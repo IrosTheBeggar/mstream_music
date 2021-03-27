@@ -52,11 +52,6 @@ class _MStreamAppState extends State<MStreamApp>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static final handlerNames = [
-    'Audio Player',
-    //if (_isTtsSupported) 'Text-To-Speech',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -78,125 +73,136 @@ class _MStreamAppState extends State<MStreamApp>
               ],
               controller: _tabController),
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Queue display/controls.
-              StreamBuilder<QueueState>(
-                stream: _queueStateStream,
-                builder: (context, snapshot) {
-                  final queueState = snapshot.data;
-                  final queue = queueState?.queue ?? [];
-                  final mediaItem = queueState?.mediaItem;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      StreamBuilder<dynamic>(
-                        stream: _audioHandler.customState,
-                        builder: (context, snapshot) {
-                          final handlerIndex = snapshot.data?.handlerIndex ?? 0;
-                          return DropdownButton<int>(
-                            iconSize: 0.0,
-                            value: handlerIndex,
-                            items: [
-                              for (var i = 0; i < handlerNames.length; i++)
-                                DropdownMenuItem<int>(
-                                  value: i,
-                                  child: Text(handlerNames[i]),
-                                ),
-                            ],
-                            onChanged: _audioHandler.switchToHandler,
-                          );
-                        },
-                      ),
-                      if (queue.isNotEmpty)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.skip_previous),
-                              // iconSize: 64.0,
-                              onPressed: mediaItem == queue.first
-                                  ? null
-                                  : _audioHandler.skipToPrevious,
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.skip_next),
-                              // iconSize: 64.0,
-                              onPressed: mediaItem == queue.last
-                                  ? null
-                                  : _audioHandler.skipToNext,
-                            ),
-                          ],
-                        ),
-                      if (mediaItem?.title != null) Text(mediaItem!.title),
-                    ],
-                  );
-                },
-              ),
-              // Play/pause/stop buttons.
-              StreamBuilder<bool>(
-                stream: _audioHandler.playbackState
-                    .map((state) => state.playing)
-                    .distinct(),
-                builder: (context, snapshot) {
-                  final playing = snapshot.data ?? false;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (playing) pauseButton() else playButton(),
-                      stopButton(),
-                    ],
-                  );
-                },
-              ),
-              // A seek bar.
-              StreamBuilder<MediaState>(
-                stream: _mediaStateStream,
-                builder: (context, snapshot) {
-                  final mediaState = snapshot.data;
-                  return SeekBar(
-                    duration: mediaState?.mediaItem?.duration ?? Duration.zero,
-                    position: mediaState?.position ?? Duration.zero,
-                    onChangeEnd: (newPosition) {
-                      _audioHandler.seek(newPosition);
-                    },
-                  );
-                },
-              ),
-              // Display the processing state.
-              StreamBuilder<AudioProcessingState>(
-                stream: _audioHandler.playbackState
-                    .map((state) => state.processingState)
-                    .distinct(),
-                builder: (context, snapshot) {
-                  final processingState =
-                      snapshot.data ?? AudioProcessingState.idle;
-                  return Text(
-                      "Processing state: ${describeEnum(processingState)}");
-                },
-              ),
-              // Display the latest custom event.
-              StreamBuilder(
-                stream: _audioHandler.customEvent,
-                builder: (context, snapshot) {
-                  return Text("custom event: ${snapshot.data}");
-                },
-              ),
-              // Display the notification click status.
-              StreamBuilder<bool>(
-                stream: AudioService.notificationClickEvent,
-                builder: (context, snapshot) {
-                  return Text(
-                    'Notification Click Status: ${snapshot.data}',
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+        body: TabBarView(
+            children: [TestScreen(), TestScreen()], controller: _tabController),
         bottomNavigationBar: BottomBar());
+  }
+}
+
+class TestScreen extends StatelessWidget {
+  static final handlerNames = [
+    'Audio Player',
+    //if (_isTtsSupported) 'Text-To-Speech',
+  ];
+
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Queue display/controls.
+          StreamBuilder<QueueState>(
+            stream: _queueStateStream,
+            builder: (context, snapshot) {
+              final queueState = snapshot.data;
+              final queue = queueState?.queue ?? [];
+              final mediaItem = queueState?.mediaItem;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  StreamBuilder<dynamic>(
+                    stream: _audioHandler.customState,
+                    builder: (context, snapshot) {
+                      final handlerIndex = snapshot.data?.handlerIndex ?? 0;
+                      return DropdownButton<int>(
+                        iconSize: 0.0,
+                        value: handlerIndex,
+                        items: [
+                          for (var i = 0; i < handlerNames.length; i++)
+                            DropdownMenuItem<int>(
+                              value: i,
+                              child: Text(handlerNames[i]),
+                            ),
+                        ],
+                        onChanged: _audioHandler.switchToHandler,
+                      );
+                    },
+                  ),
+                  if (queue.isNotEmpty)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.skip_previous),
+                          // iconSize: 64.0,
+                          onPressed: mediaItem == queue.first
+                              ? null
+                              : _audioHandler.skipToPrevious,
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.skip_next),
+                          // iconSize: 64.0,
+                          onPressed: mediaItem == queue.last
+                              ? null
+                              : _audioHandler.skipToNext,
+                        ),
+                      ],
+                    ),
+                  if (mediaItem?.title != null) Text(mediaItem!.title),
+                ],
+              );
+            },
+          ),
+          // Play/pause/stop buttons.
+          StreamBuilder<bool>(
+            stream: _audioHandler.playbackState
+                .map((state) => state.playing)
+                .distinct(),
+            builder: (context, snapshot) {
+              final playing = snapshot.data ?? false;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (playing) pauseButton() else playButton(),
+                  stopButton(),
+                ],
+              );
+            },
+          ),
+          // A seek bar.
+          StreamBuilder<MediaState>(
+            stream: _mediaStateStream,
+            builder: (context, snapshot) {
+              final mediaState = snapshot.data;
+              return SeekBar(
+                duration: mediaState?.mediaItem?.duration ?? Duration.zero,
+                position: mediaState?.position ?? Duration.zero,
+                onChangeEnd: (newPosition) {
+                  _audioHandler.seek(newPosition);
+                },
+              );
+            },
+          ),
+          // Display the processing state.
+          StreamBuilder<AudioProcessingState>(
+            stream: _audioHandler.playbackState
+                .map((state) => state.processingState)
+                .distinct(),
+            builder: (context, snapshot) {
+              final processingState =
+                  snapshot.data ?? AudioProcessingState.idle;
+              return Text("Processing state: ${describeEnum(processingState)}");
+            },
+          ),
+          // Display the latest custom event.
+          StreamBuilder(
+            stream: _audioHandler.customEvent,
+            builder: (context, snapshot) {
+              return Text("custom event: ${snapshot.data}");
+            },
+          ),
+          // Display the notification click status.
+          StreamBuilder<bool>(
+            stream: AudioService.notificationClickEvent,
+            builder: (context, snapshot) {
+              return Text(
+                'Notification Click Status: ${snapshot.data}',
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   /// A stream reporting the combined state of the current media item and its
