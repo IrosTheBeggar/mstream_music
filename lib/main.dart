@@ -36,31 +36,47 @@ Future<void> main() async {
       androidEnableQueue: true,
     ),
   );
-  runApp(new MyApp());
+  runApp(new MaterialApp(
+    title: 'Audio Service Demo',
+    theme: ThemeData(primarySwatch: Colors.blue),
+    home: MStreamApp(),
+  ));
 }
 
-class MyApp extends StatelessWidget {
+class MStreamApp extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Audio Service Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: MainScreen(),
-    );
-  }
+  _MStreamAppState createState() => new _MStreamAppState();
 }
 
-class MainScreen extends StatelessWidget {
+class _MStreamAppState extends State<MStreamApp>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   static final handlerNames = [
     'Audio Player',
     //if (_isTtsSupported) 'Text-To-Speech',
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
           title: const Text('mStream'),
+          bottom: TabBar(
+              labelColor: Color(0xFFffab00),
+              indicatorColor: Color(0xFFffab00),
+              unselectedLabelColor: Color(0xFFcccccc),
+              tabs: [
+                Tab(text: 'Old Controls'),
+                Tab(text: 'Now Playing'),
+              ],
+              controller: _tabController),
         ),
         body: Center(
           child: Column(
@@ -180,61 +196,7 @@ class MainScreen extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: BottomAppBar(
-            color: Color(0xFF212121),
-            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-              Container(
-                height: 8,
-              ),
-              StreamBuilder<MediaState>(
-                stream: _mediaStateStream,
-                builder: (context, snapshot) {
-                  final mediaState = snapshot.data;
-                  return GestureDetector(
-                    onTapUp: (TapUpDetails details) {
-                      double width = MediaQuery.of(context).size.width;
-                      double percentage = details.globalPosition.dx / width;
-                      Duration duration =
-                          mediaState?.mediaItem?.duration ?? Duration.zero;
-
-                      double doubleDs = duration.inSeconds.toDouble();
-                      int newDuration = (doubleDs * percentage).toInt();
-
-                      _audioHandler.seek(Duration(seconds: newDuration));
-                    },
-                    child: Container(
-                      height: 16,
-                      child: LinearProgressIndicator(
-                        value: (mediaState?.position.inSeconds ?? 0) /
-                            (mediaState?.mediaItem?.duration?.inSeconds ?? 1),
-                        backgroundColor: Color(0xFF484848),
-                        valueColor:
-                            new AlwaysStoppedAnimation(Color(0xFFc67c00)),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    Row(children: [
-                      StreamBuilder<bool>(
-                        stream: _audioHandler.playbackState
-                            .map((state) => state.playing)
-                            .distinct(),
-                        builder: (context, snapshot) {
-                          final playing = snapshot.data ?? false;
-                          if (playing)
-                            return pauseButton();
-                          else
-                            return playButton();
-                        },
-                      ),
-                    ])
-                  ])
-            ])));
+        bottomNavigationBar: BottomBar());
   }
 
   /// A stream reporting the combined state of the current media item and its
@@ -275,6 +237,85 @@ class MainScreen extends StatelessWidget {
         icon: Icon(Icons.stop),
         // iconSize: 64.0,
         onPressed: _audioHandler.stop,
+      );
+}
+
+class BottomBar extends StatelessWidget {
+  Widget build(BuildContext context) {
+    return BottomAppBar(
+        color: Color(0xFF212121),
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Container(
+            height: 8,
+          ),
+          StreamBuilder<MediaState>(
+            stream: _mediaStateStream,
+            builder: (context, snapshot) {
+              final mediaState = snapshot.data;
+              return GestureDetector(
+                onTapUp: (TapUpDetails details) {
+                  double width = MediaQuery.of(context).size.width;
+                  double percentage = details.globalPosition.dx / width;
+                  Duration duration =
+                      mediaState?.mediaItem?.duration ?? Duration.zero;
+
+                  double doubleDs = duration.inSeconds.toDouble();
+                  int newDuration = (doubleDs * percentage).toInt();
+
+                  _audioHandler.seek(Duration(seconds: newDuration));
+                },
+                child: Container(
+                  height: 16,
+                  child: LinearProgressIndicator(
+                    value: (mediaState?.position.inSeconds ?? 0) /
+                        (mediaState?.mediaItem?.duration?.inSeconds ?? 1),
+                    backgroundColor: Color(0xFF484848),
+                    valueColor: new AlwaysStoppedAnimation(Color(0xFFc67c00)),
+                  ),
+                ),
+              );
+            },
+          ),
+          Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Row(children: [
+                  StreamBuilder<bool>(
+                    stream: _audioHandler.playbackState
+                        .map((state) => state.playing)
+                        .distinct(),
+                    builder: (context, snapshot) {
+                      final playing = snapshot.data ?? false;
+                      if (playing)
+                        return pauseButton();
+                      else
+                        return playButton();
+                    },
+                  ),
+                ])
+              ])
+        ]));
+  }
+
+  /// A stream reporting the combined state of the current media item and its
+  /// current position.
+  Stream<MediaState> get _mediaStateStream =>
+      Rx.combineLatest2<MediaItem?, Duration, MediaState>(
+          _audioHandler.mediaItem,
+          AudioService.getPositionStream(),
+          (mediaItem, position) => MediaState(mediaItem, position));
+
+  IconButton playButton() => IconButton(
+        icon: Icon(Icons.play_arrow),
+        // iconSize: 64.0,
+        onPressed: _audioHandler.play,
+      );
+
+  IconButton pauseButton() => IconButton(
+        icon: Icon(Icons.pause),
+        // iconSize: 64.0,
+        onPressed: _audioHandler.pause,
       );
 }
 
