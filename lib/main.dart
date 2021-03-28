@@ -65,7 +65,7 @@ class _MStreamAppState extends State<MStreamApp>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -78,8 +78,9 @@ class _MStreamAppState extends State<MStreamApp>
               indicatorColor: Color(0xFFffab00),
               unselectedLabelColor: Color(0xFFcccccc),
               tabs: [
-                Tab(text: 'Old Controls'),
-                Tab(text: 'Now Playing'),
+                Tab(text: 'Browse'),
+                Tab(text: 'Controls'),
+                Tab(text: 'Queue'),
               ],
               controller: _tabController),
         ),
@@ -122,8 +123,59 @@ class _MStreamAppState extends State<MStreamApp>
           ),
         ])),
         body: TabBarView(
-            children: [TestScreen(), NowPlaying()], controller: _tabController),
+            children: [Browser(), TestScreen(), NowPlaying()],
+            controller: _tabController),
         bottomNavigationBar: BottomBar());
+  }
+}
+
+class Browser extends StatefulWidget {
+  @override
+  _BrowserState createState() => _BrowserState();
+}
+
+class _BrowserState extends State<Browser> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: <Widget>[
+      Material(
+          color: Color(0xFFffffff),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                IconButton(
+                    icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
+                    tooltip: 'Go Back',
+                    onPressed: () {}),
+              ])),
+      // Expanded(
+      //   child: SizedBox(
+      //     child: ListView.separated(itemBuilder: itemBuilder, separatorBuilder: (BuildContext context, int index) => Divider( height: 3, color: Colors.white), itemCount: itemCount)
+      //   )
+      // )
+    ]);
+  }
+}
+
+class Browser2 extends StatelessWidget {
+  Widget build(BuildContext context) {
+    return Column(children: <Widget>[
+      Material(
+          color: Color(0xFFffffff),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                IconButton(
+                    icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
+                    tooltip: 'Go Back',
+                    onPressed: () {}),
+              ])),
+      // Expanded(
+      //   child: SizedBox(
+      //     child: ListView.separated(itemBuilder: itemBuilder, separatorBuilder: (BuildContext context, int index) => Divider( height: 3, color: Colors.white), itemCount: itemCount)
+      //   )
+      // )
+    ]);
   }
 }
 
@@ -161,7 +213,39 @@ class NowPlaying extends StatelessWidget {
                           return Slidable(
                               actionPane: SlidableDrawerActionPane(),
                               key: Key(queue[index].id),
-                              actions: <Widget>[],
+                              dismissal: SlidableDismissal(
+                                child: SlidableDrawerDismissal(),
+                                onDismissed: (actionType) {
+                                  _audioHandler.removeQueueItem(queue[index]);
+                                },
+                              ),
+                              actions: <Widget>[
+                                IconSlideAction(
+                                    color: Colors.blueGrey,
+                                    icon: Icons.star,
+                                    caption: 'Rate',
+                                    onTap: () {
+                                      showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                                title: Text("Rate Song"),
+                                                content: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    child: Text("Go Back"),
+                                                    onPressed: () {
+                                                      Navigator.of(context)
+                                                          .pop();
+                                                    },
+                                                  ),
+                                                ]);
+                                          });
+                                    })
+                              ],
                               actionExtentRatio: 0.18,
                               child: ListTile(
                                   tileColor: (queue[index] == mediaItem)
