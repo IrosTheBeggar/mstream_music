@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 //import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/about_screen.dart';
 
@@ -121,9 +122,70 @@ class _MStreamAppState extends State<MStreamApp>
           ),
         ])),
         body: TabBarView(
-            children: [TestScreen(), TestScreen()], controller: _tabController),
+            children: [TestScreen(), NowPlaying()], controller: _tabController),
         bottomNavigationBar: BottomBar());
   }
+}
+
+class NowPlaying extends StatelessWidget {
+  Widget build(BuildContext context) {
+    return Column(children: <Widget>[
+      Material(
+          color: Colors.white,
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Row(children: []),
+                Row(children: [
+                  IconButton(
+                    splashColor: Colors.red,
+                    icon: Icon(Icons.cancel),
+                    color: Colors.redAccent,
+                    onPressed: () {},
+                  ),
+                ])
+              ])),
+      Expanded(
+          child: SizedBox(
+              child: StreamBuilder<QueueState>(
+                  stream: _queueStateStream,
+                  builder: (context, snapshot) {
+                    final queueState = snapshot.data;
+                    final queue = queueState?.queue ?? [];
+                    final mediaItem = queueState?.mediaItem;
+
+                    return ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: queue.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          return Slidable(
+                              actionPane: SlidableDrawerActionPane(),
+                              key: Key(queue[index].id),
+                              actions: <Widget>[],
+                              actionExtentRatio: 0.18,
+                              child: ListTile(
+                                  tileColor: (queue[index] == mediaItem)
+                                      ? Color(0xFFffab00)
+                                      : null,
+                                  title: Text(queue[index].id,
+                                      style: TextStyle(
+                                          fontFamily: 'Jura',
+                                          fontSize: 18,
+                                          color: Colors.black)),
+                                  onTap: () {
+                                    _audioHandler.skipToQueueItem(index);
+                                    _audioHandler.play();
+                                  }));
+                        });
+                  })))
+    ]);
+  }
+
+  Stream<QueueState> get _queueStateStream =>
+      Rx.combineLatest2<List<MediaItem>?, MediaItem?, QueueState>(
+          _audioHandler.queue,
+          _audioHandler.mediaItem,
+          (queue, mediaItem) => QueueState(queue, mediaItem));
 }
 
 class TestScreen extends StatelessWidget {
@@ -954,35 +1016,3 @@ class MediaLibrary {
     ],
   };
 }
-
-/// An object that performs interruptable sleep.
-class Sleeper {
-  Completer? _blockingCompleter;
-
-  /// Sleep for a duration. If sleep is interrupted, a
-  /// [SleeperInterruptedException] will be thrown.
-  Future<void> sleep([Duration? duration]) async {
-    _blockingCompleter = Completer();
-    if (duration != null) {
-      await Future.any([Future.delayed(duration), _blockingCompleter!.future]);
-    } else {
-      await _blockingCompleter!.future;
-    }
-    final interrupted = _blockingCompleter!.isCompleted;
-    _blockingCompleter = null;
-    if (interrupted) {
-      throw SleeperInterruptedException();
-    }
-  }
-
-  /// Interrupt any sleep that's underway.
-  void interrupt() {
-    if (_blockingCompleter?.isCompleted == false) {
-      _blockingCompleter!.complete();
-    }
-  }
-}
-
-class SleeperInterruptedException {}
-
-class TtsInterruptedException {}
