@@ -279,9 +279,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                         onPressed: () {
                           // Validate will return true if the form is valid, or false if
                           // the form is invalid.
-                          // if (!_formKey.currentState.validate()) {
-                          //   return;
-                          // }
+                          if (!_formKey.currentState!.validate()) {
+                            return;
+                          }
 
                           // _formKey.currentState.save(); // Save our form now.
 

@@ -1,7 +1,11 @@
 import 'dart:async';
-//import 'dart:io';
+import 'dart:io';
 import 'dart:math';
+import 'dart:convert';
 
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +15,14 @@ import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
+import 'singletons/server_list.dart';
+import 'objects/server.dart';
 import 'screens/about_screen.dart';
+import 'screens/add_server.dart';
+
+ServerManager serverManager = ServerManager();
+
+int? editThisServer;
 
 //final _isTtsSupported = kIsWeb || !Platform.isMacOS;
 
@@ -66,13 +77,67 @@ class _MStreamAppState extends State<MStreamApp>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    serverManager.loadServerList().then((e) {
+      if (ServerManager.serverList.length > 0) {
+        // _goToNavScreen();
+      } else {
+        // displayList.add(new DisplayItem(
+        //     null,
+        //     'Welcome To mStream',
+        //     'addServer',
+        //     '',
+        //     Icon(Icons.add, color: Colors.black),
+        //     'Click here to add server'));
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('mStream'),
+          title: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('mStream Music'),
+              Visibility(
+                visible: ServerManager.currentServer != null,
+                child: Text(
+                  ServerManager.currentServer == null
+                      ? ''
+                      : ServerManager.currentServer!.nickname,
+                  style: TextStyle(fontSize: 12.0),
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            PopupMenuButton(
+                onSelected: (Server selectedServer) {},
+                icon: Icon(Icons.cloud),
+                itemBuilder: (BuildContext context) {
+                  return ServerManager.serverList.map((server) {
+                    return PopupMenuItem(
+                      value: server,
+                      child: Text(
+                          server.nickname.length > 0
+                              ? server.nickname
+                              : server.url,
+                          style: new TextStyle(color: Colors.black)),
+                    );
+                  }).toList();
+                }),
+            IconButton(
+                icon: Icon(Icons.add),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => AddServerScreen()));
+                }),
+          ],
           bottom: TabBar(
               labelColor: Color(0xFFffab00),
               indicatorColor: Color(0xFFffab00),
@@ -146,7 +211,13 @@ class _BrowserState extends State<Browser> {
                 IconButton(
                     icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
                     tooltip: 'Go Back',
-                    onPressed: () {}),
+                    onPressed: () {
+                      // _audioHandler.addQueueItem(MediaItem(
+                      //     id: 'https://demo.mstream.io/media/media/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
+                      //     album: 'LOL',
+                      //     duration: Duration(milliseconds: 2856950),
+                      //     title: 'LOL'));
+                    }),
               ])),
       // Expanded(
       //   child: SizedBox(
@@ -935,7 +1006,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ignore: close_sinks
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
-  final _mediaLibrary = MediaLibrary();
   final _player = AudioPlayer();
 
   int? get index => _player.currentIndex;
@@ -946,7 +1016,34 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> _init() async {
     // Load and broadcast the queue
-    queue.add(_mediaLibrary.items[MediaLibrary.albumsRootId]);
+    // queue.add(_mediaLibrary.items[MediaLibrary.albumsRootId]);
+
+    queue.add([
+      MediaItem(
+        id: "https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3",
+        album: "Science Friday",
+        title: "A Salute To Head-Scratching Science",
+        artist: "Science Friday and WNYC Studios",
+        duration: Duration(milliseconds: 5739820),
+        artUri: Uri.parse(
+            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
+      ),
+      MediaItem(
+          id: 'https://demo.mstream.io/media/media/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
+          album: 'LOL',
+          duration: Duration(milliseconds: 2856950),
+          title: 'LOL'),
+      MediaItem(
+        id: "https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3",
+        album: "Science Friday",
+        title: "From Cat Rheology To Operatic Incompetence",
+        artist: "Science Friday and WNYC Studios",
+        duration: Duration(milliseconds: 2856950),
+        artUri: Uri.parse(
+            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
+      )
+    ]);
+
     // For Android 11, record the most recent item so it can be resumed.
     mediaItem
         .whereType<MediaItem>()
@@ -978,33 +1075,33 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
-  @override
-  Future<List<MediaItem>> getChildren(String parentMediaId,
-      [Map<String, dynamic>? options]) async {
-    switch (parentMediaId) {
-      case AudioService.recentRootId:
-        // When the user resumes a media session, tell the system what the most
-        // recently played item was.
-        print("### get recent children: ${_recentSubject.value}:");
-        return _recentSubject.value ?? [];
-      default:
-        // Allow client to browse the media library.
-        print(
-            "### get $parentMediaId children: ${_mediaLibrary.items[parentMediaId]}:");
-        return _mediaLibrary.items[parentMediaId]!;
-    }
-  }
+  // @override
+  // Future<List<MediaItem>> getChildren(String parentMediaId,
+  //     [Map<String, dynamic>? options]) async {
+  //   switch (parentMediaId) {
+  //     case AudioService.recentRootId:
+  //       // When the user resumes a media session, tell the system what the most
+  //       // recently played item was.
+  //       print("### get recent children: ${_recentSubject.value}:");
+  //       return _recentSubject.value ?? [];
+  //     default:
+  //       // Allow client to browse the media library.
+  //       print(
+  //           "### get $parentMediaId children: ${_mediaLibrary.items[parentMediaId]}:");
+  //       return _mediaLibrary.items[parentMediaId]!;
+  //   }
+  // }
 
-  @override
-  ValueStream<Map<String, dynamic>> subscribeToChildren(String parentMediaId) {
-    switch (parentMediaId) {
-      case AudioService.recentRootId:
-        return _recentSubject.map((_) => {});
-      default:
-        return Stream.value(_mediaLibrary.items[parentMediaId]).map((_) => {})
-            as ValueStream<Map<String, dynamic>>;
-    }
-  }
+  // @override
+  // ValueStream<Map<String, dynamic>> subscribeToChildren(String parentMediaId) {
+  //   switch (parentMediaId) {
+  //     case AudioService.recentRootId:
+  //       return _recentSubject.map((_) => {});
+  //     default:
+  //       return Stream.value(_mediaLibrary.items[parentMediaId]).map((_) => {})
+  //           as ValueStream<Map<String, dynamic>>;
+  //   }
+  // }
 
   @override
   Future<void> skipToQueueItem(int index) async {
@@ -1015,6 +1112,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.seek(Duration.zero, index: index);
     // Demonstrate custom events.
     customEventSubject.add('skip to $index');
+  }
+
+  @override
+  Future<void> addQueueItem(MediaItem item) async {
+    queue.add(queue.value!..add(item));
   }
 
   @override

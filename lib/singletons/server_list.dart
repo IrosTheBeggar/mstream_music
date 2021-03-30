@@ -5,6 +5,7 @@ import '../objects/server.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:rxdart/rxdart.dart';
 
 class ServerManager {
   ServerManager._privateConstructor();
@@ -15,8 +16,8 @@ class ServerManager {
     return _instance;
   }
 
-  final List<Server> serverList = [];
-  Server? currentServer;
+  static final List<Server> serverList = [];
+  static Server? currentServer;
 
   Future<File> get _serverFile async {
     final directory = await getApplicationDocumentsDirectory();
@@ -54,11 +55,19 @@ class ServerManager {
 
     if (serverList.length > 0) {
       currentServer = serverList[0];
+      _curentServerStream.sink.add(currentServer);
     }
+
+    _serverListStream.sink.add(serverList);
   }
 
   Future<void> addServer(Server newServer) async {
     serverList.add(newServer);
+
+    if (currentServer == null) {
+      currentServer = newServer;
+      _curentServerStream.sink.add(currentServer);
+    }
 
     // Create server directory (for downloads)
     var file = await getApplicationDocumentsDirectory();
@@ -66,7 +75,19 @@ class ServerManager {
     await new Directory(dir).create(recursive: true);
 
     await writeServerFile();
+
+    _serverListStream.sink.add(serverList);
   }
 
-  // add streams
+  // streams
+  BehaviorSubject<List<Server>> _serverListStream =
+      BehaviorSubject<List<Server>>.seeded(serverList);
+
+  BehaviorSubject<Server?> _curentServerStream =
+      BehaviorSubject<Server?>.seeded(currentServer);
+
+  void dispose() {
+    _serverListStream.close();
+    _curentServerStream.close();
+  } //initializes the subject with element already;
 }
