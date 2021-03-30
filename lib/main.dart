@@ -19,6 +19,7 @@ import 'singletons/server_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
+import 'screens/manage_server.dart';
 
 ServerManager serverManager = ServerManager();
 
@@ -184,6 +185,21 @@ class _MStreamAppState extends State<MStreamApp>
               // }
               Navigator.of(context).pop();
               _tabController.animateTo(0);
+            },
+          ),
+          ListTile(
+            title: Text('Manage Servers',
+                style: TextStyle(
+                    fontFamily: 'Jura',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17)),
+            leading: Icon(Icons.router),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ManageServersScreen()),
+              );
             },
           ),
         ])),
