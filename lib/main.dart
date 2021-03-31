@@ -23,8 +23,6 @@ import 'screens/manage_server.dart';
 
 ServerManager serverManager = ServerManager();
 
-int? editThisServer;
-
 //final _isTtsSupported = kIsWeb || !Platform.isMacOS;
 
 // You might want to provide this using dependency injection rather than a
@@ -103,32 +101,62 @@ class _MStreamAppState extends State<MStreamApp>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text('mStream Music'),
-              Visibility(
-                visible: ServerManager.currentServer != null,
-                child: Text(
-                  ServerManager.currentServer == null
-                      ? ''
-                      : ServerManager.currentServer!.nickname,
-                  style: TextStyle(fontSize: 12.0),
-                ),
-              ),
+              StreamBuilder<Server?>(
+                  stream: ServerManager().curentServerStream,
+                  builder: (context, snapshot) {
+                    final Server? cServer = snapshot.data;
+                    return Visibility(
+                      visible: cServer != null,
+                      child: Text(
+                        cServer == null ? '' : cServer.nickname,
+                        style: TextStyle(fontSize: 12.0),
+                      ),
+                    );
+                  }),
             ],
           ),
           actions: <Widget>[
             PopupMenuButton(
-                onSelected: (Server selectedServer) {},
+                onSelected: (int selectedServerIndex) {
+                  _tabController.animateTo(0);
+                  if (selectedServerIndex > -1) {
+                    ServerManager().changeCurrentServer(selectedServerIndex);
+                    // ServerManager.currentServer =
+                    //     ServerManager.serverList[selectedServerIndex];
+                  } else if (selectedServerIndex == -1) {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => AddServerScreen()));
+                  }
+                },
                 icon: Icon(Icons.cloud),
                 itemBuilder: (BuildContext context) {
-                  return ServerManager.serverList.map((server) {
+                  List<PopupMenuEntry<int>> popUpWidgetList =
+                      ServerManager.serverList.map((server) {
                     return PopupMenuItem(
-                      value: server,
+                      value: ServerManager.serverList.indexOf(server),
                       child: Text(
                           server.nickname.length > 0
                               ? server.nickname
                               : server.url,
-                          style: new TextStyle(color: Colors.black)),
+                          style: TextStyle(
+                              color: server == ServerManager.currentServer
+                                  ? Colors.blue
+                                  : Colors.black)),
                     );
                   }).toList();
+
+                  // popUpWidgetList.add(PopupMenuDivider());
+
+                  popUpWidgetList.add(PopupMenuItem(
+                      value: -1,
+                      child: Text(
+                        'Add Server',
+                        style: TextStyle(color: Colors.black),
+                      )));
+
+                  return popUpWidgetList;
                 }),
             IconButton(
                 icon: Icon(Icons.add),

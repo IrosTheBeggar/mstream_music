@@ -79,6 +79,11 @@ class ServerManager {
     _serverListStream.sink.add(serverList);
   }
 
+  void changeCurrentServer(int currentServerIndex) {
+    currentServer = serverList[currentServerIndex];
+    _curentServerStream.sink.add(currentServer);
+  }
+
   // streams
   BehaviorSubject<List<Server>> _serverListStream =
       BehaviorSubject<List<Server>>.seeded(serverList);
@@ -90,4 +95,6 @@ class ServerManager {
     _serverListStream.close();
     _curentServerStream.close();
   } //initializes the subject with element already;
+
+  Stream<Server?> get curentServerStream => _curentServerStream.stream;
 }
