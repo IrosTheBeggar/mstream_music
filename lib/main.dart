@@ -10,6 +10,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
+import 'screens/browser.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
@@ -230,62 +231,6 @@ class _MStreamAppState extends State<MStreamApp>
             children: [Browser(), TestScreen(), NowPlaying()],
             controller: _tabController),
         bottomNavigationBar: BottomBar());
-  }
-}
-
-class Browser extends StatefulWidget {
-  @override
-  _BrowserState createState() => _BrowserState();
-}
-
-class _BrowserState extends State<Browser> {
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: <Widget>[
-      Material(
-          color: Color(0xFFffffff),
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                IconButton(
-                    icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
-                    tooltip: 'Go Back',
-                    onPressed: () {
-                      // _audioHandler.addQueueItem(MediaItem(
-                      //     id: 'https://demo.mstream.io/media/media/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
-                      //     album: 'LOL',
-                      //     duration: Duration(milliseconds: 2856950),
-                      //     title: 'LOL'));
-                    }),
-              ])),
-      // Expanded(
-      //   child: SizedBox(
-      //     child: ListView.separated(itemBuilder: itemBuilder, separatorBuilder: (BuildContext context, int index) => Divider( height: 3, color: Colors.white), itemCount: itemCount)
-      //   )
-      // )
-    ]);
-  }
-}
-
-class Browser2 extends StatelessWidget {
-  Widget build(BuildContext context) {
-    return Column(children: <Widget>[
-      Material(
-          color: Color(0xFFffffff),
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                IconButton(
-                    icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
-                    tooltip: 'Go Back',
-                    onPressed: () {}),
-              ])),
-      // Expanded(
-      //   child: SizedBox(
-      //     child: ListView.separated(itemBuilder: itemBuilder, separatorBuilder: (BuildContext context, int index) => Divider( height: 3, color: Colors.white), itemCount: itemCount)
-      //   )
-      // )
-    ]);
   }
 }
 
