@@ -74,7 +74,7 @@ class _MStreamAppState extends State<MStreamApp>
     _tabController = TabController(length: 3, vsync: this);
 
     serverManager.loadServerList().then((e) {
-      if (ServerManager.serverList.length > 0) {
+      if (ServerManager().serverList.length > 0) {
         // _goToNavScreen();
       } else {
         // displayList.add(new DisplayItem(
@@ -127,15 +127,15 @@ class _MStreamAppState extends State<MStreamApp>
                 icon: Icon(Icons.cloud),
                 itemBuilder: (BuildContext context) {
                   List<PopupMenuEntry<int>> popUpWidgetList =
-                      ServerManager.serverList.map((server) {
+                      ServerManager().serverList.map((server) {
                     return PopupMenuItem(
-                      value: ServerManager.serverList.indexOf(server),
+                      value: ServerManager().serverList.indexOf(server),
                       child: Text(
                           server.nickname.length > 0
                               ? server.nickname
                               : server.url,
                           style: TextStyle(
-                              color: server == ServerManager.currentServer
+                              color: server == ServerManager().currentServer
                                   ? Colors.blue
                                   : Colors.black)),
                     );

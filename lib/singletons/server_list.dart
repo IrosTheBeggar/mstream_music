@@ -8,16 +8,22 @@ import 'package:path/path.dart' as path;
 import 'package:rxdart/rxdart.dart';
 
 class ServerManager {
-  ServerManager._privateConstructor();
+  final List<Server> serverList = [];
+  Server? currentServer;
+
+  // streams
+  late final BehaviorSubject<List<Server>> _serverListStream =
+      BehaviorSubject<List<Server>>.seeded(serverList);
+  late final BehaviorSubject<Server?> _curentServerStream =
+      BehaviorSubject<Server?>.seeded(currentServer);
+
+  ServerManager._privateConstructor() {}
 
   static final ServerManager _instance = ServerManager._privateConstructor();
 
   factory ServerManager() {
     return _instance;
   }
-
-  static final List<Server> serverList = [];
-  static Server? currentServer;
 
   Future<File> get _serverFile async {
     final directory = await getApplicationDocumentsDirectory();
@@ -111,13 +117,6 @@ class ServerManager {
         directory.path.toString(), "media/${removedServer.localname}"));
     dir.delete(recursive: true);
   }
-
-  // streams
-  BehaviorSubject<List<Server>> _serverListStream =
-      BehaviorSubject<List<Server>>.seeded(serverList);
-
-  BehaviorSubject<Server?> _curentServerStream =
-      BehaviorSubject<Server?>.seeded(currentServer);
 
   void dispose() {
     _serverListStream.close();

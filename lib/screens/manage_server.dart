@@ -27,7 +27,7 @@ class ManageServersScreen extends StatelessWidget {
               child: StreamBuilder<List<Server>>(
                   stream: ServerManager().serverListStream,
                   builder: (context, snapshot) {
-                    final List<Server> cServerList = snapshot.data!;
+                    final List<Server> cServerList = snapshot.data ?? [];
                     return ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: cServerList.length,
@@ -68,7 +68,7 @@ class ManageServersScreen extends StatelessWidget {
                                       builder: (BuildContext context) {
                                         // return object of type Dialog
                                         return DeleteServerDialog(
-                                            cServer: ServerManager
+                                            cServer: ServerManager()
                                                 .serverList[index]);
                                       },
                                     );
