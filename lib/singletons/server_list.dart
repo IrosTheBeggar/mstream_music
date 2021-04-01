@@ -69,10 +69,10 @@ class ServerManager {
       _curentServerStream.sink.add(currentServer);
     }
 
-    // Create server directory (for downloads)
-    var file = await getApplicationDocumentsDirectory();
-    String dir = path.join(file.path, "media/${newServer.localname}");
-    await new Directory(dir).create(recursive: true);
+    // // Create server directory (for downloads)
+    // var file = await getApplicationDocumentsDirectory();
+    // String dir = path.join(file.path, "media/${newServer.localname}");
+    // await new Directory(dir).create(recursive: true);
 
     await writeServerFile();
 
@@ -82,6 +82,34 @@ class ServerManager {
   void changeCurrentServer(int currentServerIndex) {
     currentServer = serverList[currentServerIndex];
     _curentServerStream.sink.add(currentServer);
+  }
+
+  Future<void> removeServer(
+      Server removeThisServer, bool removeSyncedFiles) async {
+    serverList.remove(removeThisServer);
+    _serverListStream.sink.add(serverList);
+
+    if (serverList.length == 0) {
+      currentServer = null;
+      _curentServerStream.sink.add(currentServer);
+    } else if (removeThisServer == currentServer) {
+      currentServer = serverList[0];
+      _curentServerStream.sink.add(currentServer);
+    }
+
+    await writeServerFile();
+
+    // delete synced files
+    // if (removeSyncedFiles == true) {
+    //   _deleteServeDirectory(removeThisServer);
+    // }
+  }
+
+  Future<void> _deleteServeDirectory(Server removedServer) async {
+    final directory = await getApplicationDocumentsDirectory();
+    var dir = new Directory(path.join(
+        directory.path.toString(), "media/${removedServer.localname}"));
+    dir.delete(recursive: true);
   }
 
   // streams
@@ -97,4 +125,6 @@ class ServerManager {
   } //initializes the subject with element already;
 
   Stream<Server?> get curentServerStream => _curentServerStream.stream;
+
+  Stream<List<Server>> get serverListStream => _serverListStream.stream;
 }

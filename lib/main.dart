@@ -121,8 +121,6 @@ class _MStreamAppState extends State<MStreamApp>
                   _tabController.animateTo(0);
                   if (selectedServerIndex > -1) {
                     ServerManager().changeCurrentServer(selectedServerIndex);
-                    // ServerManager.currentServer =
-                    //     ServerManager.serverList[selectedServerIndex];
                   } else if (selectedServerIndex == -1) {
                     Navigator.push(
                         context,
@@ -147,7 +145,9 @@ class _MStreamAppState extends State<MStreamApp>
                     );
                   }).toList();
 
-                  // popUpWidgetList.add(PopupMenuDivider());
+                  // popUpWidgetList.add(PopupMenuDivider(
+                  //   height: 20,
+                  // ));
 
                   popUpWidgetList.add(PopupMenuItem(
                       value: -1,
