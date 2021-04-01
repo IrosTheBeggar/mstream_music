@@ -44,7 +44,12 @@ class MyCustomFormState extends State<MyCustomForm> {
   TextEditingController _passwordCtrl = TextEditingController();
   TextEditingController _serverNameCtrl = TextEditingController();
 
+  bool submitPending = false;
+
   checkServer() async {
+    setState(() {
+      submitPending = true;
+    });
     Uri lol = Uri.parse(this._urlCtrl.text);
     String origin = lol.origin;
     var response;
@@ -52,6 +57,9 @@ class MyCustomFormState extends State<MyCustomForm> {
     try {
       response = await http.get(lol.resolve('/ping'));
     } catch (err) {
+      setState(() {
+        submitPending = false;
+      });
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Could not connect to server')));
       return;
@@ -59,6 +67,9 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     // Check for login
     if (response.statusCode == 200) {
+      setState(() {
+        submitPending = false;
+      });
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Connection Successful!')));
       saveServer(origin);
@@ -72,12 +83,18 @@ class MyCustomFormState extends State<MyCustomForm> {
         "password": this._passwordCtrl.text
       });
     } catch (err) {
+      setState(() {
+        submitPending = false;
+      });
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
     }
 
     if (response.statusCode != 200) {
+      setState(() {
+        submitPending = false;
+      });
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
@@ -246,48 +263,52 @@ class MyCustomFormState extends State<MyCustomForm> {
                               Text('QR Code',
                                   style: TextStyle(color: Colors.white)),
                             ]),
-                        onPressed: () {
-                          // new QRCodeReader().scan().then((qrValue) {
-                          //   if (qrValue == null || qrValue == '') {
-                          //     return;
-                          //   }
+                        onPressed: submitPending
+                            ? null
+                            : () {
+                                // new QRCodeReader().scan().then((qrValue) {
+                                //   if (qrValue == null || qrValue == '') {
+                                //     return;
+                                //   }
 
-                          //   try {
-                          //     Map<String, String> parsedValues =
-                          //         parseQrCode(qrValue);
-                          //     _urlCtrl.text = parsedValues['url'];
-                          //     _usernameCtrl.text = parsedValues['username'];
-                          //     _passwordCtrl.text = parsedValues['password'];
-                          //     if (!_isUpdate) {
-                          //       _serverNameCtrl.text =
-                          //           parsedValues['serverName'];
-                          //     }
-                          //   } catch (err) {
-                          //     Scaffold.of(context).showSnackBar(
-                          //         SnackBar(content: Text('Invalid Code')));
-                          //   }
-                          // });
-                        },
+                                //   try {
+                                //     Map<String, String> parsedValues =
+                                //         parseQrCode(qrValue);
+                                //     _urlCtrl.text = parsedValues['url'];
+                                //     _usernameCtrl.text = parsedValues['username'];
+                                //     _passwordCtrl.text = parsedValues['password'];
+                                //     if (!_isUpdate) {
+                                //       _serverNameCtrl.text =
+                                //           parsedValues['serverName'];
+                                //     }
+                                //   } catch (err) {
+                                //     Scaffold.of(context).showSnackBar(
+                                //         SnackBar(content: Text('Invalid Code')));
+                                //   }
+                                // });
+                              },
                       ),
                     ),
                     Container(width: 8), // Make a gap between the buttons
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(primary: Colors.green),
-                        child:
-                            Text('Save', style: TextStyle(color: Colors.white)),
-                        onPressed: () {
-                          // Validate will return true if the form is valid, or false if
-                          // the form is invalid.
-                          if (!_formKey.currentState!.validate()) {
-                            return;
-                          }
+                        child: Text(submitPending ? 'Checking Server' : 'Save',
+                            style: TextStyle(color: Colors.white)),
+                        onPressed: submitPending
+                            ? null
+                            : () {
+                                // Validate will return true if the form is valid, or false if
+                                // the form is invalid.
+                                if (!_formKey.currentState!.validate()) {
+                                  return;
+                                }
 
-                          // _formKey.currentState.save(); // Save our form now.
+                                // _formKey.currentState.save(); // Save our form now.
 
-                          // Ping server
-                          checkServer();
-                        },
+                                // Ping server
+                                checkServer();
+                              },
                       ),
                     ),
                   ]),
