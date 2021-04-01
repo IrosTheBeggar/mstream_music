@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'server.dart';
 import 'metadata.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 class DisplayItem {
   final Server server;

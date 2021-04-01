@@ -52,14 +52,14 @@ class MyCustomFormState extends State<MyCustomForm> {
     try {
       response = await http.get(lol.resolve('/ping'));
     } catch (err) {
-      Scaffold.of(context)
+      ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Could not connect to server')));
       return;
     }
 
     // Check for login
     if (response.statusCode == 200) {
-      Scaffold.of(context)
+      ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Connection Successful!')));
       saveServer(origin);
       return;
@@ -72,13 +72,13 @@ class MyCustomFormState extends State<MyCustomForm> {
         "password": this._passwordCtrl.text
       });
     } catch (err) {
-      Scaffold.of(context)
+      ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
     }
 
     if (response.statusCode != 200) {
-      Scaffold.of(context)
+      ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
     }

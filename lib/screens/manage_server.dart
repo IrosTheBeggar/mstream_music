@@ -1,10 +1,3 @@
-import 'dart:async';
-import 'dart:io';
-import 'dart:convert';
-
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
 import 'package:flutter/material.dart';
 
 import '../objects/server.dart';
@@ -90,13 +83,13 @@ class ManageServersScreenState extends State<ManageServersScreen> {
                                                     "Remove synced files from device?"))
                                           ]),
                                           actions: <Widget>[
-                                            FlatButton(
+                                            TextButton(
                                               child: Text("Go Back"),
                                               onPressed: () {
                                                 Navigator.of(context).pop();
                                               },
                                             ),
-                                            FlatButton(
+                                            TextButton(
                                               child: Text(
                                                 "Delete",
                                                 style: TextStyle(
