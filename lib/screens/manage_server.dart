@@ -4,14 +4,7 @@ import '../objects/server.dart';
 import '../singletons/server_list.dart';
 import 'add_server.dart';
 
-class ManageServersScreen extends StatefulWidget {
-  @override
-  ManageServersScreenState createState() {
-    return ManageServersScreenState();
-  }
-}
-
-class ManageServersScreenState extends State<ManageServersScreen> {
+class ManageServersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,45 +67,9 @@ class ManageServersScreenState extends State<ManageServersScreen> {
                                       context: context,
                                       builder: (BuildContext context) {
                                         // return object of type Dialog
-                                        return AlertDialog(
-                                          title: Text("Confirm Remove Server"),
-                                          content: Row(children: <Widget>[
-                                            DeleteServerAlertForm(),
-                                            Flexible(
-                                                child: Text(
-                                                    "Remove synced files from device?"))
-                                          ]),
-                                          actions: <Widget>[
-                                            TextButton(
-                                              child: Text("Go Back"),
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                            ),
-                                            TextButton(
-                                              child: Text(
-                                                "Delete",
-                                                style: TextStyle(
-                                                    color: Colors.red),
-                                              ),
-                                              onPressed: () {
-                                                try {
-                                                  ServerManager().removeServer(
-                                                      cServerList[index],
-                                                      false);
-                                                } catch (err) {}
-                                                //   // Delete files
-                                                //   if (isRemoveFilesOnServerDeleteSelected ==
-                                                //       true) {
-                                                //     _deleteServeDirectory(
-                                                //         removedServer);
-                                                //   }
-                                                // } catch (err) {}
-                                                Navigator.of(context).pop();
-                                              },
-                                            ),
-                                          ],
-                                        );
+                                        return DeleteServerDialog(
+                                            cServer: ServerManager
+                                                .serverList[index]);
                                       },
                                     );
                                   },
@@ -128,29 +85,54 @@ class ManageServersScreenState extends State<ManageServersScreen> {
   }
 }
 
-class DeleteServerAlertForm extends StatefulWidget {
-  // DeleteServerAlertForm({Key key}) : super(key: key);
+class DeleteServerDialog extends StatefulWidget {
+  final Server cServer;
+
+  DeleteServerDialog({required this.cServer});
 
   @override
-  _DeleteServerAlertFormState createState() =>
-      new _DeleteServerAlertFormState();
+  _DeleteServerDialogState createState() => _DeleteServerDialogState();
 }
 
-bool isRemoveFilesOnServerDeleteSelected = false;
-
-class _DeleteServerAlertFormState extends State<DeleteServerAlertForm> {
-  @override
-  void initState() {
-    isRemoveFilesOnServerDeleteSelected = false;
-  }
+class _DeleteServerDialogState extends State<DeleteServerDialog> {
+  bool isRemoveFilesOnServerDeleteSelected = false;
 
   @override
   Widget build(BuildContext context) {
-    return new Checkbox(
-        value: isRemoveFilesOnServerDeleteSelected,
-        onChanged: (bool? value) {
-          isRemoveFilesOnServerDeleteSelected =
-              !isRemoveFilesOnServerDeleteSelected;
-        });
+    return AlertDialog(
+      title: Text("Confirm Remove Server"),
+      content: Row(children: <Widget>[
+        Checkbox(
+            value: isRemoveFilesOnServerDeleteSelected,
+            onChanged: (bool? value) {
+              setState(() {
+                isRemoveFilesOnServerDeleteSelected =
+                    !isRemoveFilesOnServerDeleteSelected;
+              });
+            }),
+        Flexible(child: Text("Remove synced files from device?"))
+      ]),
+      actions: <Widget>[
+        TextButton(
+          child: Text("Go Back"),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        TextButton(
+          child: Text(
+            "Delete",
+            style: TextStyle(color: Colors.red),
+          ),
+          onPressed: () {
+            try {
+              ServerManager().removeServer(
+                  widget.cServer, isRemoveFilesOnServerDeleteSelected);
+            } catch (err) {}
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
+    );
   }
 }
