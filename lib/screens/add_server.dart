@@ -236,8 +236,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: <Widget>[
                     Expanded(
-                      child: RaisedButton(
-                        color: Colors.blue,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(primary: Colors.blue),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -272,8 +272,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                     ),
                     Container(width: 8), // Make a gap between the buttons
                     Expanded(
-                      child: RaisedButton(
-                        color: Colors.green,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(primary: Colors.green),
                         child:
                             Text('Save', style: TextStyle(color: Colors.white)),
                         onPressed: () {
