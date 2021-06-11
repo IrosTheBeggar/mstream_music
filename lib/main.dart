@@ -458,7 +458,7 @@ class TestScreen extends StatelessWidget {
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
           _audioHandler.mediaItem,
-          AudioService.getPositionStream(),
+          AudioService.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   /// A stream reporting the combined state of the current queue and the current
@@ -557,7 +557,7 @@ class BottomBar extends StatelessWidget {
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
           _audioHandler.mediaItem,
-          AudioService.getPositionStream(),
+          AudioService.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   IconButton playButton() => IconButton(
@@ -873,7 +873,7 @@ class LoggingAudioHandler extends CompositeAudioHandler {
   }
 
   @override
-  Future<void> setRating(Rating rating, Map<dynamic, dynamic>? extras) {
+  Future<void> setRating(Rating rating, Map<String, dynamic>? extras) {
     _log('setRating($rating, $extras)');
     return super.setRating(rating, extras);
   }
@@ -1013,7 +1013,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
       ),
       MediaItem(
-          id: 'https://demo.mstream.io/media/media/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
+          id: 'https://demo.mstream.io/media/music/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
           album: 'LOL',
           duration: Duration(milliseconds: 2856950),
           title: 'LOL'),
@@ -1095,7 +1095,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // This jumps to the beginning of the queue item at newIndex.
     _player.seek(Duration.zero, index: index);
     // Demonstrate custom events.
-    customEventSubject.add('skip to $index');
+    customEvent.add('skip to $index');
   }
 
   @override
