@@ -112,55 +112,47 @@ class _MStreamAppState extends State<MStreamApp>
             ],
           ),
           actions: <Widget>[
-            PopupMenuButton(
-                onSelected: (int selectedServerIndex) {
-                  _tabController.animateTo(0);
-                  if (selectedServerIndex > -1) {
-                    ServerManager().changeCurrentServer(selectedServerIndex);
-                  } else if (selectedServerIndex == -1) {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => AddServerScreen()));
-                  }
-                },
-                icon: Icon(Icons.cloud),
-                itemBuilder: (BuildContext context) {
-                  List<PopupMenuEntry<int>> popUpWidgetList =
-                      ServerManager().serverList.map((server) {
-                    return PopupMenuItem(
-                      value: ServerManager().serverList.indexOf(server),
-                      child: Text(
-                          server.nickname.length > 0
-                              ? server.nickname
-                              : server.url,
-                          style: TextStyle(
-                              color: server == ServerManager().currentServer
-                                  ? Colors.blue
-                                  : Colors.black)),
-                    );
-                  }).toList();
+            StreamBuilder<List<Server>>(
+                stream: ServerManager().serverListStream,
+                builder: (context, snapshot) {
+                  final isVisible =
+                      snapshot.hasData && snapshot.data!.length > 1;
+                  return Visibility(
+                    visible: isVisible,
+                    child: PopupMenuButton(
+                        onSelected: (int selectedServerIndex) {
+                          _tabController.animateTo(0);
+                          if (selectedServerIndex > -1) {
+                            ServerManager()
+                                .changeCurrentServer(selectedServerIndex);
+                          } else if (selectedServerIndex == -1) {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AddServerScreen()));
+                          }
+                        },
+                        icon: Icon(Icons.cloud),
+                        itemBuilder: (BuildContext context) {
+                          List<PopupMenuEntry<int>> popUpWidgetList =
+                              ServerManager().serverList.map((server) {
+                            return PopupMenuItem(
+                              value: ServerManager().serverList.indexOf(server),
+                              child: Text(
+                                  server.nickname.length > 0
+                                      ? server.nickname
+                                      : server.url,
+                                  style: TextStyle(
+                                      color: server ==
+                                              ServerManager().currentServer
+                                          ? Colors.blue
+                                          : Colors.black)),
+                            );
+                          }).toList();
 
-                  // popUpWidgetList.add(PopupMenuDivider(
-                  //   height: 20,
-                  // ));
-
-                  popUpWidgetList.add(PopupMenuItem(
-                      value: -1,
-                      child: Text(
-                        'Add Server',
-                        style: TextStyle(color: Colors.black),
-                      )));
-
-                  return popUpWidgetList;
-                }),
-            IconButton(
-                icon: Icon(Icons.add),
-                onPressed: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => AddServerScreen()));
+                          return popUpWidgetList;
+                        }),
+                  );
                 }),
           ],
           bottom: TabBar(
@@ -674,20 +666,20 @@ class MainSwitchHandler extends SwitchAudioHandler {
     });
   }
 
-  @override
-  Future<dynamic> customAction(
-      String name, Map<String, dynamic>? extras) async {
-    switch (name) {
-      case 'switchToHandler':
-        await stop();
-        final int index = extras!['index'];
-        inner = handlers[index];
-        customState.add(CustomEvent(index));
-        return null;
-      default:
-        return super.customAction(name, extras);
-    }
-  }
+  // @override
+  // Future<dynamic> customAction(
+  //     String name, Map<String, dynamic>? extras) async {
+  //   switch (name) {
+  //     case 'switchToHandler':
+  //       await stop();
+  //       final int index = extras!['index'];
+  //       inner = handlers[index];
+  //       customState.add(CustomEvent(index));
+  //       return null;
+  //     default:
+  //       return super.customAction(name, extras);
+  //   }
+  // }
 }
 
 class LoggingAudioHandler extends CompositeAudioHandler {
@@ -872,11 +864,11 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return super.seek(position);
   }
 
-  @override
-  Future<void> setRating(Rating rating, Map<String, dynamic>? extras) {
-    _log('setRating($rating, $extras)');
-    return super.setRating(rating, extras);
-  }
+  // @override
+  // Future<void> setRating(Rating rating, Map<String, dynamic>? extras) {
+  //   _log('setRating($rating, $extras)');
+  //   return super.setRating(rating, extras);
+  // }
 
   @override
   Future<void> setCaptioningEnabled(bool enabled) {
@@ -914,14 +906,14 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return super.setSpeed(speed);
   }
 
-  @override
-  Future<dynamic> customAction(
-      String name, Map<String, dynamic>? extras) async {
-    _log('customAction($name, extras)');
-    final result = await super.customAction(name, extras);
-    _log('customAction -> $result');
-    return result;
-  }
+  // @override
+  // Future<dynamic> customAction(
+  //     String name, Map<String, dynamic>? extras) async {
+  //   _log('customAction($name, extras)');
+  //   final result = await super.customAction(name, extras);
+  //   _log('customAction -> $result');
+  //   return result;
+  // }
 
   @override
   Future<void> onTaskRemoved() {
@@ -944,15 +936,15 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return result;
   }
 
-  @override
-  ValueStream<Map<String, dynamic>?> subscribeToChildren(String parentMediaId) {
-    _log('subscribeToChildren($parentMediaId)');
-    final result = super.subscribeToChildren(parentMediaId);
-    result.listen((options) {
-      _log('$parentMediaId children changed with options $options');
-    });
-    return result;
-  }
+  // @override
+  // ValueStream<Map<String, dynamic>?> subscribeToChildren(String parentMediaId) {
+  //   _log('subscribeToChildren($parentMediaId)');
+  //   final result = super.subscribeToChildren(parentMediaId);
+  //   result.listen((options) {
+  //     _log('$parentMediaId children changed with options $options');
+  //   });
+  //   return result;
+  // }
 
   @override
   Future<MediaItem?> getMediaItem(String mediaId) async {
