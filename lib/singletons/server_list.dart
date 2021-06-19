@@ -17,7 +17,7 @@ class ServerManager {
   late final BehaviorSubject<Server?> _curentServerStream =
       BehaviorSubject<Server?>.seeded(currentServer);
 
-  ServerManager._privateConstructor() {}
+  ServerManager._privateConstructor();
 
   static final ServerManager _instance = ServerManager._privateConstructor();
 
