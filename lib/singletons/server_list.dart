@@ -85,6 +85,15 @@ class ServerManager {
     _serverListStream.sink.add(serverList);
   }
 
+  void editServer(
+      int serverIndex, String url, String? username, String? password) {
+    serverList[serverIndex].url = url;
+    ServerManager().serverList[serverIndex].password = password;
+    ServerManager().serverList[serverIndex].username = username;
+
+    callAfterEditServer();
+  }
+
   void changeCurrentServer(int currentServerIndex) {
     currentServer = serverList[currentServerIndex];
     _curentServerStream.sink.add(currentServer);
@@ -109,6 +118,11 @@ class ServerManager {
     // if (removeSyncedFiles == true) {
     //   _deleteServeDirectory(removeThisServer);
     // }
+  }
+
+  Future<void> callAfterEditServer() async {
+    _serverListStream.sink.add(serverList);
+    await writeServerFile();
   }
 
   Future<void> _deleteServeDirectory(Server removedServer) async {

@@ -44,13 +44,13 @@ class ManageServersScreen extends StatelessWidget {
                                     color: Color(0xFF212121),
                                     tooltip: 'Edit Server',
                                     onPressed: () {
-                                      // editThisServer = index;
-                                      // Navigator.push(
-                                      //   context,
-                                      //   MaterialPageRoute(
-                                      //       builder: (context) =>
-                                      //           EditServerScreen()),
-                                      // );
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                EditServerScreen(
+                                                    editThisServer: index)),
+                                      );
                                     }),
                                 IconButton(
                                   icon: Icon(

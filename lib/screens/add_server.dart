@@ -22,10 +22,28 @@ class AddServerScreen extends StatelessWidget {
   }
 }
 
+class EditServerScreen extends StatelessWidget {
+  final int editThisServer;
+  const EditServerScreen({Key? key, required this.editThisServer})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+        appBar: AppBar(
+          title: Text("Edit Server"),
+        ),
+        body: MyCustomForm(editThisServer: editThisServer));
+  }
+}
+
 class MyCustomForm extends StatefulWidget {
+  final int? editThisServer;
+  const MyCustomForm({Key? key, this.editThisServer}) : super(key: key);
+
   @override
   MyCustomFormState createState() {
-    return MyCustomFormState();
+    return MyCustomFormState(editThisServer: editThisServer);
   }
 }
 
@@ -36,15 +54,30 @@ class MyCustomFormState extends State<MyCustomForm> {
   // us to validate the form
   // Note: This is a GlobalKey<FormState>, not a GlobalKey<MyCustomFormState>!
   final _formKey = GlobalKey<FormState>();
-  bool _isUpdate = false;
-  late Directory useThisDir;
-  ServerManager serverManager = ServerManager();
 
   TextEditingController _urlCtrl = TextEditingController();
   TextEditingController _usernameCtrl = TextEditingController();
   TextEditingController _passwordCtrl = TextEditingController();
 
   bool submitPending = false;
+
+  final int? editThisServer;
+  MyCustomFormState({this.editThisServer}) : super();
+
+  @protected
+  @mustCallSuper
+  void initState() {
+    super.initState();
+
+    try {
+      ServerManager().serverList[editThisServer ?? -1];
+      _urlCtrl.text = ServerManager().serverList[editThisServer ?? -1].url;
+      _usernameCtrl.text =
+          ServerManager().serverList[editThisServer ?? -1].username ?? '';
+      _passwordCtrl.text =
+          ServerManager().serverList[editThisServer ?? -1].password ?? '';
+    } catch (err) {}
+  }
 
   checkServer() async {
     setState(() {
@@ -55,34 +88,37 @@ class MyCustomFormState extends State<MyCustomForm> {
     var response;
 
     try {
-      response = await http.get(lol.resolve('/ping'));
-    } catch (err) {
-      setState(() {
-        submitPending = false;
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Could not connect to server')));
-      return;
-    }
+      // Do a quick check on /ping to see if this server even needs authentication
+      response = await http.get(lol.resolve('/api/v1/ping'));
 
-    // Check for login
-    if (response.statusCode == 200) {
-      setState(() {
-        submitPending = false;
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Connection Successful!')));
-      saveServer(origin);
-      return;
-    }
+      if (response.statusCode == 200) {
+        // setState(() {
+        //   submitPending = false;
+        // });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Connection Successful!')));
+        saveServer(origin);
+        return;
+      }
+    } catch (err) {}
 
     // Try logging in
     try {
-      response = await http.post(lol.resolve('/login'), body: {
+      response = await http.post(lol.resolve('/api/v1/auth/login'), body: {
         "username": this._usernameCtrl.text,
         "password": this._passwordCtrl.text
       });
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to connect to server');
+      }
+
+      var res = jsonDecode(response.body);
+
+      // Save
+      saveServer(origin, res['token']);
     } catch (err) {
+      print(err);
       setState(() {
         submitPending = false;
       });
@@ -90,37 +126,26 @@ class MyCustomFormState extends State<MyCustomForm> {
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
     }
-
-    if (response.statusCode != 200) {
-      setState(() {
-        submitPending = false;
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to Login')));
-      return;
-    }
-
-    var res = jsonDecode(response.body);
-
-    // Save
-    saveServer(origin, res['token']);
   }
 
   Future<void> saveServer(String origin, [String jwt = '']) async {
-    Server newServer = new Server(origin, this._usernameCtrl.text,
-        this._passwordCtrl.text, jwt, Uuid().v4());
-    await serverManager.addServer(newServer);
+    bool shouldUpdate = false;
+    try {
+      ServerManager().serverList[editThisServer ?? -1];
+      shouldUpdate = true;
+    } catch (err) {}
+
+    if (shouldUpdate) {
+      ServerManager().editServer(editThisServer!, _urlCtrl.text,
+          _usernameCtrl.text, _passwordCtrl.text);
+    } else {
+      Server newServer = new Server(origin, this._usernameCtrl.text,
+          this._passwordCtrl.text, jwt, Uuid().v4());
+      await ServerManager().addServer(newServer);
+    }
 
     // Save Server List
     Navigator.pop(context);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    getApplicationDocumentsDirectory().then((filepath) {
-      useThisDir = filepath;
-    });
   }
 
   Map<String, String> parseQrCode(String qrValue) {
@@ -129,7 +154,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
 
     List<String> explodeArr = qrValue.split("|");
-    if (explodeArr.length < 5) {
+    if (explodeArr.length < 4) {
       throw new Error();
     }
 
@@ -137,23 +162,12 @@ class MyCustomFormState extends State<MyCustomForm> {
       'url': explodeArr[1],
       'username': explodeArr[2],
       'password': explodeArr[3],
-      'serverName': explodeArr[4]
     };
   }
 
   @override
   Widget build(BuildContext context) {
     // Build a Form widget using the _formKey we created above
-    // try {
-    //   serverList[editThisServer];
-    //   _urlCtrl.text = serverList[editThisServer].url;
-    //   _usernameCtrl.text = serverList[editThisServer].username;
-    //   _passwordCtrl.text = serverList[editThisServer].password;
-    //   _isUpdate = true;
-    // } catch (err) {
-
-    // }
-
     return Container(
       color: Color(0xFF3f3f3f),
       padding: EdgeInsets.all(20.0),
@@ -183,7 +197,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                   labelText: 'Server URL',
                 ),
                 onSaved: (String? value) {
-                  this._urlCtrl.text = value!;
+                  this._urlCtrl.text = value ?? '';
                 }),
             Container(
                 width: MediaQuery.of(context).size.width,
@@ -269,7 +283,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                                   return;
                                 }
 
-                                // _formKey.currentState.save(); // Save our form now.
+                                _formKey.currentState!
+                                    .save(); // Save our form now.
 
                                 // Ping server
                                 checkServer();
