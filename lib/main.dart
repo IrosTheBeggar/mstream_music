@@ -104,7 +104,7 @@ class _MStreamAppState extends State<MStreamApp>
                     return Visibility(
                       visible: cServer != null,
                       child: Text(
-                        cServer == null ? '' : cServer.nickname,
+                        cServer == null ? '' : cServer.url,
                         style: TextStyle(fontSize: 12.0),
                       ),
                     );
@@ -138,10 +138,7 @@ class _MStreamAppState extends State<MStreamApp>
                               ServerManager().serverList.map((server) {
                             return PopupMenuItem(
                               value: ServerManager().serverList.indexOf(server),
-                              child: Text(
-                                  server.nickname.length > 0
-                                      ? server.nickname
-                                      : server.url,
+                              child: Text(server.url,
                                   style: TextStyle(
                                       color: server ==
                                               ServerManager().currentServer

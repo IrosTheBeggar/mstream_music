@@ -33,13 +33,9 @@ class ManageServersScreen extends StatelessWidget {
                         itemCount: cServerList.length,
                         itemBuilder: (BuildContext context, int index) {
                           return ListTile(
-                            title: Text(cServerList[index].nickname,
+                            title: Text(cServerList[index].url,
                                 style: TextStyle(
                                     color: Colors.black, fontSize: 18)),
-                            subtitle: Text(
-                              cServerList[index].url,
-                              style: TextStyle(color: Colors.black),
-                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

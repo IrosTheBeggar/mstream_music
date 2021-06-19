@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 
 import '../objects/server.dart';
@@ -42,7 +43,6 @@ class MyCustomFormState extends State<MyCustomForm> {
   TextEditingController _urlCtrl = TextEditingController();
   TextEditingController _usernameCtrl = TextEditingController();
   TextEditingController _passwordCtrl = TextEditingController();
-  TextEditingController _serverNameCtrl = TextEditingController();
 
   bool submitPending = false;
 
@@ -107,13 +107,8 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 
   Future<void> saveServer(String origin, [String jwt = '']) async {
-    Server newServer = new Server(
-        origin,
-        this._serverNameCtrl.text,
-        this._usernameCtrl.text,
-        this._passwordCtrl.text,
-        jwt,
-        this._serverNameCtrl.text);
+    Server newServer = new Server(origin, this._usernameCtrl.text,
+        this._passwordCtrl.text, jwt, Uuid().v4());
     await serverManager.addServer(newServer);
 
     // Save Server List
@@ -154,7 +149,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     //   _urlCtrl.text = serverList[editThisServer].url;
     //   _usernameCtrl.text = serverList[editThisServer].username;
     //   _passwordCtrl.text = serverList[editThisServer].password;
-    //   _serverNameCtrl.text = serverList[editThisServer].nickname;
     //   _isUpdate = true;
     // } catch (err) {
 
@@ -190,31 +184,6 @@ class MyCustomFormState extends State<MyCustomForm> {
                 ),
                 onSaved: (String? value) {
                   this._urlCtrl.text = value!;
-                }),
-            TextFormField(
-                enabled: !_isUpdate,
-                controller: _serverNameCtrl,
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Server Name is Required For File Syncing';
-                  }
-
-                  if (_isUpdate != true) {
-                    // Check against the directory
-                    String dir = path.join(useThisDir.path, 'media/' + value);
-                    if (new Directory(dir).existsSync() == true) {
-                      return 'Pathname Already Exists';
-                    }
-                    return RegExp(r"^[a-zA-Z0-9_\- ]*$").hasMatch(value)
-                        ? null
-                        : 'No Special Characters';
-                  }
-                },
-                keyboardType: TextInputType.emailAddress,
-                decoration: new InputDecoration(
-                    labelText: 'Server Name', hintText: 'A Unique Name'),
-                onSaved: (String? value) {
-                  this._serverNameCtrl.text = value!;
                 }),
             Container(
                 width: MediaQuery.of(context).size.width,
@@ -277,10 +246,6 @@ class MyCustomFormState extends State<MyCustomForm> {
                                 //     _urlCtrl.text = parsedValues['url'];
                                 //     _usernameCtrl.text = parsedValues['username'];
                                 //     _passwordCtrl.text = parsedValues['password'];
-                                //     if (!_isUpdate) {
-                                //       _serverNameCtrl.text =
-                                //           parsedValues['serverName'];
-                                //     }
                                 //   } catch (err) {
                                 //     Scaffold.of(context).showSnackBar(
                                 //         SnackBar(content: Text('Invalid Code')));
