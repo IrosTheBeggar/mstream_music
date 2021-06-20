@@ -5,14 +5,12 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-//import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
-import 'singletons/browser_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
@@ -71,14 +69,7 @@ class _MStreamAppState extends State<MStreamApp>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-
-    ServerManager().loadServerList().then((e) {
-      if (ServerManager().serverList.length > 0) {
-        BrowserManager().goToNavScreen();
-      } else {
-        BrowserManager().noServerScreen();
-      }
-    });
+    ServerManager().loadServerList();
   }
 
   @override

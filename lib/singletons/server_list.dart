@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import '../objects/server.dart';
+import './browser_list.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -58,12 +59,15 @@ class ServerManager {
       serverList.add(newServer);
     });
 
+    _serverListStream.sink.add(serverList);
+
     if (serverList.length > 0) {
       currentServer = serverList[0];
+      BrowserManager().goToNavScreen();
       _curentServerStream.sink.add(currentServer);
+    } else {
+      BrowserManager().noServerScreen();
     }
-
-    _serverListStream.sink.add(serverList);
   }
 
   Future<void> addServer(Server newServer) async {
@@ -72,6 +76,7 @@ class ServerManager {
     if (currentServer == null) {
       currentServer = newServer;
       _curentServerStream.sink.add(currentServer);
+      BrowserManager().goToNavScreen();
     }
 
     // // Create server directory (for downloads)
@@ -104,10 +109,15 @@ class ServerManager {
     _serverListStream.sink.add(serverList);
 
     if (serverList.length == 0) {
+      // force the browser to rerender so it displays
+      BrowserManager().noServerScreen();
+
       currentServer = null;
       _curentServerStream.sink.add(currentServer);
     } else if (removeThisServer == currentServer) {
       currentServer = serverList[0];
+      // clear the browser
+      BrowserManager().goToNavScreen();
       _curentServerStream.sink.add(currentServer);
     }
 
