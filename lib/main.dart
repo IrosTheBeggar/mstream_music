@@ -12,12 +12,11 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
+import 'singletons/browser_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
-
-ServerManager serverManager = ServerManager();
 
 //final _isTtsSupported = kIsWeb || !Platform.isMacOS;
 
@@ -73,17 +72,11 @@ class _MStreamAppState extends State<MStreamApp>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
 
-    serverManager.loadServerList().then((e) {
+    ServerManager().loadServerList().then((e) {
       if (ServerManager().serverList.length > 0) {
-        // _goToNavScreen();
+        BrowserManager().goToNavScreen();
       } else {
-        // displayList.add(new DisplayItem(
-        //     null,
-        //     'Welcome To mStream',
-        //     'addServer',
-        //     '',
-        //     Icon(Icons.add, color: Colors.black),
-        //     'Click here to add server'));
+        BrowserManager().noServerScreen();
       }
     });
   }
@@ -430,7 +423,7 @@ class TestScreen extends StatelessWidget {
           ),
           // Display the notification click status.
           StreamBuilder<bool>(
-            stream: AudioService.notificationClickEvent,
+            stream: AudioService.notificationClicked,
             builder: (context, snapshot) {
               return Text(
                 'Notification Click Status: ${snapshot.data}',

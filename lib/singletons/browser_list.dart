@@ -9,21 +9,21 @@ import '../objects/display_item.dart';
 import '../objects/server.dart';
 
 class BrowserManager {
+  final List<List<DisplayItem>> browserCache = [];
+  final List<DisplayItem> browserList = [];
+
+  String listName = 'Welcome';
+  bool loading = false;
+
+  late final BehaviorSubject<List<DisplayItem>> _browserStream =
+      BehaviorSubject<List<DisplayItem>>.seeded(browserList);
+
   BrowserManager._privateConstructor();
   static final BrowserManager _instance = BrowserManager._privateConstructor();
 
   factory BrowserManager() {
     return _instance;
   }
-
-  String listName = 'Welcome';
-  bool loading = false;
-
-  final List<List<DisplayItem>> browserCache = [];
-  late final List<DisplayItem> browserList = [];
-
-  late final BehaviorSubject<List<DisplayItem>> _browserStream =
-      BehaviorSubject<List<DisplayItem>>.seeded(browserList);
 
   void goToNavScreen() {
     browserCache.clear();
@@ -43,13 +43,21 @@ class BrowserManager {
 
     browserCache.add([newItem1]);
     browserList.add(newItem1);
+
+    _browserStream.sink.add(browserList);
+  }
+
+  void noServerScreen() {
+    browserCache.clear();
+    browserList.clear();
+
+    browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
+        Icon(Icons.add, color: Colors.black), 'Click here to add server'));
   }
 
   void dispose() {
     _browserStream.close();
   }
-
-  Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
 
   Future<void> getFileList(String directory,
       {bool wipeBackCache = false, Server? useThisServer}) async {
@@ -122,4 +130,6 @@ class BrowserManager {
 
     return res;
   }
+
+  Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
 }

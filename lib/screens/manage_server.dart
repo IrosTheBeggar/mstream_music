@@ -5,7 +5,6 @@ import '../singletons/server_list.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(

@@ -18,7 +18,6 @@ class ServerManager {
       BehaviorSubject<Server?>.seeded(currentServer);
 
   ServerManager._privateConstructor();
-
   static final ServerManager _instance = ServerManager._privateConstructor();
 
   factory ServerManager() {

@@ -3,11 +3,11 @@ import 'server.dart';
 import 'metadata.dart';
 
 class DisplayItem {
-  final Server server;
+  final Server? server;
   final String type;
   final String data;
 
-  Icon icon;
+  Icon? icon;
   String name;
   MusicMetadata? metadata;
   String? subtext;
