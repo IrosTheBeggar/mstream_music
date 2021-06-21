@@ -20,7 +20,7 @@ packages:
     description:
       path: audio_service_platform_interface
       ref: one-isolate
-      resolved-ref: "3aa25ad3e0249b2e4d0b6c5255343fba48d2bcf4"
+      resolved-ref: ec95a57595cb143509a0b3c9f5129e086bb77af7
       url: "https://github.com/ryanheise/audio_service.git"
     source: git
     version: "1.0.0"
@@ -29,7 +29,7 @@ packages:
     description:
       path: audio_service_web
       ref: one-isolate
-      resolved-ref: "3aa25ad3e0249b2e4d0b6c5255343fba48d2bcf4"
+      resolved-ref: ec95a57595cb143509a0b3c9f5129e086bb77af7
       url: "https://github.com/ryanheise/audio_service.git"
     source: git
     version: "0.16.2"
@@ -367,7 +367,7 @@ packages:
       name: win32
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.2.0"
+    version: "2.2.1"
   xdg_directories:
     dependency: transitive
     description:

@@ -17,26 +17,13 @@ import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 
-//final _isTtsSupported = kIsWeb || !Platform.isMacOS;
-
 // You might want to provide this using dependency injection rather than a
 // global variable.
 late AudioHandler _audioHandler;
 
-/// Extension methods for our custom actions.
-extension DemoAudioHandler on AudioHandler {
-  Future<void> switchToHandler(int? index) async {
-    if (index == null) return;
-    await _audioHandler.customAction('switchToHandler', {'index': index});
-  }
-}
-
 Future<void> main() async {
   _audioHandler = await AudioService.init(
-    builder: () => LoggingAudioHandler(MainSwitchHandler([
-      AudioPlayerHandler(),
-      //if (_isTtsSupported) TextPlayerHandler(),
-    ])),
+    builder: () => AudioPlayerHandler(),
     config: AudioServiceConfig(
       androidNotificationChannelName: 'Audio Service Demo',
       androidNotificationOngoing: true,
@@ -345,24 +332,6 @@ class TestScreen extends StatelessWidget {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  StreamBuilder<dynamic>(
-                    stream: _audioHandler.customState,
-                    builder: (context, snapshot) {
-                      final handlerIndex = snapshot.data?.handlerIndex ?? 0;
-                      return DropdownButton<int>(
-                        iconSize: 0.0,
-                        value: handlerIndex,
-                        items: [
-                          for (var i = 0; i < handlerNames.length; i++)
-                            DropdownMenuItem<int>(
-                              value: i,
-                              child: Text(handlerNames[i]),
-                            ),
-                        ],
-                        onChanged: _audioHandler.switchToHandler,
-                      );
-                    },
-                  ),
                   if (queue.isNotEmpty)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -659,34 +628,6 @@ class CustomEvent {
   CustomEvent(this.handlerIndex);
 }
 
-class MainSwitchHandler extends SwitchAudioHandler {
-  final List<AudioHandler> handlers;
-  @override
-  BehaviorSubject<dynamic> customState = BehaviorSubject.seeded(CustomEvent(0));
-
-  MainSwitchHandler(this.handlers) : super(handlers.first) {
-    // Configure the app's audio category and attributes for speech.
-    AudioSession.instance.then((session) {
-      session.configure(AudioSessionConfiguration.speech());
-    });
-  }
-
-  // @override
-  // Future<dynamic> customAction(
-  //     String name, Map<String, dynamic>? extras) async {
-  //   switch (name) {
-  //     case 'switchToHandler':
-  //       await stop();
-  //       final int index = extras!['index'];
-  //       inner = handlers[index];
-  //       customState.add(CustomEvent(index));
-  //       return null;
-  //     default:
-  //       return super.customAction(name, extras);
-  //   }
-  // }
-}
-
 class LoggingAudioHandler extends CompositeAudioHandler {
   LoggingAudioHandler(AudioHandler inner) : super(inner) {
     playbackState.listen((state) {
@@ -869,11 +810,11 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return super.seek(position);
   }
 
-  // @override
-  // Future<void> setRating(Rating rating, Map<String, dynamic>? extras) {
-  //   _log('setRating($rating, $extras)');
-  //   return super.setRating(rating, extras);
-  // }
+  @override
+  Future<void> setRating(Rating rating, [Map<String, dynamic>? extras]) {
+    _log('setRating($rating, $extras)');
+    return super.setRating(rating, extras);
+  }
 
   @override
   Future<void> setCaptioningEnabled(bool enabled) {
@@ -911,14 +852,14 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return super.setSpeed(speed);
   }
 
-  // @override
-  // Future<dynamic> customAction(
-  //     String name, Map<String, dynamic>? extras) async {
-  //   _log('customAction($name, extras)');
-  //   final result = await super.customAction(name, extras);
-  //   _log('customAction -> $result');
-  //   return result;
-  // }
+  @override
+  Future<dynamic> customAction(String name,
+      [Map<String, dynamic>? extras]) async {
+    _log('customAction($name, extras)');
+    final dynamic result = await super.customAction(name, extras);
+    _log('customAction -> $result');
+    return result;
+  }
 
   @override
   Future<void> onTaskRemoved() {
@@ -941,15 +882,15 @@ class LoggingAudioHandler extends CompositeAudioHandler {
     return result;
   }
 
-  // @override
-  // ValueStream<Map<String, dynamic>?> subscribeToChildren(String parentMediaId) {
-  //   _log('subscribeToChildren($parentMediaId)');
-  //   final result = super.subscribeToChildren(parentMediaId);
-  //   result.listen((options) {
-  //     _log('$parentMediaId children changed with options $options');
-  //   });
-  //   return result;
-  // }
+  @override
+  ValueStream<Map<String, dynamic>> subscribeToChildren(String parentMediaId) {
+    _log('subscribeToChildren($parentMediaId)');
+    final result = super.subscribeToChildren(parentMediaId);
+    result.listen((options) {
+      _log('$parentMediaId children changed with options $options');
+    });
+    return result;
+  }
 
   @override
   Future<MediaItem?> getMediaItem(String mediaId) async {
@@ -996,9 +937,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   Future<void> _init() async {
-    // Load and broadcast the queue
-    // queue.add(_mediaLibrary.items[MediaLibrary.albumsRootId]);
-
     queue.add([
       MediaItem(
         id: "https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3",
@@ -1055,34 +993,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       print("Error: $e");
     }
   }
-
-  // @override
-  // Future<List<MediaItem>> getChildren(String parentMediaId,
-  //     [Map<String, dynamic>? options]) async {
-  //   switch (parentMediaId) {
-  //     case AudioService.recentRootId:
-  //       // When the user resumes a media session, tell the system what the most
-  //       // recently played item was.
-  //       print("### get recent children: ${_recentSubject.value}:");
-  //       return _recentSubject.value ?? [];
-  //     default:
-  //       // Allow client to browse the media library.
-  //       print(
-  //           "### get $parentMediaId children: ${_mediaLibrary.items[parentMediaId]}:");
-  //       return _mediaLibrary.items[parentMediaId]!;
-  //   }
-  // }
-
-  // @override
-  // ValueStream<Map<String, dynamic>> subscribeToChildren(String parentMediaId) {
-  //   switch (parentMediaId) {
-  //     case AudioService.recentRootId:
-  //       return _recentSubject.map((_) => {});
-  //     default:
-  //       return Stream.value(_mediaLibrary.items[parentMediaId]).map((_) => {})
-  //           as ValueStream<Map<String, dynamic>>;
-  //   }
-  // }
 
   @override
   Future<void> skipToQueueItem(int index) async {
@@ -1145,41 +1055,4 @@ class AudioPlayerHandler extends BaseAudioHandler
       queueIndex: event.currentIndex,
     ));
   }
-}
-
-/// Provides access to a library of media items. In your app, this could come
-/// from a database or web service.
-class MediaLibrary {
-  static const albumsRootId = 'albums';
-
-  final items = <String, List<MediaItem>>{
-    AudioService.browsableRootId: [
-      MediaItem(
-        id: albumsRootId,
-        album: "",
-        title: "Albums",
-        playable: false,
-      ),
-    ],
-    albumsRootId: [
-      MediaItem(
-        id: "https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3",
-        album: "Science Friday",
-        title: "A Salute To Head-Scratching Science",
-        artist: "Science Friday and WNYC Studios",
-        duration: Duration(milliseconds: 5739820),
-        artUri: Uri.parse(
-            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-      ),
-      MediaItem(
-        id: "https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3",
-        album: "Science Friday",
-        title: "From Cat Rheology To Operatic Incompetence",
-        artist: "Science Friday and WNYC Studios",
-        duration: Duration(milliseconds: 2856950),
-        artUri: Uri.parse(
-            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-      ),
-    ],
-  };
 }
