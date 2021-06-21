@@ -6,6 +6,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -141,7 +142,12 @@ class _MStreamAppState extends State<MStreamApp>
               indicatorColor: Color(0xFFffab00),
               unselectedLabelColor: Color(0xFFcccccc),
               tabs: [
-                Tab(text: 'Browse'),
+                StreamBuilder<String>(
+                    stream: BrowserManager().broswerLabelStream,
+                    builder: (context, snapshot) {
+                      final String? label = snapshot.data;
+                      return Tab(text: label ?? 'Browser');
+                    }),
                 Tab(text: 'Controls'),
                 Tab(text: 'Queue'),
               ],

@@ -17,12 +17,19 @@ class BrowserManager {
 
   late final BehaviorSubject<List<DisplayItem>> _browserStream =
       BehaviorSubject<List<DisplayItem>>.seeded(browserList);
+  late final BehaviorSubject<String> _browserLabel =
+      BehaviorSubject<String>.seeded(listName);
 
   BrowserManager._privateConstructor();
   static final BrowserManager _instance = BrowserManager._privateConstructor();
 
   factory BrowserManager() {
     return _instance;
+  }
+
+  void setBrowserLabel(String label) {
+    listName = label;
+    _browserLabel.sink.add(label);
   }
 
   void goToNavScreen() {
@@ -55,81 +62,22 @@ class BrowserManager {
         Icon(Icons.add, color: Colors.black), 'Click here to add server'));
   }
 
+  void addListToStack(List<DisplayItem> newList) {
+    browserCache.add(newList);
+
+    browserList.clear();
+    newList.forEach((element) {
+      browserList.add(element);
+    });
+
+    _browserStream.sink.add(browserList);
+  }
+
   void dispose() {
     _browserStream.close();
-  }
-
-  Future<void> getFileList(String directory,
-      {bool wipeBackCache = false, Server? useThisServer}) async {
-    listName = 'File Explorer';
-
-    if (useThisServer == null) {
-      return;
-    }
-
-    var res = await _makeServerCall(
-        useThisServer, '/dirparser', {"dir": directory}, 'POST', wipeBackCache);
-    //   if (res == null) {
-    //     return;
-    //   }
-
-    //   displayList.clear();
-    //   List<DisplayItem> newList = new List();
-    //   res['contents'].forEach((e) {
-    //     Icon thisIcon = e['type'] == 'directory'
-    //         ? Icon(Icons.folder, color: Color(0xFFffab00))
-    //         : Icon(Icons.music_note, color: Colors.blue);
-    //     var thisType = (e['type'] == 'directory') ? 'directory' : 'file';
-    //     DisplayItem newItem = new DisplayItem(useThisServer, e['name'], thisType,
-    //         path.join(res['path'], e['name']), thisIcon, null);
-    //     displayList.add(newItem);
-    //     newList.add(newItem);
-    //   });
-    //   displayCache.add(newList);
-  }
-
-  Future _makeServerCall(Server useThisServer, String location, Map payload,
-      String getOrPost, bool wipeBackCache) async {
-    Uri currentUri = Uri.parse(useThisServer.url).resolve(location);
-    var response;
-    const Map<String, String> headers = {};
-    if (useThisServer.jwt != null) {
-      headers['x-access-token'] = useThisServer.jwt!;
-    }
-
-    if (getOrPost == 'GET') {
-      response = await http.get(currentUri, headers: headers);
-    } else {
-      response = await http.post(currentUri, body: payload, headers: headers);
-    }
-
-    //   if (response.statusCode > 299) {
-    //     Fluttertoast.showToast(
-    //       msg: "Server Call Failed",
-    //       toastLength: Toast.LENGTH_SHORT,
-    //       gravity: ToastGravity.CENTER,
-    //       timeInSecForIos: 1,
-    //       backgroundColor: Colors.orange,
-    //       textColor: Colors.white
-    //     );
-    //     return null;
-    //   }
-
-    var res = jsonDecode(response.body);
-    //   if(wipeBackCache) {
-    //     displayCache.clear();
-    //     List<DisplayItem> newList = new List();
-    //     newList.add(new DisplayItem(useThisServer, 'File Explorer', 'execAction', 'fileExplorer', Icon(Icons.folder, color: Color(0xFFffab00)), null));
-    //     newList.add(new DisplayItem(useThisServer, 'Playlists', 'execAction', 'playlists', Icon(Icons.queue_music, color: Colors.black), null));
-    //     newList.add(new DisplayItem(useThisServer, 'Albums', 'execAction', 'albums', Icon(Icons.album, color: Colors.black), null));
-    //     newList.add(new DisplayItem(useThisServer, 'Artists', 'execAction', 'artists', Icon(Icons.library_music, color: Colors.black), null));
-    //     newList.add(new DisplayItem(useThisServer, 'Rated', 'execAction', 'rated', Icon(Icons.star, color: Colors.black), null));
-    //     newList.add(new DisplayItem(useThisServer, 'Recent', 'execAction', 'recent', Icon(Icons.query_builder, color: Colors.black), null));
-    //     displayCache.add(newList);
-    //   }
-
-    return res;
+    _browserLabel.close();
   }
 
   Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
+  Stream<String> get broswerLabelStream => _browserLabel.stream;
 }

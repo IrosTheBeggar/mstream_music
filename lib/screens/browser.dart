@@ -1,10 +1,33 @@
 import 'package:flutter/material.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/api.dart';
 import '../objects/display_item.dart';
 
 import 'add_server.dart';
 
 class Browser extends StatelessWidget {
+  void handleTap(browserList, index, context) {
+    if (browserList[index].type == 'addServer') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => AddServerScreen()),
+      );
+      return;
+    }
+
+    if (browserList[index].type == 'directory') {
+      ApiManager().getFileList(browserList[index].data,
+          useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'fileExplorer') {
+      ApiManager().getFileList("~", useThisServer: browserList[index].server);
+      return;
+    }
+  }
+
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
@@ -19,7 +42,6 @@ class Browser extends StatelessWidget {
               ])),
       Expanded(
           child: SizedBox(
-              // TODO: fix bug where list doesn;t rerender after first server is added
               child: StreamBuilder<List<DisplayItem>>(
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
@@ -70,17 +92,8 @@ class Browser extends StatelessWidget {
                                                     subtitle: browserList[index]
                                                         .getSubText(),
                                                     onTap: () {
-                                                      if (browserList[index]
-                                                              .type ==
-                                                          'addServer') {
-                                                        Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                              builder: (context) =>
-                                                                  AddServerScreen()),
-                                                        );
-                                                        return;
-                                                      }
+                                                      handleTap(browserList,
+                                                          index, context);
                                                     }))
                                           ])))));
                         });
