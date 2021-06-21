@@ -53,6 +53,11 @@ class Browser extends StatelessWidget {
                             Divider(height: 3, color: Colors.white),
                         itemCount: BrowserManager().browserList.length,
                         itemBuilder: (BuildContext context, int index) {
+                          // Fixes an odd rendering bug when going between tabs
+                          if (browserList.length == 0) {
+                            return Container();
+                          }
+
                           return Container(
                               decoration: BoxDecoration(
                                   border: Border(
