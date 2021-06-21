@@ -73,6 +73,16 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
+  void popBrowser() {
+    browserCache.removeLast();
+    browserList.clear();
+    browserCache[browserCache.length - 1].forEach((el) {
+      browserList.add(el);
+    });
+
+    _browserStream.sink.add(browserList);
+  }
+
   void dispose() {
     _browserStream.close();
     _browserLabel.close();

@@ -73,143 +73,161 @@ class _MStreamAppState extends State<MStreamApp>
     ServerManager().loadServerList();
   }
 
+  Future<bool> _onWillPop() {
+    if (_tabController.index != 0) {
+      _tabController.animateTo(0);
+      return new Future.value(false);
+    } else if (BrowserManager().browserCache.length > 1) {
+      BrowserManager().popBrowser();
+      return new Future.value(false);
+    } else {
+      return new Future.value(true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('mStream Music'),
-              StreamBuilder<Server?>(
-                  stream: ServerManager().curentServerStream,
-                  builder: (context, snapshot) {
-                    final Server? cServer = snapshot.data;
-                    return Visibility(
-                      visible: cServer != null,
-                      child: Text(
-                        cServer == null ? '' : cServer.url,
-                        style: TextStyle(fontSize: 12.0),
-                      ),
-                    );
-                  }),
-            ],
-          ),
-          actions: <Widget>[
-            StreamBuilder<List<Server>>(
-                stream: ServerManager().serverListStream,
-                builder: (context, snapshot) {
-                  final isVisible =
-                      snapshot.hasData && snapshot.data!.length > 1;
-                  return Visibility(
-                    visible: isVisible,
-                    child: PopupMenuButton(
-                        onSelected: (int selectedServerIndex) {
-                          _tabController.animateTo(0);
-                          if (selectedServerIndex > -1) {
-                            ServerManager()
-                                .changeCurrentServer(selectedServerIndex);
-                          } else if (selectedServerIndex == -1) {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => AddServerScreen()));
-                          }
-                        },
-                        icon: Icon(Icons.cloud),
-                        itemBuilder: (BuildContext context) {
-                          List<PopupMenuEntry<int>> popUpWidgetList =
-                              ServerManager().serverList.map((server) {
-                            return PopupMenuItem(
-                              value: ServerManager().serverList.indexOf(server),
-                              child: Text(server.url,
-                                  style: TextStyle(
-                                      color: server ==
-                                              ServerManager().currentServer
-                                          ? Colors.blue
-                                          : Colors.black)),
-                            );
-                          }).toList();
-
-                          return popUpWidgetList;
-                        }),
-                  );
-                }),
-          ],
-          bottom: TabBar(
-              labelColor: Color(0xFFffab00),
-              indicatorColor: Color(0xFFffab00),
-              unselectedLabelColor: Color(0xFFcccccc),
-              tabs: [
-                StreamBuilder<String>(
-                    stream: BrowserManager().broswerLabelStream,
+    return new WillPopScope(
+        onWillPop: _onWillPop,
+        child: Scaffold(
+            appBar: AppBar(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('mStream Music'),
+                  StreamBuilder<Server?>(
+                      stream: ServerManager().curentServerStream,
+                      builder: (context, snapshot) {
+                        final Server? cServer = snapshot.data;
+                        return Visibility(
+                          visible: cServer != null,
+                          child: Text(
+                            cServer == null ? '' : cServer.url,
+                            style: TextStyle(fontSize: 12.0),
+                          ),
+                        );
+                      }),
+                ],
+              ),
+              actions: <Widget>[
+                StreamBuilder<List<Server>>(
+                    stream: ServerManager().serverListStream,
                     builder: (context, snapshot) {
-                      final String? label = snapshot.data;
-                      return Tab(text: label ?? 'Browser');
+                      final isVisible =
+                          snapshot.hasData && snapshot.data!.length > 1;
+                      return Visibility(
+                        visible: isVisible,
+                        child: PopupMenuButton(
+                            onSelected: (int selectedServerIndex) {
+                              _tabController.animateTo(0);
+                              if (selectedServerIndex > -1) {
+                                ServerManager()
+                                    .changeCurrentServer(selectedServerIndex);
+                              } else if (selectedServerIndex == -1) {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddServerScreen()));
+                              }
+                            },
+                            icon: Icon(Icons.cloud),
+                            itemBuilder: (BuildContext context) {
+                              List<PopupMenuEntry<int>> popUpWidgetList =
+                                  ServerManager().serverList.map((server) {
+                                return PopupMenuItem(
+                                  value: ServerManager()
+                                      .serverList
+                                      .indexOf(server),
+                                  child: Text(server.url,
+                                      style: TextStyle(
+                                          color: server ==
+                                                  ServerManager().currentServer
+                                              ? Colors.blue
+                                              : Colors.black)),
+                                );
+                              }).toList();
+
+                              return popUpWidgetList;
+                            }),
+                      );
                     }),
-                Tab(text: 'Controls'),
-                Tab(text: 'Queue'),
               ],
-              controller: _tabController),
-        ),
-        drawer: Drawer(
-            child: ListView(children: <Widget>[
-          ListTile(
-            title: Text(
-              'mStream Music',
-              style: TextStyle(
-                  fontFamily: 'Jura',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 28,
-                  color: Color(0xFFffab00)),
+              bottom: TabBar(
+                  labelColor: Color(0xFFffab00),
+                  indicatorColor: Color(0xFFffab00),
+                  unselectedLabelColor: Color(0xFFcccccc),
+                  tabs: [
+                    StreamBuilder<String>(
+                        stream: BrowserManager().broswerLabelStream,
+                        builder: (context, snapshot) {
+                          final String? label = snapshot.data;
+                          return Tab(text: label ?? 'Browser');
+                        }),
+                    Tab(text: 'Controls'),
+                    Tab(text: 'Queue'),
+                  ],
+                  controller: _tabController),
             ),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => AboutScreen()));
-            },
-          ),
-          Divider(),
-          ListTile(
-            leading: Icon(Icons.folder),
-            title: Text(
-              'File Explorer',
-              style: TextStyle(
-                  fontFamily: 'Jura',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 17),
-            ),
-            onTap: () {
-              // if(serverList.length > 0) {
-              //   getFileList("", wipeBackCache: true);
-              // }else {
-              //   _setupStartScreen();
-              // }
-              Navigator.of(context).pop();
-              _tabController.animateTo(0);
-            },
-          ),
-          ListTile(
-            title: Text('Manage Servers',
-                style: TextStyle(
-                    fontFamily: 'Jura',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17)),
-            leading: Icon(Icons.router),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ManageServersScreen()),
-              );
-            },
-          ),
-        ])),
-        body: TabBarView(
-            children: [Browser(), TestScreen(), NowPlaying()],
-            controller: _tabController),
-        bottomNavigationBar: BottomBar());
+            drawer: Drawer(
+                child: ListView(children: <Widget>[
+              ListTile(
+                title: Text(
+                  'mStream Music',
+                  style: TextStyle(
+                      fontFamily: 'Jura',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      color: Color(0xFFffab00)),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => AboutScreen()));
+                },
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.folder),
+                title: Text(
+                  'File Explorer',
+                  style: TextStyle(
+                      fontFamily: 'Jura',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17),
+                ),
+                onTap: () {
+                  // if(serverList.length > 0) {
+                  //   getFileList("", wipeBackCache: true);
+                  // }else {
+                  //   _setupStartScreen();
+                  // }
+                  Navigator.of(context).pop();
+                  _tabController.animateTo(0);
+                },
+              ),
+              ListTile(
+                title: Text('Manage Servers',
+                    style: TextStyle(
+                        fontFamily: 'Jura',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17)),
+                leading: Icon(Icons.router),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ManageServersScreen()),
+                  );
+                },
+              ),
+            ])),
+            body: TabBarView(
+                children: [Browser(), TestScreen(), NowPlaying()],
+                controller: _tabController),
+            bottomNavigationBar: BottomBar()));
   }
 }
 
