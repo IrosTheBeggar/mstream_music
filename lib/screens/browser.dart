@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../objects/display_item.dart';
+import 'package:uuid/uuid.dart';
 
 import '../singletons/lol.dart';
 
@@ -36,9 +37,11 @@ class Browser extends StatelessWidget {
       String lolUrl = Uri.encodeFull(browserList[index].server!.url +
           '/media' +
           browserList[index].data +
+          '?app_uuid=' +
+          Uuid().v4() +
           (browserList[index].server!.jwt == null
               ? ''
-              : '?token=' + browserList[index].server!.jwt!));
+              : '&token=' + browserList[index].server!.jwt!));
 
       MediaItem lol = new MediaItem(id: lolUrl, title: browserList[index].name);
       LolManager().audioHandler.addQueueItem(lol);
