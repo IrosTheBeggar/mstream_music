@@ -286,7 +286,7 @@ class NowPlaying extends StatelessWidget {
                                   tileColor: (queue[index] == mediaItem)
                                       ? Color(0xFFffab00)
                                       : null,
-                                  title: Text(queue[index].id,
+                                  title: Text(queue[index].title,
                                       style: TextStyle(
                                           fontFamily: 'Jura',
                                           fontSize: 18,

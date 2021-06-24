@@ -101,6 +101,7 @@ class ServerManager {
   void changeCurrentServer(int currentServerIndex) {
     currentServer = serverList[currentServerIndex];
     _curentServerStream.sink.add(currentServer);
+    BrowserManager().goToNavScreen();
   }
 
   Future<void> removeServer(

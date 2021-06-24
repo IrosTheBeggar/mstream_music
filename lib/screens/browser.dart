@@ -32,10 +32,14 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'file') {
-      String lolUrl = Uri.encodeFull(
-          browserList[index].server!.url + '/media' + browserList[index].data);
+      // TODO: Add a unique GET param to avoid duplicate IDs
+      String lolUrl = Uri.encodeFull(browserList[index].server!.url +
+          '/media' +
+          browserList[index].data +
+          (browserList[index].server!.jwt == null
+              ? ''
+              : '?token=' + browserList[index].server!.jwt!));
 
-      // String lolUrl = browserList[index].server!.url + browserList[index].data;
       MediaItem lol = new MediaItem(id: lolUrl, title: browserList[index].name);
       LolManager().audioHandler.addQueueItem(lol);
     }
