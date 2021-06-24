@@ -1,12 +1,16 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../objects/display_item.dart';
 
+import '../singletons/lol.dart';
+
 import 'add_server.dart';
 
 class Browser extends StatelessWidget {
-  void handleTap(browserList, index, context) {
+  void handleTap(
+      List<DisplayItem> browserList, int index, BuildContext context) {
     if (browserList[index].type == 'addServer') {
       Navigator.push(
         context,
@@ -25,6 +29,15 @@ class Browser extends StatelessWidget {
         browserList[index].data == 'fileExplorer') {
       ApiManager().getFileList("~", useThisServer: browserList[index].server);
       return;
+    }
+
+    if (browserList[index].type == 'file') {
+      String lolUrl = Uri.encodeFull(
+          browserList[index].server!.url + '/media' + browserList[index].data);
+
+      // String lolUrl = browserList[index].server!.url + browserList[index].data;
+      MediaItem lol = new MediaItem(id: lolUrl, title: browserList[index].name);
+      LolManager().audioHandler.addQueueItem(lol);
     }
   }
 

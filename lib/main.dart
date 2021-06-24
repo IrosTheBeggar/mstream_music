@@ -18,19 +18,12 @@ import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'media/common.dart';
 
-// You might want to provide this using dependency injection rather than a
-// global variable.
-late AudioHandler _audioHandler;
+// import 'media/audio_stuff.dart';
+import 'singletons/lol.dart';
 
 Future<void> main() async {
-  _audioHandler = await AudioService.init(
-    builder: () => AudioPlayerHandler(),
-    config: AudioServiceConfig(
-      androidNotificationChannelName: 'Audio Service Demo',
-      androidNotificationOngoing: true,
-      androidEnableQueue: true,
-    ),
-  );
+  await LolManager().start();
+
   runApp(new MaterialApp(
       title: 'Audio Service Demo',
       home: MStreamApp(),
@@ -256,7 +249,9 @@ class NowPlaying extends StatelessWidget {
                               dismissal: SlidableDismissal(
                                 child: SlidableDrawerDismissal(),
                                 onDismissed: (actionType) {
-                                  _audioHandler.removeQueueItem(queue[index]);
+                                  LolManager()
+                                      .audioHandler
+                                      .removeQueueItemAt(index);
                                 },
                               ),
                               actions: <Widget>[
@@ -297,8 +292,10 @@ class NowPlaying extends StatelessWidget {
                                           fontSize: 18,
                                           color: Colors.black)),
                                   onTap: () {
-                                    _audioHandler.skipToQueueItem(index);
-                                    _audioHandler.play();
+                                    LolManager()
+                                        .audioHandler
+                                        .skipToQueueItem(index);
+                                    LolManager().audioHandler.play();
                                   }));
                         });
                   })))
@@ -307,8 +304,8 @@ class NowPlaying extends StatelessWidget {
 
   Stream<QueueState> get _queueStateStream =>
       Rx.combineLatest2<List<MediaItem>?, MediaItem?, QueueState>(
-          _audioHandler.queue,
-          _audioHandler.mediaItem,
+          LolManager().audioHandler.queue,
+          LolManager().audioHandler.mediaItem,
           (queue, mediaItem) => QueueState(queue, mediaItem));
 }
 
@@ -342,14 +339,14 @@ class TestScreen extends StatelessWidget {
                           // iconSize: 64.0,
                           onPressed: mediaItem == queue.first
                               ? null
-                              : _audioHandler.skipToPrevious,
+                              : LolManager().audioHandler.skipToPrevious,
                         ),
                         IconButton(
                           icon: Icon(Icons.skip_next),
                           // iconSize: 64.0,
                           onPressed: mediaItem == queue.last
                               ? null
-                              : _audioHandler.skipToNext,
+                              : LolManager().audioHandler.skipToNext,
                         ),
                       ],
                     ),
@@ -360,7 +357,9 @@ class TestScreen extends StatelessWidget {
           ),
           // Play/pause/stop buttons.
           StreamBuilder<bool>(
-            stream: _audioHandler.playbackState
+            stream: LolManager()
+                .audioHandler
+                .playbackState
                 .map((state) => state.playing)
                 .distinct(),
             builder: (context, snapshot) {
@@ -383,14 +382,16 @@ class TestScreen extends StatelessWidget {
                 duration: mediaState?.mediaItem?.duration ?? Duration.zero,
                 position: mediaState?.position ?? Duration.zero,
                 onChangeEnd: (newPosition) {
-                  _audioHandler.seek(newPosition);
+                  LolManager().audioHandler.seek(newPosition);
                 },
               );
             },
           ),
           // Display the processing state.
           StreamBuilder<AudioProcessingState>(
-            stream: _audioHandler.playbackState
+            stream: LolManager()
+                .audioHandler
+                .playbackState
                 .map((state) => state.processingState)
                 .distinct(),
             builder: (context, snapshot) {
@@ -401,7 +402,7 @@ class TestScreen extends StatelessWidget {
           ),
           // Display the latest custom event.
           StreamBuilder(
-            stream: _audioHandler.customEvent,
+            stream: LolManager().audioHandler.customEvent,
             builder: (context, snapshot) {
               return Text("custom event: ${snapshot.data}");
             },
@@ -424,7 +425,7 @@ class TestScreen extends StatelessWidget {
   /// current position.
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
-          _audioHandler.mediaItem,
+          LolManager().audioHandler.mediaItem,
           AudioService.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
@@ -432,8 +433,8 @@ class TestScreen extends StatelessWidget {
   /// media item within that queue.
   Stream<QueueState> get _queueStateStream =>
       Rx.combineLatest2<List<MediaItem>?, MediaItem?, QueueState>(
-          _audioHandler.queue,
-          _audioHandler.mediaItem,
+          LolManager().audioHandler.queue,
+          LolManager().audioHandler.mediaItem,
           (queue, mediaItem) => QueueState(queue, mediaItem));
 
   ElevatedButton startButton(String label, VoidCallback onPressed) =>
@@ -445,19 +446,19 @@ class TestScreen extends StatelessWidget {
   IconButton playButton() => IconButton(
         icon: Icon(Icons.play_arrow),
         // iconSize: 64.0,
-        onPressed: _audioHandler.play,
+        onPressed: LolManager().audioHandler.play,
       );
 
   IconButton pauseButton() => IconButton(
         icon: Icon(Icons.pause),
         // iconSize: 64.0,
-        onPressed: _audioHandler.pause,
+        onPressed: LolManager().audioHandler.pause,
       );
 
   IconButton stopButton() => IconButton(
         icon: Icon(Icons.stop),
         // iconSize: 64.0,
-        onPressed: _audioHandler.stop,
+        onPressed: LolManager().audioHandler.stop,
       );
 }
 
@@ -483,7 +484,9 @@ class BottomBar extends StatelessWidget {
                   double doubleDs = duration.inSeconds.toDouble();
                   int newDuration = (doubleDs * percentage).toInt();
 
-                  _audioHandler.seek(Duration(seconds: newDuration));
+                  LolManager()
+                      .audioHandler
+                      .seek(Duration(seconds: newDuration));
                 },
                 child: Container(
                   height: 16,
@@ -503,7 +506,9 @@ class BottomBar extends StatelessWidget {
               children: <Widget>[
                 Row(children: [
                   StreamBuilder<bool>(
-                    stream: _audioHandler.playbackState
+                    stream: LolManager()
+                        .audioHandler
+                        .playbackState
                         .map((state) => state.playing)
                         .distinct(),
                     builder: (context, snapshot) {
@@ -523,20 +528,20 @@ class BottomBar extends StatelessWidget {
   /// current position.
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
-          _audioHandler.mediaItem,
+          LolManager().audioHandler.mediaItem,
           AudioService.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   IconButton playButton() => IconButton(
         icon: Icon(Icons.play_arrow),
         // iconSize: 64.0,
-        onPressed: _audioHandler.play,
+        onPressed: LolManager().audioHandler.play,
       );
 
   IconButton pauseButton() => IconButton(
         icon: Icon(Icons.pause),
         // iconSize: 64.0,
-        onPressed: _audioHandler.pause,
+        onPressed: LolManager().audioHandler.pause,
       );
 }
 
@@ -554,212 +559,8 @@ class MediaState {
   MediaState(this.mediaItem, this.position);
 }
 
-class SeekBar extends StatefulWidget {
-  final Duration duration;
-  final Duration position;
-  final ValueChanged<Duration>? onChanged;
-  final ValueChanged<Duration>? onChangeEnd;
-
-  SeekBar({
-    required this.duration,
-    required this.position,
-    this.onChanged,
-    this.onChangeEnd,
-  });
-
-  @override
-  _SeekBarState createState() => _SeekBarState();
-}
-
-class _SeekBarState extends State<SeekBar> {
-  double? _dragValue;
-  bool _dragging = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = min(_dragValue ?? widget.position.inMilliseconds.toDouble(),
-        widget.duration.inMilliseconds.toDouble());
-    if (_dragValue != null && !_dragging) {
-      _dragValue = null;
-    }
-    return Stack(
-      children: [
-        Slider(
-          min: 0.0,
-          max: widget.duration.inMilliseconds.toDouble(),
-          value: value,
-          onChanged: (value) {
-            if (!_dragging) {
-              _dragging = true;
-            }
-            setState(() {
-              _dragValue = value;
-            });
-            if (widget.onChanged != null) {
-              widget.onChanged!(Duration(milliseconds: value.round()));
-            }
-          },
-          onChangeEnd: (value) {
-            if (widget.onChangeEnd != null) {
-              widget.onChangeEnd!(Duration(milliseconds: value.round()));
-            }
-            _dragging = false;
-          },
-        ),
-        Positioned(
-          right: 16.0,
-          bottom: 0.0,
-          child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                      .firstMatch("$_remaining")
-                      ?.group(1) ??
-                  '$_remaining',
-              style: Theme.of(context).textTheme.caption),
-        ),
-      ],
-    );
-  }
-
-  Duration get _remaining => widget.duration - widget.position;
-}
-
 class CustomEvent {
   final int handlerIndex;
 
   CustomEvent(this.handlerIndex);
-}
-
-/// An [AudioHandler] for playing a list of podcast episodes.
-class AudioPlayerHandler extends BaseAudioHandler
-    with QueueHandler, SeekHandler {
-  // ignore: close_sinks
-  final BehaviorSubject<List<MediaItem>> _recentSubject =
-      BehaviorSubject<List<MediaItem>>();
-  final _player = AudioPlayer();
-
-  int? get index => _player.currentIndex;
-
-  AudioPlayerHandler() {
-    _init();
-  }
-
-  Future<void> _init() async {
-    queue.add([
-      MediaItem(
-        id: "https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3",
-        album: "Science Friday",
-        title: "A Salute To Head-Scratching Science",
-        artist: "Science Friday and WNYC Studios",
-        duration: Duration(milliseconds: 5739820),
-        artUri: Uri.parse(
-            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-      ),
-      MediaItem(
-          id: 'https://demo.mstream.io/media/music/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
-          album: 'LOL',
-          duration: Duration(milliseconds: 2856950),
-          title: 'LOL'),
-      MediaItem(
-        id: "https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3",
-        album: "Science Friday",
-        title: "From Cat Rheology To Operatic Incompetence",
-        artist: "Science Friday and WNYC Studios",
-        duration: Duration(milliseconds: 2856950),
-        artUri: Uri.parse(
-            "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-      )
-    ]);
-
-    // For Android 11, record the most recent item so it can be resumed.
-    mediaItem
-        .whereType<MediaItem>()
-        .listen((item) => _recentSubject.add([item]));
-    // Broadcast media item changes.
-    _player.currentIndexStream.listen((index) {
-      if (index != null) mediaItem.add(queue.value![index]);
-    });
-    // Propagate all events from the audio player to AudioService clients.
-    _player.playbackEventStream.listen(_broadcastState);
-    // In this example, the service stops when reaching the end.
-    _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) stop();
-    });
-    try {
-      print("### _player.load");
-      // After a cold restart (on Android), _player.load jumps straight from
-      // the loading state to the completed state. Inserting a delay makes it
-      // work. Not sure why!
-      //await Future.delayed(Duration(seconds: 2)); // magic delay
-      await _player.setAudioSource(ConcatenatingAudioSource(
-        children: queue.value!
-            .map((item) => AudioSource.uri(Uri.parse(item.id)))
-            .toList(),
-      ));
-      print("### loaded");
-    } catch (e) {
-      print("Error: $e");
-    }
-  }
-
-  @override
-  Future<void> skipToQueueItem(int index) async {
-    // Then default implementations of skipToNext and skipToPrevious provided by
-    // the [QueueHandler] mixin will delegate to this method.
-    if (index < 0 || index > queue.value!.length) return;
-    // This jumps to the beginning of the queue item at newIndex.
-    _player.seek(Duration.zero, index: index);
-    // Demonstrate custom events.
-    customEvent.add('skip to $index');
-  }
-
-  @override
-  Future<void> addQueueItem(MediaItem item) async {
-    queue.add(queue.value!..add(item));
-  }
-
-  @override
-  Future<void> play() => _player.play();
-
-  @override
-  Future<void> pause() => _player.pause();
-
-  @override
-  Future<void> seek(Duration position) => _player.seek(position);
-
-  @override
-  Future<void> stop() async {
-    await _player.stop();
-    await super.stop();
-  }
-
-  /// Broadcasts the current state to all clients.
-  void _broadcastState(PlaybackEvent event) {
-    final playing = _player.playing;
-    playbackState.add(playbackState.value.copyWith(
-      controls: [
-        MediaControl.skipToPrevious,
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
-        MediaControl.skipToNext,
-      ],
-      systemActions: {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: [0, 1, 3],
-      processingState: {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState]!,
-      playing: playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
-      queueIndex: event.currentIndex,
-    ));
-  }
 }
