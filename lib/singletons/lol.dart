@@ -11,8 +11,6 @@ class LolManager {
   late AudioHandler audioHandler;
 
   start() async {
-    print('lol');
-
     audioHandler = await AudioService.init(
       builder: () => AudioPlayerHandler(),
       config: AudioServiceConfig(

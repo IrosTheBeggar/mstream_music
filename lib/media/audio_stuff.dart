@@ -154,6 +154,4 @@ class AudioPlayerHandler extends BaseAudioHandler
       queueIndex: event.currentIndex,
     ));
   }
-
-  void resetPlayer() {}
 }
