@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
@@ -20,31 +21,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   Future<void> _init() async {
-    // queue.add([
-    //   MediaItem(
-    //     id: "https://s3.amazonaws.com/scifri-episodes/scifri20181123-episode.mp3",
-    //     album: "Science Friday",
-    //     title: "A Salute To Head-Scratching Science",
-    //     artist: "Science Friday and WNYC Studios",
-    //     duration: Duration(milliseconds: 5739820),
-    //     artUri: Uri.parse(
-    //         "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-    //   ),
-    //   MediaItem(
-    //       id: 'https://demo.mstream.io/media/music/Vosto/Vosto%20-%20Metro%20Holografix%20-%2003%20Sunset%20of%20Synths.mp3',
-    //       album: 'LOL',
-    //       duration: Duration(milliseconds: 2856950),
-    //       title: 'LOL'),
-    //   MediaItem(
-    //     id: "https://s3.amazonaws.com/scifri-segments/scifri201711241.mp3",
-    //     album: "Science Friday",
-    //     title: "From Cat Rheology To Operatic Incompetence",
-    //     artist: "Science Friday and WNYC Studios",
-    //     duration: Duration(milliseconds: 2856950),
-    //     artUri: Uri.parse(
-    //         "https://media.wnyc.org/i/1400/1400/l/80/1/ScienceFriday_WNYCStudios_1400.jpg"),
-    //   )
-    // ]);
+    // AudioSession.instance.then((session) {
+    //   session.configure(const AudioSessionConfiguration.music());
+    // });
+    // final session = await AudioSession.instance;
+
+    //     // Handle unplugged headphones.
+    // session.becomingNoisyEventStream.listen((_) {
+    //   if (_playing) pause();
+    // });
 
     // For Android 11, record the most recent item so it can be resumed.
     mediaItem
