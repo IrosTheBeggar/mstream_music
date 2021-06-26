@@ -58,7 +58,9 @@ class Browser extends StatelessWidget {
                 IconButton(
                     icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
                     tooltip: 'Go Back',
-                    onPressed: () {}),
+                    onPressed: () {
+                      BrowserManager().popBrowser();
+                    }),
               ])),
       Expanded(
           child: SizedBox(

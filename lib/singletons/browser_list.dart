@@ -74,6 +74,10 @@ class BrowserManager {
   }
 
   void popBrowser() {
+    if (BrowserManager().browserCache.length < 2) {
+      return;
+    }
+
     browserCache.removeLast();
     browserList.clear();
     browserCache[browserCache.length - 1].forEach((el) {
