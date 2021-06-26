@@ -40,6 +40,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (index != null && queue.value!.isNotEmpty)
         mediaItem.add(queue.value![index]);
     });
+    // Magic
+    _player.durationStream.listen((duration) {
+      if (index != null && duration != null) {
+        mediaItem
+            .add(queue.value![index!.toInt()].copyWith(duration: duration));
+      }
+    });
     // Propagate all events from the audio player to AudioService clients.
     _player.playbackEventStream.listen(_broadcastState);
     // In this example, the service stops when reaching the end.
