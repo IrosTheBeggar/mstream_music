@@ -56,9 +56,46 @@ class BrowserManager {
         Icon(Icons.queue_music, color: Colors.black),
         null);
 
-    browserCache.add([newItem1, newItem2]);
+    DisplayItem newItem3 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Albums',
+        'execAction',
+        'albums',
+        Icon(Icons.album, color: Colors.black),
+        null);
+
+    DisplayItem newItem4 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Artists',
+        'execAction',
+        'artists',
+        Icon(Icons.library_music, color: Colors.black),
+        null);
+
+    DisplayItem newItem5 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Rated',
+        'execAction',
+        'rated',
+        Icon(Icons.star, color: Colors.black),
+        null);
+
+    DisplayItem newItem6 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Recent',
+        'execAction',
+        'recent',
+        Icon(Icons.query_builder, color: Colors.black),
+        null);
+
+    browserCache
+        .add([newItem1, newItem2, newItem3, newItem4, newItem5, newItem6]);
     browserList.add(newItem1);
     browserList.add(newItem2);
+    browserList.add(newItem3);
+    browserList.add(newItem4);
+    browserList.add(newItem5);
+    browserList.add(newItem6);
 
     _browserStream.sink.add(browserList);
   }

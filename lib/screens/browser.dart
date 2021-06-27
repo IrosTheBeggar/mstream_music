@@ -44,6 +44,30 @@ class Browser extends StatelessWidget {
       return;
     }
 
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'recent') {
+      ApiManager().getRecentlyAdded(useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'rated') {
+      ApiManager().getRated(useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'albums') {
+      ApiManager().getAlbums(useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'album') {
+      ApiManager().getAlbumSongs(browserList[index].data,
+          useThisServer: browserList[index].server);
+      return;
+    }
+
     if (browserList[index].type == 'file') {
       // TODO: Add a unique GET param to avoid duplicate IDs
       String lolUrl = Uri.encodeFull(browserList[index].server!.url +

@@ -66,6 +66,108 @@ class ApiManager {
     BrowserManager().addListToStack(newList);
   }
 
+  Future<void> getAlbums({Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().setBrowserLabel('Albums');
+
+    List<DisplayItem> newList = [];
+    res['albums'].forEach((e) {
+      DisplayItem newItem = new DisplayItem(useThisServer, e['name'], 'album',
+          e['name'], Icon(Icons.album, color: Colors.black), null);
+      newList.add(newItem);
+    });
+
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getAlbumSongs(String album, {Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(
+          useThisServer, '/api/v1/db/album-songs', {'album': album}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    // TODO: Handle metadata
+    List<DisplayItem> newList = [];
+    res.forEach((e) {
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          e['filepath'],
+          'file',
+          '/' + e['filepath'],
+          Icon(Icons.music_note, color: Colors.blue),
+          null);
+      newList.add(newItem);
+    });
+
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getRecentlyAdded({Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(
+          useThisServer, '/api/v1/db/recent/added', {'limit': '100'}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().setBrowserLabel('Recent');
+
+    List<DisplayItem> newList = [];
+    res.forEach((e) {
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          e['filepath'],
+          'file',
+          '/' + e['filepath'],
+          Icon(Icons.music_note, color: Colors.blue),
+          null);
+      newList.add(newItem);
+    });
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getRated({Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().setBrowserLabel('Rated');
+
+    List<DisplayItem> newList = [];
+    res.forEach((e) {
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          '[' + (e['metadata']['rating'] / 2).toString() + ']' + e['filepath'],
+          'file',
+          '/' + e['filepath'],
+          Icon(Icons.music_note, color: Colors.blue),
+          null);
+      newList.add(newItem);
+    });
+    BrowserManager().addListToStack(newList);
+  }
+
   Future<void> getPlaylistContents(String playlistName,
       {Server? useThisServer}) async {
     var res;
