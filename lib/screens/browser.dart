@@ -26,6 +26,18 @@ class Browser extends StatelessWidget {
       return;
     }
 
+    if (browserList[index].type == 'playlist') {
+      ApiManager().getPlaylistContents(browserList[index].data,
+          useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'playlists') {
+      ApiManager().getPlaylists(useThisServer: browserList[index].server);
+      return;
+    }
+
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'fileExplorer') {
       ApiManager().getFileList("~", useThisServer: browserList[index].server);
@@ -45,6 +57,8 @@ class Browser extends StatelessWidget {
 
       MediaItem lol = new MediaItem(id: lolUrl, title: browserList[index].name);
       LolManager().audioHandler.addQueueItem(lol);
+
+      // TODO: Fire of request for metadata
     }
   }
 

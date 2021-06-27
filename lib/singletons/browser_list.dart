@@ -48,8 +48,17 @@ class BrowserManager {
         Icon(Icons.folder, color: Color(0xFFffab00)),
         null);
 
-    browserCache.add([newItem1]);
+    DisplayItem newItem2 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Playlists',
+        'execAction',
+        'playlists',
+        Icon(Icons.queue_music, color: Colors.black),
+        null);
+
+    browserCache.add([newItem1, newItem2]);
     browserList.add(newItem1);
+    browserList.add(newItem2);
 
     _browserStream.sink.add(browserList);
   }

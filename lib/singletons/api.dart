@@ -38,6 +38,62 @@ class ApiManager {
     return jsonDecode(response.body);
   }
 
+  Future<void> getPlaylists({Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(
+          useThisServer, '/api/v1/playlist/getall', {}, 'GET');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().setBrowserLabel('Playlists');
+
+    List<DisplayItem> newList = [];
+    res.forEach((e) {
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          e['name'],
+          'playlist',
+          e['name'],
+          Icon(Icons.queue_music, color: Colors.black),
+          null);
+      newList.add(newItem);
+    });
+
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getPlaylistContents(String playlistName,
+      {Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/playlist/load',
+          {'playlistname': playlistName}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    // TODO: Handle metadata
+    List<DisplayItem> newList = [];
+    res.forEach((e) {
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          e['filepath'],
+          'file',
+          '/' + e['filepath'],
+          Icon(Icons.music_note, color: Colors.blue),
+          null);
+      newList.add(newItem);
+    });
+
+    BrowserManager().addListToStack(newList);
+  }
+
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
     var res;
     try {
