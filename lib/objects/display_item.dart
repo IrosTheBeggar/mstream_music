@@ -5,7 +5,7 @@ import 'metadata.dart';
 class DisplayItem {
   final Server? server;
   final String type;
-  final String data;
+  final String? data;
 
   Icon? icon;
   String name;

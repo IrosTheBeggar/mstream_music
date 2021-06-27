@@ -28,7 +28,11 @@ class ApiManager {
           .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
     } else {
       response = await http.post(currentUri,
-          body: payload, headers: {'x-access-token': server.jwt ?? ''});
+          body: json.encode(payload),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? ''
+          });
     }
 
     if (response.statusCode > 299) {
@@ -88,7 +92,7 @@ class ApiManager {
     BrowserManager().addListToStack(newList);
   }
 
-  Future<void> getAlbumSongs(String album, {Server? useThisServer}) async {
+  Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
     var res;
     try {
       res = await makeServerCall(
@@ -119,7 +123,7 @@ class ApiManager {
     var res;
     try {
       res = await makeServerCall(
-          useThisServer, '/api/v1/db/recent/added', {'limit': '100'}, 'POST');
+          useThisServer, '/api/v1/db/recent/added', {'limit': 100}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
       print(err);
@@ -165,6 +169,52 @@ class ApiManager {
           null);
       newList.add(newItem);
     });
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getArtists({Server? useThisServer}) async {
+    var res;
+    try {
+      res =
+          await makeServerCall(useThisServer, '/api/v1/db/artists', {}, 'GET');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().setBrowserLabel('Artists');
+
+    List<DisplayItem> newList = [];
+    res['artists'].forEach((e) {
+      DisplayItem newItem = new DisplayItem(useThisServer, e, 'artist', e,
+          Icon(Icons.library_music, color: Colors.black), null);
+      newList.add(newItem);
+    });
+    BrowserManager().addListToStack(newList);
+  }
+
+  Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/db/artists-albums',
+          {'artist': artist}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    List<DisplayItem> newList = [];
+    res['albums'].forEach((e) {
+      String name = e['name'] ?? 'SINGLES';
+
+      // TODO: Errors on singles
+      DisplayItem newItem = new DisplayItem(useThisServer, name, 'album',
+          e['name'], Icon(Icons.album, color: Colors.black), null);
+      newList.add(newItem);
+    });
+
     BrowserManager().addListToStack(newList);
   }
 

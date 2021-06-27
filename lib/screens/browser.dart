@@ -21,13 +21,13 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'directory') {
-      ApiManager().getFileList(browserList[index].data,
+      ApiManager().getFileList(browserList[index].data ?? '',
           useThisServer: browserList[index].server);
       return;
     }
 
     if (browserList[index].type == 'playlist') {
-      ApiManager().getPlaylistContents(browserList[index].data,
+      ApiManager().getPlaylistContents(browserList[index].data ?? '',
           useThisServer: browserList[index].server);
       return;
     }
@@ -62,6 +62,18 @@ class Browser extends StatelessWidget {
       return;
     }
 
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'artists') {
+      ApiManager().getArtists(useThisServer: browserList[index].server);
+      return;
+    }
+
+    if (browserList[index].type == 'artist') {
+      ApiManager().getArtistAlbums(browserList[index].data ?? '',
+          useThisServer: browserList[index].server);
+      return;
+    }
+
     if (browserList[index].type == 'album') {
       ApiManager().getAlbumSongs(browserList[index].data,
           useThisServer: browserList[index].server);
@@ -72,7 +84,7 @@ class Browser extends StatelessWidget {
       // TODO: Add a unique GET param to avoid duplicate IDs
       String lolUrl = Uri.encodeFull(browserList[index].server!.url +
           '/media' +
-          browserList[index].data +
+          browserList[index].data! +
           '?app_uuid=' +
           Uuid().v4() +
           (browserList[index].server!.jwt == null
