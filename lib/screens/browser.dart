@@ -81,21 +81,22 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'file') {
-      // TODO: Add a unique GET param to avoid duplicate IDs
-      String lolUrl = Uri.encodeFull(browserList[index].server!.url +
-          '/media' +
-          browserList[index].data! +
-          '?app_uuid=' +
-          Uuid().v4() +
-          (browserList[index].server!.jwt == null
-              ? ''
-              : '&token=' + browserList[index].server!.jwt!));
-
-      MediaItem lol = new MediaItem(id: lolUrl, title: browserList[index].name);
-      LolManager().audioHandler.addQueueItem(lol);
-
-      // TODO: Fire of request for metadata
+      addFile(browserList[index]);
     }
+  }
+
+  void addFile(DisplayItem i) {
+    String lolUrl = Uri.encodeFull(i.server!.url +
+        '/media' +
+        i.data! +
+        '?app_uuid=' +
+        Uuid().v4() +
+        (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!));
+
+    MediaItem lol = new MediaItem(id: lolUrl, title: i.name);
+    LolManager().audioHandler.addQueueItem(lol);
+
+    // TODO: Fire of request for metadata
   }
 
   Widget build(BuildContext context) {
@@ -111,6 +112,21 @@ class Browser extends StatelessWidget {
                     onPressed: () {
                       BrowserManager().popBrowser();
                     }),
+                Row(children: <Widget>[
+                  IconButton(
+                      icon: Icon(
+                        Icons.library_add,
+                        color: Colors.black,
+                      ),
+                      tooltip: 'Add All',
+                      onPressed: () {
+                        BrowserManager().browserList.forEach((element) {
+                          if (element.type == 'file') {
+                            addFile(element);
+                          }
+                        });
+                      })
+                ])
               ])),
       Expanded(
           child: SizedBox(
