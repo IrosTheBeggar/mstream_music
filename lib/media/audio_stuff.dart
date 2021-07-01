@@ -133,6 +133,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode doesntMatter) async {
+    if (_player.loopMode == LoopMode.all) {
+      _player.setLoopMode(LoopMode.off);
+      await super.setRepeatMode(AudioServiceRepeatMode.none);
+    } else {
+      _player.setLoopMode(LoopMode.all);
+      await super.setRepeatMode(AudioServiceRepeatMode.all);
+    }
+
+    // TODO: Is this correct?
+    _broadcastState(new PlaybackEvent());
+  }
+
+  @override
   Future<void> removeQueueItem(MediaItem i) async {
     await super.removeQueueItem(i);
     // TODO: See removeQueueItemAt
@@ -151,6 +165,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     final AudioServiceShuffleMode shuffle = _player.shuffleModeEnabled == true
         ? AudioServiceShuffleMode.all
         : AudioServiceShuffleMode.none;
+
+    final AudioServiceRepeatMode repeat = _player.loopMode == LoopMode.all
+        ? AudioServiceRepeatMode.all
+        : AudioServiceRepeatMode.none;
+
     playbackState.add(playbackState.value.copyWith(
       controls: [
         MediaControl.skipToPrevious,
@@ -164,6 +183,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seekBackward,
       },
       shuffleMode: shuffle,
+      repeatMode: repeat,
       androidCompactActionIndices: [0, 1, 3],
       processingState: {
         ProcessingState.idle: AudioProcessingState.idle,

@@ -313,6 +313,10 @@ class BottomBar extends StatelessWidget {
     LolManager().audioHandler.setShuffleMode(AudioServiceShuffleMode.all);
   }
 
+  toggleRepeat() {
+    LolManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
+  }
+
   Widget build(BuildContext context) {
     return BottomAppBar(
         color: Color(0xFF212121),
@@ -394,6 +398,22 @@ class BottomBar extends StatelessWidget {
                                 ? Colors.blue
                                 : Colors.white,
                             onPressed: toggleShuffle);
+                      }),
+                  StreamBuilder<AudioServiceRepeatMode>(
+                      // stream: LolManager().audioHandler.playbackState,
+                      stream: LolManager()
+                          .audioHandler
+                          .playbackState
+                          .map((state) => state.repeatMode)
+                          .distinct(),
+                      builder: (context, snapshot) {
+                        final mediaState = snapshot.data;
+                        return IconButton(
+                            icon: Icon(Icons.loop_sharp),
+                            color: (mediaState == AudioServiceRepeatMode.all)
+                                ? Colors.blue
+                                : Colors.white,
+                            onPressed: toggleRepeat);
                       }),
                 ])
               ])
