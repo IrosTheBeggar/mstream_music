@@ -101,12 +101,12 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
-    // cancel skip if not possible
-    if (index! + 1 >= _playlist.length) {
-      return;
-    }
+    _player.seekToNext();
+  }
 
-    await super.skipToNext();
+  @override
+  Future<void> skipToPrevious() async {
+    _player.seekToPrevious();
   }
 
   @override
@@ -116,6 +116,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> stop() async {
     await _player.stop();
     await super.stop();
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode doesntMatter) async {
+    if (_player.shuffleModeEnabled == true) {
+      _player.setShuffleModeEnabled(false);
+      await super.setShuffleMode(AudioServiceShuffleMode.none);
+    } else {
+      _player.setShuffleModeEnabled(true);
+      await super.setShuffleMode(AudioServiceShuffleMode.all);
+    }
+
+    // TODO: Is this correct?
+    _broadcastState(new PlaybackEvent());
   }
 
   @override
@@ -134,6 +148,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Broadcasts the current state to all clients.
   void _broadcastState(PlaybackEvent event) {
     final playing = _player.playing;
+    final AudioServiceShuffleMode shuffle = _player.shuffleModeEnabled == true
+        ? AudioServiceShuffleMode.all
+        : AudioServiceShuffleMode.none;
     playbackState.add(playbackState.value.copyWith(
       controls: [
         MediaControl.skipToPrevious,
@@ -146,6 +163,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seekForward,
         MediaAction.seekBackward,
       },
+      shuffleMode: shuffle,
       androidCompactActionIndices: [0, 1, 3],
       processingState: {
         ProcessingState.idle: AudioProcessingState.idle,
