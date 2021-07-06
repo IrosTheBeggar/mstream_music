@@ -1,12 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:http/http.dart' as http;
 
 import '../singletons/server_list.dart';
 import '../objects/display_item.dart';
-import '../objects/server.dart';
 
 class BrowserManager {
   final List<List<DisplayItem>> browserCache = [];

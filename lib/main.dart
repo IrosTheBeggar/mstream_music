@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -16,13 +13,27 @@ import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
-import 'media/common.dart';
 
 // import 'media/audio_stuff.dart';
 import 'singletons/lol.dart';
 
+import 'dart:io';
+
+// allow self signed SSL cert
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 Future<void> main() async {
   await LolManager().start();
+
+  // allow self signed SSL cert
+  HttpOverrides.global = new MyHttpOverrides();
 
   runApp(new MaterialApp(
       title: 'Audio Service Demo',
