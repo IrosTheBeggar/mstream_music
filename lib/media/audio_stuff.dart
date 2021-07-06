@@ -155,8 +155,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int i) async {
     await super.removeQueueItemAt(i);
+    await _playlist.removeAt(i);
     queue.add(queue.value!..removeAt(i));
-    _playlist.removeAt(i);
+  }
+
+  customAction(String name, [Map<String, dynamic>? extras]) async {
+    switch (name) {
+      case 'clearPlaylist':
+        await _player.stop();
+        await super.stop();
+        await _playlist.clear();
+        queue.add(queue.value!..clear());
+        _broadcastState(new PlaybackEvent());
+        break;
+    }
   }
 
   /// Broadcasts the current state to all clients.

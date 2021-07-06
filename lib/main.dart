@@ -225,7 +225,9 @@ class NowPlaying extends StatelessWidget {
                     splashColor: Colors.red,
                     icon: Icon(Icons.cancel),
                     color: Colors.redAccent,
-                    onPressed: () {},
+                    onPressed: () {
+                      LolManager().audioHandler.customAction('clearPlaylist');
+                    },
                   ),
                 ])
               ])),

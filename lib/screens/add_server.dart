@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 
