@@ -4,6 +4,7 @@ import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../objects/display_item.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/lol.dart';
 
@@ -99,6 +100,111 @@ class Browser extends StatelessWidget {
     // TODO: Fire of request for metadata
   }
 
+  Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
+    switch (b[i].type) {
+      case "file":
+        {
+          return makeFileWidget(b, i, c);
+        }
+      case "directory":
+        {
+          return makeFolderWidget(b, i, c);
+        }
+      default:
+        {
+          return makeBasicWidget(b, i, c);
+        }
+    }
+  }
+
+  Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final _slidableKey = GlobalKey<SlidableState>();
+
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: Slidable(
+            key: _slidableKey,
+            actionPane: SlidableDrawerActionPane(),
+            secondaryActions: [
+              IconSlideAction(
+                  color: Colors.blueGrey,
+                  icon: Icons.add_to_queue,
+                  caption: 'Add All',
+                  onTap: () {
+                    ApiManager().getRecursiveFiles(b[i].data!,
+                        useThisServer: b[i].server);
+                  })
+            ],
+            child: ListTile(
+                leading: b[i].icon ?? null,
+                title: b[i].getText(),
+                subtitle: b[i].getSubText(),
+                trailing: IconButton(
+                  icon: Icon(
+                    Icons.keyboard_arrow_left,
+                    size: 20.0,
+                    color: Colors.brown[900],
+                  ),
+                  onPressed: () {
+                    _slidableKey.currentState?.open(
+                      actionType: SlideActionType.secondary,
+                    );
+                  },
+                ),
+                onTap: () {
+                  handleTap(b, i, c);
+                })));
+  }
+
+  Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: ListTile(
+            leading: b[i].icon ?? null,
+            title: b[i].getText(),
+            subtitle: b[i].getSubText(),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
+  }
+
+  Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: Material(
+            color: Color(0xFFe1e2e1),
+            child: InkWell(
+                splashColor: Colors.blue,
+                child: IntrinsicHeight(
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                      Container(
+                        width: 4,
+                        child: RotatedBox(
+                          quarterTurns: 3,
+                          child: LinearProgressIndicator(
+                            // value: displayList[index].downloadProgress/100,
+                            value: 1,
+                            valueColor: new AlwaysStoppedAnimation(Colors.blue),
+                            backgroundColor: Colors.white.withOpacity(0),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                          child: ListTile(
+                              leading: b[i].icon ?? null,
+                              title: b[i].getText(),
+                              subtitle: b[i].getSubText(),
+                              onTap: () {
+                                handleTap(b, i, c);
+                              }))
+                    ])))));
+  }
+
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
@@ -146,49 +252,7 @@ class Browser extends StatelessWidget {
                             return Container();
                           }
 
-                          return Container(
-                              decoration: BoxDecoration(
-                                  border: Border(
-                                      bottom: BorderSide(
-                                          color: Color(0xFFbdbdbd)))),
-                              child: Material(
-                                  color: Color(0xFFe1e2e1),
-                                  child: InkWell(
-                                      splashColor: Colors.blue,
-                                      child: IntrinsicHeight(
-                                          child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.stretch,
-                                              children: <Widget>[
-                                            Container(
-                                              width: 4,
-                                              child: RotatedBox(
-                                                quarterTurns: 3,
-                                                child: LinearProgressIndicator(
-                                                  // value: displayList[index].downloadProgress/100,
-                                                  value: 0,
-                                                  valueColor:
-                                                      new AlwaysStoppedAnimation(
-                                                          Colors.blue),
-                                                  backgroundColor: Colors.white
-                                                      .withOpacity(0),
-                                                ),
-                                              ),
-                                            ),
-                                            Expanded(
-                                                child: ListTile(
-                                                    leading: browserList[index]
-                                                            .icon ??
-                                                        null,
-                                                    title: browserList[index]
-                                                        .getText(),
-                                                    subtitle: browserList[index]
-                                                        .getSubText(),
-                                                    onTap: () {
-                                                      handleTap(browserList,
-                                                          index, context);
-                                                    }))
-                                          ])))));
+                          return makeListItem(browserList, index, context);
                         });
                   })))
     ]);

@@ -2,8 +2,11 @@ import './server_list.dart';
 import './browser_list.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
+import './lol.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
+import 'package:uuid/uuid.dart';
+import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -40,6 +43,33 @@ class ApiManager {
     }
 
     return jsonDecode(response.body);
+  }
+
+  Future<void> getRecursiveFiles(String directory,
+      {Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer,
+          '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    res.forEach((e) {
+      String lolUrl = Uri.encodeFull(useThisServer!.url +
+          '/media/' +
+          e +
+          '?app_uuid=' +
+          Uuid().v4() +
+          (useThisServer.jwt == null ? '' : '&token=' + useThisServer.jwt!));
+
+      print(lolUrl);
+
+      MediaItem lol = new MediaItem(id: lolUrl, title: e.split("/").last);
+      LolManager().audioHandler.addQueueItem(lol);
+    });
   }
 
   Future<void> getPlaylists({Server? useThisServer}) async {
