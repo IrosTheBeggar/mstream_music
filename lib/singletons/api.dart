@@ -68,7 +68,7 @@ class ApiManager {
       print(lolUrl);
 
       MediaItem lol = new MediaItem(id: lolUrl, title: e.split("/").last);
-      LolManager().audioHandler.addQueueItem(lol);
+      MediaManager().audioHandler.addQueueItem(lol);
     });
   }
 

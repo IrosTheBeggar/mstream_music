@@ -29,7 +29,7 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 Future<void> main() async {
-  await LolManager().start();
+  await MediaManager().start();
 
   // allow self signed SSL cert
   HttpOverrides.global = new MyHttpOverrides();
@@ -236,7 +236,7 @@ class NowPlaying extends StatelessWidget {
                     icon: Icon(Icons.cancel),
                     color: Colors.redAccent,
                     onPressed: () {
-                      LolManager().audioHandler.customAction('clearPlaylist');
+                      MediaManager().audioHandler.customAction('clearPlaylist');
                     },
                   ),
                 ])
@@ -260,7 +260,7 @@ class NowPlaying extends StatelessWidget {
                               dismissal: SlidableDismissal(
                                 child: SlidableDrawerDismissal(),
                                 onDismissed: (actionType) {
-                                  LolManager()
+                                  MediaManager()
                                       .audioHandler
                                       .removeQueueItemAt(index);
                                 },
@@ -303,10 +303,10 @@ class NowPlaying extends StatelessWidget {
                                           fontSize: 18,
                                           color: Colors.black)),
                                   onTap: () {
-                                    LolManager()
+                                    MediaManager()
                                         .audioHandler
                                         .skipToQueueItem(index);
-                                    LolManager().audioHandler.play();
+                                    MediaManager().audioHandler.play();
                                   }));
                         });
                   })))
@@ -315,18 +315,18 @@ class NowPlaying extends StatelessWidget {
 
   Stream<QueueState> get _queueStateStream =>
       Rx.combineLatest2<List<MediaItem>?, MediaItem?, QueueState>(
-          LolManager().audioHandler.queue,
-          LolManager().audioHandler.mediaItem,
+          MediaManager().audioHandler.queue,
+          MediaManager().audioHandler.mediaItem,
           (queue, mediaItem) => QueueState(queue, mediaItem));
 }
 
 class BottomBar extends StatelessWidget {
   toggleShuffle() {
-    LolManager().audioHandler.setShuffleMode(AudioServiceShuffleMode.all);
+    MediaManager().audioHandler.setShuffleMode(AudioServiceShuffleMode.all);
   }
 
   toggleRepeat() {
-    LolManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
+    MediaManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
   }
 
   Widget build(BuildContext context) {
@@ -350,7 +350,7 @@ class BottomBar extends StatelessWidget {
                   double doubleDs = duration.inSeconds.toDouble();
                   int newDuration = (doubleDs * percentage).toInt();
 
-                  LolManager()
+                  MediaManager()
                       .audioHandler
                       .seek(Duration(seconds: newDuration));
                 },
@@ -373,10 +373,10 @@ class BottomBar extends StatelessWidget {
                 Row(children: [
                   IconButton(
                     icon: Icon(Icons.skip_previous),
-                    onPressed: LolManager().audioHandler.skipToPrevious,
+                    onPressed: MediaManager().audioHandler.skipToPrevious,
                   ),
                   StreamBuilder<bool>(
-                    stream: LolManager()
+                    stream: MediaManager()
                         .audioHandler
                         .playbackState
                         .map((state) => state.playing)
@@ -391,13 +391,13 @@ class BottomBar extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.skip_next),
-                    onPressed: LolManager().audioHandler.skipToNext,
+                    onPressed: MediaManager().audioHandler.skipToNext,
                   ),
                 ]),
                 Row(children: [
                   StreamBuilder<AudioServiceShuffleMode>(
-                      // stream: LolManager().audioHandler.playbackState,
-                      stream: LolManager()
+                      // stream: MediaManager().audioHandler.playbackState,
+                      stream: MediaManager()
                           .audioHandler
                           .playbackState
                           .map((state) => state.shuffleMode)
@@ -412,8 +412,8 @@ class BottomBar extends StatelessWidget {
                             onPressed: toggleShuffle);
                       }),
                   StreamBuilder<AudioServiceRepeatMode>(
-                      // stream: LolManager().audioHandler.playbackState,
-                      stream: LolManager()
+                      // stream: MediaManager().audioHandler.playbackState,
+                      stream: MediaManager()
                           .audioHandler
                           .playbackState
                           .map((state) => state.repeatMode)
@@ -436,20 +436,20 @@ class BottomBar extends StatelessWidget {
   /// current position.
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
-          LolManager().audioHandler.mediaItem,
+          MediaManager().audioHandler.mediaItem,
           AudioService.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   IconButton playButton() => IconButton(
         icon: Icon(Icons.play_arrow),
         // iconSize: 64.0,
-        onPressed: LolManager().audioHandler.play,
+        onPressed: MediaManager().audioHandler.play,
       );
 
   IconButton pauseButton() => IconButton(
         icon: Icon(Icons.pause),
         // iconSize: 64.0,
-        onPressed: LolManager().audioHandler.pause,
+        onPressed: MediaManager().audioHandler.pause,
       );
 }
 
