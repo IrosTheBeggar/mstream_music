@@ -37,14 +37,13 @@ class AudioPlayerHandler extends BaseAudioHandler
         .listen((item) => _recentSubject.add([item]));
     // Broadcast media item changes.
     _player.currentIndexStream.listen((index) {
-      if (index != null && queue.value!.isNotEmpty)
-        mediaItem.add(queue.value![index]);
+      if (index != null && queue.value.isNotEmpty)
+        mediaItem.add(queue.value[index]);
     });
     // Magic
     _player.durationStream.listen((duration) {
       if (index != null && duration != null) {
-        mediaItem
-            .add(queue.value![index!.toInt()].copyWith(duration: duration));
+        mediaItem.add(queue.value[index!.toInt()].copyWith(duration: duration));
       }
     });
     // Propagate all events from the audio player to AudioService clients.
@@ -59,7 +58,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // the loading state to the completed state. Inserting a delay makes it
       // work. Not sure why!
       //await Future.delayed(Duration(seconds: 2)); // magic delay
-      queue.value!.forEach((element) {
+      queue.value.forEach((element) {
         _playlist.add(AudioSource.uri(Uri.parse(element.id)));
       });
 
@@ -80,7 +79,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
     // the [QueueHandler] mixin will delegate to this method.
-    if (index < 0 || index > queue.value!.length) return;
+    if (index < 0 || index > queue.value.length) return;
     // This jumps to the beginning of the queue item at newIndex.
     _player.seek(Duration.zero, index: index);
     // Demonstrate custom events.
@@ -89,7 +88,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> addQueueItem(MediaItem item) async {
-    queue.add(queue.value!..add(item));
+    queue.add(queue.value..add(item));
     _playlist.add(AudioSource.uri(Uri.parse(item.id)));
   }
 
@@ -156,7 +155,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> removeQueueItemAt(int i) async {
     await super.removeQueueItemAt(i);
     await _playlist.removeAt(i);
-    queue.add(queue.value!..removeAt(i));
+    queue.add(queue.value..removeAt(i));
   }
 
   customAction(String name, [Map<String, dynamic>? extras]) async {
@@ -165,7 +164,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         await _player.stop();
         await super.stop();
         await _playlist.clear();
-        queue.add(queue.value!..clear());
+        queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
     }

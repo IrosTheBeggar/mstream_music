@@ -16,7 +16,6 @@ class LolManager {
       config: AudioServiceConfig(
         androidNotificationChannelName: 'Audio Service Demo',
         androidNotificationOngoing: true,
-        androidEnableQueue: true,
       ),
     );
   }
