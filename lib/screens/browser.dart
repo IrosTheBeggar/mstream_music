@@ -106,6 +106,10 @@ class Browser extends StatelessWidget {
         {
           return makeFileWidget(b, i, c);
         }
+      case "playlist":
+        {
+          return makePlaylistWidget(b, i, c);
+        }
       case "directory":
         {
           return makeFolderWidget(b, i, c);
@@ -115,6 +119,44 @@ class Browser extends StatelessWidget {
           return makeBasicWidget(b, i, c);
         }
     }
+  }
+
+  Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final _slidableKey = GlobalKey<SlidableState>();
+
+    return Container(
+      decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+      child: Slidable(
+          key: _slidableKey,
+          actionPane: SlidableDrawerActionPane(),
+          secondaryActions: [
+            IconSlideAction(
+                color: Colors.redAccent,
+                icon: Icons.remove_circle,
+                caption: 'Delete',
+                onTap: () {})
+          ],
+          child: ListTile(
+              leading: b[i].icon ?? null,
+              title: b[i].getText(),
+              subtitle: b[i].getSubText(),
+              trailing: IconButton(
+                icon: Icon(
+                  Icons.keyboard_arrow_left,
+                  size: 20.0,
+                  color: Colors.brown[900],
+                ),
+                onPressed: () {
+                  _slidableKey.currentState?.open(
+                    actionType: SlideActionType.secondary,
+                  );
+                },
+              ),
+              onTap: () {
+                handleTap(b, i, c);
+              })),
+    );
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
