@@ -135,7 +135,10 @@ class Browser extends StatelessWidget {
                 color: Colors.redAccent,
                 icon: Icons.remove_circle,
                 caption: 'Delete',
-                onTap: () {})
+                onTap: () {
+                  ApiManager()
+                      .removePlaylist(b[i].data!, useThisServer: b[i].server);
+                })
           ],
           child: ListTile(
               leading: b[i].icon ?? null,

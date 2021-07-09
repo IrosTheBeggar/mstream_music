@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../singletons/server_list.dart';
 import '../objects/display_item.dart';
+import '../objects/server.dart';
 
 class BrowserManager {
   final List<List<DisplayItem>> browserCache = [];
@@ -127,6 +128,17 @@ class BrowserManager {
     });
 
     _browserStream.sink.add(browserList);
+  }
+
+  void removeAll(String data, Server server, String type) {
+    browserList.removeWhere(
+        (e) => e.server == server && e.data == data && e.type == type);
+    _browserStream.sink.add(browserList);
+
+    browserCache.forEach((b) {
+      b.removeWhere(
+          (e) => e.server == server && e.data == data && e.type == type);
+    });
   }
 
   void dispose() {

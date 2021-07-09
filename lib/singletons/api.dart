@@ -100,6 +100,21 @@ class ApiManager {
     BrowserManager().addListToStack(newList);
   }
 
+  Future<void> removePlaylist(String playlistId,
+      {Server? useThisServer}) async {
+    var res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/playlist/delete',
+          {'playlistname': playlistId}, 'POST');
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
+
+    BrowserManager().removeAll(playlistId, useThisServer!, 'playlist');
+  }
+
   Future<void> getAlbums({Server? useThisServer}) async {
     var res;
     try {
