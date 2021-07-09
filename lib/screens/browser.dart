@@ -6,7 +6,7 @@ import '../objects/display_item.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-import '../singletons/lol.dart';
+import '../singletons/media.dart';
 
 import 'add_server.dart';
 

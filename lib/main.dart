@@ -14,7 +14,7 @@ import 'screens/about_screen.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 
-import 'singletons/lol.dart';
+import 'singletons/media.dart';
 
 import 'dart:io';
 
