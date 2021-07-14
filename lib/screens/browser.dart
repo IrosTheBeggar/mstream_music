@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
+import '../singletons/transcode.dart';
 import '../objects/display_item.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -87,8 +88,11 @@ class Browser extends StatelessWidget {
   }
 
   void addFile(DisplayItem i) {
+    String prefix =
+        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
+
     String lolUrl = Uri.encodeFull(i.server!.url +
-        '/media' +
+        prefix +
         i.data! +
         '?app_uuid=' +
         Uuid().v4() +

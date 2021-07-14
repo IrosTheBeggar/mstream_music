@@ -2,6 +2,7 @@ import './server_list.dart';
 import './browser_list.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
+import './transcode.dart';
 import 'media.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
@@ -57,9 +58,12 @@ class ApiManager {
       return;
     }
 
+    String prefix =
+        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
+
     res.forEach((e) {
       String lolUrl = Uri.encodeFull(useThisServer!.url +
-          '/media/' +
+          prefix +
           e +
           '?app_uuid=' +
           Uuid().v4() +
