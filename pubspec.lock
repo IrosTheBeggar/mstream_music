@@ -25,28 +25,24 @@ packages:
   audio_service:
     dependency: "direct main"
     description:
-      path: "../audio_service/audio_Service"
-      relative: true
-    source: path
-    version: "0.16.2"
+      name: audio_service
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.18.0-beta.0"
   audio_service_platform_interface:
     dependency: transitive
     description:
-      path: audio_service_platform_interface
-      ref: one-isolate
-      resolved-ref: ec95a57595cb143509a0b3c9f5129e086bb77af7
-      url: "https://github.com/ryanheise/audio_service.git"
-    source: git
-    version: "1.0.0"
+      name: audio_service_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.0"
   audio_service_web:
     dependency: transitive
     description:
-      path: audio_service_web
-      ref: one-isolate
-      resolved-ref: ec95a57595cb143509a0b3c9f5129e086bb77af7
-      url: "https://github.com/ryanheise/audio_service.git"
-    source: git
-    version: "0.16.2"
+      name: audio_service_web
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.1.0"
   audio_session:
     dependency: "direct main"
     description:
@@ -136,6 +132,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "3.1.2"
+  flutter_downloader:
+    dependency: "direct main"
+    description:
+      name: flutter_downloader
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.6.1"
   flutter_launcher_icons:
     dependency: "direct main"
     description:
@@ -426,4 +429,4 @@ packages:
     version: "3.1.0"
 sdks:
   dart: ">=2.13.0 <3.0.0"
-  flutter: ">=1.24.0-10"
+  flutter: ">=2.0.0"

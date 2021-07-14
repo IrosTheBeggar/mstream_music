@@ -25,14 +25,14 @@ dependencies:
     sdk: flutter
   http: ^0.13.3
   uuid: ^3.0.4
-  rxdart: "0.27.1"
+  rxdart: ^0.27.1
   path_provider: ^2.0.2
   audio_session: ^0.1.5
-  audio_service: 
-    path: ../audio_service/audio_Service
+  audio_service: 0.18.0-beta.0
   just_audio: ^0.8.0
   flutter_slidable: ^0.6.0
-  flutter_launcher_icons: "^0.9.0"
+  flutter_downloader: ^1.6.1
+  flutter_launcher_icons: ^0.9.0
   cupertino_icons: ^1.0.3
 
 dev_dependencies:
