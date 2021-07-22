@@ -140,8 +140,31 @@ class Browser extends StatelessWidget {
                 icon: Icons.remove_circle,
                 caption: 'Delete',
                 onTap: () {
-                  ApiManager()
-                      .removePlaylist(b[i].data!, useThisServer: b[i].server);
+                  showDialog(
+                      context: c,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                            title: Text("Confirm Delete Playlist"),
+                            content: b[i].getText(),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text("Go Back"),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                              TextButton(
+                                  child: Text(
+                                    "Delete",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                  onPressed: () {
+                                    ApiManager().removePlaylist(b[i].data!,
+                                        useThisServer: b[i].server);
+                                    Navigator.of(context).pop();
+                                  })
+                            ]);
+                      });
                 })
           ],
           child: ListTile(
