@@ -35,7 +35,7 @@ Future<void> main() async {
   HttpOverrides.global = new MyHttpOverrides();
 
   runApp(new MaterialApp(
-      title: 'Audio Service Demo',
+      title: 'mStream Music',
       home: MStreamApp(),
       theme: ThemeData(
           brightness: Brightness.dark,

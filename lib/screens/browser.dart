@@ -288,9 +288,9 @@ class Browser extends StatelessWidget {
               child: StreamBuilder<List<DisplayItem>>(
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
-                    print(BrowserManager().browserList);
                     final List<DisplayItem> browserList = snapshot.data ?? [];
                     return ListView.separated(
+                        controller: BrowserManager().sc,
                         physics: const AlwaysScrollableScrollPhysics(),
                         separatorBuilder: (BuildContext context, int index) =>
                             Divider(height: 3, color: Colors.white),

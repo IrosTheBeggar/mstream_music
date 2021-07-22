@@ -7,6 +7,8 @@ import '../objects/server.dart';
 
 class BrowserManager {
   final List<List<DisplayItem>> browserCache = [];
+  final List<double> scrollCache = [];
+
   final List<DisplayItem> browserList = [];
 
   String listName = 'Welcome';
@@ -19,6 +21,9 @@ class BrowserManager {
 
   BrowserManager._privateConstructor();
   static final BrowserManager _instance = BrowserManager._privateConstructor();
+
+  // scroll controller in stream format
+  ScrollController sc = ScrollController();
 
   factory BrowserManager() {
     return _instance;
@@ -108,6 +113,8 @@ class BrowserManager {
   void addListToStack(List<DisplayItem> newList) {
     browserCache.add(newList);
 
+    scrollCache.add(sc.offset);
+
     browserList.clear();
     newList.forEach((element) {
       browserList.add(element);
@@ -128,6 +135,9 @@ class BrowserManager {
     });
 
     _browserStream.sink.add(browserList);
+
+    double scrollTo = scrollCache.removeLast();
+    // sc.jumpTo(scrollTo);
   }
 
   void removeAll(String data, Server server, String type) {

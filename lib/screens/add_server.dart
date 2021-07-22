@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
 
@@ -246,6 +246,28 @@ class MyCustomFormState extends State<MyCustomForm> {
                         onPressed: submitPending
                             ? null
                             : () {
+                                FlutterBarcodeScanner.scanBarcode(
+                                        '#ff6666', 'Cancel', false, ScanMode.QR)
+                                    .then((qrValue) {
+                                  if (qrValue == '-1' || qrValue == '') {
+                                    return;
+                                  }
+
+                                  try {
+                                    Map<String, String> parsedValues =
+                                        parseQrCode(qrValue);
+                                    _urlCtrl.text = parsedValues['url'] ?? '';
+                                    _usernameCtrl.text =
+                                        parsedValues['username'] ?? '';
+                                    _passwordCtrl.text =
+                                        parsedValues['password'] ?? '';
+                                  } catch (err) {
+                                    Scaffold.of(context).showSnackBar(SnackBar(
+                                        content: Text('Invalid Code')));
+                                  }
+                                });
+
+                                //});
                                 // new QRCodeReader().scan().then((qrValue) {
                                 //   if (qrValue == null || qrValue == '') {
                                 //     return;
