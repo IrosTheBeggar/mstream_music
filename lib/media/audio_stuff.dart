@@ -127,7 +127,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       await super.setShuffleMode(AudioServiceShuffleMode.all);
     }
 
-    // TODO: Is this correct?
     _broadcastState(new PlaybackEvent());
   }
 
@@ -141,7 +140,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       await super.setRepeatMode(AudioServiceRepeatMode.all);
     }
 
-    // TODO: Is this correct?
     _broadcastState(new PlaybackEvent());
   }
 
