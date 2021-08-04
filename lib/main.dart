@@ -11,6 +11,8 @@ import 'screens/browser.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
+import 'screens/downloads.dart';
+import 'singletons/downloads.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 
@@ -62,6 +64,13 @@ class _MStreamAppState extends State<MStreamApp>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     ServerManager().loadServerList();
+    DownloadManager().initDownloader();
+  }
+
+  @override
+  void dispose() {
+    DownloadManager().dispose();
+    super.dispose();
   }
 
   Future<bool> _onWillPop() {
@@ -213,6 +222,21 @@ class _MStreamAppState extends State<MStreamApp>
                   );
                 },
               ),
+              ListTile(
+                title: Text('Downloads',
+                    style: TextStyle(
+                        fontFamily: 'Jura',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17)),
+                leading: Icon(Icons.download),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DownloadScreen()),
+                  );
+                },
+              ),
             ])),
             body: TabBarView(
                 children: [Browser(), NowPlaying()],
@@ -290,6 +314,16 @@ class NowPlaying extends StatelessWidget {
                                                   ),
                                                 ]);
                                           });
+                                    }),
+                                IconSlideAction(
+                                    color: Colors.blueGrey,
+                                    icon: Icons.download,
+                                    caption: 'Sync',
+                                    onTap: () {
+                                      DownloadManager().downloadOneFile(
+                                          queue[index].id,
+                                          queue[index].extras!['server'],
+                                          queue[index].extras!['path']);
                                     })
                               ],
                               actionExtentRatio: 0.18,

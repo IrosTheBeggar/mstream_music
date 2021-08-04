@@ -26,6 +26,7 @@ dependencies:
   http: ^0.13.3
   uuid: ^3.0.4
   rxdart: ^0.27.1
+  disk_space: ^0.1.1
   path_provider: ^2.0.2
   audio_session: ^0.1.5
   audio_service: 0.18.0-beta.0

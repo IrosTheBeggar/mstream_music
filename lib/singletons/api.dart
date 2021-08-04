@@ -69,7 +69,10 @@ class ApiManager {
           Uuid().v4() +
           (useThisServer.jwt == null ? '' : '&token=' + useThisServer.jwt!));
 
-      MediaItem lol = new MediaItem(id: lolUrl, title: e.split("/").last);
+      MediaItem lol = new MediaItem(
+          id: lolUrl,
+          title: e.split("/").last,
+          extras: {'server': useThisServer.localname, 'path': e});
       MediaManager().audioHandler.addQueueItem(lol);
     });
   }

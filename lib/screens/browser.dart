@@ -98,7 +98,10 @@ class Browser extends StatelessWidget {
         Uuid().v4() +
         (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!));
 
-    MediaItem lol = new MediaItem(id: lolUrl, title: i.name);
+    MediaItem lol = new MediaItem(
+        id: lolUrl,
+        title: i.name,
+        extras: {'server': i.server!.localname, 'path': i.data});
     MediaManager().audioHandler.addQueueItem(lol);
 
     // TODO: Fire of request for metadata

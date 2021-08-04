@@ -12,7 +12,7 @@ class DisplayItem {
   MusicMetadata? metadata;
   String? subtext;
 
-  // int downloadProgress = 0;
+  int downloadProgress = 0;
 
   Widget getText() {
     if (metadata?.title != null) {
