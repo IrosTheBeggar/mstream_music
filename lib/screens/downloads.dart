@@ -16,7 +16,7 @@ class DownloadScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Testing This Text',
+                'Total Storage Space (in MiB)',
                 style: TextStyle(
                   color: Colors.blue,
                 ),

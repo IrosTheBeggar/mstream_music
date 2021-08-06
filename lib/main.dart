@@ -289,7 +289,7 @@ class NowPlaying extends StatelessWidget {
                               actions: <Widget>[
                                 // IconSlideAction(
                                 //     color: Colors.blueGrey,
-                                //     icon: Icons.star,
+                                //     icon: ,
                                 //     caption: 'Rate',
                                 //     onTap: () {
                                 //       showDialog(
@@ -324,21 +324,57 @@ class NowPlaying extends StatelessWidget {
                                     })
                               ],
                               actionExtentRatio: 0.18,
-                              child: ListTile(
-                                  tileColor: (queue[index] == mediaItem)
+                              child: Container(
+                                  color: (queue[index] == mediaItem)
                                       ? Color(0xFFffab00)
                                       : null,
-                                  title: Text(queue[index].title,
-                                      style: TextStyle(
-                                          fontFamily: 'Jura',
-                                          fontSize: 18,
-                                          color: Colors.black)),
-                                  onTap: () {
-                                    MediaManager()
-                                        .audioHandler
-                                        .skipToQueueItem(index);
-                                    MediaManager().audioHandler.play();
-                                  }));
+                                  child: IntrinsicHeight(
+                                      child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: <Widget>[
+                                        Container(
+                                          width: 4,
+                                          child: RotatedBox(
+                                            quarterTurns: 3,
+                                            child: LinearProgressIndicator(
+                                              value: queue[index].extras![
+                                                          'localPath'] ==
+                                                      null
+                                                  ? 0 // TODO: check for download progress
+                                                  : 1,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                      Colors.blue),
+                                              backgroundColor:
+                                                  Colors.white.withOpacity(0),
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                            child: Container(
+                                                child: ListTile(
+                                                    // tileColor: (queue[index] ==
+                                                    //         mediaItem)
+                                                    //     ? Color(0xFFffab00)
+                                                    //     : null,
+                                                    title: Text(
+                                                        queue[index].title,
+                                                        style: TextStyle(
+                                                            fontFamily: 'Jura',
+                                                            fontSize: 18,
+                                                            color:
+                                                                Colors.black)),
+                                                    onTap: () {
+                                                      MediaManager()
+                                                          .audioHandler
+                                                          .skipToQueueItem(
+                                                              index);
+                                                      MediaManager()
+                                                          .audioHandler
+                                                          .play();
+                                                    })))
+                                      ]))));
                         });
                   })))
     ]);
