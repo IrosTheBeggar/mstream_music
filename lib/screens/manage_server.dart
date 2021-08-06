@@ -36,16 +36,6 @@ class ManageServersScreen extends StatelessWidget {
         itemBuilder: (BuildContext context) {
           List<PopupMenuEntry<String>> popUpWidgetList = [
             PopupMenuItem(
-              value: 'default',
-              child: Row(children: [
-                Icon(
-                  Icons.arrow_upward_rounded,
-                  color: Colors.black,
-                ),
-                Text('   Make Default', style: TextStyle(color: Colors.black))
-              ]),
-            ),
-            PopupMenuItem(
               value: 'edit',
               child: Row(children: [
                 Icon(
@@ -66,6 +56,22 @@ class ManageServersScreen extends StatelessWidget {
               ]),
             )
           ];
+
+          if (index != 0) {
+            popUpWidgetList.insert(
+                0,
+                PopupMenuItem(
+                  value: 'default',
+                  child: Row(children: [
+                    Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Colors.black,
+                    ),
+                    Text('   Make Default',
+                        style: TextStyle(color: Colors.black))
+                  ]),
+                ));
+          }
 
           return popUpWidgetList;
         });
