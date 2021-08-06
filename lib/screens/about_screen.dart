@@ -14,7 +14,7 @@ class AboutScreen extends StatelessWidget {
               Container(
                 height: 15,
               ),
-              Text('mStream Mobile v0.5',
+              Text('mStream Mobile v0.9',
                   style: TextStyle(
                       fontFamily: 'Jura',
                       color: Color(0xFF000000),
