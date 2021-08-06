@@ -56,9 +56,18 @@ class DownloadScreen extends StatelessWidget {
                               return ListTile(
                                 title: Text(
                                   dList[index].filePath,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                  ),
                                 ),
-                                subtitle:
-                                    Text(dList[index].progress.toString()),
+                                subtitle: Text(
+                                  'progress: ' +
+                                      dList[index].progress.toString() +
+                                      '%',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                  ),
+                                ),
                               );
                             });
                       })))

@@ -465,6 +465,8 @@ class Browser extends StatelessWidget {
                       ),
                       tooltip: 'Add All',
                       onPressed: () {
+                        int count = 0;
+
                         BrowserManager().browserList.forEach((e) {
                           if (e.type == 'file') {
                             String downloadUrl = e.server!.url +
@@ -476,8 +478,12 @@ class Browser extends StatelessWidget {
 
                             DownloadManager().downloadOneFile(
                                 downloadUrl, e.server!.localname, e.data!);
+                            count++;
                           }
                         });
+
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('$count downloads started')));
                       }),
                   IconButton(
                       icon: Icon(

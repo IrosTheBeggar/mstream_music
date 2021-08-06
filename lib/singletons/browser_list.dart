@@ -129,6 +129,8 @@ class BrowserManager {
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: Colors.black), 'Click here to add server'));
+
+    _browserStream.sink.add(browserList);
   }
 
   void addListToStack(List<DisplayItem> newList) {
