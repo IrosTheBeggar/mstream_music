@@ -317,10 +317,13 @@ class NowPlaying extends StatelessWidget {
                                     icon: Icons.download,
                                     caption: 'Sync',
                                     onTap: () {
-                                      DownloadManager().downloadOneFile(
-                                          queue[index].id,
-                                          queue[index].extras!['server'],
-                                          queue[index].extras!['path']);
+                                      if (queue[index].extras!['localPath'] ==
+                                          null) {
+                                        DownloadManager().downloadOneFile(
+                                            queue[index].id,
+                                            queue[index].extras!['server'],
+                                            queue[index].extras!['path']);
+                                      }
                                     })
                               ],
                               actionExtentRatio: 0.18,

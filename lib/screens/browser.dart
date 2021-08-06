@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:mstream_music/singletons/downloads.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
@@ -123,8 +124,6 @@ class Browser extends StatelessWidget {
     String downloadDirectory = i.server!.localname + i.data!;
     final dir = await getApplicationDocumentsDirectory();
     String finalString = '${dir.path}/media/$downloadDirectory';
-
-    print(finalString);
 
     if (new File(finalString).existsSync() == true) {
       print('exists!');
@@ -459,6 +458,27 @@ class Browser extends StatelessWidget {
                       BrowserManager().popBrowser();
                     }),
                 Row(children: <Widget>[
+                  IconButton(
+                      icon: Icon(
+                        Icons.download_sharp,
+                        color: Colors.black,
+                      ),
+                      tooltip: 'Add All',
+                      onPressed: () {
+                        BrowserManager().browserList.forEach((e) {
+                          if (e.type == 'file') {
+                            String downloadUrl = e.server!.url +
+                                '/media' +
+                                e.data! +
+                                (e.server!.jwt == null
+                                    ? ''
+                                    : '?token=' + e.server!.jwt!);
+
+                            DownloadManager().downloadOneFile(
+                                downloadUrl, e.server!.localname, e.data!);
+                          }
+                        });
+                      }),
                   IconButton(
                       icon: Icon(
                         Icons.library_add,

@@ -101,6 +101,12 @@ class DownloadManager {
     print(filepath);
 
     String downloadTo = '${dir.path}/media/$downloadDirectory';
+
+    if (new File(downloadTo).existsSync() == true) {
+      print('exists!');
+      return;
+    }
+
     String lol = path.dirname(downloadTo);
     String filename = path.basename(downloadTo);
 
