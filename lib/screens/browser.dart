@@ -425,7 +425,10 @@ class Browser extends StatelessWidget {
                           quarterTurns: 3,
                           child: LinearProgressIndicator(
                             // value: displayList[index].downloadProgress/100,
-                            value: 1,
+                            value: BrowserManager()
+                                    .browserList[i]
+                                    .downloadProgress /
+                                100,
                             valueColor: new AlwaysStoppedAnimation(Colors.blue),
                             backgroundColor: Colors.white.withOpacity(0),
                           ),

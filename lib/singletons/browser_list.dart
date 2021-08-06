@@ -145,6 +145,10 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
+  updateStream() {
+    _browserStream.sink.add(browserList);
+  }
+
   void popBrowser() {
     if (BrowserManager().browserCache.length < 2) {
       return;

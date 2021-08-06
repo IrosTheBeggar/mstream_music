@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+
 import 'server.dart';
 import 'metadata.dart';
+import '../singletons/browser_list.dart';
 
 class DisplayItem {
   final Server? server;
@@ -52,13 +57,17 @@ class DisplayItem {
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext) {
     if (this.type == 'file') {
-      // String downloadDirectory = this.server.localname + this.data;
-      // getApplicationDocumentsDirectory().then((dir) {
-      //   String finalString = '${dir.path}/media/${downloadDirectory}';
-      //   if (new File(finalString).existsSync() == true) {
-      //     this.downloadProgress = 100;
-      //   }
-      // });
+      String downloadDirectory = this.server!.localname + this.data!;
+      getApplicationDocumentsDirectory().then((dir) {
+        String finalString = '${dir.path}/media/$downloadDirectory';
+
+        new File(finalString).exists().then((ex) {
+          if (ex == true) {
+            this.downloadProgress = 100;
+            BrowserManager().updateStream();
+          }
+        });
+      });
     }
   }
 
