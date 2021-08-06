@@ -142,6 +142,15 @@ class ServerManager {
     dir.delete(recursive: true);
   }
 
+  makeDefault(int i) {
+    Server s = serverList[i];
+
+    serverList.remove(s);
+    serverList.insert(0, s);
+
+    _serverListStream.sink.add(serverList);
+  }
+
   void dispose() {
     _serverListStream.close();
     _curentServerStream.close();
