@@ -89,7 +89,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
-    _playlist.add(AudioSource.uri(Uri.parse(item.id)));
+
+    if (item.extras?['localPath'] != null) {
+      _playlist.add(AudioSource.uri(Uri.parse(item.extras!['localPath'])));
+    } else {
+      _playlist.add(AudioSource.uri(Uri.parse(item.id)));
+    }
   }
 
   @override

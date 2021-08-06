@@ -1,11 +1,17 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:mstream_music/singletons/file_explorer.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/transcode.dart';
+import '../singletons/file_explorer.dart';
 import '../objects/display_item.dart';
+import '../objects/server.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import '../singletons/media.dart';
 
@@ -65,6 +71,12 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'localFiles') {
+      FileExplorer().getPathForServer(browserList[index].server!.localname);
+      return;
+    }
+
+    if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'artists') {
       ApiManager().getArtists(useThisServer: browserList[index].server);
       return;
@@ -84,10 +96,47 @@ class Browser extends StatelessWidget {
 
     if (browserList[index].type == 'file') {
       addFile(browserList[index]);
+      return;
+    }
+
+    if (browserList[index].type == 'localDirectory') {
+      FileExplorer().getLocalFiles(browserList[index].data);
+      return;
+    }
+
+    if (browserList[index].type == 'localFile') {
+      addLocalFile(browserList[index]);
+      return;
     }
   }
 
-  void addFile(DisplayItem i) {
+  void addLocalFile(DisplayItem i) {
+    MediaItem item = new MediaItem(
+        id: Uuid().v4(),
+        title: i.name,
+        extras: {'path': i.data, 'localPath': i.data!});
+    MediaManager().audioHandler.addQueueItem(item);
+  }
+
+  void addFile(DisplayItem i) async {
+    // Check for song locally
+    String downloadDirectory = i.server!.localname + i.data!;
+    final dir = await getApplicationDocumentsDirectory();
+    String finalString = '${dir.path}/media/$downloadDirectory';
+
+    print(finalString);
+
+    if (new File(finalString).existsSync() == true) {
+      print('exists!');
+
+      MediaItem item = new MediaItem(
+          id: Uuid().v4(),
+          title: i.name,
+          extras: {'path': i.data, 'localPath': finalString});
+      MediaManager().audioHandler.addQueueItem(item);
+      return;
+    }
+
     String prefix =
         TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
 
@@ -98,11 +147,12 @@ class Browser extends StatelessWidget {
         Uuid().v4() +
         (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!));
 
-    MediaItem lol = new MediaItem(
+    MediaItem item = new MediaItem(
         id: lolUrl,
         title: i.name,
         extras: {'server': i.server!.localname, 'path': i.data});
-    MediaManager().audioHandler.addQueueItem(lol);
+
+    MediaManager().audioHandler.addQueueItem(item);
 
     // TODO: Fire of request for metadata
   }
@@ -120,6 +170,14 @@ class Browser extends StatelessWidget {
       case "directory":
         {
           return makeFolderWidget(b, i, c);
+        }
+      case "localDirectory":
+        {
+          return makeLocalFolderWidget(b, i, c);
+        }
+      case "localFile":
+        {
+          return makeLocalFileWidget(b, i, c);
         }
       default:
         {
@@ -190,6 +248,110 @@ class Browser extends StatelessWidget {
                 handleTap(b, i, c);
               })),
     );
+  }
+
+  Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final _slidableKey = GlobalKey<SlidableState>();
+
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: Slidable(
+            key: _slidableKey,
+            actionPane: SlidableDrawerActionPane(),
+            secondaryActions: [
+              IconSlideAction(
+                  color: Colors.red,
+                  icon: Icons.delete,
+                  caption: 'Delete',
+                  onTap: () {
+                    showDialog(
+                        context: c,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                              title: Text("Confirm Delete Folder"),
+                              content: b[i].getText(),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: Text("Go Back"),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                                TextButton(
+                                    child: Text(
+                                      "Delete",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                    onPressed: () {
+                                      FileExplorer().deleteDirectory(
+                                          b[i].data!, b[i].server);
+                                      Navigator.of(context).pop();
+                                    })
+                              ]);
+                        });
+                  })
+            ],
+            child: ListTile(
+                leading: b[i].icon ?? null,
+                title: b[i].getText(),
+                subtitle: b[i].getSubText(),
+                trailing: IconButton(
+                  icon: Icon(
+                    Icons.keyboard_arrow_left,
+                    size: 20.0,
+                    color: Colors.brown[900],
+                  ),
+                  onPressed: () {
+                    _slidableKey.currentState?.open(
+                      actionType: SlideActionType.secondary,
+                    );
+                  },
+                ),
+                onTap: () {
+                  handleTap(b, i, c);
+                })));
+  }
+
+  Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final _slidableKey = GlobalKey<SlidableState>();
+
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: Slidable(
+            key: _slidableKey,
+            actionPane: SlidableDrawerActionPane(),
+            secondaryActions: [
+              IconSlideAction(
+                  color: Colors.red,
+                  icon: Icons.delete,
+                  caption: 'Delete',
+                  onTap: () {
+                    // ApiManager().getRecursiveFiles(b[i].data!,
+                    //     useThisServer: b[i].server);
+                    FileExplorer().deleteFile(b[i].data!, b[i].server);
+                  })
+            ],
+            child: ListTile(
+                leading: b[i].icon ?? null,
+                title: b[i].getText(),
+                subtitle: b[i].getSubText(),
+                trailing: IconButton(
+                  icon: Icon(
+                    Icons.keyboard_arrow_left,
+                    size: 20.0,
+                    color: Colors.brown[900],
+                  ),
+                  onPressed: () {
+                    _slidableKey.currentState?.open(
+                      actionType: SlideActionType.secondary,
+                    );
+                  },
+                ),
+                onTap: () {
+                  handleTap(b, i, c);
+                })));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {

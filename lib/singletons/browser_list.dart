@@ -34,6 +34,17 @@ class BrowserManager {
     _browserLabel.sink.add(label);
   }
 
+  void clear() {
+    List<DisplayItem> hold = browserCache[0];
+
+    browserCache.clear();
+    browserList.clear();
+
+    browserCache.add(hold);
+
+    scrollCache.clear();
+  }
+
   void goToNavScreen() {
     browserCache.clear();
     browserList.clear();
@@ -90,14 +101,23 @@ class BrowserManager {
         Icon(Icons.query_builder, color: Colors.black),
         null);
 
-    browserCache
-        .add([newItem1, newItem2, newItem3, newItem4, newItem5, newItem6]);
+    DisplayItem newItem7 = new DisplayItem(
+        ServerManager().currentServer!,
+        'Local Files',
+        'execAction',
+        'localFiles',
+        Icon(Icons.folder_open_outlined, color: Colors.black),
+        null);
+
+    browserCache.add(
+        [newItem1, newItem2, newItem3, newItem4, newItem5, newItem6, newItem7]);
     browserList.add(newItem1);
     browserList.add(newItem2);
     browserList.add(newItem3);
     browserList.add(newItem4);
     browserList.add(newItem5);
     browserList.add(newItem6);
+    browserList.add(newItem7);
 
     _browserStream.sink.add(browserList);
   }
@@ -105,6 +125,7 @@ class BrowserManager {
   void noServerScreen() {
     browserCache.clear();
     browserList.clear();
+    scrollCache.clear();
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: Colors.black), 'Click here to add server'));
@@ -113,7 +134,8 @@ class BrowserManager {
   void addListToStack(List<DisplayItem> newList) {
     browserCache.add(newList);
 
-    scrollCache.add(sc.offset);
+    // TODO: throws an error when you click the file explorer tab from the queue
+    // scrollCache.add(sc.offset);
 
     browserList.clear();
     newList.forEach((element) {
@@ -136,11 +158,11 @@ class BrowserManager {
 
     _browserStream.sink.add(browserList);
 
-    double scrollTo = scrollCache.removeLast();
+    // double scrollTo = scrollCache.removeLast();
     // sc.jumpTo(scrollTo);
   }
 
-  void removeAll(String data, Server server, String type) {
+  void removeAll(String data, Server? server, String type) {
     browserList.removeWhere(
         (e) => e.server == server && e.data == data && e.type == type);
     _browserStream.sink.add(browserList);

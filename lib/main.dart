@@ -9,6 +9,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
+import 'singletons/file_explorer.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/downloads.dart';
@@ -187,25 +188,21 @@ class _MStreamAppState extends State<MStreamApp>
                 },
               ),
               Divider(),
-              ListTile(
-                leading: Icon(Icons.folder),
-                title: Text(
-                  'File Explorer',
-                  style: TextStyle(
-                      fontFamily: 'Jura',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17),
-                ),
-                onTap: () {
-                  // if(serverList.length > 0) {
-                  //   getFileList("", wipeBackCache: true);
-                  // }else {
-                  //   _setupStartScreen();
-                  // }
-                  Navigator.of(context).pop();
-                  _tabController.animateTo(0);
-                },
-              ),
+              // ListTile(
+              //   leading: Icon(Icons.folder),
+              //   title: Text(
+              //     'File Explorer',
+              //     style: TextStyle(
+              //         fontFamily: 'Jura',
+              //         fontWeight: FontWeight.bold,
+              //         fontSize: 17),
+              //   ),
+              //   onTap: () {
+              //     FileExplorer().getLocalFiles(null);
+              //     Navigator.of(context).pop();
+              //     _tabController.animateTo(0);
+              //   },
+              // ),
               ListTile(
                 title: Text('Manage Servers',
                     style: TextStyle(
@@ -290,31 +287,31 @@ class NowPlaying extends StatelessWidget {
                                 },
                               ),
                               actions: <Widget>[
-                                IconSlideAction(
-                                    color: Colors.blueGrey,
-                                    icon: Icons.star,
-                                    caption: 'Rate',
-                                    onTap: () {
-                                      showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return AlertDialog(
-                                                title: Text("Rate Song"),
-                                                content: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    child: Text("Go Back"),
-                                                    onPressed: () {
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                    },
-                                                  ),
-                                                ]);
-                                          });
-                                    }),
+                                // IconSlideAction(
+                                //     color: Colors.blueGrey,
+                                //     icon: Icons.star,
+                                //     caption: 'Rate',
+                                //     onTap: () {
+                                //       showDialog(
+                                //           context: context,
+                                //           builder: (BuildContext context) {
+                                //             return AlertDialog(
+                                //                 title: Text("Rate Song"),
+                                //                 content: Column(
+                                //                   mainAxisSize:
+                                //                       MainAxisSize.min,
+                                //                 ),
+                                //                 actions: [
+                                //                   TextButton(
+                                //                     child: Text("Go Back"),
+                                //                     onPressed: () {
+                                //                       Navigator.of(context)
+                                //                           .pop();
+                                //                     },
+                                //                   ),
+                                //                 ]);
+                                //           });
+                                //     }),
                                 IconSlideAction(
                                     color: Colors.blueGrey,
                                     icon: Icons.download,

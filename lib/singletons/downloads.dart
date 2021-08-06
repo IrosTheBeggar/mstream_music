@@ -34,7 +34,7 @@ class DownloadManager {
     // bindBackgroundIsolate();
 
     _port.listen((dynamic data) {
-      print(data);
+      _syncItem(data[0], data[1], data[2]);
     });
 
     FlutterDownloader.registerCallback(_callbackDownloader);
@@ -85,9 +85,11 @@ class DownloadManager {
         // TODO: update queue items
       }
 
-      dt.referenceDisplayItem?.downloadProgress = progress;
+      // dt.referenceDisplayItem?.downloadProgress = progress;
       dt.progress = progress;
-    } catch (err) {}
+    } catch (err) {
+      print(err);
+    }
   }
 
   Future<void> downloadOneFile(
