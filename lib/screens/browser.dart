@@ -463,7 +463,7 @@ class Browser extends StatelessWidget {
                         Icons.download_sharp,
                         color: Colors.black,
                       ),
-                      tooltip: 'Add All',
+                      tooltip: 'Download',
                       onPressed: () {
                         int count = 0;
 
@@ -495,6 +495,9 @@ class Browser extends StatelessWidget {
                         BrowserManager().browserList.forEach((element) {
                           if (element.type == 'file') {
                             addFile(element);
+                          }
+                          if (element.type == 'localFile') {
+                            addLocalFile(element);
                           }
                         });
                       })
