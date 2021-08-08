@@ -76,6 +76,15 @@ class MyCustomFormState extends State<MyCustomForm> {
     } catch (err) {}
   }
 
+  @override
+  void dispose() {
+    _urlCtrl.dispose();
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+
+    super.dispose();
+  }
+
   checkServer() async {
     setState(() {
       submitPending = true;
@@ -226,6 +235,15 @@ class MyCustomFormState extends State<MyCustomForm> {
                     ])),
             Container(
               height: 20,
+            ),
+            Row(
+              children: [
+                Switch(
+                  value: false,
+                  onChanged: (value) {},
+                ),
+                Text('Download to SD Card')
+              ],
             ),
             Container(
               width: MediaQuery.of(context).size.width,
