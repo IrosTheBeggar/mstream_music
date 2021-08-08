@@ -79,10 +79,10 @@ class ServerManager {
       BrowserManager().goToNavScreen();
     }
 
-    // // Create server directory (for downloads)
-    // var file = await getApplicationDocumentsDirectory();
-    // String dir = path.join(file.path, "media/${newServer.localname}");
-    // await new Directory(dir).create(recursive: true);
+    // Create server directory (for downloads)
+    var file = await getApplicationDocumentsDirectory();
+    String dir = path.join(file.path, "media/${newServer.localname}");
+    await new Directory(dir).create(recursive: true);
 
     await writeServerFile();
 
