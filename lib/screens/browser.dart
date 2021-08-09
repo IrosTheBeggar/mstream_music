@@ -73,7 +73,7 @@ class Browser extends StatelessWidget {
 
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'localFiles') {
-      FileExplorer().getPathForServer(browserList[index].server!.localname);
+      FileExplorer().getPathForServer(browserList[index].server!);
       return;
     }
 
@@ -101,7 +101,8 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'localDirectory') {
-      FileExplorer().getLocalFiles(browserList[index].data);
+      FileExplorer()
+          .getLocalFiles(browserList[index].data, browserList[index].server!);
       return;
     }
 
@@ -122,7 +123,10 @@ class Browser extends StatelessWidget {
   void addFile(DisplayItem i) async {
     // Check for song locally
     String downloadDirectory = i.server!.localname + i.data!;
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = await FileExplorer().getDownloadDir(i.server!.saveToSdCard);
+    if (dir == null) {
+      return;
+    }
     String finalString = '${dir.path}/media/$downloadDirectory';
 
     if (new File(finalString).existsSync() == true) {
@@ -133,7 +137,6 @@ class Browser extends StatelessWidget {
           title: i.name,
           extras: {'path': i.data, 'localPath': finalString});
       MediaManager().audioHandler.addQueueItem(item);
-      return;
     }
 
     String prefix =
@@ -477,7 +480,10 @@ class Browser extends StatelessWidget {
                                     : '?token=' + e.server!.jwt!);
 
                             DownloadManager().downloadOneFile(
-                                downloadUrl, e.server!.localname, e.data!);
+                                downloadUrl,
+                                e.server!.localname,
+                                e.data!,
+                                e.server!.saveToSdCard);
                             count++;
                           }
                         });

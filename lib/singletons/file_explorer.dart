@@ -17,14 +17,28 @@ class FileExplorer {
     return _instance;
   }
 
-  Future<void> getLocalFiles(String? directory) async {
+  Future<String> getServerDir(Server s) async {
+    Directory? woo = await getDownloadDir(s.saveToSdCard);
+    if (woo == null) {
+      return 'NO SD CARD DETECTED';
+    }
+
+    return new Directory(path.join(woo.path.toString(), 'media/${s.localname}'))
+        .path
+        .toString();
+  }
+
+  Future<void> getLocalFiles(String? directory, Server s) async {
     BrowserManager().setBrowserLabel('Local Files');
     List<DisplayItem> newList = [];
 
     Directory file;
     if (directory == null) {
       BrowserManager().clear();
-      Directory woo = await getApplicationDocumentsDirectory();
+      Directory? woo = await getDownloadDir(s.saveToSdCard);
+      if (woo == null) {
+        return;
+      }
       file = new Directory(path.join(woo.path.toString(), 'media'));
     } else {
       file = new Directory(directory);
@@ -49,18 +63,20 @@ class FileExplorer {
 
       String thisName = entity.path.substring(stringLength, entity.path.length);
       DisplayItem newItem =
-          new DisplayItem(null, thisName, type, entity.path, useIcon, null);
+          new DisplayItem(s, thisName, type, entity.path, useIcon, null);
       newList.add(newItem);
     }).onDone(() {
       BrowserManager().addListToStack(newList);
     });
   }
 
-  Future<void> getPathForServer(String serverName) async {
-    Directory woo = await getApplicationDocumentsDirectory();
-    Directory file =
-        new Directory(path.join(woo.path.toString(), 'media/$serverName'));
-    getLocalFiles(file.path.toString());
+  Future<void> getPathForServer(Server s) async {
+    Directory? woo = await getDownloadDir(s.saveToSdCard);
+    if (woo != null) {
+      Directory file =
+          new Directory(path.join(woo.path.toString(), 'media/${s.localname}'));
+      getLocalFiles(file.path.toString(), s);
+    }
   }
 
   Future<void> deleteFile(String path, Server? server) async {
@@ -79,5 +95,13 @@ class FileExplorer {
     }
 
     BrowserManager().removeAll(path, server, 'localDirectory');
+  }
+
+  Future<Directory?> getDownloadDir(bool sd) {
+    if (sd == false) {
+      return getApplicationDocumentsDirectory();
+    }
+
+    return getExternalStorageDirectory();
   }
 }

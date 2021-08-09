@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mstream_music/singletons/file_explorer.dart';
+import 'package:flutter/services.dart';
 
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
@@ -18,6 +20,42 @@ class ManageServersScreen extends StatelessWidget {
           if (command == 'default') {
             ServerManager().makeDefault(index);
           }
+          if (command == 'info') {
+            // SimpleDialog(children: <Widget>[]);
+            FileExplorer()
+                .getServerDir(ServerManager().serverList[index])
+                .then((dir) {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                      title: Text('Server Info'),
+                      content: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(ServerManager().serverList[index].url),
+                            Text(''),
+                            Text('Download Folder:'),
+                            Text(''),
+                            Text(dir)
+                          ]),
+                      actions: <Widget>[
+                        TextButton(
+                          child: Text("Copy Download Path"),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: dir));
+                            Navigator.of(context).pop();
+
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Path Copied to Clipboard')));
+                          },
+                        )
+                      ]);
+                },
+              );
+            });
+          }
           if (command == 'delete') {
             showDialog(
               context: context,
@@ -35,6 +73,16 @@ class ManageServersScreen extends StatelessWidget {
         ),
         itemBuilder: (BuildContext context) {
           List<PopupMenuEntry<String>> popUpWidgetList = [
+            PopupMenuItem(
+              value: 'info',
+              child: Row(children: [
+                Icon(
+                  Icons.info,
+                  color: Colors.black,
+                ),
+                Text('   Info', style: TextStyle(color: Colors.black))
+              ]),
+            ),
             PopupMenuItem(
               value: 'edit',
               child: Row(children: [
@@ -122,44 +170,7 @@ class ManageServersScreen extends StatelessWidget {
                                                   color: Colors.black,
                                                   fontSize: 18)),
                                           trailing: generateDropdownMenu(
-                                              context, index)
-                                          // Row(
-                                          //   mainAxisSize: MainAxisSize.min,
-                                          //   children: [
-                                          //     IconButton(
-                                          //         icon: Icon(Icons.edit),
-                                          //         color: Color(0xFF212121),
-                                          //         tooltip: 'Edit Server',
-                                          //         onPressed: () {
-                                          //           Navigator.push(
-                                          //             context,
-                                          //             MaterialPageRoute(
-                                          //                 builder: (context) =>
-                                          //                     EditServerScreen(
-                                          //                         editThisServer: index)),
-                                          //           );
-                                          //         }),
-                                          //     IconButton(
-                                          //       icon: Icon(
-                                          //         Icons.delete,
-                                          //         color: Colors.redAccent,
-                                          //       ),
-                                          //       tooltip: 'Delete Server',
-                                          //       onPressed: () {
-                                          //         showDialog(
-                                          //           context: context,
-                                          //           builder: (BuildContext context) {
-                                          //             // return object of type Dialog
-                                          //             return DeleteServerDialog(
-                                          //                 cServer: ServerManager()
-                                          //                     .serverList[index]);
-                                          //           },
-                                          //         );
-                                          //       },
-                                          //     ),
-                                          //   ],
-                                          // ),
-                                          ));
+                                              context, index)));
                                 }));
                       })))
         ]));

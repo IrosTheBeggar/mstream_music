@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'server.dart';
 import 'metadata.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/file_explorer.dart';
 
 class DisplayItem {
   final Server? server;
@@ -56,9 +57,13 @@ class DisplayItem {
 
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext) {
+    // Check if file is saved on device
     if (this.type == 'file') {
       String downloadDirectory = this.server!.localname + this.data!;
-      getApplicationDocumentsDirectory().then((dir) {
+      FileExplorer().getDownloadDir(this.server!.saveToSdCard).then((dir) {
+        if (dir == null) {
+          return;
+        }
         String finalString = '${dir.path}/media/$downloadDirectory';
 
         new File(finalString).exists().then((ex) {

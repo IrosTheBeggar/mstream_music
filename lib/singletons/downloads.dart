@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'dart:async';
 import 'dart:io';
 
+import 'package:mstream_music/singletons/file_explorer.dart';
+import 'package:mstream_music/singletons/server_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:path_provider/path_provider.dart';
@@ -92,13 +94,16 @@ class DownloadManager {
     }
   }
 
-  Future<void> downloadOneFile(
-      String downloadUrl, String serverName, String filepath) async {
+  Future<void> downloadOneFile(String downloadUrl, String serverName,
+      String filepath, bool? saveToSdCard) async {
     String downloadDirectory = serverName + filepath;
-    final dir = await getApplicationDocumentsDirectory();
 
-    print(downloadUrl);
-    print(filepath);
+    bool sd =
+        saveToSdCard ?? ServerManager().lookupServer(serverName).saveToSdCard;
+    final dir = await FileExplorer().getDownloadDir(sd);
+    if (dir == null) {
+      return;
+    }
 
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 

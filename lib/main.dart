@@ -322,7 +322,8 @@ class NowPlaying extends StatelessWidget {
                                         DownloadManager().downloadOneFile(
                                             queue[index].id,
                                             queue[index].extras!['server'],
-                                            queue[index].extras!['path']);
+                                            queue[index].extras!['path'],
+                                            null);
                                       }
                                     })
                               ],

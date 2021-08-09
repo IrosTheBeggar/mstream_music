@@ -57,6 +57,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   TextEditingController _passwordCtrl = TextEditingController();
 
   bool submitPending = false;
+  bool saveToSdCard = false;
 
   final int? editThisServer;
   MyCustomFormState({this.editThisServer}) : super();
@@ -67,12 +68,11 @@ class MyCustomFormState extends State<MyCustomForm> {
     super.initState();
 
     try {
-      ServerManager().serverList[editThisServer ?? -1];
-      _urlCtrl.text = ServerManager().serverList[editThisServer ?? -1].url;
-      _usernameCtrl.text =
-          ServerManager().serverList[editThisServer ?? -1].username ?? '';
-      _passwordCtrl.text =
-          ServerManager().serverList[editThisServer ?? -1].password ?? '';
+      Server s = ServerManager().serverList[editThisServer ?? -1];
+      _urlCtrl.text = s.url;
+      _usernameCtrl.text = s.username ?? '';
+      _passwordCtrl.text = s.password ?? '';
+      saveToSdCard = s.saveToSdCard;
     } catch (err) {}
   }
 
@@ -143,10 +143,13 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     if (shouldUpdate) {
       ServerManager().editServer(editThisServer!, _urlCtrl.text,
-          _usernameCtrl.text, _passwordCtrl.text);
+          _usernameCtrl.text, _passwordCtrl.text, saveToSdCard);
     } else {
       Server newServer = new Server(origin, this._usernameCtrl.text,
           this._passwordCtrl.text, jwt, Uuid().v4());
+      if (saveToSdCard == true) {
+        newServer.saveToSdCard = true;
+      }
       await ServerManager().addServer(newServer);
     }
 
@@ -236,15 +239,21 @@ class MyCustomFormState extends State<MyCustomForm> {
             Container(
               height: 20,
             ),
+            // if (this.editThisServer == null) ...[
             Row(
               children: [
                 Switch(
-                  value: false,
-                  onChanged: (value) {},
+                  value: this.saveToSdCard,
+                  onChanged: (value) {
+                    setState(() {
+                      this.saveToSdCard = value;
+                    });
+                  },
                 ),
                 Text('Download to SD Card')
               ],
             ),
+            // ],
             Container(
               width: MediaQuery.of(context).size.width,
               child: Row(

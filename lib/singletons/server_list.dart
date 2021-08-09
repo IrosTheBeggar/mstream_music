@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'package:mstream_music/singletons/file_explorer.dart';
+
 import '../objects/server.dart';
 import './browser_list.dart';
 
@@ -80,20 +82,24 @@ class ServerManager {
     }
 
     // Create server directory (for downloads)
-    var file = await getApplicationDocumentsDirectory();
-    String dir = path.join(file.path, "media/${newServer.localname}");
-    await new Directory(dir).create(recursive: true);
+    Directory? file =
+        await FileExplorer().getDownloadDir(newServer.saveToSdCard);
+    if (file != null) {
+      String dir = path.join(file.path, "media/${newServer.localname}");
+      await new Directory(dir).create(recursive: true);
+    }
 
     await writeServerFile();
 
     _serverListStream.sink.add(serverList);
   }
 
-  void editServer(
-      int serverIndex, String url, String? username, String? password) {
+  void editServer(int serverIndex, String url, String? username,
+      String? password, bool saveToSd) {
     serverList[serverIndex].url = url;
     ServerManager().serverList[serverIndex].password = password;
     ServerManager().serverList[serverIndex].username = username;
+    ServerManager().serverList[serverIndex].saveToSdCard = saveToSd;
 
     callAfterEditServer();
   }
@@ -136,19 +142,26 @@ class ServerManager {
   }
 
   Future<void> _deleteServeDirectory(Server removedServer) async {
-    final directory = await getApplicationDocumentsDirectory();
-    var dir = new Directory(path.join(
-        directory.path.toString(), "media/${removedServer.localname}"));
-    dir.delete(recursive: true);
+    Directory? directory =
+        await FileExplorer().getDownloadDir(removedServer.saveToSdCard);
+    if (directory != null) {
+      Directory dir = new Directory(path.join(
+          directory.path.toString(), "media/${removedServer.localname}"));
+      dir.delete(recursive: true);
+    }
   }
 
-  makeDefault(int i) {
+  void makeDefault(int i) {
     Server s = serverList[i];
 
     serverList.remove(s);
     serverList.insert(0, s);
 
     _serverListStream.sink.add(serverList);
+  }
+
+  Server lookupServer(String id) {
+    return serverList.firstWhere((e) => e.localname == id);
   }
 
   void dispose() {

@@ -1,6 +1,7 @@
 class Server {
   String url;
   String localname; // name we use when mappings files to the fs
+  bool saveToSdCard = false;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
