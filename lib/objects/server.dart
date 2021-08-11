@@ -15,7 +15,8 @@ class Server {
         jwt = json['jwt'],
         username = json['username'],
         password = json['password'],
-        localname = json['localname'];
+        localname = json['localname'],
+        saveToSdCard = json['saveToSdCard'] ?? false;
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -23,5 +24,6 @@ class Server {
         'username': username,
         'password': password,
         'localname': localname,
+        'saveToSdCard': saveToSdCard
       };
 }
