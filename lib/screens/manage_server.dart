@@ -137,7 +137,10 @@ class ManageServersScreen extends StatelessWidget {
               MaterialPageRoute(builder: (context) => AddServerScreen()),
             );
           },
-          child: Icon(Icons.add),
+          child: Icon(
+            Icons.add,
+            color: Colors.black,
+          ),
           backgroundColor: Color(0xFFFFAB00),
         ),
         body: Row(children: [
