@@ -451,64 +451,73 @@ class Browser extends StatelessWidget {
     return Column(children: <Widget>[
       Material(
           color: Color(0xFFffffff),
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                IconButton(
-                    icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
-                    tooltip: 'Go Back',
-                    onPressed: () {
-                      BrowserManager().popBrowser();
-                    }),
-                Row(children: <Widget>[
-                  IconButton(
-                      icon: Icon(
-                        Icons.download_sharp,
-                        color: Colors.black,
-                      ),
-                      tooltip: 'Download',
-                      onPressed: () {
-                        int count = 0;
+          child:
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: <
+                  Widget>[
+            IconButton(
+                icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
+                tooltip: 'Go Back',
+                onPressed: () {
+                  BrowserManager().popBrowser();
+                }),
+            Row(children: <Widget>[
+              IconButton(
+                  icon: Icon(
+                    Icons.download_sharp,
+                    color: Colors.black,
+                  ),
+                  tooltip: 'Download',
+                  onPressed: () {
+                    int count = 0;
 
-                        BrowserManager().browserList.forEach((e) {
-                          if (e.type == 'file') {
-                            String downloadUrl = e.server!.url +
-                                '/media' +
-                                e.data! +
-                                (e.server!.jwt == null
-                                    ? ''
-                                    : '?token=' + e.server!.jwt!);
+                    BrowserManager().browserList.forEach((e) {
+                      if (e.type == 'file') {
+                        String downloadUrl = e.server!.url +
+                            '/media' +
+                            e.data! +
+                            (e.server!.jwt == null
+                                ? ''
+                                : '?token=' + e.server!.jwt!);
 
-                            DownloadManager().downloadOneFile(
-                                downloadUrl,
-                                e.server!.localname,
-                                e.data!,
-                                e.server!.saveToSdCard);
-                            count++;
-                          }
-                        });
+                        DownloadManager().downloadOneFile(
+                            downloadUrl,
+                            e.server!.localname,
+                            e.data!,
+                            e.server!.saveToSdCard);
+                        count++;
+                      }
+                    });
 
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('$count downloads started')));
-                      }),
-                  IconButton(
-                      icon: Icon(
-                        Icons.library_add,
-                        color: Colors.black,
-                      ),
-                      tooltip: 'Add All',
-                      onPressed: () {
-                        BrowserManager().browserList.forEach((element) {
-                          if (element.type == 'file') {
-                            addFile(element);
-                          }
-                          if (element.type == 'localFile') {
-                            addLocalFile(element);
-                          }
-                        });
-                      })
-                ])
-              ])),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$count downloads started')));
+                  }),
+              IconButton(
+                  icon: Icon(
+                    Icons.library_add,
+                    color: Colors.black,
+                  ),
+                  tooltip: 'Add All',
+                  onPressed: () {
+                    int n = 0;
+
+                    BrowserManager().browserList.forEach((element) {
+                      if (element.type == 'localFile') {
+                        addLocalFile(element);
+                        n++;
+                      } else if (element.type == 'file') {
+                        addFile(element);
+                        n++;
+                      }
+                    });
+
+                    if (n > 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text(n.toString() + " songs added to queue")));
+                    }
+                  })
+            ])
+          ])),
       Expanded(
           child: SizedBox(
               child: StreamBuilder<List<DisplayItem>>(
