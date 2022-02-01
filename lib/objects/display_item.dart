@@ -13,6 +13,8 @@ class DisplayItem {
   final String type;
   final String? data;
 
+  bool showRating = false;
+
   Icon? icon;
   String name;
   MusicMetadata? metadata;
@@ -23,13 +25,20 @@ class DisplayItem {
   Widget getText() {
     if (metadata?.title != null) {
       return Text(
-        metadata!.title!,
+        (showRating == true && metadata?.rating != null
+                ? '[' + (metadata!.rating! / 2).toString() + '] '
+                : '') +
+            metadata!.title!,
         style: TextStyle(fontFamily: 'Jura', fontSize: 18, color: Colors.black),
       );
     }
 
     if (type == 'file' || type == 'localFile') {
-      return new Text(this.name,
+      return new Text(
+          (showRating == true && metadata?.rating != null
+                  ? '[' + (metadata!.rating! / 2).toString() + '] '
+                  : '') +
+              this.data!.split('/').last,
           style: TextStyle(fontSize: 18, color: Colors.black));
     }
     return new Text(this.name,

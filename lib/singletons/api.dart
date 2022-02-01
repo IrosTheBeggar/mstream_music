@@ -2,6 +2,7 @@ import './server_list.dart';
 import './browser_list.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
+import '../objects/metadata.dart';
 import './transcode.dart';
 import 'media.dart';
 import 'package:flutter/material.dart';
@@ -210,13 +211,28 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
+      MusicMetadata m = new MusicMetadata(
+          e['metadata']['artist'],
+          e['metadata']['album'],
+          e['metadata']['title'],
+          e['metadata']['track'],
+          e['metadata']['disc'],
+          e['metadata']['year'],
+          e['metadata']['hash'],
+          e['metadata']['rating'],
+          e['metadata']['album-art']);
+
       DisplayItem newItem = new DisplayItem(
           useThisServer,
-          '[' + (e['metadata']['rating'] / 2).toString() + ']' + e['filepath'],
+          e['filepath'],
           'file',
           '/' + e['filepath'],
           Icon(Icons.music_note, color: Colors.blue),
-          null);
+          m.artist);
+
+      newItem.metadata = m;
+      newItem.showRating = true;
+
       newList.add(newItem);
     });
     BrowserManager().addListToStack(newList);

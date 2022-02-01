@@ -302,7 +302,7 @@ class NowPlaying extends StatelessWidget {
                               actions: <Widget>[
                                 // IconSlideAction(
                                 //     color: Colors.blueGrey,
-                                //     icon: ,
+                                //     icon: Icons.star_border_outlined,
                                 //     caption: 'Rate',
                                 //     onTap: () {
                                 //       showDialog(
@@ -371,15 +371,9 @@ class NowPlaying extends StatelessWidget {
                                         Expanded(
                                             child: Container(
                                                 child: ListTile(
-                                                    // tileColor: (queue[index] ==
-                                                    //         mediaItem)
-                                                    //     ? Color(0xFFffab00)
-                                                    //     : null,
                                                     title: Text(
                                                         queue[index].title,
                                                         style: TextStyle(
-                                                            fontFamily: 'Jura',
-                                                            fontSize: 18,
                                                             color:
                                                                 Colors.black)),
                                                     onTap: () {
