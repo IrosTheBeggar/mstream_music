@@ -95,7 +95,9 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     try {
       // Do a quick check on /ping to see if this server even needs authentication
-      response = await http.get(lol.resolve('/api/v1/ping'));
+      response = await http
+          .get(lol.resolve('/api/v1/ping'))
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         // setState(() {
@@ -113,7 +115,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       response = await http.post(lol.resolve('/api/v1/auth/login'), body: {
         "username": this._usernameCtrl.text,
         "password": this._passwordCtrl.text
-      });
+      }).timeout(Duration(seconds: 6));
 
       if (response.statusCode != 200) {
         throw Exception('Failed to connect to server');
@@ -125,9 +127,12 @@ class MyCustomFormState extends State<MyCustomForm> {
       saveServer(origin, res['token']);
     } catch (err) {
       print(err);
-      setState(() {
-        submitPending = false;
-      });
+      try {
+        setState(() {
+          submitPending = false;
+        });
+      } catch (e) {}
+
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to Login')));
       return;
