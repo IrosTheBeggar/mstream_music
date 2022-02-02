@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:http/http.dart' as http;
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -37,6 +38,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         .listen((item) => _recentSubject.add([item]));
     // Broadcast media item changes.
     _player.currentIndexStream.listen((index) {
+      print(index);
+      print(queue.value.length);
+      if (index == queue.value.length - 1) {
+        print('AUTO DJ');
+      }
+
       if (index != null && queue.value.isNotEmpty)
         mediaItem.add(queue.value[index]);
     });

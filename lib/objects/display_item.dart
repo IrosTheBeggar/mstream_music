@@ -22,6 +22,20 @@ class DisplayItem {
 
   int downloadProgress = 0;
 
+  Widget? getImage() {
+    if (this.server != null && this.metadata?.albumArt != null) {
+      String lolUrl = Uri.encodeFull(this.server!.url +
+          '/album-art/' +
+          this.metadata!.albumArt! +
+          '?compress=s' +
+          (this.server!.jwt == null ? '' : '&token=' + this.server!.jwt!));
+
+      return Image.network(lolUrl.toString());
+    }
+
+    return icon;
+  }
+
   Widget getText() {
     if (metadata?.title != null) {
       return Text(
@@ -29,7 +43,7 @@ class DisplayItem {
                 ? '[' + (metadata!.rating! / 2).toString() + '] '
                 : '') +
             metadata!.title!,
-        style: TextStyle(fontFamily: 'Jura', fontSize: 18, color: Colors.black),
+        style: TextStyle(color: Colors.black),
       );
     }
 
@@ -41,6 +55,7 @@ class DisplayItem {
               this.data!.split('/').last,
           style: TextStyle(fontSize: 18, color: Colors.black));
     }
+
     return new Text(this.name,
         style:
             TextStyle(fontFamily: 'Jura', fontSize: 18, color: Colors.black));

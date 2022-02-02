@@ -154,9 +154,19 @@ class ApiManager {
       return;
     }
 
-    // TODO: Handle metadata
     List<DisplayItem> newList = [];
     res.forEach((e) {
+      MusicMetadata m = new MusicMetadata(
+          e['metadata']['artist'],
+          e['metadata']['album'],
+          e['metadata']['title'],
+          e['metadata']['track'],
+          e['metadata']['disc'],
+          e['metadata']['year'],
+          e['metadata']['hash'],
+          e['metadata']['rating'],
+          e['metadata']['album-art']);
+
       DisplayItem newItem = new DisplayItem(
           useThisServer,
           e['filepath'],
@@ -164,6 +174,9 @@ class ApiManager {
           '/' + e['filepath'],
           Icon(Icons.music_note, color: Colors.blue),
           null);
+
+      newItem.metadata = m;
+
       newList.add(newItem);
     });
 
@@ -185,6 +198,17 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
+      MusicMetadata m = new MusicMetadata(
+          e['metadata']['artist'],
+          e['metadata']['album'],
+          e['metadata']['title'],
+          e['metadata']['track'],
+          e['metadata']['disc'],
+          e['metadata']['year'],
+          e['metadata']['hash'],
+          e['metadata']['rating'],
+          e['metadata']['album-art']);
+
       DisplayItem newItem = new DisplayItem(
           useThisServer,
           e['filepath'],
@@ -192,6 +216,9 @@ class ApiManager {
           '/' + e['filepath'],
           Icon(Icons.music_note, color: Colors.blue),
           null);
+
+      newItem.metadata = m;
+
       newList.add(newItem);
     });
     BrowserManager().addListToStack(newList);
@@ -296,9 +323,19 @@ class ApiManager {
       return;
     }
 
-    // TODO: Handle metadata
     List<DisplayItem> newList = [];
     res.forEach((e) {
+      MusicMetadata m = new MusicMetadata(
+          e['metadata']['artist'],
+          e['metadata']['album'],
+          e['metadata']['title'],
+          e['metadata']['track'],
+          e['metadata']['disc'],
+          e['metadata']['year'],
+          e['metadata']['hash'],
+          e['metadata']['rating'],
+          e['metadata']['album-art']);
+
       DisplayItem newItem = new DisplayItem(
           useThisServer,
           e['filepath'],
@@ -306,6 +343,8 @@ class ApiManager {
           '/' + e['filepath'],
           Icon(Icons.music_note, color: Colors.blue),
           null);
+
+      newItem.metadata = m;
       newList.add(newItem);
     });
 
