@@ -137,6 +137,7 @@ class Browser extends StatelessWidget {
           title: i.name,
           extras: {'path': i.data, 'localPath': finalString});
       MediaManager().audioHandler.addQueueItem(item);
+      return;
     }
 
     String prefix =
