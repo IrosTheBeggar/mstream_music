@@ -15,9 +15,9 @@
     <!-- Change the following to disable SSL certs -->
     <!-- android:name=".MyApplication" -->
     <!-- The correct way -->
-    <!-- android:name="io.flutter.app.FlutterApplication" -->
+    <!-- android:name="${applicationName}" -->
     <application
-        android:name=".MyApplication"
+        android:name="${applicationName}"
         android:label="mStream Music"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
