@@ -143,12 +143,20 @@ class Browser extends StatelessWidget {
     String prefix =
         TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
 
-    String lolUrl = Uri.encodeFull(i.server!.url +
+    String p = '';
+    i.data!.split("/").forEach((element) {
+      if (element.length == 0) {
+        return;
+      }
+      p += "/" + Uri.encodeComponent(element);
+    });
+
+    String lolUrl = i.server!.url +
         prefix +
-        i.data! +
+        p +
         '?app_uuid=' +
         Uuid().v4() +
-        (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!));
+        (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!);
 
     MediaItem item = new MediaItem(
         id: lolUrl,
