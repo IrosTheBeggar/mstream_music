@@ -14,7 +14,7 @@ class MediaManager {
     audioHandler = await AudioService.init(
       builder: () => AudioPlayerHandler(),
       config: AudioServiceConfig(
-        androidNotificationChannelName: 'Audio Service Demo',
+        androidNotificationChannelName: 'mStream Music',
         androidNotificationOngoing: true,
       ),
     );

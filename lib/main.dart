@@ -407,6 +407,17 @@ class BottomBar extends StatelessWidget {
     MediaManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
   }
 
+  setAutoDJ() {
+    if (ServerManager().currentServer == null) {
+      return;
+    }
+
+    MediaManager().audioHandler.customAction('setAutoDJ', {
+      'serverURL': ServerManager().currentServer!.url.toString(),
+      'token': ServerManager().currentServer!.jwt
+    });
+  }
+
   Widget build(BuildContext context) {
     return BottomAppBar(
         color: Color(0xFF212121),
@@ -504,6 +515,22 @@ class BottomBar extends StatelessWidget {
                                 ? Colors.blue
                                 : Colors.white,
                             onPressed: toggleRepeat);
+                      }),
+                  StreamBuilder<AudioServiceShuffleMode>(
+                      // stream: MediaManager().audioHandler.playbackState,
+                      stream: MediaManager()
+                          .audioHandler
+                          .playbackState
+                          .map((state) => state.shuffleMode)
+                          .distinct(),
+                      builder: (context, snapshot) {
+                        final mediaState = snapshot.data;
+                        return IconButton(
+                            icon: Icon(Icons.album),
+                            color: (mediaState == AudioServiceShuffleMode.all)
+                                ? Colors.blue
+                                : Colors.white,
+                            onPressed: setAutoDJ);
                       }),
                 ])
               ])
