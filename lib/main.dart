@@ -516,20 +516,17 @@ class BottomBar extends StatelessWidget {
                                 : Colors.white,
                             onPressed: toggleRepeat);
                       }),
-                  StreamBuilder<AudioServiceShuffleMode>(
+                  StreamBuilder<dynamic>(
                       // stream: MediaManager().audioHandler.playbackState,
-                      stream: MediaManager()
-                          .audioHandler
-                          .playbackState
-                          .map((state) => state.shuffleMode)
-                          .distinct(),
+                      stream: MediaManager().audioHandler.customState,
                       builder: (context, snapshot) {
-                        final mediaState = snapshot.data;
+                        final String? autoDJState =
+                            (snapshot.data?.autoDJState as String?);
                         return IconButton(
                             icon: Icon(Icons.album),
-                            color: (mediaState == AudioServiceShuffleMode.all)
-                                ? Colors.blue
-                                : Colors.white,
+                            color: (autoDJState == null)
+                                ? Colors.white
+                                : Colors.blue,
                             onPressed: setAutoDJ);
                       }),
                 ])
@@ -573,7 +570,7 @@ class MediaState {
 }
 
 class CustomEvent {
-  final int handlerIndex;
+  final String? autoDJState;
 
-  CustomEvent(this.handlerIndex);
+  CustomEvent(this.autoDJState);
 }

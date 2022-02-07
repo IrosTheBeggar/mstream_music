@@ -91,6 +91,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
+  BehaviorSubject<dynamic> customState =
+      BehaviorSubject<dynamic>.seeded(CustomEvent(null));
+
+  @override
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
     // the [QueueHandler] mixin will delegate to this method.
@@ -191,6 +195,8 @@ class AudioPlayerHandler extends BaseAudioHandler
           autoDJServer = null;
           autoDJToken = null;
           jsonAutoDJIgnoreList = null;
+          customState.add(CustomEvent(autoDJServer));
+
           return;
         }
 
@@ -211,12 +217,10 @@ class AudioPlayerHandler extends BaseAudioHandler
             autoDJ();
           }
         }
+
+        customState.add(CustomEvent(autoDJServer));
         break;
     }
-  }
-
-  void _broadcastCustomState(CustomEvent event) {
-    customState.add(customState.value);
   }
 
   /// Broadcasts the current state to all clients.
