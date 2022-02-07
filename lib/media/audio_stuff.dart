@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 
 /// An [AudioHandler] for playing a list of podcast episodes.
@@ -16,6 +19,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   final _playlist = ConcatenatingAudioSource(children: []);
 
   int? get index => _player.currentIndex;
+
+  String? autoDJServer;
+  String? autoDJToken;
+  var jsonAutoDJIgnoreList;
 
   AudioPlayerHandler() {
     _init();
@@ -40,8 +47,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.currentIndexStream.listen((index) {
       print(index);
       print(queue.value.length);
+
       if (index == queue.value.length - 1) {
-        print('AUTO DJ');
+        autoDJ();
       }
 
       if (index != null && queue.value.isNotEmpty)
@@ -177,7 +185,38 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
+      case 'setAutoDJ':
+        if (autoDJServer == extras?['serverURL']) {
+          //  NOTE: This logic might be moved to the frontend
+          autoDJServer = null;
+          autoDJToken = null;
+          jsonAutoDJIgnoreList = null;
+          return;
+        }
+
+        autoDJServer = extras?['serverURL'];
+        autoDJToken = extras?['token'];
+        jsonAutoDJIgnoreList = null;
+
+        if (queue.value.length == 0 ||
+            queue.value.length == 1 ||
+            index == queue.value.length - 1) {
+          if (queue.value.length == 0) {
+            await autoDJ(autoPlay: true);
+            autoDJ();
+          } else if (index == queue.value.length - 1 &&
+              _player.processingState == ProcessingState.idle) {
+            autoDJ(autoPlay: true, incrementIndex: true);
+          } else {
+            autoDJ();
+          }
+        }
+        break;
     }
+  }
+
+  void _broadcastCustomState(CustomEvent event) {
+    customState.add(customState.value);
   }
 
   /// Broadcasts the current state to all clients.
@@ -219,5 +258,59 @@ class AudioPlayerHandler extends BaseAudioHandler
       speed: _player.speed,
       queueIndex: event.currentIndex,
     ));
+  }
+
+  Future<void> autoDJ(
+      {bool autoPlay = false, bool incrementIndex = false}) async {
+    if (autoDJServer == null) {
+      return;
+    }
+
+    try {
+      Uri currentUri =
+          Uri.parse(autoDJServer!).resolve('/api/v1/db/random-songs');
+
+      String payload = '{"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
+
+      var res = await http.post(currentUri,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': autoDJToken ?? ''
+          },
+          body: payload);
+
+      var decoded = jsonDecode(res.body);
+
+      String p = '';
+      decoded['songs'][0]['filepath'].split("/").forEach((element) {
+        if (element.length == 0) {
+          return;
+        }
+        p += "/" + Uri.encodeComponent(element);
+      });
+
+      String lolUrl = autoDJServer! +
+          '/media' +
+          p +
+          '?app_uuid=' +
+          Uuid().v4() +
+          (autoDJToken == null ? '' : '&token=' + autoDJToken!);
+
+      MediaItem item = new MediaItem(
+          id: lolUrl,
+          title: decoded['songs'][0]['filepath'].split("/").removeLast(),
+          extras: {'path': decoded['songs'][0]['filepath']});
+
+      jsonAutoDJIgnoreList = decoded['ignoreList'];
+
+      addQueueItem(item);
+
+      if (incrementIndex == true) {
+        _player.seek(Duration.zero, index: index! + 1);
+      }
+      if (autoPlay == true) {
+        play();
+      }
+    } catch (err) {}
   }
 }
