@@ -135,8 +135,15 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res['albums'].forEach((e) {
-      DisplayItem newItem = new DisplayItem(useThisServer, e['name'], 'album',
-          e['name'], Icon(Icons.album, color: Colors.black), null);
+      // print(e['album_art_file']);
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          e['name'],
+          'album',
+          e['name'],
+          Icon(Icons.album, color: Colors.black),
+          e['year']?.toString() ?? '');
+      newItem.altAlbumArt = e['album_art_file'];
       newList.add(newItem);
     });
 
@@ -303,8 +310,15 @@ class ApiManager {
       String name = e['name'] ?? 'SINGLES';
 
       // TODO: Errors on singles
-      DisplayItem newItem = new DisplayItem(useThisServer, name, 'album',
-          e['name'], Icon(Icons.album, color: Colors.black), null);
+      DisplayItem newItem = new DisplayItem(
+          useThisServer,
+          name,
+          'album',
+          e['name'],
+          Icon(Icons.album, color: Colors.black),
+          e['year']?.toString() ?? '');
+      newItem.altAlbumArt = e['album_art_file'];
+
       newList.add(newItem);
     });
 

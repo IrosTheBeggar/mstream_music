@@ -18,15 +18,20 @@ class DisplayItem {
   Icon? icon;
   String name;
   MusicMetadata? metadata;
+  String? altAlbumArt;
   String? subtext;
 
   int downloadProgress = 0;
 
   Widget? getImage() {
-    if (this.server != null && this.metadata?.albumArt != null) {
+    print(altAlbumArt);
+    String? aaFile = altAlbumArt ?? this.metadata?.albumArt ?? null;
+    print(aaFile);
+
+    if (this.server != null && aaFile != null) {
       String lolUrl = Uri.encodeFull(this.server!.url +
           '/album-art/' +
-          this.metadata!.albumArt! +
+          aaFile +
           '?compress=s' +
           (this.server!.jwt == null ? '' : '&token=' + this.server!.jwt!));
 

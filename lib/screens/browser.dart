@@ -410,7 +410,7 @@ class Browser extends StatelessWidget {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: ListTile(
-            leading: b[i].icon ?? null,
+            leading: b[i].getImage(),
             title: b[i].getText(),
             subtitle: b[i].getSubText(),
             onTap: () {
