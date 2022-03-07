@@ -511,9 +511,17 @@ class Browser extends StatelessWidget {
 
                     BrowserManager().browserList.forEach((element) {
                       if (element.type == 'localFile') {
+                        if (element.data!.substring(element.data!.length - 4) ==
+                            '.m3u') {
+                          return;
+                        }
                         addLocalFile(element);
                         n++;
                       } else if (element.type == 'file') {
+                        if (element.data!.substring(element.data!.length - 4) ==
+                            '.m3u') {
+                          return;
+                        }
                         addFile(element);
                         n++;
                       }
