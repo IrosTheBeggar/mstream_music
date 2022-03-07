@@ -523,8 +523,8 @@ class BottomBar extends StatelessWidget {
                       // stream: MediaManager().audioHandler.playbackState,
                       stream: MediaManager().audioHandler.customState,
                       builder: (context, snapshot) {
-                        final String? autoDJState =
-                            (snapshot.data?.autoDJState as String?);
+                        final Server? autoDJState =
+                            (snapshot.data?.autoDJState as Server?);
                         return IconButton(
                             icon: Icon(Icons.album),
                             color: (autoDJState == null)
@@ -536,6 +536,11 @@ class BottomBar extends StatelessWidget {
                               }
 
                               if (autoDJState == null) {
+                                MediaManager().audioHandler.customAction(
+                                    'setAutoDJ', {
+                                  'autoDJServer': ServerManager().currentServer
+                                });
+
                                 if (ServerManager().serverList.length == 1) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -546,32 +551,23 @@ class BottomBar extends StatelessWidget {
                                           content: Text(
                                               "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
                                 }
-                              } else if (ServerManager()
-                                      .currentServer!
-                                      .url
-                                      .toString() ==
+                              } else if (ServerManager().currentServer! ==
                                   autoDJState) {
+                                MediaManager().audioHandler.customAction(
+                                    'setAutoDJ', {'autoDJServer': null});
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                         content: Text("Auto DJ Disabled")));
                               } else {
+                                MediaManager().audioHandler.customAction(
+                                    'setAutoDJ', {
+                                  'autoDJServer': ServerManager().currentServer
+                                });
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                     content: Text(
                                         "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
                               }
-
-                              MediaManager()
-                                  .audioHandler
-                                  .customAction('setAutoDJ', {
-                                'serverURL': ServerManager()
-                                    .currentServer!
-                                    .url
-                                    .toString(),
-                                'token': ServerManager().currentServer!.jwt,
-                                'autoDJMinRating': ServerManager()
-                                    .currentServer!
-                                    .autoDJminRating
-                              });
                             });
                       }),
                 ])
@@ -615,7 +611,7 @@ class MediaState {
 }
 
 class CustomEvent {
-  final String? autoDJState;
+  final Server? autoDJState;
 
   CustomEvent(this.autoDJState);
 }

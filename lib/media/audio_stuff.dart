@@ -3,11 +3,11 @@ import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:audio_session/audio_session.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import '../objects/server.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -20,9 +20,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   int? get index => _player.currentIndex;
 
-  String? autoDJServer;
-  String? autoDJToken;
-  int? autoDJMinRating;
+  Server? autoDJServer;
 
   var jsonAutoDJIgnoreList;
 
@@ -103,8 +101,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (index < 0 || index > queue.value.length) return;
     // This jumps to the beginning of the queue item at newIndex.
     _player.seek(Duration.zero, index: index);
-    // Demonstrate custom events.
-    customEvent.add('skip to $index');
   }
 
   @override
@@ -191,29 +187,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
-      case 'setAutoDJMinRating':
-        try {
-          autoDJMinRating = extras?['autoDJMinRating'];
-          print(autoDJMinRating);
-        } catch (err) {
-          print(err);
-        }
-        break;
       case 'setAutoDJ':
-        if (autoDJServer == extras?['serverURL']) {
-          //  NOTE: This logic might be moved to the frontend
-          autoDJServer = null;
-          autoDJToken = null;
-          jsonAutoDJIgnoreList = null;
-          customState.add(CustomEvent(autoDJServer));
-
-          return;
-        }
-
-        autoDJServer = extras?['serverURL'];
-        autoDJToken = extras?['token'];
-        autoDJMinRating = extras?['autoDJMinRating'];
-
+        autoDJServer = extras?['autoDJServer'];
         jsonAutoDJIgnoreList = null;
 
         customState.add(CustomEvent(autoDJServer));
@@ -284,16 +259,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
 
     try {
-      Uri currentUri =
-          Uri.parse(autoDJServer!).resolve('/api/v1/db/random-songs');
+      Uri currentUri = Uri.parse(autoDJServer!.url.toString())
+          .resolve('/api/v1/db/random-songs');
 
       String payload =
-          '{"minRating":$autoDJMinRating,"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
+          '{"minRating":${autoDJServer?.autoDJminRating},"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
 
       var res = await http.post(currentUri,
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': autoDJToken ?? ''
+            'x-access-token': autoDJServer?.jwt ?? ''
           },
           body: payload);
 
@@ -307,12 +282,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         p += "/" + Uri.encodeComponent(element);
       });
 
-      String lolUrl = autoDJServer! +
+      String lolUrl = autoDJServer!.url.toString() +
           '/media' +
           p +
           '?app_uuid=' +
           Uuid().v4() +
-          (autoDJToken == null ? '' : '&token=' + autoDJToken!);
+          (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
 
       MediaItem item = new MediaItem(
           id: lolUrl,
