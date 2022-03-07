@@ -8,6 +8,9 @@ class Server {
   String? password;
   String? jwt;
 
+  // Auto DJ
+  int? autoDJminRating;
+
   Server(this.url, this.username, this.password, this.jwt, this.localname);
 
   Server.fromJson(Map<String, dynamic> json)

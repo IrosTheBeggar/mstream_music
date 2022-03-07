@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
@@ -9,9 +8,9 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
-import 'singletons/file_explorer.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
+import 'screens/auto_dj.dart';
 import 'screens/downloads.dart';
 import 'singletons/downloads.dart';
 import 'screens/add_server.dart';
@@ -247,6 +246,21 @@ class _MStreamAppState extends State<MStreamApp>
                   );
                 },
               ),
+              ListTile(
+                title: Text('Auto DJ',
+                    style: TextStyle(
+                        fontFamily: 'Jura',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17)),
+                leading: Icon(Icons.album),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AutoDJScreen()),
+                  );
+                },
+              ),
             ])),
             body: TabBarView(
                 children: [Browser(), NowPlaying()],
@@ -407,17 +421,6 @@ class BottomBar extends StatelessWidget {
     MediaManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
   }
 
-  setAutoDJ() {
-    if (ServerManager().currentServer == null) {
-      return;
-    }
-
-    MediaManager().audioHandler.customAction('setAutoDJ', {
-      'serverURL': ServerManager().currentServer!.url.toString(),
-      'token': ServerManager().currentServer!.jwt
-    });
-  }
-
   Widget build(BuildContext context) {
     return BottomAppBar(
         color: Color(0xFF212121),
@@ -527,7 +530,49 @@ class BottomBar extends StatelessWidget {
                             color: (autoDJState == null)
                                 ? Colors.white
                                 : Colors.blue,
-                            onPressed: setAutoDJ);
+                            onPressed: () {
+                              if (ServerManager().currentServer == null) {
+                                return;
+                              }
+
+                              if (autoDJState == null) {
+                                if (ServerManager().serverList.length == 1) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text("Auto DJ Enabled")));
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(
+                                              "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
+                                }
+                              } else if (ServerManager()
+                                      .currentServer!
+                                      .url
+                                      .toString() ==
+                                  autoDJState) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text("Auto DJ Disabled")));
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(
+                                        "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
+                              }
+
+                              MediaManager()
+                                  .audioHandler
+                                  .customAction('setAutoDJ', {
+                                'serverURL': ServerManager()
+                                    .currentServer!
+                                    .url
+                                    .toString(),
+                                'token': ServerManager().currentServer!.jwt,
+                                'autoDJMinRating': ServerManager()
+                                    .currentServer!
+                                    .autoDJminRating
+                              });
+                            });
                       }),
                 ])
               ])

@@ -135,7 +135,6 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res['albums'].forEach((e) {
-      // print(e['album_art_file']);
       DisplayItem newItem = new DisplayItem(
           useThisServer,
           e['name'],

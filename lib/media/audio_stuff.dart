@@ -22,6 +22,8 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   String? autoDJServer;
   String? autoDJToken;
+  int? autoDJMinRating;
+
   var jsonAutoDJIgnoreList;
 
   AudioPlayerHandler() {
@@ -189,6 +191,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
+      case 'setAutoDJMinRating':
+        try {
+          autoDJMinRating = extras?['autoDJMinRating'];
+          print(autoDJMinRating);
+        } catch (err) {
+          print(err);
+        }
+        break;
       case 'setAutoDJ':
         if (autoDJServer == extras?['serverURL']) {
           //  NOTE: This logic might be moved to the frontend
@@ -202,7 +212,11 @@ class AudioPlayerHandler extends BaseAudioHandler
 
         autoDJServer = extras?['serverURL'];
         autoDJToken = extras?['token'];
+        autoDJMinRating = extras?['autoDJMinRating'];
+
         jsonAutoDJIgnoreList = null;
+
+        customState.add(CustomEvent(autoDJServer));
 
         if (queue.value.length == 0 ||
             queue.value.length == 1 ||
@@ -218,7 +232,6 @@ class AudioPlayerHandler extends BaseAudioHandler
           }
         }
 
-        customState.add(CustomEvent(autoDJServer));
         break;
     }
   }
@@ -274,7 +287,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       Uri currentUri =
           Uri.parse(autoDJServer!).resolve('/api/v1/db/random-songs');
 
-      String payload = '{"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
+      String payload =
+          '{"minRating":$autoDJMinRating,"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
 
       var res = await http.post(currentUri,
           headers: {
