@@ -17,7 +17,7 @@ class ServerManager {
   // streams
   late final BehaviorSubject<List<Server>> _serverListStream =
       BehaviorSubject<List<Server>>.seeded(serverList);
-  late final BehaviorSubject<Server?> _curentServerStream =
+  late final BehaviorSubject<Server?> _currentServerStream =
       BehaviorSubject<Server?>.seeded(currentServer);
 
   ServerManager._privateConstructor();
@@ -66,7 +66,7 @@ class ServerManager {
     if (serverList.length > 0) {
       currentServer = serverList[0];
       BrowserManager().goToNavScreen();
-      _curentServerStream.sink.add(currentServer);
+      _currentServerStream.sink.add(currentServer);
     } else {
       BrowserManager().noServerScreen();
     }
@@ -77,7 +77,7 @@ class ServerManager {
 
     if (currentServer == null) {
       currentServer = newServer;
-      _curentServerStream.sink.add(currentServer);
+      _currentServerStream.sink.add(currentServer);
       BrowserManager().goToNavScreen();
     }
 
@@ -106,7 +106,7 @@ class ServerManager {
 
   void changeCurrentServer(int currentServerIndex) {
     currentServer = serverList[currentServerIndex];
-    _curentServerStream.sink.add(currentServer);
+    _currentServerStream.sink.add(currentServer);
     BrowserManager().goToNavScreen();
   }
 
@@ -120,12 +120,12 @@ class ServerManager {
       BrowserManager().noServerScreen();
 
       currentServer = null;
-      _curentServerStream.sink.add(currentServer);
+      _currentServerStream.sink.add(currentServer);
     } else if (removeThisServer == currentServer) {
       currentServer = serverList[0];
       // clear the browser
       BrowserManager().goToNavScreen();
-      _curentServerStream.sink.add(currentServer);
+      _currentServerStream.sink.add(currentServer);
     }
 
     await writeServerFile();
@@ -166,10 +166,10 @@ class ServerManager {
 
   void dispose() {
     _serverListStream.close();
-    _curentServerStream.close();
+    _currentServerStream.close();
   } //initializes the subject with element already;
 
-  Stream<Server?> get curentServerStream => _curentServerStream.stream;
+  Stream<Server?> get curentServerStream => _currentServerStream.stream;
 
   Stream<List<Server>> get serverListStream => _serverListStream.stream;
 }
