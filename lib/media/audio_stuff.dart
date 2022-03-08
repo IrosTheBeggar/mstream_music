@@ -187,9 +187,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
+      case 'forceAutoDJRefresh':
+        customState.add(CustomEvent(autoDJServer));
+        break;
       case 'setAutoDJ':
+        if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
+          jsonAutoDJIgnoreList = null;
+        }
         autoDJServer = extras?['autoDJServer'];
-        jsonAutoDJIgnoreList = null;
 
         customState.add(CustomEvent(autoDJServer));
 

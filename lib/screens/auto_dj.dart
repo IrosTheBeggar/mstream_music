@@ -116,7 +116,7 @@ class AutoDJScreen extends StatelessWidget {
                     }
 
                     return DropdownButton<int>(
-                      value: ServerManager().currentServer?.autoDJminRating,
+                      value: autoDJState.autoDJminRating,
                       items: [
                         DropdownMenuItem<int>(
                           value: null,
@@ -164,74 +164,19 @@ class AutoDJScreen extends StatelessWidget {
                         ),
                       ],
                       onChanged: (int? newValue) {
-                        ServerManager().currentServer!.autoDJminRating =
-                            newValue;
+                        autoDJState.autoDJminRating = newValue;
+
+                        MediaManager()
+                            .audioHandler
+                            .customAction('forceAutoDJRefresh');
+
                         ServerManager().callAfterEditServer();
 
+                        print(ServerManager().currentServer?.autoDJminRating);
                         return;
                       },
                     );
                   }),
-              // Text('Min Rating', style: TextStyle(fontWeight: FontWeight.bold)),
-              // if (ServerManager().serverList.length == 1) ...[
-              //   // show license
-              //   DropdownButton<int>(
-              //     value: ServerManager().currentServer?.autoDJminRating,
-              //     items: [
-              //       DropdownMenuItem<int>(
-              //         value: null,
-              //         child: Text('N/A'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 1,
-              //         child: Text('0.5'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 2,
-              //         child: Text('1'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 3,
-              //         child: Text('1.5'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 4,
-              //         child: Text('2'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 5,
-              //         child: Text('2.5'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 6,
-              //         child: Text('3'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 7,
-              //         child: Text('3.5'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 8,
-              //         child: Text('4'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 9,
-              //         child: Text('4.5'),
-              //       ),
-              //       DropdownMenuItem<int>(
-              //         value: 10,
-              //         child: Text('5'),
-              //       ),
-              //     ],
-              //     onChanged: (int? newValue) {
-              //       ServerManager().currentServer!.autoDJminRating = newValue;
-              //       ServerManager().callAfterEditServer();
-
-              //       return;
-              //     },
-              //   )
-              // ] else if (ServerManager().serverList.length > 1)
-              //   ...[]
             ])));
   }
 }

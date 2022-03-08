@@ -19,6 +19,7 @@ class Server {
         username = json['username'],
         password = json['password'],
         localname = json['localname'],
+        autoDJminRating = json['autoDJminRating'],
         saveToSdCard = json['saveToSdCard'] ?? false;
 
   Map<String, dynamic> toJson() => {
@@ -27,6 +28,7 @@ class Server {
         'username': username,
         'password': password,
         'localname': localname,
+        'autoDJminRating': autoDJminRating,
         'saveToSdCard': saveToSdCard
       };
 }
