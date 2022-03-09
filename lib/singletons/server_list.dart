@@ -68,7 +68,9 @@ class ServerManager {
       currentServer = serverList[0];
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
-      await getServerPaths(currentServer!);
+      serverList.forEach((Server s) {
+        getServerPaths(s);
+      });
     } else {
       BrowserManager().noServerScreen();
     }
@@ -125,14 +127,36 @@ class ServerManager {
       }
 
       var res = jsonDecode(response.body);
-      print(res);
 
+      Set<String> pathCompare = new Set();
       for (var i = 0; i < res['vpaths'].length; i++) {
-        print(res['vpaths'][i]);
-        server.autoDJPaths[res['vpaths'][i]] = true;
+        pathCompare.add(res['vpaths'][i]);
+        // add new keys
+        if (!server.autoDJPaths.containsKey(res['vpaths'][i])) {
+          server.autoDJPaths[res['vpaths'][i]] = true;
+        }
       }
+
+      // Remove outdated entries
+      server.autoDJPaths
+          .removeWhere((key, value) => !pathCompare.contains(key));
+
+      // Make sure all entries are not false
+      bool falseFlag = true;
+      server.autoDJPaths.forEach((key, value) {
+        if (value == true) {
+          falseFlag = false;
+        }
+      });
+      if (falseFlag == true) {
+        server.autoDJPaths.forEach((key, value) {
+          server.autoDJPaths[key] = true;
+        });
+      }
+
+      print('XXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+      print(falseFlag);
     } catch (err) {
-      print(err);
       if (throwErr) {
         throw err;
       }

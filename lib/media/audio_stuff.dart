@@ -267,8 +267,21 @@ class AudioPlayerHandler extends BaseAudioHandler
       Uri currentUri = Uri.parse(autoDJServer!.url.toString())
           .resolve('/api/v1/db/random-songs');
 
-      String payload =
-          '{"minRating":${autoDJServer?.autoDJminRating},"ignoreList":${json.encode(jsonAutoDJIgnoreList)}}';
+      bool flagIt = false;
+      String ignoreVPathString = '[';
+      autoDJServer?.autoDJPaths.forEach((key, value) {
+        if (value == false) {
+          ignoreVPathString += '${flagIt == false ? '' : ','} "$key"';
+          flagIt = true;
+        }
+      });
+      ignoreVPathString += '],';
+
+      print(ignoreVPathString);
+
+      String payload = '''{"minRating":${autoDJServer?.autoDJminRating},
+          ${flagIt == true ? '"ignoreVPaths": $ignoreVPathString' : ''}
+          "ignoreList":${json.encode(jsonAutoDJIgnoreList)}}''';
 
       var res = await http.post(currentUri,
           headers: {

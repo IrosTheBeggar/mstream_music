@@ -191,7 +191,7 @@ class AutoDJScreen extends StatelessWidget {
                     final Server? autoDJState =
                         (snapshot.data?.autoDJState as Server?);
                     if (autoDJState == null ||
-                        autoDJState.autoDJPaths.length < 2) {
+                        autoDJState.autoDJPaths.length < 1) {
                       return Container();
                     }
 
@@ -208,6 +208,25 @@ class AutoDJScreen extends StatelessWidget {
                         leading: Switch(
                             value: v,
                             onChanged: (value) {
+                              bool falseFlag = false;
+                              autoDJState.autoDJPaths.forEach((key, value) {
+                                if (key == k) {
+                                  return;
+                                }
+
+                                if (value == true) {
+                                  falseFlag = true;
+                                }
+                              });
+
+                              if (falseFlag == false) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            'You must have 1 folder selected')));
+                                return;
+                              }
+
                               autoDJState.autoDJPaths[k] = value;
                               MediaManager()
                                   .audioHandler
