@@ -115,67 +115,112 @@ class AutoDJScreen extends StatelessWidget {
                       return Container();
                     }
 
-                    return DropdownButton<int>(
-                      value: autoDJState.autoDJminRating,
-                      items: [
-                        DropdownMenuItem<int>(
-                          value: null,
-                          child: Text('N/A'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 1,
-                          child: Text('0.5'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 2,
-                          child: Text('1'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 3,
-                          child: Text('1.5'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 4,
-                          child: Text('2'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 5,
-                          child: Text('2.5'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 6,
-                          child: Text('3'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 7,
-                          child: Text('3.5'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 8,
-                          child: Text('4'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 9,
-                          child: Text('4.5'),
-                        ),
-                        DropdownMenuItem<int>(
-                          value: 10,
-                          child: Text('5'),
-                        ),
-                      ],
-                      onChanged: (int? newValue) {
-                        autoDJState.autoDJminRating = newValue;
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Min Rating',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          DropdownButton<int>(
+                            value: autoDJState.autoDJminRating,
+                            items: [
+                              DropdownMenuItem<int>(
+                                value: null,
+                                child: Text('N/A'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 1,
+                                child: Text('0.5'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 2,
+                                child: Text('1'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 3,
+                                child: Text('1.5'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 4,
+                                child: Text('2'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 5,
+                                child: Text('2.5'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 6,
+                                child: Text('3'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 7,
+                                child: Text('3.5'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 8,
+                                child: Text('4'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 9,
+                                child: Text('4.5'),
+                              ),
+                              DropdownMenuItem<int>(
+                                value: 10,
+                                child: Text('5'),
+                              ),
+                            ],
+                            onChanged: (int? newValue) {
+                              autoDJState.autoDJminRating = newValue;
 
-                        MediaManager()
-                            .audioHandler
-                            .customAction('forceAutoDJRefresh');
+                              MediaManager()
+                                  .audioHandler
+                                  .customAction('forceAutoDJRefresh');
 
-                        ServerManager().callAfterEditServer();
+                              ServerManager().callAfterEditServer();
 
-                        print(ServerManager().currentServer?.autoDJminRating);
-                        return;
-                      },
-                    );
+                              print(ServerManager()
+                                  .currentServer
+                                  ?.autoDJminRating);
+                              return;
+                            },
+                          )
+                        ]);
+                  }),
+              StreamBuilder<dynamic>(
+                  stream: MediaManager().audioHandler.customState,
+                  builder: (context, snapshot) {
+                    final Server? autoDJState =
+                        (snapshot.data?.autoDJState as Server?);
+                    if (autoDJState == null ||
+                        autoDJState.autoDJPaths.length < 2) {
+                      return Container();
+                    }
+
+                    List<Widget> lol = [
+                      Container(
+                        height: 20,
+                      ),
+                      Text('Select Folders',
+                          style: TextStyle(fontWeight: FontWeight.bold))
+                    ];
+
+                    autoDJState.autoDJPaths.forEach((k, v) {
+                      lol.add(ListTile(
+                        leading: Switch(
+                            value: v,
+                            onChanged: (value) {
+                              autoDJState.autoDJPaths[k] = value;
+                              MediaManager()
+                                  .audioHandler
+                                  .customAction('forceAutoDJRefresh');
+                              ServerManager().callAfterEditServer();
+                            }),
+                        title: Text(k),
+                      ));
+                    });
+
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: lol);
                   }),
             ])));
   }

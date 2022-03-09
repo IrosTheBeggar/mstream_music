@@ -10,6 +10,7 @@ class Server {
 
   // Auto DJ
   int? autoDJminRating;
+  Map<String, bool> autoDJPaths = {};
 
   Server(this.url, this.username, this.password, this.jwt, this.localname);
 
@@ -19,6 +20,7 @@ class Server {
         username = json['username'],
         password = json['password'],
         localname = json['localname'],
+        autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
         saveToSdCard = json['saveToSdCard'] ?? false;
 
@@ -28,6 +30,7 @@ class Server {
         'username': username,
         'password': password,
         'localname': localname,
+        'autoDJPaths': autoDJPaths,
         'autoDJminRating': autoDJminRating,
         'saveToSdCard': saveToSdCard
       };

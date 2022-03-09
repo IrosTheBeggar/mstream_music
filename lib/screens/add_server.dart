@@ -90,7 +90,6 @@ class MyCustomFormState extends State<MyCustomForm> {
       submitPending = true;
     });
     Uri lol = Uri.parse(this._urlCtrl.text);
-    String origin = lol.origin;
     var response;
 
     try {
@@ -105,7 +104,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         // });
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Connection Successful!')));
-        saveServer(origin);
+        saveServer(lol);
         return;
       }
     } catch (err) {}
@@ -124,7 +123,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       var res = jsonDecode(response.body);
 
       // Save
-      saveServer(origin, res['token']);
+      saveServer(lol, res['token']);
     } catch (err) {
       print(err);
       try {
@@ -139,7 +138,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
-  Future<void> saveServer(String origin, [String jwt = '']) async {
+  Future<void> saveServer(Uri lol, [String jwt = '']) async {
     bool shouldUpdate = false;
     try {
       ServerManager().serverList[editThisServer ?? -1];
@@ -149,17 +148,40 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (shouldUpdate) {
       ServerManager().editServer(editThisServer!, _urlCtrl.text,
           _usernameCtrl.text, _passwordCtrl.text, saveToSdCard);
+      await getServerPaths(ServerManager().serverList[editThisServer!]);
+      await ServerManager().callAfterEditServer();
     } else {
-      Server newServer = new Server(origin, this._usernameCtrl.text,
+      Server newServer = new Server(lol.origin, this._usernameCtrl.text,
           this._passwordCtrl.text, jwt, Uuid().v4());
       if (saveToSdCard == true) {
         newServer.saveToSdCard = true;
       }
+      await getServerPaths(newServer);
+
       await ServerManager().addServer(newServer);
     }
 
     // Save Server List
     Navigator.pop(context);
+  }
+
+  Future<void> getServerPaths(Server server) async {
+    try {
+      var response = await http
+          .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? ''
+      }).timeout(Duration(seconds: 5));
+      var res = jsonDecode(response.body);
+      print(res);
+
+      for (var i = 0; i < res['vpaths'].length; i++) {
+        print(res['vpaths'][i]);
+        server.autoDJPaths[res['vpaths'][i]] = true;
+      }
+    } catch (err) {
+      print(err);
+    }
   }
 
   Map<String, String> parseQrCode(String qrValue) {
@@ -298,24 +320,6 @@ class MyCustomFormState extends State<MyCustomForm> {
                                         content: Text('Invalid Code')));
                                   }
                                 });
-
-                                //});
-                                // new QRCodeReader().scan().then((qrValue) {
-                                //   if (qrValue == null || qrValue == '') {
-                                //     return;
-                                //   }
-
-                                //   try {
-                                //     Map<String, String> parsedValues =
-                                //         parseQrCode(qrValue);
-                                //     _urlCtrl.text = parsedValues['url'];
-                                //     _usernameCtrl.text = parsedValues['username'];
-                                //     _passwordCtrl.text = parsedValues['password'];
-                                //   } catch (err) {
-                                //     Scaffold.of(context).showSnackBar(
-                                //         SnackBar(content: Text('Invalid Code')));
-                                //   }
-                                // });
                               },
                       ),
                     ),

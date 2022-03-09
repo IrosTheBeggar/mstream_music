@@ -94,14 +94,14 @@ class ServerManager {
     _serverListStream.sink.add(serverList);
   }
 
-  void editServer(int serverIndex, String url, String? username,
-      String? password, bool saveToSd) {
+  Future<void> editServer(int serverIndex, String url, String? username,
+      String? password, bool saveToSd) async {
     serverList[serverIndex].url = url;
     ServerManager().serverList[serverIndex].password = password;
     ServerManager().serverList[serverIndex].username = username;
     ServerManager().serverList[serverIndex].saveToSdCard = saveToSd;
 
-    callAfterEditServer();
+    await callAfterEditServer();
   }
 
   void changeCurrentServer(int currentServerIndex) {
