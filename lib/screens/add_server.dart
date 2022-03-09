@@ -148,7 +148,8 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (shouldUpdate) {
       ServerManager().editServer(editThisServer!, _urlCtrl.text,
           _usernameCtrl.text, _passwordCtrl.text, saveToSdCard);
-      await getServerPaths(ServerManager().serverList[editThisServer!]);
+      await ServerManager()
+          .getServerPaths(ServerManager().serverList[editThisServer!]);
       await ServerManager().callAfterEditServer();
     } else {
       Server newServer = new Server(lol.origin, this._usernameCtrl.text,
@@ -156,32 +157,13 @@ class MyCustomFormState extends State<MyCustomForm> {
       if (saveToSdCard == true) {
         newServer.saveToSdCard = true;
       }
-      await getServerPaths(newServer);
+      await ServerManager().getServerPaths(newServer);
 
       await ServerManager().addServer(newServer);
     }
 
     // Save Server List
     Navigator.pop(context);
-  }
-
-  Future<void> getServerPaths(Server server) async {
-    try {
-      var response = await http
-          .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
-        'Content-Type': 'application/json',
-        'x-access-token': server.jwt ?? ''
-      }).timeout(Duration(seconds: 5));
-      var res = jsonDecode(response.body);
-      print(res);
-
-      for (var i = 0; i < res['vpaths'].length; i++) {
-        print(res['vpaths'][i]);
-        server.autoDJPaths[res['vpaths'][i]] = true;
-      }
-    } catch (err) {
-      print(err);
-    }
   }
 
   Map<String, String> parseQrCode(String qrValue) {

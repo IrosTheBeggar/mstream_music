@@ -9,6 +9,7 @@ import './browser_list.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:rxdart/rxdart.dart';
+import 'package:http/http.dart' as http;
 
 class ServerManager {
   final List<Server> serverList = [];
@@ -67,6 +68,7 @@ class ServerManager {
       currentServer = serverList[0];
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
+      await getServerPaths(currentServer!);
     } else {
       BrowserManager().noServerScreen();
     }
@@ -108,6 +110,33 @@ class ServerManager {
     currentServer = serverList[currentServerIndex];
     _currentServerStream.sink.add(currentServer);
     BrowserManager().goToNavScreen();
+  }
+
+  Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
+    try {
+      var response = await http
+          .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? ''
+      }).timeout(Duration(seconds: 5));
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to connect to server');
+      }
+
+      var res = jsonDecode(response.body);
+      print(res);
+
+      for (var i = 0; i < res['vpaths'].length; i++) {
+        print(res['vpaths'][i]);
+        server.autoDJPaths[res['vpaths'][i]] = true;
+      }
+    } catch (err) {
+      print(err);
+      if (throwErr) {
+        throw err;
+      }
+    }
   }
 
   Future<void> removeServer(

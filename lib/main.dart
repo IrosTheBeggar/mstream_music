@@ -132,11 +132,23 @@ class _MStreamAppState extends State<MStreamApp>
                       return Visibility(
                         visible: isVisible,
                         child: PopupMenuButton(
-                            onSelected: (int selectedServerIndex) {
+                            onSelected: (int selectedServerIndex) async {
                               _tabController.animateTo(0);
                               if (selectedServerIndex > -1) {
                                 ServerManager()
                                     .changeCurrentServer(selectedServerIndex);
+
+                                try {
+                                  await ServerManager().getServerPaths(
+                                      ServerManager().currentServer!,
+                                      throwErr: true);
+                                  await ServerManager().callAfterEditServer();
+                                } catch (err) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(
+                                              "Failed To Connect To Server")));
+                                }
                               } else if (selectedServerIndex == -1) {
                                 Navigator.push(
                                     context,
