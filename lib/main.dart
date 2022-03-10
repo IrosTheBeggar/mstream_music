@@ -212,21 +212,6 @@ class _MStreamAppState extends State<MStreamApp>
                 },
               ),
               Divider(),
-              // ListTile(
-              //   leading: Icon(Icons.folder),
-              //   title: Text(
-              //     'File Explorer',
-              //     style: TextStyle(
-              //         fontFamily: 'Jura',
-              //         fontWeight: FontWeight.bold,
-              //         fontSize: 17),
-              //   ),
-              //   onTap: () {
-              //     FileExplorer().getLocalFiles(null);
-              //     Navigator.of(context).pop();
-              //     _tabController.animateTo(0);
-              //   },
-              // ),
               ListTile(
                 title: Text('Manage Servers',
                     style: TextStyle(

@@ -153,9 +153,6 @@ class ServerManager {
           server.autoDJPaths[key] = true;
         });
       }
-
-      print('XXXXXXXXXXXXXXXXXXXXXXXXXXXX');
-      print(falseFlag);
     } catch (err) {
       if (throwErr) {
         throw err;

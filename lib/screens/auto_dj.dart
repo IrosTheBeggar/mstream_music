@@ -191,7 +191,7 @@ class AutoDJScreen extends StatelessWidget {
                     final Server? autoDJState =
                         (snapshot.data?.autoDJState as Server?);
                     if (autoDJState == null ||
-                        autoDJState.autoDJPaths.length < 1) {
+                        autoDJState.autoDJPaths.length < 2) {
                       return Container();
                     }
 

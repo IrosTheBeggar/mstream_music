@@ -459,82 +459,118 @@ class Browser extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
-          color: Color(0xFFffffff),
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: <
-                  Widget>[
-            IconButton(
-                icon: Icon(Icons.keyboard_arrow_left, color: Colors.black),
-                tooltip: 'Go Back',
-                onPressed: () {
-                  BrowserManager().popBrowser();
-                }),
-            Row(children: <Widget>[
-              IconButton(
-                  icon: Icon(
-                    Icons.download_sharp,
-                    color: Colors.black,
-                  ),
-                  tooltip: 'Download',
-                  onPressed: () {
-                    int count = 0;
+        color: Color(0xFFffffff),
+        child: StreamBuilder<List<DisplayItem>>(
+            stream: BrowserManager().browserListStream,
+            builder: (context, snapshot) {
+              final List<DisplayItem> browserList = snapshot.data ?? [];
 
-                    BrowserManager().browserList.forEach((e) {
-                      if (e.type == 'file') {
-                        String downloadUrl = e.server!.url +
-                            '/media' +
-                            e.data! +
-                            (e.server!.jwt == null
-                                ? ''
-                                : '?token=' + e.server!.jwt!);
+              if (browserList.length > 0) {
+                print(browserList[0].type);
+              }
+              return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    if (browserList.length == 0 ||
+                        browserList[0].type != 'execAction') ...[
+                      IconButton(
+                          icon: Icon(Icons.keyboard_arrow_left,
+                              color: Colors.black),
+                          tooltip: 'Go Back',
+                          onPressed: () {
+                            BrowserManager().popBrowser();
+                          }),
+                      Row(children: <Widget>[
+                        IconButton(
+                            icon: Icon(
+                              Icons.download_sharp,
+                              color: Colors.black,
+                            ),
+                            tooltip: 'Download',
+                            onPressed: () {
+                              int count = 0;
 
-                        DownloadManager().downloadOneFile(
-                            downloadUrl,
-                            e.server!.localname,
-                            e.data!,
-                            e.server!.saveToSdCard);
-                        count++;
-                      }
-                    });
+                              BrowserManager().browserList.forEach((e) {
+                                if (e.type == 'file') {
+                                  String downloadUrl = e.server!.url +
+                                      '/media' +
+                                      e.data! +
+                                      (e.server!.jwt == null
+                                          ? ''
+                                          : '?token=' + e.server!.jwt!);
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$count downloads started')));
-                  }),
-              IconButton(
-                  icon: Icon(
-                    Icons.library_add,
-                    color: Colors.black,
-                  ),
-                  tooltip: 'Add All',
-                  onPressed: () {
-                    int n = 0;
+                                  DownloadManager().downloadOneFile(
+                                      downloadUrl,
+                                      e.server!.localname,
+                                      e.data!,
+                                      e.server!.saveToSdCard);
+                                  count++;
+                                }
+                              });
 
-                    BrowserManager().browserList.forEach((element) {
-                      if (element.type == 'localFile') {
-                        if (element.data!.substring(element.data!.length - 4) ==
-                            '.m3u') {
-                          return;
-                        }
-                        addLocalFile(element);
-                        n++;
-                      } else if (element.type == 'file') {
-                        if (element.data!.substring(element.data!.length - 4) ==
-                            '.m3u') {
-                          return;
-                        }
-                        addFile(element);
-                        n++;
-                      }
-                    });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('$count downloads started')));
+                            }),
+                        IconButton(
+                            icon: Icon(
+                              Icons.library_add,
+                              color: Colors.black,
+                            ),
+                            tooltip: 'Add All',
+                            onPressed: () {
+                              int n = 0;
 
-                    if (n > 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text(n.toString() + " songs added to queue")));
-                    }
-                  })
-            ])
-          ])),
+                              BrowserManager().browserList.forEach((element) {
+                                if (element.type == 'localFile') {
+                                  if (element.data!.substring(
+                                          element.data!.length - 4) ==
+                                      '.m3u') {
+                                    return;
+                                  }
+                                  addLocalFile(element);
+                                  n++;
+                                } else if (element.type == 'file') {
+                                  if (element.data!.substring(
+                                          element.data!.length - 4) ==
+                                      '.m3u') {
+                                    return;
+                                  }
+                                  addFile(element);
+                                  n++;
+                                }
+                              });
+
+                              if (n > 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(n.toString() +
+                                            " songs added to queue")));
+                              }
+                            })
+                      ])
+                    ] else ...[
+                      IntrinsicWidth(
+                          child: TextField(
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.search,
+                                  color: Colors.black,
+                                ),
+                                hintStyle: TextStyle(
+                                  color: Colors.black,
+                                ),
+                                labelStyle: TextStyle(
+                                  color: Colors.black,
+                                ),
+                                hintText: 'Search Database',
+                              )))
+                    ]
+                  ]);
+            }),
+      ),
       Expanded(
           child: SizedBox(
               child: StreamBuilder<List<DisplayItem>>(

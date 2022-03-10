@@ -119,6 +119,7 @@ class BrowserManager {
     browserList.add(newItem6);
     browserList.add(newItem7);
 
+    _browserLabel.sink.add('Browser');
     _browserStream.sink.add(browserList);
   }
 
@@ -163,6 +164,10 @@ class BrowserManager {
     });
 
     _browserStream.sink.add(browserList);
+
+    if (BrowserManager().browserCache.length == 1) {
+      _browserLabel.sink.add('Browser');
+    }
 
     // double scrollTo = scrollCache.removeLast();
     // sc.jumpTo(scrollTo);
