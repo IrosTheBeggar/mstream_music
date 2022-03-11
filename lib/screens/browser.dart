@@ -551,8 +551,12 @@ class Browser extends StatelessWidget {
                             })
                       ])
                     ] else ...[
-                      IntrinsicWidth(
+                      Expanded(
                           child: TextField(
+                              onSubmitted: (text) {
+                                ApiManager().searchServer(text);
+                                print('First text field: $text');
+                              },
                               style: TextStyle(color: Colors.black),
                               decoration: InputDecoration(
                                 prefixIcon: Icon(
@@ -582,7 +586,7 @@ class Browser extends StatelessWidget {
                         physics: const AlwaysScrollableScrollPhysics(),
                         separatorBuilder: (BuildContext context, int index) =>
                             Divider(height: 3, color: Colors.white),
-                        itemCount: BrowserManager().browserList.length,
+                        itemCount: browserList.length,
                         itemBuilder: (BuildContext context, int index) {
                           // Fixes an odd rendering bug when going between tabs
                           if (browserList.length == 0) {

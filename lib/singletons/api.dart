@@ -121,6 +121,55 @@ class ApiManager {
     BrowserManager().removeAll(playlistId, useThisServer!, 'playlist');
   }
 
+  Future<void> searchServer(String search) async {
+    try {
+      var res = await makeServerCall(null, '/api/v1/db/search',
+          {'noFiles': true, 'search': search}, 'POST');
+
+      BrowserManager().setBrowserLabel('Search');
+      List<DisplayItem> newList = [];
+      res['artists'].forEach((e) {
+        DisplayItem newItem = new DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'artist',
+            e['name'],
+            Icon(Icons.library_music, color: Colors.black),
+            'artist');
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      res['albums'].forEach((e) {
+        DisplayItem newItem = new DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'album',
+            e['name'],
+            Icon(Icons.library_music, color: Colors.black),
+            'album');
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      res['title'].forEach((e) {
+        DisplayItem newItem = new DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'file',
+            '/' + e['filepath'],
+            Icon(Icons.music_note, color: Colors.blue),
+            'song');
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      BrowserManager().addListToStack(newList);
+    } catch (err) {
+      print(err);
+    }
+  }
+
   Future<void> getAlbums({Server? useThisServer}) async {
     var res;
     try {
