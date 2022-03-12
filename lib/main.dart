@@ -382,11 +382,27 @@ class NowPlaying extends StatelessWidget {
                                         Expanded(
                                             child: Container(
                                                 child: ListTile(
+                                                    leading: queue[index]
+                                                                .artUri !=
+                                                            null
+                                                        ? Image.network(
+                                                            queue[index]
+                                                                .artUri
+                                                                .toString())
+                                                        : Icon(
+                                                            Icons.music_note),
+                                                    subtitle: queue[index]
+                                                                .artist !=
+                                                            null
+                                                        ? Text(queue[index].artist!,
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .black))
+                                                        : null,
                                                     title: Text(
                                                         queue[index].title,
                                                         style: TextStyle(
-                                                            color:
-                                                                Colors.black)),
+                                                            color: Colors.black)),
                                                     onTap: () {
                                                       MediaManager()
                                                           .audioHandler

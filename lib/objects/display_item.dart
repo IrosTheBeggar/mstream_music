@@ -24,9 +24,7 @@ class DisplayItem {
   int downloadProgress = 0;
 
   Widget? getImage() {
-    print(altAlbumArt);
     String? aaFile = altAlbumArt ?? this.metadata?.albumArt ?? null;
-    print(aaFile);
 
     if (this.server != null && aaFile != null) {
       String lolUrl = Uri.encodeFull(this.server!.url +
