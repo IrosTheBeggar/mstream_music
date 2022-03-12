@@ -309,7 +309,17 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       MediaItem item = new MediaItem(
           id: lolUrl,
-          title: decoded['songs'][0]['filepath'].split("/").removeLast(),
+          title: decoded['songs'][0]['metadata']['title'] ??
+              decoded['songs'][0]['filepath'].split("/").removeLast(),
+          album: decoded['songs'][0]['metadata']['album'],
+          artist: decoded['songs'][0]['metadata']['artist'],
+          artUri: decoded['songs'][0]['metadata']['album-art'] != null
+              ? Uri.parse(autoDJServer!.url.toString()).resolve('/album-art/' +
+                  decoded['songs'][0]['metadata']['album-art'] +
+                  '?compress=l&token=' +
+                  (autoDJServer?.jwt ?? ''))
+              : Uri.parse(autoDJServer!.url.toString())
+                  .resolve('/assets/img/default.png'),
           extras: {'path': decoded['songs'][0]['filepath']});
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];

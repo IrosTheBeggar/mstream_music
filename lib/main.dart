@@ -577,7 +577,7 @@ class BottomBar extends StatelessWidget {
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
           MediaManager().audioHandler.mediaItem,
-          AudioService.positionStream,
+          AudioService.position,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   IconButton playButton() => IconButton(

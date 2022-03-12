@@ -115,7 +115,7 @@ class Browser extends StatelessWidget {
   void addLocalFile(DisplayItem i) {
     MediaItem item = new MediaItem(
         id: Uuid().v4(),
-        title: i.name,
+        title: i.name.split('/').last,
         extras: {'path': i.data, 'localPath': i.data!});
     MediaManager().audioHandler.addQueueItem(item);
   }
@@ -134,7 +134,16 @@ class Browser extends StatelessWidget {
 
       MediaItem item = new MediaItem(
           id: Uuid().v4(),
-          title: i.name,
+          title: i.metadata?.title ?? i.name,
+          album: i.metadata?.album,
+          artist: i.metadata?.artist,
+          artUri: i.metadata?.albumArt != null
+              ? Uri.parse(i.server!.url.toString()).resolve('/album-art/' +
+                  i.metadata!.albumArt! +
+                  '?compress=l&token=' +
+                  (i.server!.jwt ?? ''))
+              : Uri.parse(i.server!.url.toString())
+                  .resolve('/assets/img/default.png'),
           extras: {'path': i.data, 'localPath': finalString});
       MediaManager().audioHandler.addQueueItem(item);
       return;
@@ -160,7 +169,16 @@ class Browser extends StatelessWidget {
 
     MediaItem item = new MediaItem(
         id: lolUrl,
-        title: i.name,
+        title: i.metadata?.title ?? i.name,
+        album: i.metadata?.album,
+        artist: i.metadata?.artist,
+        artUri: i.metadata?.albumArt != null
+            ? Uri.parse(i.server!.url.toString()).resolve('/album-art/' +
+                i.metadata!.albumArt! +
+                '?compress=l&token=' +
+                (i.server!.jwt ?? ''))
+            : Uri.parse(i.server!.url.toString())
+                .resolve('/assets/img/default.png'),
         extras: {'server': i.server!.localname, 'path': i.data});
 
     MediaManager().audioHandler.addQueueItem(item);

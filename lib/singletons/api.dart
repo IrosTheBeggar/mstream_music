@@ -59,12 +59,13 @@ class ApiManager {
       return;
     }
 
-    String prefix =
-        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
+    // String prefix =
+    //     TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
 
     res.forEach((e) {
       String lolUrl = Uri.encodeFull(useThisServer!.url +
-          prefix +
+          '/media' +
+          (e.toString()[0] != '/' ? '/' : '') +
           e +
           '?app_uuid=' +
           Uuid().v4() +
