@@ -9,7 +9,9 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
+import 'objects/metadata.dart';
 import 'screens/about_screen.dart';
+import 'screens/metadata_screen.dart';
 import 'screens/auto_dj.dart';
 import 'screens/downloads.dart';
 import 'singletons/downloads.dart';
@@ -310,6 +312,33 @@ class NowPlaying extends StatelessWidget {
                                       .removeQueueItemAt(index);
                                 },
                               ),
+                              secondaryActions: <Widget>[
+                                IconSlideAction(
+                                    color: Colors.blueGrey,
+                                    icon: Icons.info,
+                                    caption: 'Info',
+                                    onTap: () {
+                                      MusicMetadata m = new MusicMetadata(
+                                          queue[index].artist,
+                                          queue[index].album,
+                                          queue[index].title,
+                                          null,
+                                          null,
+                                          queue[index].extras?['year'],
+                                          'X',
+                                          null,
+                                          queue[index].artUri?.toString());
+                                      print(queue[index]);
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  MeteDataScreen(
+                                                      meta: m,
+                                                      path: queue[index]
+                                                          .extras?['path'])));
+                                    }),
+                              ],
                               actions: <Widget>[
                                 // IconSlideAction(
                                 //     color: Colors.blueGrey,

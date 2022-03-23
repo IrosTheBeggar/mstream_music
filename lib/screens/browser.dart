@@ -144,7 +144,11 @@ class Browser extends StatelessWidget {
                   (i.server!.jwt ?? ''))
               : Uri.parse(i.server!.url.toString())
                   .resolve('/assets/img/default.png'),
-          extras: {'path': i.data, 'localPath': finalString});
+          extras: {
+            'path': i.data,
+            'localPath': finalString,
+            'year': i.metadata?.year
+          });
       MediaManager().audioHandler.addQueueItem(item);
       return;
     }
@@ -179,7 +183,11 @@ class Browser extends StatelessWidget {
                 (i.server!.jwt ?? ''))
             : Uri.parse(i.server!.url.toString())
                 .resolve('/assets/img/default.png'),
-        extras: {'server': i.server!.localname, 'path': i.data});
+        extras: {
+          'server': i.server!.localname,
+          'path': i.data,
+          'year': i.metadata?.year
+        });
 
     MediaManager().audioHandler.addQueueItem(item);
 

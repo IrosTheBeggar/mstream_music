@@ -320,7 +320,10 @@ class AudioPlayerHandler extends BaseAudioHandler
                   (autoDJServer?.jwt ?? ''))
               : Uri.parse(autoDJServer!.url.toString())
                   .resolve('/assets/img/default.png'),
-          extras: {'path': decoded['songs'][0]['filepath']});
+          extras: {
+            'path': decoded['songs'][0]['filepath'],
+            'year': decoded['songs'][0]['year']
+          });
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
 
