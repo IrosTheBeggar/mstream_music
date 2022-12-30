@@ -11,6 +11,7 @@ class Server {
   // Auto DJ
   int? autoDJminRating;
   Map<String, bool> autoDJPaths = {};
+  List<String> playlists = [];
 
   Server(this.url, this.username, this.password, this.jwt, this.localname);
 
@@ -22,6 +23,7 @@ class Server {
         localname = json['localname'],
         autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
+        playlists = List<String>.from(json['playlists']) ?? [],
         saveToSdCard = json['saveToSdCard'] ?? false;
 
   Map<String, dynamic> toJson() => {
@@ -32,6 +34,7 @@ class Server {
         'localname': localname,
         'autoDJPaths': autoDJPaths,
         'autoDJminRating': autoDJminRating,
+        'playlists': playlists,
         'saveToSdCard': saveToSdCard
       };
 }
