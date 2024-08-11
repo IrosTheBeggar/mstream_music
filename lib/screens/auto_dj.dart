@@ -41,7 +41,7 @@ class AutoDJScreen extends StatelessWidget {
                         (snapshot.data?.autoDJState as Server?);
                     return ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            primary: autoDJState == null
+                            backgroundColor: autoDJState == null
                                 ? Colors.green
                                 : Colors.orange.shade900,
                             textStyle: const TextStyle(fontSize: 20)),

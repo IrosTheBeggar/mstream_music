@@ -3,7 +3,6 @@ import './browser_list.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
-import './transcode.dart';
 import 'media.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;

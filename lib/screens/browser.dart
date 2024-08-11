@@ -5,13 +5,10 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/transcode.dart';
-import '../singletons/file_explorer.dart';
 import '../objects/display_item.dart';
-import '../objects/server.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 import '../singletons/media.dart';

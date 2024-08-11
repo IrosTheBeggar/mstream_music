@@ -208,6 +208,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                   } catch (err) {
                     return 'Cannot Parse URL';
                   }
+                  return null;
                 },
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
@@ -225,7 +226,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                       Expanded(
                           child: TextFormField(
                               controller: _usernameCtrl,
-                              validator: (value) {},
+                              validator: (value) {
+                                return null;
+                              },
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
                                   hintText: 'Username', labelText: 'Username'),
@@ -236,7 +239,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                       Expanded(
                           child: TextFormField(
                               controller: _passwordCtrl,
-                              validator: (value) {},
+                              validator: (value) {
+                                return null;
+                              },
                               obscureText:
                                   true, // Use secure text for passwords.
                               decoration: InputDecoration(
@@ -270,7 +275,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                   children: <Widget>[
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(primary: Colors.blue),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -298,8 +303,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                                     _passwordCtrl.text =
                                         parsedValues['password'] ?? '';
                                   } catch (err) {
-                                    Scaffold.of(context).showSnackBar(SnackBar(
-                                        content: Text('Invalid Code')));
+                                    // Scaffold.of(context).showSnackBar(SnackBar(
+                                    //     content: Text('Invalid Code')));
                                   }
                                 });
                               },
@@ -308,7 +313,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                     Container(width: 8), // Make a gap between the buttons
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(primary: Colors.green),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                         child: Text(submitPending ? 'Checking Server' : 'Save',
                             style: TextStyle(color: Colors.white)),
                         onPressed: submitPending

@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -55,12 +59,12 @@ Future<void> main() async {
               error: Colors.black,
               onError: Colors.white,
               primary: Color(0xFF212121),
-              primaryVariant: Color(0xFFffab00),
+              primaryContainer: Color(0xFFffab00),
               onPrimary: Colors.white,
               secondary: Color(0xFF000000),
-              secondaryVariant: Color(0xFFffab00),
+              secondaryContainer: Color(0xFFffab00),
               onSecondary: Colors.orange),
-          buttonColor: Color(0xFFFFAB00),
+          buttonTheme: ButtonThemeData(buttonColor: Color(0xFFFFAB00)),
           scaffoldBackgroundColor: Color(0xFFe1e2e1),
           cardColor: Color(0xFFffffff))));
 }
@@ -197,70 +201,75 @@ class _MStreamAppState extends State<MStreamApp>
                   controller: _tabController),
             ),
             drawer: Drawer(
+                backgroundColor: Color(0xFF212121),
+                shape: Border(),
                 child: ListView(children: <Widget>[
-              ListTile(
-                title: Text(
-                  'mStream Music',
-                  style: TextStyle(
-                      fontFamily: 'Jura',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                      color: Color(0xFFffab00)),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => AboutScreen()));
-                },
-              ),
-              Divider(),
-              ListTile(
-                title: Text('Manage Servers',
-                    style: TextStyle(
-                        fontFamily: 'Jura',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17)),
-                leading: Icon(Icons.router),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ManageServersScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                title: Text('Downloads',
-                    style: TextStyle(
-                        fontFamily: 'Jura',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17)),
-                leading: Icon(Icons.download),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => DownloadScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                title: Text('Auto DJ',
-                    style: TextStyle(
-                        fontFamily: 'Jura',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17)),
-                leading: Icon(Icons.album),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AutoDJScreen()),
-                  );
-                },
-              ),
-            ])),
+                  ListTile(
+                    title: Text(
+                      'mStream Music',
+                      style: TextStyle(
+                          fontFamily: 'Jura',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 28,
+                          color: Color(0xFFffab00)),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => AboutScreen()));
+                    },
+                  ),
+                  Divider(),
+                  ListTile(
+                    title: Text('Manage Servers',
+                        style: TextStyle(
+                            fontFamily: 'Jura',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17)),
+                    leading: Icon(Icons.router),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ManageServersScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Text('Downloads',
+                        style: TextStyle(
+                            fontFamily: 'Jura',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17)),
+                    leading: Icon(Icons.download),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => DownloadScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    title: Text('Auto DJ',
+                        style: TextStyle(
+                            fontFamily: 'Jura',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17)),
+                    leading: Icon(Icons.album),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AutoDJScreen()),
+                      );
+                    },
+                  ),
+                ])),
             body: TabBarView(
                 children: [Browser(), NowPlaying()],
                 controller: _tabController),
@@ -465,6 +474,7 @@ class BottomBar extends StatelessWidget {
 
   Widget build(BuildContext context) {
     return BottomAppBar(
+        padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 0.0),
         color: Color(0xFF212121),
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           Container(

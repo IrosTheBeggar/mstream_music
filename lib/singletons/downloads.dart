@@ -7,12 +7,9 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
 import '../objects/download_tracker.dart';
-import '../objects/server.dart';
-import '../objects/display_item.dart';
 
 class DownloadManager {
   DownloadManager._privateConstructor();

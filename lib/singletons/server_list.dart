@@ -153,6 +153,12 @@ class ServerManager {
           server.autoDJPaths[key] = true;
         });
       }
+
+      // Update Playlists
+      server.playlists.clear();
+      for (var i = 0; i < res['playlists'].length; i++) {
+        server.playlists.add(res['playlists'][i]);
+      }
     } catch (err) {
       if (throwErr) {
         throw err;
