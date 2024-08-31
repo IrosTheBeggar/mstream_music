@@ -30,7 +30,7 @@ dependencies:
   path_provider: ^2.1.4
   audio_session: ^0.1.21
   audio_service: ^0.18.15
-  just_audio: ^0.9.39
+  just_audio: ^0.9.40
   flutter_slidable: ^0.6.0
   flutter_downloader: ^1.11.8
   flutter_launcher_icons: ^0.13.1
