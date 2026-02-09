@@ -190,5 +190,5 @@ class BrowserManager {
   }
 
   Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
-  Stream<String> get broswerLabelStream => _browserLabel.stream;
+  Stream<String> get browserLabelStream => _browserLabel.stream;
 }

@@ -108,9 +108,8 @@ class ApiManager {
 
   Future<void> removePlaylist(String playlistId,
       {Server? useThisServer}) async {
-    var res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/playlist/delete',
+      await makeServerCall(useThisServer, '/api/v1/playlist/delete',
           {'playlistname': playlistId}, 'POST');
     } catch (err) {
       // TODO: Handle Errors

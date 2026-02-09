@@ -307,22 +307,25 @@ class AudioPlayerHandler extends BaseAudioHandler
           Uuid().v4() +
           (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
 
+      String? artUrl = decoded['songs'][0]['metadata']['album-art'] != null
+          ? Uri.parse(autoDJServer!.url.toString())
+              .resolve('/album-art/' +
+                  decoded['songs'][0]['metadata']['album-art'] +
+                  '?compress=l&token=' +
+                  (autoDJServer?.jwt ?? ''))
+              .toString()
+          : null;
+
       MediaItem item = new MediaItem(
           id: lolUrl,
           title: decoded['songs'][0]['metadata']['title'] ??
               decoded['songs'][0]['filepath'].split("/").removeLast(),
           album: decoded['songs'][0]['metadata']['album'],
           artist: decoded['songs'][0]['metadata']['artist'],
-          artUri: decoded['songs'][0]['metadata']['album-art'] != null
-              ? Uri.parse(autoDJServer!.url.toString()).resolve('/album-art/' +
-                  decoded['songs'][0]['metadata']['album-art'] +
-                  '?compress=l&token=' +
-                  (autoDJServer?.jwt ?? ''))
-              : Uri.parse(autoDJServer!.url.toString())
-                  .resolve('/assets/img/default.png'),
           extras: {
             'path': decoded['songs'][0]['filepath'],
-            'year': decoded['songs'][0]['year']
+            'year': decoded['songs'][0]['year'],
+            'artUrl': artUrl,
           });
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];

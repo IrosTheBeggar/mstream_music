@@ -29,7 +29,17 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 34
+    compileSdkVersion 36
+    namespace "com.example.mstream_music"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -42,7 +52,7 @@ android {
     defaultConfig {
         applicationId "mstream.music"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 34
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -68,6 +78,6 @@ flutter {
 }
 
 dependencies {
-    implementation 'com.android.support:multidex:1.0.3'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.20"
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0"
 }

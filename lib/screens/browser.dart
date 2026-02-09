@@ -129,22 +129,25 @@ class Browser extends StatelessWidget {
     if (new File(finalString).existsSync() == true) {
       print('exists!');
 
+      String? artUrl = i.metadata?.albumArt != null
+          ? Uri.parse(i.server!.url.toString())
+              .resolve('/album-art/' +
+                  i.metadata!.albumArt! +
+                  '?compress=l&token=' +
+                  (i.server!.jwt ?? ''))
+              .toString()
+          : null;
+
       MediaItem item = new MediaItem(
           id: Uuid().v4(),
           title: i.metadata?.title ?? i.name,
           album: i.metadata?.album,
           artist: i.metadata?.artist,
-          artUri: i.metadata?.albumArt != null
-              ? Uri.parse(i.server!.url.toString()).resolve('/album-art/' +
-                  i.metadata!.albumArt! +
-                  '?compress=l&token=' +
-                  (i.server!.jwt ?? ''))
-              : Uri.parse(i.server!.url.toString())
-                  .resolve('/assets/img/default.png'),
           extras: {
             'path': i.data,
             'localPath': finalString,
-            'year': i.metadata?.year
+            'year': i.metadata?.year,
+            'artUrl': artUrl,
           });
       MediaManager().audioHandler.addQueueItem(item);
       return;
@@ -168,22 +171,25 @@ class Browser extends StatelessWidget {
         Uuid().v4() +
         (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!);
 
+    String? artUrl = i.metadata?.albumArt != null
+        ? Uri.parse(i.server!.url.toString())
+            .resolve('/album-art/' +
+                i.metadata!.albumArt! +
+                '?compress=l&token=' +
+                (i.server!.jwt ?? ''))
+            .toString()
+        : null;
+
     MediaItem item = new MediaItem(
         id: lolUrl,
         title: i.metadata?.title ?? i.name,
         album: i.metadata?.album,
         artist: i.metadata?.artist,
-        artUri: i.metadata?.albumArt != null
-            ? Uri.parse(i.server!.url.toString()).resolve('/album-art/' +
-                i.metadata!.albumArt! +
-                '?compress=l&token=' +
-                (i.server!.jwt ?? ''))
-            : Uri.parse(i.server!.url.toString())
-                .resolve('/assets/img/default.png'),
         extras: {
           'server': i.server!.localname,
           'path': i.data,
-          'year': i.metadata?.year
+          'year': i.metadata?.year,
+          'artUrl': artUrl,
         });
 
     MediaManager().audioHandler.addQueueItem(item);
@@ -221,89 +227,23 @@ class Browser extends StatelessWidget {
   }
 
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final _slidableKey = GlobalKey<SlidableState>();
-
     return Container(
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
       child: Slidable(
-          key: _slidableKey,
-          actionPane: SlidableDrawerActionPane(),
-          secondaryActions: [
-            IconSlideAction(
-                color: Colors.redAccent,
-                icon: Icons.remove_circle,
-                caption: 'Delete',
-                onTap: () {
-                  showDialog(
-                      context: c,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                            title: Text("Confirm Delete Playlist"),
-                            content: b[i].getText(),
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("Go Back"),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                  child: Text(
-                                    "Delete",
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                  onPressed: () {
-                                    ApiManager().removePlaylist(b[i].data!,
-                                        useThisServer: b[i].server);
-                                    Navigator.of(context).pop();
-                                  })
-                            ]);
-                      });
-                })
-          ],
-          child: ListTile(
-              leading: b[i].icon ?? null,
-              title: b[i].getText(),
-              subtitle: b[i].getSubText(),
-              trailing: IconButton(
-                icon: Icon(
-                  Icons.keyboard_arrow_left,
-                  size: 20.0,
-                  color: Colors.brown[900],
-                ),
-                onPressed: () {
-                  _slidableKey.currentState?.open(
-                    actionType: SlideActionType.secondary,
-                  );
-                },
-              ),
-              onTap: () {
-                handleTap(b, i, c);
-              })),
-    );
-  }
-
-  Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final _slidableKey = GlobalKey<SlidableState>();
-
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
-        child: Slidable(
-            key: _slidableKey,
-            actionPane: SlidableDrawerActionPane(),
-            secondaryActions: [
-              IconSlideAction(
-                  color: Colors.red,
-                  icon: Icons.delete,
-                  caption: 'Delete',
-                  onTap: () {
+          endActionPane: ActionPane(
+            motion: DrawerMotion(),
+            children: [
+              SlidableAction(
+                  backgroundColor: Colors.redAccent,
+                  icon: Icons.remove_circle,
+                  label: 'Delete',
+                  onPressed: (context) {
                     showDialog(
                         context: c,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                              title: Text("Confirm Delete Folder"),
+                              title: Text("Confirm Delete Playlist"),
                               content: b[i].getText(),
                               actions: <Widget>[
                                 TextButton(
@@ -318,15 +258,17 @@ class Browser extends StatelessWidget {
                                       style: TextStyle(color: Colors.red),
                                     ),
                                     onPressed: () {
-                                      FileExplorer().deleteDirectory(
-                                          b[i].data!, b[i].server);
+                                      ApiManager().removePlaylist(b[i].data!,
+                                          useThisServer: b[i].server);
                                       Navigator.of(context).pop();
                                     })
                               ]);
                         });
                   })
             ],
-            child: ListTile(
+          ),
+          child: Builder(
+            builder: (context) => ListTile(
                 leading: b[i].icon ?? null,
                 title: b[i].getText(),
                 subtitle: b[i].getSubText(),
@@ -337,95 +279,153 @@ class Browser extends StatelessWidget {
                     color: Colors.brown[900],
                   ),
                   onPressed: () {
-                    _slidableKey.currentState?.open(
-                      actionType: SlideActionType.secondary,
-                    );
+                    Slidable.of(context)?.openEndActionPane();
                   },
                 ),
                 onTap: () {
                   handleTap(b, i, c);
-                })));
+                }),
+          )),
+    );
+  }
+
+  Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+        child: Slidable(
+            endActionPane: ActionPane(
+              motion: DrawerMotion(),
+              children: [
+                SlidableAction(
+                    backgroundColor: Colors.red,
+                    icon: Icons.delete,
+                    label: 'Delete',
+                    onPressed: (context) {
+                      showDialog(
+                          context: c,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                                title: Text("Confirm Delete Folder"),
+                                content: b[i].getText(),
+                                actions: <Widget>[
+                                  TextButton(
+                                    child: Text("Go Back"),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                  TextButton(
+                                      child: Text(
+                                        "Delete",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                      onPressed: () {
+                                        FileExplorer().deleteDirectory(
+                                            b[i].data!, b[i].server);
+                                        Navigator.of(context).pop();
+                                      })
+                                ]);
+                          });
+                    })
+              ],
+            ),
+            child: Builder(
+              builder: (context) => ListTile(
+                  leading: b[i].icon ?? null,
+                  title: b[i].getText(),
+                  subtitle: b[i].getSubText(),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.keyboard_arrow_left,
+                      size: 20.0,
+                      color: Colors.brown[900],
+                    ),
+                    onPressed: () {
+                      Slidable.of(context)?.openEndActionPane();
+                    },
+                  ),
+                  onTap: () {
+                    handleTap(b, i, c);
+                  }),
+            )));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final _slidableKey = GlobalKey<SlidableState>();
-
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: Slidable(
-            key: _slidableKey,
-            actionPane: SlidableDrawerActionPane(),
-            secondaryActions: [
-              IconSlideAction(
-                  color: Colors.red,
-                  icon: Icons.delete,
-                  caption: 'Delete',
-                  onTap: () {
-                    // ApiManager().getRecursiveFiles(b[i].data!,
-                    //     useThisServer: b[i].server);
-                    FileExplorer().deleteFile(b[i].data!, b[i].server);
-                  })
-            ],
-            child: ListTile(
-                leading: b[i].icon ?? null,
-                title: b[i].getText(),
-                subtitle: b[i].getSubText(),
-                trailing: IconButton(
-                  icon: Icon(
-                    Icons.keyboard_arrow_left,
-                    size: 20.0,
-                    color: Colors.brown[900],
+            endActionPane: ActionPane(
+              motion: DrawerMotion(),
+              children: [
+                SlidableAction(
+                    backgroundColor: Colors.red,
+                    icon: Icons.delete,
+                    label: 'Delete',
+                    onPressed: (context) {
+                      FileExplorer().deleteFile(b[i].data!, b[i].server);
+                    })
+              ],
+            ),
+            child: Builder(
+              builder: (context) => ListTile(
+                  leading: b[i].icon ?? null,
+                  title: b[i].getText(),
+                  subtitle: b[i].getSubText(),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.keyboard_arrow_left,
+                      size: 20.0,
+                      color: Colors.brown[900],
+                    ),
+                    onPressed: () {
+                      Slidable.of(context)?.openEndActionPane();
+                    },
                   ),
-                  onPressed: () {
-                    _slidableKey.currentState?.open(
-                      actionType: SlideActionType.secondary,
-                    );
-                  },
-                ),
-                onTap: () {
-                  handleTap(b, i, c);
-                })));
+                  onTap: () {
+                    handleTap(b, i, c);
+                  }),
+            )));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final _slidableKey = GlobalKey<SlidableState>();
-
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: Slidable(
-            key: _slidableKey,
-            actionPane: SlidableDrawerActionPane(),
-            secondaryActions: [
-              IconSlideAction(
-                  color: Colors.blueGrey,
-                  icon: Icons.add_to_queue,
-                  caption: 'Add All',
-                  onTap: () {
-                    ApiManager().getRecursiveFiles(b[i].data!,
-                        useThisServer: b[i].server);
-                  })
-            ],
-            child: ListTile(
-                leading: b[i].icon ?? null,
-                title: b[i].getText(),
-                subtitle: b[i].getSubText(),
-                trailing: IconButton(
-                  icon: Icon(
-                    Icons.keyboard_arrow_left,
-                    size: 20.0,
-                    color: Colors.brown[900],
+            endActionPane: ActionPane(
+              motion: DrawerMotion(),
+              children: [
+                SlidableAction(
+                    backgroundColor: Colors.blueGrey,
+                    icon: Icons.add_to_queue,
+                    label: 'Add All',
+                    onPressed: (context) {
+                      ApiManager().getRecursiveFiles(b[i].data!,
+                          useThisServer: b[i].server);
+                    })
+              ],
+            ),
+            child: Builder(
+              builder: (context) => ListTile(
+                  leading: b[i].icon ?? null,
+                  title: b[i].getText(),
+                  subtitle: b[i].getSubText(),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.keyboard_arrow_left,
+                      size: 20.0,
+                      color: Colors.brown[900],
+                    ),
+                    onPressed: () {
+                      Slidable.of(context)?.openEndActionPane();
+                    },
                   ),
-                  onPressed: () {
-                    _slidableKey.currentState?.open(
-                      actionType: SlideActionType.secondary,
-                    );
-                  },
-                ),
-                onTap: () {
-                  handleTap(b, i, c);
-                })));
+                  onTap: () {
+                    handleTap(b, i, c);
+                  }),
+            )));
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -464,7 +464,7 @@ class Browser extends StatelessWidget {
                                     .downloadProgress /
                                 100,
                             valueColor: new AlwaysStoppedAnimation(Colors.blue),
-                            backgroundColor: Colors.white.withOpacity(0),
+                            backgroundColor: Colors.white.withValues(alpha: 0),
                           ),
                         ),
                       ),

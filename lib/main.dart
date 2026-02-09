@@ -1,11 +1,8 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -51,8 +48,6 @@ Future<void> main() async {
           primaryColorDark: Color(0xFF000000),
           primaryColorLight: Color(0xFF484848),
           colorScheme: ColorScheme(
-              background: Colors.red,
-              onBackground: Colors.black,
               surface: Colors.black,
               onSurface: Colors.white,
               brightness: Brightness.dark,
@@ -92,22 +87,20 @@ class _MStreamAppState extends State<MStreamApp>
     super.dispose();
   }
 
-  Future<bool> _onWillPop() {
-    if (_tabController.index != 0) {
-      _tabController.animateTo(0);
-      return new Future.value(false);
-    } else if (BrowserManager().browserCache.length > 1) {
-      BrowserManager().popBrowser();
-      return new Future.value(false);
-    } else {
-      return new Future.value(true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return new WillPopScope(
-        onWillPop: _onWillPop,
+    return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (_tabController.index != 0) {
+            _tabController.animateTo(0);
+          } else if (BrowserManager().browserCache.length > 1) {
+            BrowserManager().popBrowser();
+          } else {
+            SystemNavigator.pop();
+          }
+        },
         child: Scaffold(
             appBar: AppBar(
               title: Column(
@@ -116,7 +109,7 @@ class _MStreamAppState extends State<MStreamApp>
                 children: <Widget>[
                   Text('mStream Music'),
                   StreamBuilder<Server?>(
-                      stream: ServerManager().curentServerStream,
+                      stream: ServerManager().currentServerStream,
                       builder: (context, snapshot) {
                         final Server? cServer = snapshot.data;
                         return Visibility(
@@ -191,7 +184,7 @@ class _MStreamAppState extends State<MStreamApp>
                   unselectedLabelColor: Color(0xFFcccccc),
                   tabs: [
                     StreamBuilder<String>(
-                        stream: BrowserManager().broswerLabelStream,
+                        stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
                           return Tab(text: label ?? 'Browser');
@@ -311,85 +304,66 @@ class NowPlaying extends StatelessWidget {
                         itemCount: queue.length,
                         itemBuilder: (BuildContext context, int index) {
                           return Slidable(
-                              actionPane: SlidableDrawerActionPane(),
                               key: Key(queue[index].id),
-                              dismissal: SlidableDismissal(
-                                child: SlidableDrawerDismissal(),
-                                onDismissed: (actionType) {
-                                  MediaManager()
-                                      .audioHandler
-                                      .removeQueueItemAt(index);
-                                },
+                              startActionPane: ActionPane(
+                                motion: DrawerMotion(),
+                                extentRatio: 0.18,
+                                children: [
+                                  SlidableAction(
+                                      backgroundColor: Colors.blueGrey,
+                                      icon: Icons.download,
+                                      label: 'Sync',
+                                      onPressed: (context) {
+                                        if (queue[index]
+                                                .extras!['localPath'] ==
+                                            null) {
+                                          DownloadManager().downloadOneFile(
+                                              queue[index].id,
+                                              queue[index].extras!['server'],
+                                              queue[index].extras!['path'],
+                                              null);
+                                        }
+                                      })
+                                ],
                               ),
-                              secondaryActions: <Widget>[
-                                IconSlideAction(
-                                    color: Colors.blueGrey,
-                                    icon: Icons.info,
-                                    caption: 'Info',
-                                    onTap: () {
-                                      MusicMetadata m = new MusicMetadata(
-                                          queue[index].artist,
-                                          queue[index].album,
-                                          queue[index].title,
-                                          null,
-                                          null,
-                                          queue[index].extras?['year'],
-                                          'X',
-                                          null,
-                                          queue[index].artUri?.toString());
-                                      print(queue[index]);
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  MeteDataScreen(
-                                                      meta: m,
-                                                      path: queue[index]
-                                                          .extras?['path'])));
-                                    }),
-                              ],
-                              actions: <Widget>[
-                                // IconSlideAction(
-                                //     color: Colors.blueGrey,
-                                //     icon: Icons.star_border_outlined,
-                                //     caption: 'Rate',
-                                //     onTap: () {
-                                //       showDialog(
-                                //           context: context,
-                                //           builder: (BuildContext context) {
-                                //             return AlertDialog(
-                                //                 title: Text("Rate Song"),
-                                //                 content: Column(
-                                //                   mainAxisSize:
-                                //                       MainAxisSize.min,
-                                //                 ),
-                                //                 actions: [
-                                //                   TextButton(
-                                //                     child: Text("Go Back"),
-                                //                     onPressed: () {
-                                //                       Navigator.of(context)
-                                //                           .pop();
-                                //                     },
-                                //                   ),
-                                //                 ]);
-                                //           });
-                                //     }),
-                                IconSlideAction(
-                                    color: Colors.blueGrey,
-                                    icon: Icons.download,
-                                    caption: 'Sync',
-                                    onTap: () {
-                                      if (queue[index].extras!['localPath'] ==
-                                          null) {
-                                        DownloadManager().downloadOneFile(
-                                            queue[index].id,
-                                            queue[index].extras!['server'],
-                                            queue[index].extras!['path'],
-                                            null);
-                                      }
-                                    })
-                              ],
-                              actionExtentRatio: 0.18,
+                              endActionPane: ActionPane(
+                                motion: DrawerMotion(),
+                                extentRatio: 0.18,
+                                dismissible: DismissiblePane(
+                                  onDismissed: () {
+                                    MediaManager()
+                                        .audioHandler
+                                        .removeQueueItemAt(index);
+                                  },
+                                ),
+                                children: [
+                                  SlidableAction(
+                                      backgroundColor: Colors.blueGrey,
+                                      icon: Icons.info,
+                                      label: 'Info',
+                                      onPressed: (context) {
+                                        MusicMetadata m = new MusicMetadata(
+                                            queue[index].artist,
+                                            queue[index].album,
+                                            queue[index].title,
+                                            null,
+                                            null,
+                                            queue[index].extras?['year'],
+                                            'X',
+                                            null,
+                                            queue[index].extras?['artUrl']);
+                                        print(queue[index]);
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    MeteDataScreen(
+                                                        meta: m,
+                                                        path: queue[index]
+                                                            .extras?['path'])));
+                                      }),
+                                ],
+                              ),
                               child: Container(
                                   color: (queue[index] == mediaItem)
                                       ? Color(0xFFffab00)
@@ -412,8 +386,8 @@ class NowPlaying extends StatelessWidget {
                                               valueColor:
                                                   AlwaysStoppedAnimation(
                                                       Colors.blue),
-                                              backgroundColor:
-                                                  Colors.white.withOpacity(0),
+                                              backgroundColor: Colors.white
+                                                  .withValues(alpha: 0),
                                             ),
                                           ),
                                         ),
@@ -421,12 +395,13 @@ class NowPlaying extends StatelessWidget {
                                             child: Container(
                                                 child: ListTile(
                                                     leading: queue[index]
-                                                                .artUri !=
+                                                                    .extras?[
+                                                                'artUrl'] !=
                                                             null
                                                         ? Image.network(
                                                             queue[index]
-                                                                .artUri
-                                                                .toString())
+                                                                    .extras![
+                                                                'artUrl'])
                                                         : Icon(
                                                             Icons.music_note),
                                                     subtitle: queue[index]
@@ -488,8 +463,11 @@ class BottomBar extends StatelessWidget {
                 onTapUp: (TapUpDetails details) {
                   double width = MediaQuery.of(context).size.width;
                   double percentage = details.globalPosition.dx / width;
+
                   Duration duration =
                       mediaState?.mediaItem?.duration ?? Duration.zero;
+
+                  stdout.write("Duration: ${duration.inSeconds}");
 
                   double doubleDs = duration.inSeconds.toDouble();
                   int newDuration = (doubleDs * percentage).toInt();

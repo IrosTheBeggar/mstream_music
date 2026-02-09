@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+// import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
 
@@ -275,7 +275,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                   children: <Widget>[
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
@@ -287,33 +288,34 @@ class MyCustomFormState extends State<MyCustomForm> {
                         onPressed: submitPending
                             ? null
                             : () {
-                                FlutterBarcodeScanner.scanBarcode(
-                                        '#ff6666', 'Cancel', false, ScanMode.QR)
-                                    .then((qrValue) {
-                                  if (qrValue == '-1' || qrValue == '') {
-                                    return;
-                                  }
+                                // FlutterBarcodeScanner.scanBarcode(
+                                //         '#ff6666', 'Cancel', false, ScanMode.QR)
+                                //     .then((qrValue) {
+                                //   if (qrValue == '-1' || qrValue == '') {
+                                //     return;
+                                //   }
 
-                                  try {
-                                    Map<String, String> parsedValues =
-                                        parseQrCode(qrValue);
-                                    _urlCtrl.text = parsedValues['url'] ?? '';
-                                    _usernameCtrl.text =
-                                        parsedValues['username'] ?? '';
-                                    _passwordCtrl.text =
-                                        parsedValues['password'] ?? '';
-                                  } catch (err) {
-                                    // Scaffold.of(context).showSnackBar(SnackBar(
-                                    //     content: Text('Invalid Code')));
-                                  }
-                                });
+                                //   try {
+                                //     Map<String, String> parsedValues =
+                                //         parseQrCode(qrValue);
+                                //     _urlCtrl.text = parsedValues['url'] ?? '';
+                                //     _usernameCtrl.text =
+                                //         parsedValues['username'] ?? '';
+                                //     _passwordCtrl.text =
+                                //         parsedValues['password'] ?? '';
+                                //   } catch (err) {
+                                //     // Scaffold.of(context).showSnackBar(SnackBar(
+                                //     //     content: Text('Invalid Code')));
+                                //   }
+                                // });
                               },
                       ),
                     ),
                     Container(width: 8), // Make a gap between the buttons
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green),
                         child: Text(submitPending ? 'Checking Server' : 'Save',
                             style: TextStyle(color: Colors.white)),
                         onPressed: submitPending

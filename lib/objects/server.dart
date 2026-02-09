@@ -23,7 +23,7 @@ class Server {
         localname = json['localname'],
         autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
-        playlists = List<String>.from(json['playlists']) ?? [],
+        playlists = List<String>.from(json['playlists'] ?? []),
         saveToSdCard = json['saveToSdCard'] ?? false;
 
   Map<String, dynamic> toJson() => {
