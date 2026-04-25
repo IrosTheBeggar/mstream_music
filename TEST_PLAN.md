@@ -94,17 +94,22 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 
 **Cost**: highest. Needs:
 - Android emulator booted (`flutter emulators --launch <id>` then `flutter devices` to confirm).
-- A controllable mStream backend. Easiest: spin up the real mStream server in this monorepo against a fixture music directory on `localhost:3000`, point the app at it via the integration-test setup.
-- `dev_dependencies: integration_test: { sdk: flutter }` — currently absent from `pubspec.yaml`, will need adding.
+- A controllable mStream backend. Either spin up the real mStream server in the monorepo against fixture music, or — what we do today — start an in-process `dart:io` `HttpServer` inside the test that mocks the routes the test exercises (much faster, no music files needed, see `integration_test/add_server_test.dart`).
+- `dev_dependencies: integration_test: { sdk: flutter }`.
 - Test code lives in `integration_test/` (sibling of `test/`).
 
+**Constraints discovered while writing these:**
+- `audio_service` and `flutter_downloader` both assert single-init per process. `testWidgets` cases share a process, and re-pumping `MStreamApp` re-runs `initState` which re-initializes both — crashes the second test. Workaround: **one user-journey-style `testWidgets` per test file**. Each file gets its own `flutter test` driver entry and a fresh process. Cross-test sharing happens via `setUpAll` (e.g. `MediaManager().start()` once), not multiple cases.
+- To skip the welcome screen for tests that need a logged-in state, **pre-seed `servers.json`** in the app's documents directory (see `browse_albums_test.dart`). MStreamApp's `initState` reads it on load.
+
 **Targets** (in priority order — each catches a frequent regression source):
-- [ ] **Cold start, no server**: launch app, verify "Welcome To mStream" screen, no crashes.
-- [ ] **Add server flow**: tap "+", enter URL, submit, verify navigation to browser, verify default browse items appear.
-- [ ] **Browse + play**: tap "Albums", tap an album, tap a song, verify `audioHandler.play()` reaches `playing: true` state.
+- [x] **Cold start, no server** — `integration_test/cold_start_test.dart`.
+- [x] **Add server flow** — `integration_test/add_server_test.dart` (validation error + mock-server success in one journey).
+- [x] **Browse albums** — `integration_test/browse_albums_test.dart` (pre-seeds server, taps Albums, asserts mock list renders). Catches API-shape parsing regressions.
+- [ ] **Browse + play**: tap an album, tap a song, verify `audioHandler.play()` reaches `playing: true` state. Mock the audio URL with a tiny silent stream or skip the actual playback assertion.
 - [ ] **Queue manipulation**: queue 2 songs, swipe to dismiss one, verify queue length goes to 1.
-- [ ] **Auto DJ toggle**: enable Auto DJ, verify subsequent track loads from `/api/v1/db/random-songs`.
-- [ ] **Search**: type a query, verify results render in the three sections (artists, albums, titles).
+- [ ] **Auto DJ toggle**: enable Auto DJ, verify subsequent track loads from `/api/v1/db/random-songs` (mock the endpoint).
+- [ ] **Search**: type a query, verify results render in the three sections (artists, albums, titles) (mock `/api/v1/db/search`).
 
 **Screenshot capture on failure**: integration_test supports `binding.takeScreenshot('name')`. Wire each test's failure path to dump a screenshot, so when the loop fails, a human (or me) can see what the screen actually looked like.
 
