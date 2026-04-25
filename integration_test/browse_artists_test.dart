@@ -1,10 +1,11 @@
-// Browse-albums flow.
+// Browse-artists drill-down.
 //
-// Pre-seeds a server in servers.json so MStreamApp loads it at startup
-// and lands directly on the browser. Taps Albums and asserts the items
-// returned by the mock /api/v1/db/albums endpoint render. Catches the
-// most common modernization regression: server-side API shape drifts
-// that silently break parsing in lib/singletons/api.dart.
+// Verifies the artists → artist-albums path:
+//   1. Tap Artists, expect mocked artist names to render.
+//   2. Tap an artist, expect that artist's albums to render.
+//
+// Catches regressions in the GET /api/v1/db/artists and POST
+// /api/v1/db/artists-albums parsing in lib/singletons/api.dart.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,10 +33,13 @@ void main() {
   });
 
   testWidgets(
-    'tapping Albums renders the list returned by the server',
+    'Artists list renders, tapping one drills to that artist\'s albums',
     (WidgetTester tester) async {
       mockServer = await MockServer.start({
-        '/api/v1/db/albums': (_) => {
+        '/api/v1/db/artists': (_) => {
+              'artists': ['Pink Floyd', 'Led Zeppelin'],
+            },
+        '/api/v1/db/artists-albums': (_) => {
               'albums': [
                 {
                   'name': 'Wish You Were Here',
@@ -43,7 +47,7 @@ void main() {
                   'album_art_file': null,
                 },
                 {
-                  'name': 'Dark Side of the Moon',
+                  'name': 'The Dark Side of the Moon',
                   'year': 1973,
                   'album_art_file': null,
                 },
@@ -56,13 +60,17 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: MStreamApp()));
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      expect(find.text('Albums'), findsOneWidget);
+      await tester.tap(find.text('Artists'));
+      await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      await tester.tap(find.text('Albums'));
+      expect(find.text('Pink Floyd'), findsOneWidget);
+      expect(find.text('Led Zeppelin'), findsOneWidget);
+
+      await tester.tap(find.text('Pink Floyd'));
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
       expect(find.text('Wish You Were Here'), findsOneWidget);
-      expect(find.text('Dark Side of the Moon'), findsOneWidget);
+      expect(find.text('The Dark Side of the Moon'), findsOneWidget);
     },
   );
 }

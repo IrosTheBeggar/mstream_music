@@ -98,18 +98,28 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - `dev_dependencies: integration_test: { sdk: flutter }`.
 - Test code lives in `integration_test/` (sibling of `test/`).
 
+**Shared infrastructure** lives in `integration_test/helpers/test_helpers.dart`:
+- `resetAppState()` — wipes `servers.json` and clears the singletons that hold UI state.
+- `MockServer.start({...})` — spins up a `dart:io` HttpServer on emulator loopback. Always handles `/api/v1/ping` with a default response; callers add the routes they need. Returns an instance with `.url` and `.close()`.
+- `seedServer(url)` — writes a single-server `servers.json` so MStreamApp loads it at startup, skipping the welcome screen.
+
 **Constraints discovered while writing these:**
 - `audio_service` and `flutter_downloader` both assert single-init per process. `testWidgets` cases share a process, and re-pumping `MStreamApp` re-runs `initState` which re-initializes both — crashes the second test. Workaround: **one user-journey-style `testWidgets` per test file**. Each file gets its own `flutter test` driver entry and a fresh process. Cross-test sharing happens via `setUpAll` (e.g. `MediaManager().start()` once), not multiple cases.
-- To skip the welcome screen for tests that need a logged-in state, **pre-seed `servers.json`** in the app's documents directory (see `browse_albums_test.dart`). MStreamApp's `initState` reads it on load.
+- For type=`'file'` DisplayItems with no metadata, the row title comes from `data.split('/').last` (i.e. the filename), **not** the JSON `name` field. Tests asserting on file-row text need to plan filepaths accordingly — see `search_test.dart`.
 
 **Targets** (in priority order — each catches a frequent regression source):
 - [x] **Cold start, no server** — `integration_test/cold_start_test.dart`.
 - [x] **Add server flow** — `integration_test/add_server_test.dart` (validation error + mock-server success in one journey).
-- [x] **Browse albums** — `integration_test/browse_albums_test.dart` (pre-seeds server, taps Albums, asserts mock list renders). Catches API-shape parsing regressions.
-- [ ] **Browse + play**: tap an album, tap a song, verify `audioHandler.play()` reaches `playing: true` state. Mock the audio URL with a tiny silent stream or skip the actual playback assertion.
-- [ ] **Queue manipulation**: queue 2 songs, swipe to dismiss one, verify queue length goes to 1.
-- [ ] **Auto DJ toggle**: enable Auto DJ, verify subsequent track loads from `/api/v1/db/random-songs` (mock the endpoint).
-- [ ] **Search**: type a query, verify results render in the three sections (artists, albums, titles) (mock `/api/v1/db/search`).
+- [x] **Browse albums** — `integration_test/browse_albums_test.dart`. Catches `/api/v1/db/albums` parsing regressions.
+- [x] **Browse artists with drill-down** — `integration_test/browse_artists_test.dart`. Tests `/api/v1/db/artists` then `/api/v1/db/artists-albums`.
+- [x] **Browse recently added** — `integration_test/browse_recent_test.dart`. Tests the metadata-bearing `/api/v1/db/recent/added` shape.
+- [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts the `[rating/2] Title` prefix that DisplayItem applies when `showRating` is set.
+- [x] **Search** — `integration_test/search_test.dart`. Covers the three parallel arrays (artists/albums/title) returned by `/api/v1/db/search`.
+- [ ] **Browse + play**: tap an album, tap a song, verify `audioHandler.play()` reaches `playing: true`. Mocking the audio URL is non-trivial; consider asserting on `audioHandler.queue` length instead of actual playback state.
+- [ ] **Queue manipulation**: programmatically add 2 MediaItems to the queue, swipe to dismiss one, verify queue length goes to 1. Doesn't require playback.
+- [ ] **Auto DJ toggle**: enable Auto DJ via the BottomBar button, mock `/api/v1/db/random-songs`, verify a new MediaItem ends up in the queue.
+- [ ] **Browse playlists** — `/api/v1/playlist/getall` then `/api/v1/playlist/load`.
+- [ ] **File explorer** — `/api/v1/file-explorer` (mixed directories + files in one response).
 
 **Screenshot capture on failure**: integration_test supports `binding.takeScreenshot('name')`. Wire each test's failure path to dump a screenshot, so when the loop fails, a human (or me) can see what the screen actually looked like.
 
