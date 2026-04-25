@@ -115,7 +115,8 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - [x] **Browse recently added** — `integration_test/browse_recent_test.dart`. Tests the metadata-bearing `/api/v1/db/recent/added` shape.
 - [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts the `[rating/2] Title` prefix that DisplayItem applies when `showRating` is set.
 - [x] **Search** — `integration_test/search_test.dart`. Covers the three parallel arrays (artists/albums/title) returned by `/api/v1/db/search`.
-- [ ] **Browse + play**: tap an album, tap a song, verify `audioHandler.play()` reaches `playing: true`. Mocking the audio URL is non-trivial; consider asserting on `audioHandler.queue` length instead of actual playback state.
+- [x] **Browse album songs (drill-down)** — `integration_test/browse_album_songs_test.dart`. Albums → tap an album → POST `/api/v1/db/album-songs` returns metadata-bearing items.
+- [ ] **Tap song to play**: from album-songs, tap a song, verify `audioHandler.play()` reaches `playing: true`. Mocking the audio URL is non-trivial; consider asserting on `audioHandler.queue` length instead of actual playback state.
 - [ ] **Queue manipulation**: programmatically add 2 MediaItems to the queue, swipe to dismiss one, verify queue length goes to 1. Doesn't require playback.
 - [ ] **Auto DJ toggle**: enable Auto DJ via the BottomBar button, mock `/api/v1/db/random-songs`, verify a new MediaItem ends up in the queue.
 - [ ] **Browse playlists** — `/api/v1/playlist/getall` then `/api/v1/playlist/load`.
