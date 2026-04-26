@@ -18,8 +18,12 @@ import 'screens/downloads.dart';
 import 'singletons/downloads.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
+import 'screens/settings_screen.dart';
 
 import 'singletons/media.dart';
+import 'singletons/settings.dart';
+import 'theme/velvet_theme.dart';
+import 'widgets/waveform_progress.dart';
 
 import 'dart:io';
 
@@ -35,33 +39,17 @@ class MyHttpOverrides extends HttpOverrides {
 
 Future<void> main() async {
   await MediaManager().start();
+  await SettingsManager().load();
 
   // allow self signed SSL cert
   HttpOverrides.global = new MyHttpOverrides();
 
-  runApp(new MaterialApp(
-      title: 'mStream Music',
-      home: MStreamApp(),
-      theme: ThemeData(
-          brightness: Brightness.dark,
-          primaryColor: Color(0xFF212121),
-          primaryColorDark: Color(0xFF000000),
-          primaryColorLight: Color(0xFF484848),
-          colorScheme: ColorScheme(
-              surface: Colors.black,
-              onSurface: Colors.white,
-              brightness: Brightness.dark,
-              error: Colors.black,
-              onError: Colors.white,
-              primary: Color(0xFF212121),
-              primaryContainer: Color(0xFFffab00),
-              onPrimary: Colors.white,
-              secondary: Color(0xFF000000),
-              secondaryContainer: Color(0xFFffab00),
-              onSecondary: Colors.orange),
-          buttonTheme: ButtonThemeData(buttonColor: Color(0xFFFFAB00)),
-          scaffoldBackgroundColor: Color(0xFFe1e2e1),
-          cardColor: Color(0xFFffffff))));
+  runApp(MaterialApp(
+    title: 'mStream Music',
+    home: MStreamApp(),
+    theme: buildVelvetTheme(),
+    debugShowCheckedModeBanner: false,
+  ));
 }
 
 class MStreamApp extends StatefulWidget {
@@ -179,9 +167,6 @@ class _MStreamAppState extends State<MStreamApp>
                     }),
               ],
               bottom: TabBar(
-                  labelColor: Color(0xFFffab00),
-                  indicatorColor: Color(0xFFffab00),
-                  unselectedLabelColor: Color(0xFFcccccc),
                   tabs: [
                     StreamBuilder<String>(
                         stream: BrowserManager().browserLabelStream,
@@ -194,75 +179,110 @@ class _MStreamAppState extends State<MStreamApp>
                   controller: _tabController),
             ),
             drawer: Drawer(
-                backgroundColor: Color(0xFF212121),
-                shape: Border(),
-                child: ListView(children: <Widget>[
-                  ListTile(
-                    title: Text(
-                      'mStream Music',
-                      style: TextStyle(
-                          fontFamily: 'Jura',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 28,
-                          color: Color(0xFFffab00)),
-                    ),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => AboutScreen()));
-                    },
+                child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      VelvetColors.raised,
+                      VelvetColors.surface,
+                    ],
                   ),
-                  Divider(),
-                  ListTile(
-                    title: Text('Manage Servers',
+                ),
+                margin: EdgeInsets.zero,
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.graphic_eq,
+                          color: VelvetColors.primary, size: 32),
+                      SizedBox(width: 10),
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(
+                              text: 'm',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w300,
+                                  color: VelvetColors.textSecondary)),
+                          TextSpan(
+                              text: 'Stream',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: VelvetColors.textPrimary)),
+                        ]),
                         style: TextStyle(
-                            fontFamily: 'Jura',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17)),
-                    leading: Icon(Icons.router),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => ManageServersScreen()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    title: Text('Downloads',
+                            fontSize: 22, letterSpacing: -0.3),
+                      ),
+                    ]),
+                    SizedBox(height: 4),
+                    Text('Personal music streaming',
                         style: TextStyle(
-                            fontFamily: 'Jura',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17)),
-                    leading: Icon(Icons.download),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => DownloadScreen()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    title: Text('Auto DJ',
-                        style: TextStyle(
-                            fontFamily: 'Jura',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17)),
-                    leading: Icon(Icons.album),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => AutoDJScreen()),
-                      );
-                    },
-                  ),
-                ])),
+                            color: VelvetColors.textSecondary, fontSize: 12)),
+                  ],
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.router),
+                title: Text('Manage Servers'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => ManageServersScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.download),
+                title: Text('Downloads'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DownloadScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.album),
+                title: Text('Auto DJ'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AutoDJScreen()),
+                  );
+                },
+              ),
+              Divider(color: VelvetColors.border),
+              ListTile(
+                leading: Icon(Icons.settings),
+                title: Text('Settings'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('About'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AboutScreen()),
+                  );
+                },
+              ),
+            ])),
             body: TabBarView(
                 children: [Browser(), NowPlaying()],
                 controller: _tabController),
@@ -274,22 +294,40 @@ class NowPlaying extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
-          color: Colors.white,
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Row(children: []),
-                Row(children: [
+          color: VelvetColors.surface,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  StreamBuilder<List<MediaItem>>(
+                      stream: MediaManager().audioHandler.queue,
+                      builder: (context, snap) {
+                        final n = snap.data?.length ?? 0;
+                        return Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            n == 0
+                                ? 'Queue is empty'
+                                : '$n track${n == 1 ? '' : 's'} in queue',
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5),
+                          ),
+                        );
+                      }),
                   IconButton(
-                    splashColor: Colors.red,
-                    icon: Icon(Icons.cancel),
-                    color: Colors.redAccent,
+                    icon: Icon(Icons.delete_sweep),
+                    color: VelvetColors.error,
+                    tooltip: 'Clear queue',
                     onPressed: () {
                       MediaManager().audioHandler.customAction('clearPlaylist');
                     },
                   ),
-                ])
-              ])),
+                ]),
+          )),
       Expanded(
           child: SizedBox(
               child: StreamBuilder<QueueState>(
@@ -365,66 +403,79 @@ class NowPlaying extends StatelessWidget {
                                 ],
                               ),
                               child: Container(
-                                  color: (queue[index] == mediaItem)
-                                      ? Color(0xFFffab00)
-                                      : null,
+                                  decoration: BoxDecoration(
+                                    color: (queue[index] == mediaItem)
+                                        ? VelvetColors.active
+                                        : null,
+                                    border: Border(
+                                      bottom: BorderSide(
+                                          color: VelvetColors.border,
+                                          width: 0.5),
+                                    ),
+                                  ),
                                   child: IntrinsicHeight(
                                       child: Row(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.stretch,
                                           children: <Widget>[
                                         Container(
-                                          width: 4,
-                                          child: RotatedBox(
-                                            quarterTurns: 3,
-                                            child: LinearProgressIndicator(
-                                              value: queue[index].extras![
-                                                          'localPath'] ==
-                                                      null
-                                                  ? 0 // TODO: check for download progress
-                                                  : 1,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation(
-                                                      Colors.blue),
-                                              backgroundColor: Colors.white
-                                                  .withValues(alpha: 0),
-                                            ),
-                                          ),
+                                          width: 3,
+                                          color: queue[index].extras![
+                                                      'localPath'] !=
+                                                  null
+                                              ? VelvetColors.success
+                                              : Colors.transparent,
                                         ),
                                         Expanded(
-                                            child: Container(
-                                                child: ListTile(
-                                                    leading: queue[index]
-                                                                    .extras?[
+                                            child: ListTile(
+                                                leading: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  child: SizedBox(
+                                                    width: 44,
+                                                    height: 44,
+                                                    child: queue[index].extras?[
                                                                 'artUrl'] !=
                                                             null
                                                         ? Image.network(
                                                             queue[index]
                                                                     .extras![
-                                                                'artUrl'])
-                                                        : Icon(
-                                                            Icons.music_note),
-                                                    subtitle: queue[index]
-                                                                .artist !=
-                                                            null
-                                                        ? Text(queue[index].artist!,
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .black))
-                                                        : null,
-                                                    title: Text(
-                                                        queue[index].title,
+                                                                'artUrl'],
+                                                            fit: BoxFit.cover,
+                                                            errorBuilder:
+                                                                (_, __, ___) =>
+                                                                    _artFallback())
+                                                        : _artFallback(),
+                                                  ),
+                                                ),
+                                                subtitle: queue[index]
+                                                            .artist !=
+                                                        null
+                                                    ? Text(queue[index].artist!,
                                                         style: TextStyle(
-                                                            color: Colors.black)),
-                                                    onTap: () {
-                                                      MediaManager()
-                                                          .audioHandler
-                                                          .skipToQueueItem(
-                                                              index);
-                                                      MediaManager()
-                                                          .audioHandler
-                                                          .play();
-                                                    })))
+                                                            color: VelvetColors
+                                                                .textSecondary))
+                                                    : null,
+                                                title: Text(
+                                                    queue[index].title,
+                                                    style: TextStyle(
+                                                        color: queue[index] ==
+                                                                mediaItem
+                                                            ? VelvetColors
+                                                                .primary
+                                                            : VelvetColors
+                                                                .textPrimary,
+                                                        fontWeight:
+                                                            FontWeight.w500)),
+                                                onTap: () {
+                                                  MediaManager()
+                                                      .audioHandler
+                                                      .skipToQueueItem(
+                                                          index);
+                                                  MediaManager()
+                                                      .audioHandler
+                                                      .play();
+                                                }))
                                       ]))));
                         });
                   })))
@@ -436,6 +487,12 @@ class NowPlaying extends StatelessWidget {
           MediaManager().audioHandler.queue,
           MediaManager().audioHandler.mediaItem,
           (queue, mediaItem) => QueueState(queue, mediaItem));
+
+  Widget _artFallback() => Container(
+        color: VelvetColors.raised,
+        child: Icon(Icons.music_note,
+            color: VelvetColors.textSecondary, size: 22),
+      );
 }
 
 class BottomBar extends StatelessWidget {
@@ -450,40 +507,87 @@ class BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomAppBar(
         padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 0.0),
-        color: Color(0xFF212121),
+        color: VelvetColors.surface,
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Container(
-            height: 8,
+          // Now-playing strip (title + artist) above the waveform.
+          StreamBuilder<MediaItem?>(
+            stream: MediaManager().audioHandler.mediaItem,
+            builder: (context, snap) {
+              final item = snap.data;
+              if (item == null) {
+                return SizedBox.shrink();
+              }
+              return Padding(
+                padding: EdgeInsets.fromLTRB(14, 6, 14, 4),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: VelvetColors.textPrimary)),
+                        if (item.artist != null)
+                          Text(item.artist!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: VelvetColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  StreamBuilder<MediaState>(
+                    stream: _mediaStateStream,
+                    builder: (context, snap) {
+                      final position = snap.data?.position ?? Duration.zero;
+                      final duration = item.duration;
+                      return Text(
+                        duration == null
+                            ? _fmt(position)
+                            : '${_fmt(position)} / ${_fmt(duration)}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: VelvetColors.textSecondary,
+                            fontFeatures: [FontFeature.tabularFigures()]),
+                      );
+                    },
+                  ),
+                ]),
+              );
+            },
           ),
           StreamBuilder<MediaState>(
             stream: _mediaStateStream,
             builder: (context, snapshot) {
               final mediaState = snapshot.data;
-              return GestureDetector(
-                onTapUp: (TapUpDetails details) {
-                  double width = MediaQuery.of(context).size.width;
-                  double percentage = details.globalPosition.dx / width;
-
-                  Duration duration =
-                      mediaState?.mediaItem?.duration ?? Duration.zero;
-
-                  stdout.write("Duration: ${duration.inSeconds}");
-
-                  double doubleDs = duration.inSeconds.toDouble();
-                  int newDuration = (doubleDs * percentage).toInt();
-
-                  MediaManager()
-                      .audioHandler
-                      .seek(Duration(seconds: newDuration));
-                },
-                child: Container(
-                  height: 16,
-                  child: LinearProgressIndicator(
-                    value: (mediaState?.position.inSeconds ?? 0) /
-                        (mediaState?.mediaItem?.duration?.inSeconds ?? 1),
-                    backgroundColor: Color(0xFF484848),
-                    valueColor: new AlwaysStoppedAnimation(Color(0xFFc67c00)),
-                  ),
+              final dur = mediaState?.mediaItem?.duration;
+              final progress = (dur == null || dur.inMilliseconds == 0)
+                  ? 0.0
+                  : (mediaState!.position.inMilliseconds /
+                          dur.inMilliseconds)
+                      .clamp(0.0, 1.0);
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                child: WaveformProgress(
+                  height: 20,
+                  progress: progress,
+                  seed: mediaState?.mediaItem?.id,
+                  onSeek: dur == null
+                      ? null
+                      : (fraction) {
+                          MediaManager().audioHandler.seek(
+                                Duration(
+                                    milliseconds:
+                                        (dur.inMilliseconds * fraction)
+                                            .toInt()),
+                              );
+                        },
                 ),
               );
             },
@@ -529,8 +633,8 @@ class BottomBar extends StatelessWidget {
                         return IconButton(
                             icon: Icon(Icons.shuffle),
                             color: (mediaState == AudioServiceShuffleMode.all)
-                                ? Colors.blue
-                                : Colors.white,
+                                ? VelvetColors.primary
+                                : VelvetColors.textSecondary,
                             onPressed: toggleShuffle);
                       }),
                   StreamBuilder<AudioServiceRepeatMode>(
@@ -545,8 +649,8 @@ class BottomBar extends StatelessWidget {
                         return IconButton(
                             icon: Icon(Icons.loop_sharp),
                             color: (mediaState == AudioServiceRepeatMode.all)
-                                ? Colors.blue
-                                : Colors.white,
+                                ? VelvetColors.primary
+                                : VelvetColors.textSecondary,
                             onPressed: toggleRepeat);
                       }),
                   StreamBuilder<dynamic>(
@@ -610,7 +714,7 @@ class BottomBar extends StatelessWidget {
   Stream<MediaState> get _mediaStateStream =>
       Rx.combineLatest2<MediaItem?, Duration, MediaState>(
           MediaManager().audioHandler.mediaItem,
-          AudioService.position,
+          MediaManager().audioHandler.positionStream,
           (mediaItem, position) => MediaState(mediaItem, position));
 
   IconButton playButton() => IconButton(
@@ -644,4 +748,13 @@ class CustomEvent {
   final Server? autoDJState;
 
   CustomEvent(this.autoDJState);
+}
+
+String _fmt(Duration d) {
+  final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  if (d.inHours > 0) {
+    return '${d.inHours}:$mm:$ss';
+  }
+  return '$mm:$ss';
 }
