@@ -7,13 +7,21 @@
 // loopback. Callers pass a map of path → handler; the server matches by
 // req.uri.path and returns the handler's output as JSON. /api/v1/ping is
 // always handled with a default response so tests don't have to repeat
-// it.
+// it. A `defaultHandler` runs for unmatched paths (used by the playback
+// test to serve audio bytes for /media/*).
+//
+// Handler return values: null → 404; List<int> → returned as
+// audio/wav bytes (used for media); anything else → JSON-encoded.
 //
 // seedServer writes a single-server servers.json so MStreamApp's
 // initState loads it on startup, skipping the welcome screen.
+//
+// buildSilentWav returns an in-memory 8-bit unsigned PCM WAV file
+// (mono, 8kHz). Avoids carrying a binary fixture in the repo.
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -42,7 +50,10 @@ class MockServer {
   final HttpServer _server;
   final String url;
 
-  static Future<MockServer> start(Map<String, MockRoute> routes) async {
+  static Future<MockServer> start(
+    Map<String, MockRoute> routes, {
+    MockRoute? defaultHandler,
+  }) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final url = 'http://127.0.0.1:${server.port}';
 
@@ -55,18 +66,25 @@ class MockServer {
     };
 
     server.listen((HttpRequest req) async {
-      req.response.headers.contentType = ContentType.json;
-      final handler = allRoutes[req.uri.path];
-      if (handler != null) {
-        final body = handler(req);
-        if (body == null) {
-          req.response.statusCode = 404;
-        } else {
-          req.response.statusCode = 200;
-          req.response.write(jsonEncode(body));
-        }
-      } else {
+      final handler = allRoutes[req.uri.path] ?? defaultHandler;
+      if (handler == null) {
         req.response.statusCode = 404;
+        await req.response.close();
+        return;
+      }
+
+      final body = handler(req);
+      if (body == null) {
+        req.response.statusCode = 404;
+      } else if (body is List<int>) {
+        req.response.statusCode = 200;
+        req.response.headers.contentType = ContentType('audio', 'wav');
+        req.response.headers.contentLength = body.length;
+        req.response.add(body);
+      } else {
+        req.response.statusCode = 200;
+        req.response.headers.contentType = ContentType.json;
+        req.response.write(jsonEncode(body));
       }
       await req.response.close();
     });
@@ -96,3 +114,39 @@ Future<void> seedServer(String mockUrl) async {
     },
   ]));
 }
+
+/// Builds a silent 16-bit signed PCM mono WAV file in memory.
+/// Default 5 seconds at 8 kHz = 80 KB. 16-bit signed is the most
+/// universally supported PCM format on Android's ExoPlayer.
+Uint8List buildSilentWav({int seconds = 5, int sampleRate = 8000}) {
+  final dataSize = sampleRate * seconds * 2; // 2 bytes per sample
+  final fileSize = dataSize + 36;
+
+  final b = BytesBuilder();
+  b.add(ascii.encode('RIFF'));
+  b.add(_le32(fileSize));
+  b.add(ascii.encode('WAVE'));
+  b.add(ascii.encode('fmt '));
+  b.add(_le32(16));
+  b.add(_le16(1)); // PCM
+  b.add(_le16(1)); // mono
+  b.add(_le32(sampleRate));
+  b.add(_le32(sampleRate * 2)); // byte rate
+  b.add(_le16(2)); // block align
+  b.add(_le16(16)); // bits per sample
+  b.add(ascii.encode('data'));
+  b.add(_le32(dataSize));
+  // 16-bit signed PCM silence is 0 — Uint8List defaults to zero.
+  b.add(Uint8List(dataSize));
+
+  return b.toBytes();
+}
+
+List<int> _le16(int v) => [v & 0xff, (v >> 8) & 0xff];
+
+List<int> _le32(int v) => [
+      v & 0xff,
+      (v >> 8) & 0xff,
+      (v >> 16) & 0xff,
+      (v >> 24) & 0xff,
+    ];

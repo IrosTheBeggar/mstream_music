@@ -116,7 +116,7 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts the `[rating/2] Title` prefix that DisplayItem applies when `showRating` is set.
 - [x] **Search** — `integration_test/search_test.dart`. Covers the three parallel arrays (artists/albums/title) returned by `/api/v1/db/search`.
 - [x] **Browse album songs (drill-down)** — `integration_test/browse_album_songs_test.dart`. Albums → tap an album → POST `/api/v1/db/album-songs` returns metadata-bearing items.
-- [ ] **Tap song to play**: from album-songs, tap a song, verify `audioHandler.play()` reaches `playing: true`. Mocking the audio URL is non-trivial; consider asserting on `audioHandler.queue` length instead of actual playback state.
+- [x] **Playback progress bar** — `integration_test/playback_progress_test.dart`. Mocks `/media/*` with an in-memory silent WAV (`buildSilentWav` helper), navigates Albums → album → song → play, samples the BottomBar's `LinearProgressIndicator.value` across 2s of real playback, asserts monotonic advance and value in [0, 1]. **Currently fails** — see "Known bugs surfaced" below.
 - [ ] **Queue manipulation**: programmatically add 2 MediaItems to the queue, swipe to dismiss one, verify queue length goes to 1. Doesn't require playback.
 - [ ] **Auto DJ toggle**: enable Auto DJ via the BottomBar button, mock `/api/v1/db/random-songs`, verify a new MediaItem ends up in the queue.
 - [ ] **Browse playlists** — `/api/v1/playlist/getall` then `/api/v1/playlist/load`.
@@ -168,6 +168,10 @@ These are the *minimum* refactors that pay for themselves quickly. None changes 
 - **`audio_service` background notification UI**. Visible only on a real device; not testable from Flutter.
 - **iOS-specific paths**. Project targets Android primarily; iOS testing is out of scope unless an emulator is set up.
 - **Color/theme exact values**. Material 3 + theme tweaks change pixels constantly; gate via golden tests on stable screens only, never assert exact `Color(0xFF…)` values in widget tests.
+
+## Known bugs surfaced by tests
+
+- **Progress bar duration not propagated** ([lib/media/audio_stuff.dart](lib/media/audio_stuff.dart) `AudioPlayerHandler._init`'s `durationStream` listener). The listener only updates `mediaItem.duration` when `_player.currentIndex` is non-null, but `currentIndex` can still be null when `durationStream` first fires for a freshly-added queue item. Result: `mediaItem.duration` stays null forever, the BottomBar's progress formula falls back to `position / 1`, and the bar visually pegs at 100% after 1 second of playback (the user-reported "stuck" symptom). Caught by `integration_test/playback_progress_test.dart`. Fix sketch: drop the `index != null` guard and fall back to `index ?? 0`, or merge with `currentIndexStream` so duration is re-emitted whenever the index becomes valid.
 
 ## Known follow-ups (not regressions, but worth the round trip)
 
