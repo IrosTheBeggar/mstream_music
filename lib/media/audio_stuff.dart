@@ -20,6 +20,8 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   int? get index => _player.currentIndex;
 
+  Stream<Duration> get positionStream => _player.positionStream;
+
   Server? autoDJServer;
 
   var jsonAutoDJIgnoreList;
@@ -43,24 +45,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     mediaItem
         .whereType<MediaItem>()
         .listen((item) => _recentSubject.add([item]));
-    // Broadcast media item changes.
+    // Broadcast media item changes (with duration if it's known yet).
     _player.currentIndexStream.listen((index) {
-      print(index);
-      print(queue.value.length);
-
       if (index == queue.value.length - 1) {
         autoDJ();
       }
-
-      if (index != null && queue.value.isNotEmpty)
-        mediaItem.add(queue.value[index]);
+      _emitCurrentMediaItem();
     });
-    // Magic
-    _player.durationStream.listen((duration) {
-      if (index != null && duration != null) {
-        mediaItem.add(queue.value[index!.toInt()].copyWith(duration: duration));
-      }
-    });
+    // duration usually arrives via durationStream after the source
+    // loads. Re-emit the current MediaItem with the duration filled in
+    // so the BottomBar progress formula stops dividing by 1.
+    _player.durationStream.listen((_) => _emitCurrentMediaItem());
     // Propagate all events from the audio player to AudioService clients.
     _player.playbackEventStream.listen(_broadcastState);
     // In this example, the service stops when reaching the end.
@@ -88,6 +83,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     } catch (e) {
       print("Error: $e");
     }
+  }
+
+  void _emitCurrentMediaItem() {
+    if (queue.value.isEmpty) return;
+    final i = (index ?? 0).clamp(0, queue.value.length - 1);
+    final item = queue.value[i];
+    final dur = _player.duration;
+    mediaItem.add(dur != null ? item.copyWith(duration: dur) : item);
   }
 
   @override
