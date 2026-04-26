@@ -116,10 +116,12 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts the `[rating/2] Title` prefix that DisplayItem applies when `showRating` is set.
 - [x] **Search** — `integration_test/search_test.dart`. Covers the three parallel arrays (artists/albums/title) returned by `/api/v1/db/search`.
 - [x] **Browse album songs (drill-down)** — `integration_test/browse_album_songs_test.dart`. Albums → tap an album → POST `/api/v1/db/album-songs` returns metadata-bearing items.
-- [x] **Playback progress bar** — `integration_test/playback_progress_test.dart`. Mocks `/media/*` with an in-memory silent WAV (`buildSilentWav` helper), navigates Albums → album → song → play, samples the BottomBar's `LinearProgressIndicator.value` across 2s of real playback, asserts monotonic advance and value in [0, 1]. **Currently fails** — see "Known bugs surfaced" below.
+- [x] **Playback progress bar** — `integration_test/playback_progress_test.dart`. Mocks `/media/*` with an in-memory silent WAV (`buildSilentWav` helper), navigates Albums → album → song → play, samples the BottomBar's `WaveformProgress.progress` across 2s of real playback, asserts monotonic advance and value in [0, 1]. *Originally failed* — caught the `mediaItem.duration` propagation bug in `audio_stuff.dart`; fixed in commit 8741f1d (see "Bugs caught and fixed").
+- [x] **Create local playlist** — `integration_test/playlist_create_test.dart`. Opens drawer → Playlists → FAB → enters name → asserts the playlist renders and persists to `playlists.json`.
+- [x] **Settings persistence** — `integration_test/settings_persist_test.dart`. Toggles the Transcode switch on the Settings screen, asserts it lands in `settings.json` and survives a `SettingsManager().load()` reload (i.e., a simulated app restart).
 - [ ] **Queue manipulation**: programmatically add 2 MediaItems to the queue, swipe to dismiss one, verify queue length goes to 1. Doesn't require playback.
 - [ ] **Auto DJ toggle**: enable Auto DJ via the BottomBar button, mock `/api/v1/db/random-songs`, verify a new MediaItem ends up in the queue.
-- [ ] **Browse playlists** — `/api/v1/playlist/getall` then `/api/v1/playlist/load`.
+- [ ] **Browse playlists** — server-side `/api/v1/playlist/getall` then `/api/v1/playlist/load`.
 - [ ] **File explorer** — `/api/v1/file-explorer` (mixed directories + files in one response).
 
 **Screenshot capture on failure**: integration_test supports `binding.takeScreenshot('name')`. Wire each test's failure path to dump a screenshot, so when the loop fails, a human (or me) can see what the screen actually looked like.
@@ -169,9 +171,9 @@ These are the *minimum* refactors that pay for themselves quickly. None changes 
 - **iOS-specific paths**. Project targets Android primarily; iOS testing is out of scope unless an emulator is set up.
 - **Color/theme exact values**. Material 3 + theme tweaks change pixels constantly; gate via golden tests on stable screens only, never assert exact `Color(0xFF…)` values in widget tests.
 
-## Known bugs surfaced by tests
+## Bugs caught and fixed
 
-- **Progress bar duration not propagated** ([lib/media/audio_stuff.dart](lib/media/audio_stuff.dart) `AudioPlayerHandler._init`'s `durationStream` listener). The listener only updates `mediaItem.duration` when `_player.currentIndex` is non-null, but `currentIndex` can still be null when `durationStream` first fires for a freshly-added queue item. Result: `mediaItem.duration` stays null forever, the BottomBar's progress formula falls back to `position / 1`, and the bar visually pegs at 100% after 1 second of playback (the user-reported "stuck" symptom). Caught by `integration_test/playback_progress_test.dart`. Fix sketch: drop the `index != null` guard and fall back to `index ?? 0`, or merge with `currentIndexStream` so duration is re-emitted whenever the index becomes valid.
+- **Progress bar duration not propagated** (commit 8741f1d). [lib/media/audio_stuff.dart](lib/media/audio_stuff.dart) `AudioPlayerHandler._init`'s `durationStream` listener used to only update `mediaItem.duration` when `_player.currentIndex` was non-null, but `currentIndex` can still be null when `durationStream` first fires for a freshly-added queue item. Result: `mediaItem.duration` stayed null forever, the BottomBar progress formula fell back to `position / 1`, and the bar visually pegged at 100% after 1 second of playback (the user-reported "stuck" symptom). Refactored both `currentIndexStream` and `durationStream` listeners to call a single `_emitCurrentMediaItem()` helper that reads `_player.duration` synchronously and falls back to `index ?? 0`, so duration reaches `mediaItem` regardless of which stream fires first. Caught by `integration_test/playback_progress_test.dart`.
 
 ## Known follow-ups (not regressions, but worth the round trip)
 
