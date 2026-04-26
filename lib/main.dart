@@ -98,7 +98,28 @@ class _MStreamAppState extends State<MStreamApp>
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text('mStream Music'),
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                          text: 'm',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w300,
+                              color: VelvetColors.textSecondary)),
+                      TextSpan(
+                          text: 'Stream',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: VelvetColors.textPrimary)),
+                      TextSpan(
+                          text: '  velvet',
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.5,
+                              color: VelvetColors.primary)),
+                    ]),
+                    style: TextStyle(fontSize: 18, letterSpacing: -0.3),
+                  ),
                   StreamBuilder<Server?>(
                       stream: ServerManager().currentServerStream,
                       builder: (context, snapshot) {
@@ -107,7 +128,10 @@ class _MStreamAppState extends State<MStreamApp>
                           visible: cServer != null,
                           child: Text(
                             cServer == null ? '' : cServer.url,
-                            style: TextStyle(fontSize: 12.0),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: VelvetColors.textSecondary,
+                                fontWeight: FontWeight.normal),
                           ),
                         );
                       }),
@@ -159,8 +183,8 @@ class _MStreamAppState extends State<MStreamApp>
                                       style: TextStyle(
                                           color: server ==
                                                   ServerManager().currentServer
-                                              ? Colors.blue
-                                              : Colors.black)),
+                                              ? VelvetColors.primary
+                                              : VelvetColors.textPrimary)),
                                 );
                               }).toList();
 

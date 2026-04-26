@@ -32,8 +32,6 @@ void main() {
 
       expect(find.text('Welcome To mStream'), findsOneWidget);
       expect(find.text('Click here to add server'), findsOneWidget);
-
-      expect(find.text('mStream Music'), findsWidgets);
     },
   );
 }
