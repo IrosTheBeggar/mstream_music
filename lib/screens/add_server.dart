@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
+import '../theme/velvet_theme.dart';
 
 class AddServerScreen extends StatelessWidget {
   @override
@@ -187,7 +188,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   Widget build(BuildContext context) {
     // Build a Form widget using the _formKey we created above
     return Container(
-      color: Color(0xFF3f3f3f),
+      color: VelvetColors.bg,
       padding: EdgeInsets.all(20.0),
       child: Form(
         key: _formKey,
@@ -274,40 +275,26 @@ class MyCustomFormState extends State<MyCustomForm> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: <Widget>[
                     Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue),
-                        child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: <Widget>[
-                              Icon(Icons.photo_camera, color: Colors.white),
-                              Container(width: 8),
-                              Text('QR Code',
-                                  style: TextStyle(color: Colors.white)),
-                            ]),
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: VelvetColors.textSecondary,
+                          side: BorderSide(color: VelvetColors.border2),
+                          padding:
+                              EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                VelvetColors.radiusSmall),
+                          ),
+                        ),
+                        icon: Icon(Icons.qr_code_scanner),
+                        label: Text('QR Code'),
                         onPressed: submitPending
                             ? null
                             : () {
-                                // FlutterBarcodeScanner.scanBarcode(
-                                //         '#ff6666', 'Cancel', false, ScanMode.QR)
-                                //     .then((qrValue) {
-                                //   if (qrValue == '-1' || qrValue == '') {
-                                //     return;
-                                //   }
-
-                                //   try {
-                                //     Map<String, String> parsedValues =
-                                //         parseQrCode(qrValue);
-                                //     _urlCtrl.text = parsedValues['url'] ?? '';
-                                //     _usernameCtrl.text =
-                                //         parsedValues['username'] ?? '';
-                                //     _passwordCtrl.text =
-                                //         parsedValues['password'] ?? '';
-                                //   } catch (err) {
-                                //     // Scaffold.of(context).showSnackBar(SnackBar(
-                                //     //     content: Text('Invalid Code')));
-                                //   }
-                                // });
+                                // QR scanning is currently disabled —
+                                // flutter_barcode_scanner is commented
+                                // out in pubspec.yaml. See parseQrCode
+                                // above for the format.
                               },
                       ),
                     ),
@@ -315,22 +302,22 @@ class MyCustomFormState extends State<MyCustomForm> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green),
-                        child: Text(submitPending ? 'Checking Server' : 'Save',
-                            style: TextStyle(color: Colors.white)),
+                          backgroundColor: VelvetColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                VelvetColors.radiusSmall),
+                          ),
+                        ),
+                        child: Text(submitPending ? 'Checking…' : 'Save'),
                         onPressed: submitPending
                             ? null
                             : () {
-                                // Validate will return true if the form is valid, or false if
-                                // the form is invalid.
                                 if (!_formKey.currentState!.validate()) {
                                   return;
                                 }
-
-                                _formKey.currentState!
-                                    .save(); // Save our form now.
-
-                                // Ping server
+                                _formKey.currentState!.save();
                                 checkServer();
                               },
                       ),
