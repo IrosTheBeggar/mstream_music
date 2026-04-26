@@ -24,6 +24,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
+import 'package:mstream_music/widgets/waveform_progress.dart';
 
 import 'helpers/test_helpers.dart';
 
@@ -158,13 +159,13 @@ void main() {
 }
 
 double _readBottomBarProgress(WidgetTester tester) {
-  final bar = tester.widget<LinearProgressIndicator>(
+  final bar = tester.widget<WaveformProgress>(
     find.descendant(
       of: find.byType(BottomAppBar),
-      matching: find.byType(LinearProgressIndicator),
+      matching: find.byType(WaveformProgress),
     ),
   );
-  return bar.value ?? 0.0;
+  return bar.progress;
 }
 
 Future<void> _pumpFor(WidgetTester tester, Duration total) async {

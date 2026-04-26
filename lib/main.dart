@@ -660,56 +660,52 @@ class BottomBar extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 0.0),
         color: VelvetColors.surface,
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          // Now-playing strip (title + artist) above the waveform.
+          // Compact now-playing row: title — artist on the left,
+          // mm:ss / mm:ss on the right, then the waveform on the row
+          // BELOW. Both share a single ~36px tall line each so the
+          // BottomAppBar stays inside the Scaffold's allocation.
           StreamBuilder<MediaItem?>(
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
-              if (item == null) {
-                return SizedBox.shrink();
-              }
               return Padding(
-                padding: EdgeInsets.fromLTRB(14, 6, 14, 4),
-                child: Row(children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: VelvetColors.textPrimary)),
-                        if (item.artist != null)
-                          Text(item.artist!,
+                padding: EdgeInsets.fromLTRB(12, 0, 12, 0),
+                child: SizedBox(
+                  height: 16,
+                  child: item == null
+                      ? null
+                      : Row(children: [
+                          Expanded(
+                            child: Text(
+                              item.artist == null
+                                  ? item.title
+                                  : '${item.title}  ·  ${item.artist}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: VelvetColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  StreamBuilder<MediaState>(
-                    stream: _mediaStateStream,
-                    builder: (context, snap) {
-                      final position = snap.data?.position ?? Duration.zero;
-                      final duration = item.duration;
-                      return Text(
-                        duration == null
-                            ? _fmt(position)
-                            : '${_fmt(position)} / ${_fmt(duration)}',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: VelvetColors.textSecondary,
-                            fontFeatures: [FontFeature.tabularFigures()]),
-                      );
-                    },
-                  ),
-                ]),
+                                  color: VelvetColors.textPrimary,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          StreamBuilder<MediaState>(
+                            stream: _mediaStateStream,
+                            builder: (context, snap) {
+                              final position =
+                                  snap.data?.position ?? Duration.zero;
+                              final duration = item.duration;
+                              return Text(
+                                duration == null
+                                    ? _fmt(position)
+                                    : '${_fmt(position)} / ${_fmt(duration)}',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: VelvetColors.textSecondary),
+                              );
+                            },
+                          ),
+                        ]),
+                ),
               );
             },
           ),
@@ -724,9 +720,9 @@ class BottomBar extends StatelessWidget {
                           dur.inMilliseconds)
                       .clamp(0.0, 1.0);
               return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 12),
                 child: WaveformProgress(
-                  height: 20,
+                  height: 16,
                   progress: progress,
                   seed: mediaState?.mediaItem?.id,
                   onSeek: dur == null
