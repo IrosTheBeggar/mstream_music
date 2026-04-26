@@ -6,6 +6,7 @@ import 'server.dart';
 import 'metadata.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/file_explorer.dart';
+import '../theme/velvet_theme.dart';
 
 class DisplayItem {
   final Server? server;
@@ -45,7 +46,7 @@ class DisplayItem {
                 ? '[' + (metadata!.rating! / 2).toString() + '] '
                 : '') +
             metadata!.title!,
-        style: TextStyle(color: Colors.black),
+        style: TextStyle(color: VelvetColors.textPrimary),
       );
     }
 
@@ -55,26 +56,26 @@ class DisplayItem {
                   ? '[' + (metadata!.rating! / 2).toString() + '] '
                   : '') +
               this.data!.split('/').last,
-          style: TextStyle(fontSize: 18, color: Colors.black));
+          style: TextStyle(fontSize: 18, color: VelvetColors.textPrimary));
     }
 
     return new Text(this.name,
         style:
-            TextStyle(fontFamily: 'Jura', fontSize: 18, color: Colors.black));
+            TextStyle(fontFamily: 'Jura', fontSize: 18, color: VelvetColors.textPrimary));
   }
 
   Widget? getSubText() {
     if (metadata?.artist != null) {
       return Text(
         metadata!.artist!,
-        style: TextStyle(fontSize: 16, color: Colors.black),
+        style: TextStyle(fontSize: 16, color: VelvetColors.textPrimary),
       );
     }
 
     if (subtext != null) {
       return new Text(
         subtext!,
-        style: TextStyle(fontSize: 16, color: Colors.black),
+        style: TextStyle(fontSize: 16, color: VelvetColors.textPrimary),
       );
     }
 

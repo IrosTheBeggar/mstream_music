@@ -4,8 +4,11 @@ import 'package:mstream_music/singletons/downloads.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
+import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../objects/display_item.dart';
+import '../theme/velvet_theme.dart';
+import '../widgets/album_grid.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -446,9 +449,9 @@ class Browser extends StatelessWidget {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: Material(
-            color: Color(0xFFe1e2e1),
+            color: VelvetColors.bg,
             child: InkWell(
-                splashColor: Colors.blue,
+                splashColor: VelvetColors.primaryDim,
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -463,8 +466,9 @@ class Browser extends StatelessWidget {
                                     .browserList[i]
                                     .downloadProgress /
                                 100,
-                            valueColor: new AlwaysStoppedAnimation(Colors.blue),
-                            backgroundColor: Colors.white.withValues(alpha: 0),
+                            valueColor: AlwaysStoppedAnimation(
+                                VelvetColors.success),
+                            backgroundColor: Colors.transparent,
                           ),
                         ),
                       ),
@@ -482,7 +486,7 @@ class Browser extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
-        color: Color(0xFFffffff),
+        color: VelvetColors.surface,
         child: StreamBuilder<List<DisplayItem>>(
             stream: BrowserManager().browserListStream,
             builder: (context, snapshot) {
@@ -498,7 +502,7 @@ class Browser extends StatelessWidget {
                         browserList[0].type != 'execAction') ...[
                       IconButton(
                           icon: Icon(Icons.keyboard_arrow_left,
-                              color: Colors.black),
+                              color: VelvetColors.textSecondary),
                           tooltip: 'Go Back',
                           onPressed: () {
                             BrowserManager().popBrowser();
@@ -507,7 +511,7 @@ class Browser extends StatelessWidget {
                         IconButton(
                             icon: Icon(
                               Icons.download_sharp,
-                              color: Colors.black,
+                              color: VelvetColors.textSecondary,
                             ),
                             tooltip: 'Download',
                             onPressed: () {
@@ -539,7 +543,7 @@ class Browser extends StatelessWidget {
                         IconButton(
                             icon: Icon(
                               Icons.library_add,
-                              color: Colors.black,
+                              color: VelvetColors.textSecondary,
                             ),
                             tooltip: 'Add All',
                             onPressed: () {
@@ -580,17 +584,17 @@ class Browser extends StatelessWidget {
                                 ApiManager().searchServer(text);
                                 print('First text field: $text');
                               },
-                              style: TextStyle(color: Colors.black),
+                              style: TextStyle(color: VelvetColors.textSecondary),
                               decoration: InputDecoration(
                                 prefixIcon: Icon(
                                   Icons.search,
-                                  color: Colors.black,
+                                  color: VelvetColors.textSecondary,
                                 ),
                                 hintStyle: TextStyle(
-                                  color: Colors.black,
+                                  color: VelvetColors.textSecondary,
                                 ),
                                 labelStyle: TextStyle(
-                                  color: Colors.black,
+                                  color: VelvetColors.textSecondary,
                                 ),
                                 hintText: 'Search Database',
                               )))
@@ -604,20 +608,39 @@ class Browser extends StatelessWidget {
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
                     final List<DisplayItem> browserList = snapshot.data ?? [];
-                    return ListView.separated(
-                        controller: BrowserManager().sc,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        separatorBuilder: (BuildContext context, int index) =>
-                            Divider(height: 3, color: Colors.white),
-                        itemCount: browserList.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          // Fixes an odd rendering bug when going between tabs
-                          if (browserList.length == 0) {
-                            return Container();
-                          }
 
-                          return makeListItem(browserList, index, context);
-                        });
+                    // If the whole list is albums and the user has the
+                    // album-grid setting on, show a grid of album cards
+                    // instead of the plain list.
+                    final allAlbums = browserList.isNotEmpty &&
+                        browserList.every((e) => e.type == 'album');
+                    return StreamBuilder<bool>(
+                      stream: SettingsManager().albumGridStream,
+                      initialData: SettingsManager().albumGrid,
+                      builder: (context, gridSnap) {
+                        final useGrid = (gridSnap.data ?? true) && allAlbums;
+                        if (useGrid) {
+                          return AlbumGrid(
+                            items: browserList,
+                            onTap: (i) => handleTap(browserList, i, context),
+                          );
+                        }
+                        return ListView.separated(
+                            controller: BrowserManager().sc,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            separatorBuilder:
+                                (BuildContext context, int index) => Divider(
+                                    height: 1, color: VelvetColors.border),
+                            itemCount: browserList.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              if (browserList.length == 0) {
+                                return Container();
+                              }
+                              return makeListItem(
+                                  browserList, index, context);
+                            });
+                      },
+                    );
                   })))
     ]);
   }

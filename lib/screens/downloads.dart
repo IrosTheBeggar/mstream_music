@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../singletons/downloads.dart';
 import '../objects/download_tracker.dart';
+import '../theme/velvet_theme.dart';
 
 class DownloadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
@@ -51,13 +52,13 @@ class DownloadScreen extends StatelessWidget {
                             itemCount: dList.length,
                             separatorBuilder:
                                 (BuildContext context, int index) =>
-                                    Divider(height: 3, color: Colors.black),
+                                    Divider(height: 3, color: VelvetColors.textPrimary),
                             itemBuilder: (BuildContext context, int index) {
                               return ListTile(
                                 title: Text(
                                   dList[index].filePath,
                                   style: TextStyle(
-                                    color: Colors.black,
+                                    color: VelvetColors.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -65,7 +66,7 @@ class DownloadScreen extends StatelessWidget {
                                       dList[index].progress.toString() +
                                       '%',
                                   style: TextStyle(
-                                    color: Colors.black,
+                                    color: VelvetColors.textPrimary,
                                   ),
                                 ),
                               );

@@ -4,6 +4,7 @@ import 'package:rxdart/rxdart.dart';
 import '../singletons/server_list.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
+import '../theme/velvet_theme.dart';
 
 class BrowserManager {
   final List<List<DisplayItem>> browserCache = [];
@@ -58,7 +59,7 @@ class BrowserManager {
         'File Explorer',
         'execAction',
         'fileExplorer',
-        Icon(Icons.folder, color: Color(0xFFffab00)),
+        Icon(Icons.folder, color: VelvetColors.warning),
         null);
 
     DisplayItem newItem2 = new DisplayItem(
@@ -66,7 +67,7 @@ class BrowserManager {
         'Playlists',
         'execAction',
         'playlists',
-        Icon(Icons.queue_music, color: Colors.black),
+        Icon(Icons.queue_music, color: VelvetColors.textSecondary),
         null);
 
     DisplayItem newItem3 = new DisplayItem(
@@ -74,7 +75,7 @@ class BrowserManager {
         'Albums',
         'execAction',
         'albums',
-        Icon(Icons.album, color: Colors.black),
+        Icon(Icons.album, color: VelvetColors.textSecondary),
         null);
 
     DisplayItem newItem4 = new DisplayItem(
@@ -82,7 +83,7 @@ class BrowserManager {
         'Artists',
         'execAction',
         'artists',
-        Icon(Icons.library_music, color: Colors.black),
+        Icon(Icons.library_music, color: VelvetColors.textSecondary),
         null);
 
     DisplayItem newItem5 = new DisplayItem(
@@ -90,7 +91,7 @@ class BrowserManager {
         'Rated',
         'execAction',
         'rated',
-        Icon(Icons.star, color: Colors.black),
+        Icon(Icons.star, color: VelvetColors.textSecondary),
         null);
 
     DisplayItem newItem6 = new DisplayItem(
@@ -98,7 +99,7 @@ class BrowserManager {
         'Recent',
         'execAction',
         'recent',
-        Icon(Icons.query_builder, color: Colors.black),
+        Icon(Icons.query_builder, color: VelvetColors.textSecondary),
         null);
 
     DisplayItem newItem7 = new DisplayItem(
@@ -106,7 +107,7 @@ class BrowserManager {
         'Local Files',
         'execAction',
         'localFiles',
-        Icon(Icons.folder_open_outlined, color: Colors.black),
+        Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
         null);
 
     browserCache.add(
@@ -129,7 +130,7 @@ class BrowserManager {
     scrollCache.clear();
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
-        Icon(Icons.add, color: Colors.black), 'Click here to add server'));
+        Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
 
     _browserStream.sink.add(browserList);
   }

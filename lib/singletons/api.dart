@@ -4,6 +4,7 @@ import '../objects/server.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
+import '../theme/velvet_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
@@ -98,7 +99,7 @@ class ApiManager {
           e['name'],
           'playlist',
           e['name'],
-          Icon(Icons.queue_music, color: Colors.black),
+          Icon(Icons.queue_music, color: VelvetColors.textSecondary),
           null);
       newList.add(newItem);
     });
@@ -133,7 +134,7 @@ class ApiManager {
             e['name'],
             'artist',
             e['name'],
-            Icon(Icons.library_music, color: Colors.black),
+            Icon(Icons.library_music, color: VelvetColors.textSecondary),
             'artist');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -145,7 +146,7 @@ class ApiManager {
             e['name'],
             'album',
             e['name'],
-            Icon(Icons.library_music, color: Colors.black),
+            Icon(Icons.library_music, color: VelvetColors.textSecondary),
             'album');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -157,7 +158,7 @@ class ApiManager {
             e['name'],
             'file',
             '/' + e['filepath'],
-            Icon(Icons.music_note, color: Colors.blue),
+            Icon(Icons.music_note, color: VelvetColors.accent),
             'song');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -188,7 +189,7 @@ class ApiManager {
           e['name'],
           'album',
           e['name'],
-          Icon(Icons.album, color: Colors.black),
+          Icon(Icons.album, color: VelvetColors.textSecondary),
           e['year']?.toString() ?? '');
       newItem.altAlbumArt = e['album_art_file'];
       newList.add(newItem);
@@ -226,7 +227,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -268,7 +269,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -308,7 +309,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           m.artist);
 
       newItem.metadata = m;
@@ -335,7 +336,7 @@ class ApiManager {
     List<DisplayItem> newList = [];
     res['artists'].forEach((e) {
       DisplayItem newItem = new DisplayItem(useThisServer, e, 'artist', e,
-          Icon(Icons.library_music, color: Colors.black), null);
+          Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
       newList.add(newItem);
     });
     BrowserManager().addListToStack(newList);
@@ -362,7 +363,7 @@ class ApiManager {
           name,
           'album',
           e['name'],
-          Icon(Icons.album, color: Colors.black),
+          Icon(Icons.album, color: VelvetColors.textSecondary),
           e['year']?.toString() ?? '');
       newItem.altAlbumArt = e['album_art_file'];
 
@@ -402,7 +403,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -432,7 +433,7 @@ class ApiManager {
           e['name'],
           'directory',
           path.join(res['path'], e['name']),
-          Icon(Icons.folder, color: Color(0xFFffab00)),
+          Icon(Icons.folder, color: VelvetColors.warning),
           null);
       newList.add(newItem);
     });
@@ -443,7 +444,7 @@ class ApiManager {
           e['name'],
           'file',
           path.join(res['path'], e['name']),
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
       newList.add(newItem);
     });

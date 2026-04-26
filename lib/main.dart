@@ -18,9 +18,11 @@ import 'screens/downloads.dart';
 import 'singletons/downloads.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
+import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
 
 import 'singletons/media.dart';
+import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
 import 'widgets/waveform_progress.dart';
@@ -40,6 +42,7 @@ class MyHttpOverrides extends HttpOverrides {
 Future<void> main() async {
   await MediaManager().start();
   await SettingsManager().load();
+  await PlaylistManager().load();
 
   // allow self signed SSL cert
   HttpOverrides.global = new MyHttpOverrides();
@@ -259,6 +262,17 @@ class _MStreamAppState extends State<MStreamApp>
                   );
                 },
               ),
+              ListTile(
+                leading: Icon(Icons.queue_music),
+                title: Text('Playlists'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PlaylistsScreen()),
+                  );
+                },
+              ),
               Divider(color: VelvetColors.border),
               ListTile(
                 leading: Icon(Icons.settings),
@@ -366,7 +380,7 @@ class NowPlaying extends StatelessWidget {
                               ),
                               endActionPane: ActionPane(
                                 motion: DrawerMotion(),
-                                extentRatio: 0.18,
+                                extentRatio: 0.36,
                                 dismissible: DismissiblePane(
                                   onDismissed: () {
                                     MediaManager()
@@ -376,7 +390,18 @@ class NowPlaying extends StatelessWidget {
                                 ),
                                 children: [
                                   SlidableAction(
-                                      backgroundColor: Colors.blueGrey,
+                                      backgroundColor: VelvetColors.primary,
+                                      foregroundColor: Colors.white,
+                                      icon: Icons.playlist_add,
+                                      label: 'Add to',
+                                      onPressed: (ctx) {
+                                        _showAddToPlaylistSheet(
+                                            ctx, queue[index]);
+                                      }),
+                                  SlidableAction(
+                                      backgroundColor: VelvetColors.raised,
+                                      foregroundColor:
+                                          VelvetColors.textPrimary,
                                       icon: Icons.info,
                                       label: 'Info',
                                       onPressed: (context) {
@@ -493,6 +518,132 @@ class NowPlaying extends StatelessWidget {
         child: Icon(Icons.music_note,
             color: VelvetColors.textSecondary, size: 22),
       );
+
+  void _showAddToPlaylistSheet(BuildContext context, MediaItem item) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(VelvetColors.radiusLarge)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: StreamBuilder(
+            stream: PlaylistManager().stream,
+            initialData: PlaylistManager().playlists,
+            builder: (context, snapshot) {
+              final lists = snapshot.data ?? const [];
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text('Add to playlist',
+                            style: TextStyle(
+                                color: VelvetColors.textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.add,
+                            color: VelvetColors.primary),
+                        tooltip: 'New playlist',
+                        onPressed: () async {
+                          final name = await _promptName(ctx);
+                          if (name != null && name.isNotEmpty) {
+                            final p =
+                                await PlaylistManager().create(name);
+                            await PlaylistManager().addEntry(
+                                PlaylistManager().playlists.indexOf(p),
+                                item);
+                            if (ctx.mounted) Navigator.of(ctx).pop();
+                          }
+                        },
+                      ),
+                    ]),
+                  ),
+                  if (lists.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(20, 8, 20, 28),
+                      child: Text(
+                        'No playlists yet — tap + to create one.',
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary,
+                            fontSize: 13),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: lists.length,
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1, color: VelvetColors.border),
+                        itemBuilder: (_, i) {
+                          final p = lists[i];
+                          return ListTile(
+                            leading: Icon(Icons.queue_music,
+                                color: VelvetColors.primary),
+                            title: Text(p.name),
+                            subtitle: Text(
+                              '${p.entries.length} track${p.entries.length == 1 ? '' : 's'}',
+                              style: TextStyle(
+                                  color: VelvetColors.textSecondary,
+                                  fontSize: 12),
+                            ),
+                            onTap: () async {
+                              await PlaylistManager().addEntry(i, item);
+                              if (ctx.mounted) {
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'Added to ${p.name}')),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String?> _promptName(BuildContext context) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('New playlist'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: 'Name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel',
+                  style:
+                      TextStyle(color: VelvetColors.textSecondary))),
+          ElevatedButton(
+              onPressed: () =>
+                  Navigator.of(ctx).pop(controller.text.trim()),
+              child: Text('Create')),
+        ],
+      ),
+    );
+  }
 }
 
 class BottomBar extends StatelessWidget {
