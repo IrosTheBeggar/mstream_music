@@ -70,6 +70,11 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
+            // ExoPlayer/Media3 (used by just_audio) accesses methods reflectively
+            // that R8 strips without explicit keep-rules. Disable minification
+            // until proper proguard-rules.pro is added.
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
