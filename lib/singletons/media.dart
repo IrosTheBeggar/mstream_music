@@ -8,10 +8,10 @@ class MediaManager {
     return _instance;
   }
 
-  late AudioHandler audioHandler;
+  late AudioPlayerHandler audioHandler;
 
   start() async {
-    audioHandler = await AudioService.init(
+    audioHandler = await AudioService.init<AudioPlayerHandler>(
       builder: () => AudioPlayerHandler(),
       config: AudioServiceConfig(
         androidNotificationChannelName: 'mStream Music',
