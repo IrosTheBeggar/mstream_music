@@ -16,7 +16,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
   final _player = AudioPlayer();
-  final _playlist = ConcatenatingAudioSource(children: []);
 
   int? get index => _player.currentIndex;
 
@@ -68,22 +67,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (state == ProcessingState.completed) stop();
     });
     try {
-      print("### _player.load");
-      // After a cold restart (on Android), _player.load jumps straight from
-      // the loading state to the completed state. Inserting a delay makes it
-      // work. Not sure why!
-      //await Future.delayed(Duration(seconds: 2)); // magic delay
-      queue.value.forEach((element) {
-        _playlist.add(AudioSource.uri(Uri.parse(element.id)));
-      });
-
-      await _player.setAudioSource(_playlist);
-      // TODO: We might need this later
-      // await _player.setAudioSource(ConcatenatingAudioSource(
-      //   children: queue.value!
-      //       .map((item) => AudioSource.uri(Uri.parse(item.id)))
-      //       .toList(),
-      // ));
+      print("### _player.setAudioSources (init)");
+      // just_audio 0.10 deprecated ConcatenatingAudioSource; the playlist
+      // API now lives on AudioPlayer directly. Seed with whatever is
+      // already in the queue (typically empty on cold start).
+      await _player.setAudioSources(
+        queue.value
+            .map((item) => AudioSource.uri(Uri.parse(item.id)))
+            .toList(),
+      );
       print("### loaded");
     } catch (e) {
       print("Error: $e");
@@ -107,11 +99,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
 
-    if (item.extras?['localPath'] != null) {
-      _playlist.add(AudioSource.uri(Uri.parse(item.extras!['localPath'])));
-    } else {
-      _playlist.add(AudioSource.uri(Uri.parse(item.id)));
-    }
+    final uri = item.extras?['localPath'] != null
+        ? Uri.parse(item.extras!['localPath'])
+        : Uri.parse(item.id);
+    await _player.addAudioSource(AudioSource.uri(uri));
   }
 
   @override
@@ -174,7 +165,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int i) async {
     await super.removeQueueItemAt(i);
-    await _playlist.removeAt(i);
+    await _player.removeAudioSourceAt(i);
     queue.add(queue.value..removeAt(i));
   }
 
@@ -183,7 +174,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'clearPlaylist':
         await _player.stop();
         await super.stop();
-        await _playlist.clear();
+        await _player.clearAudioSources();
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;

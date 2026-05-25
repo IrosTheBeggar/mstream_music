@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -34,6 +35,7 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await MediaManager().start();
 
   // allow self signed SSL cert
@@ -79,6 +81,12 @@ class _MStreamAppState extends State<MStreamApp>
     _tabController = TabController(length: 2, vsync: this);
     ServerManager().loadServerList();
     DownloadManager().initDownloader();
+    // Android 13+ (targetSdk >= 33): OS no longer auto-prompts; audio_service
+    // can't run its foreground media notification without this, so playback
+    // silently fails. Fire-and-forget — first call shows the system dialog,
+    // subsequent calls are no-ops once granted. Must run after runApp so the
+    // permission_handler plugin has an Activity to attach the dialog to.
+    Permission.notification.request();
   }
 
   @override
