@@ -16,6 +16,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: Text('Settings')),
       body: ListView(
         children: [
+          _sectionHeader('Appearance'),
+          ListTile(
+            title: Text('Theme'),
+            subtitle: Text(
+              _themeSubtitle(SettingsManager().appTheme),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<AppTheme>(
+              value: SettingsManager().appTheme,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: AppTheme.values
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t.label),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                setState(() {});
+                await SettingsManager().setAppTheme(v);
+                setState(() {});
+              },
+            ),
+          ),
+          Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Playback'),
           SwitchListTile(
             title: Text('Transcode audio'),
@@ -34,6 +62,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             activeThumbColor: VelvetColors.primary,
           ),
+          ListTile(
+            title: Text('When you tap a song'),
+            subtitle: Text(
+              _tapBehaviorSubtitle(SettingsManager().tapBehavior),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<TapBehavior>(
+              value: SettingsManager().tapBehavior,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: TapBehavior.values
+                  .map((b) => DropdownMenuItem(
+                        value: b,
+                        child: Text(b.label),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                setState(() {});
+                await SettingsManager().setTapBehavior(v);
+                setState(() {});
+              },
+            ),
+          ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Browse'),
           SwitchListTile(
@@ -51,6 +105,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {});
             },
             activeThumbColor: VelvetColors.primary,
+          ),
+          SwitchListTile(
+            title: Text('Read song metadata in file explorer'),
+            subtitle: Text(
+              'Fetch title, artist, and album art for each song when '
+              "browsing server files. Off shows raw filenames (faster "
+              'for huge folders).',
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().fileExplorerMetadata,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setFileExplorerMetadata(v);
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Letter scrubber threshold',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: VelvetColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${SettingsManager().letterStripThreshold}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: VelvetColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Show the A-Z quick-scrub strip when a list has this '
+                  'many items or more. Below this size the strip is '
+                  'hidden and long folder/file names wrap to multiple '
+                  'lines instead of being truncated. Set 0 to always '
+                  'show the strip.',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: VelvetColors.primary,
+                    thumbColor: VelvetColors.primary,
+                    overlayColor: VelvetColors.primaryDim,
+                  ),
+                  child: Slider(
+                    value: SettingsManager()
+                        .letterStripThreshold
+                        .toDouble()
+                        .clamp(0.0, 100.0),
+                    min: 0,
+                    max: 100,
+                    divisions: 20,
+                    onChanged: (v) async {
+                      setState(() {});
+                      await SettingsManager()
+                          .setLetterStripThreshold(v.round());
+                      setState(() {});
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('About'),
@@ -76,6 +208,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  String _themeSubtitle(AppTheme t) {
+    switch (t) {
+      case AppTheme.velvet:
+        return 'Navy and purple — the signature dark theme.';
+      case AppTheme.dark:
+        return 'Neutral dark with amber accents.';
+      case AppTheme.light:
+        return 'Light body with a dark app bar and amber accents — '
+            "matches the older shipped theme.";
+    }
+  }
+
+  String _tapBehaviorSubtitle(TapBehavior b) {
+    switch (b) {
+      case TapBehavior.addToQueue:
+        return 'Tapping a song appends it to the queue. If the queue is '
+            'empty, playback starts automatically.';
+      case TapBehavior.playFromHere:
+        return 'Tapping a song replaces the queue with the songs in the '
+            'current view and starts playback at the tapped song.';
+      case TapBehavior.appendAndJump:
+        return 'Tapping a song appends it to the queue and jumps playback '
+            'to it, interrupting whatever was playing.';
+    }
   }
 
   Widget _sectionHeader(String label) {

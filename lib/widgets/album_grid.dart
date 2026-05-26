@@ -14,24 +14,50 @@ import '../theme/velvet_theme.dart';
 class AlbumGrid extends StatelessWidget {
   final List<DisplayItem> items;
   final void Function(int index) onTap;
+  // Optional: pass BrowserManager().sc so the letter-strip's jumpTo
+  // actually moves the grid. When null, GridView uses its own
+  // implicit controller.
+  final ScrollController? controller;
 
-  const AlbumGrid({Key? key, required this.items, required this.onTap})
-      : super(key: key);
+  const AlbumGrid({
+    Key? key,
+    required this.items,
+    required this.onTap,
+    this.controller,
+  }) : super(key: key);
+
+  // Layout constants exposed so the parent can compute the per-row
+  // offset for the letter-strip's jumpTo without duplicating the
+  // math. Keep in sync with the GridView config below.
+  static const double padTop = 12;
+  static const double padHorizontal = 12;
+  static const double spacing = 12;
+  static const double aspectRatio = 0.72;
+
+  static int columnsFor(double width) =>
+      width > 600 ? 4 : (width > 400 ? 3 : 2);
+
+  static double rowHeightFor(double width) {
+    final cols = columnsFor(width);
+    final itemWidth = (width - padHorizontal * 2 - spacing * (cols - 1)) / cols;
+    return itemWidth / aspectRatio;
+  }
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width > 600 ? 4 : (width > 400 ? 3 : 2);
+    final crossAxisCount = columnsFor(width);
 
     return Container(
       color: VelvetColors.bg,
       child: GridView.builder(
-        padding: EdgeInsets.fromLTRB(12, 12, 12, 80),
+        controller: controller,
+        padding: EdgeInsets.fromLTRB(padHorizontal, padTop, padHorizontal, 80),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.72,
+          crossAxisSpacing: spacing,
+          mainAxisSpacing: spacing,
+          childAspectRatio: aspectRatio,
         ),
         itemCount: items.length,
         itemBuilder: (context, i) {

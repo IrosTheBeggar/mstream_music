@@ -1,5 +1,6 @@
 import './server_list.dart';
 import './browser_list.dart';
+import './settings.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
@@ -18,6 +19,33 @@ class ApiManager {
   static final ApiManager _instance = ApiManager._privateConstructor();
   factory ApiManager() {
     return _instance;
+  }
+
+  /// POST /api/v1/share — creates a share link for [filepaths] on
+  /// [server]. [expiresInDays] null means the link never expires.
+  /// Returns the raw server response (notably `playlistId`).
+  Future<Map<String, dynamic>> sharePlaylist({
+    required Server server,
+    required List<String> filepaths,
+    int? expiresInDays,
+  }) async {
+    final uri = Uri.parse(server.url).resolve('/api/v1/share');
+    final body = <String, dynamic>{'playlist': filepaths};
+    if (expiresInDays != null) body['time'] = expiresInDays;
+
+    final response = await http.post(
+      uri,
+      body: json.encode(body),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? '',
+      },
+    );
+
+    if (response.statusCode > 299) {
+      throw Exception('Share failed (HTTP ${response.statusCode})');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
@@ -195,7 +223,7 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
@@ -339,7 +367,7 @@ class ApiManager {
           Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
       newList.add(newItem);
     });
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
@@ -416,8 +444,17 @@ class ApiManager {
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
     var res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/file-explorer',
-          {"directory": directory}, 'POST');
+      res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
+        "directory": directory,
+        // Server defaults this to false (cheap listing). When the user
+        // has the setting on, the server returns a `metadata` field on
+        // each file entry — we attach it to the DisplayItem below so
+        // that when the user taps to queue, browser.dart's addFile
+        // sees a populated metadata object and the resulting MediaItem
+        // carries title/artist/album/art into the player and the
+        // notification.
+        "pullMetadata": SettingsManager().fileExplorerMetadata,
+      }, 'POST');
     } catch (err) {
       // TODO: Handle Errors
       print(err);
@@ -446,9 +483,31 @@ class ApiManager {
           path.join(res['path'], e['name']),
           Icon(Icons.music_note, color: VelvetColors.accent),
           null);
+
+      // The server wraps each file's metadata as { filepath, metadata:
+      // {…actual fields…} } — drill in one level. Only set when
+      // pullMetadata=true was sent AND the file is in the library DB
+      // (unscanned files still arrive without an inner metadata
+      // object; we tolerate that and fall back to filename display).
+      // Field name quirk: server uses `disk`, not `disc`.
+      final outer = e['metadata'];
+      final inner = outer is Map ? outer['metadata'] : null;
+      if (inner is Map) {
+        newItem.metadata = MusicMetadata(
+            inner['artist'],
+            inner['album'],
+            inner['title'],
+            inner['track'],
+            inner['disk'] ?? inner['disc'],
+            inner['year'],
+            inner['hash'] ?? '',
+            inner['rating'],
+            inner['album-art']);
+      }
+
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 }

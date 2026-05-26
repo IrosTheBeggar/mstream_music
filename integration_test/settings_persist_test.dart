@@ -35,7 +35,7 @@ void main() {
     // Reset in-memory defaults.
     TranscodeManager().transcodeOn = false;
     SettingsManager().albumGrid = true;
-    SettingsManager().autoPlayOnTap = false;
+    SettingsManager().tapBehavior = TapBehavior.addToQueue;
   });
 
   testWidgets(

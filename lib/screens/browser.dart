@@ -9,6 +9,7 @@ import '../singletons/transcode.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
+import '../widgets/letter_strip.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -96,7 +97,11 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'file') {
-      addFile(browserList[index]);
+      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
+        _playFromHere(browserList, index);
+      } else {
+        addFile(browserList[index]);
+      }
       return;
     }
 
@@ -107,31 +112,45 @@ class Browser extends StatelessWidget {
     }
 
     if (browserList[index].type == 'localFile') {
-      addLocalFile(browserList[index]);
+      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
+        _playFromHere(browserList, index);
+      } else {
+        addLocalFile(browserList[index]);
+      }
       return;
     }
   }
 
-  void addLocalFile(DisplayItem i) {
-    MediaItem item = new MediaItem(
+  // Side-effect entry points. Build the MediaItem then run it through
+  // _enqueue, which applies the user's tap behavior preference.
+  Future<void> addLocalFile(DisplayItem i) async {
+    await _enqueue(_buildLocalFileItem(i));
+  }
+
+  Future<void> addFile(DisplayItem i) async {
+    final item = await _buildFileItem(i);
+    if (item != null) await _enqueue(item);
+  }
+
+  // Pure builder for a localFile MediaItem. No I/O.
+  MediaItem _buildLocalFileItem(DisplayItem i) {
+    return new MediaItem(
         id: Uuid().v4(),
         title: i.name.split('/').last,
         extras: {'path': i.data, 'localPath': i.data!});
-    MediaManager().audioHandler.addQueueItem(item);
   }
 
-  void addFile(DisplayItem i) async {
-    // Check for song locally
+  // Builder for a server-file MediaItem. Async because it has to check
+  // whether the file is already cached locally to decide between a
+  // local path and a streaming URL. Returns null if the download dir
+  // isn't available.
+  Future<MediaItem?> _buildFileItem(DisplayItem i) async {
     String downloadDirectory = i.server!.localname + i.data!;
     final dir = await FileExplorer().getDownloadDir(i.server!.saveToSdCard);
-    if (dir == null) {
-      return;
-    }
+    if (dir == null) return null;
     String finalString = '${dir.path}/media/$downloadDirectory';
 
     if (new File(finalString).existsSync() == true) {
-      print('exists!');
-
       String? artUrl = i.metadata?.albumArt != null
           ? Uri.parse(i.server!.url.toString())
               .resolve('/album-art/' +
@@ -141,7 +160,7 @@ class Browser extends StatelessWidget {
               .toString()
           : null;
 
-      MediaItem item = new MediaItem(
+      return new MediaItem(
           id: Uuid().v4(),
           title: i.metadata?.title ?? i.name,
           album: i.metadata?.album,
@@ -152,8 +171,6 @@ class Browser extends StatelessWidget {
             'year': i.metadata?.year,
             'artUrl': artUrl,
           });
-      MediaManager().audioHandler.addQueueItem(item);
-      return;
     }
 
     String prefix =
@@ -183,7 +200,7 @@ class Browser extends StatelessWidget {
             .toString()
         : null;
 
-    MediaItem item = new MediaItem(
+    return new MediaItem(
         id: lolUrl,
         title: i.metadata?.title ?? i.name,
         album: i.metadata?.album,
@@ -195,9 +212,70 @@ class Browser extends StatelessWidget {
           'artUrl': artUrl,
         });
 
-    MediaManager().audioHandler.addQueueItem(item);
-
     // TODO: Fire of request for metadata
+  }
+
+  // Adds the item to the queue, then dispatches on the user's tap
+  // behavior preference. Pattern A (playFromHere) doesn't reach here
+  // — it's handled directly in handleTap because it needs the
+  // surrounding browser context to know what to fill the queue with.
+  Future<void> _enqueue(MediaItem item) async {
+    final wasEmpty = MediaManager().audioHandler.queue.value.isEmpty;
+    await MediaManager().audioHandler.addQueueItem(item);
+
+    switch (SettingsManager().tapBehavior) {
+      case TapBehavior.addToQueue:
+        // Convenience: first tap from a fresh state shouldn't require
+        // a separate Play press to actually start anything.
+        if (wasEmpty) {
+          await MediaManager().audioHandler.play();
+        }
+        break;
+      case TapBehavior.appendAndJump:
+        final queueLen = MediaManager().audioHandler.queue.value.length;
+        await MediaManager().audioHandler.skipToQueueItem(queueLen - 1);
+        await MediaManager().audioHandler.play();
+        break;
+      case TapBehavior.playFromHere:
+        // Unreachable — see handleTap.
+        break;
+    }
+  }
+
+  // Pattern A: clear the queue, fill it with every playable item from
+  // the current browser view (in order), jump to the tapped one, play.
+  Future<void> _playFromHere(
+      List<DisplayItem> browserList, int tappedIndex) async {
+    // Filter to playable rows, remember where the tap lands within
+    // the filtered list. Non-song rows (folders, headers) are skipped.
+    final playable = <DisplayItem>[];
+    int newIndex = 0;
+    for (var j = 0; j < browserList.length; j++) {
+      final t = browserList[j].type;
+      if (t == 'file' || t == 'localFile') {
+        if (j == tappedIndex) newIndex = playable.length;
+        playable.add(browserList[j]);
+      }
+    }
+    if (playable.isEmpty) return;
+
+    // Build all MediaItems first so a failed build doesn't leave us
+    // with a half-replaced queue.
+    final items = <MediaItem>[];
+    for (final i in playable) {
+      final m = i.type == 'localFile'
+          ? _buildLocalFileItem(i)
+          : await _buildFileItem(i);
+      if (m != null) items.add(m);
+    }
+    if (items.isEmpty) return;
+
+    await MediaManager().audioHandler.customAction('clearPlaylist');
+    for (final m in items) {
+      await MediaManager().audioHandler.addQueueItem(m);
+    }
+    await MediaManager().audioHandler.skipToQueueItem(newIndex);
+    await MediaManager().audioHandler.play();
   }
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
@@ -293,6 +371,9 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    // Same rationale as makeFolderWidget — wrap long names below the
+    // letter-strip threshold.
+    final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -336,7 +417,7 @@ class Browser extends StatelessWidget {
             child: Builder(
               builder: (context) => ListTile(
                   leading: b[i].icon ?? null,
-                  title: b[i].getText(),
+                  title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
                     icon: Icon(
@@ -355,6 +436,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -374,7 +456,7 @@ class Browser extends StatelessWidget {
             child: Builder(
               builder: (context) => ListTile(
                   leading: b[i].icon ?? null,
-                  title: b[i].getText(),
+                  title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
                     icon: Icon(
@@ -393,6 +475,10 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    // Below the letter-strip threshold there's no strip math to keep
+    // uniform — let long folder names wrap and show in full. Smaller
+    // folders tend to have longer / more descriptive names.
+    final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -413,7 +499,7 @@ class Browser extends StatelessWidget {
             child: Builder(
               builder: (context) => ListTile(
                   leading: b[i].icon ?? null,
-                  title: b[i].getText(),
+                  title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
                     icon: Icon(
@@ -445,6 +531,10 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    // Same wrap-on-small-list rule as folders: below the letter-strip
+    // threshold there's no uniform-row constraint, so long song names
+    // get to show in full.
+    final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -475,7 +565,7 @@ class Browser extends StatelessWidget {
                       Expanded(
                           child: ListTile(
                               leading: b[i].getImage(),
-                              title: b[i].getText(),
+                              title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
                               onTap: () {
                                 handleTap(b, i, c);
@@ -619,26 +709,132 @@ class Browser extends StatelessWidget {
                       initialData: SettingsManager().albumGrid,
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
-                        if (useGrid) {
-                          return AlbumGrid(
-                            items: browserList,
-                            onTap: (i) => handleTap(browserList, i, context),
-                          );
+                        final Widget content = useGrid
+                            ? AlbumGrid(
+                                items: browserList,
+                                // Pass the shared controller so the
+                                // letter-strip's jumpTo actually
+                                // moves the grid (and so the existing
+                                // scroll-restore logic works in grid
+                                // mode too).
+                                controller: BrowserManager().sc,
+                                onTap: (i) =>
+                                    handleTap(browserList, i, context),
+                              )
+                            // Theme override so the browser's rows
+                            // are denser than the global ListTile
+                            // default — gains ~26px of horizontal
+                            // space for the title (less truncation)
+                            // without affecting Settings/About/etc.
+                            //   contentPadding: 16 -> 10 (saves 12)
+                            //   horizontalTitleGap: 16 -> 10 (saves 6)
+                            //   minLeadingWidth: 40 -> 32 (saves 8)
+                            // Heights are unchanged by these knobs,
+                            // so the letter-scrub cumulative math
+                            // stays correct.
+                            : Theme(
+                                data: Theme.of(context).copyWith(
+                                  listTileTheme: Theme.of(context)
+                                      .listTileTheme
+                                      .copyWith(
+                                        contentPadding:
+                                            EdgeInsets.symmetric(
+                                                horizontal: 10),
+                                        horizontalTitleGap: 10,
+                                        minLeadingWidth: 32,
+                                      ),
+                                ),
+                                child: ListView.separated(
+                                    controller: BrowserManager().sc,
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    separatorBuilder:
+                                        (BuildContext context, int index) =>
+                                            Divider(
+                                                height: 1,
+                                                color:
+                                                    VelvetColors.border),
+                                    itemCount: browserList.length,
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                      if (browserList.length == 0) {
+                                        return Container();
+                                      }
+                                      return makeListItem(
+                                          browserList, index, context);
+                                    }),
+                              );
+
+                        // Only overlay the letter scrubber for views
+                        // the server sorts alphabetically (Albums,
+                        // Artists, File Explorer) — see BrowserManager
+                        // .alphabeticalCache.
+                        if (!BrowserManager().isAlphabetical ||
+                            browserList.isEmpty) {
+                          return content;
                         }
-                        return ListView.separated(
-                            controller: BrowserManager().sc,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            separatorBuilder:
-                                (BuildContext context, int index) => Divider(
-                                    height: 1, color: VelvetColors.border),
-                            itemCount: browserList.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              if (browserList.length == 0) {
-                                return Container();
-                              }
-                              return makeListItem(
-                                  browserList, index, context);
-                            });
+                        return Stack(
+                          children: [
+                            content,
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              child: LetterStrip(
+                                items: browserList,
+                                onJump: (i) {
+                                  final sc = BrowserManager().sc;
+                                  if (!sc.hasClients) return;
+                                  final double offset;
+                                  if (useGrid) {
+                                    final w = MediaQuery.of(context)
+                                        .size
+                                        .width;
+                                    final cols = AlbumGrid.columnsFor(w);
+                                    final rowH = AlbumGrid.rowHeightFor(w);
+                                    final row = i ~/ cols;
+                                    offset = AlbumGrid.padTop +
+                                        row * (rowH + AlbumGrid.spacing);
+                                  } else {
+                                    // ListTile heights vary per-row by
+                                    // whether a subtitle is present:
+                                    //   1-line (Artists, dirs): ~56dp
+                                    //     + 1 border + 1 separator = 58
+                                    //   2-line (Albums, files w/ meta):
+                                    //     ~72dp + 1 border + 1 sep = 74
+                                    // File Explorer mixes both inside
+                                    // a single list (directories first,
+                                    // then metadata-bearing files), so
+                                    // we have to walk and SUM rather
+                                    // than multiply by a single height.
+                                    // O(i), microseconds even at 10k+
+                                    // items. Tune these constants if
+                                    // taps land too high or too low.
+                                    const oneLineRow = 58.0;
+                                    const twoLineRow = 74.0;
+                                    double sum = 0;
+                                    final stop =
+                                        i.clamp(0, browserList.length);
+                                    for (var k = 0; k < stop; k++) {
+                                      final it = browserList[k];
+                                      final twoLine = it.metadata?.artist !=
+                                              null ||
+                                          it.subtext != null;
+                                      sum += twoLine
+                                          ? twoLineRow
+                                          : oneLineRow;
+                                    }
+                                    offset = sum;
+                                  }
+                                  sc.jumpTo(offset
+                                      .clamp(
+                                          0.0, sc.position.maxScrollExtent)
+                                      .toDouble());
+                                },
+                              ),
+                            ),
+                          ],
+                        );
                       },
                     );
                   })))

@@ -39,43 +39,72 @@ class DisplayItem {
     return icon;
   }
 
-  Widget getText() {
+  // Title/subtitle text widgets cap at one line with ellipsis so long
+  // directory or song names don't wrap and make their row taller than
+  // the others. Keeps the letter-scrub offset math (cumulative sum of
+  // fixed per-row heights in browser.dart) honest.
+  //
+  // Font sizes were 18 (title) / 16 (subtitle), noticeably larger
+  // than Material's 16/14 defaults. Dropped to 15/13 to fit more
+  // characters before truncation — typical dense file-browser sizing.
+  // The leading icon, horizontalTitleGap and contentPadding are also
+  // tightened in browser.dart's ListView Theme override for the same
+  // reason.
+  //
+  // [truncate] defaults to true. The folder row builders pass false
+  // when the list is below the letter-strip threshold (small lists
+  // don't need uniform row heights since there's no strip math to
+  // honor, so long folder names get to wrap and show in full).
+  Widget getText({bool truncate = true}) {
     if (metadata?.title != null) {
       return Text(
         (showRating == true && metadata?.rating != null
                 ? '[' + (metadata!.rating! / 2).toString() + '] '
                 : '') +
             metadata!.title!,
-        style: TextStyle(color: VelvetColors.textPrimary),
+        style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
+        maxLines: truncate ? 1 : null,
+        overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
       );
     }
 
     if (type == 'file' || type == 'localFile') {
       return new Text(
-          (showRating == true && metadata?.rating != null
-                  ? '[' + (metadata!.rating! / 2).toString() + '] '
-                  : '') +
-              this.data!.split('/').last,
-          style: TextStyle(fontSize: 18, color: VelvetColors.textPrimary));
+        (showRating == true && metadata?.rating != null
+                ? '[' + (metadata!.rating! / 2).toString() + '] '
+                : '') +
+            this.data!.split('/').last,
+        style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
+        maxLines: truncate ? 1 : null,
+        overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
+      );
     }
 
-    return new Text(this.name,
-        style:
-            TextStyle(fontFamily: 'Jura', fontSize: 18, color: VelvetColors.textPrimary));
+    return new Text(
+      this.name,
+      style: TextStyle(
+          fontFamily: 'Jura', fontSize: 15, color: VelvetColors.textPrimary),
+      maxLines: truncate ? 1 : null,
+      overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
+    );
   }
 
   Widget? getSubText() {
     if (metadata?.artist != null) {
       return Text(
         metadata!.artist!,
-        style: TextStyle(fontSize: 16, color: VelvetColors.textPrimary),
+        style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
     if (subtext != null) {
       return new Text(
         subtext!,
-        style: TextStyle(fontSize: 16, color: VelvetColors.textPrimary),
+        style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 

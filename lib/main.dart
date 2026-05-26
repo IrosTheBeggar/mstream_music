@@ -21,6 +21,7 @@ import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/share_playlist_dialog.dart';
 
 import 'singletons/media.dart';
 import 'singletons/playlists.dart';
@@ -49,11 +50,23 @@ Future<void> main() async {
   // allow self signed SSL cert
   HttpOverrides.global = new MyHttpOverrides();
 
-  runApp(MaterialApp(
-    title: 'mStream Music',
-    home: MStreamApp(),
-    theme: buildVelvetTheme(),
-    debugShowCheckedModeBanner: false,
+  // Wrap MaterialApp in a StreamBuilder bound to the theme setting so
+  // switching themes triggers a full retheme. setActive runs *inside*
+  // the builder, immediately before MaterialApp returns, so the
+  // ThemeData and any direct VelvetColors lookups stay in sync.
+  runApp(StreamBuilder<AppTheme>(
+    stream: SettingsManager().themeStream,
+    initialData: SettingsManager().appTheme,
+    builder: (context, snapshot) {
+      final palette = paletteFor(snapshot.data ?? AppTheme.velvet);
+      VelvetColors.setActive(palette);
+      return MaterialApp(
+        title: 'mStream Music',
+        home: MStreamApp(),
+        theme: buildAppTheme(palette),
+        debugShowCheckedModeBanner: false,
+      );
+    },
   ));
 }
 
@@ -112,19 +125,12 @@ class _MStreamAppState extends State<MStreamApp>
                           text: 'm',
                           style: TextStyle(
                               fontWeight: FontWeight.w300,
-                              color: VelvetColors.textSecondary)),
+                              color: VelvetColors.appBarTextSecondary)),
                       TextSpan(
                           text: 'Stream',
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: VelvetColors.textPrimary)),
-                      TextSpan(
-                          text: '  velvet',
-                          style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 2.5,
-                              color: VelvetColors.primary)),
+                              color: VelvetColors.appBarText)),
                     ]),
                     style: TextStyle(fontSize: 18, letterSpacing: -0.3),
                   ),
@@ -138,7 +144,7 @@ class _MStreamAppState extends State<MStreamApp>
                             cServer == null ? '' : cServer.url,
                             style: TextStyle(
                                 fontSize: 11,
-                                color: VelvetColors.textSecondary,
+                                color: VelvetColors.appBarTextSecondary,
                                 fontWeight: FontWeight.normal),
                           ),
                         );
@@ -295,16 +301,29 @@ class _MStreamAppState extends State<MStreamApp>
                 },
               ),
               ListTile(
-                leading: Icon(Icons.queue_music),
-                title: Text('Playlists'),
+                leading: Icon(Icons.share),
+                title: Text('Share Playlist'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => PlaylistsScreen()),
-                  );
+                  showSharePlaylistDialog(context);
                 },
               ),
+              // Local playlists drawer entry hidden — having both this and
+              // the server-side "Playlists" browser node was confusing.
+              // Uncomment to restore; the PlaylistsScreen / PlaylistManager
+              // code is still in the tree and PlaylistManager().load() still
+              // runs at startup so saved playlists survive.
+              // ListTile(
+              //   leading: Icon(Icons.queue_music),
+              //   title: Text('Playlists'),
+              //   onTap: () {
+              //     Navigator.of(context).pop();
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => PlaylistsScreen()),
+              //     );
+              //   },
+              // ),
               Divider(color: VelvetColors.border),
               ListTile(
                 leading: Icon(Icons.settings),
@@ -421,15 +440,18 @@ class NowPlaying extends StatelessWidget {
                                   },
                                 ),
                                 children: [
-                                  SlidableAction(
-                                      backgroundColor: VelvetColors.primary,
-                                      foregroundColor: Colors.white,
-                                      icon: Icons.playlist_add,
-                                      label: 'Add to',
-                                      onPressed: (ctx) {
-                                        _showAddToPlaylistSheet(
-                                            ctx, queue[index]);
-                                      }),
+                                  // "Add to" (local playlist) action hidden
+                                  // alongside the drawer entry. Restore both
+                                  // together when local playlists return.
+                                  // SlidableAction(
+                                  //     backgroundColor: VelvetColors.primary,
+                                  //     foregroundColor: Colors.white,
+                                  //     icon: Icons.playlist_add,
+                                  //     label: 'Add to',
+                                  //     onPressed: (ctx) {
+                                  //       _showAddToPlaylistSheet(
+                                  //           ctx, queue[index]);
+                                  //     }),
                                   SlidableAction(
                                       backgroundColor: VelvetColors.raised,
                                       foregroundColor:
@@ -688,10 +710,18 @@ class BottomBar extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
+    // BottomBar mirrors the AppBar (appBarBg) rather than the body
+    // surface, so in the Light theme it stays a dark strip with light
+    // text — master's signature look — instead of a low-contrast
+    // white block on a light gray body. IconTheme wrap sets the
+    // default icon color for the whole bar; per-button overrides
+    // (active shuffle/repeat/autoDJ) still apply.
     return BottomAppBar(
         padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 0.0),
-        color: VelvetColors.surface,
-        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        color: VelvetColors.appBarBg,
+        child: IconTheme(
+          data: IconThemeData(color: VelvetColors.appBarTextSecondary),
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           // Compact now-playing row: title — artist on the left,
           // mm:ss / mm:ss on the right, then the waveform on the row
           // BELOW. Both share a single ~36px tall line each so the
@@ -716,7 +746,7 @@ class BottomBar extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: VelvetColors.textPrimary,
+                                  color: VelvetColors.appBarText,
                                   fontWeight: FontWeight.w500),
                             ),
                           ),
@@ -732,7 +762,7 @@ class BottomBar extends StatelessWidget {
                                     : '${_fmt(position)} / ${_fmt(duration)}',
                                 style: TextStyle(
                                     fontSize: 10,
-                                    color: VelvetColors.textSecondary),
+                                    color: VelvetColors.appBarTextSecondary),
                               );
                             },
                           ),
@@ -813,7 +843,7 @@ class BottomBar extends StatelessWidget {
                             icon: Icon(Icons.shuffle),
                             color: (mediaState == AudioServiceShuffleMode.all)
                                 ? VelvetColors.primary
-                                : VelvetColors.textSecondary,
+                                : VelvetColors.appBarTextSecondary,
                             onPressed: toggleShuffle);
                       }),
                   StreamBuilder<AudioServiceRepeatMode>(
@@ -829,7 +859,7 @@ class BottomBar extends StatelessWidget {
                             icon: Icon(Icons.loop_sharp),
                             color: (mediaState == AudioServiceRepeatMode.all)
                                 ? VelvetColors.primary
-                                : VelvetColors.textSecondary,
+                                : VelvetColors.appBarTextSecondary,
                             onPressed: toggleRepeat);
                       }),
                   StreamBuilder<dynamic>(
@@ -841,7 +871,7 @@ class BottomBar extends StatelessWidget {
                         return IconButton(
                             icon: Icon(Icons.album),
                             color: (autoDJState == null)
-                                ? Colors.white
+                                ? VelvetColors.appBarText
                                 : Colors.blue,
                             onPressed: () {
                               if (ServerManager().currentServer == null) {
@@ -885,7 +915,7 @@ class BottomBar extends StatelessWidget {
                       }),
                 ])
               ])
-        ]));
+        ])));
   }
 
   /// A stream reporting the combined state of the current media item and its
