@@ -2,7 +2,7 @@
 
 #include <android/log.h>
 #include <cstring>
-#include <string>
+#include <utility>
 
 #define LOG_TAG "mstream/viz-bridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -10,9 +10,8 @@
 
 namespace {
 
-// Vertex shader — a fullscreen triangle. Coordinates chosen so that a
-// single triangle covers the entire viewport without needing a quad
-// (saves us an index buffer).
+// Fullscreen-triangle vertex shader. One triangle covers the entire
+// NDC viewport — saves us an index buffer compared to a quad.
 const char* kVertexShader = R"(#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aPos;
@@ -74,7 +73,28 @@ GLuint compileShader(GLenum kind, const char* src) {
 } // namespace
 
 ShaderEngine::~ShaderEngine() {
-    releaseProgram();
+    // Stop the worker first so it doesn't try to touch GL during
+    // teardown. Worker may have a context-current state that needs
+    // unwinding cleanly.
+    workerShutdown_ = true;
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        queueCv_.notify_all();
+    }
+    if (worker_.joinable()) worker_.join();
+    teardownSharedContext();
+
+    // Free any program that arrived just before shutdown and never
+    // got adopted by the render thread.
+    {
+        std::lock_guard<std::mutex> lock(resultMutex_);
+        if (pendingProgram_) {
+            glDeleteProgram(pendingProgram_);
+            pendingProgram_ = 0;
+        }
+    }
+
+    if (program_) glDeleteProgram(program_);
     if (vao_) glDeleteVertexArrays(1, &vao_);
     if (vbo_) glDeleteBuffers(1, &vbo_);
     audio_.dispose();
@@ -87,7 +107,7 @@ bool ShaderEngine::init(int width, int height) {
     lastFrameTime_ = startTime_;
     frameCount_ = 0;
 
-    // Fullscreen-triangle VBO/VAO. Three vertices covering NDC.
+    // Fullscreen-triangle VBO/VAO.
     const float verts[] = {
         -1.0f, -1.0f,
          3.0f, -1.0f,
@@ -107,20 +127,104 @@ bool ShaderEngine::init(int width, int height) {
         return false;
     }
 
+    if (!setupSharedContext()) {
+        LOGE("shared EGL context setup failed — compile will fall back to sync");
+        // Fail soft: the engine still works, just synchronously.
+    } else {
+        worker_ = std::thread(&ShaderEngine::workerLoop, this);
+    }
+
     LOGI("ShaderEngine init ok %dx%d", width, height);
     return true;
 }
 
-bool ShaderEngine::compileProgram(const char* fragSource) {
-    GLuint vs = compileShader(GL_VERTEX_SHADER, kVertexShader);
-    if (!vs) return false;
+bool ShaderEngine::setupSharedContext() {
+    EGLDisplay display = eglGetCurrentDisplay();
+    EGLContext mainCtx = eglGetCurrentContext();
+    if (display == EGL_NO_DISPLAY || mainCtx == EGL_NO_CONTEXT) {
+        LOGE("no current EGL display/context — cannot share");
+        return false;
+    }
 
-    std::string fullFrag(kFragPrelude);
-    fullFrag.append(fragSource ? fragSource : "");
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fullFrag.c_str());
+    // Choose a config compatible with the main context that also
+    // supports PBuffer surfaces (the worker needs *some* surface to
+    // make its context current, even if it never renders to one).
+    const EGLint configAttrs[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_SURFACE_TYPE,    EGL_PBUFFER_BIT,
+        EGL_RED_SIZE,   8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE,  8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_NONE,
+    };
+    EGLConfig config = nullptr;
+    EGLint numConfigs = 0;
+    if (!eglChooseConfig(display, configAttrs, &config, 1, &numConfigs)
+        || numConfigs < 1) {
+        LOGE("worker eglChooseConfig failed: 0x%x", eglGetError());
+        return false;
+    }
+
+    const EGLint pbAttrs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+    workerSurface_ = eglCreatePbufferSurface(display, config, pbAttrs);
+    if (workerSurface_ == EGL_NO_SURFACE) {
+        LOGE("worker eglCreatePbufferSurface failed: 0x%x", eglGetError());
+        return false;
+    }
+
+    const EGLint ctxAttrs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+    workerCtx_ = eglCreateContext(display, config, mainCtx, ctxAttrs);
+    if (workerCtx_ == EGL_NO_CONTEXT) {
+        LOGE("worker eglCreateContext (shared) failed: 0x%x", eglGetError());
+        eglDestroySurface(display, workerSurface_);
+        workerSurface_ = EGL_NO_SURFACE;
+        return false;
+    }
+
+    workerDisplay_ = display;
+    return true;
+}
+
+void ShaderEngine::teardownSharedContext() {
+    if (workerDisplay_ == EGL_NO_DISPLAY) return;
+    if (workerCtx_ != EGL_NO_CONTEXT) {
+        eglDestroyContext(workerDisplay_, workerCtx_);
+        workerCtx_ = EGL_NO_CONTEXT;
+    }
+    if (workerSurface_ != EGL_NO_SURFACE) {
+        eglDestroySurface(workerDisplay_, workerSurface_);
+        workerSurface_ = EGL_NO_SURFACE;
+    }
+    workerDisplay_ = EGL_NO_DISPLAY;
+}
+
+ShaderEngine::UniformLocs ShaderEngine::queryUniformLocations(GLuint program) {
+    UniformLocs u;
+    u.time = glGetUniformLocation(program, "iTime");
+    u.timeDelta = glGetUniformLocation(program, "iTimeDelta");
+    u.frame = glGetUniformLocation(program, "iFrame");
+    u.resolution = glGetUniformLocation(program, "iResolution");
+    u.mouse = glGetUniformLocation(program, "iMouse");
+    u.channel0 = glGetUniformLocation(program, "iChannel0");
+    u.channelTime = glGetUniformLocation(program, "iChannelTime[0]");
+    u.channelResolution = glGetUniformLocation(program, "iChannelResolution[0]");
+    u.date = glGetUniformLocation(program, "iDate");
+    u.sampleRate = glGetUniformLocation(program, "iSampleRate");
+    return u;
+}
+
+GLuint ShaderEngine::compileProgramOnCurrentContext(
+        const std::string& fragSource) {
+    GLuint vs = compileShader(GL_VERTEX_SHADER, kVertexShader);
+    if (!vs) return 0;
+
+    std::string full(kFragPrelude);
+    full.append(fragSource);
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, full.c_str());
     if (!fs) {
         glDeleteShader(vs);
-        return false;
+        return 0;
     }
 
     GLuint p = glCreateProgram();
@@ -139,36 +243,79 @@ bool ShaderEngine::compileProgram(const char* fragSource) {
         glGetProgramInfoLog(p, logLen, nullptr, log.data());
         LOGE("program link error:\n%s", log.c_str());
         glDeleteProgram(p);
-        return false;
+        return 0;
     }
-
-    releaseProgram();
-    program_ = p;
-
-    locTime_ = glGetUniformLocation(p, "iTime");
-    locTimeDelta_ = glGetUniformLocation(p, "iTimeDelta");
-    locFrame_ = glGetUniformLocation(p, "iFrame");
-    locResolution_ = glGetUniformLocation(p, "iResolution");
-    locMouse_ = glGetUniformLocation(p, "iMouse");
-    locChannel0_ = glGetUniformLocation(p, "iChannel0");
-    locChannelTime_ = glGetUniformLocation(p, "iChannelTime[0]");
-    locChannelResolution_ =
-        glGetUniformLocation(p, "iChannelResolution[0]");
-    locDate_ = glGetUniformLocation(p, "iDate");
-    locSampleRate_ = glGetUniformLocation(p, "iSampleRate");
-
-    LOGI("shader program linked ok program=%u", program_);
-    return true;
+    return p;
 }
 
-void ShaderEngine::releaseProgram() {
-    if (program_) {
-        glDeleteProgram(program_);
-        program_ = 0;
+void ShaderEngine::workerLoop() {
+    if (!eglMakeCurrent(workerDisplay_, workerSurface_, workerSurface_,
+                         workerCtx_)) {
+        LOGE("worker eglMakeCurrent failed: 0x%x — exiting worker",
+             eglGetError());
+        return;
     }
+    LOGI("shader compile worker ready");
+
+    while (true) {
+        std::string source;
+        {
+            std::unique_lock<std::mutex> lock(queueMutex_);
+            queueCv_.wait(lock, [this] {
+                return workerShutdown_.load() || hasPendingSource_;
+            });
+            if (workerShutdown_.load()) break;
+            source = std::move(pendingSource_);
+            hasPendingSource_ = false;
+        }
+
+        GLuint newProgram = compileProgramOnCurrentContext(source);
+        if (newProgram == 0) continue;
+
+        // Make sure the program object is fully realized before the
+        // render thread tries to use it from the other context.
+        glFlush();
+
+        // Hand off. If a previous program is still waiting to be
+        // adopted, the render thread missed its window — free it
+        // here so it doesn't leak.
+        GLuint orphan = 0;
+        {
+            std::lock_guard<std::mutex> lock(resultMutex_);
+            orphan = pendingProgram_;
+            pendingProgram_ = newProgram;
+        }
+        if (orphan) glDeleteProgram(orphan);
+    }
+
+    eglMakeCurrent(workerDisplay_, EGL_NO_SURFACE, EGL_NO_SURFACE,
+                    EGL_NO_CONTEXT);
+    LOGI("shader compile worker exited");
+}
+
+void ShaderEngine::adoptPendingProgramIfAny() {
+    GLuint adopt = 0;
+    {
+        std::lock_guard<std::mutex> lock(resultMutex_);
+        if (pendingProgram_ != 0) {
+            adopt = pendingProgram_;
+            pendingProgram_ = 0;
+        }
+    }
+    if (!adopt) return;
+
+    // Free the old current program. Programs are shared between the
+    // worker and render contexts (created via shared context), so
+    // we can delete from either side.
+    if (program_) glDeleteProgram(program_);
+    program_ = adopt;
+    locs_ = queryUniformLocations(program_);
+    LOGI("adopted new shader program=%u", program_);
 }
 
 void ShaderEngine::renderFrame() {
+    adoptPendingProgramIfAny();
+
     if (!program_) {
         // No shader loaded yet — clear to black so the user sees
         // *something* and the surface isn't undefined.
@@ -177,10 +324,8 @@ void ShaderEngine::renderFrame() {
         return;
     }
 
-    // Push the latest audio frame into iChannel0.
     const GLuint audioTex = audio_.upload();
 
-    // Compute timing uniforms.
     auto now = std::chrono::steady_clock::now();
     const float elapsed =
         std::chrono::duration<float>(now - startTime_).count();
@@ -191,35 +336,35 @@ void ShaderEngine::renderFrame() {
     glViewport(0, 0, width_, height_);
     glUseProgram(program_);
 
-    if (locTime_       >= 0) glUniform1f(locTime_, elapsed);
-    if (locTimeDelta_  >= 0) glUniform1f(locTimeDelta_, delta);
-    if (locFrame_      >= 0) glUniform1i(locFrame_, frameCount_);
-    if (locResolution_ >= 0) glUniform3f(locResolution_,
+    if (locs_.time       >= 0) glUniform1f(locs_.time, elapsed);
+    if (locs_.timeDelta  >= 0) glUniform1f(locs_.timeDelta, delta);
+    if (locs_.frame      >= 0) glUniform1i(locs_.frame, frameCount_);
+    if (locs_.resolution >= 0) glUniform3f(locs_.resolution,
         static_cast<float>(width_),
         static_cast<float>(height_),
         static_cast<float>(width_) / static_cast<float>(height_));
-    if (locMouse_      >= 0) glUniform4f(locMouse_, 0.0f, 0.0f, 0.0f, 0.0f);
-    if (locDate_       >= 0) glUniform4f(locDate_, 0.0f, 0.0f, 0.0f, 0.0f);
-    if (locSampleRate_ >= 0) glUniform1f(locSampleRate_, 44100.0f);
+    if (locs_.mouse      >= 0) glUniform4f(locs_.mouse, 0.0f, 0.0f, 0.0f, 0.0f);
+    if (locs_.date       >= 0) glUniform4f(locs_.date, 0.0f, 0.0f, 0.0f, 0.0f);
+    if (locs_.sampleRate >= 0) glUniform1f(locs_.sampleRate, 44100.0f);
 
-    if (locChannelTime_ >= 0) {
+    if (locs_.channelTime >= 0) {
         const float times[4] = { elapsed, elapsed, elapsed, elapsed };
-        glUniform1fv(locChannelTime_, 4, times);
+        glUniform1fv(locs_.channelTime, 4, times);
     }
-    if (locChannelResolution_ >= 0) {
+    if (locs_.channelResolution >= 0) {
         const float res[12] = {
             static_cast<float>(AudioTexture::BINS), 2.0f, 1.0f,
             0.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f,
         };
-        glUniform3fv(locChannelResolution_, 4, res);
+        glUniform3fv(locs_.channelResolution, 4, res);
     }
 
-    if (locChannel0_ >= 0) {
+    if (locs_.channel0 >= 0) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, audioTex);
-        glUniform1i(locChannel0_, 0);
+        glUniform1i(locs_.channel0, 0);
     }
 
     glBindVertexArray(vao_);
@@ -235,8 +380,27 @@ void ShaderEngine::addPcm(const float* samples, std::size_t frameCount) {
 
 void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {
     if (!data) return;
-    // We don't currently animate a transition between shaders — the
-    // swap is instant. smoothTransition is accepted for API parity
-    // with ProjectMEngine.
-    compileProgram(data);
+
+    // If the worker thread couldn't be started (shared context
+    // failed), fall back to compiling synchronously on the render
+    // thread — slower but correct.
+    if (!worker_.joinable()) {
+        GLuint newProgram =
+            compileProgramOnCurrentContext(std::string(data));
+        if (newProgram == 0) return;
+        if (program_) glDeleteProgram(program_);
+        program_ = newProgram;
+        locs_ = queryUniformLocations(program_);
+        return;
+    }
+
+    // Queue the source. We only keep the LATEST source — if the user
+    // taps faster than compile time, intermediate selections are
+    // dropped. The worker drains exactly one source per cycle.
+    {
+        std::lock_guard<std::mutex> lock(queueMutex_);
+        pendingSource_ = data;
+        hasPendingSource_ = true;
+    }
+    queueCv_.notify_one();
 }
