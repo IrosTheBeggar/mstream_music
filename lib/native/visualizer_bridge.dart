@@ -38,6 +38,22 @@ class VisualizerBridge {
     }
   }
 
+  /// Loads a Milkdrop preset from in-memory `.milk` text. Faster than
+  /// the file-path variant since native code doesn't have to read from
+  /// the filesystem (or be granted permission to). [smooth] enables
+  /// the soft-cut transition animation between presets.
+  static Future<void> loadPreset(String data, {bool smooth = true}) async {
+    try {
+      await _channel.invokeMethod('loadPreset', {
+        'data': data,
+        'smooth': smooth,
+      });
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('VisualizerBridge.loadPreset failed: ${e.code} ${e.message}');
+    }
+  }
+
   /// Tears down the render thread, EGL context, and projectM handle.
   /// Call from VisualizerScreen.dispose().
   static Future<void> dispose() async {
@@ -48,3 +64,4 @@ class VisualizerBridge {
     }
   }
 }
+

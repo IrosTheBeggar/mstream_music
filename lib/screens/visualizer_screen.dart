@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../native/projectm_controller.dart';
 import '../native/visualizer_bridge.dart';
+import '../native/visualizer_presets.dart';
 import '../singletons/settings.dart';
 import '../singletons/visualizer_audio.dart';
 import '../theme/velvet_theme.dart';
@@ -58,7 +59,13 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
     });
     // Audio source feed only matters if the texture came up; without
     // a bridge there's nothing on the receiving end to consume PCM.
-    if (id != null) VisualizerAudio().start();
+    if (id != null) {
+      VisualizerAudio().start();
+      // Pick a random Milkdrop preset on bringup. Without this projectM
+      // falls back to its idle preset (still nice, but every session
+      // looks the same).
+      await VisualizerPresets().loadRandom(smooth: false);
+    }
   }
 
   @override
@@ -73,7 +80,17 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
       ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(context).maybePop(),
+        // Tap when rendering = next preset (so the user can cycle).
+        // Tap when stuck on the placeholder = close (no preset to
+        // switch). Long-press always closes — escape hatch.
+        onTap: () {
+          if (_textureId != null) {
+            VisualizerPresets().loadNext();
+          } else {
+            Navigator.of(context).maybePop();
+          }
+        },
+        onLongPress: () => Navigator.of(context).maybePop(),
         child: supported ? _androidBody() : _unsupported(),
       ),
     );
@@ -95,7 +112,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
             left: 0,
             right: 0,
             child: Text(
-              'Tap to close',
+              'Tap = next preset · long-press to close',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withAlpha(160),

@@ -181,6 +181,20 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeAddPcm(
 }
 
 JNIEXPORT void JNICALL
+Java_com_example_mstream_1music_VisualizerBridge_nativeLoadPresetData(
+        JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
+        jstring presetData, jboolean smoothTransition) {
+    auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
+    if (!ctx || !ctx->pm || !presetData) return;
+    const char* data = env->GetStringUTFChars(presetData, nullptr);
+    if (!data) return;
+    eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
+    projectm_load_preset_data(ctx->pm, data, smoothTransition);
+    env->ReleaseStringUTFChars(presetData, data);
+    LOGI("loaded preset (%zu bytes)", static_cast<size_t>(env->GetStringUTFLength(presetData)));
+}
+
+JNIEXPORT void JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeDispose(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);

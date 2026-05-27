@@ -37,6 +37,8 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeInit(surface: Surface, width: Int, height: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
+    private external fun nativeLoadPresetData(
+        ctxPtr: Long, presetData: String, smoothTransition: Boolean)
     private external fun nativeDispose(ctxPtr: Long)
 
     private var channel: MethodChannel? = null
@@ -65,12 +67,24 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         when (call.method) {
             "create" -> handleCreate(call, result)
             "addPcm" -> handleAddPcm(call, result)
+            "loadPreset" -> handleLoadPreset(call, result)
             "dispose" -> {
                 teardown()
                 result.success(null)
             }
             else -> result.notImplemented()
         }
+    }
+
+    private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {
+        val data = call.argument<String>("data")
+        val smooth = call.argument<Boolean>("smooth") ?: true
+        if (data == null) {
+            result.success(null)
+            return
+        }
+        renderThread?.enqueuePreset(data, smooth, ::nativeLoadPresetData)
+        result.success(null)
     }
 
     private fun handleCreate(call: MethodCall, result: MethodChannel.Result) {
@@ -146,12 +160,18 @@ private class RenderThread(
 
     @Volatile private var running = true
     private val pcmQueue = ConcurrentLinkedQueue<FloatArray>()
+    private val presetQueue = ConcurrentLinkedQueue<Triple<String, Boolean, (Long, String, Boolean) -> Unit>>()
     private val frameNanos = 1_000_000_000L / 60L // ~16.67 ms
 
     fun enqueuePcm(samples: FloatArray) {
         pcmQueue.offer(samples)
         // Cap backlog so a paused render thread doesn't OOM.
         while (pcmQueue.size > 8) pcmQueue.poll()
+    }
+
+    fun enqueuePreset(data: String, smooth: Boolean,
+                       loadFn: (Long, String, Boolean) -> Unit) {
+        presetQueue.offer(Triple(data, smooth, loadFn))
     }
 
     fun shutdown() {
@@ -173,6 +193,7 @@ private class RenderThread(
         try {
             var lastFrame = System.nanoTime()
             while (running) {
+                drainPresets(ctx)
                 drainPcm(ctx)
                 renderFn(ctx)
                 lastFrame += frameNanos
@@ -200,6 +221,14 @@ private class RenderThread(
         while (batch != null) {
             addPcmFn(ctx, batch)
             batch = pcmQueue.poll()
+        }
+    }
+
+    private fun drainPresets(ctx: Long) {
+        var p = presetQueue.poll()
+        while (p != null) {
+            p.third(ctx, p.first, p.second)
+            p = presetQueue.poll()
         }
     }
 }
