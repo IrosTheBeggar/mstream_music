@@ -9,14 +9,25 @@ import 'package:flutter/services.dart';
 class VisualizerBridge {
   static const _channel = MethodChannel('mstream/visualizer');
 
-  /// Asks Kotlin to allocate a SurfaceTexture + EGL context + projectM
-  /// handle at [width] × [height]. Returns the Flutter texture id (to
-  /// hand to a [Texture] widget) on success, or `null` on failure.
-  static Future<int?> create({required int width, required int height}) async {
+  /// Engine identifiers — matches the enum in native/visualizer_bridge.cpp.
+  static const int engineProjectM = 0;
+  static const int engineShader = 1;
+
+  /// Asks Kotlin to allocate a SurfaceTexture + EGL context + visualizer
+  /// engine at [width] × [height]. [engine] picks which renderer:
+  /// `engineProjectM` (default, Milkdrop) or `engineShader` (Shadertoy
+  /// fragment shaders). Returns the Flutter texture id (to hand to a
+  /// [Texture] widget) on success, or `null` on failure.
+  static Future<int?> create({
+    required int width,
+    required int height,
+    int engine = engineProjectM,
+  }) async {
     try {
       final id = await _channel.invokeMethod<int>('create', {
         'width': width,
         'height': height,
+        'engine': engine,
       });
       return id;
     } on PlatformException catch (e) {

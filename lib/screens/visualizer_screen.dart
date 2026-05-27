@@ -27,6 +27,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   // Tracks whether we've parked the bridge so didChangeAppLifecycleState
   // doesn't double-pause / double-resume.
   bool _backgroundPaused = false;
+  // Snapshot at bringup so engine swaps via Settings only take effect
+  // next time the visualizer opens — no half-swapped GL state.
+  late final VisualizerEngine _engine =
+      SettingsManager().visualizerEngine;
+  VisualizerPresetKind get _presetKind => _engine == VisualizerEngine.shader
+      ? VisualizerPresetKind.shader
+      : VisualizerPresetKind.milkdrop;
 
   @override
   void initState() {
@@ -86,7 +93,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     final w = size.width.round().clamp(64, 4096);
     final h = size.height.round().clamp(64, 4096);
 
-    final id = await VisualizerBridge.create(width: w, height: h);
+    final id = await VisualizerBridge.create(
+      width: w,
+      height: h,
+      engine: _engine.nativeKind,
+    );
     if (!mounted) return;
     setState(() {
       _textureId = id;
@@ -97,10 +108,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     // a bridge there's nothing on the receiving end to consume PCM.
     if (id != null) {
       VisualizerAudio().start();
-      // Pick a random Milkdrop preset on bringup. Without this projectM
-      // falls back to its idle preset (still nice, but every session
-      // looks the same).
-      await VisualizerPresets().loadRandom(smooth: false);
+      // Pick a random preset matching the active engine. ProjectM
+      // falls back to its idle preset if we don't load one (still
+      // looks fine); ShaderEngine clears to black so loading is
+      // essential.
+      await VisualizerPresets().loadRandom(_presetKind, smooth: false);
     }
   }
 
@@ -121,7 +133,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         // switch). Long-press always closes — escape hatch.
         onTap: () {
           if (_textureId != null) {
-            VisualizerPresets().loadNext();
+            VisualizerPresets().loadNext(_presetKind);
           } else {
             Navigator.of(context).maybePop();
           }

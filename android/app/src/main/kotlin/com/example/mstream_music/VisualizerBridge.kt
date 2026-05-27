@@ -34,7 +34,9 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     // JNI methods — implemented in visualizer_bridge.cpp.
-    private external fun nativeInit(surface: Surface, width: Int, height: Int): Long
+    // engineKind: 0 = ProjectM (Milkdrop), 1 = Shader (Shadertoy fragment shaders).
+    private external fun nativeInit(
+        surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
     private external fun nativeLoadPresetData(
@@ -98,6 +100,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private fun handleCreate(call: MethodCall, result: MethodChannel.Result) {
         val width = (call.argument<Int>("width") ?: 0).coerceAtLeast(1)
         val height = (call.argument<Int>("height") ?: 0).coerceAtLeast(1)
+        val engineKind = call.argument<Int>("engine") ?: 0 // default ProjectM
         val reg = registry
         if (reg == null) {
             result.error("not_attached", "TextureRegistry unavailable", null)
@@ -115,6 +118,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             surface = surface,
             width = width,
             height = height,
+            engineKind = engineKind,
             initFn = ::nativeInit,
             renderFn = ::nativeRenderFrame,
             addPcmFn = ::nativeAddPcm,
@@ -125,7 +129,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         renderThread = thread
 
         result.success(entry.id())
-        Log.i(TAG, "create: textureId=${entry.id()} ${width}x${height}")
+        Log.i(TAG, "create: textureId=${entry.id()} ${width}x${height} engine=$engineKind")
     }
 
     private fun handleAddPcm(call: MethodCall, result: MethodChannel.Result) {
@@ -160,7 +164,8 @@ private class RenderThread(
     private val surface: Surface,
     private val width: Int,
     private val height: Int,
-    private val initFn: (Surface, Int, Int) -> Long,
+    private val engineKind: Int,
+    private val initFn: (Surface, Int, Int, Int) -> Long,
     private val renderFn: (Long) -> Unit,
     private val addPcmFn: (Long, FloatArray) -> Unit,
     private val disposeFn: (Long) -> Unit,
@@ -211,7 +216,7 @@ private class RenderThread(
     }
 
     override fun run() {
-        val ctx = initFn(surface, width, height)
+        val ctx = initFn(surface, width, height, engineKind)
         if (ctx == 0L) {
             Log.e(TAG, "nativeInit returned 0 — render thread exiting")
             return

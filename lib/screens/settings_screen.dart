@@ -107,6 +107,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
+            title: Text('Visualizer engine'),
+            subtitle: Text(
+              _visualizerEngineSubtitle(SettingsManager().visualizerEngine),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<VisualizerEngine>(
+              value: SettingsManager().visualizerEngine,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: VisualizerEngine.values
+                  .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(e.label),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                await SettingsManager().setVisualizerEngine(v);
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+          ListTile(
             title: Text('Visualizer audio source'),
             subtitle: Text(
               _visualizerSourceSubtitle(
@@ -260,6 +285,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case AppTheme.light:
         return 'Light body with a dark app bar and amber accents — '
             "matches the older shipped theme.";
+    }
+  }
+
+  String _visualizerEngineSubtitle(VisualizerEngine e) {
+    switch (e) {
+      case VisualizerEngine.milkdrop:
+        return 'Milkdrop presets via projectM (default). Richer effects, '
+            'heavier on the GPU.';
+      case VisualizerEngine.shader:
+        return 'Shadertoy-style fragment shaders. Lighter, modular — '
+            'drop .glsl files in assets/shaders/ to extend the catalog.';
     }
   }
 
