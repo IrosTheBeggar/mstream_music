@@ -19,14 +19,19 @@ class VisualizerScreen extends StatefulWidget {
   State<VisualizerScreen> createState() => _VisualizerScreenState();
 }
 
-class _VisualizerScreenState extends State<VisualizerScreen> {
+class _VisualizerScreenState extends State<VisualizerScreen>
+    with WidgetsBindingObserver {
   int? _textureId;
   String? _bridgeError;
   bool _bringingUp = false;
+  // Tracks whether we've parked the bridge so didChangeAppLifecycleState
+  // doesn't double-pause / double-resume.
+  bool _backgroundPaused = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (Platform.isAndroid) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _bringUpBridge());
     }
@@ -34,9 +39,40 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     VisualizerAudio().stop();
     VisualizerBridge.dispose();
     super.dispose();
+  }
+
+  // When the OS moves the app off-screen, park the native render
+  // loop and stop synthesizing PCM. On resume, kick both back up.
+  // No-op while the bridge isn't alive (e.g. on non-Android, or
+  // before _bringUpBridge has succeeded).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_textureId == null) return;
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        if (!_backgroundPaused) {
+          _backgroundPaused = true;
+          VisualizerAudio().stop();
+          VisualizerBridge.pause();
+        }
+        break;
+      case AppLifecycleState.resumed:
+        if (_backgroundPaused) {
+          _backgroundPaused = false;
+          VisualizerBridge.resume();
+          VisualizerAudio().start();
+        }
+        break;
+      case AppLifecycleState.detached:
+        // App is shutting down — dispose() will run shortly.
+        break;
+    }
   }
 
   Future<void> _bringUpBridge() async {

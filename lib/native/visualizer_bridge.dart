@@ -54,6 +54,28 @@ class VisualizerBridge {
     }
   }
 
+  /// Parks the native render thread until [resume] is called. Use
+  /// when the app moves to the background (`AppLifecycleState.paused`
+  /// or `.inactive`) so the visualizer doesn't burn CPU/GPU off-screen.
+  /// The EGL context + projectM handle stay alive; only the render
+  /// loop suspends.
+  static Future<void> pause() async {
+    try {
+      await _channel.invokeMethod('pause');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
+  /// Wakes the render thread parked by [pause].
+  static Future<void> resume() async {
+    try {
+      await _channel.invokeMethod('resume');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
   /// Tears down the render thread, EGL context, and projectM handle.
   /// Call from VisualizerScreen.dispose().
   static Future<void> dispose() async {

@@ -68,6 +68,14 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             "create" -> handleCreate(call, result)
             "addPcm" -> handleAddPcm(call, result)
             "loadPreset" -> handleLoadPreset(call, result)
+            "pause" -> {
+                renderThread?.pauseRendering()
+                result.success(null)
+            }
+            "resume" -> {
+                renderThread?.resumeRendering()
+                result.success(null)
+            }
             "dispose" -> {
                 teardown()
                 result.success(null)
@@ -159,6 +167,8 @@ private class RenderThread(
 ) : Thread("mstream-visualizer-render") {
 
     @Volatile private var running = true
+    @Volatile private var paused = false
+    private val pauseLock = Object()
     private val pcmQueue = ConcurrentLinkedQueue<FloatArray>()
     private val presetQueue = ConcurrentLinkedQueue<Triple<String, Boolean, (Long, String, Boolean) -> Unit>>()
     private val frameNanos = 1_000_000_000L / 60L // ~16.67 ms
@@ -174,8 +184,25 @@ private class RenderThread(
         presetQueue.offer(Triple(data, smooth, loadFn))
     }
 
+    fun pauseRendering() {
+        paused = true
+    }
+
+    fun resumeRendering() {
+        synchronized(pauseLock) {
+            paused = false
+            pauseLock.notifyAll()
+        }
+    }
+
     fun shutdown() {
         running = false
+        // Wake up if we're parked in the pause-wait, so the run loop
+        // can observe `running` and exit.
+        synchronized(pauseLock) {
+            paused = false
+            pauseLock.notifyAll()
+        }
         try {
             join(1000)
         } catch (e: InterruptedException) {
@@ -193,6 +220,26 @@ private class RenderThread(
         try {
             var lastFrame = System.nanoTime()
             while (running) {
+                if (paused) {
+                    // Park the thread until resumed (or shutdown).
+                    // Object.wait releases the lock and blocks, so we
+                    // consume zero CPU/GPU while the app is backgrounded.
+                    synchronized(pauseLock) {
+                        while (paused && running) {
+                            try {
+                                pauseLock.wait()
+                            } catch (_: InterruptedException) {
+                                // spurious — re-check loop conditions
+                            }
+                        }
+                    }
+                    if (!running) break
+                    // Reset the frame-timing baseline so we don't try
+                    // to "catch up" all the frames we missed while
+                    // paused — that would just spin-render.
+                    lastFrame = System.nanoTime()
+                    continue
+                }
                 drainPresets(ctx)
                 drainPcm(ctx)
                 renderFn(ctx)
