@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
+import 'eq_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   @override
@@ -87,6 +88,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {});
               },
             ),
+          ),
+          ListTile(
+            leading: Icon(Icons.equalizer, color: VelvetColors.textSecondary),
+            title: Text('Equalizer'),
+            subtitle: Text(
+              'Tune bass, mids, and treble. Android only.',
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => EqScreen()),
+              );
+            },
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Browse'),

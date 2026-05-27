@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -8,6 +9,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import '../objects/server.dart';
+import '../singletons/settings.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -15,7 +17,18 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ignore: close_sinks
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
-  final _player = AudioPlayer();
+  // Android-only: a native equalizer attached to the player's audio
+  // pipeline. just_audio has no iOS/macOS/Linux equivalent, so this
+  // stays null on those platforms and the EQ screen renders an
+  // "Android only" empty state instead.
+  final AndroidEqualizer? equalizer =
+      Platform.isAndroid ? AndroidEqualizer() : null;
+  late final AudioPlayer _player = equalizer != null
+      ? AudioPlayer(
+          audioPipeline:
+              AudioPipeline(androidAudioEffects: [equalizer!]),
+        )
+      : AudioPlayer();
 
   int? get index => _player.currentIndex;
 
@@ -74,6 +87,27 @@ class AudioPlayerHandler extends BaseAudioHandler
       print("### loaded");
     } catch (e) {
       print("Error: $e");
+    }
+    await _applySavedEqualizer();
+  }
+
+  // Apply persisted EQ state to the native equalizer. Best-effort: if
+  // the saved gains array is shorter than the device's actual band
+  // count, leftover bands are left at device default. Wrapped in
+  // try/catch so a flaky audio session never blocks player init.
+  Future<void> _applySavedEqualizer() async {
+    final eq = equalizer;
+    if (eq == null) return;
+    try {
+      await eq.setEnabled(SettingsManager().eqEnabled);
+      final saved = SettingsManager().eqBandGains;
+      if (saved.isEmpty) return;
+      final params = await eq.parameters;
+      for (var i = 0; i < params.bands.length && i < saved.length; i++) {
+        await params.bands[i].setGain(saved[i]);
+      }
+    } catch (e) {
+      print("EQ apply error: $e");
     }
   }
 

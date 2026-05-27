@@ -43,8 +43,11 @@ class MyHttpOverrides extends HttpOverrides {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await MediaManager().start();
+  // Settings load must come before MediaManager.start() so the audio
+  // handler's _init() can read persisted EQ state when it attaches the
+  // AndroidEqualizer to the player.
   await SettingsManager().load();
+  await MediaManager().start();
   await PlaylistManager().load();
 
   // allow self signed SSL cert
