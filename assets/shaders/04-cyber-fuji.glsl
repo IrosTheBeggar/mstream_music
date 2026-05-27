@@ -3,13 +3,12 @@
 // source: https://www.shadertoy.com/view/Wt33Wf
 // license: CC BY 3.0 — https://creativecommons.org/licenses/by/3.0/
 // modifications: (1) header rewritten for our metadata convention.
-//                (2) `battery` (line ~87 in mainImage) was a constant
-//                1.0 in the original; we now derive it from the bass
-//                FFT bins of iChannel0, ranging ~0.55..1.10. Since
-//                `battery` already drives sun pulse rate, grid scroll
-//                speed, and the final luminance mix, this single
-//                substitution makes the whole scene react to music
-//                without otherwise touching the source.
+//                (2) the mountain's sdTrapezoid width is multiplied
+//                by (1.0 + bass * 0.25) so it bulges horizontally
+//                on bass hits. `battery` stays constant at 1.0 (the
+//                original) — modulating it would shift the whole
+//                scene vertically via line 106 which uses it as a
+//                world-origin offset.
 //
 // Synthwave / Outrun-style sun + mountains + grid sunset.
 
@@ -88,18 +87,17 @@ float sdCloud(in vec2 p, in vec2 a1, in vec2 b1, in vec2 a2, in vec2 b2, float w
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0 * fragCoord.xy - iResolution.xy)/iResolution.y;
-    // Audio modulation (mstream addition — see file header).
-    // Average a handful of low FFT bins for a bass-energy signal,
-    // then map it onto `battery` which the rest of the shader uses
-    // as its master "intensity" parameter.
-    float bassEnergy = 0.0;
-    for (int i = 0; i < 6; i++) {
-        bassEnergy += texture(iChannel0, vec2(float(i) * 0.01 + 0.005, 0.25)).x;
-    }
-    bassEnergy = clamp(bassEnergy * 0.4, 0.0, 1.0);
-    float battery = 0.55 + bassEnergy * 0.55;
+    float battery = 1.0;
     //if (iMouse.x > 1.0 && iMouse.y > 1.0) battery = iMouse.y / iResolution.y;
     //else battery = 0.8;
+
+    // Audio modulation (mstream addition — see file header). bass
+    // is consumed below where the mountain's sdTrapezoid is built.
+    float mstreamBass = 0.0;
+    for (int i = 0; i < 6; i++) {
+        mstreamBass += texture(iChannel0, vec2(float(i) * 0.01 + 0.005, 0.25)).x;
+    }
+    mstreamBass = clamp(mstreamBass * 0.4, 0.0, 1.0);
     
     //if (abs(uv.x) < (9.0 / 16.0))
     {
@@ -130,8 +128,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             col = mix(col, vec3(1.0, 0.4, 0.1), sunUV.y * 2.0 + 0.2);
             col = mix(vec3(0.0, 0.0, 0.0), col, sunVal);
             
-            // fuji
-            float fujiVal = sdTrapezoid( uv  + vec2(-0.75+sunUV.y * 0.0, 0.5), 1.75 + pow(uv.y * uv.y, 2.1), 0.2, 0.5);
+            // fuji  —  mstream: width multiplier reacts to bass FFT
+            // so the mountain bulges horizontally on hits.
+            float mstreamWidthMul = 1.0 + mstreamBass * 0.25;
+            float fujiVal = sdTrapezoid( uv  + vec2(-0.75+sunUV.y * 0.0, 0.5), (1.75 + pow(uv.y * uv.y, 2.1)) * mstreamWidthMul, 0.2, 0.5);
             float waveVal = uv.y + sin(uv.x * 20.0 + iTime * 2.0) * 0.05 + 0.2;
             float wave_width = smoothstep(0.0,0.01,(waveVal));
             
