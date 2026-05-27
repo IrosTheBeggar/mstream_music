@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:disk_space/disk_space.dart';
+// import 'package:disk_space/disk_space.dart';
 
 import '../singletons/downloads.dart';
 import '../objects/download_tracker.dart';
+import '../theme/velvet_theme.dart';
 
 class DownloadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
@@ -11,30 +12,30 @@ class DownloadScreen extends StatelessWidget {
           title: Text("Downloads"),
         ),
         body: Column(children: [
-          Card(
-              child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Total Storage Space (in MiB)',
-                style: TextStyle(
-                  color: Colors.blue,
-                ),
-              ),
-              FutureBuilder(
-                future: DiskSpace.getTotalDiskSpace,
-                builder: (BuildContext _, AsyncSnapshot snapshot) {
-                  print(snapshot.data.toString());
-                  return Text(
-                    snapshot.data.toString(),
-                    style: TextStyle(
-                      color: Colors.blue,
-                    ),
-                  );
-                },
-              )
-            ],
-          )),
+          // Card(
+          //     child: Column(
+          //   mainAxisSize: MainAxisSize.min,
+          //   children: [
+          //     Text(
+          //       'Total Storage Space (in MiB)',
+          //       style: TextStyle(
+          //         color: Colors.blue,
+          //       ),
+          //     ),
+          //     FutureBuilder(
+          //       future: DiskSpace.getTotalDiskSpace,
+          //       builder: (BuildContext _, AsyncSnapshot snapshot) {
+          //         print(snapshot.data.toString());
+          //         return Text(
+          //           snapshot.data.toString(),
+          //           style: TextStyle(
+          //             color: Colors.blue,
+          //           ),
+          //         );
+          //       },
+          //     )
+          //   ],
+          // )),
           Expanded(
               child: SizedBox(
                   child: StreamBuilder<Map<String, DownloadTracker>>(
@@ -51,13 +52,13 @@ class DownloadScreen extends StatelessWidget {
                             itemCount: dList.length,
                             separatorBuilder:
                                 (BuildContext context, int index) =>
-                                    Divider(height: 3, color: Colors.black),
+                                    Divider(height: 3, color: VelvetColors.textPrimary),
                             itemBuilder: (BuildContext context, int index) {
                               return ListTile(
                                 title: Text(
                                   dList[index].filePath,
                                   style: TextStyle(
-                                    color: Colors.black,
+                                    color: VelvetColors.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -65,7 +66,7 @@ class DownloadScreen extends StatelessWidget {
                                       dList[index].progress.toString() +
                                       '%',
                                   style: TextStyle(
-                                    color: Colors.black,
+                                    color: VelvetColors.textPrimary,
                                   ),
                                 ),
                               );

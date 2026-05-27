@@ -11,6 +11,7 @@ import 'package:path/path.dart' as path;
 
 import '../objects/download_tracker.dart';
 
+@pragma('vm:entry-point') // Make sure optimizer does not think this is unused!
 class DownloadManager {
   DownloadManager._privateConstructor();
   static final DownloadManager _instance =
@@ -113,7 +114,6 @@ class DownloadManager {
     String filename = path.basename(downloadTo);
 
     new Directory(lol).createSync(recursive: true);
-    Uri url = Uri.parse(downloadUrl);
 
     String? taskId = await FlutterDownloader.enqueue(
       url: downloadUrl,

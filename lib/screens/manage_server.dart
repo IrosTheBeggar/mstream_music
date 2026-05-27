@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
+import '../theme/velvet_theme.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
@@ -69,7 +70,7 @@ class ManageServersScreen extends StatelessWidget {
         },
         icon: Icon(
           Icons.arrow_drop_down,
-          color: Colors.black,
+          color: VelvetColors.textPrimary,
         ),
         itemBuilder: (BuildContext context) {
           List<PopupMenuEntry<String>> popUpWidgetList = [
@@ -78,9 +79,9 @@ class ManageServersScreen extends StatelessWidget {
               child: Row(children: [
                 Icon(
                   Icons.info,
-                  color: Colors.black,
+                  color: VelvetColors.textPrimary,
                 ),
-                Text('   Info', style: TextStyle(color: Colors.black))
+                Text('   Info', style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             ),
             PopupMenuItem(
@@ -88,9 +89,9 @@ class ManageServersScreen extends StatelessWidget {
               child: Row(children: [
                 Icon(
                   Icons.edit,
-                  color: Colors.black,
+                  color: VelvetColors.textPrimary,
                 ),
-                Text('   Edit', style: TextStyle(color: Colors.black))
+                Text('   Edit', style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             ),
             PopupMenuItem(
@@ -100,7 +101,7 @@ class ManageServersScreen extends StatelessWidget {
                   Icons.delete,
                   color: Colors.redAccent,
                 ),
-                Text('   Delete', style: TextStyle(color: Colors.black))
+                Text('   Delete', style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             )
           ];
@@ -113,10 +114,10 @@ class ManageServersScreen extends StatelessWidget {
                   child: Row(children: [
                     Icon(
                       Icons.arrow_upward_rounded,
-                      color: Colors.black,
+                      color: VelvetColors.textPrimary,
                     ),
                     Text('   Make Default',
-                        style: TextStyle(color: Colors.black))
+                        style: TextStyle(color: VelvetColors.textPrimary))
                   ]),
                 ));
           }
@@ -139,7 +140,7 @@ class ManageServersScreen extends StatelessWidget {
           },
           child: Icon(
             Icons.add,
-            color: Colors.black,
+            color: VelvetColors.textPrimary,
           ),
           backgroundColor: Color(0xFFFFAB00),
         ),
@@ -170,7 +171,7 @@ class ManageServersScreen extends StatelessWidget {
                                       child: ListTile(
                                           title: Text(cServerList[index].url,
                                               style: TextStyle(
-                                                  color: Colors.black,
+                                                  color: VelvetColors.textPrimary,
                                                   fontSize: 18)),
                                           trailing: generateDropdownMenu(
                                               context, index)));

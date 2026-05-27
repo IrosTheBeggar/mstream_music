@@ -225,7 +225,7 @@ class ServerManager {
     _currentServerStream.close();
   } //initializes the subject with element already;
 
-  Stream<Server?> get curentServerStream => _currentServerStream.stream;
+  Stream<Server?> get currentServerStream => _currentServerStream.stream;
 
   Stream<List<Server>> get serverListStream => _serverListStream.stream;
 }

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import './browser_list.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
+import '../theme/velvet_theme.dart';
 
 class FileExplorer {
   FileExplorer._privateConstructor();
@@ -53,10 +54,10 @@ class FileExplorer {
       Icon useIcon;
       String type;
       if (entity is File) {
-        useIcon = new Icon(Icons.music_note, color: Colors.black);
+        useIcon = new Icon(Icons.music_note, color: VelvetColors.textSecondary);
         type = 'localFile';
       } else {
-        useIcon = new Icon(Icons.folder_open_outlined, color: Colors.black);
+        useIcon = new Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary);
         type = 'localDirectory';
       }
 

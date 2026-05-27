@@ -16,9 +16,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
   final _player = AudioPlayer();
-  final _playlist = ConcatenatingAudioSource(children: []);
 
   int? get index => _player.currentIndex;
+
+  Stream<Duration> get positionStream => _player.positionStream;
 
   Server? autoDJServer;
 
@@ -43,24 +44,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     mediaItem
         .whereType<MediaItem>()
         .listen((item) => _recentSubject.add([item]));
-    // Broadcast media item changes.
+    // Broadcast media item changes (with duration if it's known yet).
     _player.currentIndexStream.listen((index) {
-      print(index);
-      print(queue.value.length);
-
       if (index == queue.value.length - 1) {
         autoDJ();
       }
-
-      if (index != null && queue.value.isNotEmpty)
-        mediaItem.add(queue.value[index]);
+      _emitCurrentMediaItem();
     });
-    // Magic
-    _player.durationStream.listen((duration) {
-      if (index != null && duration != null) {
-        mediaItem.add(queue.value[index!.toInt()].copyWith(duration: duration));
-      }
-    });
+    // duration usually arrives via durationStream after the source
+    // loads. Re-emit the current MediaItem with the duration filled in
+    // so the BottomBar progress formula stops dividing by 1.
+    _player.durationStream.listen((_) => _emitCurrentMediaItem());
     // Propagate all events from the audio player to AudioService clients.
     _player.playbackEventStream.listen(_broadcastState);
     // In this example, the service stops when reaching the end.
@@ -68,26 +62,27 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (state == ProcessingState.completed) stop();
     });
     try {
-      print("### _player.load");
-      // After a cold restart (on Android), _player.load jumps straight from
-      // the loading state to the completed state. Inserting a delay makes it
-      // work. Not sure why!
-      //await Future.delayed(Duration(seconds: 2)); // magic delay
-      queue.value.forEach((element) {
-        _playlist.add(AudioSource.uri(Uri.parse(element.id)));
-      });
-
-      await _player.setAudioSource(_playlist);
-      // TODO: We might need this later
-      // await _player.setAudioSource(ConcatenatingAudioSource(
-      //   children: queue.value!
-      //       .map((item) => AudioSource.uri(Uri.parse(item.id)))
-      //       .toList(),
-      // ));
+      print("### _player.setAudioSources (init)");
+      // just_audio 0.10 deprecated ConcatenatingAudioSource; the playlist
+      // API now lives on AudioPlayer directly. Seed with whatever is
+      // already in the queue (typically empty on cold start).
+      await _player.setAudioSources(
+        queue.value
+            .map((item) => AudioSource.uri(Uri.parse(item.id)))
+            .toList(),
+      );
       print("### loaded");
     } catch (e) {
       print("Error: $e");
     }
+  }
+
+  void _emitCurrentMediaItem() {
+    if (queue.value.isEmpty) return;
+    final i = (index ?? 0).clamp(0, queue.value.length - 1);
+    final item = queue.value[i];
+    final dur = _player.duration;
+    mediaItem.add(dur != null ? item.copyWith(duration: dur) : item);
   }
 
   @override
@@ -107,11 +102,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
 
-    if (item.extras?['localPath'] != null) {
-      _playlist.add(AudioSource.uri(Uri.parse(item.extras!['localPath'])));
-    } else {
-      _playlist.add(AudioSource.uri(Uri.parse(item.id)));
-    }
+    final uri = item.extras?['localPath'] != null
+        ? Uri.parse(item.extras!['localPath'])
+        : Uri.parse(item.id);
+    await _player.addAudioSource(AudioSource.uri(uri));
   }
 
   @override
@@ -174,7 +168,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int i) async {
     await super.removeQueueItemAt(i);
-    await _playlist.removeAt(i);
+    await _player.removeAudioSourceAt(i);
     queue.add(queue.value..removeAt(i));
   }
 
@@ -183,7 +177,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'clearPlaylist':
         await _player.stop();
         await super.stop();
-        await _playlist.clear();
+        await _player.clearAudioSources();
         queue.add(queue.value..clear());
         _broadcastState(new PlaybackEvent());
         break;
@@ -307,22 +301,25 @@ class AudioPlayerHandler extends BaseAudioHandler
           Uuid().v4() +
           (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
 
+      String? artUrl = decoded['songs'][0]['metadata']['album-art'] != null
+          ? Uri.parse(autoDJServer!.url.toString())
+              .resolve('/album-art/' +
+                  decoded['songs'][0]['metadata']['album-art'] +
+                  '?compress=l&token=' +
+                  (autoDJServer?.jwt ?? ''))
+              .toString()
+          : null;
+
       MediaItem item = new MediaItem(
           id: lolUrl,
           title: decoded['songs'][0]['metadata']['title'] ??
               decoded['songs'][0]['filepath'].split("/").removeLast(),
           album: decoded['songs'][0]['metadata']['album'],
           artist: decoded['songs'][0]['metadata']['artist'],
-          artUri: decoded['songs'][0]['metadata']['album-art'] != null
-              ? Uri.parse(autoDJServer!.url.toString()).resolve('/album-art/' +
-                  decoded['songs'][0]['metadata']['album-art'] +
-                  '?compress=l&token=' +
-                  (autoDJServer?.jwt ?? ''))
-              : Uri.parse(autoDJServer!.url.toString())
-                  .resolve('/assets/img/default.png'),
           extras: {
             'path': decoded['songs'][0]['filepath'],
-            'year': decoded['songs'][0]['year']
+            'year': decoded['songs'][0]['year'],
+            'artUrl': artUrl,
           });
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];

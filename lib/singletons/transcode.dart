@@ -19,5 +19,5 @@ class TranscodeManager {
     _transcodeOnStream.close();
   } //initializes the subject with element already;
 
-  Stream<bool> get curentServerStream => _transcodeOnStream.stream;
+  Stream<bool> get currentServerStream => _transcodeOnStream.stream;
 }

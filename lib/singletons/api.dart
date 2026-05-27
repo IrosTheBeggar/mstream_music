@@ -1,9 +1,11 @@
 import './server_list.dart';
 import './browser_list.dart';
+import './settings.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
+import '../theme/velvet_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
@@ -17,6 +19,33 @@ class ApiManager {
   static final ApiManager _instance = ApiManager._privateConstructor();
   factory ApiManager() {
     return _instance;
+  }
+
+  /// POST /api/v1/share — creates a share link for [filepaths] on
+  /// [server]. [expiresInDays] null means the link never expires.
+  /// Returns the raw server response (notably `playlistId`).
+  Future<Map<String, dynamic>> sharePlaylist({
+    required Server server,
+    required List<String> filepaths,
+    int? expiresInDays,
+  }) async {
+    final uri = Uri.parse(server.url).resolve('/api/v1/share');
+    final body = <String, dynamic>{'playlist': filepaths};
+    if (expiresInDays != null) body['time'] = expiresInDays;
+
+    final response = await http.post(
+      uri,
+      body: json.encode(body),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? '',
+      },
+    );
+
+    if (response.statusCode > 299) {
+      throw Exception('Share failed (HTTP ${response.statusCode})');
+    }
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
@@ -98,7 +127,7 @@ class ApiManager {
           e['name'],
           'playlist',
           e['name'],
-          Icon(Icons.queue_music, color: Colors.black),
+          Icon(Icons.queue_music, color: VelvetColors.textSecondary),
           null);
       newList.add(newItem);
     });
@@ -108,9 +137,8 @@ class ApiManager {
 
   Future<void> removePlaylist(String playlistId,
       {Server? useThisServer}) async {
-    var res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/playlist/delete',
+      await makeServerCall(useThisServer, '/api/v1/playlist/delete',
           {'playlistname': playlistId}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
@@ -134,7 +162,7 @@ class ApiManager {
             e['name'],
             'artist',
             e['name'],
-            Icon(Icons.library_music, color: Colors.black),
+            Icon(Icons.library_music, color: VelvetColors.textSecondary),
             'artist');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -146,7 +174,7 @@ class ApiManager {
             e['name'],
             'album',
             e['name'],
-            Icon(Icons.library_music, color: Colors.black),
+            Icon(Icons.library_music, color: VelvetColors.textSecondary),
             'album');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -158,7 +186,7 @@ class ApiManager {
             e['name'],
             'file',
             '/' + e['filepath'],
-            Icon(Icons.music_note, color: Colors.blue),
+            Icon(Icons.music_note, color: VelvetColors.accent),
             'song');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
@@ -189,13 +217,13 @@ class ApiManager {
           e['name'],
           'album',
           e['name'],
-          Icon(Icons.album, color: Colors.black),
+          Icon(Icons.album, color: VelvetColors.textSecondary),
           e['year']?.toString() ?? '');
       newItem.altAlbumArt = e['album_art_file'];
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
@@ -227,7 +255,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -269,7 +297,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -309,7 +337,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           m.artist);
 
       newItem.metadata = m;
@@ -336,10 +364,10 @@ class ApiManager {
     List<DisplayItem> newList = [];
     res['artists'].forEach((e) {
       DisplayItem newItem = new DisplayItem(useThisServer, e, 'artist', e,
-          Icon(Icons.library_music, color: Colors.black), null);
+          Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
       newList.add(newItem);
     });
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
@@ -363,7 +391,7 @@ class ApiManager {
           name,
           'album',
           e['name'],
-          Icon(Icons.album, color: Colors.black),
+          Icon(Icons.album, color: VelvetColors.textSecondary),
           e['year']?.toString() ?? '');
       newItem.altAlbumArt = e['album_art_file'];
 
@@ -403,7 +431,7 @@ class ApiManager {
           e['filepath'],
           'file',
           '/' + e['filepath'],
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
       newItem.metadata = m;
@@ -416,8 +444,17 @@ class ApiManager {
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
     var res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/file-explorer',
-          {"directory": directory}, 'POST');
+      res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
+        "directory": directory,
+        // Server defaults this to false (cheap listing). When the user
+        // has the setting on, the server returns a `metadata` field on
+        // each file entry — we attach it to the DisplayItem below so
+        // that when the user taps to queue, browser.dart's addFile
+        // sees a populated metadata object and the resulting MediaItem
+        // carries title/artist/album/art into the player and the
+        // notification.
+        "pullMetadata": SettingsManager().fileExplorerMetadata,
+      }, 'POST');
     } catch (err) {
       // TODO: Handle Errors
       print(err);
@@ -433,7 +470,7 @@ class ApiManager {
           e['name'],
           'directory',
           path.join(res['path'], e['name']),
-          Icon(Icons.folder, color: Color(0xFFffab00)),
+          Icon(Icons.folder, color: VelvetColors.warning),
           null);
       newList.add(newItem);
     });
@@ -444,11 +481,33 @@ class ApiManager {
           e['name'],
           'file',
           path.join(res['path'], e['name']),
-          Icon(Icons.music_note, color: Colors.blue),
+          Icon(Icons.music_note, color: VelvetColors.accent),
           null);
+
+      // The server wraps each file's metadata as { filepath, metadata:
+      // {…actual fields…} } — drill in one level. Only set when
+      // pullMetadata=true was sent AND the file is in the library DB
+      // (unscanned files still arrive without an inner metadata
+      // object; we tolerate that and fall back to filename display).
+      // Field name quirk: server uses `disk`, not `disc`.
+      final outer = e['metadata'];
+      final inner = outer is Map ? outer['metadata'] : null;
+      if (inner is Map) {
+        newItem.metadata = MusicMetadata(
+            inner['artist'],
+            inner['album'],
+            inner['title'],
+            inner['track'],
+            inner['disk'] ?? inner['disc'],
+            inner['year'],
+            inner['hash'] ?? '',
+            inner['rating'],
+            inner['album-art']);
+      }
+
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 }

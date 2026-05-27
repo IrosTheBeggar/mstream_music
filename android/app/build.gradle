@@ -29,7 +29,18 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 34
+    compileSdkVersion 36
+    ndkVersion = "28.2.13676358"
+    namespace "com.example.mstream_music"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -42,7 +53,7 @@ android {
     defaultConfig {
         applicationId "mstream.music"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 34
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -59,6 +70,11 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
+            // ExoPlayer/Media3 (used by just_audio) accesses methods reflectively
+            // that R8 strips without explicit keep-rules. Disable minification
+            // until proper proguard-rules.pro is added.
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
@@ -68,6 +84,6 @@ flutter {
 }
 
 dependencies {
-    implementation 'com.android.support:multidex:1.0.3'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.20"
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0"
 }
