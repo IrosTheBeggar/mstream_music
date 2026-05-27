@@ -59,6 +59,12 @@ class SettingsManager {
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
   AppTheme appTheme = AppTheme.velvet;
+  // Android-only equalizer state. Empty gains list means "apply nothing"
+  // (device defaults / flat). Gains are in dB; the valid range and band
+  // count are device-dependent and discovered at runtime via
+  // AndroidEqualizer.parameters.
+  bool eqEnabled = false;
+  List<double> eqBandGains = const [];
 
   late final BehaviorSubject<bool> _albumGridStream =
       BehaviorSubject<bool>.seeded(albumGrid);
@@ -86,6 +92,11 @@ class SettingsManager {
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
       appTheme = _readTheme(m);
+      eqEnabled = m['eqEnabled'] ?? false;
+      final rawGains = m['eqBandGains'];
+      eqBandGains = rawGains is List
+          ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -128,6 +139,8 @@ class SettingsManager {
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
       'theme': appTheme.name,
+      'eqEnabled': eqEnabled,
+      'eqBandGains': eqBandGains,
     }));
   }
 
@@ -164,6 +177,16 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setEqEnabled(bool v) async {
+    eqEnabled = v;
+    await _save();
+  }
+
+  Future<void> setEqBandGains(List<double> v) async {
+    eqBandGains = v;
+    await _save();
+  }
+
   Future<void> resetAll() async {
     TranscodeManager().transcodeOn = false;
     albumGrid = true;
@@ -171,6 +194,8 @@ class SettingsManager {
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;
     appTheme = AppTheme.velvet;
+    eqEnabled = false;
+    eqBandGains = const [];
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);

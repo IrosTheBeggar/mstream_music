@@ -144,7 +144,7 @@ class ManageServersScreen extends StatelessWidget {
           ),
           backgroundColor: Color(0xFFFFAB00),
         ),
-        body: Row(children: [
+        body: SafeArea(top: false, child: Row(children: [
           Expanded(
               child: SizedBox(
                   child: StreamBuilder<List<Server>>(
@@ -177,7 +177,7 @@ class ManageServersScreen extends StatelessWidget {
                                               context, index)));
                                 }));
                       })))
-        ]));
+        ])));
   }
 }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -8,6 +9,9 @@ import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import '../objects/server.dart';
+import '../singletons/auto_dj_manager.dart';
+import '../singletons/settings.dart';
+import '../util/camelot.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -15,7 +19,18 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ignore: close_sinks
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
-  final _player = AudioPlayer();
+  // Android-only: a native equalizer attached to the player's audio
+  // pipeline. just_audio has no iOS/macOS/Linux equivalent, so this
+  // stays null on those platforms and the EQ screen renders an
+  // "Android only" empty state instead.
+  final AndroidEqualizer? equalizer =
+      Platform.isAndroid ? AndroidEqualizer() : null;
+  late final AudioPlayer _player = equalizer != null
+      ? AudioPlayer(
+          audioPipeline:
+              AudioPipeline(androidAudioEffects: [equalizer!]),
+        )
+      : AudioPlayer();
 
   int? get index => _player.currentIndex;
 
@@ -24,6 +39,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   Server? autoDJServer;
 
   var jsonAutoDJIgnoreList;
+
+  // Session-only: the Camelot anchor for harmonic mixing. Locked on
+  // the first DJ-picked song with a recognised key (after that, every
+  // subsequent pick uses the anchor's 6 Camelot neighbours, keeping
+  // the session musically coherent rather than drifting). Reset on
+  // setAutoDJ off or server switch.
+  String? _camelotAnchor;
 
   AudioPlayerHandler() {
     _init();
@@ -74,6 +96,27 @@ class AudioPlayerHandler extends BaseAudioHandler
       print("### loaded");
     } catch (e) {
       print("Error: $e");
+    }
+    await _applySavedEqualizer();
+  }
+
+  // Apply persisted EQ state to the native equalizer. Best-effort: if
+  // the saved gains array is shorter than the device's actual band
+  // count, leftover bands are left at device default. Wrapped in
+  // try/catch so a flaky audio session never blocks player init.
+  Future<void> _applySavedEqualizer() async {
+    final eq = equalizer;
+    if (eq == null) return;
+    try {
+      await eq.setEnabled(SettingsManager().eqEnabled);
+      final saved = SettingsManager().eqBandGains;
+      if (saved.isEmpty) return;
+      final params = await eq.parameters;
+      for (var i = 0; i < params.bands.length && i < saved.length; i++) {
+        await params.bands[i].setGain(saved[i]);
+      }
+    } catch (e) {
+      print("EQ apply error: $e");
     }
   }
 
@@ -187,6 +230,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'setAutoDJ':
         if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
           jsonAutoDJIgnoreList = null;
+          _camelotAnchor = null;
         }
         autoDJServer = extras?['autoDJServer'];
 
@@ -253,85 +297,195 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> autoDJ(
       {bool autoPlay = false, bool incrementIndex = false}) async {
-    if (autoDJServer == null) {
-      return;
+    if (autoDJServer == null) return;
+
+    // Build per-call ignoreVPaths once (cheap, doesn't change across
+    // retry attempts).
+    final ignoreVPaths = <String>[];
+    autoDJServer!.autoDJPaths.forEach((key, value) {
+      if (value == false) ignoreVPaths.add(key);
+    });
+
+    final mgr = AutoDJManager();
+    Map<String, dynamic>? lastDecoded;
+
+    // BPM/key continuity reads the currently playing item once per
+    // call. If extras don't carry bpm/musicalKey (e.g. a localFile or
+    // a browse hit without metadata), the windows aren't sent and the
+    // server picks freely.
+    final currentItem = (index != null &&
+            index! >= 0 &&
+            index! < queue.value.length)
+        ? queue.value[index!]
+        : null;
+    final rawBpm = currentItem?.extras?['bpm'];
+    final currentBpm = rawBpm is num ? rawBpm.round() : null;
+    final currentKey = currentItem?.extras?['musicalKey'] as String?;
+
+    // If harmonic mixing is on and we have no anchor yet, try to
+    // seed it from the currently playing item's key. Otherwise the
+    // first DJ pick locks the anchor (see _queueAutoDJSong below).
+    if (mgr.harmonicMixingEnabled && _camelotAnchor == null) {
+      final seed = toCamelotCode(currentKey);
+      if (seed != null) _camelotAnchor = seed;
     }
 
-    try {
-      Uri currentUri = Uri.parse(autoDJServer!.url.toString())
-          .resolve('/api/v1/db/random-songs');
-
-      bool flagIt = false;
-      String ignoreVPathString = '[';
-      autoDJServer?.autoDJPaths.forEach((key, value) {
-        if (value == false) {
-          ignoreVPathString += '${flagIt == false ? '' : ','} "$key"';
-          flagIt = true;
+    // Keyword filter is client-side (the server doesn't see it).
+    // Retry up to 5 times if responses get blocked, using the
+    // updated ignoreList from the server so we don't pick the same
+    // rejected track twice. After 5 blocks accept the last response
+    // anyway — mirrors the webapp's fallback so the queue doesn't
+    // stall forever on an over-aggressive filter.
+    for (var attempt = 0; attempt < 5; attempt++) {
+      final payload = <String, dynamic>{
+        'ignoreList': jsonAutoDJIgnoreList ?? [],
+      };
+      if (autoDJServer!.autoDJminRating != null) {
+        payload['minRating'] = autoDJServer!.autoDJminRating;
+      }
+      if (ignoreVPaths.isNotEmpty) {
+        payload['ignoreVPaths'] = ignoreVPaths;
+      }
+      if (mgr.genreFilterEnabled && mgr.genreFilterValues.isNotEmpty) {
+        payload['genres'] = mgr.genreFilterValues;
+        payload['genreMode'] = mgr.genreFilterMode;
+      }
+      if (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0) {
+        payload['bpmRanges'] =
+            _bpmWindows(currentBpm, mgr.bpmTolerance);
+        payload['bpmRangesWide'] =
+            _bpmWindows(currentBpm, mgr.bpmTolerance + 2);
+        // Require tagged tracks so the waterfall doesn't fall back
+        // to BPM-unknown picks when our windows return nothing.
+        payload['requireBpm'] = true;
+      }
+      if (mgr.harmonicMixingEnabled) {
+        if (_camelotAnchor != null) {
+          payload['musicalKeys'] = camelotNeighbours(_camelotAnchor!);
         }
-      });
-      ignoreVPathString += '],';
+        // Always prefer tagged tracks when harmonic mode is on —
+        // even without an anchor, the first pick should be keyed so
+        // we can lock the anchor for the rest of the session.
+        payload['requireMusicalKey'] = true;
+      }
 
-      print(ignoreVPathString);
-
-      String payload = '''{"minRating":${autoDJServer?.autoDJminRating},
-          ${flagIt == true ? '"ignoreVPaths": $ignoreVPathString' : ''}
-          "ignoreList":${json.encode(jsonAutoDJIgnoreList)}}''';
-
-      var res = await http.post(currentUri,
+      Map<String, dynamic> decoded;
+      try {
+        final res = await http.post(
+          Uri.parse(autoDJServer!.url).resolve('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': autoDJServer?.jwt ?? ''
+            'x-access-token': autoDJServer?.jwt ?? '',
           },
-          body: payload);
-
-      var decoded = jsonDecode(res.body);
-
-      String p = '';
-      decoded['songs'][0]['filepath'].split("/").forEach((element) {
-        if (element.length == 0) {
-          return;
-        }
-        p += "/" + Uri.encodeComponent(element);
-      });
-
-      String lolUrl = autoDJServer!.url.toString() +
-          '/media' +
-          p +
-          '?app_uuid=' +
-          Uuid().v4() +
-          (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
-
-      String? artUrl = decoded['songs'][0]['metadata']['album-art'] != null
-          ? Uri.parse(autoDJServer!.url.toString())
-              .resolve('/album-art/' +
-                  decoded['songs'][0]['metadata']['album-art'] +
-                  '?compress=l&token=' +
-                  (autoDJServer?.jwt ?? ''))
-              .toString()
-          : null;
-
-      MediaItem item = new MediaItem(
-          id: lolUrl,
-          title: decoded['songs'][0]['metadata']['title'] ??
-              decoded['songs'][0]['filepath'].split("/").removeLast(),
-          album: decoded['songs'][0]['metadata']['album'],
-          artist: decoded['songs'][0]['metadata']['artist'],
-          extras: {
-            'path': decoded['songs'][0]['filepath'],
-            'year': decoded['songs'][0]['year'],
-            'artUrl': artUrl,
-          });
+          body: jsonEncode(payload),
+        );
+        if (res.statusCode > 299) return; // server error → bail silently
+        decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      } catch (_) {
+        return; // network error → bail silently (matches old behaviour)
+      }
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
+      final songs = decoded['songs'] as List?;
+      if (songs == null || songs.isEmpty) return;
 
-      addQueueItem(item);
+      lastDecoded = decoded;
 
-      if (incrementIndex == true) {
-        _player.seek(Duration.zero, index: index! + 1);
+      if (!mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) {
+        _queueAutoDJSong(decoded,
+            autoPlay: autoPlay, incrementIndex: incrementIndex);
+        return;
       }
-      if (autoPlay == true) {
-        play();
-      }
-    } catch (err) {}
+      // Otherwise loop — the updated ignoreList means the next call
+      // returns a different candidate.
+    }
+
+    if (lastDecoded != null) {
+      _queueAutoDJSong(lastDecoded,
+          autoPlay: autoPlay, incrementIndex: incrementIndex);
+    }
+  }
+
+  void _queueAutoDJSong(Map<String, dynamic> decoded,
+      {bool autoPlay = false, bool incrementIndex = false}) {
+    final song = decoded['songs'][0] as Map<String, dynamic>;
+    final metadata = (song['metadata'] as Map?) ?? const {};
+    final filepath = song['filepath'] as String;
+
+    String p = '';
+    for (final segment in filepath.split('/')) {
+      if (segment.isEmpty) continue;
+      p += '/' + Uri.encodeComponent(segment);
+    }
+
+    final mediaUrl = autoDJServer!.url +
+        '/media' +
+        p +
+        '?app_uuid=' +
+        Uuid().v4() +
+        (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
+
+    final artUrl = metadata['album-art'] != null
+        ? Uri.parse(autoDJServer!.url)
+            .resolve('/album-art/' +
+                metadata['album-art'] +
+                '?compress=l&token=' +
+                (autoDJServer?.jwt ?? ''))
+            .toString()
+        : null;
+
+    final item = MediaItem(
+      id: mediaUrl,
+      title: metadata['title'] ?? filepath.split('/').last,
+      album: metadata['album'],
+      artist: metadata['artist'],
+      extras: {
+        // Tag with the source server so Share Playlist's multi-server
+        // detection recognises AutoDJ-added songs as shareable.
+        'server': autoDJServer!.localname,
+        'path': filepath,
+        'year': metadata['year'],
+        'artUrl': artUrl,
+        // bpm + musicalKey power the next AutoDJ pick's continuity
+        // payload (see autoDJ() above). 'musical-key' is the wire
+        // shape from the server — we stash it under our camelCase
+        // key for consistency with browser-added items.
+        'bpm': metadata['bpm'],
+        'musicalKey': metadata['musical-key'],
+      },
+    );
+
+    // Lock the Camelot anchor on the first keyed DJ pick of the
+    // session. Subsequent calls in autoDJ() will use the anchor's
+    // neighbours rather than re-deriving from each newly-played
+    // song's key (which would drift across the session).
+    if (AutoDJManager().harmonicMixingEnabled && _camelotAnchor == null) {
+      final code = toCamelotCode(metadata['musical-key'] as String?);
+      if (code != null) _camelotAnchor = code;
+    }
+
+    addQueueItem(item);
+
+    if (incrementIndex == true && index != null) {
+      _player.seek(Duration.zero, index: index! + 1);
+    }
+    if (autoPlay == true) {
+      play();
+    }
+  }
+
+  // BPM continuity windows: one centered on the current tempo, one
+  // at half-tempo, one at double. The server OR-s these together so
+  // a 120-BPM source matches tracks at 112–128, 56–64, or 232–248
+  // (with tolerance=8). Half/double cover the common DJ practice
+  // of mixing across octaves.
+  static List<Map<String, int>> _bpmWindows(int bpm, int tolerance) {
+    final half = (bpm / 2).round();
+    final dbl = bpm * 2;
+    return [
+      {'min': bpm - tolerance, 'max': bpm + tolerance},
+      {'min': half - tolerance, 'max': half + tolerance},
+      {'min': dbl - tolerance, 'max': dbl + tolerance},
+    ];
   }
 }
