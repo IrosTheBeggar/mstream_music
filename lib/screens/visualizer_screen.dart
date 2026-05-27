@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../native/projectm_controller.dart';
 import '../native/visualizer_bridge.dart';
 import '../singletons/settings.dart';
+import '../singletons/visualizer_audio.dart';
 import '../theme/velvet_theme.dart';
 
 class VisualizerScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
 
   @override
   void dispose() {
+    VisualizerAudio().stop();
     VisualizerBridge.dispose();
     super.dispose();
   }
@@ -54,6 +56,9 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
       _bridgeError = id == null ? 'Bridge failed to start' : null;
       _bringingUp = false;
     });
+    // Audio source feed only matters if the texture came up; without
+    // a bridge there's nothing on the receiving end to consume PCM.
+    if (id != null) VisualizerAudio().start();
   }
 
   @override
