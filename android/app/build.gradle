@@ -57,6 +57,27 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        // Visualizer: we only ship libprojectM-4.so for these ABIs, and
+        // the bridge .so can only link if projectM is present, so cap
+        // the app to the same set. armeabi-v7a (very old 32-bit ARM)
+        // is dropped. abiFilters has to be set in both ndk and
+        // externalNativeBuild — the former filters what Flutter ships,
+        // the latter what CMake compiles.
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
+        externalNativeBuild {
+            cmake {
+                abiFilters "arm64-v8a", "x86_64"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
     }
 
     signingConfigs {

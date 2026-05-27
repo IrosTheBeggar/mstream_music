@@ -1,20 +1,61 @@
-// Full-screen Milkdrop-style visualizer. Currently a placeholder —
-// the projectM FFI bridge and Kotlin texture renderer (see
-// ~/.claude/plans/add-visualizer.md, phases 1 and 2) land here once
-// the native side is wired up. The audio-source toggle (synthesized
-// vs real AndroidVisualizer with RECORD_AUDIO) is already in
-// Settings, and the value persists, so this screen only has to swap
-// its body when the native renderer arrives.
+// Full-screen Milkdrop-style visualizer. Tries to bring up the native
+// bridge (projectM via Kotlin + JNI + EGL); falls back to a status
+// placeholder if the bridge can't start (e.g. iOS/macOS/Linux, or
+// Android device without an EGL context).
 
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 
 import '../native/projectm_controller.dart';
+import '../native/visualizer_bridge.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 
-class VisualizerScreen extends StatelessWidget {
+class VisualizerScreen extends StatefulWidget {
+  @override
+  State<VisualizerScreen> createState() => _VisualizerScreenState();
+}
+
+class _VisualizerScreenState extends State<VisualizerScreen> {
+  int? _textureId;
+  String? _bridgeError;
+  bool _bringingUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _bringUpBridge());
+    }
+  }
+
+  @override
+  void dispose() {
+    VisualizerBridge.dispose();
+    super.dispose();
+  }
+
+  Future<void> _bringUpBridge() async {
+    if (_bringingUp || !mounted) return;
+    _bringingUp = true;
+
+    // Size the GL surface to the screen's pixel dimensions so the
+    // visualizer renders at full resolution.
+    final view = View.of(context);
+    final size = view.physicalSize;
+    final w = size.width.round().clamp(64, 4096);
+    final h = size.height.round().clamp(64, 4096);
+
+    final id = await VisualizerBridge.create(width: w, height: h);
+    if (!mounted) return;
+    setState(() {
+      _textureId = id;
+      _bridgeError = id == null ? 'Bridge failed to start' : null;
+      _bringingUp = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final supported = Platform.isAndroid;
@@ -28,19 +69,44 @@ class VisualizerScreen extends StatelessWidget {
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => Navigator.of(context).maybePop(),
-        child: Center(
-          child: supported ? _placeholder(context) : _unsupported(),
-        ),
+        child: supported ? _androidBody() : _unsupported(),
       ),
     );
   }
 
-  Widget _placeholder(BuildContext context) {
+  Widget _androidBody() {
+    // Three rendering states:
+    //   * waiting for the bridge to come up — show the status placeholder
+    //   * bridge up, texture id assigned — show the Texture widget
+    //     (projectM frames are pushed into it from the native render
+    //     thread)
+    //   * bridge failed — show the placeholder with an error line
+    if (_textureId != null) {
+      return Stack(
+        children: [
+          Positioned.fill(child: Texture(textureId: _textureId!)),
+          Positioned(
+            bottom: 24,
+            left: 0,
+            right: 0,
+            child: Text(
+              'Tap to close',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withAlpha(160),
+                fontSize: 11,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Center(child: _statusPlaceholder());
+  }
+
+  Widget _statusPlaceholder() {
     final source = SettingsManager().visualizerAudioSource;
-    // Tries to load libprojectM-4.so and read its version string. On a
-    // device with the .so bundled this proves the FFI plumbing works
-    // end-to-end. The result drives the icon colour and the status
-    // line so it's visible at a glance.
     final projectMLoaded = ProjectMController.isAvailable;
     final statusLine = ProjectMController.statusLine();
     return Padding(
@@ -49,15 +115,25 @@ class VisualizerScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            projectMLoaded ? Icons.check_circle : Icons.auto_awesome,
+            _bridgeError != null
+                ? Icons.error_outline
+                : (projectMLoaded
+                    ? Icons.hourglass_top
+                    : Icons.auto_awesome),
             size: 72,
-            color: projectMLoaded
-                ? Colors.greenAccent
-                : VelvetColors.primary,
+            color: _bridgeError != null
+                ? Colors.redAccent
+                : (projectMLoaded
+                    ? Colors.greenAccent
+                    : VelvetColors.primary),
           ),
           const SizedBox(height: 20),
           Text(
-            'Visualizer coming soon',
+            _bridgeError != null
+                ? 'Visualizer failed to start'
+                : _bringingUp
+                    ? 'Bringing up renderer…'
+                    : 'Visualizer ready',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: VelvetColors.textPrimary,
@@ -77,6 +153,18 @@ class VisualizerScreen extends StatelessWidget {
               fontFamily: 'monospace',
             ),
           ),
+          if (_bridgeError != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _bridgeError!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             'Audio source: ${source.label.toLowerCase()}',
@@ -102,14 +190,16 @@ class VisualizerScreen extends StatelessWidget {
   }
 
   Widget _unsupported() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Text(
-        'Visualizer is currently only supported on Android.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: VelvetColors.textSecondary,
-          fontSize: 14,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          'Visualizer is currently only supported on Android.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: VelvetColors.textSecondary,
+            fontSize: 14,
+          ),
         ),
       ),
     );
