@@ -44,7 +44,9 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('About')),
-      body: ListView(
+      body: SafeArea(
+        top: false,
+        child: ListView(
         children: [
           SizedBox(height: 32),
           Center(
@@ -105,6 +107,7 @@ class AboutScreen extends StatelessWidget {
                 onTap: () => _open(context, l.url),
               )),
         ],
+      ),
       ),
     );
   }

@@ -15,7 +15,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Settings')),
-      body: ListView(
+      body: SafeArea(
+        top: false,
+        child: ListView(
         children: [
           _sectionHeader('Appearance'),
           ListTile(
@@ -221,6 +223,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
         ],
+      ),
       ),
     );
   }

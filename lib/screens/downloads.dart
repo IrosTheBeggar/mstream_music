@@ -11,7 +11,7 @@ class DownloadScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text("Downloads"),
         ),
-        body: Column(children: [
+        body: SafeArea(top: false, child: Column(children: [
           // Card(
           //     child: Column(
           //   mainAxisSize: MainAxisSize.min,
@@ -72,6 +72,6 @@ class DownloadScreen extends StatelessWidget {
                               );
                             });
                       })))
-        ]));
+        ])));
   }
 }

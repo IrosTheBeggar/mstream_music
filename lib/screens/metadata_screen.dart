@@ -18,9 +18,11 @@ class MeteDataScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text("Song Info"),
         ),
-        body: Container(
-            // padding: EdgeInsets.all(20.0),
-            child: ListView(children: [
+        body: SafeArea(
+            top: false,
+            child: Container(
+                // padding: EdgeInsets.all(20.0),
+                child: ListView(children: [
           if (meta.albumArt != null) ...[Image.network(meta.albumArt!)],
           Container(height: 20),
           if (meta.title != null) ...[
@@ -49,6 +51,6 @@ class MeteDataScreen extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 20.0),
                 child: Text(path!))
           ]
-        ])));
+        ]))));
   }
 }
