@@ -4,8 +4,10 @@
 // Android device without an EGL context).
 
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../native/projectm_controller.dart';
 import '../native/visualizer_bridge.dart';
@@ -39,14 +41,36 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Full-immersive landscape for the visualizer. Hides status +
+    // navigation bars so the shader uses every pixel; locks the
+    // device to landscape because most Shadertoy/Milkdrop content
+    // is composed for that aspect.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     if (Platform.isAndroid) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _bringUpBridge());
+      // Wait for the orientation change to settle before sampling the
+      // physical size for the GL surface — a postFrameCallback alone
+      // can fire while the screen is still portrait. 250ms is plenty
+      // on every device I've tested and the user only sees black
+      // during the gap.
+      Future.delayed(const Duration(milliseconds: 250), () {
+        if (mounted) _bringUpBridge();
+      });
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Restore the app chrome before the parent route reappears.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     VisualizerAudio().stop();
     VisualizerBridge.dispose();
     super.dispose();
@@ -86,12 +110,15 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     if (_bringingUp || !mounted) return;
     _bringingUp = true;
 
-    // Size the GL surface to the screen's pixel dimensions so the
-    // visualizer renders at full resolution.
+    // Size the GL surface to the screen's pixel dimensions in
+    // landscape — we force landscape orientation in initState but
+    // the orientation change may not have fully propagated by the
+    // time we read physicalSize. max/min collapses both states to
+    // the right landscape dimensions regardless.
     final view = View.of(context);
     final size = view.physicalSize;
-    final w = size.width.round().clamp(64, 4096);
-    final h = size.height.round().clamp(64, 4096);
+    final w = math.max(size.width, size.height).round().clamp(64, 4096);
+    final h = math.min(size.width, size.height).round().clamp(64, 4096);
 
     final id = await VisualizerBridge.create(
       width: w,
@@ -119,13 +146,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   @override
   Widget build(BuildContext context) {
     final supported = Platform.isAndroid;
+    // No AppBar — the visualizer is fullscreen + immersive. Long-press
+    // exits (the bottom overlay still tells the user how).
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text('Visualizer'),
-        backgroundColor: Colors.black,
-        elevation: 0,
-      ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         // Tap when rendering = next preset (so the user can cycle).
