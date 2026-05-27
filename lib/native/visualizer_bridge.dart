@@ -87,6 +87,32 @@ class VisualizerBridge {
     }
   }
 
+  /// Asks Kotlin to attach an `AndroidVisualizer` to audio session 0
+  /// and start streaming waveform samples into the render thread's
+  /// PCM queue. Returns true on success, false if Visualizer creation
+  /// failed (commonly because RECORD_AUDIO was revoked or the OS
+  /// doesn't allow session-0 capture). Callers should fall back to
+  /// synthesized PCM on false.
+  static Future<bool> startRealAudio() async {
+    try {
+      final ok = await _channel.invokeMethod<bool>('startRealAudio');
+      return ok == true;
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('VisualizerBridge.startRealAudio failed: ${e.code} ${e.message}');
+      return false;
+    }
+  }
+
+  /// Stops the AndroidVisualizer if it's attached.
+  static Future<void> stopRealAudio() async {
+    try {
+      await _channel.invokeMethod('stopRealAudio');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
   /// Tears down the render thread, EGL context, and projectM handle.
   /// Call from VisualizerScreen.dispose().
   static Future<void> dispose() async {

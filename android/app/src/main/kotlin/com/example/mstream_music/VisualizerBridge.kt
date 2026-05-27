@@ -48,6 +48,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
     private var renderThread: RenderThread? = null
+    private var realAudio: RealAudioSource? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         registry = binding.textureRegistry
@@ -78,12 +79,38 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 renderThread?.resumeRendering()
                 result.success(null)
             }
+            "startRealAudio" -> handleStartRealAudio(result)
+            "stopRealAudio" -> {
+                stopRealAudio()
+                result.success(null)
+            }
             "dispose" -> {
                 teardown()
                 result.success(null)
             }
             else -> result.notImplemented()
         }
+    }
+
+    private fun handleStartRealAudio(result: MethodChannel.Result) {
+        // Already running? No-op success.
+        if (realAudio != null) { result.success(true); return }
+        val rt = renderThread
+        if (rt == null) { result.success(false); return }
+        val src = RealAudioSource { samples -> rt.enqueuePcm(samples) }
+        val ok = src.start()
+        if (ok) {
+            realAudio = src
+            Log.i(TAG, "real audio attached")
+        } else {
+            Log.w(TAG, "real audio failed to attach — Dart should fall back to synthesized")
+        }
+        result.success(ok)
+    }
+
+    private fun stopRealAudio() {
+        realAudio?.stop()
+        realAudio = null
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {
@@ -147,6 +174,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     private fun teardown() {
+        stopRealAudio()
         renderThread?.shutdown()
         renderThread = null
         textureEntry?.release()
