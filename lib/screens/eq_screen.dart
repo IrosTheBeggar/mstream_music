@@ -18,6 +18,9 @@
 // Persistence: gains are written to settings.json on onChangeEnd
 // (not on every drag tick) to avoid thrashing the JSON file.
 
+import 'dart:async';
+
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -34,28 +37,69 @@ class _EqScreenState extends State<EqScreen> {
   AndroidEqualizerParameters? _params;
   bool _loading = true;
   String? _error;
+  StreamSubscription<PlaybackState>? _playbackSub;
 
   @override
   void initState() {
     super.initState();
-    _loadParams();
+    _attemptLoad();
+    // AndroidEqualizer.parameters only resolves once the native
+    // audio session is alive — i.e. something's been queued. If the
+    // user opens this screen with an idle queue, the initial attempt
+    // times out. Watch playback state and retry the moment audio
+    // actually starts, so the user can queue something and come
+    // back without having to navigate out and back in.
+    _playbackSub = MediaManager().audioHandler.playbackState.listen((state) {
+      if (_params == null &&
+          state.processingState != AudioProcessingState.idle) {
+        _attemptLoad();
+      }
+    });
   }
 
-  Future<void> _loadParams() async {
+  @override
+  void dispose() {
+    _playbackSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _attemptLoad() async {
     final eq = MediaManager().audioHandler.equalizer;
     if (eq == null) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Equalizer is only available on Android.';
       });
       return;
     }
+    // Already loaded — nothing to do (guards against the playback
+    // listener firing a duplicate fetch after we've succeeded once).
+    if (_params != null) return;
+
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
-      final p = await eq.parameters;
+      // 3s is plenty when the session is alive (resolves in ms);
+      // when it isn't, the wait would otherwise be unbounded.
+      final p = await eq.parameters.timeout(const Duration(seconds: 3));
       if (!mounted) return;
       setState(() {
         _params = p;
         _loading = false;
+      });
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Start a song to configure the EQ.\n\n'
+            "Android's native equalizer initializes with the audio "
+            'session, so we need playback to be active before we can '
+            'read the band layout.';
       });
     } catch (e) {
       if (!mounted) return;
