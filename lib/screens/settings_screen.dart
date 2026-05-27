@@ -107,8 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            leading: Icon(Icons.auto_awesome,
-                color: VelvetColors.textSecondary),
             title: Text('Visualizer audio source'),
             subtitle: Text(
               _visualizerSourceSubtitle(

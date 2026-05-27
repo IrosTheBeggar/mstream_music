@@ -56,7 +56,10 @@ enum VisualizerAudioSource {
       case VisualizerAudioSource.synthesized:
         return 'Synthesized';
       case VisualizerAudioSource.real:
-        return 'Real audio (needs permission)';
+        // Keep this short — it lands in the Settings ListTile's
+        // trailing slot which is narrow. The "needs RECORD_AUDIO"
+        // caveat is in the subtitle.
+        return 'Real audio';
     }
   }
 }
