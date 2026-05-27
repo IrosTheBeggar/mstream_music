@@ -3,9 +3,12 @@
 # release.sh — bump version, commit, tag, push.
 #
 # Usage:
-#   ./release.sh <version>           # e.g. 0.14.1 (auto-increments build)
-#   ./release.sh <version>+<build>   # e.g. 0.14.1+26 (explicit build)
-#   ./release.sh --dry-run <version> # show what would happen, do nothing
+#   ./release.sh patch               # bump 0.14.0 -> 0.14.1 (npm convention)
+#   ./release.sh minor               # bump 0.14.0 -> 0.15.0
+#   ./release.sh major               # bump 0.14.0 -> 1.0.0
+#   ./release.sh <version>           # explicit, e.g. 0.14.1
+#   ./release.sh <version>+<build>   # explicit version + build, e.g. 0.14.1+26
+#   ./release.sh --dry-run <input>   # preview without doing anything
 #
 # Updates pubspec.yaml and lib/screens/about_screen.dart, commits with
 # "bump to X.Y.Z", tags vX.Y.Z, and pushes the commit + tag. Pending
@@ -26,9 +29,12 @@ fi
 
 if [[ $# -ne 1 ]]; then
   cat >&2 <<EOF
-usage: $0 [--dry-run] <version>
-  $0 0.14.1            # auto-increment build number from pubspec
-  $0 0.14.1+26         # explicit build number
+usage: $0 [--dry-run] <input>
+  $0 patch             # bump 0.14.0 -> 0.14.1 (npm convention)
+  $0 minor             # bump 0.14.0 -> 0.15.0
+  $0 major             # bump 0.14.0 -> 1.0.0
+  $0 0.14.1            # explicit version, auto-increment build
+  $0 0.14.1+26         # explicit version + build
   $0 0.14.1-rc1        # pre-release suffix supported (tag becomes v0.14.1-rc1)
 EOF
   exit 1
@@ -36,15 +42,9 @@ fi
 
 INPUT="$1"
 
-# Accept X.Y.Z, X.Y.Z-suffix, X.Y.Z+N, X.Y.Z-suffix+N
-if [[ ! "$INPUT" =~ ^([0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?)(\+([0-9]+))?$ ]]; then
-  echo "error: '$INPUT' is not a valid version (want X.Y.Z[-suffix][+N])" >&2
-  exit 1
-fi
-NEW_VERSION="${BASH_REMATCH[1]}"
-EXPLICIT_BUILD="${BASH_REMATCH[4]}"
-
-# ---- preflight -------------------------------------------------------------
+# ---- preflight: read current version from pubspec --------------------------
+# Done before resolving INPUT because patch/minor/major need the current
+# version to compute the new one from.
 if [[ ! -f pubspec.yaml ]]; then
   echo "error: pubspec.yaml not found — run from the project root" >&2
   exit 1
@@ -55,6 +55,34 @@ CURRENT="${CURRENT_LINE#version: }"
 CURRENT="$(echo "$CURRENT" | tr -d '[:space:]')"
 CURRENT_VERSION="${CURRENT%+*}"
 CURRENT_BUILD="${CURRENT##*+}"
+
+# ---- resolve INPUT into NEW_VERSION + (optional) EXPLICIT_BUILD ----------
+EXPLICIT_BUILD=""
+case "$INPUT" in
+  patch|minor|major)
+    # npm-style bump from the current pubspec version. Strip any
+    # pre-release suffix ("-rc1" etc.) before bumping — going from
+    # 0.14.0-rc1 to a real release should land on 0.14.1, not preserve
+    # the rc tag.
+    BASE="${CURRENT_VERSION%%-*}"
+    IFS='.' read -r CUR_MAJOR CUR_MINOR CUR_PATCH <<< "$BASE"
+    case "$INPUT" in
+      patch) NEW_VERSION="$CUR_MAJOR.$CUR_MINOR.$((CUR_PATCH + 1))" ;;
+      minor) NEW_VERSION="$CUR_MAJOR.$((CUR_MINOR + 1)).0" ;;
+      major) NEW_VERSION="$((CUR_MAJOR + 1)).0.0" ;;
+    esac
+    ;;
+  *)
+    # Explicit: X.Y.Z, X.Y.Z-suffix, X.Y.Z+N, X.Y.Z-suffix+N
+    if [[ ! "$INPUT" =~ ^([0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+)?)(\+([0-9]+))?$ ]]; then
+      echo "error: '$INPUT' is not valid input" >&2
+      echo "       want one of: patch | minor | major | X.Y.Z[-suffix][+N]" >&2
+      exit 1
+    fi
+    NEW_VERSION="${BASH_REMATCH[1]}"
+    EXPLICIT_BUILD="${BASH_REMATCH[4]}"
+    ;;
+esac
 
 if [[ -n "$EXPLICIT_BUILD" ]]; then
   NEW_BUILD="$EXPLICIT_BUILD"
