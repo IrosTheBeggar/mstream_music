@@ -2,12 +2,16 @@
 // author: Jan Mróz (jaszunio15), uploaded to Shadertoy by kaiware007
 // source: https://www.shadertoy.com/view/Wt33Wf
 // license: CC BY 3.0 — https://creativecommons.org/licenses/by/3.0/
-// modifications: header rewritten for our metadata convention; shader body unchanged.
+// modifications: (1) header rewritten for our metadata convention.
+//                (2) `battery` (line ~87 in mainImage) was a constant
+//                1.0 in the original; we now derive it from the bass
+//                FFT bins of iChannel0, ranging ~0.55..1.10. Since
+//                `battery` already drives sun pulse rate, grid scroll
+//                speed, and the final luminance mix, this single
+//                substitution makes the whole scene react to music
+//                without otherwise touching the source.
 //
-// Synthwave / Outrun-style sun + mountains + grid sunset. Visually
-// striking but not audio-reactive in the original — driven entirely
-// by iTime. Our engine still exposes iChannel0 if anyone wants to
-// extend it later.
+// Synthwave / Outrun-style sun + mountains + grid sunset.
 
 
 float sun(vec2 uv, float battery)
@@ -84,7 +88,16 @@ float sdCloud(in vec2 p, in vec2 a1, in vec2 b1, in vec2 a2, in vec2 b2, float w
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (2.0 * fragCoord.xy - iResolution.xy)/iResolution.y;
-    float battery = 1.0;
+    // Audio modulation (mstream addition — see file header).
+    // Average a handful of low FFT bins for a bass-energy signal,
+    // then map it onto `battery` which the rest of the shader uses
+    // as its master "intensity" parameter.
+    float bassEnergy = 0.0;
+    for (int i = 0; i < 6; i++) {
+        bassEnergy += texture(iChannel0, vec2(float(i) * 0.01 + 0.005, 0.25)).x;
+    }
+    bassEnergy = clamp(bassEnergy * 0.4, 0.0, 1.0);
+    float battery = 0.55 + bassEnergy * 0.55;
     //if (iMouse.x > 1.0 && iMouse.y > 1.0) battery = iMouse.y / iResolution.y;
     //else battery = 0.8;
     

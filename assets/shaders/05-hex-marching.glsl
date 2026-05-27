@@ -2,12 +2,16 @@
 // author: mrange (Shadertoy)
 // source: https://www.shadertoy.com/view/NdKyDw
 // license: CC0 (Public Domain dedication)
-// modifications: repackaged into our multipass format; pass sources unchanged.
+// modifications: (1) repackaged into our multipass format.
+//                (2) image pass gains an iChannel1 = music route and
+//                samples the bass FFT to add a brightness pulse on
+//                beats. Original buffer pass sources untouched.
 //
 // Multipass: bufferA computes hex marching geometry, bufferB does a feedback
 // pass sampling itself + bufferA, image samples bufferB for the final frame.
 //
 // === channel image.0 = bufferb
+// === channel image.1 = music
 // === channel bufferb.0 = buffera
 // === channel bufferb.1 = bufferb
 //
@@ -22,6 +26,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec3 col = pcol.xyz;
   col = clamp(col, 0.0, 1.0);
   col *= smoothstep(0.0, 2.0, TIME);
+
+  // mstream addition: brightness pulses on bass hits. Sample a few
+  // low FFT bins from the music channel (iChannel1) and use them as
+  // a multiplier on the otherwise time-only output.
+  float bass = 0.0;
+  for (int i = 0; i < 4; i++) {
+    bass += texture(iChannel1, vec2(float(i) * 0.015 + 0.005, 0.25)).x;
+  }
+  bass = clamp(bass * 0.5, 0.0, 1.0);
+  col *= 1.0 + bass * 0.8;
+
   col = sqrt(col);
   fragColor = vec4(col, 1.0);
 }
