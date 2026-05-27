@@ -21,6 +21,38 @@ class ApiManager {
     return _instance;
   }
 
+  /// POST /api/v1/db/genres — returns the server's distinct genre
+  /// list with track counts. Used by the AutoDJ screen to populate
+  /// the genre-picker autocomplete.
+  ///
+  /// Each entry is `{ name: String, track_count: int }`.
+  Future<List<Map<String, dynamic>>> getGenres({
+    Server? useThisServer,
+    List<String>? ignoreVPaths,
+  }) async {
+    final server = useThisServer ?? ServerManager().currentServer;
+    if (server == null) throw Exception('No server selected');
+
+    final body = <String, dynamic>{};
+    if (ignoreVPaths != null && ignoreVPaths.isNotEmpty) {
+      body['ignoreVPaths'] = ignoreVPaths;
+    }
+
+    final response = await http.post(
+      Uri.parse(server.url).resolve('/api/v1/db/genres'),
+      body: jsonEncode(body),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? '',
+      },
+    );
+    if (response.statusCode > 299) {
+      throw Exception('Failed to fetch genres (HTTP ${response.statusCode})');
+    }
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from(decoded['genres'] ?? []);
+  }
+
   /// POST /api/v1/share — creates a share link for [filepaths] on
   /// [server]. [expiresInDays] null means the link never expires.
   /// Returns the raw server response (notably `playlistId`).
@@ -248,7 +280,9 @@ class ApiManager {
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
-          e['metadata']['album-art']);
+          e['metadata']['album-art'],
+          bpm: e['metadata']['bpm'],
+          musicalKey: e['metadata']['musical-key']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -290,7 +324,9 @@ class ApiManager {
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
-          e['metadata']['album-art']);
+          e['metadata']['album-art'],
+          bpm: e['metadata']['bpm'],
+          musicalKey: e['metadata']['musical-key']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -330,7 +366,9 @@ class ApiManager {
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
-          e['metadata']['album-art']);
+          e['metadata']['album-art'],
+          bpm: e['metadata']['bpm'],
+          musicalKey: e['metadata']['musical-key']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -424,7 +462,9 @@ class ApiManager {
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
-          e['metadata']['album-art']);
+          e['metadata']['album-art'],
+          bpm: e['metadata']['bpm'],
+          musicalKey: e['metadata']['musical-key']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -502,7 +542,9 @@ class ApiManager {
             inner['year'],
             inner['hash'] ?? '',
             inner['rating'],
-            inner['album-art']);
+            inner['album-art'],
+            bpm: inner['bpm'],
+            musicalKey: inner['musical-key']);
       }
 
       newList.add(newItem);

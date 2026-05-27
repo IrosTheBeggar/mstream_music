@@ -170,6 +170,11 @@ class Browser extends StatelessWidget {
             'localPath': finalString,
             'year': i.metadata?.year,
             'artUrl': artUrl,
+            // bpm + musicalKey power AutoDJ's BPM-continuity /
+            // harmonic-mixing modes — read off the currently
+            // playing item when computing the next pick's payload.
+            'bpm': i.metadata?.bpm,
+            'musicalKey': i.metadata?.musicalKey,
           });
     }
 
@@ -210,6 +215,8 @@ class Browser extends StatelessWidget {
           'path': i.data,
           'year': i.metadata?.year,
           'artUrl': artUrl,
+          'bpm': i.metadata?.bpm,
+          'musicalKey': i.metadata?.musicalKey,
         });
 
     // TODO: Fire of request for metadata

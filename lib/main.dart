@@ -23,10 +23,13 @@ import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/share_playlist_dialog.dart';
 
+import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
+import 'singletons/sleep_timer.dart';
 import 'theme/velvet_theme.dart';
+import 'widgets/sleep_timer_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
 import 'dart:io';
@@ -49,6 +52,7 @@ Future<void> main() async {
   await SettingsManager().load();
   await MediaManager().start();
   await PlaylistManager().load();
+  await AutoDJManager().load();
 
   // allow self signed SSL cert
   HttpOverrides.global = new MyHttpOverrides();
@@ -915,6 +919,27 @@ class BottomBar extends StatelessWidget {
                                         "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
                               }
                             });
+                      }),
+                  StreamBuilder<Duration?>(
+                      stream: SleepTimerManager().remainingStream,
+                      initialData: SleepTimerManager().remaining,
+                      builder: (context, snapshot) {
+                        final active = snapshot.data != null;
+                        return IconButton(
+                          icon: Icon(active
+                              ? Icons.bedtime
+                              : Icons.bedtime_outlined),
+                          color: active
+                              ? VelvetColors.primary
+                              : VelvetColors.appBarTextSecondary,
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: VelvetColors.surface,
+                              builder: (_) => SleepTimerSheet(),
+                            );
+                          },
+                        );
                       }),
                 ])
               ])
