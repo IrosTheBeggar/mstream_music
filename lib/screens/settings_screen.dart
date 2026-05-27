@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
@@ -104,6 +105,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (_) => EqScreen()),
               );
             },
+          ),
+          ListTile(
+            title: Text('Visualizer audio source'),
+            subtitle: Text(
+              _visualizerSourceSubtitle(
+                  SettingsManager().visualizerAudioSource),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<VisualizerAudioSource>(
+              value: SettingsManager().visualizerAudioSource,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: VisualizerAudioSource.values
+                  .map((s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.label),
+                      ))
+                  .toList(),
+              onChanged: (v) => _onVisualizerSourceChanged(v),
+            ),
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Browse'),
@@ -238,6 +261,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Light body with a dark app bar and amber accents — '
             "matches the older shipped theme.";
     }
+  }
+
+  String _visualizerSourceSubtitle(VisualizerAudioSource s) {
+    switch (s) {
+      case VisualizerAudioSource.synthesized:
+        return 'Default. Visualizer reacts to playback timing only — no '
+            'microphone permission required.';
+      case VisualizerAudioSource.real:
+        return 'Visualizer reacts to actual audio output. Requires the '
+            'RECORD_AUDIO permission on Android.';
+    }
+  }
+
+  // Dropdown handler for the visualizer source. Switching to "real"
+  // walks the user through the RECORD_AUDIO permission flow with an
+  // up-front explanation of *why* a music app is asking for the
+  // microphone permission. If the user denies (or cancels), we revert
+  // the setting so the dropdown stays honest.
+  Future<void> _onVisualizerSourceChanged(VisualizerAudioSource? v) async {
+    if (v == null) return;
+    final current = SettingsManager().visualizerAudioSource;
+    if (v == current) return;
+
+    if (v == VisualizerAudioSource.real) {
+      final ok = await _confirmRealAudioPermission();
+      if (!ok) return;
+    }
+
+    await SettingsManager().setVisualizerAudioSource(v);
+    if (mounted) setState(() {});
+  }
+
+  // Two-step: explanation dialog → OS permission prompt. Returns true
+  // only if the user accepted both and the permission is granted.
+  Future<bool> _confirmRealAudioPermission() async {
+    final consented = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('Use real audio?',
+            style: TextStyle(color: VelvetColors.textPrimary)),
+        content: Text(
+          'Real audio mode reads the waveform of music your phone is '
+          'playing so the visualizer can react to it. Android requires '
+          'the RECORD_AUDIO permission for this — the app does not '
+          'record or send any audio anywhere. You can switch back to '
+          'synthesized at any time.',
+          style: TextStyle(color: VelvetColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Continue',
+                style: TextStyle(color: VelvetColors.primary)),
+          ),
+        ],
+      ),
+    );
+    if (consented != true || !mounted) return false;
+
+    final status = await Permission.microphone.request();
+    if (status.isGranted) return true;
+
+    if (mounted) {
+      final permanentlyDenied = status.isPermanentlyDenied;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(permanentlyDenied
+              ? 'Permission permanently denied. Enable it in system settings to use real audio.'
+              : 'Permission denied. Staying on synthesized audio.'),
+          action: permanentlyDenied
+              ? SnackBarAction(
+                  label: 'Open settings',
+                  onPressed: openAppSettings,
+                )
+              : null,
+        ),
+      );
+    }
+    return false;
   }
 
   String _tapBehaviorSubtitle(TapBehavior b) {

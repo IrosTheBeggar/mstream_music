@@ -41,6 +41,29 @@ enum TapBehavior {
   }
 }
 
+/// Where the visualizer screen pulls its frame-driving audio data
+/// from. `synthesized` (the default) generates fake PCM from playback
+/// position — no permissions, works on every platform. `real` taps
+/// the OS audio output via `android.media.audiofx.Visualizer` and
+/// requires `RECORD_AUDIO` (Android refuses to give an app its own
+/// playback waveform without that permission).
+enum VisualizerAudioSource {
+  synthesized,
+  real;
+
+  String get label {
+    switch (this) {
+      case VisualizerAudioSource.synthesized:
+        return 'Synthesized';
+      case VisualizerAudioSource.real:
+        // Keep this short — it lands in the Settings ListTile's
+        // trailing slot which is narrow. The "needs RECORD_AUDIO"
+        // caveat is in the subtitle.
+        return 'Real audio';
+    }
+  }
+}
+
 /// User-tweakable settings persisted to disk as a JSON blob next to
 /// servers.json. Uses path_provider — same dependency the rest of the
 /// app already pulls in — so no SharedPreferences plugin required.
@@ -65,6 +88,12 @@ class SettingsManager {
   // AndroidEqualizer.parameters.
   bool eqEnabled = false;
   List<double> eqBandGains = const [];
+  // Visualizer audio source — synthesized is the default so the
+  // visualizer Just Works without prompting for RECORD_AUDIO. Users
+  // can opt into real audio in Settings; the toggle there walks them
+  // through the permission flow.
+  VisualizerAudioSource visualizerAudioSource =
+      VisualizerAudioSource.synthesized;
 
   late final BehaviorSubject<bool> _albumGridStream =
       BehaviorSubject<bool>.seeded(albumGrid);
@@ -97,6 +126,7 @@ class SettingsManager {
       eqBandGains = rawGains is List
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
           : const [];
+      visualizerAudioSource = _readVisualizerAudioSource(m);
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -113,6 +143,16 @@ class SettingsManager {
       }
     }
     return AppTheme.velvet;
+  }
+
+  VisualizerAudioSource _readVisualizerAudioSource(Map<String, dynamic> m) {
+    final str = m['visualizerAudioSource'];
+    if (str is String) {
+      for (final v in VisualizerAudioSource.values) {
+        if (v.name == str) return v;
+      }
+    }
+    return VisualizerAudioSource.synthesized;
   }
 
   /// Reads tapBehavior, with one-shot migration from the old boolean
@@ -141,6 +181,7 @@ class SettingsManager {
       'theme': appTheme.name,
       'eqEnabled': eqEnabled,
       'eqBandGains': eqBandGains,
+      'visualizerAudioSource': visualizerAudioSource.name,
     }));
   }
 
@@ -187,6 +228,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setVisualizerAudioSource(VisualizerAudioSource v) async {
+    visualizerAudioSource = v;
+    await _save();
+  }
+
   Future<void> resetAll() async {
     TranscodeManager().transcodeOn = false;
     albumGrid = true;
@@ -196,6 +242,7 @@ class SettingsManager {
     appTheme = AppTheme.velvet;
     eqEnabled = false;
     eqBandGains = const [];
+    visualizerAudioSource = VisualizerAudioSource.synthesized;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);

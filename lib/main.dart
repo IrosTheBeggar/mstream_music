@@ -22,6 +22,7 @@ import 'screens/manage_server.dart';
 import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/share_playlist_dialog.dart';
+import 'screens/visualizer_screen.dart';
 
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
@@ -390,14 +391,26 @@ class NowPlaying extends StatelessWidget {
                           ),
                         );
                       }),
-                  IconButton(
-                    icon: Icon(Icons.delete_sweep),
-                    color: VelvetColors.error,
-                    tooltip: 'Clear queue',
-                    onPressed: () {
-                      MediaManager().audioHandler.customAction('clearPlaylist');
-                    },
-                  ),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(
+                      icon: Icon(Icons.auto_awesome),
+                      color: VelvetColors.textSecondary,
+                      tooltip: 'Visualizer',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => VisualizerScreen()),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_sweep),
+                      color: VelvetColors.error,
+                      tooltip: 'Clear queue',
+                      onPressed: () {
+                        MediaManager().audioHandler.customAction('clearPlaylist');
+                      },
+                    ),
+                  ]),
                 ]),
           )),
       Expanded(

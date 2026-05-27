@@ -38,6 +38,8 @@ dependencies:
   # flutter_barcode_scanner: ^2.0.0
   cupertino_icons: ^1.0.8
   path: any
+  # Visualizer: FFI bindings to libprojectM (loaded from jniLibs on Android).
+  ffi: ^2.1.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -58,6 +60,7 @@ flutter:
   assets:
     - graphics/mstream-logo.png
     - graphics/default.png
+    - assets/presets/
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
