@@ -936,6 +936,13 @@ class BottomBar extends StatelessWidget {
                             showModalBottomSheet(
                               context: context,
                               backgroundColor: VelvetColors.surface,
+                              // isScrollControlled lets the sheet
+                              // exceed the default half-screen cap
+                              // — needed because the custom-time
+                              // TextField triggers the soft keyboard
+                              // and the sheet has to grow + resize
+                              // to stay above it.
+                              isScrollControlled: true,
                               builder: (_) => SleepTimerSheet(),
                             );
                           },
