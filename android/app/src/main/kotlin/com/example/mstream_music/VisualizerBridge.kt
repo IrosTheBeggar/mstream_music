@@ -79,7 +79,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 renderThread?.resumeRendering()
                 result.success(null)
             }
-            "startRealAudio" -> handleStartRealAudio(result)
+            "startRealAudio" -> handleStartRealAudio(call, result)
             "stopRealAudio" -> {
                 stopRealAudio()
                 result.success(null)
@@ -92,12 +92,15 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
     }
 
-    private fun handleStartRealAudio(result: MethodChannel.Result) {
+    private fun handleStartRealAudio(call: MethodCall, result: MethodChannel.Result) {
         // Already running? No-op success.
         if (realAudio != null) { result.success(true); return }
         val rt = renderThread
         if (rt == null) { result.success(false); return }
-        val src = RealAudioSource { samples -> rt.enqueuePcm(samples) }
+        // Attach to the app's own player session (passed from Dart).
+        // Session 0 = global output mix is blocked on modern Android.
+        val sessionId = call.argument<Int>("sessionId") ?: 0
+        val src = RealAudioSource(sessionId) { samples -> rt.enqueuePcm(samples) }
         val ok = src.start()
         if (ok) {
             realAudio = src

@@ -24,7 +24,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // frequencies instead of dead air at 15–22 kHz.
     float freq = pow(bar / numBars, 1.6) * 0.30;
     float amp = texture(iChannel0, vec2(freq, 0.25)).x;
-    amp = pow(amp, 1.4) * 1.4;
+    // pow expands contrast; no extra gain (real audio is hot enough
+    // that the old *1.4 pegged the bass bars at full height).
+    amp = pow(amp, 1.5);
 
     // Gap between bars.
     float barWidth = 0.7 / numBars;

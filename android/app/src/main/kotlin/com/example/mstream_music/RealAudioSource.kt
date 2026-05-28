@@ -21,6 +21,11 @@ import android.util.Log
 private const val TAG = "mstream/viz-realaudio"
 
 class RealAudioSource(
+    // Audio session to attach the Visualizer to. Pass the app's own
+    // player session — session 0 (global output mix) is blocked for
+    // normal apps on modern Android (it needs the privileged
+    // CAPTURE_AUDIO_OUTPUT permission).
+    private val sessionId: Int,
     // Called whenever a fresh waveform chunk arrives. The Float array
     // is interleaved stereo (L,R,L,R,…) in [-1, 1]; size = 2 *
     // captureSize. Same shape as what the synthesized source emits.
@@ -36,7 +41,7 @@ class RealAudioSource(
      */
     fun start(): Boolean {
         try {
-            val v = Visualizer(0)
+            val v = Visualizer(sessionId)
             // Largest capture size the device supports (typically 1024).
             val sizeRange = Visualizer.getCaptureSizeRange()
             v.captureSize = sizeRange[1]

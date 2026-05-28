@@ -55,13 +55,21 @@ class VisualizerAudio {
     // revoked or OS quirk), silently fall back to synthesized so
     // the user still sees something.
     if (SettingsManager().visualizerAudioSource == VisualizerAudioSource.real) {
-      final ok = await VisualizerBridge.startRealAudio();
-      if (ok) {
-        _realAttached = true;
-        return;
+      // Attach the Visualizer to THIS app's own audio session, not the
+      // global mix (session 0), which modern Android blocks. The session
+      // id is null until the player has loaded a source, so real audio
+      // only attaches once something has been played.
+      final sessionId = MediaManager().audioHandler.androidAudioSessionId;
+      if (sessionId != null) {
+        final ok = await VisualizerBridge.startRealAudio(sessionId);
+        if (ok) {
+          _realAttached = true;
+          return;
+        }
       }
       // ignore: avoid_print
-      print('VisualizerAudio: real-audio attach failed; using synthesized');
+      print('VisualizerAudio: real-audio attach failed '
+          '(sessionId=$sessionId); using synthesized');
     }
 
     _timer = Timer.periodic(

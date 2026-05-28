@@ -39,7 +39,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col.g = 0.5 + 0.5 * sin(v * 3.14159 + 2.094);
     col.b = 0.5 + 0.5 * sin(v * 3.14159 + 4.188);
 
-    col *= 0.35 + loudness * 3.5;
+    col *= 0.35 + loudness * 2.0;
 
     fragColor = vec4(col, 1.0);
 }

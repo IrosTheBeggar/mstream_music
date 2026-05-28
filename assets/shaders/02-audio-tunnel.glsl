@@ -27,17 +27,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Tunnel rings. log(r) gives even spacing in screen space as
     // they recede; scroll outward over time, faster with bass.
-    float speed = 0.4 + bass * 1.2;
+    float speed = 0.4 + bass * 0.8;
     float ring = fract(log(max(r, 0.001)) * 3.0 - iTime * speed);
     float ringEdge = smoothstep(0.5, 0.42, abs(ring - 0.5));
 
     // Color mix shifts with the mids; spokes pop on treble hits.
     vec3 cold = vec3(0.25, 0.55, 1.0);
     vec3 warm = vec3(1.0, 0.35, 0.55);
-    vec3 col = mix(cold, warm, clamp(mids * 1.5, 0.0, 1.0));
+    vec3 col = mix(cold, warm, clamp(mids, 0.0, 1.0));
 
     float spoke = 0.5 + 0.5 * sin(a * 12.0 + iTime * 0.6);
-    col += pow(spoke, 12.0) * treble * vec3(1.0, 0.8, 0.4) * 3.0;
+    col += pow(spoke, 12.0) * treble * vec3(1.0, 0.8, 0.4) * 1.5;
 
     // Vignette by 1/r so the center stays bright and the edges fall off.
     col *= ringEdge / max(r * 1.4, 0.18);

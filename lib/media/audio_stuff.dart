@@ -36,6 +36,12 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Stream<Duration> get positionStream => _player.positionStream;
 
+  // Android audio session id of the underlying player. The visualizer's
+  // real-audio capture attaches a Visualizer to THIS session — the
+  // global output mix (session 0) is blocked for normal apps on modern
+  // Android. Null until a source has loaded.
+  int? get androidAudioSessionId => _player.androidAudioSessionId;
+
   Server? autoDJServer;
 
   var jsonAutoDJIgnoreList;
