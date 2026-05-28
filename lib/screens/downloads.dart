@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 // import 'package:disk_space/disk_space.dart';
 
+import '../l10n/app_localizations.dart';
 import '../singletons/downloads.dart';
 import '../objects/download_tracker.dart';
 import '../theme/velvet_theme.dart';
 
 class DownloadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
         appBar: AppBar(
-          title: Text("Downloads"),
+          title: Text(l.downloadsTitle),
         ),
         body: SafeArea(top: false, child: Column(children: [
           // Card(
@@ -62,10 +64,9 @@ class DownloadScreen extends StatelessWidget {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  'progress: ' +
+                                  l.downloadProgress(
                                       (dList[index].progress * 100)
-                                          .toStringAsFixed(0) +
-                                      '%',
+                                          .toStringAsFixed(0)),
                                   style: TextStyle(
                                     color: VelvetColors.textPrimary,
                                   ),

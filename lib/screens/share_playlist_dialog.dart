@@ -14,6 +14,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/media.dart';
@@ -23,35 +24,26 @@ import '../theme/velvet_theme.dart';
 /// Entry point. Inspects the queue and either opens the share dialog
 /// or surfaces a blocker dialog explaining why share is unavailable.
 Future<void> showSharePlaylistDialog(BuildContext context) async {
+  final l = AppLocalizations.of(context);
   final analysis = _analyzeQueue();
 
   switch (analysis) {
     case _Empty():
-      await _alert(context, 'Empty queue',
-          'Add songs to the queue before sharing.');
+      await _alert(context, l.shareEmptyTitle, l.shareEmptyBody);
       return;
     case _LocalOnly():
-      await _alert(
-          context,
-          "Can't share this queue",
-          'The queue contains songs that are only on this device (not '
-              'on any server). Sharing only works when every song in '
-              'the queue comes from a single server.');
+      await _alert(context, l.shareBlockedTitle, l.shareLocalOnlyBody);
       return;
     case _MultiServer(:final serverNames):
       await _alert(
           context,
-          "Can't share this queue",
-          'The queue mixes songs from ${serverNames.length} servers '
-              '(${serverNames.join(", ")}). Sharing only works when '
-              'every song comes from a single server.');
+          l.shareBlockedTitle,
+          l.shareMultiServerBody(
+              serverNames.length, serverNames.join(", ")));
       return;
     case _ServerGone(:final serverName):
       await _alert(
-          context,
-          "Can't share this queue",
-          'The server "$serverName" is no longer in your server list. '
-              'Re-add it to share its queue.');
+          context, l.shareBlockedTitle, l.shareServerGoneBody(serverName));
       return;
     case _Shareable(:final server, :final filepaths):
       await showDialog<void>(
@@ -124,7 +116,7 @@ Future<void> _alert(BuildContext context, String title, String body) {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: Text('OK'),
+          child: Text(AppLocalizations.of(ctx).ok),
         ),
       ],
     ),
@@ -162,25 +154,26 @@ class _ShareDialogState extends State<_ShareDialog> {
   }
 
   Widget _buildForm() {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text('Share Playlist'),
+      title: Text(l.shareTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${widget.filepaths.length} ${widget.filepaths.length == 1 ? "song" : "songs"} from ${widget.server.url}',
+            l.shareSongCount(widget.filepaths.length, widget.server.url),
             style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
           ),
           SizedBox(height: 16),
           DropdownButtonFormField<int?>(
-            decoration: InputDecoration(labelText: 'Link expires'),
+            decoration: InputDecoration(labelText: l.shareLinkExpires),
             initialValue: _expiresDays,
-            items: const [
-              DropdownMenuItem(value: null, child: Text('Never')),
-              DropdownMenuItem(value: 1, child: Text('After 1 day')),
-              DropdownMenuItem(value: 7, child: Text('After 7 days')),
-              DropdownMenuItem(value: 30, child: Text('After 30 days')),
+            items: [
+              DropdownMenuItem(value: null, child: Text(l.shareExpireNever)),
+              DropdownMenuItem(value: 1, child: Text(l.shareExpire1Day)),
+              DropdownMenuItem(value: 7, child: Text(l.shareExpire7Days)),
+              DropdownMenuItem(value: 30, child: Text(l.shareExpire30Days)),
             ],
             onChanged: (v) => setState(() => _expiresDays = v),
           ),
@@ -193,7 +186,7 @@ class _ShareDialogState extends State<_ShareDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: Text('Cancel'),
+          child: Text(l.cancel),
         ),
         TextButton(
           onPressed: _busy ? null : _doShare,
@@ -203,21 +196,22 @@ class _ShareDialogState extends State<_ShareDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text('Share'),
+              : Text(l.shareAction),
         ),
       ],
     );
   }
 
   Widget _buildResult() {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text('Playlist shared'),
+      title: Text(l.shareDoneTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Anyone with this link can play the queue:',
+            l.shareDoneBody,
             style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
           ),
           SizedBox(height: 12),
@@ -235,15 +229,15 @@ class _ShareDialogState extends State<_ShareDialog> {
             await Clipboard.setData(ClipboardData(text: _shareUrl!));
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Copied to clipboard')),
+                SnackBar(content: Text(l.copiedToClipboard)),
               );
             }
           },
-          child: Text('Copy'),
+          child: Text(l.copy),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Done'),
+          child: Text(l.done),
         ),
       ],
     );
