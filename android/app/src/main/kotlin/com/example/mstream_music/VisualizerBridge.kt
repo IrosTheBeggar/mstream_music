@@ -34,7 +34,9 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     // JNI methods — implemented in visualizer_bridge.cpp.
-    private external fun nativeInit(surface: Surface, width: Int, height: Int): Long
+    // engineKind: 0 = ProjectM (Milkdrop), 1 = Shader (Shadertoy fragment shaders).
+    private external fun nativeInit(
+        surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
     private external fun nativeLoadPresetData(
@@ -46,6 +48,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
     private var renderThread: RenderThread? = null
+    private var realAudio: RealAudioSource? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         registry = binding.textureRegistry
@@ -76,12 +79,38 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 renderThread?.resumeRendering()
                 result.success(null)
             }
+            "startRealAudio" -> handleStartRealAudio(result)
+            "stopRealAudio" -> {
+                stopRealAudio()
+                result.success(null)
+            }
             "dispose" -> {
                 teardown()
                 result.success(null)
             }
             else -> result.notImplemented()
         }
+    }
+
+    private fun handleStartRealAudio(result: MethodChannel.Result) {
+        // Already running? No-op success.
+        if (realAudio != null) { result.success(true); return }
+        val rt = renderThread
+        if (rt == null) { result.success(false); return }
+        val src = RealAudioSource { samples -> rt.enqueuePcm(samples) }
+        val ok = src.start()
+        if (ok) {
+            realAudio = src
+            Log.i(TAG, "real audio attached")
+        } else {
+            Log.w(TAG, "real audio failed to attach — Dart should fall back to synthesized")
+        }
+        result.success(ok)
+    }
+
+    private fun stopRealAudio() {
+        realAudio?.stop()
+        realAudio = null
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {
@@ -98,6 +127,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private fun handleCreate(call: MethodCall, result: MethodChannel.Result) {
         val width = (call.argument<Int>("width") ?: 0).coerceAtLeast(1)
         val height = (call.argument<Int>("height") ?: 0).coerceAtLeast(1)
+        val engineKind = call.argument<Int>("engine") ?: 0 // default ProjectM
         val reg = registry
         if (reg == null) {
             result.error("not_attached", "TextureRegistry unavailable", null)
@@ -115,6 +145,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             surface = surface,
             width = width,
             height = height,
+            engineKind = engineKind,
             initFn = ::nativeInit,
             renderFn = ::nativeRenderFrame,
             addPcmFn = ::nativeAddPcm,
@@ -125,7 +156,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         renderThread = thread
 
         result.success(entry.id())
-        Log.i(TAG, "create: textureId=${entry.id()} ${width}x${height}")
+        Log.i(TAG, "create: textureId=${entry.id()} ${width}x${height} engine=$engineKind")
     }
 
     private fun handleAddPcm(call: MethodCall, result: MethodChannel.Result) {
@@ -143,6 +174,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     private fun teardown() {
+        stopRealAudio()
         renderThread?.shutdown()
         renderThread = null
         textureEntry?.release()
@@ -160,7 +192,8 @@ private class RenderThread(
     private val surface: Surface,
     private val width: Int,
     private val height: Int,
-    private val initFn: (Surface, Int, Int) -> Long,
+    private val engineKind: Int,
+    private val initFn: (Surface, Int, Int, Int) -> Long,
     private val renderFn: (Long) -> Unit,
     private val addPcmFn: (Long, FloatArray) -> Unit,
     private val disposeFn: (Long) -> Unit,
@@ -211,7 +244,7 @@ private class RenderThread(
     }
 
     override fun run() {
-        val ctx = initFn(surface, width, height)
+        val ctx = initFn(surface, width, height, engineKind)
         if (ctx == 0L) {
             Log.e(TAG, "nativeInit returned 0 — render thread exiting")
             return

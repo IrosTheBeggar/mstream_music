@@ -9,14 +9,25 @@ import 'package:flutter/services.dart';
 class VisualizerBridge {
   static const _channel = MethodChannel('mstream/visualizer');
 
-  /// Asks Kotlin to allocate a SurfaceTexture + EGL context + projectM
-  /// handle at [width] × [height]. Returns the Flutter texture id (to
-  /// hand to a [Texture] widget) on success, or `null` on failure.
-  static Future<int?> create({required int width, required int height}) async {
+  /// Engine identifiers — matches the enum in native/visualizer_bridge.cpp.
+  static const int engineProjectM = 0;
+  static const int engineShader = 1;
+
+  /// Asks Kotlin to allocate a SurfaceTexture + EGL context + visualizer
+  /// engine at [width] × [height]. [engine] picks which renderer:
+  /// `engineProjectM` (default, Milkdrop) or `engineShader` (Shadertoy
+  /// fragment shaders). Returns the Flutter texture id (to hand to a
+  /// [Texture] widget) on success, or `null` on failure.
+  static Future<int?> create({
+    required int width,
+    required int height,
+    int engine = engineProjectM,
+  }) async {
     try {
       final id = await _channel.invokeMethod<int>('create', {
         'width': width,
         'height': height,
+        'engine': engine,
       });
       return id;
     } on PlatformException catch (e) {
@@ -71,6 +82,32 @@ class VisualizerBridge {
   static Future<void> resume() async {
     try {
       await _channel.invokeMethod('resume');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
+  /// Asks Kotlin to attach an `AndroidVisualizer` to audio session 0
+  /// and start streaming waveform samples into the render thread's
+  /// PCM queue. Returns true on success, false if Visualizer creation
+  /// failed (commonly because RECORD_AUDIO was revoked or the OS
+  /// doesn't allow session-0 capture). Callers should fall back to
+  /// synthesized PCM on false.
+  static Future<bool> startRealAudio() async {
+    try {
+      final ok = await _channel.invokeMethod<bool>('startRealAudio');
+      return ok == true;
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('VisualizerBridge.startRealAudio failed: ${e.code} ${e.message}');
+      return false;
+    }
+  }
+
+  /// Stops the AndroidVisualizer if it's attached.
+  static Future<void> stopRealAudio() async {
+    try {
+      await _channel.invokeMethod('stopRealAudio');
     } on PlatformException {
       // ignore
     }

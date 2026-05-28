@@ -41,6 +41,35 @@ enum TapBehavior {
   }
 }
 
+/// Which rendering engine the visualizer screen uses. Milkdrop is the
+/// projectM Cream-of-the-Crop pack; Shadertoy is our Shadertoy-style
+/// fragment shader catalog (drop .glsl files in assets/shaders/ to
+/// extend). Persisted so the choice survives app restart.
+enum VisualizerEngine {
+  milkdrop,
+  shader;
+
+  String get label {
+    switch (this) {
+      case VisualizerEngine.milkdrop:
+        return 'Milkdrop';
+      case VisualizerEngine.shader:
+        return 'Shaders';
+    }
+  }
+
+  /// Wire kind passed across the MethodChannel to the native bridge.
+  /// Must match the enum in visualizer_bridge.cpp.
+  int get nativeKind {
+    switch (this) {
+      case VisualizerEngine.milkdrop:
+        return 0;
+      case VisualizerEngine.shader:
+        return 1;
+    }
+  }
+}
+
 /// Where the visualizer screen pulls its frame-driving audio data
 /// from. `synthesized` (the default) generates fake PCM from playback
 /// position — no permissions, works on every platform. `real` taps
@@ -94,6 +123,10 @@ class SettingsManager {
   // through the permission flow.
   VisualizerAudioSource visualizerAudioSource =
       VisualizerAudioSource.synthesized;
+  // Visualizer rendering engine. Milkdrop is the default — it's the
+  // richer engine and the one we shipped first. Shader engine is the
+  // lighter alternative driven by the bundled .glsl catalog.
+  VisualizerEngine visualizerEngine = VisualizerEngine.milkdrop;
 
   late final BehaviorSubject<bool> _albumGridStream =
       BehaviorSubject<bool>.seeded(albumGrid);
@@ -127,6 +160,7 @@ class SettingsManager {
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
+      visualizerEngine = _readVisualizerEngine(m);
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -153,6 +187,16 @@ class SettingsManager {
       }
     }
     return VisualizerAudioSource.synthesized;
+  }
+
+  VisualizerEngine _readVisualizerEngine(Map<String, dynamic> m) {
+    final str = m['visualizerEngine'];
+    if (str is String) {
+      for (final v in VisualizerEngine.values) {
+        if (v.name == str) return v;
+      }
+    }
+    return VisualizerEngine.milkdrop;
   }
 
   /// Reads tapBehavior, with one-shot migration from the old boolean
@@ -182,6 +226,7 @@ class SettingsManager {
       'eqEnabled': eqEnabled,
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
+      'visualizerEngine': visualizerEngine.name,
     }));
   }
 
@@ -233,6 +278,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setVisualizerEngine(VisualizerEngine v) async {
+    visualizerEngine = v;
+    await _save();
+  }
+
   Future<void> resetAll() async {
     TranscodeManager().transcodeOn = false;
     albumGrid = true;
@@ -243,6 +293,7 @@ class SettingsManager {
     eqEnabled = false;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
+    visualizerEngine = VisualizerEngine.milkdrop;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);

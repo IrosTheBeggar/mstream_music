@@ -1,10 +1,13 @@
-// JNI bridge between Kotlin's VisualizerBridge and libprojectM-4.so.
+// JNI bridge for the visualizer. Owns the EGL context + window
+// surface; delegates the actual rendering to an Engine instance
+// chosen at init time.
 //
-// The Kotlin side owns the Flutter SurfaceTexture and the render
-// thread; this C++ owns the EGL context and the projectm_handle.
-// projectM rendering must happen on the same thread that created
-// the GL context, so the render thread invariably runs Kotlin →
-// JNI → here → projectM.
+// Engines:
+//   0 → ProjectMEngine (Milkdrop, default)
+//   1 → ShaderEngine   (Shadertoy fragment shaders)
+//
+// All native methods run on the Kotlin RenderThread; the EGL context
+// is made current at init and again defensively in each JNI call.
 //
 // JNI naming convention: function names mirror the Kotlin class
 // 'com.example.mstream_music.VisualizerBridge'. Underscore in the
@@ -16,8 +19,12 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES3/gl3.h>
-#include <projectM-4/projectM.h>
 #include <cstdlib>
+#include <memory>
+
+#include "engine.h"
+#include "projectm_engine.h"
+#include "shader_engine.h"
 
 #define LOG_TAG "mstream/viz-bridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -25,12 +32,15 @@
 
 namespace {
 
+constexpr jint kEngineProjectM = 0;
+constexpr jint kEngineShader   = 1;
+
 struct BridgeContext {
     EGLDisplay display = EGL_NO_DISPLAY;
     EGLContext context = EGL_NO_CONTEXT;
     EGLSurface surface = EGL_NO_SURFACE;
     ANativeWindow* window = nullptr;
-    projectm_handle pm = nullptr;
+    std::unique_ptr<Engine> engine;
     int width = 0;
     int height = 0;
 };
@@ -104,6 +114,16 @@ void teardownEgl(BridgeContext* ctx) {
     ctx->context = EGL_NO_CONTEXT;
 }
 
+std::unique_ptr<Engine> makeEngine(jint kind) {
+    switch (kind) {
+        case kEngineShader:
+            return std::make_unique<ShaderEngine>();
+        case kEngineProjectM:
+        default:
+            return std::make_unique<ProjectMEngine>();
+    }
+}
+
 } // namespace
 
 extern "C" {
@@ -111,7 +131,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeInit(
         JNIEnv* env, jobject /*thiz*/, jobject surfaceObj,
-        jint width, jint height) {
+        jint width, jint height, jint engineKind) {
 
     auto* ctx = new BridgeContext();
     ctx->width = width;
@@ -132,21 +152,18 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeInit(
         return 0;
     }
 
-    ctx->pm = projectm_create();
-    if (!ctx->pm) {
-        LOGE("projectm_create failed");
+    ctx->engine = makeEngine(engineKind);
+    if (!ctx->engine || !ctx->engine->init(width, height)) {
+        LOGE("engine init failed (kind=%d)", engineKind);
+        ctx->engine.reset();
         teardownEgl(ctx);
         ANativeWindow_release(ctx->window);
         delete ctx;
         return 0;
     }
-    projectm_set_window_size(ctx->pm, width, height);
-    projectm_set_fps(ctx->pm, 60);
-    projectm_set_preset_duration(ctx->pm, 30.0);
-    projectm_set_mesh_size(ctx->pm, 48, 36);
 
-    LOGI("nativeInit ok: %dx%d ctx=%p pm=%p", width, height, ctx,
-         (void*)ctx->pm);
+    LOGI("nativeInit ok: %dx%d ctx=%p engine=%d", width, height, ctx,
+         engineKind);
     return reinterpret_cast<jlong>(ctx);
 }
 
@@ -154,12 +171,12 @@ JNIEXPORT void JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrame(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
-    if (!ctx || !ctx->pm) return;
+    if (!ctx || !ctx->engine) return;
     // Context should already be current on this thread (set up at
     // init), but re-make-current cheaply guards against any other
     // GL caller stealing it.
     eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
-    projectm_opengl_render_frame(ctx->pm);
+    ctx->engine->renderFrame();
     eglSwapBuffers(ctx->display, ctx->surface);
 }
 
@@ -168,15 +185,13 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeAddPcm(
         JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
         jfloatArray samplesArray) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
-    if (!ctx || !ctx->pm || !samplesArray) return;
+    if (!ctx || !ctx->engine || !samplesArray) return;
     jsize len = env->GetArrayLength(samplesArray);
     if (len <= 0) return;
     jfloat* data = env->GetFloatArrayElements(samplesArray, nullptr);
     if (!data) return;
-    // Treat the input as interleaved stereo; count is per-channel frames.
-    projectm_pcm_add_float(ctx->pm, data,
-                            static_cast<unsigned int>(len / 2),
-                            PROJECTM_STEREO);
+    // Interleaved stereo; frameCount is number of L/R pairs.
+    ctx->engine->addPcm(data, static_cast<std::size_t>(len / 2));
     env->ReleaseFloatArrayElements(samplesArray, data, JNI_ABORT);
 }
 
@@ -185,13 +200,14 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeLoadPresetData(
         JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
         jstring presetData, jboolean smoothTransition) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
-    if (!ctx || !ctx->pm || !presetData) return;
+    if (!ctx || !ctx->engine || !presetData) return;
     const char* data = env->GetStringUTFChars(presetData, nullptr);
     if (!data) return;
     eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
-    projectm_load_preset_data(ctx->pm, data, smoothTransition);
+    ctx->engine->loadPreset(data, smoothTransition);
+    LOGI("loaded preset (%zu bytes)",
+         static_cast<size_t>(env->GetStringUTFLength(presetData)));
     env->ReleaseStringUTFChars(presetData, data);
-    LOGI("loaded preset (%zu bytes)", static_cast<size_t>(env->GetStringUTFLength(presetData)));
 }
 
 JNIEXPORT void JNICALL
@@ -199,10 +215,10 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeDispose(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
     if (!ctx) return;
-    if (ctx->pm) {
-        projectm_destroy(ctx->pm);
-        ctx->pm = nullptr;
-    }
+    // Engine destructor needs the GL context current to release GL
+    // resources cleanly.
+    eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
+    ctx->engine.reset();
     teardownEgl(ctx);
     if (ctx->window) {
         ANativeWindow_release(ctx->window);
