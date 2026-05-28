@@ -66,7 +66,7 @@ Future<void> main() async {
     stream: SettingsManager().themeStream,
     initialData: SettingsManager().appTheme,
     builder: (context, snapshot) {
-      final palette = paletteFor(snapshot.data ?? AppTheme.velvet);
+      final palette = paletteFor(snapshot.data ?? AppTheme.dark);
       VelvetColors.setActive(palette);
       return MaterialApp(
         title: 'mStream Music',

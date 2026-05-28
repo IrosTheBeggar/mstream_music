@@ -110,7 +110,7 @@ class SettingsManager {
   // items. Single knob driving both behaviors.
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
-  AppTheme appTheme = AppTheme.velvet;
+  AppTheme appTheme = AppTheme.dark;
   // Android-only equalizer state. Empty gains list means "apply nothing"
   // (device defaults / flat). Gains are in dB; the valid range and band
   // count are device-dependent and discovered at runtime via
@@ -176,7 +176,7 @@ class SettingsManager {
         if (t.name == str) return t;
       }
     }
-    return AppTheme.velvet;
+    return AppTheme.dark;
   }
 
   VisualizerAudioSource _readVisualizerAudioSource(Map<String, dynamic> m) {
@@ -289,7 +289,7 @@ class SettingsManager {
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;
-    appTheme = AppTheme.velvet;
+    appTheme = AppTheme.dark;
     eqEnabled = false;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;

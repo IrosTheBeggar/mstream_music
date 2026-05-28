@@ -175,7 +175,7 @@ VelvetPalette paletteFor(AppTheme t) {
 class VelvetColors {
   VelvetColors._();
 
-  static VelvetPalette _active = _velvetPalette;
+  static VelvetPalette _active = _darkPalette;
 
   /// Re-point the active palette. Call this *before* MaterialApp
   /// rebuilds so the new theme and direct VelvetColors lookups stay
