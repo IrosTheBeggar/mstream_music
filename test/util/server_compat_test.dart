@@ -17,23 +17,7 @@ void main() {
           isFalse);
     });
 
-    test('rejects a server exposing the incompatible-only endpoint', () async {
-      final client = MockClient((req) async {
-        if (req.url.path == '/api/') {
-          return http.Response('{"server":"6.7.0","apiVersions":["1"]}', 200);
-        }
-        if (req.url.path == '/api/v1/ping/public') {
-          return http.Response(
-              '{"status":"ok","instanceId":"abc","hasUsers":true}', 200);
-        }
-        return http.Response('not found', 404);
-      });
-      expect(await isServerSupported('https://x.example.com', client: client),
-          isFalse);
-    });
-
-    test('accepts a standard server (version present, no extra endpoint)',
-        () async {
+    test('accepts a standard server', () async {
       final client = MockClient((req) async {
         if (req.url.path == '/api/') {
           return http.Response('{"server":"6.7.0","apiVersions":["1"]}', 200);
@@ -42,6 +26,27 @@ void main() {
       });
       expect(await isServerSupported('https://x.example.com', client: client),
           isTrue);
+    });
+
+    // Regression: an earlier version also probed /api/v1/ping/public,
+    // which doesn't exist on a standard server and falls through to the
+    // auth wall — returning a spurious 401 on every Test Connection,
+    // Save, and app launch. The probe must touch ONLY the public /api/.
+    test('only probes the public /api/ endpoint (no auth-walled paths)',
+        () async {
+      final requested = <String>[];
+      final client = MockClient((req) async {
+        requested.add(req.url.path);
+        if (req.url.path == '/api/') {
+          return http.Response('{"server":"6.7.0","apiVersions":["1"]}', 200);
+        }
+        // Mimic the server's auth wall for any authenticated /api/v1 path.
+        return http.Response('{"error":"Authentication Error"}', 401);
+      });
+      final supported =
+          await isServerSupported('https://x.example.com', client: client);
+      expect(supported, isTrue);
+      expect(requested, ['/api/']);
     });
 
     test('treats a network failure as supported (fail open)', () async {
