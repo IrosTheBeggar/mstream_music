@@ -87,15 +87,17 @@ class VisualizerBridge {
     }
   }
 
-  /// Asks Kotlin to attach an `AndroidVisualizer` to audio session 0
-  /// and start streaming waveform samples into the render thread's
-  /// PCM queue. Returns true on success, false if Visualizer creation
-  /// failed (commonly because RECORD_AUDIO was revoked or the OS
-  /// doesn't allow session-0 capture). Callers should fall back to
-  /// synthesized PCM on false.
-  static Future<bool> startRealAudio() async {
+  /// Asks Kotlin to attach an `AndroidVisualizer` to the given audio
+  /// session and stream waveform samples into the render thread's PCM
+  /// queue. [sessionId] should be the app's own player session — the
+  /// global mix (session 0) is blocked for normal apps on modern
+  /// Android. Returns true on success, false if Visualizer creation
+  /// failed (RECORD_AUDIO revoked, OS restriction, etc.); callers
+  /// should fall back to synthesized PCM on false.
+  static Future<bool> startRealAudio(int sessionId) async {
     try {
-      final ok = await _channel.invokeMethod<bool>('startRealAudio');
+      final ok = await _channel.invokeMethod<bool>(
+          'startRealAudio', {'sessionId': sessionId});
       return ok == true;
     } on PlatformException catch (e) {
       // ignore: avoid_print
