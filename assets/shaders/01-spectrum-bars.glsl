@@ -17,7 +17,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Skew the frequency lookup toward the low end where most music
     // energy lives. Pure linear gives a top-heavy result that looks
     // like nothing's happening on the bass.
-    float freq = pow(bar / numBars, 1.6);
+    //
+    // Note: AudioTexture has 512 bins, so at 44.1 kHz each bin ≈ 43 Hz
+    // and the useful musical range tops out around x = 0.3 (≈ 12 kHz).
+    // The 0.30 max cap below keeps the rightmost bars in lively
+    // frequencies instead of dead air at 15–22 kHz.
+    float freq = pow(bar / numBars, 1.6) * 0.30;
     float amp = texture(iChannel0, vec2(freq, 0.25)).x;
     amp = pow(amp, 1.4) * 1.4;
 

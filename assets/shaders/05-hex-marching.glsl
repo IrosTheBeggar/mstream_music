@@ -30,11 +30,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // mstream addition: brightness pulses on bass hits. Sample a few
   // low FFT bins from the music channel (iChannel1) and use them as
   // a multiplier on the otherwise time-only output.
+  // AudioTexture has 512 bins (~43 Hz/bin @ 44.1 kHz); these 4 samples
+  // cover bins ~2–7 ≈ 85–300 Hz, the kick/sub-bass range.
   float bass = 0.0;
   for (int i = 0; i < 4; i++) {
-    bass += texture(iChannel1, vec2(float(i) * 0.015 + 0.005, 0.25)).x;
+    bass += texture(iChannel1, vec2(float(i) * 0.004 + 0.004, 0.25)).x;
   }
-  bass = clamp(bass * 0.5, 0.0, 1.0);
+  bass = clamp(bass * 0.7, 0.0, 1.0);
   col *= 1.0 + bass * 0.8;
 
   col = sqrt(col);

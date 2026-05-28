@@ -15,9 +15,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Sample three bands. Frequencies are normalized [0..1] into the
     // FFT row of iChannel0.
-    float bass   = texture(iChannel0, vec2(0.04, 0.25)).x;
-    float mids   = texture(iChannel0, vec2(0.30, 0.25)).x;
-    float treble = texture(iChannel0, vec2(0.70, 0.25)).x;
+    // AudioTexture has 512 bins, so at 44.1 kHz each bin ≈ 43 Hz:
+    //   x=0.006 → bin 3  → ~130 Hz   (kick / sub bass)
+    //   x=0.06  → bin 31 → ~1.3 kHz  (vocal body / lead)
+    //   x=0.15  → bin 77 → ~3.3 kHz  (presence / cymbal attack)
+    // Previously these were at 0.04 / 0.30 / 0.70 which translated to
+    // low-mid / treble / dead air respectively — fixed.
+    float bass   = texture(iChannel0, vec2(0.006, 0.25)).x;
+    float mids   = texture(iChannel0, vec2(0.060, 0.25)).x;
+    float treble = texture(iChannel0, vec2(0.150, 0.25)).x;
 
     // Tunnel rings. log(r) gives even spacing in screen space as
     // they recede; scroll outward over time, faster with bass.

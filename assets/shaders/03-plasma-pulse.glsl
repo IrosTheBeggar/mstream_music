@@ -14,9 +14,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     p.x *= iResolution.x / iResolution.y;
 
     // Average across 16 FFT bins for an overall loudness signal.
+    // AudioTexture has 512 bins; most music energy lives below ~6 kHz
+    // (x = 0.14 in the texture). Spreading samples across the full
+    // x = [0, 1] range puts half the samples in near-silent 11–22 kHz
+    // bins which drags the average down. Cap to x = 0.30.
     float loudness = 0.0;
     for (int i = 0; i < 16; ++i) {
-        float f = (float(i) + 0.5) / 16.0;
+        float f = ((float(i) + 0.5) / 16.0) * 0.30;
         loudness += texture(iChannel0, vec2(f, 0.25)).x;
     }
     loudness *= (1.0 / 16.0);
