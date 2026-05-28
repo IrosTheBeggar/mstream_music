@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../objects/playlist.dart';
 import '../singletons/playlists.dart';
 import '../theme/velvet_theme.dart';
@@ -7,13 +8,14 @@ import '../theme/velvet_theme.dart';
 class PlaylistsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text('Playlists')),
+      appBar: AppBar(title: Text(l.playlistsTitle)),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: VelvetColors.primary,
         foregroundColor: Colors.white,
         icon: Icon(Icons.add),
-        label: Text('New playlist'),
+        label: Text(l.playlistsNew),
         onPressed: () => _showCreateDialog(context),
       ),
       body: StreamBuilder<List<Playlist>>(
@@ -48,7 +50,7 @@ class PlaylistsScreen extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: VelvetColors.textPrimary)),
                 subtitle: Text(
-                  '${p.entries.length} track${p.entries.length == 1 ? '' : 's'}',
+                  l.trackCount(p.entries.length),
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12),
                 ),
@@ -65,9 +67,9 @@ class PlaylistsScreen extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => [
-                    PopupMenuItem(value: 'play', child: Text('Play')),
-                    PopupMenuItem(value: 'rename', child: Text('Rename')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    PopupMenuItem(value: 'play', child: Text(l.play)),
+                    PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                    PopupMenuItem(value: 'delete', child: Text(l.delete)),
                   ],
                 ),
                 onTap: () {
@@ -87,6 +89,7 @@ class PlaylistsScreen extends StatelessWidget {
   }
 
   Widget _emptyState(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 32),
@@ -96,16 +99,14 @@ class PlaylistsScreen extends StatelessWidget {
             Icon(Icons.queue_music,
                 size: 64, color: VelvetColors.textTertiary),
             SizedBox(height: 16),
-            Text('No playlists yet',
+            Text(l.playlistsEmptyTitle,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
             Text(
-              'Create one with the New playlist button, then '
-              'use the queue\'s Add-to-playlist swipe action to '
-              'fill it.',
+              l.playlistsEmptyBody,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: VelvetColors.textSecondary,
@@ -119,26 +120,27 @@ class PlaylistsScreen extends StatelessWidget {
   }
 
   Future<void> _showCreateDialog(BuildContext context) async {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('New playlist'),
+        title: Text(l.playlistsNew),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: InputDecoration(hintText: 'Name'),
+          decoration: InputDecoration(hintText: l.playlistNameHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text('Create'),
+            child: Text(l.create),
           ),
         ],
       ),
@@ -150,12 +152,13 @@ class PlaylistsScreen extends StatelessWidget {
 
   Future<void> _showRenameDialog(
       BuildContext context, int index, String currentName) async {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController(text: currentName);
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Rename playlist'),
+        title: Text(l.playlistsRename),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -163,12 +166,12 @@ class PlaylistsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text('Rename'),
+            child: Text(l.rename),
           ),
         ],
       ),
@@ -186,6 +189,7 @@ class PlaylistDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: StreamBuilder<List<Playlist>>(
@@ -193,14 +197,14 @@ class PlaylistDetailScreen extends StatelessWidget {
           initialData: PlaylistManager().playlists,
           builder: (context, snapshot) {
             final list = snapshot.data ?? const <Playlist>[];
-            if (playlistIndex >= list.length) return Text('Playlist');
+            if (playlistIndex >= list.length) return Text(l.playlistFallbackTitle);
             return Text(list[playlistIndex].name);
           },
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.play_arrow),
-            tooltip: 'Play all',
+            tooltip: l.playAll,
             onPressed: () =>
                 PlaylistManager().playPlaylist(playlistIndex),
           ),
@@ -216,7 +220,7 @@ class PlaylistDetailScreen extends StatelessWidget {
           if (p.entries.isEmpty) {
             return Center(
               child: Text(
-                'Playlist is empty.\nAdd tracks via the queue.',
+                l.playlistEmptyDetail,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: VelvetColors.textSecondary, fontSize: 14),

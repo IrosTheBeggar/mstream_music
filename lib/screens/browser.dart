@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/downloads.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
+import '../l10n/app_localizations.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
@@ -315,6 +316,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     return Container(
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -325,24 +327,24 @@ class Browser extends StatelessWidget {
               SlidableAction(
                   backgroundColor: Colors.redAccent,
                   icon: Icons.remove_circle,
-                  label: 'Delete',
+                  label: l.delete,
                   onPressed: (context) {
                     showDialog(
                         context: c,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                              title: Text("Confirm Delete Playlist"),
+                              title: Text(l.browserConfirmDeletePlaylist),
                               content: b[i].getText(),
                               actions: <Widget>[
                                 TextButton(
-                                  child: Text("Go Back"),
+                                  child: Text(l.goBack),
                                   onPressed: () {
                                     Navigator.of(context).pop();
                                   },
                                 ),
                                 TextButton(
                                     child: Text(
-                                      "Delete",
+                                      l.delete,
                                       style: TextStyle(color: Colors.red),
                                     ),
                                     onPressed: () {
@@ -378,6 +380,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
@@ -391,24 +394,24 @@ class Browser extends StatelessWidget {
                 SlidableAction(
                     backgroundColor: Colors.red,
                     icon: Icons.delete,
-                    label: 'Delete',
+                    label: l.delete,
                     onPressed: (context) {
                       showDialog(
                           context: c,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                                title: Text("Confirm Delete Folder"),
+                                title: Text(l.browserConfirmDeleteFolder),
                                 content: b[i].getText(),
                                 actions: <Widget>[
                                   TextButton(
-                                    child: Text("Go Back"),
+                                    child: Text(l.goBack),
                                     onPressed: () {
                                       Navigator.of(context).pop();
                                     },
                                   ),
                                   TextButton(
                                       child: Text(
-                                        "Delete",
+                                        l.delete,
                                         style: TextStyle(color: Colors.red),
                                       ),
                                       onPressed: () {
@@ -443,6 +446,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
@@ -454,7 +458,7 @@ class Browser extends StatelessWidget {
                 SlidableAction(
                     backgroundColor: Colors.red,
                     icon: Icons.delete,
-                    label: 'Delete',
+                    label: l.delete,
                     onPressed: (context) {
                       FileExplorer().deleteFile(b[i].data!, b[i].server);
                     })
@@ -482,6 +486,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     // Below the letter-strip threshold there's no strip math to keep
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
@@ -496,7 +501,7 @@ class Browser extends StatelessWidget {
                 SlidableAction(
                     backgroundColor: Colors.blueGrey,
                     icon: Icons.add_to_queue,
-                    label: 'Add All',
+                    label: l.addAll,
                     onPressed: (context) {
                       ApiManager().getRecursiveFiles(b[i].data!,
                           useThisServer: b[i].server);
@@ -581,6 +586,7 @@ class Browser extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
       Material(
         color: VelvetColors.surface,
@@ -600,7 +606,7 @@ class Browser extends StatelessWidget {
                       IconButton(
                           icon: Icon(Icons.keyboard_arrow_left,
                               color: VelvetColors.textSecondary),
-                          tooltip: 'Go Back',
+                          tooltip: l.goBack,
                           onPressed: () {
                             BrowserManager().popBrowser();
                           }),
@@ -610,7 +616,7 @@ class Browser extends StatelessWidget {
                               Icons.download_sharp,
                               color: VelvetColors.textSecondary,
                             ),
-                            tooltip: 'Download',
+                            tooltip: l.download,
                             onPressed: () {
                               int count = 0;
 
@@ -634,15 +640,15 @@ class Browser extends StatelessWidget {
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content:
-                                          Text('$count downloads started')));
+                                      content: Text(
+                                          l.browserDownloadsStarted(count))));
                             }),
                         IconButton(
                             icon: Icon(
                               Icons.library_add,
                               color: VelvetColors.textSecondary,
                             ),
-                            tooltip: 'Add All',
+                            tooltip: l.addAll,
                             onPressed: () {
                               int n = 0;
 
@@ -669,8 +675,8 @@ class Browser extends StatelessWidget {
                               if (n > 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text(n.toString() +
-                                            " songs added to queue")));
+                                        content:
+                                            Text(l.browserSongsAdded(n))));
                               }
                             })
                       ])
@@ -693,7 +699,7 @@ class Browser extends StatelessWidget {
                                 labelStyle: TextStyle(
                                   color: VelvetColors.textSecondary,
                                 ),
-                                hintText: 'Search Database',
+                                hintText: l.browserSearchHint,
                               )))
                     ]
                   ]);

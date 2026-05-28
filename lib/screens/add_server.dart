@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
@@ -16,7 +17,7 @@ class AddServerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text("Add Server"),
+          title: Text(AppLocalizations.of(context).addServerTitle),
         ),
         body: MyCustomForm());
   }
@@ -31,7 +32,7 @@ class EditServerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text("Edit Server"),
+          title: Text(AppLocalizations.of(context).editServerTitle),
         ),
         body: MyCustomForm(editThisServer: editThisServer));
   }
@@ -120,9 +121,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   // failure, so it falsely reported a 401 on servers that require
   // authentication even though Save (which logs in) worked fine.
   Future<void> _testConnection() async {
+    final l = AppLocalizations.of(context);
     if (_urlCtrl.text.trim().isEmpty) {
       setState(() {
-        _testResult = 'Enter a server URL first.';
+        _testResult = l.testEnterUrl;
         _testSuccess = false;
       });
       return;
@@ -134,7 +136,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       if (url.origin is Error || url.origin.isEmpty) throw Exception();
     } catch (_) {
       setState(() {
-        _testResult = 'Could not parse URL.';
+        _testResult = l.testParseUrl;
         _testSuccess = false;
       });
       return;
@@ -149,8 +151,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     try {
       // Fail unsupported builds with the same generic message Save uses.
       if (!await isServerSupported(url.toString())) {
-        _showTestResult(
-            false, 'Could not connect. Check the URL and try again.');
+        _showTestResult(false, l.testCouldNotConnect);
         return;
       }
 
@@ -160,17 +161,15 @@ class MyCustomFormState extends State<MyCustomForm> {
           .get(url.resolve('/api/v1/ping'))
           .timeout(Duration(seconds: 5));
       if (ping.statusCode == 200) {
-        _showTestResult(true, 'Connected${await _serverVersionSuffix(url)}');
+        _showTestResult(
+            true, l.connectionSuccessful + await _serverVersionSuffix(url));
         return;
       }
 
       // 2) Server needs auth. In public-access mode there are no
       //    credentials to try, so report that plainly.
       if (_publicAccess) {
-        _showTestResult(
-            false,
-            'Could not reach server. If it requires login, turn off '
-            '"Public access" and add credentials.');
+        _showTestResult(false, l.couldNotReachServer);
         return;
       }
 
@@ -182,15 +181,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       }).timeout(Duration(seconds: 6));
 
       if (login.statusCode == 200) {
-        _showTestResult(true, 'Connected — signed in successfully.');
+        _showTestResult(true, l.testConnectedSignedIn);
       } else {
-        _showTestResult(false,
-            'Server reached, but sign-in failed — check your username and password.');
+        _showTestResult(false, l.testSignInFailed);
       }
     } on TimeoutException {
-      _showTestResult(false, 'Connection timed out.');
+      _showTestResult(false, l.testTimedOut);
     } catch (e) {
-      _showTestResult(false, 'Could not connect: $e');
+      _showTestResult(false, l.testConnectFailed('$e'));
     }
   }
 
@@ -249,6 +247,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 
   checkServer() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       submitPending = true;
     });
@@ -264,8 +263,7 @@ class MyCustomFormState extends State<MyCustomForm> {
           submitPending = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                'Could not connect to server. Check the URL and try again.')));
+            content: Text(l.connectFailedSnack)));
       }
       return;
     }
@@ -281,7 +279,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         //   submitPending = false;
         // });
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Connection Successful!')));
+            .showSnackBar(SnackBar(content: Text(l.connectionSuccessful)));
         saveServer(lol);
         return;
       }
@@ -296,8 +294,7 @@ class MyCustomFormState extends State<MyCustomForm> {
           submitPending = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Could not reach server. If it requires login, '
-              'turn off "Public access" and add credentials.'),
+          content: Text(l.couldNotReachServer),
         ));
       }
       return;
@@ -327,7 +324,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       } catch (e) {}
 
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to Login')));
+          .showSnackBar(SnackBar(content: Text(l.failedToLogin)));
       return;
     }
   }
@@ -392,6 +389,7 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       // SingleChildScrollView ensures the Save button is reachable
       // when the on-screen keyboard appears for the password field
@@ -409,20 +407,20 @@ class MyCustomFormState extends State<MyCustomForm> {
                 autocorrect: false,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Server URL is needed';
+                    return l.validatorUrlNeeded;
                   }
                   try {
                     final parsed = Uri.parse(value);
                     if (parsed.origin is Error || parsed.origin.isEmpty) {
-                      return 'Cannot parse URL';
+                      return l.validatorUrlParse;
                     }
                   } catch (_) {
-                    return 'Cannot parse URL';
+                    return l.validatorUrlParse;
                   }
                   return null;
                 },
                 decoration: InputDecoration(
-                  labelText: 'Server URL',
+                  labelText: l.fieldServerUrl,
                   hintText: 'https://mstream.example.com',
                   prefixIcon: Icon(Icons.link),
                 ),
@@ -431,10 +429,9 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Public access'),
+                title: Text(l.fieldPublicAccess),
                 subtitle: Text(
-                  "Server is publicly accessible — no username or "
-                  'password needed.',
+                  l.publicAccessSubtitle,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12),
                 ),
@@ -456,8 +453,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                 autocorrect: false,
                 enabled: !_publicAccess,
                 decoration: InputDecoration(
-                  labelText: 'Username',
-                  hintText: 'Username',
+                  labelText: l.fieldUsername,
+                  hintText: l.fieldUsername,
                   prefixIcon: Icon(Icons.person_outline),
                 ),
                 onSaved: (v) => _usernameCtrl.text = v ?? '',
@@ -470,8 +467,8 @@ class MyCustomFormState extends State<MyCustomForm> {
                 enableSuggestions: false,
                 enabled: !_publicAccess,
                 decoration: InputDecoration(
-                  labelText: 'Password',
-                  hintText: 'Password',
+                  labelText: l.fieldPassword,
+                  hintText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
                 onSaved: (v) => _passwordCtrl.text = v ?? '',
@@ -498,7 +495,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                         ),
                       )
                     : Icon(Icons.network_check),
-                label: Text(_testing ? 'Testing…' : 'Test Connection'),
+                label: Text(_testing ? l.testing : l.testConnectionButton),
                 onPressed:
                     _testing || submitPending ? null : _testConnection,
               ),
@@ -551,10 +548,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                 SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Download to SD Card'),
+                  title: Text(l.fieldSdCard),
                   subtitle: Text(
-                    'Save downloaded music to the removable SD card '
-                    'instead of internal storage.',
+                    l.sdCardSubtitle,
                     style: TextStyle(
                         color: VelvetColors.textSecondary, fontSize: 12),
                   ),
@@ -597,10 +593,10 @@ class MyCustomFormState extends State<MyCustomForm> {
                             ),
                           ),
                           SizedBox(width: 12),
-                          Text('Connecting…'),
+                          Text(l.connecting),
                         ],
                       )
-                    : Text('Save'),
+                    : Text(l.save),
               ),
             ],
           ),

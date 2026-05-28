@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 
@@ -21,10 +22,11 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
   }
 
   void _startMinutes(int minutes) {
+    final l = AppLocalizations.of(context);
     SleepTimerManager().start(Duration(minutes: minutes));
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sleep timer set for $minutes minutes')),
+      SnackBar(content: Text(l.sleepTimerSet(minutes))),
     );
   }
 
@@ -34,7 +36,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
     if (mins == null || mins < 1 || mins > 600) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Enter a number between 1 and 600 minutes')),
+            content: Text(AppLocalizations.of(context).sleepTimerInvalid)),
       );
       return;
     }
@@ -43,6 +45,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     // viewInsets.bottom = on-screen keyboard height (0 when hidden).
     // Padding here pushes the sheet's content above the keyboard so
     // the custom-time TextField stays visible while typing.
@@ -61,7 +64,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   Icon(Icons.bedtime, color: VelvetColors.primary),
                   const SizedBox(width: 10),
                   Text(
-                    'Sleep timer',
+                    l.sleepTimerTitle,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -78,8 +81,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   final d = snapshot.data;
                   return Text(
                     d == null
-                        ? 'Pick a duration to pause playback after.'
-                        : 'Pauses in ${_format(d)}',
+                        ? l.sleepTimerHint
+                        : l.sleepTimerPausesIn(_format(d)),
                     style: TextStyle(
                       fontSize: 13,
                       color: VelvetColors.textSecondary,
@@ -115,8 +118,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _startCustom(),
                       decoration: InputDecoration(
-                        labelText: 'Custom',
-                        hintText: 'minutes (1–600)',
+                        labelText: l.sleepTimerCustom,
+                        hintText: l.sleepTimerCustomHint,
                         isDense: true,
                       ),
                     ),
@@ -125,7 +128,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   TextButton.icon(
                     onPressed: _startCustom,
                     icon: Icon(Icons.play_arrow, size: 18),
-                    label: Text('Start'),
+                    label: Text(l.start),
                     style: TextButton.styleFrom(
                       foregroundColor: VelvetColors.primary,
                     ),
@@ -144,7 +147,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       icon: Icon(Icons.close,
                           color: VelvetColors.textSecondary),
                       label: Text(
-                        'Cancel timer',
+                        l.sleepTimerCancel,
                         style: TextStyle(color: VelvetColors.textSecondary),
                       ),
                       onPressed: () {
@@ -177,7 +180,7 @@ class _PresetChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      label: Text('$minutes min'),
+      label: Text(AppLocalizations.of(context).sleepTimerMinutes(minutes)),
       backgroundColor: VelvetColors.surface,
       labelStyle: TextStyle(color: VelvetColors.textPrimary),
       side: BorderSide(color: VelvetColors.border),

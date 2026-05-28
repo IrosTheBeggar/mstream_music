@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Locale;
 
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
@@ -28,17 +29,7 @@ enum TapBehavior {
   /// keeping previously-tapped songs around in queue history.
   appendAndJump;
 
-  /// Short user-facing label for the dropdown.
-  String get label {
-    switch (this) {
-      case TapBehavior.addToQueue:
-        return 'Add to queue';
-      case TapBehavior.playFromHere:
-        return 'Play from here';
-      case TapBehavior.appendAndJump:
-        return 'Add and play';
-    }
-  }
+  // Localized labels: TapBehaviorLabel extension in lib/l10n/enum_labels.dart.
 }
 
 /// Which rendering engine the visualizer screen uses. Milkdrop is the
@@ -49,14 +40,7 @@ enum VisualizerEngine {
   milkdrop,
   shader;
 
-  String get label {
-    switch (this) {
-      case VisualizerEngine.milkdrop:
-        return 'Milkdrop';
-      case VisualizerEngine.shader:
-        return 'Shaders';
-    }
-  }
+  // Localized labels: VisualizerEngineLabel extension in lib/l10n/enum_labels.dart.
 
   /// Wire kind passed across the MethodChannel to the native bridge.
   /// Must match the enum in visualizer_bridge.cpp.
@@ -80,17 +64,8 @@ enum VisualizerAudioSource {
   synthesized,
   real;
 
-  String get label {
-    switch (this) {
-      case VisualizerAudioSource.synthesized:
-        return 'Synthesized';
-      case VisualizerAudioSource.real:
-        // Keep this short — it lands in the Settings ListTile's
-        // trailing slot which is narrow. The "needs RECORD_AUDIO"
-        // caveat is in the subtitle.
-        return 'Real audio';
-    }
-  }
+  // Localized labels: VisualizerAudioSourceLabel extension in
+  // lib/l10n/enum_labels.dart.
 }
 
 /// User-tweakable settings persisted to disk as a JSON blob next to
@@ -111,6 +86,10 @@ class SettingsManager {
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
   AppTheme appTheme = AppTheme.dark;
+  // UI language. `null` means "follow the device locale" (the default);
+  // a language code like 'en'/'es' forces that language regardless of
+  // the OS setting. Persisted as the JSON 'language' key.
+  String? language;
   // Android-only equalizer state. Empty gains list means "apply nothing"
   // (device defaults / flat). Gains are in dB; the valid range and band
   // count are device-dependent and discovered at runtime via
@@ -148,6 +127,13 @@ class SettingsManager {
       BehaviorSubject<int>.seeded(letterStripThreshold);
   late final BehaviorSubject<AppTheme> _themeStream =
       BehaviorSubject<AppTheme>.seeded(appTheme);
+  late final BehaviorSubject<Locale?> _localeStream =
+      BehaviorSubject<Locale?>.seeded(localeOverride);
+
+  /// The forced locale, or `null` to follow the device. Fed straight to
+  /// `MaterialApp.locale`.
+  Locale? get localeOverride =>
+      language == null ? null : Locale(language!);
 
   Future<File> get _file async {
     final dir = await getApplicationDocumentsDirectory();
@@ -190,9 +176,12 @@ class SettingsManager {
           }
         });
       }
+      final lang = m['language'];
+      language = lang is String ? lang : null;
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
+      _localeStream.add(localeOverride);
     } catch (_) {
       // Corrupt or missing file: fall back to defaults.
     }
@@ -259,6 +248,7 @@ class SettingsManager {
       'showVisualizerKnobs': showVisualizerKnobs,
       'visualizerGlobalParams': visualizerGlobalParams,
       'visualizerShaderParams': visualizerShaderParams,
+      'language': language,
     }));
   }
 
@@ -292,6 +282,13 @@ class SettingsManager {
   Future<void> setAppTheme(AppTheme v) async {
     appTheme = v;
     _themeStream.add(v);
+    await _save();
+  }
+
+  /// Sets the UI language. Pass `null` to follow the device locale.
+  Future<void> setLanguage(String? code) async {
+    language = code;
+    _localeStream.add(localeOverride);
     await _save();
   }
 
@@ -353,19 +350,23 @@ class SettingsManager {
     showVisualizerKnobs = false;
     visualizerGlobalParams = const [];
     visualizerShaderParams = {};
+    language = null;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);
+    _localeStream.add(localeOverride);
     await _save();
   }
 
   Stream<bool> get albumGridStream => _albumGridStream.stream;
   Stream<int> get letterStripStream => _letterStripStream.stream;
   Stream<AppTheme> get themeStream => _themeStream.stream;
+  Stream<Locale?> get localeStream => _localeStream.stream;
 
   void dispose() {
     _albumGridStream.close();
     _letterStripStream.close();
     _themeStream.close();
+    _localeStream.close();
   }
 }

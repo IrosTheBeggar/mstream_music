@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../objects/metadata.dart';
 
 class MeteDataScreen extends StatelessWidget {
@@ -16,7 +17,7 @@ class MeteDataScreen extends StatelessWidget {
     return Scaffold(
         backgroundColor: Color(0xFF3f3f3f),
         appBar: AppBar(
-          title: Text("Song Info"),
+          title: Text(AppLocalizations.of(context).songInfoTitle),
         ),
         body: SafeArea(
             top: false,

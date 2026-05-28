@@ -30,6 +30,7 @@ import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'singletons/sleep_timer.dart';
 import 'theme/velvet_theme.dart';
+import 'l10n/app_localizations.dart';
 import 'widgets/sleep_timer_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
@@ -43,20 +44,30 @@ Future<void> main() async {
   await PlaylistManager().load();
   await AutoDJManager().load();
 
-  // Wrap MaterialApp in a StreamBuilder bound to the theme setting so
-  // switching themes triggers a full retheme. setActive runs *inside*
-  // the builder, immediately before MaterialApp returns, so the
+  // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
+  // settings so switching either triggers a full rebuild. setActive runs
+  // *inside* the builder, immediately before MaterialApp returns, so the
   // ThemeData and any direct VelvetColors lookups stay in sync.
-  runApp(StreamBuilder<AppTheme>(
-    stream: SettingsManager().themeStream,
-    initialData: SettingsManager().appTheme,
+  // combineLatest2 (rxdart) merges the two streams into one record so a
+  // single StreamBuilder drives both; locale == null follows the device.
+  runApp(StreamBuilder<(AppTheme, Locale?)>(
+    stream: Rx.combineLatest2(
+      SettingsManager().themeStream,
+      SettingsManager().localeStream,
+      (AppTheme theme, Locale? locale) => (theme, locale),
+    ),
+    initialData: (SettingsManager().appTheme, SettingsManager().localeOverride),
     builder: (context, snapshot) {
-      final palette = paletteFor(snapshot.data ?? AppTheme.dark);
+      final (theme, locale) = snapshot.data ?? (AppTheme.dark, null);
+      final palette = paletteFor(theme);
       VelvetColors.setActive(palette);
       return MaterialApp(
         title: 'mStream Music',
         home: MStreamApp(),
         theme: buildAppTheme(palette),
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
       );
     },
@@ -94,6 +105,7 @@ class _MStreamAppState extends State<MStreamApp>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
@@ -168,7 +180,7 @@ class _MStreamAppState extends State<MStreamApp>
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                           content: Text(
-                                              "Failed To Connect To Server")));
+                                              l.mainFailedToConnect)));
                                 }
                               } else if (selectedServerIndex == -1) {
                                 Navigator.push(
@@ -206,9 +218,9 @@ class _MStreamAppState extends State<MStreamApp>
                         stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
-                          return Tab(text: label ?? 'Browser');
+                          return Tab(text: label ?? l.tabBrowser);
                         }),
-                    Tab(text: 'Queue'),
+                    Tab(text: l.tabQueue),
                   ],
                   controller: _tabController),
             ),
@@ -253,7 +265,7 @@ class _MStreamAppState extends State<MStreamApp>
                       ),
                     ]),
                     SizedBox(height: 4),
-                    Text('Personal music streaming',
+                    Text(l.drawerTagline,
                         style: TextStyle(
                             color: VelvetColors.textSecondary, fontSize: 12)),
                   ],
@@ -261,7 +273,7 @@ class _MStreamAppState extends State<MStreamApp>
               ),
               ListTile(
                 leading: Icon(Icons.router),
-                title: Text('Manage Servers'),
+                title: Text(l.manageServersTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.push(
@@ -273,7 +285,7 @@ class _MStreamAppState extends State<MStreamApp>
               ),
               ListTile(
                 leading: Icon(Icons.download),
-                title: Text('Downloads'),
+                title: Text(l.downloadsTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.push(
@@ -284,7 +296,7 @@ class _MStreamAppState extends State<MStreamApp>
               ),
               ListTile(
                 leading: Icon(Icons.album),
-                title: Text('Auto DJ'),
+                title: Text(l.autoDjTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.push(
@@ -295,7 +307,7 @@ class _MStreamAppState extends State<MStreamApp>
               ),
               ListTile(
                 leading: Icon(Icons.share),
-                title: Text('Share Playlist'),
+                title: Text(l.shareTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   showSharePlaylistDialog(context);
@@ -320,7 +332,7 @@ class _MStreamAppState extends State<MStreamApp>
               Divider(color: VelvetColors.border),
               ListTile(
                 leading: Icon(Icons.settings),
-                title: Text('Settings'),
+                title: Text(l.settingsTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.push(
@@ -331,7 +343,7 @@ class _MStreamAppState extends State<MStreamApp>
               ),
               ListTile(
                 leading: Icon(Icons.info_outline),
-                title: Text('About'),
+                title: Text(l.aboutTitle),
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.push(
@@ -350,6 +362,7 @@ class _MStreamAppState extends State<MStreamApp>
 
 class NowPlaying extends StatelessWidget {
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
       Material(
           color: VelvetColors.surface,
@@ -365,9 +378,7 @@ class NowPlaying extends StatelessWidget {
                         return Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            n == 0
-                                ? 'Queue is empty'
-                                : '$n track${n == 1 ? '' : 's'} in queue',
+                            n == 0 ? l.mainQueueEmpty : l.mainQueueCount(n),
                             style: TextStyle(
                                 color: VelvetColors.textSecondary,
                                 fontSize: 12,
@@ -380,7 +391,7 @@ class NowPlaying extends StatelessWidget {
                     IconButton(
                       icon: Icon(Icons.auto_awesome),
                       color: VelvetColors.textSecondary,
-                      tooltip: 'Visualizer',
+                      tooltip: l.visualizerTitle,
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => VisualizerScreen()),
@@ -390,7 +401,7 @@ class NowPlaying extends StatelessWidget {
                     IconButton(
                       icon: Icon(Icons.delete_sweep),
                       color: VelvetColors.error,
-                      tooltip: 'Clear queue',
+                      tooltip: l.mainClearQueue,
                       onPressed: () {
                         MediaManager().audioHandler.customAction('clearPlaylist');
                       },
@@ -420,7 +431,7 @@ class NowPlaying extends StatelessWidget {
                                   SlidableAction(
                                       backgroundColor: Colors.blueGrey,
                                       icon: Icons.download,
-                                      label: 'Sync',
+                                      label: l.mainSync,
                                       onPressed: (context) {
                                         if (queue[index]
                                                 .extras!['localPath'] ==
@@ -462,7 +473,7 @@ class NowPlaying extends StatelessWidget {
                                       foregroundColor:
                                           VelvetColors.textPrimary,
                                       icon: Icons.info,
-                                      label: 'Info',
+                                      label: l.info,
                                       onPressed: (context) {
                                         MusicMetadata m = new MusicMetadata(
                                             queue[index].artist,
@@ -579,6 +590,7 @@ class NowPlaying extends StatelessWidget {
       );
 
   void _showAddToPlaylistSheet(BuildContext context, MediaItem item) {
+    final l = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: VelvetColors.surface,
@@ -600,7 +612,7 @@ class NowPlaying extends StatelessWidget {
                     padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
                     child: Row(children: [
                       Expanded(
-                        child: Text('Add to playlist',
+                        child: Text(l.addToPlaylistTitle,
                             style: TextStyle(
                                 color: VelvetColors.textPrimary,
                                 fontSize: 16,
@@ -609,7 +621,7 @@ class NowPlaying extends StatelessWidget {
                       IconButton(
                         icon: Icon(Icons.add,
                             color: VelvetColors.primary),
-                        tooltip: 'New playlist',
+                        tooltip: l.playlistsNew,
                         onPressed: () async {
                           final name = await _promptName(ctx);
                           if (name != null && name.isNotEmpty) {
@@ -628,7 +640,7 @@ class NowPlaying extends StatelessWidget {
                     Padding(
                       padding: EdgeInsets.fromLTRB(20, 8, 20, 28),
                       child: Text(
-                        'No playlists yet — tap + to create one.',
+                        l.addToPlaylistEmpty,
                         style: TextStyle(
                             color: VelvetColors.textSecondary,
                             fontSize: 13),
@@ -648,7 +660,7 @@ class NowPlaying extends StatelessWidget {
                                 color: VelvetColors.primary),
                             title: Text(p.name),
                             subtitle: Text(
-                              '${p.entries.length} track${p.entries.length == 1 ? '' : 's'}',
+                              l.trackCount(p.entries.length),
                               style: TextStyle(
                                   color: VelvetColors.textSecondary,
                                   fontSize: 12),
@@ -660,7 +672,7 @@ class NowPlaying extends StatelessWidget {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   SnackBar(
                                       content: Text(
-                                          'Added to ${p.name}')),
+                                          l.addedToPlaylist(p.name))),
                                 );
                               }
                             },
@@ -678,27 +690,28 @@ class NowPlaying extends StatelessWidget {
   }
 
   Future<String?> _promptName(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('New playlist'),
+        title: Text(l.playlistsNew),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: InputDecoration(hintText: 'Name'),
+          decoration: InputDecoration(hintText: l.playlistNameHint),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Cancel',
+              child: Text(l.cancel,
                   style:
                       TextStyle(color: VelvetColors.textSecondary))),
           ElevatedButton(
               onPressed: () =>
                   Navigator.of(ctx).pop(controller.text.trim()),
-              child: Text('Create')),
+              child: Text(l.create)),
         ],
       ),
     );
@@ -715,6 +728,7 @@ class BottomBar extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     // BottomBar mirrors the AppBar (appBarBg) rather than the body
     // surface, so in the Light theme it stays a dark strip with light
     // text — master's signature look — instead of a low-contrast
@@ -892,12 +906,15 @@ class BottomBar extends StatelessWidget {
                                 if (ServerManager().serverList.length == 1) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                          content: Text("Auto DJ Enabled")));
+                                          content: Text(l.autoDjEnabled)));
                                 } else {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                          content: Text(
-                                              "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
+                                          content: Text(l.autoDjEnabledFor(
+                                              ServerManager()
+                                                  .currentServer!
+                                                  .url
+                                                  .toString()))));
                                 }
                               } else if (ServerManager().currentServer! ==
                                   autoDJState) {
@@ -906,15 +923,18 @@ class BottomBar extends StatelessWidget {
 
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text("Auto DJ Disabled")));
+                                        content: Text(l.autoDjDisabled)));
                               } else {
                                 MediaManager().audioHandler.customAction(
                                     'setAutoDJ', {
                                   'autoDJServer': ServerManager().currentServer
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(
-                                        "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
+                                    content: Text(l.autoDjEnabledFor(
+                                        ServerManager()
+                                            .currentServer!
+                                            .url
+                                            .toString()))));
                               }
                             });
                       }),
