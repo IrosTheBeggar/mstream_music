@@ -7,7 +7,7 @@ class AboutScreen extends StatelessWidget {
   // Bump alongside pubspec.yaml's `version:` line. Hardcoded rather
   // than read via package_info_plus to avoid pulling another platform
   // plugin just for one string.
-  static const _versionLabel = 'v0.16.0';
+  static const _versionLabel = 'v0.17.0';
 
   static const _links = <_LinkRow>[
     _LinkRow(
