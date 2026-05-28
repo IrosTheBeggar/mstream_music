@@ -36,8 +36,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   for (int i = 0; i < 4; i++) {
     bass += texture(iChannel1, vec2(float(i) * 0.004 + 0.004, 0.25)).x;
   }
-  bass = clamp(bass * 0.7, 0.0, 1.0);
-  col *= 1.0 + bass * 0.8;
+  // Lower prescale so loud bass doesn't pre-clamp before the square,
+  // and square for dynamic range (mrange's "fft *= fft" technique).
+  bass = clamp(bass * 0.20, 0.0, 1.0);
+  bass *= bass;
+  // Gentle brightness coefficient: this multiply lands right before the
+  // sqrt() gamma below, so a big boost pushes bright pixels past 1.0 and
+  // clips them to white (the "saturated" look). 0.45 keeps the pulse
+  // visible without blowing out highlights.
+  col *= 1.0 + bass * 0.45;
 
   col = sqrt(col);
   fragColor = vec4(col, 1.0);
