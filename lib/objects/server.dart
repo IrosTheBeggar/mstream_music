@@ -3,6 +3,11 @@ class Server {
   String localname; // name we use when mappings files to the fs
   bool saveToSdCard = false;
 
+  // Runtime-only flag (never persisted): set by a compatibility probe
+  // when this client can't work with the server build at [url]. While
+  // true, calls against this server short-circuit to a generic failure.
+  bool unsupported = false;
+
   // authentication is optional (mstream servers can be public OR private)
   String? username;
   String? password;

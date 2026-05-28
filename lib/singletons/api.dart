@@ -85,6 +85,10 @@ class ApiManager {
     Server server = ServerManager().currentServer ??
         (throw Exception('No Server Selected'));
 
+    if (server.unsupported) {
+      throw Exception('Server Call Failed');
+    }
+
     Uri currentUri = Uri.parse(server.url).resolve(location);
 
     var response;

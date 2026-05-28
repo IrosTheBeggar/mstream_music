@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
+import '../util/server_compat.dart';
 
 class AddServerScreen extends StatelessWidget {
   @override
@@ -144,6 +145,19 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
 
     try {
+      // Don't surface a version banner for unsupported builds — fail
+      // them with the same generic message the Save path uses.
+      if (!await isServerSupported(url.toString())) {
+        if (mounted) {
+          setState(() {
+            _testing = false;
+            _testResult = 'Could not connect. Check the URL and try again.';
+            _testSuccess = false;
+          });
+        }
+        return;
+      }
+
       final response = await http
           .get(url.resolve('/api/'))
           .timeout(Duration(seconds: 5));
@@ -211,6 +225,21 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
     Uri lol = Uri.parse(this._urlCtrl.text);
     var response;
+
+    // Compatibility gate: refuse server builds this client doesn't
+    // support, surfacing only a generic failure (no special-casing
+    // shown to the user).
+    if (!await isServerSupported(lol.toString())) {
+      if (mounted) {
+        setState(() {
+          submitPending = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Could not connect to server. Check the URL and try again.')));
+      }
+      return;
+    }
 
     try {
       // Do a quick check on /ping to see if this server even needs authentication

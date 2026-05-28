@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
+import '../util/server_compat.dart';
 import './browser_list.dart';
 
 import 'package:path_provider/path_provider.dart';
@@ -71,6 +72,36 @@ class ServerManager {
       serverList.forEach((Server s) {
         getServerPaths(s);
       });
+      // Probe saved servers in the background; flips the active server
+      // away from an unsupported build without blocking startup.
+      unawaited(_screenServers());
+    } else {
+      BrowserManager().noServerScreen();
+    }
+  }
+
+  // Marks every saved server this client doesn't support. Runs after the
+  // UI has already shown the first server (so startup isn't gated on the
+  // network); if the active server turns out to be unsupported, falls
+  // back to the first supported one, or the no-server screen if none.
+  Future<void> _screenServers() async {
+    await Future.wait(serverList.map((Server s) async {
+      s.unsupported = !await isServerSupported(s.url);
+    }));
+
+    if (currentServer?.unsupported != true) return;
+
+    Server? next;
+    for (final Server s in serverList) {
+      if (!s.unsupported) {
+        next = s;
+        break;
+      }
+    }
+    currentServer = next;
+    _currentServerStream.sink.add(currentServer);
+    if (next != null) {
+      BrowserManager().goToNavScreen();
     } else {
       BrowserManager().noServerScreen();
     }
@@ -115,6 +146,10 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
+    if (server.unsupported) {
+      if (throwErr) throw Exception('Failed to connect to server');
+      return;
+    }
     try {
       var response = await http
           .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
