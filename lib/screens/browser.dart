@@ -10,6 +10,7 @@ import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
+import '../widgets/local_search_bar.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -19,9 +20,48 @@ import '../singletons/media.dart';
 
 import 'add_server.dart';
 
-class Browser extends StatelessWidget {
+class Browser extends StatefulWidget {
+  @override
+  State<Browser> createState() => _BrowserState();
+}
+
+class _BrowserState extends State<Browser> {
+  // Local-search state. _searchOpen toggles the header search field;
+  // _searchQuery filters the *displayed* list only — BrowserManager's
+  // browserList and back-stack are never mutated, so navigation, the
+  // letter-strip math and scroll restore all stay intact. Any
+  // navigation (folder/album/etc. tap, or Back) clears both via
+  // _closeSearch() so a filter never carries over into a new view.
+  String _searchQuery = '';
+  bool _searchOpen = false;
+
+  // Item types whose tap loads a new list (vs. file/localFile, which
+  // just enqueue and leave the current list in place). Tapping any of
+  // these closes local search.
+  static const Set<String> _navTypes = {
+    'addServer',
+    'directory',
+    'playlist',
+    'execAction',
+    'artist',
+    'album',
+    'localDirectory',
+  };
+
+  void _closeSearch() {
+    if (!_searchOpen && _searchQuery.isEmpty) return;
+    setState(() {
+      _searchOpen = false;
+      _searchQuery = '';
+    });
+  }
+
   void handleTap(
       List<DisplayItem> browserList, int index, BuildContext context) {
+    if (_navTypes.contains(browserList[index].type)) {
+      _closeSearch();
+    }
+
     if (browserList[index].type == 'addServer') {
       Navigator.push(
         context,
@@ -559,10 +599,11 @@ class Browser extends StatelessWidget {
                           quarterTurns: 3,
                           child: LinearProgressIndicator(
                             // value: displayList[index].downloadProgress/100,
-                            value: BrowserManager()
-                                    .browserList[i]
-                                    .downloadProgress /
-                                100,
+                            // Index against the passed list `b` (the
+                            // possibly search-filtered view), not the
+                            // manager's unfiltered browserList — otherwise
+                            // the bar reads the wrong row while searching.
+                            value: b[i].downloadProgress / 100,
                             valueColor: AlwaysStoppedAnimation(
                                 VelvetColors.success),
                             backgroundColor: Colors.transparent,
@@ -578,6 +619,52 @@ class Browser extends StatelessWidget {
                                 handleTap(b, i, c);
                               }))
                     ])))));
+  }
+
+  // Browser "Download all": same confirm + empty-state UX as the queue's
+  // button. Counts the file rows in the *current* list (folders / headers
+  // are ignored); alerts if there are none, otherwise confirms the count
+  // before enqueueing. downloadOneFile no-ops on files already on disk.
+  void _downloadAll(BuildContext context) {
+    final files =
+        BrowserManager().browserList.where((e) => e.type == 'file').toList();
+    if (files.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nothing to download in this list')));
+      return;
+    }
+    final n = files.length;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('Download all'),
+        content: Text('$n file${n == 1 ? '' : 's'} will be downloaded.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              for (final e in files) {
+                String downloadUrl = e.server!.url +
+                    '/media' +
+                    e.data! +
+                    (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
+                DownloadManager().downloadOneFile(downloadUrl,
+                    e.server!.localname, e.data!, e.server!.saveToSdCard);
+              }
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('$n download${n == 1 ? '' : 's'} started')));
+            },
+            child: Text('Download'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget build(BuildContext context) {
@@ -597,46 +684,44 @@ class Browser extends StatelessWidget {
                   children: <Widget>[
                     if (browserList.length == 0 ||
                         browserList[0].type != 'execAction') ...[
+                      if (_searchOpen) ...[
+                        // Search mode: a close button + the live-filtering
+                        // field fill the header. Download / Add All are
+                        // hidden here so they always act on the full list,
+                        // never the filtered subset.
+                        IconButton(
+                            icon: Icon(Icons.close,
+                                color: VelvetColors.textSecondary),
+                            tooltip: 'Close search',
+                            onPressed: _closeSearch),
+                        Expanded(
+                            child: LocalSearchBar(
+                                hintText: 'Search this list',
+                                onChanged: (q) =>
+                                    setState(() => _searchQuery = q))),
+                      ] else ...[
                       IconButton(
                           icon: Icon(Icons.keyboard_arrow_left,
                               color: VelvetColors.textSecondary),
                           tooltip: 'Go Back',
                           onPressed: () {
+                            _closeSearch();
                             BrowserManager().popBrowser();
                           }),
                       Row(children: <Widget>[
+                        IconButton(
+                            icon: Icon(Icons.search,
+                                color: VelvetColors.textSecondary),
+                            tooltip: 'Search list',
+                            onPressed: () =>
+                                setState(() => _searchOpen = true)),
                         IconButton(
                             icon: Icon(
                               Icons.download_sharp,
                               color: VelvetColors.textSecondary,
                             ),
                             tooltip: 'Download',
-                            onPressed: () {
-                              int count = 0;
-
-                              BrowserManager().browserList.forEach((e) {
-                                if (e.type == 'file') {
-                                  String downloadUrl = e.server!.url +
-                                      '/media' +
-                                      e.data! +
-                                      (e.server!.jwt == null
-                                          ? ''
-                                          : '?token=' + e.server!.jwt!);
-
-                                  DownloadManager().downloadOneFile(
-                                      downloadUrl,
-                                      e.server!.localname,
-                                      e.data!,
-                                      e.server!.saveToSdCard);
-                                  count++;
-                                }
-                              });
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                          Text('$count downloads started')));
-                            }),
+                            onPressed: () => _downloadAll(context)),
                         IconButton(
                             icon: Icon(
                               Icons.library_add,
@@ -674,6 +759,7 @@ class Browser extends StatelessWidget {
                               }
                             })
                       ])
+                      ],
                     ] else ...[
                       Expanded(
                           child: TextField(
@@ -699,12 +785,61 @@ class Browser extends StatelessWidget {
                   ]);
             }),
       ),
+      // Thin indeterminate bar while any browser server call is in
+      // flight (all go through ApiManager.makeServerCall). Fixed 3px
+      // slot — empty when idle — so the list never jumps.
+      StreamBuilder<bool>(
+        stream: BrowserManager().loadingStream,
+        initialData: BrowserManager().isLoading,
+        builder: (context, snap) {
+          final loading = snap.data ?? false;
+          return SizedBox(
+            height: 3,
+            child: loading
+                ? LinearProgressIndicator(
+                    minHeight: 3,
+                    color: VelvetColors.primary,
+                    backgroundColor: Colors.transparent,
+                  )
+                : null,
+          );
+        },
+      ),
       Expanded(
           child: SizedBox(
               child: StreamBuilder<List<DisplayItem>>(
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
-                    final List<DisplayItem> browserList = snapshot.data ?? [];
+                    final List<DisplayItem> rawList = snapshot.data ?? [];
+
+                    // Local search filters only the *displayed* list; the
+                    // manager's browserList (hence navigation / back-stack
+                    // / scroll restore) is untouched. The execAction home
+                    // menu is fixed section shortcuts, not content, so it
+                    // is never filtered.
+                    final bool isHome = rawList.isNotEmpty &&
+                        rawList[0].type == 'execAction';
+                    final String q = _searchQuery.trim();
+                    final bool filtering =
+                        _searchOpen && q.isNotEmpty && !isHome;
+                    final List<DisplayItem> browserList = filtering
+                        ? rawList.where((it) => it.matchesQuery(q)).toList()
+                        : rawList;
+
+                    if (filtering && browserList.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'No matches for "$q"',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
 
                     // If the whole list is albums and the user has the
                     // album-grid setting on, show a grid of album cards
@@ -777,7 +912,8 @@ class Browser extends StatelessWidget {
                         // Artists, File Explorer) — see BrowserManager
                         // .alphabeticalCache.
                         if (!BrowserManager().isAlphabetical ||
-                            browserList.isEmpty) {
+                            browserList.isEmpty ||
+                            filtering) {
                           return content;
                         }
                         return Stack(

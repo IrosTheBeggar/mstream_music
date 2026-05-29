@@ -82,33 +82,41 @@ class ApiManager {
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
       String getOrPost) async {
-    Server server = ServerManager().currentServer ??
-        (throw Exception('No Server Selected'));
+    // Bracket every browse fetch so the browser can show one global
+    // loading bar. The finally guarantees the in-flight counter is
+    // balanced even on the early throws / HTTP-error / network paths.
+    BrowserManager().beginLoading();
+    try {
+      Server server = ServerManager().currentServer ??
+          (throw Exception('No Server Selected'));
 
-    if (server.unsupported) {
-      throw Exception('Server Call Failed');
+      if (server.unsupported) {
+        throw Exception('Server Call Failed');
+      }
+
+      Uri currentUri = Uri.parse(server.url).resolve(location);
+
+      var response;
+      if (getOrPost == 'GET') {
+        response = await http
+            .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
+      } else {
+        response = await http.post(currentUri,
+            body: json.encode(payload),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? ''
+            });
+      }
+
+      if (response.statusCode > 299) {
+        throw Exception('Server Call Failed');
+      }
+
+      return jsonDecode(response.body);
+    } finally {
+      BrowserManager().endLoading();
     }
-
-    Uri currentUri = Uri.parse(server.url).resolve(location);
-
-    var response;
-    if (getOrPost == 'GET') {
-      response = await http
-          .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
-    } else {
-      response = await http.post(currentUri,
-          body: json.encode(payload),
-          headers: {
-            'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? ''
-          });
-    }
-
-    if (response.statusCode > 299) {
-      throw Exception('Server Call Failed');
-    }
-
-    return jsonDecode(response.body);
   }
 
   Future<void> getRecursiveFiles(String directory,
