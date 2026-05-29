@@ -113,10 +113,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
-  // Hits the server's public /api/ endpoint, parses the version
-  // string, and surfaces the result inline as a banner. Independent
-  // of the Save button — and of public-vs-authenticated mode, since
-  // /api/ requires no credentials.
+  // Verifies the connection the same way the Save button does: an
+  // unauthenticated /api/v1/ping first, then — if the server requires
+  // auth — a login with the entered credentials. Previously this only
+  // hit the public /api/ version endpoint and treated any non-200 as a
+  // failure, so it falsely reported a 401 on servers that require
+  // authentication even though Save (which logs in) worked fine.
   Future<void> _testConnection() async {
     if (_urlCtrl.text.trim().isEmpty) {
       setState(() {
@@ -145,51 +147,78 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
 
     try {
-      // Don't surface a version banner for unsupported builds — fail
-      // them with the same generic message the Save path uses.
+      // Fail unsupported builds with the same generic message Save uses.
       if (!await isServerSupported(url.toString())) {
-        if (mounted) {
-          setState(() {
-            _testing = false;
-            _testResult = 'Could not connect. Check the URL and try again.';
-            _testSuccess = false;
-          });
-        }
+        _showTestResult(
+            false, 'Could not connect. Check the URL and try again.');
         return;
       }
 
-      final response = await http
-          .get(url.resolve('/api/'))
+      // 1) Unauthenticated ping — succeeds for public servers (and any
+      //    server that doesn't gate /api/v1/ping behind auth).
+      final ping = await http
+          .get(url.resolve('/api/v1/ping'))
           .timeout(Duration(seconds: 5));
-      if (response.statusCode != 200) {
-        throw Exception('HTTP ${response.statusCode}');
+      if (ping.statusCode == 200) {
+        _showTestResult(true, 'Connected${await _serverVersionSuffix(url)}');
+        return;
       }
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final version = data['server']?.toString() ?? 'unknown';
-      if (mounted) {
-        setState(() {
-          _testing = false;
-          _testResult = 'Connected — mStream v$version';
-          _testSuccess = true;
-        });
+
+      // 2) Server needs auth. In public-access mode there are no
+      //    credentials to try, so report that plainly.
+      if (_publicAccess) {
+        _showTestResult(
+            false,
+            'Could not reach server. If it requires login, turn off '
+            '"Public access" and add credentials.');
+        return;
+      }
+
+      // 3) Authenticate with the entered credentials — exactly what Save
+      //    does — so the test reflects real, credentialed connectivity.
+      final login = await http.post(url.resolve('/api/v1/auth/login'), body: {
+        'username': _usernameCtrl.text,
+        'password': _passwordCtrl.text,
+      }).timeout(Duration(seconds: 6));
+
+      if (login.statusCode == 200) {
+        _showTestResult(true, 'Connected — signed in successfully.');
+      } else {
+        _showTestResult(false,
+            'Server reached, but sign-in failed — check your username and password.');
       }
     } on TimeoutException {
-      if (mounted) {
-        setState(() {
-          _testing = false;
-          _testResult = 'Connection timed out.';
-          _testSuccess = false;
-        });
-      }
+      _showTestResult(false, 'Connection timed out.');
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _testing = false;
-          _testResult = 'Could not connect: $e';
-          _testSuccess = false;
-        });
-      }
+      _showTestResult(false, 'Could not connect: $e');
     }
+  }
+
+  void _showTestResult(bool success, String message) {
+    if (!mounted) return;
+    setState(() {
+      _testing = false;
+      _testSuccess = success;
+      _testResult = message;
+    });
+  }
+
+  // Best-effort version string for the success banner. Never throws: the
+  // public /api/ endpoint may be unreachable on auth-walled servers, in
+  // which case the version is simply omitted.
+  Future<String> _serverVersionSuffix(Uri url) async {
+    try {
+      final resp =
+          await http.get(url.resolve('/api/')).timeout(Duration(seconds: 4));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final version = data['server']?.toString();
+        if (version != null && version.isNotEmpty) {
+          return ' — mStream v$version';
+        }
+      }
+    } catch (_) {}
+    return '';
   }
 
   // path_provider's getExternalStorageDirectories returns one Directory
