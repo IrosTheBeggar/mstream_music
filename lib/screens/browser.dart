@@ -655,7 +655,8 @@ class _BrowserState extends State<Browser> {
                     e.data! +
                     (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
                 DownloadManager().downloadOneFile(downloadUrl,
-                    e.server!.localname, e.data!, e.server!.saveToSdCard);
+                    e.server!.localname, e.data!, e.server!.saveToSdCard,
+                    referenceItem: e);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('$n download${n == 1 ? '' : 's'} started')));
