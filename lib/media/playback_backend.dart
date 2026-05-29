@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 
 /// Processing state of the active playback backend. Mirrors just_audio's
@@ -23,8 +24,11 @@ enum BackendProcessingState { idle, loading, buffering, ready, completed }
 /// local implementation is a thin pass-through and the handler diff is minimal.
 abstract class PlaybackBackend {
   // ── Source list (mirrors just_audio's on-player playlist API) ──
-  Future<void> setSources(List<Uri> uris);
-  Future<void> addSource(Uri uri);
+  // Takes [MediaItem]s (not bare URIs) so remote backends can build rich
+  // metadata (title/artist/album/art) for the renderer; the local backend
+  // extracts the playable URI itself.
+  Future<void> setSources(List<MediaItem> items);
+  Future<void> addSource(MediaItem item);
   Future<void> removeSourceAt(int index);
   Future<void> clearSources();
 

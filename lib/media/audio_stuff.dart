@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -10,8 +9,11 @@ import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
+import 'dlna_playback_backend.dart';
+import 'cast_target.dart';
 import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
+import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
 import '../util/camelot.dart';
 
@@ -21,15 +23,17 @@ class AudioPlayerHandler extends BaseAudioHandler
   // ignore: close_sinks
   final BehaviorSubject<List<MediaItem>> _recentSubject =
       BehaviorSubject<List<MediaItem>>();
-  // Playback is delegated to a swappable backend. Today the only
-  // implementation is the local just_audio backend; casting backends
-  // (DLNA / Chromecast) will implement the same PlaybackBackend surface so
-  // the queue / Auto-DJ / shuffle / repeat logic in this handler stays
-  // backend-agnostic. Kept non-final so a future cast session can swap it —
-  // when that lands, the position/state stream getters below will need a
-  // switching subject; today there's a single backend so direct delegation
-  // is correct.
-  PlaybackBackend _backend = LocalPlaybackBackend();
+  // Playback is delegated to a swappable backend so casting can move audio
+  // off-device without changing the queue / Auto-DJ / shuffle / repeat logic
+  // here. The active backend lives in a BehaviorSubject; the handler's derived
+  // streams switchMap over it so existing listeners auto-resubscribe when the
+  // backend swaps (see positionStream and _init). The local just_audio backend
+  // is persistent (reused when switching back from a cast device); remote
+  // backends are built per-session and disposed on switch-away.
+  final LocalPlaybackBackend _localBackend = LocalPlaybackBackend();
+  late final BehaviorSubject<PlaybackBackend> _backendSubject =
+      BehaviorSubject<PlaybackBackend>.seeded(_localBackend);
+  PlaybackBackend get _backend => _backendSubject.value;
 
   // Android-only native equalizer, exposed for the EQ screen. Lives on the
   // local backend (null on non-Android / remote backends). eq_screen.dart
@@ -38,7 +42,8 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   int? get index => _backend.currentIndex;
 
-  Stream<Duration> get positionStream => _backend.positionStream;
+  Stream<Duration> get positionStream =>
+      _backendSubject.switchMap((b) => b.positionStream);
 
   // Android audio session id of the active backend. The visualizer's
   // real-audio capture attaches a Visualizer to THIS session — the
@@ -77,7 +82,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         .whereType<MediaItem>()
         .listen((item) => _recentSubject.add([item]));
     // Broadcast media item changes (with duration if it's known yet).
-    _backend.currentIndexStream.listen((index) {
+    // These derived streams switchMap over the active backend so they keep
+    // working across a cast backend swap — the new backend's streams are
+    // subscribed automatically and the old ones cancelled.
+    _backendSubject.switchMap((b) => b.currentIndexStream).listen((index) {
       if (index == queue.value.length - 1) {
         autoDJ();
       }
@@ -86,19 +94,23 @@ class AudioPlayerHandler extends BaseAudioHandler
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
     // so the BottomBar progress formula stops dividing by 1.
-    _backend.durationStream.listen((_) => _emitCurrentMediaItem());
+    _backendSubject
+        .switchMap((b) => b.durationStream)
+        .listen((_) => _emitCurrentMediaItem());
     // Propagate backend state changes to AudioService clients.
-    _backend.changeStream.listen((_) => _broadcastState());
+    _backendSubject
+        .switchMap((b) => b.changeStream)
+        .listen((_) => _broadcastState());
     // Stop the service when playback reaches the end of the queue.
-    _backend.processingStateStream.listen((state) {
+    _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();
     });
+    // Route cast-target selection (from the picker) to a backend swap.
+    CastManager().onTargetSelected = _switchToTarget;
     try {
       // Seed the backend with whatever is already in the queue
       // (typically empty on cold start).
-      await _backend.setSources(
-        queue.value.map((item) => Uri.parse(item.id)).toList(),
-      );
+      await _backend.setSources(queue.value);
     } catch (e) {
       print("Error seeding playback backend: $e");
     }
@@ -133,6 +145,52 @@ class AudioPlayerHandler extends BaseAudioHandler
     mediaItem.add(dur != null ? item.copyWith(duration: dur) : item);
   }
 
+  /// Switch playback to a [CastTarget] chosen in the cast picker. Builds the
+  /// matching backend (the persistent local just_audio backend, or a fresh
+  /// DLNA session) and hands it the current queue + position so playback
+  /// continues on the new device. Wired to CastManager.onTargetSelected.
+  Future<void> _switchToTarget(CastTarget target) async {
+    final PlaybackBackend next;
+    if (target.isLocal) {
+      next = _localBackend;
+    } else if (target.kind == CastTargetKind.dlna) {
+      next = DlnaPlaybackBackend(udn: target.id);
+    } else {
+      return; // Chromecast: Phase 4.
+    }
+    if (identical(next, _backend)) return;
+    await _switchBackend(next);
+  }
+
+  // Carry the current position / index / playing state + shuffle/repeat to the
+  // new backend, make it active (switchMap re-subscribes the derived streams),
+  // resume, then tear down the previous backend if it was a per-session remote
+  // one (the local backend is persistent and reused).
+  Future<void> _switchBackend(PlaybackBackend next) async {
+    final prev = _backend;
+    final pos = prev.position;
+    final idx = prev.currentIndex ?? 0;
+    final wasPlaying = prev.playing;
+
+    await prev.pause();
+
+    await next.setShuffleEnabled(prev.shuffleEnabled);
+    await next.setRepeatAll(prev.repeatAll);
+    await next.setSources(queue.value);
+    _backendSubject.add(next);
+    if (queue.value.isNotEmpty) {
+      await next.seek(pos, index: idx);
+    }
+    if (wasPlaying) {
+      await next.play();
+    }
+    _broadcastState();
+
+    if (!identical(prev, _localBackend)) {
+      await prev.dispose();
+    }
+  }
+
   @override
   BehaviorSubject<dynamic> customState =
       BehaviorSubject<dynamic>.seeded(CustomEvent(null));
@@ -149,18 +207,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
-
-    // Play the offline copy if it's actually on disk; otherwise stream
-    // (item.id is the server URL). Re-checking existence here means a file
-    // moved/deleted after the item was built (e.g. mid-migration, SD removed)
-    // falls back to streaming instead of a broken local URI. Uri.file (not
-    // Uri.parse) so paths with spaces — possible with user-chosen folders —
-    // encode correctly.
-    final String? localPath = item.extras?['localPath'];
-    final uri = (localPath != null && File(localPath).existsSync())
-        ? Uri.file(localPath)
-        : Uri.parse(item.id);
-    await _backend.addSource(uri);
+    // The backend extracts the playable URI (local backend) or builds renderer
+    // metadata (cast backend) from the item itself. The offline-file detection
+    // (File.existsSync + Uri.file) from the server-download-folder PR now lives
+    // in LocalPlaybackBackend._uriFor.
+    await _backend.addSource(item);
   }
 
   @override

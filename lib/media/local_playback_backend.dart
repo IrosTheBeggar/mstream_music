@@ -1,5 +1,6 @@
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:just_audio/just_audio.dart';
 
 import 'playback_backend.dart';
@@ -25,12 +26,26 @@ class LocalPlaybackBackend implements PlaybackBackend {
   // just_audio 0.10 deprecated ConcatenatingAudioSource; the playlist API now
   // lives on AudioPlayer directly.
   @override
-  Future<void> setSources(List<Uri> uris) =>
-      _player.setAudioSources(uris.map((u) => AudioSource.uri(u)).toList());
+  Future<void> setSources(List<MediaItem> items) => _player.setAudioSources(
+      items.map((i) => AudioSource.uri(_uriFor(i))).toList());
 
   @override
-  Future<void> addSource(Uri uri) =>
-      _player.addAudioSource(AudioSource.uri(uri));
+  Future<void> addSource(MediaItem item) =>
+      _player.addAudioSource(AudioSource.uri(_uriFor(item)));
+
+  // Play the offline copy when it's actually on disk; otherwise stream
+  // (item.id is the server URL). Re-checking existence means a file moved or
+  // deleted after the item was built (mid-migration, SD removed) falls back to
+  // streaming instead of a broken local URI. Uri.file (not Uri.parse) so
+  // user-chosen folder paths with spaces encode correctly. (URI policy moved
+  // here from AudioPlayerHandler.addQueueItem; the File.existsSync()/Uri.file
+  // hardening came from the server-download-folder PR merged into master.)
+  Uri _uriFor(MediaItem item) {
+    final localPath = item.extras?['localPath'];
+    return (localPath != null && File(localPath).existsSync())
+        ? Uri.file(localPath)
+        : Uri.parse(item.id);
+  }
 
   @override
   Future<void> removeSourceAt(int index) => _player.removeAudioSourceAt(index);
