@@ -18,10 +18,6 @@
          additional functionality it is fine to subclass or reimplement
          FlutterApplication and put your custom class here. -->
     
-    <!-- Change the following to disable SSL certs -->
-    <!-- android:name=".MyApplication" -->
-    <!-- The correct way -->
-    <!-- android:name="${applicationName}" -->
     <application
         android:name="${applicationName}"
         android:label="mStream Music"

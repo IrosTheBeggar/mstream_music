@@ -31,7 +31,7 @@ dependencies:
   audio_service: ^0.18.18
   just_audio: ^0.10.3
   flutter_slidable: ^4.0.3
-  flutter_downloader: ^1.12.0
+  background_downloader: ^9.4.4
   flutter_launcher_icons: ^0.14.2
   permission_handler: ^12.0.1
   url_launcher: ^6.3.1

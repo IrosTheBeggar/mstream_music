@@ -1,17 +1,14 @@
-import 'dart:isolate';
-import 'dart:ui';
 import 'dart:async';
 import 'dart:io';
 
 import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
 
 import '../objects/download_tracker.dart';
 
-@pragma('vm:entry-point') // Make sure optimizer does not think this is unused!
 class DownloadManager {
   DownloadManager._privateConstructor();
   static final DownloadManager _instance =
@@ -25,71 +22,39 @@ class DownloadManager {
       BehaviorSubject<Map<String, DownloadTracker>>.seeded(downloadMap);
 
   Map<String, DownloadTracker> downloadMap = {};
-  ReceivePort _port = ReceivePort();
+  StreamSubscription<TaskUpdate>? _updatesSub;
 
-  initDownloader() async {
-    await FlutterDownloader.initialize();
-    IsolateNameServer.registerPortWithName(
-        _port.sendPort, 'downloader_send_port');
-    // bindBackgroundIsolate();
-
-    _port.listen((dynamic data) {
-      _syncItem(data[0], data[1], data[2]);
-    });
-
-    FlutterDownloader.registerCallback(_callbackDownloader);
+  Future<void> initDownloader() async {
+    // background_downloader delivers status + progress for every task on a
+    // single stream, so the old flutter_downloader background-isolate /
+    // SendPort plumbing is no longer needed.
+    _updatesSub = FileDownloader().updates.listen(_onUpdate);
   }
 
-  static void _callbackDownloader(id, status, progress) {
-    print('Download task ($id) is in status ($status) and process ($progress)');
-    final SendPort send =
-        IsolateNameServer.lookupPortByName('downloader_send_port')!;
-    send.send([id, status, progress]);
+  void _onUpdate(TaskUpdate update) {
+    final DownloadTracker? dt = downloadMap[update.task.taskId];
+    if (dt == null) return;
+
+    if (update is TaskProgressUpdate) {
+      // progress is 0.0–1.0; negative values signal error/special states,
+      // so ignore those and keep the last good value.
+      if (update.progress >= 0) dt.progress = update.progress;
+    } else if (update is TaskStatusUpdate) {
+      if (update.status == TaskStatus.complete) {
+        dt.progress = 1.0;
+        // TODO: update queue items
+      }
+    }
+
+    // Re-emit so the Downloads screen's StreamBuilder rebuilds.
+    _downloadStream.add(downloadMap);
   }
 
   disposeDownloader() {}
 
   void dispose() {
+    _updatesSub?.cancel();
     _downloadStream.close();
-  }
-
-  void unbindBackgroundIsolate() {
-    IsolateNameServer.removePortNameMapping('downloader_send_port');
-  }
-
-  void bindBackgroundIsolate() {
-    bool isSuccess = IsolateNameServer.registerPortWithName(
-        _port.sendPort, 'downloader_send_port');
-    if (!isSuccess) {
-      unbindBackgroundIsolate();
-      bindBackgroundIsolate();
-      return;
-    }
-    _port.listen((dynamic data) {
-      // if (debug) {
-      //   print('UI Isolate Callback: $data');
-      // }
-      String id = data[0];
-      DownloadTaskStatus status = data[1];
-      int progress = data[2];
-
-      _syncItem(id, status, progress);
-    });
-  }
-
-  Future<void> _syncItem(
-      String id, DownloadTaskStatus status, int progress) async {
-    try {
-      DownloadTracker dt = downloadMap[id]!;
-      if (status == DownloadTaskStatus.complete) {
-        // TODO: update queue items
-      }
-
-      // dt.referenceDisplayItem?.downloadProgress = progress;
-      dt.progress = progress;
-    } catch (err) {
-      print(err);
-    }
   }
 
   Future<void> downloadOneFile(String downloadUrl, String serverName,
@@ -110,22 +75,27 @@ class DownloadManager {
       return;
     }
 
-    String lol = path.dirname(downloadTo);
+    String targetDir = path.dirname(downloadTo);
     String filename = path.basename(downloadTo);
 
-    new Directory(lol).createSync(recursive: true);
+    new Directory(targetDir).createSync(recursive: true);
 
-    String? taskId = await FlutterDownloader.enqueue(
+    // The destination is an absolute path (app external storage or SD card),
+    // expressed to background_downloader via BaseDirectory.root + the
+    // absolute directory.
+    final DownloadTask task = DownloadTask(
       url: downloadUrl,
-      fileName: filename,
-      savedDir: lol,
-      showNotification:
-          false, // show download progress in status bar (for Android)
-      openFileFromNotification:
-          false, // click on notification to open downloaded file (for Android)
+      filename: filename,
+      baseDirectory: BaseDirectory.root,
+      directory: targetDir,
+      updates: Updates.statusAndProgress,
     );
 
-    downloadMap[taskId!] = new DownloadTracker(downloadUrl, downloadDirectory);
+    downloadMap[task.taskId] =
+        new DownloadTracker(downloadUrl, downloadDirectory);
+    _downloadStream.add(downloadMap);
+
+    await FileDownloader().enqueue(task);
   }
 
   Stream<Map<String, DownloadTracker>> get downloadSream =>
