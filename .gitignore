@@ -162,3 +162,12 @@ app.*.symbols
 
 settings.local.json
 settings.json
+
+# Local dev screenshot / scratch artifacts (not part of the app).
+# Visualizer + UI verification shots are saved as hidden root-level
+# PNGs during development; keep them out of the repo.
+/.*.png
+
+# gen_l10n writes this report of ARB keys missing a translation; it is
+# regenerated on every build, so keep the generated copy out of the repo.
+l10n_untranslated.txt
