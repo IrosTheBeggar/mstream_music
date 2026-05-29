@@ -359,6 +359,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  media_cast_dlna:
+    dependency: "direct main"
+    description:
+      name: media_cast_dlna
+      sha256: "6506b11b7a011ae14eb38814c2f20ce61de13ba39ca5f87130e4143ba951b2f8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.1"
   meta:
     dependency: transitive
     description:

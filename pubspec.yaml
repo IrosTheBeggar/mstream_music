@@ -40,6 +40,7 @@ dependencies:
   path: any
   # Visualizer: FFI bindings to libprojectM (loaded from jniLibs on Android).
   ffi: ^2.1.4
+  media_cast_dlna: ^0.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
