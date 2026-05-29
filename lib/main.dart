@@ -33,6 +33,9 @@ import 'singletons/settings.dart';
 import 'singletons/sleep_timer.dart';
 import 'theme/velvet_theme.dart';
 import 'widgets/sleep_timer_sheet.dart';
+import 'media/cast_target.dart';
+import 'singletons/cast_manager.dart';
+import 'widgets/cast_picker_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
 Future<void> main() async {
@@ -1072,6 +1075,28 @@ class BottomBar extends StatelessWidget {
                                         "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
                               }
                             });
+                      }),
+                  StreamBuilder<CastTarget>(
+                      stream: CastManager().activeTargetStream,
+                      initialData: CastManager().activeTarget,
+                      builder: (context, snapshot) {
+                        final casting =
+                            !(snapshot.data ?? CastTarget.local).isLocal;
+                        return IconButton(
+                          icon: Icon(
+                              casting ? Icons.cast_connected : Icons.cast),
+                          tooltip: 'Play on…',
+                          color: casting
+                              ? VelvetColors.primary
+                              : VelvetColors.appBarTextSecondary,
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: VelvetColors.surface,
+                              builder: (_) => CastPickerSheet(),
+                            );
+                          },
+                        );
                       }),
                   StreamBuilder<Duration?>(
                       stream: SleepTimerManager().remainingStream,
