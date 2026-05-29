@@ -5,14 +5,20 @@ allprojects {
     }
 }
 
-rootProject.buildDir = '../build'
+// Gradle 9 removed the Project.buildDir property; redirect build output to
+// the repo-root build/ dir via layout.buildDirectory instead (mirrors the
+// Flutter 3.44 project template).
+def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    def newSubprojectBuildDir = newBuildDir.dir(project.name)
+    project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
     project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.layout.buildDirectory
 }

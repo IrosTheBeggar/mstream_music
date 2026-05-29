@@ -36,8 +36,9 @@ void main() {
 
   testWidgets(
     'create a playlist from the drawer FAB',
-    skip: 'Local playlists hidden from UI to avoid confusion with '
-        'server-side playlists. Re-enable when feature returns.',
+    // Skipped: local playlists hidden from UI to avoid confusion with
+    // server-side playlists. Re-enable when feature returns.
+    skip: true,
     (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(home: MStreamApp()));
       await tester.pumpAndSettle(const Duration(seconds: 5));
