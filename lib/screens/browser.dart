@@ -621,6 +621,52 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
+  // Browser "Download all": same confirm + empty-state UX as the queue's
+  // button. Counts the file rows in the *current* list (folders / headers
+  // are ignored); alerts if there are none, otherwise confirms the count
+  // before enqueueing. downloadOneFile no-ops on files already on disk.
+  void _downloadAll(BuildContext context) {
+    final files =
+        BrowserManager().browserList.where((e) => e.type == 'file').toList();
+    if (files.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nothing to download in this list')));
+      return;
+    }
+    final n = files.length;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('Download all'),
+        content: Text('$n file${n == 1 ? '' : 's'} will be downloaded.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              for (final e in files) {
+                String downloadUrl = e.server!.url +
+                    '/media' +
+                    e.data! +
+                    (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
+                DownloadManager().downloadOneFile(downloadUrl,
+                    e.server!.localname, e.data!, e.server!.saveToSdCard);
+              }
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('$n download${n == 1 ? '' : 's'} started')));
+            },
+            child: Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     return Column(children: <Widget>[
       Material(
@@ -675,32 +721,7 @@ class _BrowserState extends State<Browser> {
                               color: VelvetColors.textSecondary,
                             ),
                             tooltip: 'Download',
-                            onPressed: () {
-                              int count = 0;
-
-                              BrowserManager().browserList.forEach((e) {
-                                if (e.type == 'file') {
-                                  String downloadUrl = e.server!.url +
-                                      '/media' +
-                                      e.data! +
-                                      (e.server!.jwt == null
-                                          ? ''
-                                          : '?token=' + e.server!.jwt!);
-
-                                  DownloadManager().downloadOneFile(
-                                      downloadUrl,
-                                      e.server!.localname,
-                                      e.data!,
-                                      e.server!.saveToSdCard);
-                                  count++;
-                                }
-                              });
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                          Text('$count downloads started')));
-                            }),
+                            onPressed: () => _downloadAll(context)),
                         IconButton(
                             icon: Icon(
                               Icons.library_add,
