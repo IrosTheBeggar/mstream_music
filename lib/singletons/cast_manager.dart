@@ -101,14 +101,21 @@ class CastManager {
         if (seen.add(t.id)) merged.add(t);
       }
     }
-    _targets.add(merged);
-
-    // If the active remote target vanished (renderer powered off / left the
-    // network), fall back to local so the UI never points at a gone device.
+    // Always keep the active remote target listed, even when the current scan
+    // snapshot doesn't include it — SSDP devices flicker in and out, and a
+    // transient gap (notably right after the picker reopens and rescans) must
+    // not drop the device the user is actively casting to. Without this, the
+    // active target fell out of the list and the picker showed "This device"
+    // while audio was still playing on the renderer.
     final active = _activeTarget.value;
-    if (!active.isLocal && !merged.contains(active)) {
-      selectTarget(CastTarget.local);
+    if (!active.isLocal && seen.add(active.id)) {
+      merged.add(active);
     }
+    _targets.add(merged);
+    // NOTE: we intentionally do NOT auto-fall-back to local when a device is
+    // merely absent from a scan (that was the bug above). Graceful handling of
+    // a renderer that genuinely goes offline mid-cast is a future refinement
+    // (drive it off an explicit onRendererOffline for the *active* device).
   }
 
   void dispose() {
