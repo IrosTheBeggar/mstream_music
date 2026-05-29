@@ -24,18 +24,15 @@ import 'screens/manage_server.dart';
 import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/share_playlist_dialog.dart';
-import 'screens/visualizer_screen.dart';
-
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
-import 'singletons/sleep_timer.dart';
 import 'theme/velvet_theme.dart';
-import 'widgets/sleep_timer_sheet.dart';
 import 'media/cast_target.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
+import 'widgets/more_actions_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
 Future<void> main() async {
@@ -234,6 +231,26 @@ class _MStreamAppState extends State<MStreamApp>
                 ],
               ),
               actions: <Widget>[
+                StreamBuilder<CastTarget>(
+                    stream: CastManager().activeTargetStream,
+                    initialData: CastManager().activeTarget,
+                    builder: (context, snapshot) {
+                      final casting =
+                          !(snapshot.data ?? CastTarget.local).isLocal;
+                      return IconButton(
+                        icon:
+                            Icon(casting ? Icons.cast_connected : Icons.cast),
+                        tooltip: 'Play on…',
+                        color: casting ? VelvetColors.primary : null,
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: VelvetColors.surface,
+                            builder: (_) => CastPickerSheet(),
+                          );
+                        },
+                      );
+                    }),
                 StreamBuilder<List<Server>>(
                     stream: ServerManager().serverListStream,
                     builder: (context, snapshot) {
@@ -475,30 +492,15 @@ class NowPlaying extends StatelessWidget {
                           ),
                         );
                       }),
+                  // Visualizer + Clear queue moved to the "More" sheet; the
+                  // Download-all bulk action (from the server-download-folder
+                  // PR) stays here as a queue-specific action.
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    IconButton(
-                      icon: Icon(Icons.auto_awesome),
-                      color: VelvetColors.textSecondary,
-                      tooltip: 'Visualizer',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => VisualizerScreen()),
-                        );
-                      },
-                    ),
                     IconButton(
                       icon: Icon(Icons.download_for_offline),
                       color: VelvetColors.textSecondary,
                       tooltip: 'Download all',
                       onPressed: () => _downloadAll(context),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete_sweep),
-                      color: VelvetColors.error,
-                      tooltip: 'Clear queue',
-                      onPressed: () {
-                        MediaManager().audioHandler.customAction('clearPlaylist');
-                      },
                     ),
                   ]),
                 ]),
@@ -1025,107 +1027,19 @@ class BottomBar extends StatelessWidget {
                                 : VelvetColors.appBarTextSecondary,
                             onPressed: toggleRepeat);
                       }),
-                  StreamBuilder<dynamic>(
-                      // stream: MediaManager().audioHandler.playbackState,
-                      stream: MediaManager().audioHandler.customState,
-                      builder: (context, snapshot) {
-                        final Server? autoDJState =
-                            (snapshot.data?.autoDJState as Server?);
-                        return IconButton(
-                            icon: Icon(Icons.album),
-                            color: (autoDJState == null)
-                                ? VelvetColors.appBarText
-                                : Colors.blue,
-                            onPressed: () {
-                              if (ServerManager().currentServer == null) {
-                                return;
-                              }
-
-                              if (autoDJState == null) {
-                                MediaManager().audioHandler.customAction(
-                                    'setAutoDJ', {
-                                  'autoDJServer': ServerManager().currentServer
-                                });
-
-                                if (ServerManager().serverList.length == 1) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content: Text("Auto DJ Enabled")));
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content: Text(
-                                              "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
-                                }
-                              } else if (ServerManager().currentServer! ==
-                                  autoDJState) {
-                                MediaManager().audioHandler.customAction(
-                                    'setAutoDJ', {'autoDJServer': null});
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text("Auto DJ Disabled")));
-                              } else {
-                                MediaManager().audioHandler.customAction(
-                                    'setAutoDJ', {
-                                  'autoDJServer': ServerManager().currentServer
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(
-                                        "Auto DJ Enabled For ${ServerManager().currentServer!.url.toString()}")));
-                              }
-                            });
-                      }),
-                  StreamBuilder<CastTarget>(
-                      stream: CastManager().activeTargetStream,
-                      initialData: CastManager().activeTarget,
-                      builder: (context, snapshot) {
-                        final casting =
-                            !(snapshot.data ?? CastTarget.local).isLocal;
-                        return IconButton(
-                          icon: Icon(
-                              casting ? Icons.cast_connected : Icons.cast),
-                          tooltip: 'Play on…',
-                          color: casting
-                              ? VelvetColors.primary
-                              : VelvetColors.appBarTextSecondary,
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              backgroundColor: VelvetColors.surface,
-                              builder: (_) => CastPickerSheet(),
-                            );
-                          },
-                        );
-                      }),
-                  StreamBuilder<Duration?>(
-                      stream: SleepTimerManager().remainingStream,
-                      initialData: SleepTimerManager().remaining,
-                      builder: (context, snapshot) {
-                        final active = snapshot.data != null;
-                        return IconButton(
-                          icon: Icon(active
-                              ? Icons.bedtime
-                              : Icons.bedtime_outlined),
-                          color: active
-                              ? VelvetColors.primary
-                              : VelvetColors.appBarTextSecondary,
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              backgroundColor: VelvetColors.surface,
-                              // isScrollControlled lets the sheet
-                              // exceed the default half-screen cap
-                              // — needed because the custom-time
-                              // TextField triggers the soft keyboard
-                              // and the sheet has to grow + resize
-                              // to stay above it.
-                              isScrollControlled: true,
-                              builder: (_) => SleepTimerSheet(),
-                            );
-                          },
-                        );
-                      }),
+                  IconButton(
+                    icon: Icon(Icons.more_vert),
+                    color: VelvetColors.appBarTextSecondary,
+                    tooltip: 'More',
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: VelvetColors.surface,
+                        builder: (_) =>
+                            MoreActionsSheet(parentContext: context),
+                      );
+                    },
+                  ),
                 ])
               ])
         ])));
