@@ -40,6 +40,8 @@ class DlnaPlaybackBackend implements PlaybackBackend {
 
   bool _playing = false;
   bool _advancing = false; // guards against double-advance while a track loads
+  bool _confirmedPlaying = false; // renderer reached PLAYING for the current track
+  bool _reachedNearEnd = false; // position reached end-of-track while playing
   Duration _position = Duration.zero;
   Duration? _duration;
   BackendProcessingState _state = BackendProcessingState.idle;
@@ -142,6 +144,8 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     _index = index;
     _indexSubject.add(index);
     final item = _items[index];
+    _confirmedPlaying = false;
+    _reachedNearEnd = false;
     _setState(BackendProcessingState.loading);
     try {
       await _api.setMediaUri(
@@ -289,10 +293,19 @@ class DlnaPlaybackBackend implements PlaybackBackend {
         _duration = Duration(seconds: info.duration.seconds);
         _durationSubject.add(_duration);
       }
+      // Latch once we've genuinely reached the end while playing — robust to
+      // renderers that reset position to 0 when they stop at track end.
+      final dur = _duration;
+      if (dur != null &&
+          dur > Duration.zero &&
+          _position >= dur - const Duration(seconds: 5)) {
+        _reachedNearEnd = true;
+      }
       switch (info.state) {
         case TransportState.playing:
           _playing = true;
           _advancing = false;
+          _confirmedPlaying = true;
           _setState(BackendProcessingState.ready);
           break;
         case TransportState.paused:
@@ -316,13 +329,11 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   }
 
   Future<void> _onRendererStopped() async {
-    // Ignore stops we caused (pause/stop) or that happen mid-load.
-    if (_advancing || !_playing) return;
-    final dur = _duration;
-    final nearEnd = dur == null ||
-        dur == Duration.zero ||
-        _position >= dur - const Duration(seconds: 3);
-    if (!nearEnd) return; // a transient stop, not end-of-track
+    // Only treat STOPPED as end-of-track if the track actually started
+    // (ignores the transient STOPPED during the load->play transition that
+    // otherwise skips a freshly-selected track) AND playback reached the end.
+    // Without these guards a just-loaded track skips after a few seconds.
+    if (_advancing || !_confirmedPlaying || !_reachedNearEnd) return;
     _advancing = true;
     final n = _nextIndex();
     if (n != null) {
