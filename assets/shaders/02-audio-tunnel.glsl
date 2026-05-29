@@ -6,6 +6,12 @@
 //
 // Demonstrates the "sample 3 bands" pattern — useful for picking out
 // rhythm sections without doing a full equalizer.
+//
+// params (iParams[]):
+//   0 = bassSpeed (how much bass accelerates the tunnel)
+//   1 = trebleGlow (treble spoke brightness)
+// param: bassSpeed 0.0 2.5 0.19
+// param: trebleGlow 0.0 4.0 2.53
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = (fragCoord - 0.5 * iResolution.xy) / iResolution.y;
@@ -27,7 +33,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // Tunnel rings. log(r) gives even spacing in screen space as
     // they recede; scroll outward over time, faster with bass.
-    float speed = 0.4 + bass * 0.8;
+    float speed = 0.4 + bass * iParams[0];
     float ring = fract(log(max(r, 0.001)) * 3.0 - iTime * speed);
     float ringEdge = smoothstep(0.5, 0.42, abs(ring - 0.5));
 
@@ -37,7 +43,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = mix(cold, warm, clamp(mids, 0.0, 1.0));
 
     float spoke = 0.5 + 0.5 * sin(a * 12.0 + iTime * 0.6);
-    col += pow(spoke, 12.0) * treble * vec3(1.0, 0.8, 0.4) * 1.5;
+    col += pow(spoke, 12.0) * treble * vec3(1.0, 0.8, 0.4) * iParams[1];
 
     // Vignette by 1/r so the center stays bright and the edges fall off.
     col *= ringEdge / max(r * 1.4, 0.18);

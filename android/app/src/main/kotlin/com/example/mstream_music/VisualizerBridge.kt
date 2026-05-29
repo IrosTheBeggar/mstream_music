@@ -39,6 +39,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
+    private external fun nativeSetTuning(ctxPtr: Long, values: FloatArray)
     private external fun nativeLoadPresetData(
         ctxPtr: Long, presetData: String, smoothTransition: Boolean)
     private external fun nativeDispose(ctxPtr: Long)
@@ -70,6 +71,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         when (call.method) {
             "create" -> handleCreate(call, result)
             "addPcm" -> handleAddPcm(call, result)
+            "setTuning" -> handleSetTuning(call, result)
             "loadPreset" -> handleLoadPreset(call, result)
             "pause" -> {
                 renderThread?.pauseRendering()
@@ -152,6 +154,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             initFn = ::nativeInit,
             renderFn = ::nativeRenderFrame,
             addPcmFn = ::nativeAddPcm,
+            setTuningFn = ::nativeSetTuning,
             disposeFn = ::nativeDispose,
         ).also { it.start() }
 
@@ -173,6 +176,23 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
         }
         renderThread?.enqueuePcm(samples)
+        result.success(null)
+    }
+
+    private fun handleSetTuning(call: MethodCall, result: MethodChannel.Result) {
+        val raw = call.argument<Any>("values")
+        val values = when (raw) {
+            is FloatArray -> raw
+            is DoubleArray -> FloatArray(raw.size) { raw[it].toFloat() }
+            is List<*> -> FloatArray(raw.size) { (raw[it] as Number).toFloat() }
+            else -> {
+                result.success(null)
+                return
+            }
+        }
+        // Applied on the render thread before the next frame, so it can't
+        // race the native renderFrame's uniform reads.
+        renderThread?.enqueueTuning(values)
         result.success(null)
     }
 
@@ -199,6 +219,7 @@ private class RenderThread(
     private val initFn: (Surface, Int, Int, Int) -> Long,
     private val renderFn: (Long) -> Unit,
     private val addPcmFn: (Long, FloatArray) -> Unit,
+    private val setTuningFn: (Long, FloatArray) -> Unit,
     private val disposeFn: (Long) -> Unit,
 ) : Thread("mstream-visualizer-render") {
 
@@ -207,12 +228,19 @@ private class RenderThread(
     private val pauseLock = Object()
     private val pcmQueue = ConcurrentLinkedQueue<FloatArray>()
     private val presetQueue = ConcurrentLinkedQueue<Triple<String, Boolean, (Long, String, Boolean) -> Unit>>()
+    // Only the most recent tuning snapshot matters, so a single volatile
+    // slot (not a queue) — a fast slider drag just coalesces.
+    @Volatile private var pendingTuning: FloatArray? = null
     private val frameNanos = 1_000_000_000L / 60L // ~16.67 ms
 
     fun enqueuePcm(samples: FloatArray) {
         pcmQueue.offer(samples)
         // Cap backlog so a paused render thread doesn't OOM.
         while (pcmQueue.size > 8) pcmQueue.poll()
+    }
+
+    fun enqueueTuning(values: FloatArray) {
+        pendingTuning = values
     }
 
     fun enqueuePreset(data: String, smooth: Boolean,
@@ -278,6 +306,7 @@ private class RenderThread(
                 }
                 drainPresets(ctx)
                 drainPcm(ctx)
+                drainTuning(ctx)
                 renderFn(ctx)
                 lastFrame += frameNanos
                 val sleep = lastFrame - System.nanoTime()
@@ -305,6 +334,12 @@ private class RenderThread(
             addPcmFn(ctx, batch)
             batch = pcmQueue.poll()
         }
+    }
+
+    private fun drainTuning(ctx: Long) {
+        val t = pendingTuning ?: return
+        pendingTuning = null
+        setTuningFn(ctx, t)
     }
 
     private fun drainPresets(ctx: Long) {

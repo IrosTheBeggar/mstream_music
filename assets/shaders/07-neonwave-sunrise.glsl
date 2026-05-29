@@ -6,6 +6,10 @@
 //                wires iChannel0 to our audio texture by default.
 //
 // Synthwave sunrise — neon sun + reflective water, music-reactive.
+//
+// params (iParams[]):
+//   0 = fftBars (moon FFT bar height)
+// param: fftBars 0.0 0.2 0.074
 
 // CC0 - Neonwave sunrise
 //  Inspired by a tweet by I wanted to create something that looked
@@ -255,7 +259,7 @@ vec4 moon(vec3 ro, vec3 rd) {
     float d0    = abs(pp.y);
     vec2 cp     = vec2(0.055*abs(msny-float(i)), 0.25);
     float fft   = texture(iChannel0, cp).x;
-    float d1    = length(pp)-0.05*fft;
+    float d1    = length(pp)-iParams[0]*fft;
     float h     =mix(0.66, 0.99, fft);
     vec3 mcol1  = hsv2rgb(vec3(h, 0.55, 1.0));
     vec3 mcol2  = hsv2rgb(vec3(h, 0.85, 1.0));

@@ -6,6 +6,10 @@
 //                wires iChannel0 to our audio texture by default.
 //
 // Synthwave sunset companion to Neonwave sunrise, music-reactive.
+//
+// params (iParams[]):
+//   0 = synthGain (roadside oscilloscope height)
+// param: synthGain 0.0 3.0 1.0
 
 // License CC0: Neon Sunset
 //  Code is hackish but I thought it looked good enough to share
@@ -146,7 +150,7 @@ float synth(vec2 p, float aa, out float h, out float db) {
   const int around = 0;
   for (int i = -around; i <=around ;++i) {
     float fft = texture(iChannel0, vec2((n+float(i))*st, 0.25)).x; 
-    fft *= fft;
+    fft *= fft * iParams[0];
     if (i == 0) h = fft;
     float dibb = segmentx((p-vec2(st*float(i), 0.0)).yx, fft+0.05)-st*0.4;
     dib = min(dib, dibb);

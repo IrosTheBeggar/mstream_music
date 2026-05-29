@@ -5,12 +5,18 @@
 //
 // Demonstrates the simplest audio reaction — sample the FFT row of
 // iChannel0 (y near 0.25) at one frequency per bar.
+//
+// params (iParams[]):
+//   0 = contrast (FFT bar contrast / pow exponent)
+//   1 = bars (number of bars across the screen)
+// param: contrast 0.5 3.0 1.51
+// param: bars 12 96 76
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
 
-    // 48 bars across the screen.
-    float numBars = 48.0;
+    // Bar count (iParams[1]); floor keeps whole bars while dragging.
+    float numBars = floor(iParams[1]);
     float bar = floor(uv.x * numBars);
     float barCenter = (bar + 0.5) / numBars;
 
@@ -24,9 +30,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // frequencies instead of dead air at 15–22 kHz.
     float freq = pow(bar / numBars, 1.6) * 0.30;
     float amp = texture(iChannel0, vec2(freq, 0.25)).x;
-    // pow expands contrast; no extra gain (real audio is hot enough
-    // that the old *1.4 pegged the bass bars at full height).
-    amp = pow(amp, 1.5);
+    // pow expands contrast (iParams[0]); no extra gain (real audio is
+    // hot enough that the old *1.4 pegged the bass bars at full height).
+    amp = pow(amp, iParams[0]);
 
     // Gap between bars.
     float barWidth = 0.7 / numBars;

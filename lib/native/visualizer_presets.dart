@@ -31,6 +31,18 @@ class VisualizerPresets {
   final Map<VisualizerPresetKind, int> _cursors = {};
   final Random _rng = Random();
 
+  // The most recently loaded preset's asset path and raw source. The
+  // visualizer screen reads [currentShaderSource] to parse `// param:`
+  // tuning knobs, and uses [currentShaderPath] as the persistence key.
+  String? _currentPath;
+  String? _currentSource;
+
+  /// Asset path of the most recently loaded preset (null until one loads).
+  String? get currentShaderPath => _currentPath;
+
+  /// Raw source of the most recently loaded preset (null until one loads).
+  String? get currentShaderSource => _currentSource;
+
   String _directoryFor(VisualizerPresetKind kind) {
     switch (kind) {
       case VisualizerPresetKind.milkdrop:
@@ -75,31 +87,36 @@ class VisualizerPresets {
   }
 
   /// Load a random preset of the given kind into the running engine.
-  /// No-op if nothing is bundled.
-  Future<void> loadRandom(
+  /// Returns the loaded asset path (or null if nothing is bundled).
+  Future<String?> loadRandom(
     VisualizerPresetKind kind, {
     bool smooth = true,
   }) async {
     final paths = await _list(kind);
-    if (paths.isEmpty) return;
+    if (paths.isEmpty) return null;
     final pick = paths[_rng.nextInt(paths.length)];
     await _loadByPath(pick, smooth: smooth);
+    return pick;
   }
 
   /// Advance to the next preset in the sorted list, wrapping around.
-  Future<void> loadNext(
+  /// Returns the loaded asset path (or null if nothing is bundled).
+  Future<String?> loadNext(
     VisualizerPresetKind kind, {
     bool smooth = true,
   }) async {
     final paths = await _list(kind);
-    if (paths.isEmpty) return;
+    if (paths.isEmpty) return null;
     final next = ((_cursors[kind] ?? -1) + 1) % paths.length;
     _cursors[kind] = next;
     await _loadByPath(paths[next], smooth: smooth);
+    return paths[next];
   }
 
   Future<void> _loadByPath(String assetPath, {required bool smooth}) async {
     final data = await rootBundle.loadString(assetPath);
+    _currentPath = assetPath;
+    _currentSource = data;
     await VisualizerBridge.loadPreset(data, smooth: smooth);
   }
 }
