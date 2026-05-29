@@ -196,6 +196,23 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeAddPcm(
 }
 
 JNIEXPORT void JNICALL
+Java_com_example_mstream_1music_VisualizerBridge_nativeSetTuning(
+        JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
+        jfloatArray valuesArray) {
+    auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
+    if (!ctx || !ctx->engine || !valuesArray) return;
+    jsize len = env->GetArrayLength(valuesArray);
+    if (len <= 0) return;
+    jfloat* data = env->GetFloatArrayElements(valuesArray, nullptr);
+    if (!data) return;
+    // setTuning touches no GL state, so no eglMakeCurrent needed; it runs
+    // on the render thread (Kotlin enqueues) so params don't race the
+    // renderFrame reads.
+    ctx->engine->setTuning(data, static_cast<std::size_t>(len));
+    env->ReleaseFloatArrayElements(valuesArray, data, JNI_ABORT);
+}
+
+JNIEXPORT void JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeLoadPresetData(
         JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
         jstring presetData, jboolean smoothTransition) {

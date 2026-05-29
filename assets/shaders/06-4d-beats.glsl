@@ -6,6 +6,10 @@
 //                wires iChannel0 to our audio texture by default.
 //
 // Beat-driven 4D grid visualization by mrange, animated by audio FFT.
+//
+// params (iParams[]):
+//   0 = tempo (beat-clock multiplier)
+// param: tempo 0.5 4.0 1.9
 
 // CC0: 4D Beats
 // Continuing experiments with yesterday's grid structure
@@ -32,7 +36,7 @@ void mainImage(out vec4 O, vec2 C) {
   // Musical timing: beat-synced animation
   //  floor(T)+sqrt(F) gives the beat synchronized speed-up
   //  floor(T)+F*F also works
-  float i,z,d,k,T=iChannelTime[0]*1.9,F=fract(T),t=floor(T)+sqrt(F);
+  float i,z,d,k,T=iChannelTime[0]*iParams[0],F=fract(T),t=floor(T)+sqrt(F);
   
   // 2D rotation matrix that spins based on musical beats
   mat2 R=mat2(cos(t*.1+11.*U.wxzw));

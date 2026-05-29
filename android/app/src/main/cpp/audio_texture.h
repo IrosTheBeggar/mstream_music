@@ -9,6 +9,15 @@
 // PCM in is interleaved stereo. We mix L+R to mono and keep a 2048-
 // sample ring buffer; per upload, we take the most recent 1024 samples,
 // window them, FFT, and write 512 mag bins + 512 waveform samples.
+//
+// The spectrum row follows the Web Audio AnalyserNode / Shadertoy
+// convention the bundled shaders were authored against: the FFT
+// magnitude is normalized to source amplitude (so it's independent of
+// FFT size / window), EMA-smoothed in the linear domain to stop the
+// bars strobing, then mapped through a dB window to [0,1]. This
+// replaces the old uncalibrated log1p() curve that clipped the low
+// bins to white and forced every shader to pre-attenuate. Tuning
+// constants live at the top of audio_texture.cpp.
 
 #pragma once
 
@@ -42,6 +51,12 @@ public:
     // per frame. Returns the GL texture name.
     GLuint upload();
 
+    // Live-tune the spectrum response curve (see upload()). Safe to call
+    // from a thread other than upload()'s — these are plain float writes
+    // and a torn read just means one stale frame, which is fine for a
+    // visual control. Invalid windows (maxDb <= minDb) are ignored.
+    void setParams(float minDb, float maxDb, float smoothing);
+
     GLuint texture() const { return tex_; }
 
 private:
@@ -57,4 +72,23 @@ private:
     std::vector<float> windowed_;     // FFT_SIZE
     std::vector<float> hannWindow_;   // FFT_SIZE, precomputed
     std::vector<uint8_t> texBytes_;   // BINS * 2 (one row of FFT, one of waveform)
+    std::vector<float> smoothedMag_;  // BINS — EMA of normalized magnitude (linear)
+
+    // Amplitude normalization derived from the window (computed in ctor).
+    // |X[k]| for a tone of amplitude A is A/2 · Σw, so 2/Σw recovers A
+    // (0 dB == full-scale single-bin tone), independent of FFT_SIZE.
+    float windowSum_ = 0.0f;          // Σ hannWindow_
+    float normScale_ = 0.0f;          // 2 / windowSum_
+
+    // Set by addPcm(), cleared by upload(); lets upload() skip the FFT
+    // when no new PCM arrived (render ~60 Hz outpaces PCM ~30 Hz, so
+    // this elides about half the FFTs).
+    bool dirty_ = false;
+
+    // Response-curve params, tunable at runtime via setParams(). Defaults
+    // are the Web Audio / Shadertoy-style curve we calibrated; the in-app
+    // tuning panel overrides them. See upload() for how they're applied.
+    float minDb_ = -69.7f;
+    float maxDb_ = -20.7f;
+    float smoothing_ = 0.27f;
 };

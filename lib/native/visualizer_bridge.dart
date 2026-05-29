@@ -49,6 +49,20 @@ class VisualizerBridge {
     }
   }
 
+  /// Pushes live tuning values to the engine. Layout is
+  /// `[minDb, maxDb, smoothing, p0, p1, …]`: the first three drive the
+  /// native audio response curve, the rest fill the shaders' `iParams[]`
+  /// uniform. Applied on the render thread before the next frame.
+  /// No-op on the Milkdrop engine. Best-effort (purely cosmetic).
+  static Future<void> setTuning(List<double> values) async {
+    try {
+      await _channel.invokeMethod(
+          'setTuning', {'values': Float32List.fromList(values)});
+    } on PlatformException {
+      // best-effort: tuning is cosmetic
+    }
+  }
+
   /// Loads a Milkdrop preset from in-memory `.milk` text. Faster than
   /// the file-path variant since native code doesn't have to read from
   /// the filesystem (or be granted permission to). [smooth] enables

@@ -7,6 +7,10 @@
 //
 // Demonstrates the "average FFT into a loudness signal" pattern, useful
 // when you want music-reactive intensity without picking specific bands.
+//
+// params (iParams[]):
+//   0 = reactivity (loudness → brightness gain)
+// param: reactivity 0.0 5.0 2.37
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -39,7 +43,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col.g = 0.5 + 0.5 * sin(v * 3.14159 + 2.094);
     col.b = 0.5 + 0.5 * sin(v * 3.14159 + 4.188);
 
-    col *= 0.35 + loudness * 2.0;
+    col *= 0.35 + loudness * iParams[0];
 
     fragColor = vec4(col, 1.0);
 }

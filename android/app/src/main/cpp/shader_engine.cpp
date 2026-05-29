@@ -42,6 +42,10 @@ uniform float iChannelTime[4];
 uniform vec3  iChannelResolution[4];
 uniform vec4  iDate;
 uniform float iSampleRate;
+// mstream tuning knobs, pushed from the in-app panel. Size must match
+// ShaderEngine::NUM_PARAMS. Shaders read iParams[i] where they'd otherwise
+// hardcode a constant; defaults are supplied by the UI on load.
+uniform float iParams[8];
 
 out vec4 outColor;
 
@@ -500,6 +504,7 @@ ShaderEngine::UniformLocs ShaderEngine::queryUniformLocations(GLuint program) {
     u.channelResolution = glGetUniformLocation(program, "iChannelResolution[0]");
     u.date              = glGetUniformLocation(program, "iDate");
     u.sampleRate        = glGetUniformLocation(program, "iSampleRate");
+    u.params            = glGetUniformLocation(program, "iParams[0]");
     return u;
 }
 
@@ -667,6 +672,7 @@ void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
     if (p.locs.mouse      >= 0) glUniform4f(p.locs.mouse, 0,0,0,0);
     if (p.locs.date       >= 0) glUniform4f(p.locs.date, 0,0,0,0);
     if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
+    if (p.locs.params     >= 0) glUniform1fv(p.locs.params, NUM_PARAMS, params_);
     if (p.locs.channelTime >= 0) {
         const float t[4] = {elapsed,elapsed,elapsed,elapsed};
         glUniform1fv(p.locs.channelTime, 4, t);
@@ -772,6 +778,18 @@ void ShaderEngine::renderFrame() {
 
 void ShaderEngine::addPcm(const float* samples, std::size_t frameCount) {
     audio_.addPcm(samples, frameCount);
+}
+
+void ShaderEngine::setTuning(const float* values, std::size_t count) {
+    if (!values) return;
+    // Layout: [0]=minDb, [1]=maxDb, [2]=smoothing, [3..]=iParams[0..].
+    // Runs on the render thread (the bridge applies the latest value
+    // before renderFrame), so params_ writes don't race renderPass reads.
+    if (count >= 3) audio_.setParams(values[0], values[1], values[2]);
+    for (int i = 0; i < NUM_PARAMS; ++i) {
+        const std::size_t idx = static_cast<std::size_t>(i) + 3;
+        params_[i] = (idx < count) ? values[idx] : 0.0f;
+    }
 }
 
 void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {

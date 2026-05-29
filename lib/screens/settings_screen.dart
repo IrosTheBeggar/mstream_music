@@ -153,6 +153,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) => _onVisualizerSourceChanged(v),
             ),
           ),
+          SwitchListTile(
+            title: Text('Visualizer tuning knobs'),
+            subtitle: Text(
+              'Show live sliders over the visualizer to tweak each '
+              'shader\'s audio reactivity. Shader engine only.',
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().showVisualizerKnobs,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setShowVisualizerKnobs(v);
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Browse'),
           SwitchListTile(

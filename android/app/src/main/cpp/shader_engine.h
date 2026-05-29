@@ -64,6 +64,12 @@ public:
     void renderFrame() override;
     void addPcm(const float* samples, std::size_t frameCount) override;
     void loadPreset(const char* data, bool smoothTransition) override;
+    void setTuning(const float* values, std::size_t count) override;
+
+    // Number of user tuning floats exposed to shaders as `uniform float
+    // iParams[NUM_PARAMS]`. The first 3 setTuning() values drive the
+    // audio response curve; the remainder fill iParams.
+    static constexpr int NUM_PARAMS = 8;
 
     // Pass slot indices: 0..3 = bufferA..D, 4 = image. Used by the
     // anonymous-namespace parser in the .cpp; exposed here so it can
@@ -98,6 +104,7 @@ private:
         GLint channelResolution = -1;
         GLint date = -1;
         GLint sampleRate = -1;
+        GLint params = -1;   // iParams[NUM_PARAMS] — user tuning knobs
     };
 
     struct Pass {
@@ -184,6 +191,12 @@ private:
     static constexpr float kTransitionDuration = 0.6f;
 
     AudioTexture audio_;
+
+    // User tuning knobs pushed via setTuning(), bound to the iParams[]
+    // uniform each frame. Defaults to 0; the UI pushes each shader's
+    // declared defaults on load, so shaders that read iParams[i] always
+    // see a sensible value.
+    float params_[NUM_PARAMS] = {0.0f};
 
     // --- Worker thread state ---
     std::thread worker_;

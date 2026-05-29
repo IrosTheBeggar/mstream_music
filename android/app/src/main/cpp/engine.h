@@ -34,4 +34,11 @@ public:
     //   ProjectM: .milk file contents
     //   Shader:   GLSL fragment shader (Shadertoy "mainImage" convention)
     virtual void loadPreset(const char* data, bool smoothTransition) = 0;
+
+    // Live-tune engine-specific parameters from a flat float array, pushed
+    // from the in-app tuning panel. The ShaderEngine maps [0..2] → the
+    // audio response curve (minDb, maxDb, smoothing) and [3..] → the
+    // iParams[] uniform exposed to shaders. Default no-op: engines that
+    // expose nothing tunable (e.g. ProjectM) ignore it.
+    virtual void setTuning(const float* /*values*/, std::size_t /*count*/) {}
 };

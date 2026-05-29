@@ -128,6 +128,20 @@ class SettingsManager {
   // lighter alternative driven by the bundled .glsl catalog.
   VisualizerEngine visualizerEngine = VisualizerEngine.milkdrop;
 
+  // Visualizer tuning knobs (Shader engine only). Hidden by default —
+  // flipping [showVisualizerKnobs] reveals an in-visualizer slider panel
+  // for curious users. Tuned values persist: [visualizerGlobalParams] is
+  // the global response-curve override [minDb, maxDb, smoothing] (empty =
+  // native defaults), and [visualizerShaderParams] holds per-shader
+  // iParams overrides keyed by the shader's asset path.
+  bool showVisualizerKnobs = false;
+  List<double> visualizerGlobalParams = const [];
+  Map<String, List<double>> visualizerShaderParams = {};
+
+  /// Native AudioTexture response-curve defaults — keep in sync with
+  /// audio_texture.cpp (minDb_ / maxDb_ / smoothing_).
+  static const List<double> defaultGlobalParams = [-69.7, -20.7, 0.27];
+
   late final BehaviorSubject<bool> _albumGridStream =
       BehaviorSubject<bool>.seeded(albumGrid);
   late final BehaviorSubject<int> _letterStripStream =
@@ -161,6 +175,21 @@ class SettingsManager {
           : const [];
       visualizerAudioSource = _readVisualizerAudioSource(m);
       visualizerEngine = _readVisualizerEngine(m);
+      showVisualizerKnobs = m['showVisualizerKnobs'] ?? false;
+      final rawGlobal = m['visualizerGlobalParams'];
+      visualizerGlobalParams = rawGlobal is List
+          ? rawGlobal.whereType<num>().map((n) => n.toDouble()).toList()
+          : const [];
+      visualizerShaderParams = {};
+      final rawShaderParams = m['visualizerShaderParams'];
+      if (rawShaderParams is Map) {
+        rawShaderParams.forEach((k, v) {
+          if (k is String && v is List) {
+            visualizerShaderParams[k] =
+                v.whereType<num>().map((n) => n.toDouble()).toList();
+          }
+        });
+      }
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -227,6 +256,9 @@ class SettingsManager {
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
       'visualizerEngine': visualizerEngine.name,
+      'showVisualizerKnobs': showVisualizerKnobs,
+      'visualizerGlobalParams': visualizerGlobalParams,
+      'visualizerShaderParams': visualizerShaderParams,
     }));
   }
 
@@ -283,6 +315,30 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setShowVisualizerKnobs(bool v) async {
+    showVisualizerKnobs = v;
+    await _save();
+  }
+
+  Future<void> setVisualizerGlobalParams(List<double> v) async {
+    visualizerGlobalParams = v;
+    await _save();
+  }
+
+  /// Persist per-shader iParams overrides for [key] (the shader asset
+  /// path). Call on slider release, not every drag tick.
+  Future<void> setVisualizerShaderParams(String key, List<double> v) async {
+    visualizerShaderParams = {...visualizerShaderParams, key: v};
+    await _save();
+  }
+
+  /// Drop any saved overrides for [key], reverting it to shader defaults.
+  Future<void> clearVisualizerShaderParams(String key) async {
+    if (!visualizerShaderParams.containsKey(key)) return;
+    visualizerShaderParams = {...visualizerShaderParams}..remove(key);
+    await _save();
+  }
+
   Future<void> resetAll() async {
     TranscodeManager().transcodeOn = false;
     albumGrid = true;
@@ -294,6 +350,9 @@ class SettingsManager {
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
     visualizerEngine = VisualizerEngine.milkdrop;
+    showVisualizerKnobs = false;
+    visualizerGlobalParams = const [];
+    visualizerShaderParams = {};
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);

@@ -51,6 +51,14 @@
 //
 // Synthwave / Outrun-style sun + mountains + grid sunset.
 //
+// params (iParams[]):
+//   0 = bassGain (sun bloom throb)     1 = lowMidGain (mountain width)
+//   2 = midGain (grid sway)            3 = trebleGain (cloud bounce)
+// param: bassGain 0.0 0.40 0.11
+// param: lowMidGain 0.0 0.40 0.10
+// param: midGain 0.0 0.60 0.26
+// param: trebleGain 0.0 0.60 0.17
+//
 // === channel image.0 = music
 // === channel image.1 = buffera
 // === channel buffera.0 = music
@@ -298,19 +306,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     for (int i = 0; i < 6; i++) {
         rawBass += texture(iChannel0, vec2(0.004 + float(i) * 0.004, 0.25)).x;
     }
-    rawBass = clamp(rawBass * 0.13, 0.0, 1.0);
+    rawBass = clamp(rawBass * iParams[0], 0.0, 1.0);
 
     float rawLowMid = 0.0;
     for (int i = 0; i < 6; i++) {
         rawLowMid += texture(iChannel0, vec2(0.028 + float(i) * 0.006, 0.25)).x;
     }
-    rawLowMid = clamp(rawLowMid * 0.14, 0.0, 1.0);
+    rawLowMid = clamp(rawLowMid * iParams[1], 0.0, 1.0);
 
     float rawMid = 0.0;
     for (int i = 0; i < 6; i++) {
         rawMid += texture(iChannel0, vec2(0.070 + float(i) * 0.020, 0.25)).x;
     }
-    rawMid = clamp(rawMid * 0.24, 0.0, 1.0);
+    rawMid = clamp(rawMid * iParams[2], 0.0, 1.0);
 
     float rawTreble = 0.0;
     for (int i = 0; i < 6; i++) {
@@ -319,16 +327,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Real music has far less 8-11 kHz "air" than the old synth signal,
     // so sample the lower "presence" range (~3-7 kHz: cymbals, hi-hats,
     // sibilance) and boost the gain so clouds react to real audio.
-    rawTreble = clamp(rawTreble * 0.22, 0.0, 1.0);
+    rawTreble = clamp(rawTreble * iParams[3], 0.0, 1.0);
 
     vec4 raw  = vec4(rawBass, rawLowMid, rawMid, rawTreble);
-    // Square all bands (mrange's "fft *= fft" technique from neonwave
-    // sunset): expands dynamic range so every element sits calm on
-    // quiet passages and pops on transients, instead of riding the
-    // log1p compression's always-hot floor. Prescales above are set so
-    // typical-loud music lands near ~0.9 pre-square (not pre-clamped),
-    // and the visual amplitudes below are sized for the squared output.
-    raw *= raw;
+    // NOTE: an `raw *= raw` square (mrange's "fft *= fft" trick) used to
+    // sit here to claw dynamic range back out of the engine's old log1p
+    // FFT curve, which clamped the low bins to an always-hot floor. The
+    // audio texture now ships a normalized, dB-mapped, EMA-smoothed
+    // spectrum (Web Audio / Shadertoy convention), so that square would
+    // be redundant double-compression — removed. The prescales above act
+    // as per-band sum→[0,1] normalizers; the visual amplitudes below are
+    // sized for these (un-squared) band levels.
     vec4 prev = texture(iChannel1, vec2(0.5, 0.5));
 
     // Asymmetric smoothing vec4-wise: 0.15 attack (raw > prev), 0.5 release.

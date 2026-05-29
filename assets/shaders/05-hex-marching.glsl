@@ -2,18 +2,35 @@
 // author: mrange (Shadertoy)
 // source: https://www.shadertoy.com/view/NdKyDw
 // license: CC0 (Public Domain dedication)
-// modifications: (1) repackaged into our multipass format.
-//                (2) image pass gains an iChannel1 = music route and
-//                samples the bass FFT to add a brightness pulse on
-//                beats. Original buffer pass sources untouched.
+// modifications: (1) repackaged into our multipass format; the upstream
+//                buffer/image passes are otherwise unchanged.
+//                (2) bufferC is an added bass ONSET detector: it tracks a
+//                baseline of the low-frequency energy and emits only how
+//                far the current bass rises ABOVE it, so the image pass
+//                flashes on kicks and stays neutral between them. Replaces
+//                an earlier bass→brightness multiplier that rode the
+//                absolute bass *level* and read as permanently pegged.
 //
 // Multipass: bufferA computes hex marching geometry, bufferB does a feedback
-// pass sampling itself + bufferA, image samples bufferB for the final frame.
+// pass sampling itself + bufferA, bufferC tracks the bass-onset envelope,
+// image samples bufferB (scene) + bufferC (pulse) for the final frame.
+//
+// params (iParams[]):
+//   0 = flash (kick flash strength)        1 = sensitivity (onset gain)
+//   2 = baseline (bass baseline inertia)   3 = release (flash decay)
+//   4 = deadzone (onset noise floor)
+// param: flash 0.0 2.25 1.76
+// param: sensitivity 1.0 18.0 9.4
+// param: baseline 0.80 0.99 0.89
+// param: release 0.70 0.98 0.86
+// param: deadzone 0.0 0.15 0.023
 //
 // === channel image.0 = bufferb
-// === channel image.1 = music
+// === channel image.1 = bufferc
 // === channel bufferb.0 = buffera
 // === channel bufferb.1 = bufferb
+// === channel bufferc.0 = music
+// === channel bufferc.1 = bufferc
 //
 // === pass: image ===
 // License CC0: Hex Marching
@@ -27,24 +44,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   col = clamp(col, 0.0, 1.0);
   col *= smoothstep(0.0, 2.0, TIME);
 
-  // mstream addition: brightness pulses on bass hits. Sample a few
-  // low FFT bins from the music channel (iChannel1) and use them as
-  // a multiplier on the otherwise time-only output.
-  // AudioTexture has 512 bins (~43 Hz/bin @ 44.1 kHz); these 4 samples
-  // cover bins ~2–7 ≈ 85–300 Hz, the kick/sub-bass range.
-  float bass = 0.0;
-  for (int i = 0; i < 4; i++) {
-    bass += texture(iChannel1, vec2(float(i) * 0.004 + 0.004, 0.25)).x;
-  }
-  // Lower prescale so loud bass doesn't pre-clamp before the square,
-  // and square for dynamic range (mrange's "fft *= fft" technique).
-  bass = clamp(bass * 0.20, 0.0, 1.0);
-  bass *= bass;
-  // Gentle brightness coefficient: this multiply lands right before the
-  // sqrt() gamma below, so a big boost pushes bright pixels past 1.0 and
-  // clips them to white (the "saturated" look). 0.45 keeps the pulse
-  // visible without blowing out highlights.
-  col *= 1.0 + bass * 0.45;
+  // mstream: flash on bass onsets. bufferC (iChannel1) outputs a pulse in
+  // .r that spikes when bass rises above its recent baseline and decays to
+  // ~0 between hits — a transient flash, NOT a constant brightness boost
+  // (the constant boost is what made the old level-based mod peg).
+  float pulse = texture(iChannel1, vec2(0.5, 0.5)).x;
+  col *= 1.0 + pulse * iParams[0];   // iParams[0] = flash strength
 
   col = sqrt(col);
   fragColor = vec4(col, 1.0);
@@ -313,6 +318,38 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   
   vec3 col = pcol.xyz;
   col += vec3(0.9, .8, 1.2)*mix(0.5, 0.66, length(p))*(0.05+bcol);
-  
+
   fragColor = vec4(col, 1.0);
+}
+// === pass: bufferc ===
+// Bass onset detector (mstream addition). Writes one value to every pixel;
+// the image pass samples a single texel.
+//   iChannel0 = music   (FFT spectrum row, y=0.25)
+//   iChannel1 = bufferc  (self-feedback: previous frame's {pulse, baseline})
+// Output: .r = pulse (0..1, flares on kicks, ~0 between), .g = bass baseline.
+//
+// Buffers are RGBA8, so the feedback EMA only resolves ~1/255 per step. We
+// keep the baseline time-constant moderate and add a small dead-zone on the
+// onset so 8-bit quantization noise can't leak through as a constant glow.
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  // Current bass = mean of the lowest 4 bins (kick / sub-bass,
+  // ~85-345 Hz at the 512-bin, 44.1 kHz layout).
+  float bass = 0.0;
+  for (int i = 0; i < 4; i++) {
+    bass += texture(iChannel0, vec2(float(i) * 0.004 + 0.004, 0.25)).x;
+  }
+  bass *= 0.25;
+
+  vec4 prev = texture(iChannel1, vec2(0.5, 0.5));
+  // Baseline inertia (iParams[2]): follows sustained bass, lags transients.
+  float baseline = mix(bass, prev.y, iParams[2]);
+
+  // Onset = bass above baseline, past a dead-zone (iParams[4]) that eats
+  // the ~1/255 quantization band. ~0 in steady state; spikes on a kick.
+  // iParams[1] = sensitivity (onset gain).
+  float onset = clamp((bass - baseline - iParams[4]) * iParams[1], 0.0, 1.0);
+  // Instant attack; iParams[3] = release (flash decay per frame).
+  float pulse = max(onset, prev.x * iParams[3]);
+
+  fragColor = vec4(pulse, baseline, 0.0, 1.0);
 }
