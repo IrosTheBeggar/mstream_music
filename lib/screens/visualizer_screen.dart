@@ -407,7 +407,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             children: [
               Expanded(
                 child: Text(
-                  'Tuning',
+                  AppLocalizations.of(context).visualizerTuningTitle,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -417,13 +417,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ),
               TextButton(
                 onPressed: _resetTuning,
-                child: Text('Reset',
+                child: Text(AppLocalizations.of(context).reset,
                     style: TextStyle(color: VelvetColors.primary)),
               ),
               IconButton(
                 onPressed: () => setState(() => _panelOpen = false),
                 icon: Icon(Icons.close, color: Colors.white70, size: 20),
-                tooltip: 'Close',
+                tooltip: AppLocalizations.of(context).close,
               ),
             ],
           ),

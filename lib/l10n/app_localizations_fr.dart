@@ -15,11 +15,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLanguage => 'Langue';
 
   @override
-  String get languageSystemDefault => 'Paramètre du système';
+  String get languageSystemDefault => 'Langue du système';
 
   @override
   String get settingsLanguageSubtitle =>
-      'La langue d\'affichage de l\'application. « Paramètre du système » suit votre appareil.';
+      'La langue d\'affichage de l\'application. « Langue du système » suit votre appareil.';
 
   @override
   String couldNotOpen(String url) {
@@ -76,7 +76,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String downloadProgress(String progress) {
-    return 'progression : $progress %';
+    return 'progression : $progress %';
   }
 
   @override
@@ -90,11 +90,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get eqNeedsPlayback =>
-      'Lancez un morceau pour configurer l\'égaliseur.\n\nL\'égaliseur natif d\'Android s\'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.';
+      'Lancez un morceau pour configurer l\'égaliseur.\n\nL\'égaliseur natif d\'Android s\'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.';
 
   @override
   String eqInitFailed(String error) {
-    return 'Impossible d\'initialiser l\'égaliseur :\n$error';
+    return 'Impossible d\'initialiser l\'égaliseur :\n$error';
   }
 
   @override
@@ -226,7 +226,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsResetDone => 'Paramètres rétablis aux valeurs par défaut';
 
   @override
-  String get realAudioDialogTitle => 'Utiliser l\'audio réel ?';
+  String get realAudioDialogTitle => 'Utiliser l\'audio réel ?';
 
   @override
   String get realAudioDialogBody =>
@@ -258,7 +258,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String visualizerAudioSourceLine(String source) {
-    return 'Source audio : $source';
+    return 'Source audio : $source';
   }
 
   @override
@@ -364,7 +364,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get manageServerInfo => 'Infos du serveur';
 
   @override
-  String get manageServerDownloadFolder => 'Dossier de téléchargement :';
+  String get manageServerDownloadFolder => 'Dossier de téléchargement :';
 
   @override
   String get manageServerCopyPath => 'Copier le chemin de téléchargement';
@@ -377,7 +377,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get removeSyncedFiles =>
-      'Supprimer les fichiers synchronisés de l\'appareil ?';
+      'Supprimer les fichiers synchronisés de l\'appareil ?';
 
   @override
   String get playlistsTitle => 'Listes de lecture';
@@ -426,7 +426,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String shareServerGoneBody(String name) {
-    return 'Le serveur « $name » ne figure plus dans votre liste de serveurs. Rajoutez-le pour partager sa file.';
+    return 'Le serveur « $name » ne figure plus dans votre liste de serveurs. Rajoutez-le pour partager sa file.';
   }
 
   @override
@@ -466,7 +466,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareDoneBody =>
-      'Toute personne disposant de ce lien peut lire la file :';
+      'Toute personne disposant de ce lien peut lire la file :';
 
   @override
   String get save => 'Enregistrer';
@@ -536,11 +536,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de se connecter au serveur. Vérifiez l\'URL et réessayez.';
 
   @override
-  String get connectionSuccessful => 'Connexion réussie !';
+  String get connectionSuccessful => 'Connexion réussie !';
 
   @override
   String get couldNotReachServer =>
-      'Impossible de joindre le serveur. S\'il nécessite une connexion, désactivez « Accès public » et ajoutez vos identifiants.';
+      'Impossible de joindre le serveur. S\'il nécessite une connexion, désactivez « Accès public » et ajoutez vos identifiants.';
 
   @override
   String get failedToLogin => 'Échec de la connexion';
@@ -552,7 +552,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String testConnectFailed(String error) {
-    return 'Connexion impossible : $error';
+    return 'Connexion impossible : $error';
   }
 
   @override
@@ -679,14 +679,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ne choisir que les morceaux égaux ou supérieurs à cette note.';
 
   @override
-  String get autoDjRatingAny => 'Toutes';
+  String get autoDjRatingAny => 'Indifférent';
 
   @override
   String get autoDjGenreTitle => 'Filtre par genre';
 
   @override
   String get autoDjGenreSubtitle =>
-      'La liste blanche ne lit que les pistes correspondantes ; la liste noire les ignore.';
+      'La liste blanche ne lit que les pistes correspondantes ; la liste noire les ignore.';
 
   @override
   String get autoDjWhitelist => 'Liste blanche';
@@ -696,7 +696,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get autoDjNoGenres =>
-      'Aucun genre sélectionné. Touchez « Choisir des genres » pour en choisir.';
+      'Aucun genre sélectionné. Touchez « Choisir des genres » pour en choisir.';
 
   @override
   String get autoDjPickGenres => 'Choisir des genres';
@@ -716,7 +716,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun mot-clé. Ajoutez des mots ci-dessous pour commencer à filtrer.';
 
   @override
-  String get autoDjKeywordHint => 'p. ex. « live » ou « remix »';
+  String get autoDjKeywordHint => 'p. ex. « live » ou « remix »';
 
   @override
   String get autoDjSearchGenres => 'Rechercher des genres…';
@@ -731,7 +731,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String autoDjNoGenresMatch(String query) {
-    return 'Aucun genre ne correspond à « $query ».';
+    return 'Aucun genre ne correspond à « $query ».';
   }
 
   @override
@@ -830,4 +830,54 @@ class AppLocalizationsFr extends AppLocalizations {
   String addedToPlaylist(String name) {
     return 'Ajouté à $name';
   }
+
+  @override
+  String get testConnectedSignedIn => 'Connecté — connexion réussie.';
+
+  @override
+  String get testSignInFailed =>
+      'Serveur joint, mais la connexion a échoué — vérifiez votre nom d\'utilisateur et votre mot de passe.';
+
+  @override
+  String get browserFileExplorer => 'Explorateur de fichiers';
+
+  @override
+  String get browserLocalFiles => 'Fichiers locaux';
+
+  @override
+  String get browserPlaylists => 'Listes de lecture';
+
+  @override
+  String get browserAlbums => 'Albums';
+
+  @override
+  String get browserArtists => 'Artistes';
+
+  @override
+  String get browserRecent => 'Récents';
+
+  @override
+  String get browserRated => 'Notés';
+
+  @override
+  String get browserSearch => 'Rechercher';
+
+  @override
+  String get browserWelcomeTitle => 'Bienvenue sur mStream';
+
+  @override
+  String get browserWelcomeSubtitle => 'Touchez ici pour ajouter un serveur';
+
+  @override
+  String get settingsVisualizerKnobs => 'Réglages du visualiseur';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Affiche des curseurs sur le visualiseur pour ajuster la réactivité audio de chaque shader. Moteur de shaders uniquement.';
+
+  @override
+  String get visualizerTuningTitle => 'Réglage';
+
+  @override
+  String get close => 'Fermer';
 }

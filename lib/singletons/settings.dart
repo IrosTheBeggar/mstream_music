@@ -131,9 +131,25 @@ class SettingsManager {
       BehaviorSubject<Locale?>.seeded(localeOverride);
 
   /// The forced locale, or `null` to follow the device. Fed straight to
-  /// `MaterialApp.locale`.
-  Locale? get localeOverride =>
-      language == null ? null : Locale(language!);
+  /// `MaterialApp.locale`. Parses BCP-47-ish codes so script- and
+  /// region-qualified values ("zh_Hant", "pt_BR") round-trip correctly
+  /// instead of collapsing into a single bogus subtag.
+  Locale? get localeOverride {
+    final code = language;
+    if (code == null) return null;
+    final parts = code.split(RegExp(r'[-_]'));
+    if (parts.length == 1) return Locale(parts[0]);
+    // A 4-letter second subtag is a script (Hans/Hant/…); otherwise
+    // treat it as a region/country code.
+    if (parts[1].length == 4) {
+      return Locale.fromSubtags(
+        languageCode: parts[0],
+        scriptCode: parts[1],
+        countryCode: parts.length > 2 ? parts[2] : null,
+      );
+    }
+    return Locale(parts[0], parts[1]);
+  }
 
   Future<File> get _file async {
     final dir = await getApplicationDocumentsDirectory();

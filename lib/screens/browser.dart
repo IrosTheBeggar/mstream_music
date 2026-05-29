@@ -530,13 +530,14 @@ class Browser extends StatelessWidget {
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: ListTile(
             leading: b[i].getImage(),
-            title: b[i].getText(),
-            subtitle: b[i].getSubText(),
+            title: b[i].getText(l: l),
+            subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
             }));

@@ -31,6 +31,7 @@ import 'singletons/settings.dart';
 import 'singletons/sleep_timer.dart';
 import 'theme/velvet_theme.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/enum_labels.dart';
 import 'widgets/sleep_timer_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
@@ -218,7 +219,7 @@ class _MStreamAppState extends State<MStreamApp>
                         stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
-                          return Tab(text: label ?? l.tabBrowser);
+                          return Tab(text: browserChromeLabel(l, label));
                         }),
                     Tab(text: l.tabQueue),
                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/velvet_theme.dart';
 
@@ -105,7 +106,7 @@ class AttributionsScreen extends StatelessWidget {
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: 'mStream Mobile',
-                applicationVersion: 'v0.16.0',
+                applicationVersion: kAppVersion,
               ),
             ),
             SizedBox(height: 16),

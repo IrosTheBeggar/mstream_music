@@ -776,7 +776,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get tabBrowser => 'Browser';
+  String get tabBrowser => 'Mediathek';
 
   @override
   String get tabQueue => 'Warteschlange';
@@ -832,4 +832,55 @@ class AppLocalizationsDe extends AppLocalizations {
   String addedToPlaylist(String name) {
     return 'Zu $name hinzugefügt';
   }
+
+  @override
+  String get testConnectedSignedIn => 'Verbunden — erfolgreich angemeldet.';
+
+  @override
+  String get testSignInFailed =>
+      'Server erreicht, aber die Anmeldung ist fehlgeschlagen — überprüfe Benutzername und Passwort.';
+
+  @override
+  String get browserFileExplorer => 'Datei-Explorer';
+
+  @override
+  String get browserLocalFiles => 'Lokale Dateien';
+
+  @override
+  String get browserPlaylists => 'Playlists';
+
+  @override
+  String get browserAlbums => 'Alben';
+
+  @override
+  String get browserArtists => 'Künstler';
+
+  @override
+  String get browserRecent => 'Neueste';
+
+  @override
+  String get browserRated => 'Bewertet';
+
+  @override
+  String get browserSearch => 'Suchen';
+
+  @override
+  String get browserWelcomeTitle => 'Willkommen bei mStream';
+
+  @override
+  String get browserWelcomeSubtitle =>
+      'Hier tippen, um einen Server hinzuzufügen';
+
+  @override
+  String get settingsVisualizerKnobs => 'Visualizer-Regler';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Zeigt Live-Regler über dem Visualizer, um die Audio-Reaktivität jedes Shaders anzupassen. Nur Shader-Engine.';
+
+  @override
+  String get visualizerTuningTitle => 'Abstimmung';
+
+  @override
+  String get close => 'Schließen';
 }

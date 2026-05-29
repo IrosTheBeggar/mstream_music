@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/velvet_theme.dart';
 import 'attributions_screen.dart';
@@ -14,7 +15,7 @@ class AboutScreen extends StatelessWidget {
   // Bump alongside pubspec.yaml's `version:` line. Hardcoded rather
   // than read via package_info_plus to avoid pulling another platform
   // plugin just for one string.
-  static const _versionLabel = 'v0.18.0';
+  static const _versionLabel = kAppVersion;
 
   static const _links = <_LinkRow>[
     _LinkRow(

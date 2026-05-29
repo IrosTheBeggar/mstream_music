@@ -231,5 +231,21 @@
   "addToPlaylistEmpty": "Aún no hay listas de reproducción — toca + para crear una.",
   "addedToPlaylist": "Añadido a {name}",
   "testConnectedSignedIn": "Conectado — sesión iniciada correctamente.",
-  "testSignInFailed": "Se contactó con el servidor, pero el inicio de sesión falló — comprueba tu usuario y contraseña."
+  "testSignInFailed": "Se contactó con el servidor, pero el inicio de sesión falló — comprueba tu usuario y contraseña.",
+
+  "browserFileExplorer": "Explorador de archivos",
+  "browserLocalFiles": "Archivos locales",
+  "browserPlaylists": "Listas de reproducción",
+  "browserAlbums": "Álbumes",
+  "browserArtists": "Artistas",
+  "browserRecent": "Recientes",
+  "browserRated": "Valoradas",
+  "browserSearch": "Buscar",
+  "browserWelcomeTitle": "Bienvenido a mStream",
+  "browserWelcomeSubtitle": "Toca aquí para añadir un servidor",
+
+  "settingsVisualizerKnobs": "Controles de ajuste del visualizador",
+  "settingsVisualizerKnobsSubtitle": "Muestra controles deslizantes sobre el visualizador para ajustar la reactividad de audio de cada shader. Solo con el motor de shaders.",
+  "visualizerTuningTitle": "Ajuste",
+  "close": "Cerrar"
 }

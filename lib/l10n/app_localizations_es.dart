@@ -831,4 +831,55 @@ class AppLocalizationsEs extends AppLocalizations {
   String addedToPlaylist(String name) {
     return 'Añadido a $name';
   }
+
+  @override
+  String get testConnectedSignedIn =>
+      'Conectado — sesión iniciada correctamente.';
+
+  @override
+  String get testSignInFailed =>
+      'Se contactó con el servidor, pero el inicio de sesión falló — comprueba tu usuario y contraseña.';
+
+  @override
+  String get browserFileExplorer => 'Explorador de archivos';
+
+  @override
+  String get browserLocalFiles => 'Archivos locales';
+
+  @override
+  String get browserPlaylists => 'Listas de reproducción';
+
+  @override
+  String get browserAlbums => 'Álbumes';
+
+  @override
+  String get browserArtists => 'Artistas';
+
+  @override
+  String get browserRecent => 'Recientes';
+
+  @override
+  String get browserRated => 'Valoradas';
+
+  @override
+  String get browserSearch => 'Buscar';
+
+  @override
+  String get browserWelcomeTitle => 'Bienvenido a mStream';
+
+  @override
+  String get browserWelcomeSubtitle => 'Toca aquí para añadir un servidor';
+
+  @override
+  String get settingsVisualizerKnobs => 'Controles de ajuste del visualizador';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Muestra controles deslizantes sobre el visualizador para ajustar la reactividad de audio de cada shader. Solo con el motor de shaders.';
+
+  @override
+  String get visualizerTuningTitle => 'Ajuste';
+
+  @override
+  String get close => 'Cerrar';
 }
