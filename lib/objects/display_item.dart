@@ -111,6 +111,22 @@ class DisplayItem {
     return null;
   }
 
+  // Case-insensitive substring match backing the browser's local
+  // search filter. Tests the same fields getText()/getSubText() can
+  // surface — title / filename / name plus artist / album / subtext —
+  // so a match always corresponds to text the user can actually see.
+  bool matchesQuery(String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    bool hit(String? s) => s != null && s.toLowerCase().contains(q);
+    return hit(name) ||
+        hit(metadata?.title) ||
+        hit(metadata?.artist) ||
+        hit(metadata?.album) ||
+        hit(subtext) ||
+        hit(data?.split('/').last);
+  }
+
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext) {
     // Check if file is saved on device
