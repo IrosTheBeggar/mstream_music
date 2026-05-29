@@ -1,6 +1,5 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -29,17 +28,13 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdkVersion 36
+    compileSdk = 36
     ndkVersion = "28.2.13676358"
     namespace "com.example.mstream_music"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     sourceSets {
@@ -52,8 +47,8 @@ android {
 
     defaultConfig {
         applicationId "mstream.music"
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 36
+        minSdk = flutter.minSdkVersion
+        targetSdk = 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -104,7 +99,17 @@ flutter {
     source '../..'
 }
 
+// AGP 9 / built-in Kotlin: the kotlin-android plugin is removed from the
+// plugins block above and the old android.kotlinOptions is replaced by this
+// top-level kotlin.compilerOptions block (see Flutter "migrate to built-in
+// Kotlin" guide). The Kotlin stdlib is now provided automatically, so the
+// previous explicit kotlin-stdlib-jdk7 dependency is gone.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.0"
 }

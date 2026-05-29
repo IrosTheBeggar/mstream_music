@@ -63,7 +63,8 @@ class DownloadScreen extends StatelessWidget {
                                 ),
                                 subtitle: Text(
                                   'progress: ' +
-                                      dList[index].progress.toString() +
+                                      (dList[index].progress * 100)
+                                          .toStringAsFixed(0) +
                                       '%',
                                   style: TextStyle(
                                     color: VelvetColors.textPrimary,

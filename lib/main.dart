@@ -33,18 +33,6 @@ import 'theme/velvet_theme.dart';
 import 'widgets/sleep_timer_sheet.dart';
 import 'widgets/waveform_progress.dart';
 
-import 'dart:io';
-
-// allow self signed SSL cert
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Settings load must come before MediaManager.start() so the audio
@@ -54,9 +42,6 @@ Future<void> main() async {
   await MediaManager().start();
   await PlaylistManager().load();
   await AutoDJManager().load();
-
-  // allow self signed SSL cert
-  HttpOverrides.global = new MyHttpOverrides();
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme setting so
   // switching themes triggers a full retheme. setActive runs *inside*
