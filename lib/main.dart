@@ -388,6 +388,12 @@ class NowPlaying extends StatelessWidget {
                       },
                     ),
                     IconButton(
+                      icon: Icon(Icons.download_for_offline),
+                      color: VelvetColors.textSecondary,
+                      tooltip: 'Download all',
+                      onPressed: () => _downloadAll(context),
+                    ),
+                    IconButton(
                       icon: Icon(Icons.delete_sweep),
                       color: VelvetColors.error,
                       tooltip: 'Clear queue',
@@ -577,6 +583,60 @@ class NowPlaying extends StatelessWidget {
         child: Icon(Icons.music_note,
             color: VelvetColors.textSecondary, size: 22),
       );
+
+  // Queue "Download all": enqueue every track that isn't already on the
+  // device (no localPath) and is actually downloadable (has a server +
+  // path — local-only files are skipped). Confirms the count first and
+  // lets the user back out. downloadOneFile no-ops on files already on
+  // disk, so re-running is harmless.
+  void _downloadAll(BuildContext context) {
+    final queue = MediaManager().audioHandler.queue.value;
+    final pending = queue
+        .where((m) =>
+            m.extras?['localPath'] == null &&
+            m.extras?['server'] != null &&
+            m.extras?['path'] != null)
+        .toList();
+
+    if (pending.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(queue.isEmpty
+              ? 'Queue is empty — nothing to download'
+              : 'Nothing to download — tracks are already saved')));
+      return;
+    }
+
+    final n = pending.length;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('Download all'),
+        content: Text(
+            '$n track${n == 1 ? '' : 's'} will be downloaded for offline playback.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              for (final m in pending) {
+                DownloadManager().downloadOneFile(
+                    m.id, m.extras!['server'], m.extras!['path'], null);
+              }
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text('$n download${n == 1 ? '' : 's'} started')));
+            },
+            child: Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showAddToPlaylistSheet(BuildContext context, MediaItem item) {
     showModalBottomSheet<void>(
