@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
+import 'chromecast_playback_backend.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -155,8 +156,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       next = _localBackend;
     } else if (target.kind == CastTargetKind.dlna) {
       next = DlnaPlaybackBackend(udn: target.id);
+    } else if (target.kind == CastTargetKind.chromecast) {
+      next = ChromecastPlaybackBackend(deviceId: target.id);
     } else {
-      return; // Chromecast: Phase 4.
+      return;
     }
     if (identical(next, _backend)) return;
     await _switchBackend(next);
