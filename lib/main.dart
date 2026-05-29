@@ -34,7 +34,7 @@ import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'widgets/more_actions_sheet.dart';
 import 'l10n/app_localizations.dart';
-import 'widgets/sleep_timer_sheet.dart';
+import 'l10n/enum_labels.dart';
 import 'widgets/waveform_progress.dart';
 
 Future<void> main() async {
@@ -333,7 +333,7 @@ class _MStreamAppState extends State<MStreamApp>
                         stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
-                          return Tab(text: label ?? l.tabBrowser);
+                          return Tab(text: browserChromeLabel(l, label));
                         }),
                     Tab(text: l.tabQueue),
                   ],
@@ -897,7 +897,6 @@ class BottomBar extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     // BottomBar mirrors the AppBar (appBarBg) rather than the body
     // surface, so in the Light theme it stays a dark strip with light
     // text — master's signature look — instead of a low-contrast

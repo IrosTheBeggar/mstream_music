@@ -24,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'fr': 'Français',
     'de': 'Deutsch',
     'pt': 'Português',
+    'zh': '中文',
   };
 
   @override
@@ -205,10 +206,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           SwitchListTile(
-            title: Text('Visualizer tuning knobs'),
+            title: Text(l.settingsVisualizerKnobs),
             subtitle: Text(
-              'Show live sliders over the visualizer to tweak each '
-              'shader\'s audio reactivity. Shader engine only.',
+              l.settingsVisualizerKnobsSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),

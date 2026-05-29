@@ -10,6 +10,7 @@ import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
 import 'app_localizations_fr.dart';
 import 'app_localizations_pt.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -102,6 +103,7 @@ abstract class AppLocalizations {
     Locale('es'),
     Locale('fr'),
     Locale('pt'),
+    Locale('zh'),
   ];
 
   /// Application title (brand name; not translated).
@@ -1495,6 +1497,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server reached, but sign-in failed — check your username and password.'**
   String get testSignInFailed;
+
+  /// Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated.
+  ///
+  /// In en, this message translates to:
+  /// **'File Explorer'**
+  String get browserFileExplorer;
+
+  /// No description provided for @browserLocalFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Files'**
+  String get browserLocalFiles;
+
+  /// No description provided for @browserPlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists'**
+  String get browserPlaylists;
+
+  /// No description provided for @browserAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get browserAlbums;
+
+  /// No description provided for @browserArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get browserArtists;
+
+  /// No description provided for @browserRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get browserRecent;
+
+  /// No description provided for @browserRated.
+  ///
+  /// In en, this message translates to:
+  /// **'Rated'**
+  String get browserRated;
+
+  /// No description provided for @browserSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get browserSearch;
+
+  /// No description provided for @browserWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to mStream'**
+  String get browserWelcomeTitle;
+
+  /// No description provided for @browserWelcomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to add a server'**
+  String get browserWelcomeSubtitle;
+
+  /// Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English).
+  ///
+  /// In en, this message translates to:
+  /// **'Visualizer tuning knobs'**
+  String get settingsVisualizerKnobs;
+
+  /// No description provided for @settingsVisualizerKnobsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. Shader engine only.'**
+  String get settingsVisualizerKnobsSubtitle;
+
+  /// No description provided for @visualizerTuningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuning'**
+  String get visualizerTuningTitle;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
 }
 
 class _AppLocalizationsDelegate
@@ -1507,8 +1593,14 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['de', 'en', 'es', 'fr', 'pt'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'de',
+    'en',
+    'es',
+    'fr',
+    'pt',
+    'zh',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1527,6 +1619,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsFr();
     case 'pt':
       return AppLocalizationsPt();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(

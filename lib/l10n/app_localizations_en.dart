@@ -828,4 +828,47 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get testSignInFailed =>
       'Server reached, but sign-in failed — check your username and password.';
+
+  @override
+  String get browserFileExplorer => 'File Explorer';
+
+  @override
+  String get browserLocalFiles => 'Local Files';
+
+  @override
+  String get browserPlaylists => 'Playlists';
+
+  @override
+  String get browserAlbums => 'Albums';
+
+  @override
+  String get browserArtists => 'Artists';
+
+  @override
+  String get browserRecent => 'Recent';
+
+  @override
+  String get browserRated => 'Rated';
+
+  @override
+  String get browserSearch => 'Search';
+
+  @override
+  String get browserWelcomeTitle => 'Welcome to mStream';
+
+  @override
+  String get browserWelcomeSubtitle => 'Tap here to add a server';
+
+  @override
+  String get settingsVisualizerKnobs => 'Visualizer tuning knobs';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Show live sliders over the visualizer to tweak each shader\'s audio reactivity. Shader engine only.';
+
+  @override
+  String get visualizerTuningTitle => 'Tuning';
+
+  @override
+  String get close => 'Close';
 }

@@ -5,9 +5,9 @@
 
   "settingsLanguage": "Langue",
 
-  "languageSystemDefault": "Paramètre du système",
+  "languageSystemDefault": "Langue du système",
 
-  "settingsLanguageSubtitle": "La langue d'affichage de l'application. « Paramètre du système » suit votre appareil.",
+  "settingsLanguageSubtitle": "La langue d'affichage de l'application. « Langue du système » suit votre appareil.",
 
   "couldNotOpen": "Impossible d'ouvrir {url}",
 
@@ -31,7 +31,7 @@
 
   "downloadsTitle": "Téléchargements",
 
-  "downloadProgress": "progression : {progress} %",
+  "downloadProgress": "progression : {progress} %",
 
   "songInfoTitle": "Infos du morceau",
 
@@ -39,9 +39,9 @@
 
   "eqOnlyAndroid": "L'égaliseur n'est disponible que sur Android.",
 
-  "eqNeedsPlayback": "Lancez un morceau pour configurer l'égaliseur.\n\nL'égaliseur natif d'Android s'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.",
+  "eqNeedsPlayback": "Lancez un morceau pour configurer l'égaliseur.\n\nL'égaliseur natif d'Android s'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.",
 
-  "eqInitFailed": "Impossible d'initialiser l'égaliseur :\n{error}",
+  "eqInitFailed": "Impossible d'initialiser l'égaliseur :\n{error}",
 
   "eqNoBands": "Aucune bande d'égaliseur signalée par le pilote audio de cet appareil.",
 
@@ -94,7 +94,7 @@
   "settingsResetSubtitle": "Rétablir tous les paramètres de cet écran à leurs valeurs par défaut. Les serveurs et les téléchargements ne sont pas affectés.",
   "settingsResetDone": "Paramètres rétablis aux valeurs par défaut",
 
-  "realAudioDialogTitle": "Utiliser l'audio réel ?",
+  "realAudioDialogTitle": "Utiliser l'audio réel ?",
   "realAudioDialogBody": "Le mode audio réel lit la forme d'onde de la musique que votre téléphone joue afin que le visualiseur puisse y réagir. Android nécessite l'autorisation RECORD_AUDIO pour cela — l'application n'enregistre ni n'envoie aucun audio où que ce soit. Vous pouvez revenir à l'audio synthétisé à tout moment.",
   "realAudioPermPermanentlyDenied": "Autorisation définitivement refusée. Activez-la dans les paramètres système pour utiliser l'audio réel.",
   "realAudioPermDenied": "Autorisation refusée. Maintien de l'audio synthétisé.",
@@ -104,7 +104,7 @@
   "visualizerBringingUp": "Démarrage du moteur de rendu…",
   "visualizerReady": "Visualiseur prêt",
   "visualizerBridgeFailed": "Échec du démarrage du pont",
-  "visualizerAudioSourceLine": "Source audio : {source}",
+  "visualizerAudioSourceLine": "Source audio : {source}",
   "visualizerTapToClose": "Touchez n'importe où pour fermer",
   "visualizerUnsupported": "Le visualiseur n'est actuellement pris en charge que sur Android.",
 
@@ -141,11 +141,11 @@
 
   "manageServersTitle": "Gérer les serveurs",
   "manageServerInfo": "Infos du serveur",
-  "manageServerDownloadFolder": "Dossier de téléchargement :",
+  "manageServerDownloadFolder": "Dossier de téléchargement :",
   "manageServerCopyPath": "Copier le chemin de téléchargement",
   "manageServerPathCopied": "Chemin copié dans le presse-papiers",
   "confirmRemoveServerTitle": "Confirmer la suppression du serveur",
-  "removeSyncedFiles": "Supprimer les fichiers synchronisés de l'appareil ?",
+  "removeSyncedFiles": "Supprimer les fichiers synchronisés de l'appareil ?",
 
   "playlistsTitle": "Listes de lecture",
   "playlistsNew": "Nouvelle liste de lecture",
@@ -161,7 +161,7 @@
   "shareBlockedTitle": "Impossible de partager cette file",
   "shareLocalOnlyBody": "La file contient des morceaux qui sont uniquement sur cet appareil (sur aucun serveur). Le partage ne fonctionne que lorsque tous les morceaux de la file proviennent d'un seul serveur.",
   "shareMultiServerBody": "La file mélange des morceaux de {count} serveurs ({names}). Le partage ne fonctionne que lorsque tous les morceaux proviennent d'un seul serveur.",
-  "shareServerGoneBody": "Le serveur « {name} » ne figure plus dans votre liste de serveurs. Rajoutez-le pour partager sa file.",
+  "shareServerGoneBody": "Le serveur « {name} » ne figure plus dans votre liste de serveurs. Rajoutez-le pour partager sa file.",
   "shareTitle": "Partager la liste de lecture",
   "shareSongCount": "{count, plural, =1{1 morceau} other{{count} morceaux}} de {url}",
   "shareLinkExpires": "Le lien expire",
@@ -171,7 +171,7 @@
   "shareExpire30Days": "Après 30 jours",
   "shareAction": "Partager",
   "shareDoneTitle": "Liste de lecture partagée",
-  "shareDoneBody": "Toute personne disposant de ce lien peut lire la file :",
+  "shareDoneBody": "Toute personne disposant de ce lien peut lire la file :",
 
   "save": "Enregistrer",
   "start": "Démarrer",
@@ -195,11 +195,11 @@
   "testCouldNotConnect": "Connexion impossible. Vérifiez l'URL et réessayez.",
   "testTimedOut": "Délai de connexion dépassé.",
   "connectFailedSnack": "Impossible de se connecter au serveur. Vérifiez l'URL et réessayez.",
-  "connectionSuccessful": "Connexion réussie !",
-  "couldNotReachServer": "Impossible de joindre le serveur. S'il nécessite une connexion, désactivez « Accès public » et ajoutez vos identifiants.",
+  "connectionSuccessful": "Connexion réussie !",
+  "couldNotReachServer": "Impossible de joindre le serveur. S'il nécessite une connexion, désactivez « Accès public » et ajoutez vos identifiants.",
   "failedToLogin": "Échec de la connexion",
   "testConnected": "Connecté — mStream v{version}",
-  "testConnectFailed": "Connexion impossible : {error}",
+  "testConnectFailed": "Connexion impossible : {error}",
 
   "sleepTimerTitle": "Minuterie de veille",
   "sleepTimerHint": "Choisissez une durée après laquelle mettre la lecture en pause.",
@@ -242,25 +242,25 @@
 
   "autoDjMinRating": "Note minimale",
   "autoDjMinRatingSubtitle": "Ne choisir que les morceaux égaux ou supérieurs à cette note.",
-  "autoDjRatingAny": "Toutes",
+  "autoDjRatingAny": "Indifférent",
 
   "autoDjGenreTitle": "Filtre par genre",
-  "autoDjGenreSubtitle": "La liste blanche ne lit que les pistes correspondantes ; la liste noire les ignore.",
+  "autoDjGenreSubtitle": "La liste blanche ne lit que les pistes correspondantes ; la liste noire les ignore.",
   "autoDjWhitelist": "Liste blanche",
   "autoDjBlacklist": "Liste noire",
-  "autoDjNoGenres": "Aucun genre sélectionné. Touchez « Choisir des genres » pour en choisir.",
+  "autoDjNoGenres": "Aucun genre sélectionné. Touchez « Choisir des genres » pour en choisir.",
   "autoDjPickGenres": "Choisir des genres",
   "autoDjGenreLoadError": "Impossible de charger les genres",
 
   "autoDjKeywordTitle": "Filtre par mot-clé",
   "autoDjKeywordSubtitle": "Ignorer les choix dont le titre, l'artiste, l'album ou le chemin de fichier contient l'un de ces mots.",
   "autoDjNoKeywords": "Aucun mot-clé. Ajoutez des mots ci-dessous pour commencer à filtrer.",
-  "autoDjKeywordHint": "p. ex. « live » ou « remix »",
+  "autoDjKeywordHint": "p. ex. « live » ou « remix »",
 
   "autoDjSearchGenres": "Rechercher des genres…",
   "autoDjNoGenresOnServer": "Aucun genre trouvé sur ce serveur.",
   "autoDjSelectedCount": "{count} sélectionné(s)",
-  "autoDjNoGenresMatch": "Aucun genre ne correspond à « {query} ».",
+  "autoDjNoGenresMatch": "Aucun genre ne correspond à « {query} ».",
 
   "download": "Télécharger",
   "addAll": "Tout ajouter",
@@ -289,5 +289,21 @@
   "addToPlaylistEmpty": "Aucune liste de lecture — touchez + pour en créer une.",
   "addedToPlaylist": "Ajouté à {name}",
   "testConnectedSignedIn": "Connecté — connexion réussie.",
-  "testSignInFailed": "Serveur joint, mais la connexion a échoué — vérifiez votre nom d'utilisateur et votre mot de passe."
+  "testSignInFailed": "Serveur joint, mais la connexion a échoué — vérifiez votre nom d'utilisateur et votre mot de passe.",
+
+  "browserFileExplorer": "Explorateur de fichiers",
+  "browserLocalFiles": "Fichiers locaux",
+  "browserPlaylists": "Listes de lecture",
+  "browserAlbums": "Albums",
+  "browserArtists": "Artistes",
+  "browserRecent": "Récents",
+  "browserRated": "Notés",
+  "browserSearch": "Rechercher",
+  "browserWelcomeTitle": "Bienvenue sur mStream",
+  "browserWelcomeSubtitle": "Touchez ici pour ajouter un serveur",
+
+  "settingsVisualizerKnobs": "Réglages du visualiseur",
+  "settingsVisualizerKnobsSubtitle": "Affiche des curseurs sur le visualiseur pour ajuster la réactivité audio de chaque shader. Moteur de shaders uniquement.",
+  "visualizerTuningTitle": "Réglage",
+  "close": "Fermer"
 }

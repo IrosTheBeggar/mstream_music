@@ -58,3 +58,43 @@ extension VisualizerAudioSourceLabel on VisualizerAudioSource {
     }
   }
 }
+
+/// Localized label for a built-in browser node, breadcrumb, or tab.
+///
+/// The browser's section nodes (File Explorer, Albums, …) and the
+/// `browserLabelStream` emit fixed English strings from context-less
+/// singletons; this maps them to the active locale at render time.
+/// Anything not in the known set — e.g. a server folder or album name —
+/// is returned unchanged so real library data is never mistranslated.
+/// null / empty / root collapse to the generic Browse tab label.
+String browserChromeLabel(AppLocalizations l, String? english) {
+  switch (english) {
+    case null:
+    case '':
+    case 'Browser':
+    case 'Welcome':
+      return l.tabBrowser;
+    case 'File Explorer':
+      return l.browserFileExplorer;
+    case 'Local Files':
+      return l.browserLocalFiles;
+    case 'Playlists':
+      return l.browserPlaylists;
+    case 'Albums':
+      return l.browserAlbums;
+    case 'Artists':
+      return l.browserArtists;
+    case 'Recent':
+      return l.browserRecent;
+    case 'Rated':
+      return l.browserRated;
+    case 'Search':
+      return l.browserSearch;
+    case 'Welcome To mStream':
+      return l.browserWelcomeTitle;
+    case 'Click here to add server':
+      return l.browserWelcomeSubtitle;
+    default:
+      return english;
+  }
+}

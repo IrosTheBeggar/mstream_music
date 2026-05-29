@@ -836,4 +836,47 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get testSignInFailed =>
       'Servidor acessível, mas o login falhou — verifique seu usuário e senha.';
+
+  @override
+  String get browserFileExplorer => 'Explorador de arquivos';
+
+  @override
+  String get browserLocalFiles => 'Arquivos locais';
+
+  @override
+  String get browserPlaylists => 'Playlists';
+
+  @override
+  String get browserAlbums => 'Álbuns';
+
+  @override
+  String get browserArtists => 'Artistas';
+
+  @override
+  String get browserRecent => 'Recentes';
+
+  @override
+  String get browserRated => 'Avaliadas';
+
+  @override
+  String get browserSearch => 'Pesquisar';
+
+  @override
+  String get browserWelcomeTitle => 'Bem-vindo ao mStream';
+
+  @override
+  String get browserWelcomeSubtitle => 'Toque aqui para adicionar um servidor';
+
+  @override
+  String get settingsVisualizerKnobs => 'Controles de ajuste do visualizador';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Mostra controles deslizantes sobre o visualizador para ajustar a reatividade de áudio de cada shader. Apenas no motor de shaders.';
+
+  @override
+  String get visualizerTuningTitle => 'Ajuste';
+
+  @override
+  String get close => 'Fechar';
 }

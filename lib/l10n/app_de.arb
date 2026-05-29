@@ -271,7 +271,7 @@
   "browserDownloadsStarted": "{count, plural, =1{1 Download gestartet} other{{count} Downloads gestartet}}",
   "browserSongsAdded": "{count, plural, =1{1 Song zur Warteschlange hinzugefügt} other{{count} Songs zur Warteschlange hinzugefügt}}",
 
-  "tabBrowser": "Browser",
+  "tabBrowser": "Mediathek",
   "tabQueue": "Warteschlange",
   "drawerTagline": "Persönliches Musikstreaming",
   "mainFailedToConnect": "Verbindung zum Server fehlgeschlagen",
@@ -289,5 +289,21 @@
   "addToPlaylistEmpty": "Noch keine Playlists – tippe auf +, um eine zu erstellen.",
   "addedToPlaylist": "Zu {name} hinzugefügt",
   "testConnectedSignedIn": "Verbunden — erfolgreich angemeldet.",
-  "testSignInFailed": "Server erreicht, aber die Anmeldung ist fehlgeschlagen — überprüfe Benutzername und Passwort."
+  "testSignInFailed": "Server erreicht, aber die Anmeldung ist fehlgeschlagen — überprüfe Benutzername und Passwort.",
+
+  "browserFileExplorer": "Datei-Explorer",
+  "browserLocalFiles": "Lokale Dateien",
+  "browserPlaylists": "Playlists",
+  "browserAlbums": "Alben",
+  "browserArtists": "Künstler",
+  "browserRecent": "Neueste",
+  "browserRated": "Bewertet",
+  "browserSearch": "Suchen",
+  "browserWelcomeTitle": "Willkommen bei mStream",
+  "browserWelcomeSubtitle": "Hier tippen, um einen Server hinzuzufügen",
+
+  "settingsVisualizerKnobs": "Visualizer-Regler",
+  "settingsVisualizerKnobsSubtitle": "Zeigt Live-Regler über dem Visualizer, um die Audio-Reaktivität jedes Shaders anzupassen. Nur Shader-Engine.",
+  "visualizerTuningTitle": "Abstimmung",
+  "close": "Schließen"
 }

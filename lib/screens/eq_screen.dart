@@ -34,7 +34,7 @@ import '../theme/velvet_theme.dart';
 // Why the EQ couldn't be shown. Stored as a kind (not a localized
 // string) so the message is resolved against the active locale at
 // render time and stays correct if the language changes.
-enum _EqError { onlyAndroid, needsPlayback, initFailed }
+enum _EqError { onlyAndroid, needsPlayback, initFailed, casting }
 
 class EqScreen extends StatefulWidget {
   @override
@@ -82,13 +82,13 @@ class _EqScreenState extends State<EqScreen> {
         setState(() {
           _params = null;
           _loading = false;
-          _error = _castingMessage;
+          _errorKind = _EqError.casting;
         });
       } else {
         setState(() {
           _params = null;
           _loading = true;
-          _error = null;
+          _errorKind = null;
         });
         _attemptLoad();
       }
@@ -110,7 +110,7 @@ class _EqScreenState extends State<EqScreen> {
       setState(() {
         _loading = false;
         _params = null;
-        _error = _castingMessage;
+        _errorKind = _EqError.casting;
       });
       return;
     }
@@ -235,6 +235,9 @@ class _EqScreenState extends State<EqScreen> {
           break;
         case _EqError.initFailed:
           msg = l.eqInitFailed(_errorDetail ?? '');
+          break;
+        case _EqError.casting:
+          msg = _castingMessage;
           break;
       }
       return Padding(

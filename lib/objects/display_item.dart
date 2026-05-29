@@ -7,6 +7,8 @@ import 'metadata.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/file_explorer.dart';
 import '../theme/velvet_theme.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
 
 class DisplayItem {
   final Server? server;
@@ -55,7 +57,7 @@ class DisplayItem {
   // when the list is below the letter-strip threshold (small lists
   // don't need uniform row heights since there's no strip math to
   // honor, so long folder names get to wrap and show in full).
-  Widget getText({bool truncate = true}) {
+  Widget getText({bool truncate = true, AppLocalizations? l}) {
     if (metadata?.title != null) {
       return Text(
         (showRating == true && metadata?.rating != null
@@ -81,7 +83,13 @@ class DisplayItem {
     }
 
     return new Text(
-      this.name,
+      // Built-in browser nodes (execAction) and the no-server welcome
+      // item (addServer) carry fixed English names; localize them.
+      // Server folder/file names pass through browserChromeLabel
+      // unchanged (default case), so real data is never mistranslated.
+      (l != null && (type == 'execAction' || type == 'addServer'))
+          ? browserChromeLabel(l, this.name)
+          : this.name,
       style: TextStyle(
           fontFamily: 'Jura', fontSize: 15, color: VelvetColors.textPrimary),
       maxLines: truncate ? 1 : null,
@@ -89,7 +97,7 @@ class DisplayItem {
     );
   }
 
-  Widget? getSubText() {
+  Widget? getSubText({AppLocalizations? l}) {
     if (metadata?.artist != null) {
       return Text(
         metadata!.artist!,
@@ -101,7 +109,9 @@ class DisplayItem {
 
     if (subtext != null) {
       return new Text(
-        subtext!,
+        (l != null && type == 'addServer')
+            ? browserChromeLabel(l, subtext!)
+            : subtext!,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

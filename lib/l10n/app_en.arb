@@ -500,5 +500,23 @@
 
   "testConnectedSignedIn": "Connected — signed in successfully.",
   "testSignInFailed": "Server reached, but sign-in failed — check your username and password.",
-  "@testConnectedSignedIn": { "description": "Test-connection results after a credentialed login attempt." }
+  "@testConnectedSignedIn": { "description": "Test-connection results after a credentialed login attempt." },
+
+  "browserFileExplorer": "File Explorer",
+  "browserLocalFiles": "Local Files",
+  "browserPlaylists": "Playlists",
+  "browserAlbums": "Albums",
+  "browserArtists": "Artists",
+  "browserRecent": "Recent",
+  "browserRated": "Rated",
+  "browserSearch": "Search",
+  "browserWelcomeTitle": "Welcome to mStream",
+  "browserWelcomeSubtitle": "Tap here to add a server",
+  "@browserFileExplorer": { "description": "Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated." },
+
+  "settingsVisualizerKnobs": "Visualizer tuning knobs",
+  "settingsVisualizerKnobsSubtitle": "Show live sliders over the visualizer to tweak each shader's audio reactivity. Shader engine only.",
+  "visualizerTuningTitle": "Tuning",
+  "close": "Close",
+  "@settingsVisualizerKnobs": { "description": "Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English)." }
 }
