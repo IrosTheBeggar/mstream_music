@@ -764,6 +764,26 @@ class _BrowserState extends State<Browser> {
                   ]);
             }),
       ),
+      // Thin indeterminate bar while any browser server call is in
+      // flight (all go through ApiManager.makeServerCall). Fixed 3px
+      // slot — empty when idle — so the list never jumps.
+      StreamBuilder<bool>(
+        stream: BrowserManager().loadingStream,
+        initialData: BrowserManager().isLoading,
+        builder: (context, snap) {
+          final loading = snap.data ?? false;
+          return SizedBox(
+            height: 3,
+            child: loading
+                ? LinearProgressIndicator(
+                    minHeight: 3,
+                    color: VelvetColors.primary,
+                    backgroundColor: Colors.transparent,
+                  )
+                : null,
+          );
+        },
+      ),
       Expanded(
           child: SizedBox(
               child: StreamBuilder<List<DisplayItem>>(

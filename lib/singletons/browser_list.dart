@@ -23,7 +23,27 @@ class BrowserManager {
       alphabeticalCache.isNotEmpty ? alphabeticalCache.last : false;
 
   String listName = 'Welcome';
-  bool loading = false;
+
+  // In-flight server-call tracking for the browser's global loading bar.
+  // makeServerCall (the chokepoint every browse fetch passes through)
+  // brackets each request with beginLoading()/endLoading(); the counter
+  // keeps the bar up across overlapping calls and flips the stream only
+  // on the 0<->1 transition, so there are no redundant rebuilds.
+  int _inFlightCalls = 0;
+  late final BehaviorSubject<bool> _loading =
+      BehaviorSubject<bool>.seeded(false);
+  Stream<bool> get loadingStream => _loading.stream;
+  bool get isLoading => _loading.value;
+
+  void beginLoading() {
+    _inFlightCalls++;
+    if (_inFlightCalls == 1) _loading.add(true);
+  }
+
+  void endLoading() {
+    if (_inFlightCalls > 0) _inFlightCalls--;
+    if (_inFlightCalls == 0) _loading.add(false);
+  }
 
   late final BehaviorSubject<List<DisplayItem>> _browserStream =
       BehaviorSubject<List<DisplayItem>>.seeded(browserList);
@@ -249,6 +269,7 @@ class BrowserManager {
   void dispose() {
     _browserStream.close();
     _browserLabel.close();
+    _loading.close();
   }
 
   Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
