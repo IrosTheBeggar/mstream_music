@@ -9,6 +9,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
 import '../native/projectm_controller.dart';
 import '../native/shader_params.dart';
 import '../native/visualizer_bridge.dart';
@@ -25,7 +27,9 @@ class VisualizerScreen extends StatefulWidget {
 class _VisualizerScreenState extends State<VisualizerScreen>
     with WidgetsBindingObserver {
   int? _textureId;
-  String? _bridgeError;
+  // True once a bringup attempt returned no texture. The message shown
+  // to the user is localized at render time, not stored here.
+  bool _bridgeFailed = false;
   bool _bringingUp = false;
   // Tracks whether we've parked the bridge so didChangeAppLifecycleState
   // doesn't double-pause / double-resume.
@@ -166,7 +170,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
     if (!mounted) return;
     setState(() {
       _textureId = id;
-      _bridgeError = id == null ? 'Bridge failed to start' : null;
+      _bridgeFailed = id == null;
       _bringingUp = false;
     });
     // Audio source feed only matters if the texture came up; without
@@ -332,7 +336,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             left: 0,
             right: 0,
             child: Text(
-              'Tap = next preset · back arrow (top-left) or long-press to exit',
+              AppLocalizations.of(context).visualizerTapHint,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withAlpha(160),
@@ -403,7 +407,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
             children: [
               Expanded(
                 child: Text(
-                  'Tuning',
+                  AppLocalizations.of(context).visualizerTuningTitle,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -413,13 +417,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               ),
               TextButton(
                 onPressed: _resetTuning,
-                child: Text('Reset',
+                child: Text(AppLocalizations.of(context).reset,
                     style: TextStyle(color: VelvetColors.primary)),
               ),
               IconButton(
                 onPressed: () => setState(() => _panelOpen = false),
                 icon: Icon(Icons.close, color: Colors.white70, size: 20),
-                tooltip: 'Close',
+                tooltip: AppLocalizations.of(context).close,
               ),
             ],
           ),
@@ -553,6 +557,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   }
 
   Widget _statusPlaceholder() {
+    final l = AppLocalizations.of(context);
     final source = SettingsManager().visualizerAudioSource;
     final projectMLoaded = ProjectMController.isAvailable;
     final statusLine = ProjectMController.statusLine();
@@ -562,13 +567,13 @@ class _VisualizerScreenState extends State<VisualizerScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            _bridgeError != null
+            _bridgeFailed
                 ? Icons.error_outline
                 : (projectMLoaded
                     ? Icons.hourglass_top
                     : Icons.auto_awesome),
             size: 72,
-            color: _bridgeError != null
+            color: _bridgeFailed
                 ? Colors.redAccent
                 : (projectMLoaded
                     ? Colors.greenAccent
@@ -576,11 +581,11 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            _bridgeError != null
-                ? 'Visualizer failed to start'
+            _bridgeFailed
+                ? l.visualizerFailed
                 : _bringingUp
-                    ? 'Bringing up renderer…'
-                    : 'Visualizer ready',
+                    ? l.visualizerBringingUp
+                    : l.visualizerReady,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: VelvetColors.textPrimary,
@@ -600,10 +605,10 @@ class _VisualizerScreenState extends State<VisualizerScreen>
               fontFamily: 'monospace',
             ),
           ),
-          if (_bridgeError != null) ...[
+          if (_bridgeFailed) ...[
             const SizedBox(height: 6),
             Text(
-              _bridgeError!,
+              l.visualizerBridgeFailed,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.redAccent,
@@ -614,7 +619,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ],
           const SizedBox(height: 8),
           Text(
-            'Audio source: ${source.label.toLowerCase()}',
+            l.visualizerAudioSourceLine(source.label(l).toLowerCase()),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: VelvetColors.textSecondary,
@@ -623,7 +628,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
           ),
           const SizedBox(height: 24),
           Text(
-            'Tap anywhere to close',
+            l.visualizerTapToClose,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: VelvetColors.textTertiary,
@@ -641,7 +646,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Text(
-          'Visualizer is currently only supported on Android.',
+          AppLocalizations.of(context).visualizerUnsupported,
           textAlign: TextAlign.center,
           style: TextStyle(
             color: VelvetColors.textSecondary,

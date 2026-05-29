@@ -17,6 +17,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -108,20 +109,21 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       if (!mounted) return;
       setState(() {
         _loadingGenres = false;
-        _genreLoadError = 'Could not load genres';
+        _genreLoadError = AppLocalizations.of(context).autoDjGenreLoadError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (ServerManager().serverList.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text('Auto DJ')),
+        appBar: AppBar(title: Text(l.autoDjTitle)),
         body: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Add a server first.',
+            l.autoDjAddServerFirst,
             style: TextStyle(color: VelvetColors.textSecondary),
           ),
         ),
@@ -131,7 +133,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final enabled = _autoDJServer != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Auto DJ')),
+      appBar: AppBar(title: Text(l.autoDjTitle)),
       // SafeArea(bottom: true) ensures the last filter section
       // doesn't get tucked under the system gesture/nav bar on
       // edge-to-edge devices. AppBar handles the top inset.
@@ -143,20 +145,20 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           _statusSection(enabled, _autoDJServer),
           Divider(color: VelvetColors.border, height: 1),
           if (ServerManager().serverList.length > 1 && enabled) ...[
-            _sectionHeader('Server'),
+            _sectionHeader(l.autoDjSectionServer),
             _serverPickerTile(_autoDJServer!),
             Divider(color: VelvetColors.border, height: 1),
           ],
           if (enabled && _autoDJServer!.autoDJPaths.length > 1) ...[
-            _sectionHeader('Sources'),
+            _sectionHeader(l.autoDjSectionSources),
             ..._vpathTiles(_autoDJServer!),
             Divider(color: VelvetColors.border, height: 1),
           ],
-          _sectionHeader('Continuity'),
+          _sectionHeader(l.autoDjSectionContinuity),
           _bpmContinuitySection(),
           _harmonicMixingSection(),
           Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader('Filters'),
+          _sectionHeader(l.autoDjSectionFilters),
           if (enabled) _minRatingTile(_autoDJServer!),
           _genreFilterSection(),
           _keywordFilterSection(),
@@ -169,6 +171,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Continuity: BPM + harmonic mixing ───────────────────────────
 
   Widget _bpmContinuitySection() {
+    final l = AppLocalizations.of(context);
     final mgr = AutoDJManager();
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -181,13 +184,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BPM continuity',
+                    Text(l.autoDjBpmTitle,
                         style: TextStyle(
                             color: VelvetColors.textPrimary, fontSize: 15)),
                     SizedBox(height: 2),
                     Text(
-                      'Prefer picks within a tempo window of the current '
-                      'song. Honours half/double-tempo equivalence.',
+                      l.autoDjBpmSubtitle,
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),
@@ -206,13 +208,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Row(
               children: [
                 Text(
-                  'Tolerance',
+                  l.autoDjTolerance,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 13),
                 ),
                 Spacer(),
                 Text(
-                  '± ${mgr.bpmTolerance} BPM',
+                  l.autoDjBpmTolerance(mgr.bpmTolerance),
                   style: TextStyle(
                     color: VelvetColors.primary,
                     fontSize: 13,
@@ -242,6 +244,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   }
 
   Widget _harmonicMixingSection() {
+    final l = AppLocalizations.of(context);
     final mgr = AutoDJManager();
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -251,13 +254,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Harmonic mixing',
+                Text(l.autoDjHarmonicTitle,
                     style: TextStyle(
                         color: VelvetColors.textPrimary, fontSize: 15)),
                 SizedBox(height: 2),
                 Text(
-                  'Prefer picks in keys that mix well with the locked '
-                  'song (Camelot wheel neighbours).',
+                  l.autoDjHarmonicSubtitle,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12),
                 ),
@@ -277,15 +279,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Status / enable button ───────────────────────────────────────
 
   Widget _statusSection(bool enabled, Server? autoDJServer) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            enabled
-                ? 'Auto DJ is on'
-                : 'Auto DJ is off',
+            enabled ? l.autoDjStatusOn : l.autoDjStatusOff,
             style: TextStyle(
               color: VelvetColors.textPrimary,
               fontSize: 16,
@@ -295,8 +296,8 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           SizedBox(height: 4),
           Text(
             enabled
-                ? 'Songs are picked from ${autoDJServer!.url} when the queue runs low.'
-                : "Tap below to start. The current server's library will be used.",
+                ? l.autoDjStatusOnDetail(autoDJServer!.url)
+                : l.autoDjStatusOffDetail,
             style: TextStyle(
                 color: VelvetColors.textSecondary, fontSize: 12),
           ),
@@ -316,7 +317,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             ),
             onPressed: () => _setAutoDJ(
                 enabled ? null : ServerManager().currentServer),
-            child: Text(enabled ? 'Stop Auto DJ' : 'Start Auto DJ'),
+            child: Text(enabled ? l.autoDjStop : l.autoDjStart),
           ),
         ],
       ),
@@ -326,6 +327,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Server picker (multi-server only, when enabled) ─────────────
 
   Widget _serverPickerTile(Server autoDJServer) {
+    final l = AppLocalizations.of(context);
     final otherServers = ServerManager()
         .serverList
         .where((s) => s != autoDJServer)
@@ -335,7 +337,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         contentPadding: EdgeInsets.symmetric(horizontal: 20),
         title: Text(autoDJServer.url,
             style: TextStyle(color: VelvetColors.textPrimary)),
-        subtitle: Text('Active source',
+        subtitle: Text(l.autoDjActiveSource,
             style: TextStyle(
                 color: VelvetColors.textSecondary, fontSize: 12)),
       );
@@ -344,12 +346,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       contentPadding: EdgeInsets.symmetric(horizontal: 20),
       title: Text(autoDJServer.url,
           style: TextStyle(color: VelvetColors.textPrimary)),
-      subtitle: Text('Active source — tap to switch',
+      subtitle: Text(l.autoDjActiveSourceTap,
           style:
               TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
       trailing: DropdownButton<Server>(
         underline: SizedBox.shrink(),
-        hint: Text('Switch', style: TextStyle(color: VelvetColors.primary)),
+        hint: Text(l.autoDjSwitch, style: TextStyle(color: VelvetColors.primary)),
         dropdownColor: VelvetColors.surface,
         items: otherServers
             .map((s) => DropdownMenuItem(
@@ -368,6 +370,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Sources (vpath switches) ─────────────────────────────────────
 
   List<Widget> _vpathTiles(Server autoDJServer) {
+    final l = AppLocalizations.of(context);
     return autoDJServer.autoDJPaths.entries.map((entry) {
       return SwitchListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 20),
@@ -381,7 +384,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               .any((e) => e.key != entry.key && e.value);
           if (!value && !anyOtherOn) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('At least one source is required.')),
+              SnackBar(content: Text(l.autoDjOneSourceRequired)),
             );
             return;
           }
@@ -399,6 +402,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Min Rating ──────────────────────────────────────────────────
 
   Widget _minRatingTile(Server autoDJServer) {
+    final l = AppLocalizations.of(context);
     const items = [
       MapEntry<int?, String>(null, 'Any'),
       MapEntry<int?, String>(1, '0.5 ★'),
@@ -414,9 +418,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     ];
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 20),
-      title: Text('Minimum rating',
+      title: Text(l.autoDjMinRating,
           style: TextStyle(color: VelvetColors.textPrimary)),
-      subtitle: Text('Only pick songs at or above this rating.',
+      subtitle: Text(l.autoDjMinRatingSubtitle,
           style:
               TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
       trailing: DropdownButton<int?>(
@@ -426,7 +430,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         items: items
             .map((e) => DropdownMenuItem<int?>(
                   value: e.key,
-                  child: Text(e.value,
+                  // 'Any' (null key) is the only word; star labels are
+                  // universal and stay literal.
+                  child: Text(e.key == null ? l.autoDjRatingAny : e.value,
                       style: TextStyle(color: VelvetColors.textPrimary)),
                 ))
             .toList(),
@@ -442,6 +448,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Genre Filter ─────────────────────────────────────────────────
 
   Widget _genreFilterSection() {
+    final l = AppLocalizations.of(context);
     final mgr = AutoDJManager();
     final selected = mgr.genreFilterValues;
     return Padding(
@@ -455,13 +462,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Genre filter',
+                    Text(l.autoDjGenreTitle,
                         style: TextStyle(
                             color: VelvetColors.textPrimary, fontSize: 15)),
                     SizedBox(height: 2),
                     Text(
-                      'Whitelist plays only matching tracks; '
-                      'blacklist skips them.',
+                      l.autoDjGenreSubtitle,
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),
@@ -478,9 +484,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           if (mgr.genreFilterEnabled) ...[
             SizedBox(height: 8),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'whitelist', label: Text('Whitelist')),
-                ButtonSegment(value: 'blacklist', label: Text('Blacklist')),
+              segments: [
+                ButtonSegment(value: 'whitelist', label: Text(l.autoDjWhitelist)),
+                ButtonSegment(value: 'blacklist', label: Text(l.autoDjBlacklist)),
               ],
               selected: {mgr.genreFilterMode},
               onSelectionChanged: (set) {
@@ -496,7 +502,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             SizedBox(height: 12),
             if (selected.isEmpty)
               Text(
-                'No genres selected. Tap "Pick genres" to choose.',
+                l.autoDjNoGenres,
                 style:
                     TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
               )
@@ -535,7 +541,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               child: TextButton.icon(
                 onPressed: _openGenrePicker,
                 icon: Icon(Icons.add, size: 18),
-                label: Text('Pick genres'),
+                label: Text(l.autoDjPickGenres),
                 style: TextButton.styleFrom(
                   foregroundColor: VelvetColors.primary,
                 ),
@@ -568,6 +574,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Keyword Filter ───────────────────────────────────────────────
 
   Widget _keywordFilterSection() {
+    final l = AppLocalizations.of(context);
     final mgr = AutoDJManager();
     final words = mgr.keywordFilterWords;
     return Padding(
@@ -581,13 +588,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Keyword filter',
+                    Text(l.autoDjKeywordTitle,
                         style: TextStyle(
                             color: VelvetColors.textPrimary, fontSize: 15)),
                     SizedBox(height: 2),
                     Text(
-                      'Skip picks whose title, artist, album, or filepath '
-                      'contains any of these words.',
+                      l.autoDjKeywordSubtitle,
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),
@@ -605,7 +611,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             SizedBox(height: 8),
             if (words.isEmpty)
               Text(
-                'No keywords. Add words below to start filtering.',
+                l.autoDjNoKeywords,
                 style:
                     TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
               )
@@ -641,7 +647,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                   child: TextField(
                     controller: _keywordCtrl,
                     decoration: InputDecoration(
-                      hintText: 'e.g. "live" or "remix"',
+                      hintText: l.autoDjKeywordHint,
                       isDense: true,
                     ),
                     textInputAction: TextInputAction.done,
@@ -652,7 +658,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 TextButton.icon(
                   onPressed: _addKeyword,
                   icon: Icon(Icons.add, size: 18),
-                  label: Text('Add'),
+                  label: Text(l.add),
                   style: TextButton.styleFrom(
                     foregroundColor: VelvetColors.primary,
                   ),
@@ -735,6 +741,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final selected = AutoDJManager().genreFilterValues.toSet();
     final q = _query.trim().toLowerCase();
     final filtered = q.isEmpty
@@ -767,7 +774,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Pick genres',
+                      l.autoDjPickGenres,
                       style: TextStyle(
                         color: VelvetColors.textPrimary,
                         fontSize: 18,
@@ -776,7 +783,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
                     ),
                   ),
                   Text(
-                    '${selected.length} selected',
+                    l.autoDjSelectedCount(selected.length),
                     style: TextStyle(
                         color: VelvetColors.textSecondary, fontSize: 12),
                   ),
@@ -788,7 +795,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
               child: TextField(
                 autofocus: false,
                 decoration: InputDecoration(
-                  hintText: 'Search genres…',
+                  hintText: l.autoDjSearchGenres,
                   prefixIcon: Icon(Icons.search),
                   isDense: true,
                 ),
@@ -805,6 +812,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
 
   Widget _buildBody(List<String> filtered, Set<String> selected,
       ScrollController controller) {
+    final l = AppLocalizations.of(context);
     if (widget.loading) {
       return Center(
           child: CircularProgressIndicator(color: VelvetColors.primary));
@@ -820,7 +828,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
       return Padding(
         padding: EdgeInsets.all(16),
         child: Text(
-          'No genres found on this server.',
+          l.autoDjNoGenresOnServer,
           style: TextStyle(color: VelvetColors.textSecondary),
         ),
       );
@@ -829,7 +837,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
       return Padding(
         padding: EdgeInsets.all(16),
         child: Text(
-          'No genres match "${_query.trim()}".',
+          l.autoDjNoGenresMatch(_query.trim()),
           style: TextStyle(color: VelvetColors.textSecondary),
         ),
       );

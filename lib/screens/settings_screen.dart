@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
@@ -12,19 +14,33 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // A language's name in its own language. Intentionally NOT translated —
+  // users recognize their language by its endonym. Keyed by language
+  // code; the picker is built from AppLocalizations.supportedLocales so
+  // it auto-grows as ARB files are added.
+  static const _endonyms = <String, String>{
+    'en': 'English',
+    'es': 'Español',
+    'fr': 'Français',
+    'de': 'Deutsch',
+    'pt': 'Português',
+    'zh': '中文',
+  };
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text('Settings')),
+      appBar: AppBar(title: Text(l.settingsTitle)),
       body: SafeArea(
         top: false,
         child: ListView(
         children: [
-          _sectionHeader('Appearance'),
+          _sectionHeader(l.settingsSectionAppearance),
           ListTile(
-            title: Text('Theme'),
+            title: Text(l.settingsTheme),
             subtitle: Text(
-              _themeSubtitle(SettingsManager().appTheme),
+              _themeSubtitle(l, SettingsManager().appTheme),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -36,7 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: AppTheme.values
                   .map((t) => DropdownMenuItem(
                         value: t,
-                        child: Text(t.label),
+                        child: Text(t.label(l)),
                       ))
                   .toList(),
               onChanged: (v) async {
@@ -47,13 +63,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader('Playback'),
-          SwitchListTile(
-            title: Text('Transcode audio'),
+          ListTile(
+            title: Text(l.settingsLanguage),
             subtitle: Text(
-              'Stream a transcoded copy from the server (smaller files, '
-              'slightly slower start). Off plays original files.',
+              l.settingsLanguageSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<String?>(
+              value: SettingsManager().language,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              // "System default" (null) first, then one entry per
+              // supported locale — derived from the generated
+              // supportedLocales so new ARB files appear automatically.
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(l.languageSystemDefault),
+                ),
+                ...AppLocalizations.supportedLocales.map(
+                  (loc) => DropdownMenuItem<String?>(
+                    value: loc.languageCode,
+                    child: Text(
+                        _endonyms[loc.languageCode] ?? loc.languageCode),
+                  ),
+                ),
+              ],
+              // null is a valid choice here (follow device), so unlike the
+              // theme picker we don't early-return on null.
+              onChanged: (v) async {
+                setState(() {});
+                await SettingsManager().setLanguage(v);
+                setState(() {});
+              },
+            ),
+          ),
+          Divider(color: VelvetColors.border, height: 1),
+          _sectionHeader(l.settingsSectionPlayback),
+          SwitchListTile(
+            title: Text(l.settingsTranscode),
+            subtitle: Text(
+              l.settingsTranscodeSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -67,9 +119,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: VelvetColors.primary,
           ),
           ListTile(
-            title: Text('When you tap a song'),
+            title: Text(l.settingsTapBehavior),
             subtitle: Text(
-              _tapBehaviorSubtitle(SettingsManager().tapBehavior),
+              _tapBehaviorSubtitle(l, SettingsManager().tapBehavior),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -81,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: TapBehavior.values
                   .map((b) => DropdownMenuItem(
                         value: b,
-                        child: Text(b.label),
+                        child: Text(b.label(l)),
                       ))
                   .toList(),
               onChanged: (v) async {
@@ -94,9 +146,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ListTile(
             leading: Icon(Icons.equalizer, color: VelvetColors.textSecondary),
-            title: Text('Equalizer'),
+            title: Text(l.eqTitle),
             subtitle: Text(
-              'Tune bass, mids, and treble. Android only.',
+              l.settingsEqSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -107,9 +159,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ListTile(
-            title: Text('Visualizer engine'),
+            title: Text(l.settingsVisualizerEngine),
             subtitle: Text(
-              _visualizerEngineSubtitle(SettingsManager().visualizerEngine),
+              _visualizerEngineSubtitle(l, SettingsManager().visualizerEngine),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -121,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: VisualizerEngine.values
                   .map((e) => DropdownMenuItem(
                         value: e,
-                        child: Text(e.label),
+                        child: Text(e.label(l)),
                       ))
                   .toList(),
               onChanged: (v) async {
@@ -132,10 +184,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ListTile(
-            title: Text('Visualizer audio source'),
+            title: Text(l.settingsVisualizerSource),
             subtitle: Text(
               _visualizerSourceSubtitle(
-                  SettingsManager().visualizerAudioSource),
+                  l, SettingsManager().visualizerAudioSource),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -147,17 +199,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: VisualizerAudioSource.values
                   .map((s) => DropdownMenuItem(
                         value: s,
-                        child: Text(s.label),
+                        child: Text(s.label(l)),
                       ))
                   .toList(),
               onChanged: (v) => _onVisualizerSourceChanged(v),
             ),
           ),
           SwitchListTile(
-            title: Text('Visualizer tuning knobs'),
+            title: Text(l.settingsVisualizerKnobs),
             subtitle: Text(
-              'Show live sliders over the visualizer to tweak each '
-              'shader\'s audio reactivity. Shader engine only.',
+              l.settingsVisualizerKnobsSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -170,12 +221,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: VelvetColors.primary,
           ),
           Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader('Browse'),
+          _sectionHeader(l.settingsSectionBrowse),
           SwitchListTile(
-            title: Text('Album grid view'),
+            title: Text(l.settingsAlbumGrid),
             subtitle: Text(
-              'Show albums as a grid of cards with cover art instead of '
-              'a plain list.',
+              l.settingsAlbumGridSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -188,11 +238,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: VelvetColors.primary,
           ),
           SwitchListTile(
-            title: Text('Read song metadata in file explorer'),
+            title: Text(l.settingsFileMetadata),
             subtitle: Text(
-              'Fetch title, artist, and album art for each song when '
-              "browsing server files. Off shows raw filenames (faster "
-              'for huge folders).',
+              l.settingsFileMetadataSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -213,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Letter scrubber threshold',
+                        l.settingsLetterStrip,
                         style: TextStyle(
                           fontSize: 16,
                           color: VelvetColors.textPrimary,
@@ -232,11 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Show the A-Z quick-scrub strip when a list has this '
-                  'many items or more. Below this size the strip is '
-                  'hidden and long folder/file names wrap to multiple '
-                  'lines instead of being truncated. Set 0 to always '
-                  'show the strip.',
+                  l.settingsLetterStripSubtitle,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12),
                 ),
@@ -266,13 +310,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader('About'),
+          _sectionHeader(l.settingsSectionAbout),
           ListTile(
             leading: Icon(Icons.tune),
-            title: Text('Reset to defaults'),
+            title: Text(l.settingsReset),
             subtitle: Text(
-              'Restore all settings on this screen to their default '
-              'values. Servers and downloads are not affected.',
+              l.settingsResetSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -281,7 +324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {});
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Settings restored to defaults')),
+                  SnackBar(content: Text(l.settingsResetDone)),
                 );
               }
             },
@@ -292,37 +335,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _themeSubtitle(AppTheme t) {
+  String _themeSubtitle(AppLocalizations l, AppTheme t) {
     switch (t) {
       case AppTheme.velvet:
-        return 'Navy and purple — the signature dark theme.';
+        return l.themeSubtitleVelvet;
       case AppTheme.dark:
-        return 'Neutral dark with amber accents.';
+        return l.themeSubtitleDark;
       case AppTheme.light:
-        return 'Light body with a dark app bar and amber accents — '
-            "matches the older shipped theme.";
+        return l.themeSubtitleLight;
     }
   }
 
-  String _visualizerEngineSubtitle(VisualizerEngine e) {
+  String _visualizerEngineSubtitle(AppLocalizations l, VisualizerEngine e) {
     switch (e) {
       case VisualizerEngine.milkdrop:
-        return 'Milkdrop presets via projectM (default). Richer effects, '
-            'heavier on the GPU.';
+        return l.visualizerEngineSubtitleMilkdrop;
       case VisualizerEngine.shader:
-        return 'Shadertoy-style fragment shaders. Lighter, modular — '
-            'drop .glsl files in assets/shaders/ to extend the catalog.';
+        return l.visualizerEngineSubtitleShaders;
     }
   }
 
-  String _visualizerSourceSubtitle(VisualizerAudioSource s) {
+  String _visualizerSourceSubtitle(AppLocalizations l, VisualizerAudioSource s) {
     switch (s) {
       case VisualizerAudioSource.synthesized:
-        return 'Default. Visualizer reacts to playback timing only — no '
-            'microphone permission required.';
+        return l.visualizerSourceSubtitleSynthesized;
       case VisualizerAudioSource.real:
-        return 'Visualizer reacts to actual audio output. Requires the '
-            'RECORD_AUDIO permission on Android.';
+        return l.visualizerSourceSubtitleReal;
     }
   }
 
@@ -348,29 +386,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Two-step: explanation dialog → OS permission prompt. Returns true
   // only if the user accepted both and the permission is granted.
   Future<bool> _confirmRealAudioPermission() async {
+    final l = AppLocalizations.of(context);
     final consented = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Use real audio?',
+        title: Text(l.realAudioDialogTitle,
             style: TextStyle(color: VelvetColors.textPrimary)),
         content: Text(
-          'Real audio mode reads the waveform of music your phone is '
-          'playing so the visualizer can react to it. Android requires '
-          'the RECORD_AUDIO permission for this — the app does not '
-          'record or send any audio anywhere. You can switch back to '
-          'synthesized at any time.',
+          l.realAudioDialogBody,
           style: TextStyle(color: VelvetColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Continue',
+            child: Text(l.continueLabel,
                 style: TextStyle(color: VelvetColors.primary)),
           ),
         ],
@@ -386,11 +421,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(permanentlyDenied
-              ? 'Permission permanently denied. Enable it in system settings to use real audio.'
-              : 'Permission denied. Staying on synthesized audio.'),
+              ? l.realAudioPermPermanentlyDenied
+              : l.realAudioPermDenied),
           action: permanentlyDenied
               ? SnackBarAction(
-                  label: 'Open settings',
+                  label: l.openSettings,
                   onPressed: openAppSettings,
                 )
               : null,
@@ -400,17 +435,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return false;
   }
 
-  String _tapBehaviorSubtitle(TapBehavior b) {
+  String _tapBehaviorSubtitle(AppLocalizations l, TapBehavior b) {
     switch (b) {
       case TapBehavior.addToQueue:
-        return 'Tapping a song appends it to the queue. If the queue is '
-            'empty, playback starts automatically.';
+        return l.tapSubtitleAddToQueue;
       case TapBehavior.playFromHere:
-        return 'Tapping a song replaces the queue with the songs in the '
-            'current view and starts playback at the tapped song.';
+        return l.tapSubtitlePlayFromHere;
       case TapBehavior.appendAndJump:
-        return 'Tapping a song appends it to the queue and jumps playback '
-            'to it, interrupting whatever was playing.';
+        return l.tapSubtitleAppendAndJump;
     }
   }
 

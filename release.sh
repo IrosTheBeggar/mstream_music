@@ -10,7 +10,7 @@
 #   ./release.sh <version>+<build>   # explicit version + build, e.g. 0.14.1+26
 #   ./release.sh --dry-run <input>   # preview without doing anything
 #
-# Updates pubspec.yaml and lib/screens/about_screen.dart, commits with
+# Updates pubspec.yaml and lib/app_version.dart, commits with
 # "bump to X.Y.Z", tags vX.Y.Z, and pushes the commit + tag. Pending
 # working-tree changes get stashed (with --include-untracked) before
 # the bump and popped at the end via an EXIT trap, even on failure.
@@ -145,22 +145,23 @@ trap cleanup EXIT
 sed -i.bak "s/^version: .*/version: $FULL_NEW/" pubspec.yaml
 rm -f pubspec.yaml.bak
 
-# about_screen's _versionLabel is a hardcoded const — bump it alongside
-# pubspec. Pattern check first so older branches (where the const
-# doesn't exist) silently skip rather than mutating unrelated text.
-ABOUT="lib/screens/about_screen.dart"
-if [[ -f "$ABOUT" ]] && grep -q "static const _versionLabel = '" "$ABOUT"; then
-  sed -i.bak "s/static const _versionLabel = '[^']*';/static const _versionLabel = '$TAG';/" "$ABOUT"
-  rm -f "$ABOUT.bak"
+# app_version.dart holds the single user-facing version label (used by
+# the About + Attributions screens). Bump it alongside pubspec. Pattern
+# check first so older branches (where the const doesn't exist) silently
+# skip rather than mutating unrelated text.
+VERSION_FILE="lib/app_version.dart"
+if [[ -f "$VERSION_FILE" ]] && grep -q "const String kAppVersion = '" "$VERSION_FILE"; then
+  sed -i.bak "s/const String kAppVersion = '[^']*';/const String kAppVersion = '$TAG';/" "$VERSION_FILE"
+  rm -f "$VERSION_FILE.bak"
 fi
 
 echo
 echo "Diff:"
-git --no-pager diff -- pubspec.yaml "$ABOUT"
+git --no-pager diff -- pubspec.yaml "$VERSION_FILE"
 echo
 
 # ---- commit, tag, push -----------------------------------------------------
-git add pubspec.yaml "$ABOUT"
+git add pubspec.yaml "$VERSION_FILE"
 git commit -m "bump to $NEW_VERSION"
 git tag "$TAG"
 

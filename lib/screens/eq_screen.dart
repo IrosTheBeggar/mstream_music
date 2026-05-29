@@ -24,9 +24,15 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../l10n/app_localizations.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+
+// Why the EQ couldn't be shown. Stored as a kind (not a localized
+// string) so the message is resolved against the active locale at
+// render time and stays correct if the language changes.
+enum _EqError { onlyAndroid, needsPlayback, initFailed }
 
 class EqScreen extends StatefulWidget {
   @override
@@ -36,7 +42,9 @@ class EqScreen extends StatefulWidget {
 class _EqScreenState extends State<EqScreen> {
   AndroidEqualizerParameters? _params;
   bool _loading = true;
-  String? _error;
+  _EqError? _errorKind;
+  // Raw exception text for _EqError.initFailed (not translated).
+  String? _errorDetail;
   StreamSubscription<PlaybackState>? _playbackSub;
 
   @override
@@ -69,7 +77,7 @@ class _EqScreenState extends State<EqScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Equalizer is only available on Android.';
+        _errorKind = _EqError.onlyAndroid;
       });
       return;
     }
@@ -80,7 +88,8 @@ class _EqScreenState extends State<EqScreen> {
     if (!mounted) return;
     setState(() {
       _loading = true;
-      _error = null;
+      _errorKind = null;
+      _errorDetail = null;
     });
 
     try {
@@ -96,16 +105,14 @@ class _EqScreenState extends State<EqScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Start a song to configure the EQ.\n\n'
-            "Android's native equalizer initializes with the audio "
-            'session, so we need playback to be active before we can '
-            'read the band layout.';
+        _errorKind = _EqError.needsPlayback;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Could not initialize equalizer:\n$e';
+        _errorKind = _EqError.initFailed;
+        _errorDetail = '$e';
       });
     }
   }
@@ -149,13 +156,13 @@ class _EqScreenState extends State<EqScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Equalizer'),
+        title: Text(AppLocalizations.of(context).eqTitle),
         actions: [
           if (_params != null && _params!.bands.isNotEmpty)
             TextButton(
               onPressed: _resetToFlat,
               child: Text(
-                'Reset',
+                AppLocalizations.of(context).reset,
                 style: TextStyle(
                   color: VelvetColors.primary,
                   fontWeight: FontWeight.w600,
@@ -169,17 +176,30 @@ class _EqScreenState extends State<EqScreen> {
   }
 
   Widget _buildBody() {
+    final l = AppLocalizations.of(context);
     if (_loading) {
       return Center(
         child: CircularProgressIndicator(color: VelvetColors.primary),
       );
     }
-    if (_error != null) {
+    if (_errorKind != null) {
+      final String msg;
+      switch (_errorKind!) {
+        case _EqError.onlyAndroid:
+          msg = l.eqOnlyAndroid;
+          break;
+        case _EqError.needsPlayback:
+          msg = l.eqNeedsPlayback;
+          break;
+        case _EqError.initFailed:
+          msg = l.eqInitFailed(_errorDetail ?? '');
+          break;
+      }
       return Padding(
         padding: EdgeInsets.all(24),
         child: Center(
           child: Text(
-            _error!,
+            msg,
             textAlign: TextAlign.center,
             style: TextStyle(color: VelvetColors.textSecondary),
           ),
@@ -192,7 +212,7 @@ class _EqScreenState extends State<EqScreen> {
         padding: EdgeInsets.all(24),
         child: Center(
           child: Text(
-            "No EQ bands reported by this device's audio driver.",
+            l.eqNoBands,
             textAlign: TextAlign.center,
             style: TextStyle(color: VelvetColors.textSecondary),
           ),
@@ -217,13 +237,13 @@ class _EqScreenState extends State<EqScreen> {
             return SwitchListTile(
               contentPadding: EdgeInsets.symmetric(horizontal: 20),
               title: Text(
-                'Equalizer',
+                l.eqTitle,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
                     fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
-                on ? 'On — gains applied to playback' : 'Off — bypass mode',
+                on ? l.eqEnabledOn : l.eqEnabledOff,
                 style: TextStyle(
                     color: VelvetColors.textSecondary, fontSize: 12),
               ),
