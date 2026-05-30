@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
@@ -151,10 +152,43 @@ class MyCustomFormState extends State<MyCustomForm> {
   // the user has already typed or picked a folder. New servers only.
   void _maybeAutofillFolder() {
     if (_folderManuallyEdited) return;
-    final name = _defaultLocalName(_urlCtrl.text);
+    final name = _computeAutoFolder();
     if (name != null && _downloadFolderCtrl.text != name) {
       _downloadFolderCtrl.text = name;
     }
+  }
+
+  // The auto folder name: "${subdomain}-${domain}", plus a stable short id
+  // when another configured server already uses that name — so two servers
+  // on the same domain don't share one download directory. (Checks the
+  // server list, not the filesystem, so re-adding a lost server can still
+  // reuse its orphaned folder for recovery.)
+  String? _computeAutoFolder() {
+    final base = _defaultLocalName(_urlCtrl.text);
+    if (base == null) return null;
+    return _localNameTaken(base) ? '$base-$_folderSuffix' : base;
+  }
+
+  // Does any *other* configured server already use this folder name?
+  bool _localNameTaken(String name) {
+    final list = ServerManager().serverList;
+    for (int i = 0; i < list.length; i++) {
+      if (i == editThisServer) continue; // ignore the server being edited
+      if (list[i].localname == name) return true;
+    }
+    return false;
+  }
+
+  // Stable per-screen short id, generated once and reused so the suffix
+  // doesn't churn while the user is still typing the URL.
+  String? _cachedFolderSuffix;
+  String get _folderSuffix => _cachedFolderSuffix ??= _nanoId();
+
+  String _nanoId([int length = 6]) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final rnd = Random.secure();
+    return List.generate(length, (_) => chars[rnd.nextInt(chars.length)])
+        .join();
   }
 
   // Derives a clean folder name from a server URL: the host's first label
@@ -181,8 +215,13 @@ class MyCustomFormState extends State<MyCustomForm> {
     } else {
       name = '${labels.first}-${labels.sublist(1).join('.')}';
     }
-    // Keep only filesystem-safe characters.
-    final safe = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-');
+    // Keep only filesystem-safe characters, then strip any leading or
+    // trailing separators so a no-subdomain or odd host can't yield a name
+    // starting with '-', '.', or '/'.
+    final safe = name
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-')
+        .replaceAll(RegExp(r'^[-._]+'), '')
+        .replaceAll(RegExp(r'[-._]+$'), '');
     return safe.isEmpty ? null : safe;
   }
 
@@ -444,7 +483,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     // fall back to the URL-derived name, then a generated id.
     String folder = _downloadFolderCtrl.text.trim();
     if (folder.isEmpty) {
-      folder = _defaultLocalName(_urlCtrl.text) ?? Uuid().v4();
+      folder = _computeAutoFolder() ?? Uuid().v4();
     }
 
     // permanent/sdCard carry an absolute base path; the other modes
