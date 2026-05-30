@@ -18,10 +18,22 @@ class BrowserManager {
   // brings the strip back when returning to an alphabetical screen.
   final List<bool> alphabeticalCache = [];
 
+  // 1:1 with browserCache. The server file-explorer vpath for each stack
+  // frame (null for non-file-explorer frames: nav menu, Albums, Artists,
+  // local files…). Lets the "Add media" affordance know the current
+  // upload target, and back-nav restores the right directory.
+  final List<String?> directoryCache = [];
+
   final List<DisplayItem> browserList = [];
 
   bool get isAlphabetical =>
       alphabeticalCache.isNotEmpty ? alphabeticalCache.last : false;
+
+  // The server file-explorer directory currently in view, or null when
+  // the current screen isn't a server directory — so ytdl/upload know
+  // where to target and whether to show the affordance at all.
+  String? get currentDirectory =>
+      directoryCache.isNotEmpty ? directoryCache.last : null;
 
   String listName = 'Welcome';
 
@@ -86,6 +98,7 @@ class BrowserManager {
   void clear() {
     List<DisplayItem> hold = browserCache[0];
     bool holdAlpha = alphabeticalCache.isNotEmpty ? alphabeticalCache[0] : false;
+    String? holdDir = directoryCache.isNotEmpty ? directoryCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -96,6 +109,9 @@ class BrowserManager {
     alphabeticalCache
       ..clear()
       ..add(holdAlpha);
+    directoryCache
+      ..clear()
+      ..add(holdDir);
   }
 
   void goToNavScreen() {
@@ -105,6 +121,7 @@ class BrowserManager {
     // Reset alongside the cache or pops will pull stale offsets.
     scrollCache.clear();
     alphabeticalCache.clear();
+    directoryCache.clear();
 
     if (ServerManager().currentServer == null) {
       return;
@@ -170,6 +187,7 @@ class BrowserManager {
         [newItem1, newItem2, newItem3, newItem4, newItem5, newItem6, newItem7]);
     // Nav screen isn't alphabetical content — just the section list.
     alphabeticalCache.add(false);
+    directoryCache.add(null);
     browserList.add(newItem1);
     browserList.add(newItem2);
     browserList.add(newItem3);
@@ -187,6 +205,7 @@ class BrowserManager {
     browserList.clear();
     scrollCache.clear();
     alphabeticalCache.clear();
+    directoryCache.clear();
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -194,7 +213,8 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
-  void addListToStack(List<DisplayItem> newList, {bool alphabetical = false}) {
+  void addListToStack(List<DisplayItem> newList,
+      {bool alphabetical = false, String? directory}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -206,6 +226,7 @@ class BrowserManager {
 
     browserCache.add(newList);
     alphabeticalCache.add(alphabetical);
+    directoryCache.add(directory);
 
     browserList.clear();
     newList.forEach((element) {
@@ -258,6 +279,7 @@ class BrowserManager {
 
     browserCache.removeLast();
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
+    if (directoryCache.isNotEmpty) directoryCache.removeLast();
     browserList.clear();
     browserCache[browserCache.length - 1].forEach((el) {
       browserList.add(el);

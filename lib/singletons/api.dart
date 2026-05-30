@@ -562,6 +562,109 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList, alphabetical: true);
+    BrowserManager().addListToStack(newList,
+        alphabetical: true, directory: res['path']?.toString());
+  }
+
+  // ── yt-dlp ─────────────────────────────────────────────────────────
+  // Download audio from a (YouTube) URL straight into a server library
+  // directory, mirroring the webapp's file-explorer "ytdl" tab. These
+  // hit the base mStream routes (not the velvet adapters) and auth with
+  // the same x-access-token makeServerCall uses.
+
+  Map<String, String> _ytdlHeaders(Server s) => {'x-access-token': s.jwt ?? ''};
+
+  // Best-effort list of audio formats the server has enabled
+  // (GET /api/v1/ping → supportedAudioFiles). Falls back to the server's
+  // own default ('mp3') on any error so the picker always has a value.
+  Future<List<String>> ytdlCodecs() async {
+    final s = ServerManager().currentServer;
+    if (s == null) return const ['mp3'];
+    try {
+      final res = await http
+          .get(Uri.parse(s.url).resolve('/api/v1/ping'),
+              headers: _ytdlHeaders(s))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final saf = (jsonDecode(res.body) as Map)['supportedAudioFiles'];
+        if (saf is Map) {
+          final codecs = saf.entries
+              .where((e) => e.value == true)
+              .map((e) => e.key.toString())
+              .toList();
+          if (codecs.isNotEmpty) return codecs;
+        }
+      }
+    } catch (_) {}
+    return const ['mp3'];
+  }
+
+  // Metadata preview for [url] (GET /api/v1/ytdl/metadata):
+  // { title, artist, album, year, thumbnail } — any field may be absent.
+  Future<Map<String, dynamic>> ytdlMetadata(String url) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final uri = Uri.parse(s.url)
+        .resolve('/api/v1/ytdl/metadata')
+        .replace(queryParameters: {'url': url});
+    final res = await http
+        .get(uri, headers: _ytdlHeaders(s))
+        .timeout(const Duration(seconds: 30));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Could not read metadata');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // Start an async download (POST /api/v1/ytdl/). Only non-empty
+  // [metadata] fields are forwarded. Throws with the server's error text
+  // on failure (403 uploads-disabled, 500 no yt-dlp/ffmpeg, …).
+  Future<void> ytdl({
+    required String url,
+    required String directory,
+    String? outputCodec,
+    Map<String, String> metadata = const {},
+  }) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final body = <String, dynamic>{
+      'directory': directory,
+      'url': url,
+      if (outputCodec != null && outputCodec.isNotEmpty)
+        'outputCodec': outputCodec,
+      'metadata': metadata,
+    };
+    final res = await http
+        .post(Uri.parse(s.url).resolve('/api/v1/ytdl/'),
+            body: jsonEncode(body),
+            headers: {'Content-Type': 'application/json', ..._ytdlHeaders(s)})
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Download failed');
+    }
+  }
+
+  // Poll active/finished downloads (GET /api/v1/ytdl/downloads). Each
+  // entry: { pid, url, directory, outputCodec, status, startTime }.
+  Future<List<Map<String, dynamic>>> ytdlDownloads() async {
+    final s = ServerManager().currentServer;
+    if (s == null) return const [];
+    final res = await http
+        .get(Uri.parse(s.url).resolve('/api/v1/ytdl/downloads'),
+            headers: _ytdlHeaders(s))
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return const [];
+    final list = (jsonDecode(res.body) as Map)['downloads'];
+    if (list is List) return List<Map<String, dynamic>>.from(list);
+    return const [];
+  }
+
+  // Pull the server's { error: "…" } message out of a failed response.
+  String? _ytdlError(http.Response res) {
+    try {
+      final m = jsonDecode(res.body);
+      if (m is Map && m['error'] != null) return m['error'].toString();
+    } catch (_) {}
+    return null;
   }
 }
