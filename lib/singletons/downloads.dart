@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
+import 'package:mstream_music/singletons/app_messenger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
@@ -72,14 +73,19 @@ class DownloadManager {
   }
 
   Future<void> downloadOneFile(String downloadUrl, String serverName,
-      String filepath, bool? saveToSdCard,
+      String filepath,
       {DisplayItem? referenceItem}) async {
     String downloadDirectory = serverName + filepath;
 
-    bool sd =
-        saveToSdCard ?? ServerManager().lookupServer(serverName).saveToSdCard;
-    final dir = await FileExplorer().getDownloadDir(sd);
+    final server = ServerManager().lookupServer(serverName);
+    final dir = await FileExplorer()
+        .getDownloadDir(server.storageMode, server.storageBasePath);
     if (dir == null) {
+      // Storage location unavailable (e.g. SD card removed / chosen folder
+      // deleted). Tell the user instead of silently doing nothing.
+      showGlobalSnack(
+          'Storage location unavailable — reconnect the SD card or change '
+          "this server's storage location in Edit Server.");
       return;
     }
 
@@ -93,25 +99,30 @@ class DownloadManager {
     String targetDir = path.dirname(downloadTo);
     String filename = path.basename(downloadTo);
 
-    new Directory(targetDir).createSync(recursive: true);
+    try {
+      new Directory(targetDir).createSync(recursive: true);
 
-    // The destination is an absolute path (app external storage or SD card),
-    // expressed to background_downloader via BaseDirectory.root + the
-    // absolute directory.
-    final DownloadTask task = DownloadTask(
-      url: downloadUrl,
-      filename: filename,
-      baseDirectory: BaseDirectory.root,
-      directory: targetDir,
-      updates: Updates.statusAndProgress,
-    );
+      // The destination is an absolute path (app docs, a permanent shared
+      // folder, or the SD card), expressed to background_downloader via
+      // BaseDirectory.root + the absolute directory.
+      final DownloadTask task = DownloadTask(
+        url: downloadUrl,
+        filename: filename,
+        baseDirectory: BaseDirectory.root,
+        directory: targetDir,
+        updates: Updates.statusAndProgress,
+      );
 
-    downloadMap[task.taskId] =
-        new DownloadTracker(downloadUrl, downloadDirectory)
-          ..referenceDisplayItem = referenceItem;
-    _downloadStream.add(downloadMap);
+      downloadMap[task.taskId] =
+          new DownloadTracker(downloadUrl, downloadDirectory)
+            ..referenceDisplayItem = referenceItem;
+      _downloadStream.add(downloadMap);
 
-    await FileDownloader().enqueue(task);
+      await FileDownloader().enqueue(task);
+    } catch (e) {
+      // The volume could vanish between the null-check and the write.
+      showGlobalSnack('Could not start download — storage unavailable.');
+    }
   }
 
   Stream<Map<String, DownloadTracker>> get downloadSream =>

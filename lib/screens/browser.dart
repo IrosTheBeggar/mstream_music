@@ -186,11 +186,16 @@ class _BrowserState extends State<Browser> {
   // isn't available.
   Future<MediaItem?> _buildFileItem(DisplayItem i) async {
     String downloadDirectory = i.server!.localname + i.data!;
-    final dir = await FileExplorer().getDownloadDir(i.server!.saveToSdCard);
-    if (dir == null) return null;
-    String finalString = '${dir.path}/media/$downloadDirectory';
+    final dir = await FileExplorer()
+        .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
+    // A null dir means the configured location is unavailable (SD card
+    // removed / folder deleted). Treat it exactly like "not downloaded"
+    // and fall through to streaming, rather than returning a null item
+    // (which would make the track unplayable instead of just online-only).
+    final String? finalString =
+        dir == null ? null : '${dir.path}/media/$downloadDirectory';
 
-    if (new File(finalString).existsSync() == true) {
+    if (finalString != null && new File(finalString).existsSync() == true) {
       String? artUrl = i.metadata?.albumArt != null
           ? Uri.parse(i.server!.url.toString())
               .resolve('/album-art/' +
@@ -654,8 +659,8 @@ class _BrowserState extends State<Browser> {
                     '/media' +
                     e.data! +
                     (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
-                DownloadManager().downloadOneFile(downloadUrl,
-                    e.server!.localname, e.data!, e.server!.saveToSdCard,
+                DownloadManager().downloadOneFile(
+                    downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(

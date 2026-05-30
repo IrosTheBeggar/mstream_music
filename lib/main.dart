@@ -17,6 +17,7 @@ import 'screens/metadata_screen.dart';
 import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
+import 'singletons/app_messenger.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/playlists_screen.dart';
@@ -55,6 +56,7 @@ Future<void> main() async {
       VelvetColors.setActive(palette);
       return MaterialApp(
         title: 'mStream Music',
+        scaffoldMessengerKey: rootMessengerKey,
         home: MStreamApp(),
         theme: buildAppTheme(palette),
         debugShowCheckedModeBanner: false,
@@ -440,8 +442,7 @@ class NowPlaying extends StatelessWidget {
                                           DownloadManager().downloadOneFile(
                                               queue[index].id,
                                               queue[index].extras!['server'],
-                                              queue[index].extras!['path'],
-                                              null);
+                                              queue[index].extras!['path']);
                                         }
                                       })
                                 ],
@@ -631,7 +632,7 @@ class NowPlaying extends StatelessWidget {
               Navigator.of(ctx).pop();
               for (final m in pending) {
                 DownloadManager().downloadOneFile(
-                    m.id, m.extras!['server'], m.extras!['path'], null);
+                    m.id, m.extras!['server'], m.extras!['path']);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content:

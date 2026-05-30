@@ -117,8 +117,8 @@ class ServerManager {
     }
 
     // Create server directory (for downloads)
-    Directory? file =
-        await FileExplorer().getDownloadDir(newServer.saveToSdCard);
+    Directory? file = await FileExplorer()
+        .getDownloadDir(newServer.storageMode, newServer.storageBasePath);
     if (file != null) {
       String dir = path.join(file.path, "media/${newServer.localname}");
       await new Directory(dir).create(recursive: true);
@@ -129,12 +129,14 @@ class ServerManager {
     _serverListStream.sink.add(serverList);
   }
 
+  // Storage mode + base path are set directly on the Server in the
+  // add-server form (like localname is), so they aren't part of this
+  // signature — callAfterEditServer() persists whatever was set.
   Future<void> editServer(int serverIndex, String url, String? username,
-      String? password, bool saveToSd) async {
+      String? password) async {
     serverList[serverIndex].url = url;
     ServerManager().serverList[serverIndex].password = password;
     ServerManager().serverList[serverIndex].username = username;
-    ServerManager().serverList[serverIndex].saveToSdCard = saveToSd;
 
     await callAfterEditServer();
   }
@@ -233,8 +235,8 @@ class ServerManager {
   }
 
   Future<void> _deleteServeDirectory(Server removedServer) async {
-    Directory? directory =
-        await FileExplorer().getDownloadDir(removedServer.saveToSdCard);
+    Directory? directory = await FileExplorer().getDownloadDir(
+        removedServer.storageMode, removedServer.storageBasePath);
     if (directory != null) {
       Directory dir = new Directory(path.join(
           directory.path.toString(), "media/${removedServer.localname}"));
