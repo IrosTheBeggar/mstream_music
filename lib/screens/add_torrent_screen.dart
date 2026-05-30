@@ -41,6 +41,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   String? _fileName;
   bool _pathEdited = false;
   bool _renameRoot = false;
+  bool _forceFresh = false;
   bool _detecting = false;
   bool _submitting = false;
 
@@ -235,19 +236,81 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     }
 
     setState(() => _submitting = true);
+
+    // Phase C: seed-existing pre-check (file-based only). If the files
+    // are already on disk, seed them instead of re-downloading. Skipped
+    // for magnets (no file to hash) and when "force fresh" is on.
+    if (hasFile && !_forceFresh) {
+      Map<String, dynamic> res;
+      try {
+        res = await ApiManager()
+            .torrentSeedExisting(torrentBytes: _fileBytes!, server: s);
+      } catch (e) {
+        if (mounted) {
+          setState(() => _submitting = false);
+          messenger.showSnackBar(SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', ''))));
+        }
+        return;
+      }
+      if (!mounted) return;
+      final outcome = res['outcome']?.toString();
+      if (outcome == 'seeded' || outcome == 'already_in_daemon') {
+        messenger.showSnackBar(SnackBar(
+            content: Text(outcome == 'seeded'
+                ? 'Already on disk — seeding it now'
+                : 'Already in the torrent client')));
+        Navigator.of(context).pop();
+        return;
+      }
+      if (outcome == 'invalid_torrent' || outcome == 'daemon_error') {
+        setState(() => _submitting = false);
+        messenger.showSnackBar(SnackBar(
+            content: Text(res['error']?.toString() ??
+                'Could not check for existing files')));
+        return;
+      }
+      if (outcome == 'partial_match') {
+        setState(() => _submitting = false);
+        _showPartialMatch((res['matches'] as List?) ?? const []);
+        return;
+      }
+      // no_match (or anything unexpected) → fall through to a fresh add.
+    }
+
+    await _doAdd(
+      server: s,
+      vpath: vpath,
+      magnet: hasMagnet ? magnet : null,
+      bytes: hasFile ? _fileBytes : null,
+      subPath: split.subPath,
+      directoryName: split.directoryName,
+    );
+  }
+
+  // The actual /torrent/add. Assumes _submitting is already true.
+  Future<void> _doAdd({
+    required Server server,
+    required String vpath,
+    String? magnet,
+    List<int>? bytes,
+    required String subPath,
+    required String directoryName,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final r = await ApiManager().torrentAdd(
-        server: s,
+        server: server,
         vpath: vpath,
-        subPath: split.subPath,
-        directoryName: split.directoryName,
+        subPath: subPath,
+        directoryName: directoryName,
         renameRoot: _renameRoot,
-        magnet: hasMagnet ? magnet : null,
-        torrentBytes: hasFile ? _fileBytes : null,
+        magnet: magnet,
+        torrentBytes: bytes,
         torrentFilename: _fileName,
       );
       if (!mounted) return;
-      final name = r['name']?.toString() ?? split.directoryName;
+      final name = r['name']?.toString() ?? directoryName;
       final dup = r['isDuplicate'] == true;
       messenger.showSnackBar(SnackBar(
           content: Text(
@@ -264,6 +327,97 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
             content: Text(e.toString().replaceFirst('Exception: ', ''))));
       }
     }
+  }
+
+  // Phase C: the server found some of the torrent's files already on
+  // disk elsewhere. Offer to point the torrent at one of those locations
+  // (seed what's there + fetch only the missing files), or download fresh.
+  void _showPartialMatch(List<dynamic> matches) {
+    final s = _server;
+    if (s == null) return;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(VelvetColors.radiusLarge)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Text('Some files already exist',
+                  style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                  'Point the torrent at an existing copy to seed it and '
+                  'download only what is missing.',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12)),
+            ),
+            for (final m in matches)
+              if (m is Map)
+                ListTile(
+                  leading:
+                      Icon(Icons.folder_open, color: VelvetColors.primary),
+                  title: Text('${m['vpath'] ?? ''}/${m['relativePath'] ?? ''}',
+                      style: TextStyle(color: VelvetColors.textPrimary)),
+                  subtitle: Text(
+                      '${m['matched'] ?? '?'}/${m['total'] ?? '?'} files here'
+                      '${m['missing'] != null ? ' · ${m['missing']} to download' : ''}',
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12)),
+                  onTap: () {
+                    Navigator.of(sheetCtx).pop();
+                    _useMatch(s, m);
+                  },
+                ),
+            Divider(height: 1, color: VelvetColors.border),
+            ListTile(
+              leading:
+                  Icon(Icons.download, color: VelvetColors.textSecondary),
+              title: Text('Download fresh anyway',
+                  style: TextStyle(color: VelvetColors.textPrimary)),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                final split = splitTorrentPath(_path.text.trim());
+                setState(() => _submitting = true);
+                _doAdd(
+                  server: s,
+                  vpath: _vpath ?? '',
+                  bytes: _fileBytes,
+                  subPath: split.subPath,
+                  directoryName: split.directoryName,
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _useMatch(Server s, Map m) {
+    final mv = (m['vpath'] ?? _vpath ?? '').toString();
+    final split = splitTorrentPath((m['relativePath'] ?? '').toString());
+    if (split.directoryName.isEmpty) return;
+    setState(() => _submitting = true);
+    _doAdd(
+      server: s,
+      vpath: mv,
+      bytes: _fileBytes,
+      subPath: split.subPath,
+      directoryName: split.directoryName,
+    );
   }
 
   @override
@@ -325,6 +479,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                 _preview(),
                 const SizedBox(height: 8),
                 _renameToggle(),
+                if (_fileBytes != null) _forceFreshToggle(),
                 const SizedBox(height: 22),
                 _submitButton(),
               ],
@@ -499,6 +654,17 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
             style: TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
         value: _renameRoot,
         onChanged: _submitting ? null : (v) => setState(() => _renameRoot = v),
+        activeThumbColor: VelvetColors.primary,
+      );
+
+  Widget _forceFreshToggle() => SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text('Force fresh download',
+            style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14)),
+        subtitle: Text('Skip checking for files already on the server',
+            style: TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
+        value: _forceFresh,
+        onChanged: _submitting ? null : (v) => setState(() => _forceFresh = v),
         activeThumbColor: VelvetColors.primary,
       );
 

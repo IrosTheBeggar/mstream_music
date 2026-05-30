@@ -774,6 +774,40 @@ class ApiManager {
     };
   }
 
+  // Check whether the torrent's files already exist on the server
+  // (POST /seed-existing, multipart). Returns the raw body — the caller
+  // switches on `outcome` (seeded / already_in_daemon / partial_match /
+  // no_match / invalid_torrent / daemon_error). Omitting [vpaths] scans
+  // all of the user's libraries.
+  Future<Map<String, dynamic>> torrentSeedExisting({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    List<String>? vpaths,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/seed-existing'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpaths != null && vpaths.isNotEmpty) {
+      req.fields['vpaths'] = jsonEncode(vpaths);
+    }
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'outcome': 'daemon_error',
+      'error': 'Seed check failed (HTTP ${res.statusCode})'
+    };
+  }
+
   // Pull the server's { error: "…" } message out of a failed response.
   String? _ytdlError(http.Response res) {
     try {
