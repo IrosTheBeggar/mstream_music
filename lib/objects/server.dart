@@ -1,7 +1,18 @@
 class Server {
   String url;
   String localname; // name we use when mappings files to the fs
-  bool saveToSdCard = false;
+
+  // Where downloaded files are stored. One of:
+  //   'appLocal'       — internal app-private storage (default; wiped on uninstall)
+  //   'permanent'      — a user-chosen folder in shared storage (survives uninstall)
+  //   'sdCard'         — a user-chosen folder on a removable SD card
+  //   'legacyExternal' — migration-only: the pre-existing saveToSdCard==true
+  //                      location (getExternalStorageDirectory). Not offered in
+  //                      the UI; a server keeps it until the user re-picks a mode.
+  // 'permanent'/'sdCard' keep their absolute base dir in [storageBasePath];
+  // 'appLocal'/'legacyExternal' resolve their base at runtime (basePath null).
+  String storageMode = 'appLocal';
+  String? storageBasePath;
 
   // Runtime-only flag (never persisted): set by a compatibility probe
   // when this client can't work with the server build at [url]. While
@@ -29,7 +40,14 @@ class Server {
         autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
         playlists = List<String>.from(json['playlists'] ?? []),
-        saveToSdCard = json['saveToSdCard'] ?? false;
+        // Migrate the old boolean: absent/false → appLocal; true → the
+        // legacy external-app-private location (preserved losslessly so
+        // existing SD-toggle downloads keep resolving).
+        storageMode = json['storageMode'] is String
+            ? json['storageMode'] as String
+            : ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
+        storageBasePath =
+            json['storageBasePath'] is String ? json['storageBasePath'] : null;
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -40,6 +58,7 @@ class Server {
         'autoDJPaths': autoDJPaths,
         'autoDJminRating': autoDJminRating,
         'playlists': playlists,
-        'saveToSdCard': saveToSdCard
+        'storageMode': storageMode,
+        'storageBasePath': storageBasePath
       };
 }

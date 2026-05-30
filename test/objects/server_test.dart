@@ -19,7 +19,9 @@ void main() {
       expect(s.autoDJPaths, isEmpty);
       expect(s.autoDJminRating, isNull);
       expect(s.playlists, isEmpty);
-      expect(s.saveToSdCard, isFalse);
+      // No storage fields and no legacy flag -> default app-local.
+      expect(s.storageMode, 'appLocal');
+      expect(s.storageBasePath, isNull);
     });
 
     test('parses full payload with auto DJ + playlists', () {
@@ -32,7 +34,8 @@ void main() {
         'autoDJPaths': {'rock': true, 'jazz': false},
         'autoDJminRating': 6,
         'playlists': ['favs', 'roadtrip'],
-        'saveToSdCard': true,
+        'storageMode': 'permanent',
+        'storageBasePath': '/storage/emulated/0/Music',
       });
       expect(s.username, 'alice');
       expect(s.password, 'secret');
@@ -40,10 +43,11 @@ void main() {
       expect(s.autoDJPaths, {'rock': true, 'jazz': false});
       expect(s.autoDJminRating, 6);
       expect(s.playlists, ['favs', 'roadtrip']);
-      expect(s.saveToSdCard, isTrue);
+      expect(s.storageMode, 'permanent');
+      expect(s.storageBasePath, '/storage/emulated/0/Music');
     });
 
-    test('treats missing autoDJPaths/playlists/saveToSdCard as defaults', () {
+    test('treats missing autoDJPaths/playlists/storage as defaults', () {
       final s = Server.fromJson({
         'url': 'u',
         'username': null,
@@ -53,7 +57,50 @@ void main() {
       });
       expect(s.autoDJPaths, isEmpty);
       expect(s.playlists, isEmpty);
-      expect(s.saveToSdCard, isFalse);
+      expect(s.storageMode, 'appLocal');
+      expect(s.storageBasePath, isNull);
+    });
+  });
+
+  group('Server.fromJson storage migration', () {
+    test('legacy saveToSdCard:true migrates to legacyExternal', () {
+      final s = Server.fromJson({
+        'url': 'u',
+        'username': null,
+        'password': null,
+        'jwt': null,
+        'localname': 'l',
+        'saveToSdCard': true,
+      });
+      // Preserved losslessly: the resolver maps legacyExternal to the old
+      // getExternalStorageDirectory() so existing downloads still resolve.
+      expect(s.storageMode, 'legacyExternal');
+      expect(s.storageBasePath, isNull);
+    });
+
+    test('legacy saveToSdCard:false migrates to appLocal', () {
+      final s = Server.fromJson({
+        'url': 'u',
+        'username': null,
+        'password': null,
+        'jwt': null,
+        'localname': 'l',
+        'saveToSdCard': false,
+      });
+      expect(s.storageMode, 'appLocal');
+    });
+
+    test('explicit storageMode wins over a legacy flag', () {
+      final s = Server.fromJson({
+        'url': 'u',
+        'username': null,
+        'password': null,
+        'jwt': null,
+        'localname': 'l',
+        'saveToSdCard': true,
+        'storageMode': 'appLocal',
+      });
+      expect(s.storageMode, 'appLocal');
     });
   });
 
@@ -69,7 +116,8 @@ void main() {
       original.autoDJPaths = {'rock': true, 'jazz': false};
       original.autoDJminRating = 7;
       original.playlists = ['p1'];
-      original.saveToSdCard = true;
+      original.storageMode = 'permanent';
+      original.storageBasePath = '/storage/emulated/0/Music';
 
       final reparsed = Server.fromJson(original.toJson());
 
@@ -81,7 +129,14 @@ void main() {
       expect(reparsed.autoDJPaths, original.autoDJPaths);
       expect(reparsed.autoDJminRating, original.autoDJminRating);
       expect(reparsed.playlists, original.playlists);
-      expect(reparsed.saveToSdCard, original.saveToSdCard);
+      expect(reparsed.storageMode, original.storageMode);
+      expect(reparsed.storageBasePath, original.storageBasePath);
+    });
+
+    test('does not emit the obsolete saveToSdCard key', () {
+      final json = Server('u', null, null, null, 'l').toJson();
+      expect(json.containsKey('saveToSdCard'), isFalse);
+      expect(json['storageMode'], 'appLocal');
     });
   });
 }

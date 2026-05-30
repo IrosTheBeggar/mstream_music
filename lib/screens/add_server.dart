@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../objects/server.dart';
+import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/server_compat.dart';
@@ -58,9 +63,24 @@ class MyCustomFormState extends State<MyCustomForm> {
   TextEditingController _urlCtrl = TextEditingController();
   TextEditingController _usernameCtrl = TextEditingController();
   TextEditingController _passwordCtrl = TextEditingController();
+  // Per-server download subfolder (downloads live in media/<this>).
+  // Defaults to a generated id; making it editable lets a re-added
+  // server reuse its old folder and recover its downloaded songs.
+  final TextEditingController _downloadFolderCtrl = TextEditingController();
+  // True once the user types in / picks the download folder, so the URL
+  // auto-fill (subdomain-domain) stops overwriting their choice. Also set
+  // in edit mode, where the existing folder must be preserved.
+  bool _folderManuallyEdited = false;
 
   bool submitPending = false;
-  bool saveToSdCard = false;
+  // Download storage destination: 'appLocal' | 'permanent' | 'sdCard'
+  // (+ migration-only 'legacyExternal', shown as App local). 'permanent'
+  // and 'sdCard' also keep an absolute base dir in _storageBasePath.
+  String _storageMode = 'appLocal';
+  String? _storageBasePath;
+  // Browsable volume roots derived in _detectSdCard for the folder picker.
+  String? _sharedStorageRoot;
+  String? _sdCardRoot;
   // Public-access mode: server is reachable without authentication.
   // Disables the username/password fields and skips the login
   // fallback in checkServer. checkServer's existing /api/v1/ping
@@ -84,12 +104,16 @@ class MyCustomFormState extends State<MyCustomForm> {
   void initState() {
     super.initState();
 
+    bool isEdit = false;
     try {
       Server s = ServerManager().serverList[editThisServer ?? -1];
       _urlCtrl.text = s.url;
       _usernameCtrl.text = s.username ?? '';
       _passwordCtrl.text = s.password ?? '';
-      saveToSdCard = s.saveToSdCard;
+      _storageMode = s.storageMode;
+      _storageBasePath = s.storageBasePath;
+      _downloadFolderCtrl.text = s.localname;
+      isEdit = true;
       // An existing server saved without credentials is a public
       // server — start in public mode so the toggle reflects reality.
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
@@ -97,11 +121,21 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
     } catch (err) {}
 
+    // Existing server: keep its folder as-is (it maps to already-downloaded
+    // files). New server: auto-derive the folder from the URL as the user
+    // types it, until they edit it themselves.
+    _folderManuallyEdited = isEdit;
+    if (!isEdit) {
+      _maybeAutofillFolder();
+    }
+
     _detectSdCard();
 
     // Stale-result-clearing: editing the URL invalidates whatever
     // banner the last test produced (it was for a different URL).
     _urlCtrl.addListener(_clearTestResult);
+    // Auto-name the download folder from the URL (new servers only).
+    _urlCtrl.addListener(_maybeAutofillFolder);
   }
 
   void _clearTestResult() {
@@ -111,6 +145,84 @@ class MyCustomFormState extends State<MyCustomForm> {
         _testSuccess = null;
       });
     }
+  }
+
+  // Auto-fills the download folder from the server URL as
+  // "${subdomain}-${domain}" (e.g. music.rum.st -> music-rum.st), unless
+  // the user has already typed or picked a folder. New servers only.
+  void _maybeAutofillFolder() {
+    if (_folderManuallyEdited) return;
+    final name = _computeAutoFolder();
+    if (name != null && _downloadFolderCtrl.text != name) {
+      _downloadFolderCtrl.text = name;
+    }
+  }
+
+  // The auto folder name: "${subdomain}-${domain}", plus a stable short id
+  // when another configured server already uses that name — so two servers
+  // on the same domain don't share one download directory. (Checks the
+  // server list, not the filesystem, so re-adding a lost server can still
+  // reuse its orphaned folder for recovery.)
+  String? _computeAutoFolder() {
+    final base = _defaultLocalName(_urlCtrl.text);
+    if (base == null) return null;
+    return _localNameTaken(base) ? '$base-$_folderSuffix' : base;
+  }
+
+  // Does any *other* configured server already use this folder name?
+  bool _localNameTaken(String name) {
+    final list = ServerManager().serverList;
+    for (int i = 0; i < list.length; i++) {
+      if (i == editThisServer) continue; // ignore the server being edited
+      if (list[i].localname == name) return true;
+    }
+    return false;
+  }
+
+  // Stable per-screen short id, generated once and reused so the suffix
+  // doesn't churn while the user is still typing the URL.
+  String? _cachedFolderSuffix;
+  String get _folderSuffix => _cachedFolderSuffix ??= _nanoId();
+
+  String _nanoId([int length = 6]) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final rnd = Random.secure();
+    return List.generate(length, (_) => chars[rnd.nextInt(chars.length)])
+        .join();
+  }
+
+  // Derives a clean folder name from a server URL: the host's first label
+  // (subdomain), a dash, then the remaining labels (domain). IP / single-
+  // label / no-subdomain hosts use the bare host. Returns null if no host
+  // can be parsed yet. Sanitized for FAT/ext filesystems (SD cards).
+  String? _defaultLocalName(String url) {
+    final raw = url.trim();
+    if (raw.isEmpty) return null;
+    String host;
+    try {
+      host = Uri.parse(raw.contains('://') ? raw : 'https://$raw').host;
+    } catch (_) {
+      return null;
+    }
+    if (host.isEmpty) return null;
+    if (host.startsWith('www.')) host = host.substring(4);
+
+    final isIpv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host);
+    final labels = host.split('.');
+    final String name;
+    if (isIpv4 || host.contains(':') || labels.length < 3) {
+      name = host; // IP / single label / bare domain — use as-is
+    } else {
+      name = '${labels.first}-${labels.sublist(1).join('.')}';
+    }
+    // Keep only filesystem-safe characters, then strip any leading or
+    // trailing separators so a no-subdomain or odd host can't yield a name
+    // starting with '-', '.', or '/'.
+    final safe = name
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-')
+        .replaceAll(RegExp(r'^[-._]+'), '')
+        .replaceAll(RegExp(r'[-._]+$'), '');
+    return safe.isEmpty ? null : safe;
   }
 
   // Verifies the connection the same way the Save button does: an
@@ -230,20 +342,42 @@ class MyCustomFormState extends State<MyCustomForm> {
     try {
       final dirs = await getExternalStorageDirectories();
       final hasSd = dirs != null && dirs.length > 1;
-      if (mounted && hasSd != _hasSdCard) {
-        setState(() => _hasSdCard = hasSd);
+      // Derive the browsable volume roots for the folder picker by
+      // stripping the "/Android/data/<pkg>/files" app-private suffix.
+      String? sharedRoot;
+      String? sdRoot;
+      if (dirs != null && dirs.isNotEmpty) {
+        sharedRoot = _volumeRoot(dirs[0].path);
+        if (dirs.length > 1) sdRoot = _volumeRoot(dirs[1].path);
+      }
+      if (mounted) {
+        setState(() {
+          _hasSdCard = hasSd;
+          _sharedStorageRoot = sharedRoot;
+          _sdCardRoot = sdRoot;
+        });
       }
     } catch (_) {
       // Platform doesn't support it — stay hidden.
     }
   }
 
+  // ".../Android/data/<pkg>/files" -> the volume root the user can browse
+  // (e.g. /storage/emulated/0 or /storage/<uuid>). Falls back to the input
+  // when the app-private suffix isn't present.
+  String _volumeRoot(String appDirPath) {
+    final idx = appDirPath.indexOf('/Android/');
+    return idx > 0 ? appDirPath.substring(0, idx) : appDirPath;
+  }
+
   @override
   void dispose() {
     _urlCtrl.removeListener(_clearTestResult);
+    _urlCtrl.removeListener(_maybeAutofillFolder);
     _urlCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _downloadFolderCtrl.dispose();
 
     super.dispose();
   }
@@ -332,6 +466,176 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  // Before an edited server's storage pointers change, relocate its
+  // already-downloaded files (the media/<localname> subtree). Within one
+  // volume this is an instant, atomic rename; across volumes (App local on
+  // internal storage -> a Permanent/SD folder) rename can't cross
+  // filesystems, so we offer an async copy (copy -> verify -> delete
+  // originals) or a switch-without-copying. Returns false only when the user
+  // cancels (so the save is aborted).
+  Future<bool> _migrateDownloads({
+    required String oldMode,
+    required String? oldBasePath,
+    required String oldLocalname,
+    required String newMode,
+    required String? newBasePath,
+    required String newLocalname,
+  }) async {
+    final oldBase = await FileExplorer().getDownloadDir(oldMode, oldBasePath);
+    if (oldBase == null) return true; // old location gone — nothing to move
+    final oldDir = Directory(path.join(oldBase.path, 'media', oldLocalname));
+    bool hasFiles = false;
+    try {
+      hasFiles = oldDir.existsSync() && oldDir.listSync().isNotEmpty;
+    } catch (_) {}
+    if (!hasFiles) return true; // nothing downloaded yet
+
+    final newBase = await FileExplorer().getDownloadDir(newMode, newBasePath);
+    if (newBase == null) return true; // new location unavailable right now
+    final newDir = Directory(path.join(newBase.path, 'media', newLocalname));
+    if (oldDir.path == newDir.path) return true; // same target, no-op
+    // Don't clobber a destination that already holds files — the user is
+    // pointing at an existing folder (recovery), not moving into a fresh one.
+    try {
+      if (newDir.existsSync() && newDir.listSync().isNotEmpty) return true;
+    } catch (_) {}
+
+    // Try an atomic move — succeeds only within the same volume.
+    try {
+      Directory(path.join(newBase.path, 'media')).createSync(recursive: true);
+      oldDir.renameSync(newDir.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Moved downloaded files to the new folder.')));
+      }
+      return true;
+    } catch (_) {
+      // Cross-volume: rename can't move across filesystems — offer a copy.
+      return await _copyAcrossVolumes(oldDir, newDir);
+    }
+  }
+
+  // Cross-volume relocation. Prompts (with file count + size): Copy moves the
+  // files (async copy -> verify -> delete originals); "Switch only" leaves
+  // them (re-download), optionally deleting the old copies; Cancel aborts.
+  // Fail-safe: a failed/canceled copy cleans up the partial, keeps the
+  // originals, and aborts the save. Returns true to proceed, false to abort.
+  Future<bool> _copyAcrossVolumes(Directory oldDir, Directory newDir) async {
+    if (!mounted) return false;
+    // Count + size from the source (App local is internal — fast to walk).
+    int count = 0;
+    int bytes = 0;
+    try {
+      await for (final e in oldDir.list(recursive: true, followLinks: false)) {
+        if (e is File) {
+          count++;
+          bytes += await e.length();
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return false;
+    bool deleteOld = false;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
+          backgroundColor: VelvetColors.surface,
+          title: Text('Move downloaded files?',
+              style: TextStyle(color: VelvetColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  "This server's $count downloaded file${count == 1 ? '' : 's'} "
+                  '(${_formatBytes(bytes)}) are on a different storage volume. '
+                  'Copy them to keep them offline at the new location, or '
+                  "switch without copying (they'll re-download).",
+                  style: TextStyle(color: VelvetColors.textSecondary)),
+              SizedBox(height: 4),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: VelvetColors.primary,
+                value: deleteOld,
+                onChanged: (v) => setInner(() => deleteOld = v ?? false),
+                title: Text('Delete the old files',
+                    style: TextStyle(color: VelvetColors.textPrimary)),
+                subtitle: Text('Only applies when switching without copying.',
+                    style: TextStyle(
+                        color: VelvetColors.textTertiary, fontSize: 12)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop('cancel'),
+                child: Text('Cancel',
+                    style: TextStyle(color: VelvetColors.textSecondary))),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop('switch'),
+                child: Text('Switch only')),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop('copy'),
+                child: Text('Copy')),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == null || choice == 'cancel') return false; // abort save
+    if (choice == 'switch') {
+      if (deleteOld) {
+        try {
+          await oldDir.delete(recursive: true);
+        } catch (_) {}
+      }
+      return true; // switch without copying
+    }
+
+    // Copy: run the async copy behind a progress dialog.
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _CopyProgressDialog(src: oldDir, dst: newDir),
+    );
+
+    if (ok != true) {
+      // Clean up a partial copy; the originals are untouched.
+      try {
+        if (newDir.existsSync()) await newDir.delete(recursive: true);
+      } catch (_) {}
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Copy failed — files unchanged, storage location not changed.')));
+      }
+      return false;
+    }
+
+    // Success — remove the originals so the files live only at the new spot.
+    try {
+      await oldDir.delete(recursive: true);
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Moved $count file${count == 1 ? '' : 's'} to the new location.')));
+    }
+    return true;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  }
+
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
     bool shouldUpdate = false;
     try {
@@ -345,26 +649,57 @@ class MyCustomFormState extends State<MyCustomForm> {
     // residual text in the controllers.
     final username = _publicAccess ? '' : _usernameCtrl.text;
     final password = _publicAccess ? '' : _passwordCtrl.text;
+    // The user-chosen download folder (media/<this>). If they cleared it,
+    // fall back to the URL-derived name, then a generated id.
+    String folder = _downloadFolderCtrl.text.trim();
+    if (folder.isEmpty) {
+      folder = _computeAutoFolder() ?? Uuid().v4();
+    }
+
+    // permanent/sdCard carry an absolute base path; the other modes
+    // resolve their base at runtime, so null it out.
+    final basePath = (_storageMode == 'permanent' || _storageMode == 'sdCard')
+        ? _storageBasePath
+        : null;
 
     if (shouldUpdate) {
-      ServerManager().editServer(
-          editThisServer!, _urlCtrl.text, username, password, saveToSdCard);
-      await ServerManager()
-          .getServerPaths(ServerManager().serverList[editThisServer!]);
+      final s = ServerManager().serverList[editThisServer!];
+      // Relocate already-downloaded files before flipping the server's
+      // storage pointers. Same-volume = instant atomic move; cross-volume =
+      // warn (files stay, user re-downloads). Cancel aborts the save.
+      final migrationOk = await _migrateDownloads(
+        oldMode: s.storageMode,
+        oldBasePath: s.storageBasePath,
+        oldLocalname: s.localname,
+        newMode: _storageMode,
+        newBasePath: basePath,
+        newLocalname: folder,
+      );
+      if (!migrationOk) {
+        if (mounted) setState(() => submitPending = false);
+        return;
+      }
+      // localname + storage aren't part of editServer's signature — set
+      // them directly (callAfterEditServer below persists the change).
+      s.localname = folder;
+      s.storageMode = _storageMode;
+      s.storageBasePath = basePath;
+      ServerManager()
+          .editServer(editThisServer!, _urlCtrl.text, username, password);
+      await ServerManager().getServerPaths(s);
       await ServerManager().callAfterEditServer();
     } else {
       Server newServer =
-          new Server(lol.origin, username, password, jwt, Uuid().v4());
-      if (saveToSdCard == true) {
-        newServer.saveToSdCard = true;
-      }
+          new Server(lol.origin, username, password, jwt, folder);
+      newServer.storageMode = _storageMode;
+      newServer.storageBasePath = basePath;
       await ServerManager().getServerPaths(newServer);
 
       await ServerManager().addServer(newServer);
     }
 
     // Save Server List
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   Map<String, String> parseQrCode(String qrValue) {
@@ -388,6 +723,347 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
     checkServer();
+  }
+
+  // Lists the existing per-server download folders (media/<id>) so the
+  // user can point this server at one — recovering a re-added server's
+  // previously-downloaded songs.
+  Future<void> _browseDownloadFolders() async {
+    final base =
+        await FileExplorer().getDownloadDir(_storageMode, _storageBasePath);
+    if (!mounted) return;
+    if (base == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No storage available')));
+      return;
+    }
+    final mediaDir = Directory(path.join(base.path, 'media'));
+    final folders = mediaDir.existsSync()
+        ? mediaDir.listSync().whereType<Directory>().toList()
+        : <Directory>[];
+    if (!mounted) return;
+    if (folders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No existing download folders found')));
+      return;
+    }
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Existing download folders',
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: folders.map((d) {
+                  final name = path.basename(d.path);
+                  int count = 0;
+                  DateTime? modified;
+                  try {
+                    count = d.listSync().length;
+                    modified = d.statSync().modified;
+                  } catch (_) {}
+                  return ListTile(
+                    leading: Icon(Icons.folder, color: VelvetColors.primary),
+                    title: Text(name,
+                        style: TextStyle(color: VelvetColors.textPrimary),
+                        overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                        '$count item${count == 1 ? '' : 's'}'
+                        '${modified != null ? ' · ${modified.toString().split('.').first}' : ''}',
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary, fontSize: 12)),
+                    onTap: () => Navigator.of(ctx).pop(name),
+                  );
+                }).toList(),
+              ),
+            ),
+            SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null && mounted) {
+      _folderManuallyEdited = true;
+      setState(() => _downloadFolderCtrl.text = chosen);
+    }
+  }
+
+  // The dropdown offers only the three real modes; a migrated
+  // 'legacyExternal' server displays as App local but keeps its stored
+  // mode until the user actively changes it (so its old downloads aren't
+  // orphaned just by opening this screen).
+  String get _displayStorageMode =>
+      (_storageMode == 'permanent' || _storageMode == 'sdCard')
+          ? _storageMode
+          : 'appLocal';
+
+  Future<void> _onStorageModeChanged(String? v) async {
+    if (v == null || v == _storageMode) return;
+    // Permanent / SD card write outside the app sandbox -> need all-files
+    // access. If the user declines, keep the previous mode (the dropdown
+    // is value-controlled, so it snaps back).
+    if (v == 'permanent' || v == 'sdCard') {
+      final granted = await _ensureAllFilesAccess();
+      if (!granted) return;
+    }
+    if (mounted) setState(() => _storageMode = v);
+  }
+
+  // Requests MANAGE_EXTERNAL_STORAGE ("All files access"). On Android 11+
+  // request() bounces to a system settings screen, so the just-returned
+  // status can still be denied — the user grants there, then re-selects.
+  Future<bool> _ensureAllFilesAccess() async {
+    var status = await Permission.manageExternalStorage.status;
+    if (status.isGranted) return true;
+    status = await Permission.manageExternalStorage.request();
+    if (status.isGranted) return true;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Grant "All files access" to store downloads permanently, '
+            'then pick the mode again.'),
+        action: SnackBarAction(label: 'Settings', onPressed: openAppSettings),
+      ));
+    }
+    return false;
+  }
+
+  Future<void> _chooseStorageFolder() async {
+    if (!await _ensureAllFilesAccess()) return;
+    final root = _storageMode == 'sdCard' ? _sdCardRoot : _sharedStorageRoot;
+    if (root == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not locate a storage volume')));
+      }
+      return;
+    }
+    final chosen = await _browseForFolder(root);
+    if (chosen == null || !mounted) return;
+    // Confirm we can actually write there before committing — catches
+    // read-only roots / SD cards before downloads silently fail later.
+    if (!await _isWritable(chosen)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("That folder isn't writable — pick another.")));
+      }
+      return;
+    }
+    setState(() => _storageBasePath = chosen);
+  }
+
+  Future<bool> _isWritable(String dirPath) async {
+    try {
+      final probe = File(path.join(dirPath, '.mstream_write_test'));
+      await probe.writeAsString('');
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Minimal navigable folder browser (no plugin — pure dart:io). Starts at
+  // [rootPath], descends on tap; "Use this folder" returns the current
+  // absolute path. Cannot navigate above the root.
+  Future<String?> _browseForFolder(String rootPath) {
+    String current = rootPath;
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          List<Directory> subs = [];
+          try {
+            subs = Directory(current)
+                .listSync()
+                .whereType<Directory>()
+                .toList()
+              ..sort((a, b) => path
+                  .basename(a.path)
+                  .toLowerCase()
+                  .compareTo(path.basename(b.path).toLowerCase()));
+          } catch (_) {}
+          final canGoUp = current != rootPath;
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.6,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.arrow_upward,
+                              color: canGoUp
+                                  ? VelvetColors.textPrimary
+                                  : VelvetColors.textTertiary),
+                          onPressed: canGoUp
+                              ? () =>
+                                  setSheet(() => current = path.dirname(current))
+                              : null,
+                        ),
+                        Expanded(
+                          child: Text(current,
+                              style: TextStyle(
+                                  color: VelvetColors.textSecondary,
+                                  fontSize: 12),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.create_new_folder_outlined,
+                              color: VelvetColors.primary),
+                          tooltip: 'New folder',
+                          onPressed: () => _createSubfolder(ctx, current,
+                              (p) => setSheet(() => current = p)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: VelvetColors.border2, height: 1),
+                  Expanded(
+                    child: subs.isEmpty
+                        ? Center(
+                            child: Text('No subfolders here',
+                                style: TextStyle(
+                                    color: VelvetColors.textTertiary)))
+                        : ListView(
+                            children: subs
+                                .map((d) => ListTile(
+                                      leading: Icon(Icons.folder,
+                                          color: VelvetColors.primary),
+                                      title: Text(path.basename(d.path),
+                                          style: TextStyle(
+                                              color: VelvetColors.textPrimary),
+                                          overflow: TextOverflow.ellipsis),
+                                      onTap: () =>
+                                          setSheet(() => current = d.path),
+                                    ))
+                                .toList(),
+                          ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: VelvetColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: Icon(Icons.check),
+                        label: Text('Use this folder'),
+                        onPressed: () => Navigator.of(ctx).pop(current),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Prompts for a name and creates a subfolder under [parent], then calls
+  // [onCreated] with the new absolute path so the picker descends into it.
+  Future<void> _createSubfolder(BuildContext sheetCtx, String parent,
+      void Function(String) onCreated) async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: sheetCtx,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('New folder',
+            style: TextStyle(color: VelvetColors.textPrimary)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          autocorrect: false,
+          style: TextStyle(color: VelvetColors.textPrimary),
+          decoration: InputDecoration(hintText: 'Folder name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(),
+              child: Text('Cancel',
+                  style: TextStyle(color: VelvetColors.textSecondary))),
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(ctrl.text.trim()),
+              child: Text('Create')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty) return;
+    // Single path segment only — strip separators so a name can't escape
+    // the current directory.
+    final safe = name.replaceAll(RegExp(r'[\\/]+'), '_');
+    try {
+      final newDir = Directory(path.join(parent, safe));
+      newDir.createSync(recursive: true);
+      onCreated(newDir.path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not create folder')));
+      }
+    }
+  }
+
+  // Per-mode explanation under the dropdown. App local gets a prominent
+  // warning that its files vanish on uninstall (the whole reason this
+  // picker exists).
+  Widget _storageHelp() {
+    switch (_storageMode) {
+      case 'permanent':
+        return Text(
+          'Saved to a folder you choose. Survives uninstalling the app. '
+          'Requires "All files access".',
+          style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+        );
+      case 'sdCard':
+        return Text(
+          'Saved to a folder on the SD card you choose. May become '
+          'unavailable if the card is removed.',
+          style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+        );
+      case 'appLocal':
+      default:
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                size: 14, color: VelvetColors.warning),
+            SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Saved inside the app. Deleted when you uninstall or clear '
+                'the app.',
+                style: TextStyle(color: VelvetColors.warning, fontSize: 11),
+              ),
+            ),
+          ],
+        );
+    }
   }
 
   @override
@@ -544,25 +1220,127 @@ class MyCustomFormState extends State<MyCustomForm> {
                   ),
                 ),
               ],
-              // Switch only renders when an actual removable SD card
-              // is present (see _detectSdCard). Hidden on internal-
-              // storage-only phones — most modern devices.
-              if (_hasSdCard) ...[
-                SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text('Download to SD Card'),
-                  subtitle: Text(
-                    'Save downloaded music to the removable SD card '
-                    'instead of internal storage.',
-                    style: TextStyle(
-                        color: VelvetColors.textSecondary, fontSize: 12),
+              // Storage location: App local (default) / Permanent / SD card
+              // (the SD option only when a removable card is present, or when
+              // this server is already configured for it). Replaces the old
+              // SD-card toggle; see _storageHelp for the per-mode caveats.
+              SizedBox(height: 16),
+              Text('Storage location',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              SizedBox(height: 6),
+              InputDecorator(
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: Icon(Icons.sd_storage_outlined),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _displayStorageMode,
+                    isExpanded: true,
+                    isDense: true,
+                    dropdownColor: VelvetColors.surface,
+                    style: TextStyle(color: VelvetColors.textPrimary),
+                    items: [
+                      DropdownMenuItem(
+                          value: 'appLocal', child: Text('App local')),
+                      DropdownMenuItem(
+                          value: 'permanent', child: Text('Permanent')),
+                      if (_hasSdCard || _storageMode == 'sdCard')
+                        DropdownMenuItem(
+                            value: 'sdCard', child: Text('SD card')),
+                    ],
+                    onChanged: submitPending ? null : _onStorageModeChanged,
                   ),
-                  value: saveToSdCard,
-                  onChanged: (v) => setState(() => saveToSdCard = v),
-                  activeThumbColor: VelvetColors.primary,
+                ),
+              ),
+              SizedBox(height: 8),
+              _storageHelp(),
+              if (_storageMode == 'permanent' ||
+                  _storageMode == 'sdCard') ...[
+                SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _storageBasePath ?? 'No folder chosen yet',
+                        style: TextStyle(
+                            color: _storageBasePath == null
+                                ? VelvetColors.textTertiary
+                                : VelvetColors.textPrimary,
+                            fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: VelvetColors.textPrimary,
+                        side: BorderSide(color: VelvetColors.border2),
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(VelvetColors.radiusSmall),
+                        ),
+                      ),
+                      icon: Icon(Icons.folder_open, size: 18),
+                      label: Text('Choose folder'),
+                      onPressed: submitPending ? null : _chooseStorageFolder,
+                    ),
+                  ],
                 ),
               ],
+              SizedBox(height: 8),
+              Text('Download folder',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _downloadFolderCtrl,
+                      autocorrect: false,
+                      onChanged: (_) => _folderManuallyEdited = true,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        prefixIcon: Icon(Icons.folder_outlined),
+                        hintText: 'folder name',
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding:
+                          EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.folder_open, size: 18),
+                    label: Text('Browse'),
+                    onPressed: submitPending ? null : _browseDownloadFolders,
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              Text(
+                "Files download to a 'media/<folder>' directory on this "
+                "device. Re-using a previous server's folder keeps its "
+                "downloaded songs when you re-add a lost server.",
+                style:
+                    TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+              ),
               SizedBox(height: 24),
               // QR Code button hidden — flutter_barcode_scanner is
               // commented out in pubspec.yaml (hasn't kept up with
@@ -606,6 +1384,103 @@ class MyCustomFormState extends State<MyCustomForm> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Modal progress dialog that copies a directory tree (src -> dst) using async
+// I/O so the UI stays responsive on large libraries. Pops `true` once the
+// copy is verified (file count + total bytes), `false` on error or cancel.
+class _CopyProgressDialog extends StatefulWidget {
+  final Directory src;
+  final Directory dst;
+  const _CopyProgressDialog({required this.src, required this.dst});
+
+  @override
+  State<_CopyProgressDialog> createState() => _CopyProgressDialogState();
+}
+
+class _CopyProgressDialogState extends State<_CopyProgressDialog> {
+  int _copied = 0;
+  int _total = 0;
+  bool _canceled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+  }
+
+  Future<void> _run() async {
+    try {
+      final files = <File>[];
+      await for (final e
+          in widget.src.list(recursive: true, followLinks: false)) {
+        if (e is File) files.add(e);
+      }
+      if (mounted) setState(() => _total = files.length);
+
+      int srcBytes = 0;
+      int lastPct = -1;
+      for (int i = 0; i < files.length; i++) {
+        if (_canceled) {
+          if (mounted) Navigator.of(context).pop(false);
+          return;
+        }
+        final f = files[i];
+        final rel = path.relative(f.path, from: widget.src.path);
+        final destPath = path.join(widget.dst.path, rel);
+        await Directory(path.dirname(destPath)).create(recursive: true);
+        await f.copy(destPath);
+        srcBytes += await f.length();
+        final done = i + 1;
+        final pct = (done * 100) ~/ files.length;
+        if (mounted && pct != lastPct) {
+          lastPct = pct;
+          setState(() => _copied = done);
+        }
+      }
+
+      // Verify: the destination has at least as many files + bytes.
+      int destCount = 0;
+      int destBytes = 0;
+      await for (final e
+          in widget.dst.list(recursive: true, followLinks: false)) {
+        if (e is File) {
+          destCount++;
+          destBytes += await e.length();
+        }
+      }
+      final ok = destCount >= files.length && destBytes >= srcBytes;
+      if (mounted) Navigator.of(context).pop(ok);
+    } catch (_) {
+      if (mounted) Navigator.of(context).pop(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = _total == 0 ? null : _copied / _total;
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text(_canceled ? 'Canceling…' : 'Moving files…',
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(value: value),
+          SizedBox(height: 12),
+          Text(_total == 0 ? 'Preparing…' : 'Copied $_copied of $_total files',
+              style: TextStyle(color: VelvetColors.textSecondary)),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _canceled ? null : () => setState(() => _canceled = true),
+          child: Text('Cancel',
+              style: TextStyle(color: VelvetColors.textSecondary)),
+        ),
+      ],
     );
   }
 }

@@ -132,7 +132,9 @@ class DisplayItem {
     // Check if file is saved on device
     if (this.type == 'file') {
       String downloadDirectory = this.server!.localname + this.data!;
-      FileExplorer().getDownloadDir(this.server!.saveToSdCard).then((dir) {
+      FileExplorer()
+          .getDownloadDir(this.server!.storageMode, this.server!.storageBasePath)
+          .then((dir) {
         if (dir == null) {
           return;
         }
