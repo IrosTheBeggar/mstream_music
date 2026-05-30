@@ -21,7 +21,7 @@ class FileExplorer {
   Future<String> getServerDir(Server s) async {
     Directory? woo = await getDownloadDir(s.storageMode, s.storageBasePath);
     if (woo == null) {
-      return 'NO SD CARD DETECTED';
+      return 'Download location unavailable';
     }
 
     return new Directory(path.join(woo.path.toString(), 'media/${s.localname}'))

@@ -43,9 +43,11 @@ class Server {
         // Migrate the old boolean: absent/false → appLocal; true → the
         // legacy external-app-private location (preserved losslessly so
         // existing SD-toggle downloads keep resolving).
-        storageMode = json['storageMode'] ??
-            ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
-        storageBasePath = json['storageBasePath'];
+        storageMode = json['storageMode'] is String
+            ? json['storageMode'] as String
+            : ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
+        storageBasePath =
+            json['storageBasePath'] is String ? json['storageBasePath'] : null;
 
   Map<String, dynamic> toJson() => {
         'url': url,

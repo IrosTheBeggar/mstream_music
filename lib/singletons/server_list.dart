@@ -5,6 +5,7 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
 import '../util/server_compat.dart';
+import './app_messenger.dart';
 import './browser_list.dart';
 
 import 'package:path_provider/path_provider.dart';
@@ -59,8 +60,12 @@ class ServerManager {
     List serversJson = await readServerManager();
 
     serversJson.forEach((s) {
-      Server newServer = Server.fromJson(s);
-      serverList.add(newServer);
+      try {
+        serverList.add(Server.fromJson(s));
+      } catch (e) {
+        // Skip a corrupt entry instead of failing to load every server
+        // that comes after it in the file.
+      }
     });
 
     _serverListStream.sink.add(serverList);
@@ -120,8 +125,16 @@ class ServerManager {
     Directory? file = await FileExplorer()
         .getDownloadDir(newServer.storageMode, newServer.storageBasePath);
     if (file != null) {
-      String dir = path.join(file.path, "media/${newServer.localname}");
-      await new Directory(dir).create(recursive: true);
+      try {
+        String dir = path.join(file.path, "media/${newServer.localname}");
+        await new Directory(dir).create(recursive: true);
+      } catch (e) {
+        // A permanent/SD path can fail to create (unmounted, read-only).
+        // Don't let that abort the save below and lose the server entirely.
+        showGlobalSnack(
+            'Saved, but the download folder could not be created — storage '
+            'may be unavailable.');
+      }
     }
 
     await writeServerFile();

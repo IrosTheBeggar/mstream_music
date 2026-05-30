@@ -575,8 +575,27 @@ class MyCustomFormState extends State<MyCustomForm> {
       return;
     }
     final chosen = await _browseForFolder(root);
-    if (chosen != null && mounted) {
-      setState(() => _storageBasePath = chosen);
+    if (chosen == null || !mounted) return;
+    // Confirm we can actually write there before committing — catches
+    // read-only roots / SD cards before downloads silently fail later.
+    if (!await _isWritable(chosen)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("That folder isn't writable — pick another.")));
+      }
+      return;
+    }
+    setState(() => _storageBasePath = chosen);
+  }
+
+  Future<bool> _isWritable(String dirPath) async {
+    try {
+      final probe = File(path.join(dirPath, '.mstream_write_test'));
+      await probe.writeAsString('');
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -629,6 +648,13 @@ class MyCustomFormState extends State<MyCustomForm> {
                                   fontSize: 12),
                               overflow: TextOverflow.ellipsis),
                         ),
+                        IconButton(
+                          icon: Icon(Icons.create_new_folder_outlined,
+                              color: VelvetColors.primary),
+                          tooltip: 'New folder',
+                          onPressed: () => _createSubfolder(ctx, current,
+                              (p) => setSheet(() => current = p)),
+                        ),
                       ],
                     ),
                   ),
@@ -677,6 +703,52 @@ class MyCustomFormState extends State<MyCustomForm> {
         },
       ),
     );
+  }
+
+  // Prompts for a name and creates a subfolder under [parent], then calls
+  // [onCreated] with the new absolute path so the picker descends into it.
+  Future<void> _createSubfolder(BuildContext sheetCtx, String parent,
+      void Function(String) onCreated) async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: sheetCtx,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('New folder',
+            style: TextStyle(color: VelvetColors.textPrimary)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          autocorrect: false,
+          style: TextStyle(color: VelvetColors.textPrimary),
+          decoration: InputDecoration(hintText: 'Folder name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(),
+              child: Text('Cancel',
+                  style: TextStyle(color: VelvetColors.textSecondary))),
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(ctrl.text.trim()),
+              child: Text('Create')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty) return;
+    // Single path segment only — strip separators so a name can't escape
+    // the current directory.
+    final safe = name.replaceAll(RegExp(r'[\\/]+'), '_');
+    try {
+      final newDir = Directory(path.join(parent, safe));
+      newDir.createSync(recursive: true);
+      onCreated(newDir.path);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not create folder')));
+      }
+    }
   }
 
   // Per-mode explanation under the dropdown. App local gets a prominent

@@ -11,6 +11,7 @@ import 'package:path/path.dart' as path;
 
 import '../objects/download_tracker.dart';
 import '../objects/display_item.dart';
+import '../objects/server.dart';
 
 class DownloadManager {
   DownloadManager._privateConstructor();
@@ -25,6 +26,10 @@ class DownloadManager {
       BehaviorSubject<Map<String, DownloadTracker>>.seeded(downloadMap);
 
   Map<String, DownloadTracker> downloadMap = {};
+  // Destination keys (serverName+filepath) of downloads currently in
+  // flight, so a duplicate tap / second "Download all" can't enqueue the
+  // same file twice and interleave writes to the same path.
+  final Set<String> _inFlight = {};
   StreamSubscription<TaskUpdate>? _updatesSub;
 
   Future<void> initDownloader() async {
@@ -38,14 +43,34 @@ class DownloadManager {
     final DownloadTracker? dt = downloadMap[update.task.taskId];
     if (dt == null) return;
 
+    bool terminal = false;
     if (update is TaskProgressUpdate) {
       // progress is 0.0–1.0; negative values signal error/special states,
       // so ignore those and keep the last good value.
       if (update.progress >= 0) dt.progress = update.progress;
     } else if (update is TaskStatusUpdate) {
-      if (update.status == TaskStatus.complete) {
-        dt.progress = 1.0;
-        // TODO: update queue items
+      switch (update.status) {
+        case TaskStatus.complete:
+          dt.progress = 1.0;
+          terminal = true;
+          // TODO: patch matching queue MediaItems' localPath so an
+          // already-queued track switches from streaming to the fresh
+          // local copy without a queue rebuild.
+          break;
+        case TaskStatus.failed:
+        case TaskStatus.notFound:
+          // Reset the row so a stuck partial bar doesn't imply a cached
+          // file that isn't there, and tell the user it didn't work.
+          dt.progress = 0;
+          terminal = true;
+          showGlobalSnack('A download failed — check your connection.');
+          break;
+        case TaskStatus.canceled:
+          dt.progress = 0;
+          terminal = true;
+          break;
+        default:
+          break; // enqueued / running / paused / waitingToRetry
       }
     }
 
@@ -59,6 +84,14 @@ class DownloadManager {
         row.downloadProgress = pct;
         BrowserManager().updateStream();
       }
+    }
+
+    // On a terminal status, release the tracker (and the DisplayItem it
+    // retains) and clear the in-flight guard so the file can be retried.
+    if (terminal) {
+      _inFlight.remove(dt.filePath);
+      dt.referenceDisplayItem = null;
+      downloadMap.remove(update.task.taskId);
     }
 
     // Re-emit so the Downloads screen's StreamBuilder rebuilds.
@@ -77,7 +110,16 @@ class DownloadManager {
       {DisplayItem? referenceItem}) async {
     String downloadDirectory = serverName + filepath;
 
-    final server = ServerManager().lookupServer(serverName);
+    // The originating server may have been removed while this track lingered
+    // in the queue — lookupServer is a bare firstWhere that would throw.
+    final Server server;
+    try {
+      server = ServerManager().lookupServer(serverName);
+    } catch (_) {
+      showGlobalSnack('That server is no longer configured.');
+      return;
+    }
+
     final dir = await FileExplorer()
         .getDownloadDir(server.storageMode, server.storageBasePath);
     if (dir == null) {
@@ -92,8 +134,10 @@ class DownloadManager {
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 
     if (new File(downloadTo).existsSync() == true) {
-      print('exists!');
-      return;
+      return; // already cached on disk
+    }
+    if (_inFlight.contains(downloadDirectory)) {
+      return; // a download for this exact file is already running
     }
 
     String targetDir = path.dirname(downloadTo);
@@ -113,6 +157,7 @@ class DownloadManager {
         updates: Updates.statusAndProgress,
       );
 
+      _inFlight.add(downloadDirectory);
       downloadMap[task.taskId] =
           new DownloadTracker(downloadUrl, downloadDirectory)
             ..referenceDisplayItem = referenceItem;
@@ -121,6 +166,7 @@ class DownloadManager {
       await FileDownloader().enqueue(task);
     } catch (e) {
       // The volume could vanish between the null-check and the write.
+      _inFlight.remove(downloadDirectory);
       showGlobalSnack('Could not start download — storage unavailable.');
     }
   }
