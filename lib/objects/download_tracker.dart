@@ -7,9 +7,10 @@ class DownloadTracker {
   // 0.0–1.0 (background_downloader progress scale).
   double progress = 0.0;
 
-  // These can be set to update downlaod progress for a particular item
-  // you should always check if these exist before using them
-  late DisplayItem? referenceDisplayItem;
+  // Optional back-reference to the browser row that kicked off this
+  // download, so progress updates can drive that row's inline bar. Null
+  // for downloads with no on-screen row (e.g. the queue's Sync action).
+  DisplayItem? referenceDisplayItem;
 
   DownloadTracker(this.serverUrl, this.filePath);
 }

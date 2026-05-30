@@ -15,7 +15,7 @@ import 'objects/metadata.dart';
 import 'screens/about_screen.dart';
 import 'screens/metadata_screen.dart';
 import 'screens/auto_dj.dart';
-import 'screens/downloads.dart';
+// import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
@@ -271,17 +271,23 @@ class _MStreamAppState extends State<MStreamApp>
                   );
                 },
               ),
-              ListTile(
-                leading: Icon(Icons.download),
-                title: Text('Downloads'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => DownloadScreen()),
-                  );
-                },
-              ),
+              // Downloads drawer entry hidden — per-file download progress
+              // now shows inline on each browser row (the green left-edge
+              // bar), so the dedicated Downloads page is redundant for
+              // monitoring. Uncomment this and the screens/downloads.dart
+              // import to restore; DownloadScreen and the DownloadManager
+              // stream are both still in the tree.
+              // ListTile(
+              //   leading: Icon(Icons.download),
+              //   title: Text('Downloads'),
+              //   onTap: () {
+              //     Navigator.of(context).pop();
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(builder: (context) => DownloadScreen()),
+              //     );
+              //   },
+              // ),
               ListTile(
                 leading: Icon(Icons.album),
                 title: Text('Auto DJ'),

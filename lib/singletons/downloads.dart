@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/server_list.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
 
 import '../objects/download_tracker.dart';
+import '../objects/display_item.dart';
 
 class DownloadManager {
   DownloadManager._privateConstructor();
@@ -46,6 +48,18 @@ class DownloadManager {
       }
     }
 
+    // Drive the originating browser row's inline progress bar, if any.
+    // Only repaint the browser when the rounded percentage actually
+    // changes, so a burst of sub-percent ticks doesn't thrash the list.
+    final DisplayItem? row = dt.referenceDisplayItem;
+    if (row != null) {
+      final int pct = (dt.progress.clamp(0.0, 1.0) * 100).round();
+      if (row.downloadProgress != pct) {
+        row.downloadProgress = pct;
+        BrowserManager().updateStream();
+      }
+    }
+
     // Re-emit so the Downloads screen's StreamBuilder rebuilds.
     _downloadStream.add(downloadMap);
   }
@@ -58,7 +72,8 @@ class DownloadManager {
   }
 
   Future<void> downloadOneFile(String downloadUrl, String serverName,
-      String filepath, bool? saveToSdCard) async {
+      String filepath, bool? saveToSdCard,
+      {DisplayItem? referenceItem}) async {
     String downloadDirectory = serverName + filepath;
 
     bool sd =
@@ -92,7 +107,8 @@ class DownloadManager {
     );
 
     downloadMap[task.taskId] =
-        new DownloadTracker(downloadUrl, downloadDirectory);
+        new DownloadTracker(downloadUrl, downloadDirectory)
+          ..referenceDisplayItem = referenceItem;
     _downloadStream.add(downloadMap);
 
     await FileDownloader().enqueue(task);
