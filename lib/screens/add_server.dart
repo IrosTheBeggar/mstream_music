@@ -468,10 +468,11 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   // Before an edited server's storage pointers change, relocate its
   // already-downloaded files (the media/<localname> subtree). Within one
-  // volume this is an instant, atomic rename; across volumes (e.g. App local
-  // -> Permanent) files can't be moved, so we warn and let the user proceed
-  // — they re-download and delete the old copies manually. Returns false
-  // only when the user cancels that warning (so the save is aborted).
+  // volume this is an instant, atomic rename; across volumes (App local on
+  // internal storage -> a Permanent/SD folder) rename can't cross
+  // filesystems, so we offer an async copy (copy -> verify -> delete
+  // originals) or a switch-without-copying. Returns false only when the user
+  // cancels (so the save is aborted).
   Future<bool> _migrateDownloads({
     required String oldMode,
     required String? oldBasePath,
@@ -509,33 +510,130 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
       return true;
     } catch (_) {
-      // Cross-volume (or otherwise un-renamable): can't move. Warn the user.
-      if (!mounted) return false;
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
+      // Cross-volume: rename can't move across filesystems — offer a copy.
+      return await _copyAcrossVolumes(oldDir, newDir);
+    }
+  }
+
+  // Cross-volume relocation. Prompts (with file count + size): Copy moves the
+  // files (async copy -> verify -> delete originals); "Switch only" leaves
+  // them (re-download), optionally deleting the old copies; Cancel aborts.
+  // Fail-safe: a failed/canceled copy cleans up the partial, keeps the
+  // originals, and aborts the save. Returns true to proceed, false to abort.
+  Future<bool> _copyAcrossVolumes(Directory oldDir, Directory newDir) async {
+    if (!mounted) return false;
+    // Count + size from the source (App local is internal — fast to walk).
+    int count = 0;
+    int bytes = 0;
+    try {
+      await for (final e in oldDir.list(recursive: true, followLinks: false)) {
+        if (e is File) {
+          count++;
+          bytes += await e.length();
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return false;
+    bool deleteOld = false;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
           backgroundColor: VelvetColors.surface,
-          title: Text('Different storage volume',
+          title: Text('Move downloaded files?',
               style: TextStyle(color: VelvetColors.textPrimary)),
-          content: Text(
-              "Your downloaded files are on a different storage volume and "
-              "can't be moved automatically.\n\nIf you continue, those songs "
-              "will re-download to the new location. The old files stay where "
-              "they are — delete them manually if you want the space back.",
-              style: TextStyle(color: VelvetColors.textSecondary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                  "This server's $count downloaded file${count == 1 ? '' : 's'} "
+                  '(${_formatBytes(bytes)}) are on a different storage volume. '
+                  'Copy them to keep them offline at the new location, or '
+                  "switch without copying (they'll re-download).",
+                  style: TextStyle(color: VelvetColors.textSecondary)),
+              SizedBox(height: 4),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: VelvetColors.primary,
+                value: deleteOld,
+                onChanged: (v) => setInner(() => deleteOld = v ?? false),
+                title: Text('Delete the old files',
+                    style: TextStyle(color: VelvetColors.textPrimary)),
+                subtitle: Text('Only applies when switching without copying.',
+                    style: TextStyle(
+                        color: VelvetColors.textTertiary, fontSize: 12)),
+              ),
+            ],
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
+                onPressed: () => Navigator.of(ctx).pop('cancel'),
                 child: Text('Cancel',
                     style: TextStyle(color: VelvetColors.textSecondary))),
             TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text('Continue')),
+                onPressed: () => Navigator.of(ctx).pop('switch'),
+                child: Text('Switch only')),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop('copy'),
+                child: Text('Copy')),
           ],
         ),
-      );
-      return proceed == true;
+      ),
+    );
+
+    if (choice == null || choice == 'cancel') return false; // abort save
+    if (choice == 'switch') {
+      if (deleteOld) {
+        try {
+          await oldDir.delete(recursive: true);
+        } catch (_) {}
+      }
+      return true; // switch without copying
     }
+
+    // Copy: run the async copy behind a progress dialog.
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _CopyProgressDialog(src: oldDir, dst: newDir),
+    );
+
+    if (ok != true) {
+      // Clean up a partial copy; the originals are untouched.
+      try {
+        if (newDir.existsSync()) await newDir.delete(recursive: true);
+      } catch (_) {}
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Copy failed — files unchanged, storage location not changed.')));
+      }
+      return false;
+    }
+
+    // Success — remove the originals so the files live only at the new spot.
+    try {
+      await oldDir.delete(recursive: true);
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Moved $count file${count == 1 ? '' : 's'} to the new location.')));
+    }
+    return true;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
@@ -1286,6 +1384,103 @@ class MyCustomFormState extends State<MyCustomForm> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Modal progress dialog that copies a directory tree (src -> dst) using async
+// I/O so the UI stays responsive on large libraries. Pops `true` once the
+// copy is verified (file count + total bytes), `false` on error or cancel.
+class _CopyProgressDialog extends StatefulWidget {
+  final Directory src;
+  final Directory dst;
+  const _CopyProgressDialog({required this.src, required this.dst});
+
+  @override
+  State<_CopyProgressDialog> createState() => _CopyProgressDialogState();
+}
+
+class _CopyProgressDialogState extends State<_CopyProgressDialog> {
+  int _copied = 0;
+  int _total = 0;
+  bool _canceled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+  }
+
+  Future<void> _run() async {
+    try {
+      final files = <File>[];
+      await for (final e
+          in widget.src.list(recursive: true, followLinks: false)) {
+        if (e is File) files.add(e);
+      }
+      if (mounted) setState(() => _total = files.length);
+
+      int srcBytes = 0;
+      int lastPct = -1;
+      for (int i = 0; i < files.length; i++) {
+        if (_canceled) {
+          if (mounted) Navigator.of(context).pop(false);
+          return;
+        }
+        final f = files[i];
+        final rel = path.relative(f.path, from: widget.src.path);
+        final destPath = path.join(widget.dst.path, rel);
+        await Directory(path.dirname(destPath)).create(recursive: true);
+        await f.copy(destPath);
+        srcBytes += await f.length();
+        final done = i + 1;
+        final pct = (done * 100) ~/ files.length;
+        if (mounted && pct != lastPct) {
+          lastPct = pct;
+          setState(() => _copied = done);
+        }
+      }
+
+      // Verify: the destination has at least as many files + bytes.
+      int destCount = 0;
+      int destBytes = 0;
+      await for (final e
+          in widget.dst.list(recursive: true, followLinks: false)) {
+        if (e is File) {
+          destCount++;
+          destBytes += await e.length();
+        }
+      }
+      final ok = destCount >= files.length && destBytes >= srcBytes;
+      if (mounted) Navigator.of(context).pop(ok);
+    } catch (_) {
+      if (mounted) Navigator.of(context).pop(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = _total == 0 ? null : _copied / _total;
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text(_canceled ? 'Canceling…' : 'Moving files…',
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(value: value),
+          SizedBox(height: 12),
+          Text(_total == 0 ? 'Preparing…' : 'Copied $_copied of $_total files',
+              style: TextStyle(color: VelvetColors.textSecondary)),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _canceled ? null : () => setState(() => _canceled = true),
+          child: Text('Cancel',
+              style: TextStyle(color: VelvetColors.textSecondary)),
+        ),
+      ],
     );
   }
 }
