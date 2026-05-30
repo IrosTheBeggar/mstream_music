@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../objects/server.dart';
+import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/server_compat.dart';
@@ -58,6 +61,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   TextEditingController _urlCtrl = TextEditingController();
   TextEditingController _usernameCtrl = TextEditingController();
   TextEditingController _passwordCtrl = TextEditingController();
+  // Per-server download subfolder (downloads live in media/<this>).
+  // Defaults to a generated id; making it editable lets a re-added
+  // server reuse its old folder and recover its downloaded songs.
+  final TextEditingController _downloadFolderCtrl = TextEditingController();
 
   bool submitPending = false;
   bool saveToSdCard = false;
@@ -90,12 +97,18 @@ class MyCustomFormState extends State<MyCustomForm> {
       _usernameCtrl.text = s.username ?? '';
       _passwordCtrl.text = s.password ?? '';
       saveToSdCard = s.saveToSdCard;
+      _downloadFolderCtrl.text = s.localname;
       // An existing server saved without credentials is a public
       // server — start in public mode so the toggle reflects reality.
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
         _publicAccess = true;
       }
     } catch (err) {}
+
+    // New server: default to a generated folder id (overridable below).
+    if (_downloadFolderCtrl.text.isEmpty) {
+      _downloadFolderCtrl.text = Uuid().v4();
+    }
 
     _detectSdCard();
 
@@ -244,6 +257,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     _urlCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _downloadFolderCtrl.dispose();
 
     super.dispose();
   }
@@ -345,8 +359,16 @@ class MyCustomFormState extends State<MyCustomForm> {
     // residual text in the controllers.
     final username = _publicAccess ? '' : _usernameCtrl.text;
     final password = _publicAccess ? '' : _passwordCtrl.text;
+    // The user-chosen download folder (media/<this>); fall back to a
+    // generated id if they cleared the field.
+    final folder = _downloadFolderCtrl.text.trim().isEmpty
+        ? Uuid().v4()
+        : _downloadFolderCtrl.text.trim();
 
     if (shouldUpdate) {
+      // localname isn't part of editServer's signature — set it directly
+      // (callAfterEditServer below persists the change).
+      ServerManager().serverList[editThisServer!].localname = folder;
       ServerManager().editServer(
           editThisServer!, _urlCtrl.text, username, password, saveToSdCard);
       await ServerManager()
@@ -354,7 +376,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       await ServerManager().callAfterEditServer();
     } else {
       Server newServer =
-          new Server(lol.origin, username, password, jwt, Uuid().v4());
+          new Server(lol.origin, username, password, jwt, folder);
       if (saveToSdCard == true) {
         newServer.saveToSdCard = true;
       }
@@ -388,6 +410,81 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
     checkServer();
+  }
+
+  // Lists the existing per-server download folders (media/<id>) so the
+  // user can point this server at one — recovering a re-added server's
+  // previously-downloaded songs.
+  Future<void> _browseDownloadFolders() async {
+    final base = await FileExplorer().getDownloadDir(saveToSdCard);
+    if (!mounted) return;
+    if (base == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('No storage available')));
+      return;
+    }
+    final mediaDir = Directory(path.join(base.path, 'media'));
+    final folders = mediaDir.existsSync()
+        ? mediaDir.listSync().whereType<Directory>().toList()
+        : <Directory>[];
+    if (!mounted) return;
+    if (folders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No existing download folders found')));
+      return;
+    }
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Existing download folders',
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: folders.map((d) {
+                  final name = path.basename(d.path);
+                  int count = 0;
+                  DateTime? modified;
+                  try {
+                    count = d.listSync().length;
+                    modified = d.statSync().modified;
+                  } catch (_) {}
+                  return ListTile(
+                    leading: Icon(Icons.folder, color: VelvetColors.primary),
+                    title: Text(name,
+                        style: TextStyle(color: VelvetColors.textPrimary),
+                        overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                        '$count item${count == 1 ? '' : 's'}'
+                        '${modified != null ? ' · ${modified.toString().split('.').first}' : ''}',
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary, fontSize: 12)),
+                    onTap: () => Navigator.of(ctx).pop(name),
+                  );
+                }).toList(),
+              ),
+            ),
+            SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null && mounted) {
+      setState(() => _downloadFolderCtrl.text = chosen);
+    }
   }
 
   @override
@@ -563,6 +660,53 @@ class MyCustomFormState extends State<MyCustomForm> {
                   activeThumbColor: VelvetColors.primary,
                 ),
               ],
+              SizedBox(height: 8),
+              Text('Download folder',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _downloadFolderCtrl,
+                      autocorrect: false,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        prefixIcon: Icon(Icons.folder_outlined),
+                        hintText: 'folder name',
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding:
+                          EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.folder_open, size: 18),
+                    label: Text('Browse'),
+                    onPressed: submitPending ? null : _browseDownloadFolders,
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              Text(
+                "Files download to a 'media/<folder>' directory on this "
+                "device. Re-using a previous server's folder keeps its "
+                "downloaded songs when you re-add a lost server.",
+                style:
+                    TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+              ),
               SizedBox(height: 24),
               // QR Code button hidden — flutter_barcode_scanner is
               // commented out in pubspec.yaml (hasn't kept up with
