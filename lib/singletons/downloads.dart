@@ -75,11 +75,13 @@ class DownloadManager {
     }
 
     // Drive the originating browser row's inline progress bar, if any.
-    // Only repaint the browser when the rounded percentage actually
-    // changes, so a burst of sub-percent ticks doesn't thrash the list.
+    // Quantize to 5% buckets so a full-list repaint fires at most ~20
+    // times per download instead of up to 100× — this matters when
+    // "Download all" runs many downloads concurrently. Completion still
+    // lands on 100 (a multiple of 5).
     final DisplayItem? row = dt.referenceDisplayItem;
     if (row != null) {
-      final int pct = (dt.progress.clamp(0.0, 1.0) * 100).round();
+      final int pct = ((dt.progress.clamp(0.0, 1.0) * 100).round() ~/ 5) * 5;
       if (row.downloadProgress != pct) {
         row.downloadProgress = pct;
         BrowserManager().updateStream();
