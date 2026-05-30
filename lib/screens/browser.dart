@@ -12,7 +12,7 @@ import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/local_search_bar.dart';
 import '../singletons/ytdl_manager.dart';
-import 'ytdl_sheet.dart';
+import 'add_media_sheet.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -696,10 +696,12 @@ class _BrowserState extends State<Browser> {
                           IconButton(
                               icon: Icon(Icons.cloud_download_outlined,
                                   color: VelvetColors.textSecondary),
-                              tooltip: 'Download from URL',
+                              tooltip: 'Add media',
                               onPressed: () {
                                 final dir = BrowserManager().currentDirectory;
-                                if (dir != null) showYtdlSheet(context, dir);
+                                if (dir != null) {
+                                  showAddMediaSheet(context, dir);
+                                }
                               }),
                         IconButton(
                             icon: Icon(Icons.search,

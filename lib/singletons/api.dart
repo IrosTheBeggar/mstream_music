@@ -659,6 +659,74 @@ class ApiManager {
     return const [];
   }
 
+  // ── Torrent ────────────────────────────────────────────────────────
+  // Add a magnet / .torrent to the server's torrent client, into a
+  // library directory — mirrors the webapp's file-explorer torrent tab.
+
+  // Capability + destination probe for [path] (GET /torrent/preflight):
+  // { active, clientType, displayName, noUpload, userAllowed, vpath,
+  // subPath, vpathConfirmed, daemonPath, reason }.
+  Future<Map<String, dynamic>> torrentPreflight(String path) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final uri = Uri.parse(s.url)
+        .resolve('/api/v1/torrent/preflight')
+        .replace(queryParameters: {'path': path});
+    final res = await http
+        .get(uri, headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Torrent unavailable');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // Submit a torrent (POST /torrent/add, multipart). Provide exactly one
+  // of [magnet] or [torrentBytes]. Throws the server's message on
+  // failure; returns { ok, name, downloadPath, isDuplicate,
+  // renameWarning?, … } on success.
+  Future<Map<String, dynamic>> torrentAdd({
+    required String vpath,
+    String? subPath,
+    required String directoryName,
+    bool renameRoot = false,
+    String? magnet,
+    List<int>? torrentBytes,
+    String? torrentFilename,
+  }) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/add'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    req.fields['vpath'] = vpath;
+    if (subPath != null && subPath.isNotEmpty) req.fields['subPath'] = subPath;
+    req.fields['directoryName'] = directoryName;
+    req.fields['renameRoot'] = renameRoot ? 'true' : 'false';
+    if (magnet != null && magnet.isNotEmpty) {
+      req.fields['magnet'] = magnet;
+    } else if (torrentBytes != null) {
+      req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+          filename: torrentFilename ?? 'upload.torrent'));
+    }
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 30)));
+    Map<String, dynamic> body;
+    try {
+      body = res.body.isNotEmpty
+          ? jsonDecode(res.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+    } catch (_) {
+      body = <String, dynamic>{};
+    }
+    if (res.statusCode != 200 || body['ok'] != true) {
+      throw Exception(body['message']?.toString() ??
+          body['error']?.toString() ??
+          'Torrent add failed (HTTP ${res.statusCode})');
+    }
+    return body;
+  }
+
   // Pull the server's { error: "…" } message out of a failed response.
   String? _ytdlError(http.Response res) {
     try {
