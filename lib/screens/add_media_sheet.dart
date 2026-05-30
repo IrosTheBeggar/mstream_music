@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../singletons/api.dart';
@@ -403,7 +404,10 @@ class _TorrentFormState extends State<TorrentForm> {
   bool _preLoading = true;
   String? _preError;
 
+  List<int>? _fileBytes;
+  String? _fileName;
   bool _dirAutofilled = false;
+  bool _renameRoot = false;
   bool _submitting = false;
 
   @override
@@ -446,11 +450,33 @@ class _TorrentFormState extends State<TorrentForm> {
   void _onMagnetChanged() {
     final m = _magnet.text.trim();
     setState(() {
+      // Magnet + file are mutually exclusive.
+      if (m.isNotEmpty && _fileBytes != null) {
+        _fileBytes = null;
+        _fileName = null;
+      }
       if (m.isNotEmpty && (_dirName.text.isEmpty || _dirAutofilled)) {
         try {
           final dn = Uri.parse(m).queryParameters['dn'];
           if (dn != null && dn.isNotEmpty) _setDir(dn);
         } catch (_) {}
+      }
+    });
+  }
+
+  Future<void> _pickFile() async {
+    final group = XTypeGroup(label: 'Torrent', extensions: const ['torrent']);
+    final XFile? file = await openFile(acceptedTypeGroups: [group]);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _fileBytes = bytes;
+      _fileName = file.name;
+      _magnet.clear();
+      if (_dirName.text.isEmpty || _dirAutofilled) {
+        final name = extractTorrentName(bytes);
+        if (name.isNotEmpty) _setDir(name);
       }
     });
   }
@@ -469,14 +495,16 @@ class _TorrentFormState extends State<TorrentForm> {
           const SnackBar(content: Text('No library path for this folder')));
       return;
     }
-    if (magnet.isEmpty) {
-      messenger
-          .showSnackBar(const SnackBar(content: Text('Paste a magnet link')));
-      return;
-    }
     if (dir.isEmpty) {
       messenger
           .showSnackBar(const SnackBar(content: Text('Enter a folder name')));
+      return;
+    }
+    final hasFile = _fileBytes != null;
+    final hasMagnet = magnet.isNotEmpty;
+    if (hasFile == hasMagnet) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Add a magnet link or a .torrent file (one)')));
       return;
     }
 
@@ -486,7 +514,10 @@ class _TorrentFormState extends State<TorrentForm> {
         vpath: vpath,
         subPath: subPath,
         directoryName: dir,
-        magnet: magnet,
+        renameRoot: _renameRoot,
+        magnet: hasMagnet ? magnet : null,
+        torrentBytes: hasFile ? _fileBytes : null,
+        torrentFilename: _fileName,
       );
       if (mounted) Navigator.of(context).pop();
       final name = r['name']?.toString() ?? dir;
@@ -558,6 +589,31 @@ class _TorrentFormState extends State<TorrentForm> {
             ),
           ],
           const SizedBox(height: 16),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: VelvetColors.textPrimary,
+              side: BorderSide(color: VelvetColors.border2),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              ),
+            ),
+            icon: Icon(Icons.attach_file, color: VelvetColors.textSecondary),
+            label: Text(_fileName ?? 'Choose .torrent file'),
+            onPressed: _submitting ? null : _pickFile,
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: Divider(color: VelvetColors.border)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('or',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12)),
+            ),
+            Expanded(child: Divider(color: VelvetColors.border)),
+          ]),
+          const SizedBox(height: 12),
           TextField(
             controller: _magnet,
             autocorrect: false,
@@ -592,7 +648,21 @@ class _TorrentFormState extends State<TorrentForm> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 4),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text("Rename the torrent's root folder",
+                style:
+                    TextStyle(color: VelvetColors.textPrimary, fontSize: 14)),
+            subtitle: Text('Match the folder name above',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+            value: _renameRoot,
+            onChanged:
+                _submitting ? null : (v) => setState(() => _renameRoot = v),
+            activeThumbColor: VelvetColors.primary,
+          ),
+          const SizedBox(height: 12),
           _submitButton(
             label: _submitting ? 'Adding…' : 'Add torrent',
             busy: _submitting,

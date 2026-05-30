@@ -40,6 +40,7 @@ dependencies:
   path: any
   # Visualizer: FFI bindings to libprojectM (loaded from jniLibs on Android).
   ffi: ^2.1.4
+  file_selector: ^1.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
