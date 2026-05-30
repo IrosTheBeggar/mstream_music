@@ -66,6 +66,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Defaults to a generated id; making it editable lets a re-added
   // server reuse its old folder and recover its downloaded songs.
   final TextEditingController _downloadFolderCtrl = TextEditingController();
+  // True once the user types in / picks the download folder, so the URL
+  // auto-fill (subdomain-domain) stops overwriting their choice. Also set
+  // in edit mode, where the existing folder must be preserved.
+  bool _folderManuallyEdited = false;
 
   bool submitPending = false;
   // Download storage destination: 'appLocal' | 'permanent' | 'sdCard'
@@ -99,6 +103,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   void initState() {
     super.initState();
 
+    bool isEdit = false;
     try {
       Server s = ServerManager().serverList[editThisServer ?? -1];
       _urlCtrl.text = s.url;
@@ -107,6 +112,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _storageMode = s.storageMode;
       _storageBasePath = s.storageBasePath;
       _downloadFolderCtrl.text = s.localname;
+      isEdit = true;
       // An existing server saved without credentials is a public
       // server — start in public mode so the toggle reflects reality.
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
@@ -114,9 +120,12 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
     } catch (err) {}
 
-    // New server: default to a generated folder id (overridable below).
-    if (_downloadFolderCtrl.text.isEmpty) {
-      _downloadFolderCtrl.text = Uuid().v4();
+    // Existing server: keep its folder as-is (it maps to already-downloaded
+    // files). New server: auto-derive the folder from the URL as the user
+    // types it, until they edit it themselves.
+    _folderManuallyEdited = isEdit;
+    if (!isEdit) {
+      _maybeAutofillFolder();
     }
 
     _detectSdCard();
@@ -124,6 +133,8 @@ class MyCustomFormState extends State<MyCustomForm> {
     // Stale-result-clearing: editing the URL invalidates whatever
     // banner the last test produced (it was for a different URL).
     _urlCtrl.addListener(_clearTestResult);
+    // Auto-name the download folder from the URL (new servers only).
+    _urlCtrl.addListener(_maybeAutofillFolder);
   }
 
   void _clearTestResult() {
@@ -133,6 +144,46 @@ class MyCustomFormState extends State<MyCustomForm> {
         _testSuccess = null;
       });
     }
+  }
+
+  // Auto-fills the download folder from the server URL as
+  // "${subdomain}-${domain}" (e.g. music.rum.st -> music-rum.st), unless
+  // the user has already typed or picked a folder. New servers only.
+  void _maybeAutofillFolder() {
+    if (_folderManuallyEdited) return;
+    final name = _defaultLocalName(_urlCtrl.text);
+    if (name != null && _downloadFolderCtrl.text != name) {
+      _downloadFolderCtrl.text = name;
+    }
+  }
+
+  // Derives a clean folder name from a server URL: the host's first label
+  // (subdomain), a dash, then the remaining labels (domain). IP / single-
+  // label / no-subdomain hosts use the bare host. Returns null if no host
+  // can be parsed yet. Sanitized for FAT/ext filesystems (SD cards).
+  String? _defaultLocalName(String url) {
+    final raw = url.trim();
+    if (raw.isEmpty) return null;
+    String host;
+    try {
+      host = Uri.parse(raw.contains('://') ? raw : 'https://$raw').host;
+    } catch (_) {
+      return null;
+    }
+    if (host.isEmpty) return null;
+    if (host.startsWith('www.')) host = host.substring(4);
+
+    final isIpv4 = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host);
+    final labels = host.split('.');
+    final String name;
+    if (isIpv4 || host.contains(':') || labels.length < 3) {
+      name = host; // IP / single label / bare domain — use as-is
+    } else {
+      name = '${labels.first}-${labels.sublist(1).join('.')}';
+    }
+    // Keep only filesystem-safe characters.
+    final safe = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-');
+    return safe.isEmpty ? null : safe;
   }
 
   // Verifies the connection the same way the Save button does: an
@@ -283,6 +334,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   @override
   void dispose() {
     _urlCtrl.removeListener(_clearTestResult);
+    _urlCtrl.removeListener(_maybeAutofillFolder);
     _urlCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
@@ -388,11 +440,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     // residual text in the controllers.
     final username = _publicAccess ? '' : _usernameCtrl.text;
     final password = _publicAccess ? '' : _passwordCtrl.text;
-    // The user-chosen download folder (media/<this>); fall back to a
-    // generated id if they cleared the field.
-    final folder = _downloadFolderCtrl.text.trim().isEmpty
-        ? Uuid().v4()
-        : _downloadFolderCtrl.text.trim();
+    // The user-chosen download folder (media/<this>). If they cleared it,
+    // fall back to the URL-derived name, then a generated id.
+    String folder = _downloadFolderCtrl.text.trim();
+    if (folder.isEmpty) {
+      folder = _defaultLocalName(_urlCtrl.text) ?? Uuid().v4();
+    }
 
     // permanent/sdCard carry an absolute base path; the other modes
     // resolve their base at runtime, so null it out.
@@ -520,6 +573,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       ),
     );
     if (chosen != null && mounted) {
+      _folderManuallyEdited = true;
       setState(() => _downloadFolderCtrl.text = chosen);
     }
   }
@@ -1029,6 +1083,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                     child: TextFormField(
                       controller: _downloadFolderCtrl,
                       autocorrect: false,
+                      onChanged: (_) => _folderManuallyEdited = true,
                       decoration: InputDecoration(
                         isDense: true,
                         prefixIcon: Icon(Icons.folder_outlined),
