@@ -466,6 +466,78 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  // Before an edited server's storage pointers change, relocate its
+  // already-downloaded files (the media/<localname> subtree). Within one
+  // volume this is an instant, atomic rename; across volumes (e.g. App local
+  // -> Permanent) files can't be moved, so we warn and let the user proceed
+  // — they re-download and delete the old copies manually. Returns false
+  // only when the user cancels that warning (so the save is aborted).
+  Future<bool> _migrateDownloads({
+    required String oldMode,
+    required String? oldBasePath,
+    required String oldLocalname,
+    required String newMode,
+    required String? newBasePath,
+    required String newLocalname,
+  }) async {
+    final oldBase = await FileExplorer().getDownloadDir(oldMode, oldBasePath);
+    if (oldBase == null) return true; // old location gone — nothing to move
+    final oldDir = Directory(path.join(oldBase.path, 'media', oldLocalname));
+    bool hasFiles = false;
+    try {
+      hasFiles = oldDir.existsSync() && oldDir.listSync().isNotEmpty;
+    } catch (_) {}
+    if (!hasFiles) return true; // nothing downloaded yet
+
+    final newBase = await FileExplorer().getDownloadDir(newMode, newBasePath);
+    if (newBase == null) return true; // new location unavailable right now
+    final newDir = Directory(path.join(newBase.path, 'media', newLocalname));
+    if (oldDir.path == newDir.path) return true; // same target, no-op
+    // Don't clobber a destination that already holds files — the user is
+    // pointing at an existing folder (recovery), not moving into a fresh one.
+    try {
+      if (newDir.existsSync() && newDir.listSync().isNotEmpty) return true;
+    } catch (_) {}
+
+    // Try an atomic move — succeeds only within the same volume.
+    try {
+      Directory(path.join(newBase.path, 'media')).createSync(recursive: true);
+      oldDir.renameSync(newDir.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Moved downloaded files to the new folder.')));
+      }
+      return true;
+    } catch (_) {
+      // Cross-volume (or otherwise un-renamable): can't move. Warn the user.
+      if (!mounted) return false;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: VelvetColors.surface,
+          title: Text('Different storage volume',
+              style: TextStyle(color: VelvetColors.textPrimary)),
+          content: Text(
+              "Your downloaded files are on a different storage volume and "
+              "can't be moved automatically.\n\nIf you continue, those songs "
+              "will re-download to the new location. The old files stay where "
+              "they are — delete them manually if you want the space back.",
+              style: TextStyle(color: VelvetColors.textSecondary)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text('Cancel',
+                    style: TextStyle(color: VelvetColors.textSecondary))),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text('Continue')),
+          ],
+        ),
+      );
+      return proceed == true;
+    }
+  }
+
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
     bool shouldUpdate = false;
     try {
@@ -493,9 +565,24 @@ class MyCustomFormState extends State<MyCustomForm> {
         : null;
 
     if (shouldUpdate) {
+      final s = ServerManager().serverList[editThisServer!];
+      // Relocate already-downloaded files before flipping the server's
+      // storage pointers. Same-volume = instant atomic move; cross-volume =
+      // warn (files stay, user re-downloads). Cancel aborts the save.
+      final migrationOk = await _migrateDownloads(
+        oldMode: s.storageMode,
+        oldBasePath: s.storageBasePath,
+        oldLocalname: s.localname,
+        newMode: _storageMode,
+        newBasePath: basePath,
+        newLocalname: folder,
+      );
+      if (!migrationOk) {
+        if (mounted) setState(() => submitPending = false);
+        return;
+      }
       // localname + storage aren't part of editServer's signature — set
       // them directly (callAfterEditServer below persists the change).
-      final s = ServerManager().serverList[editThisServer!];
       s.localname = folder;
       s.storageMode = _storageMode;
       s.storageBasePath = basePath;
@@ -514,7 +601,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
 
     // Save Server List
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   Map<String, String> parseQrCode(String qrValue) {
