@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../singletons/api.dart';
 import '../singletons/ytdl_manager.dart';
 import '../theme/velvet_theme.dart';
+import '../util/torrent_meta.dart';
 
 /// "Add media" bottom sheet, replicating the webapp's file-explorer modal:
 /// a Download (yt-dlp) tab and a Torrent tab, both acting on [directory]
@@ -36,52 +36,6 @@ bool _isYoutubeUrl(String url) {
   } catch (_) {
     return false;
   }
-}
-
-/// Pull the suggested folder name out of a .torrent file's info dict —
-/// scan bytes for "4:info" then "4:name<len>:<value>" (a direct port of
-/// the webapp's extractTorrentName). Returns '' on any parse failure.
-String extractTorrentName(List<int> bytes) {
-  int i = 0;
-  while (i < bytes.length - 8) {
-    // "4:info"
-    if (bytes[i] == 0x34 &&
-        bytes[i + 1] == 0x3a &&
-        bytes[i + 2] == 0x69 &&
-        bytes[i + 3] == 0x6e &&
-        bytes[i + 4] == 0x66 &&
-        bytes[i + 5] == 0x6f) {
-      if (bytes[i + 6] != 0x64) {
-        i++;
-        continue;
-      } // expect a dict opener 'd'
-      for (int j = i + 7; j < bytes.length - 8; j++) {
-        // "4:name"
-        if (bytes[j] == 0x34 &&
-            bytes[j + 1] == 0x3a &&
-            bytes[j + 2] == 0x6e &&
-            bytes[j + 3] == 0x61 &&
-            bytes[j + 4] == 0x6d &&
-            bytes[j + 5] == 0x65) {
-          int k = j + 6;
-          final lenBuf = StringBuffer();
-          while (k < bytes.length && bytes[k] != 0x3a) {
-            lenBuf.writeCharCode(bytes[k]);
-            k++;
-          }
-          final len = int.tryParse(lenBuf.toString());
-          if (len == null || len <= 0 || len > 1024) return '';
-          final start = k + 1;
-          if (start + len > bytes.length) return '';
-          return utf8.decode(bytes.sublist(start, start + len),
-              allowMalformed: true);
-        }
-      }
-      return '';
-    }
-    i++;
-  }
-  return '';
 }
 
 class _AddMediaSheet extends StatefulWidget {

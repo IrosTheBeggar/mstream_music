@@ -666,8 +666,9 @@ class ApiManager {
   // Capability + destination probe for [path] (GET /torrent/preflight):
   // { active, clientType, displayName, noUpload, userAllowed, vpath,
   // subPath, vpathConfirmed, daemonPath, reason }.
-  Future<Map<String, dynamic>> torrentPreflight(String path) async {
-    final s = ServerManager().currentServer;
+  Future<Map<String, dynamic>> torrentPreflight(String path,
+      {Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
     if (s == null) throw Exception('No server selected');
     final uri = Uri.parse(s.url)
         .resolve('/api/v1/torrent/preflight')
@@ -693,8 +694,9 @@ class ApiManager {
     String? magnet,
     List<int>? torrentBytes,
     String? torrentFilename,
+    Server? server,
   }) async {
-    final s = ServerManager().currentServer;
+    final s = server ?? ServerManager().currentServer;
     if (s == null) throw Exception('No server selected');
     final req = http.MultipartRequest(
         'POST', Uri.parse(s.url).resolve('/api/v1/torrent/add'));
@@ -725,6 +727,51 @@ class ApiManager {
           'Torrent add failed (HTTP ${res.statusCode})');
     }
     return body;
+  }
+
+  // Per-library destination templates (GET /torrent/path-templates):
+  // { vpaths: { <name>: { template } }, supportedVars, suggestedTemplate }.
+  Future<Map<String, dynamic>> torrentPathTemplates({Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final res = await http
+        .get(Uri.parse(s.url).resolve('/api/v1/torrent/path-templates'),
+            headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Could not load path templates');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // Server-side metadata detection for a .torrent (POST /auto-detect,
+  // multipart). Returns the raw body — the caller checks `ok` /
+  // `confidence` / `metadata` / `message`. [vpath] enables the server's
+  // Tier-3 tag fetch.
+  Future<Map<String, dynamic>> torrentAutoDetect({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    String? vpath,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/auto-detect'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpath != null && vpath.isNotEmpty) req.fields['vpath'] = vpath;
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'message': 'Auto-detect failed (HTTP ${res.statusCode})'
+    };
   }
 
   // Pull the server's { error: "…" } message out of a failed response.

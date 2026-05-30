@@ -15,6 +15,7 @@ import 'objects/metadata.dart';
 import 'screens/about_screen.dart';
 import 'screens/metadata_screen.dart';
 import 'screens/auto_dj.dart';
+import 'screens/add_torrent_screen.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
 import 'singletons/app_messenger.dart';
@@ -382,6 +383,17 @@ class _MStreamAppState extends State<MStreamApp>
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => AutoDJScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.downloading),
+                title: Text('Add Torrent'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AddTorrentScreen()),
                   );
                 },
               ),
