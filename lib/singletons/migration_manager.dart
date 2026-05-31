@@ -123,6 +123,47 @@ class MigrationManager {
     return '/'; // internal storage is always mounted
   }
 
+  // Stream-copies [src] to [destPath], calling [onBytes] with the running byte
+  // count for intra-file progress. Returns false if canceled mid-copy (the
+  // partial destination is removed); throws on I/O error (e.g. ENOSPC) after
+  // cleaning up the partial, leaving the source intact.
+  Future<bool> _copyFileStreamed(
+      File src, String destPath, void Function(int written) onBytes) async {
+    final sink = File(destPath).openWrite();
+    int written = 0;
+    bool canceled = false;
+    try {
+      await for (final chunk in src.openRead()) {
+        if (_cancelRequested) {
+          canceled = true;
+          break;
+        }
+        sink.add(chunk);
+        written += chunk.length;
+        onBytes(written);
+      }
+      await sink.flush();
+      await sink.close();
+    } catch (e) {
+      try {
+        await sink.close();
+      } catch (_) {}
+      try {
+        final p = File(destPath);
+        if (p.existsSync()) await p.delete();
+      } catch (_) {}
+      rethrow;
+    }
+    if (canceled) {
+      try {
+        final p = File(destPath);
+        if (p.existsSync()) await p.delete();
+      } catch (_) {}
+      return false;
+    }
+    return true;
+  }
+
   // Begin moving [sourcePath] -> [destPath]. [totalFiles]/[totalBytes] are the
   // already-computed source size (from the dialog) so we don't re-walk.
   Future<void> start(String sourcePath, String destPath, int totalFiles,
@@ -291,19 +332,23 @@ class MigrationManager {
         final destPath = path.join(dest.path, rel);
         await Directory(path.dirname(destPath)).create(recursive: true);
         try {
-          await f.rename(destPath); // same-volume fast path
+          await f.rename(destPath); // same-volume fast path (instant)
         } catch (_) {
-          try {
-            await f.copy(destPath);
-          } catch (e) {
-            // Out of space / write error: clean up the partial destination
-            // file and keep the original. Propagate so the run records a
-            // failure (no blanket delete of un-copied files).
-            try {
-              final p = File(destPath);
-              if (p.existsSync()) await p.delete();
-            } catch (_) {}
-            rethrow;
+          // Cross-volume: stream-copy so the bar advances within a large file
+          // (and Cancel is responsive mid-file). Throws on error after
+          // cleaning up the partial; returns false if canceled mid-copy.
+          final ok = await _copyFileStreamed(f, destPath, (written) {
+            final mb = movedBytes + written;
+            final pct = totalBytes > 0 ? (mb * 100) ~/ totalBytes : -1;
+            if (pct != lastPct) {
+              lastPct = pct;
+              _progress.add(MigrationProgress(moved, total,
+                  movedBytes: mb, totalBytes: totalBytes));
+            }
+          });
+          if (!ok) {
+            canceled = true; // canceled mid-copy; partial already removed
+            break;
           }
           await f.delete();
         }
