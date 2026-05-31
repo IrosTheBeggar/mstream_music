@@ -111,6 +111,21 @@ class DownloadManager {
     _downloadStream.close();
   }
 
+  // Cancel every in-flight download. Used before a storage-location change so
+  // nothing lands at the old location after the switch (it would be stranded).
+  // The canceled-task updates flow through _onUpdate, which resets each row and
+  // removes its tracker.
+  Future<void> cancelAll() async {
+    try {
+      final tasks = await FileDownloader().allTasks();
+      if (tasks.isNotEmpty) {
+        await FileDownloader()
+            .cancelTasksWithIds(tasks.map((t) => t.taskId).toList());
+      }
+    } catch (_) {}
+    _inFlight.clear(); // allow immediate re-download of the same files
+  }
+
   // Show the "name not supported" warning, at most once every few seconds so
   // a batch download doesn't queue a snackbar per skipped file.
   void _warnFatSkip() {

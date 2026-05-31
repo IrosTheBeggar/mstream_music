@@ -14,6 +14,7 @@ import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
 import '../singletons/migration_manager.dart';
+import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
 import '../util/server_compat.dart';
 
@@ -704,6 +705,13 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     if (shouldUpdate) {
       final s = ServerManager().serverList[editThisServer!];
+      // If the storage target is changing, cancel in-flight downloads first so
+      // none land at the old location after the switch (they'd be stranded).
+      if (s.storageMode != _storageMode ||
+          s.storageBasePath != basePath ||
+          s.localname != folder) {
+        await DownloadManager().cancelAll();
+      }
       // Relocate already-downloaded files before flipping the server's
       // storage pointers. Same-volume = instant atomic move; cross-volume =
       // warn (files stay, user re-downloads). Cancel aborts the save.
