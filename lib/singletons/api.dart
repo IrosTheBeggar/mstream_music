@@ -574,29 +574,33 @@ class ApiManager {
 
   Map<String, String> _ytdlHeaders(Server s) => {'x-access-token': s.jwt ?? ''};
 
-  // Best-effort list of audio formats the server has enabled
-  // (GET /api/v1/ping → supportedAudioFiles). Falls back to the server's
-  // own default ('mp3') on any error so the picker always has a value.
-  Future<List<String>> ytdlCodecs() async {
+  // Probe ytdl capability (GET /api/v1/ping): whether the server responded and
+  // the enabled output codecs. A failed ping means a download POST will fail
+  // too, so the UI can gate on [ok] up front instead of surfacing the error
+  // only after the user hits Download. Falls back to 'mp3' for the picker
+  // either way.
+  Future<({bool ok, List<String> codecs})> ytdlCapability() async {
     final s = ServerManager().currentServer;
-    if (s == null) return const ['mp3'];
+    if (s == null) return (ok: false, codecs: const ['mp3']);
     try {
       final res = await http
           .get(Uri.parse(s.url).resolve('/api/v1/ping'),
               headers: _ytdlHeaders(s))
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final saf = (jsonDecode(res.body) as Map)['supportedAudioFiles'];
+        final decoded = jsonDecode(res.body);
+        final saf = decoded is Map ? decoded['supportedAudioFiles'] : null;
         if (saf is Map) {
           final codecs = saf.entries
               .where((e) => e.value == true)
               .map((e) => e.key.toString())
               .toList();
-          if (codecs.isNotEmpty) return codecs;
+          if (codecs.isNotEmpty) return (ok: true, codecs: codecs);
         }
+        return (ok: true, codecs: const ['mp3']);
       }
     } catch (_) {}
-    return const ['mp3'];
+    return (ok: false, codecs: const ['mp3']);
   }
 
   // Metadata preview for [url] (GET /api/v1/ytdl/metadata):

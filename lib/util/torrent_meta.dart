@@ -142,7 +142,11 @@ String resolveTorrentTemplate(String template, TorrentMeta meta,
   );
   final segs = subst
       .split(RegExp(r'[/\\]+'))
-      .map((s) => s.trim())
+      // Strip leading/trailing separator junk so a template literal left
+      // dangling by an empty variable (e.g. "{{ARTIST}} - {{ALBUM}}" with no
+      // album -> "Artist -", or both empty -> "-") doesn't become a folder
+      // name. Only ASCII separators are stripped, so unicode names survive.
+      .map((s) => s.replaceAll(RegExp(r'^[\s._-]+|[\s._-]+$'), ''))
       .where((s) => s.isNotEmpty)
       .toList();
   return segs.join('/');

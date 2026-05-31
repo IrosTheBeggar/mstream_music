@@ -416,7 +416,14 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   void _useMatch(Server s, Map m) {
     final mv = (m['vpath'] ?? _vpath ?? '').toString();
     final split = splitTorrentPath((m['relativePath'] ?? '').toString());
-    if (split.directoryName.isEmpty) return;
+    if (split.directoryName.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                "That match has no folder name — use 'Download fresh' instead")));
+      }
+      return;
+    }
     setState(() => _submitting = true);
     _doAdd(
       server: s,

@@ -123,6 +123,18 @@ void main() {
               const TorrentMeta('..', '..', '', 'high')),
           '');
     });
+    test('drops dangling separator from a partially-empty template', () {
+      expect(
+          resolveTorrentTemplate('{{ARTIST}} - {{ALBUM}}',
+              const TorrentMeta('Artist', '', '', 'high')),
+          'Artist');
+    });
+    test('all-empty template segment is dropped, not kept as "-"', () {
+      expect(
+          resolveTorrentTemplate('{{ARTIST}} - {{ALBUM}}',
+              const TorrentMeta('', '', '', 'none')),
+          '');
+    });
   });
 
   group('splitTorrentPath', () {

@@ -48,6 +48,10 @@ class _AddMediaSheet extends StatefulWidget {
 
 class _AddMediaSheetState extends State<_AddMediaSheet> {
   int _tab = 0;
+  // Tabs shown at least once. The Torrent tab runs a /preflight on first
+  // build, so don't build it until the user opens it; once built it stays
+  // alive (IndexedStack) to preserve typed input.
+  final Set<int> _visited = {0};
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +80,12 @@ class _AddMediaSheetState extends State<_AddMediaSheet> {
           IndexedStack(
             index: _tab,
             children: [
-              YtdlForm(directory: widget.directory),
-              TorrentForm(directory: widget.directory),
+              _visited.contains(0)
+                  ? YtdlForm(directory: widget.directory)
+                  : const SizedBox.shrink(),
+              _visited.contains(1)
+                  ? TorrentForm(directory: widget.directory)
+                  : const SizedBox.shrink(),
             ],
           ),
         ],
@@ -90,7 +98,10 @@ class _AddMediaSheetState extends State<_AddMediaSheet> {
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-        onTap: () => setState(() => _tab = index),
+        onTap: () => setState(() {
+          _tab = index;
+          _visited.add(index);
+        }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
@@ -142,21 +153,47 @@ class _YtdlFormState extends State<YtdlForm> {
   List<String> _codecs = const ['mp3'];
   String _codec = 'mp3';
   bool _submitting = false;
+  bool _capLoading = true; // probing whether the server supports ytdl
+  bool _ytdlOk = false;
 
   @override
   void initState() {
     super.initState();
     _url.addListener(_onUrlChanged);
-    _loadCodecs();
+    _loadCapability();
   }
 
-  Future<void> _loadCodecs() async {
-    final codecs = await ApiManager().ytdlCodecs();
+  Future<void> _loadCapability() async {
+    final cap = await ApiManager().ytdlCapability();
     if (!mounted) return;
     setState(() {
-      _codecs = codecs;
-      _codec = codecs.contains('mp3') ? 'mp3' : codecs.first;
+      _capLoading = false;
+      _ytdlOk = cap.ok;
+      _codecs = cap.codecs;
+      _codec = cap.codecs.contains('mp3') ? 'mp3' : cap.codecs.first;
     });
+  }
+
+  // Shown when the server didn't respond to the capability probe.
+  Widget _unavailableBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: VelvetColors.error.withValues(alpha: 0.12),
+        border: Border.all(color: VelvetColors.error),
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+      ),
+      child: Row(children: [
+        Icon(Icons.error_outline, color: VelvetColors.error, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+              "Couldn't reach this server to confirm yt-dlp support — "
+              'downloads may not work.',
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 13)),
+        ),
+      ]),
+    );
   }
 
   void _onUrlChanged() {
@@ -248,6 +285,10 @@ class _YtdlFormState extends State<YtdlForm> {
               style: TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
+          if (!_capLoading && !_ytdlOk) ...[
+            const SizedBox(height: 12),
+            _unavailableBanner(),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _url,
@@ -322,7 +363,7 @@ class _YtdlFormState extends State<YtdlForm> {
             label: _submitting ? 'Starting…' : 'Download',
             busy: _submitting,
             icon: Icons.download,
-            onPressed: _submitting ? null : _submit,
+            onPressed: (_submitting || !_ytdlOk) ? null : _submit,
           ),
         ],
       ),
