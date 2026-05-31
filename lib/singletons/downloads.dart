@@ -5,6 +5,7 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/app_messenger.dart';
+import 'package:mstream_music/singletons/migration_manager.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
@@ -30,6 +31,9 @@ class DownloadManager {
   // flight, so a duplicate tap / second "Download all" can't enqueue the
   // same file twice and interleave writes to the same path.
   final Set<String> _inFlight = {};
+  // Throttle the "unsupported name" warning so a "Download all" to an SD card
+  // doesn't queue one snackbar per skipped file.
+  DateTime? _lastFatWarn;
   StreamSubscription<TaskUpdate>? _updatesSub;
 
   Future<void> initDownloader() async {
@@ -107,6 +111,19 @@ class DownloadManager {
     _downloadStream.close();
   }
 
+  // Show the "name not supported" warning, at most once every few seconds so
+  // a batch download doesn't queue a snackbar per skipped file.
+  void _warnFatSkip() {
+    final now = DateTime.now();
+    if (_lastFatWarn == null ||
+        now.difference(_lastFatWarn!) > const Duration(seconds: 3)) {
+      _lastFatWarn = now;
+      showGlobalSnack(
+          "Some tracks can't be saved on this card — their names aren't "
+          'supported. They stream instead.');
+    }
+  }
+
   Future<void> downloadOneFile(String downloadUrl, String serverName,
       String filepath,
       {DisplayItem? referenceItem}) async {
@@ -119,6 +136,14 @@ class DownloadManager {
       server = ServerManager().lookupServer(serverName);
     } catch (_) {
       showGlobalSnack('That server is no longer configured.');
+      return;
+    }
+
+    // FAT/exFAT cards can't store certain characters; on an SD-card server,
+    // skip such files (they'd fail to write anyway) and warn once.
+    if (server.storageMode == 'sdCard' &&
+        hasFatIllegalChars(downloadDirectory)) {
+      _warnFatSkip();
       return;
     }
 

@@ -7,6 +7,15 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+// FAT/exFAT (typical removable SD cards) reject these characters in file and
+// directory names; '/' is the legal path separator between segments.
+final RegExp _fatIllegalChars = RegExp(r'[<>:"|?*\\\x00-\x1f]');
+
+// True if [relativePath] holds a character FAT/exFAT can't store — such files
+// can't be saved to a typical SD card.
+bool hasFatIllegalChars(String relativePath) =>
+    _fatIllegalChars.hasMatch(relativePath);
+
 // Progress of a background storage migration (moving a server's downloaded
 // files from one storage volume to another, one file at a time).
 class MigrationProgress {
@@ -14,11 +23,13 @@ class MigrationProgress {
   final int total; // total files
   final int movedBytes;
   final int totalBytes;
+  final int skipped; // files skipped (names unsupported on the destination)
   final bool done;
   final bool failed; // stopped on an error; awaiting Retry/Cancel
   const MigrationProgress(this.moved, this.total,
       {this.movedBytes = 0,
       this.totalBytes = 0,
+      this.skipped = 0,
       this.done = false,
       this.failed = false});
 
@@ -76,6 +87,27 @@ class MigrationManager {
     try {
       await _channel.invokeMethod(active ? 'startMove' : 'stopMove');
     } catch (_) {}
+  }
+
+  // Whether [dirPath]'s filesystem rejects FAT-illegal characters (typical of
+  // an SD card). Probes by writing a normal file (must succeed) then one with
+  // a '?' (fails on FAT). Defaults to false (don't skip) if it can't tell.
+  Future<bool> _isFatLike(String dirPath) async {
+    try {
+      final ok = File(path.join(dirPath, '.mstream_probe'));
+      await ok.writeAsString('');
+      await ok.delete();
+    } catch (_) {
+      return false; // can't write here at all — not a charset limit
+    }
+    try {
+      final bad = File(path.join(dirPath, '.mstream_probe_q?'));
+      await bad.writeAsString('');
+      await bad.delete();
+      return false; // illegal char accepted → not FAT
+    } catch (_) {
+      return true; // normal name OK but '?' rejected → FAT-like
+    }
   }
 
   // Begin moving [sourcePath] -> [destPath]. [totalFiles]/[totalBytes] are the
@@ -193,10 +225,19 @@ class MigrationManager {
           movedBytes: movedBytes, totalBytes: totalBytes));
 
       // Hold a foreground service for the duration so backgrounding the app
-      // doesn't freeze the move.
-      if (files.isNotEmpty) await _setService(true);
+      // doesn't freeze the move; detect a FAT/exFAT destination (SD card) so
+      // files with unsupported names are skipped, not fatal.
+      bool fatLike = false;
+      if (files.isNotEmpty) {
+        try {
+          await dest.create(recursive: true);
+        } catch (_) {}
+        fatLike = await _isFatLike(dest.path);
+        await _setService(true);
+      }
 
       int lastPct = -1;
+      int skipped = 0;
       bool canceled = false;
       for (int i = 0; i < files.length; i++) {
         if (_cancelRequested) {
@@ -206,6 +247,12 @@ class MigrationManager {
         final f = files[i];
         if (!f.existsSync()) continue;
         final rel = path.relative(f.path, from: source.path);
+        // Can't store this name on a FAT/exFAT card — leave it at the source
+        // rather than failing the whole move.
+        if (fatLike && hasFatIllegalChars(rel)) {
+          skipped++;
+          continue;
+        }
         final destPath = path.join(dest.path, rel);
         await Directory(path.dirname(destPath)).create(recursive: true);
         try {
@@ -258,7 +305,10 @@ class MigrationManager {
       } catch (_) {}
 
       _progress.add(MigrationProgress(total, total,
-          movedBytes: totalBytes, totalBytes: totalBytes, done: true));
+          movedBytes: totalBytes,
+          totalBytes: totalBytes,
+          skipped: skipped,
+          done: true));
       succeeded = true;
     } catch (_) {
       await _recordFailure();

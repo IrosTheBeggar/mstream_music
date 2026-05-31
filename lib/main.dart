@@ -109,7 +109,10 @@ class _MStreamAppState extends State<MStreamApp>
         final label = p.failed
             ? 'Move stopped — not enough space, or the location is unavailable.'
             : p.done
-                ? 'Move complete'
+                ? (p.skipped > 0
+                    ? 'Move complete — ${p.skipped} skipped (unsupported '
+                        'name${p.skipped == 1 ? '' : 's'})'
+                    : 'Move complete')
                 : 'Moving downloads… '
                     '${pct != null ? '${(pct * 100).round()}%' : '${p.moved}/${p.total}'}'
                     ' — keep the app open';
