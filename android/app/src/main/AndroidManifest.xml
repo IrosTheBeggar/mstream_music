@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- Keeps the process alive while a background storage migration moves
+         downloaded files (MigrationService). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -75,7 +78,14 @@
           <intent-filter>
             <action android:name="android.intent.action.MEDIA_BUTTON" />
           </intent-filter>
-        </receiver> 
+        </receiver>
+
+        <!-- Foreground service that keeps the process alive during a
+             background storage migration (file move). -->
+        <service
+            android:name=".MigrationService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
     </application>
 </manifest>

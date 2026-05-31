@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, File;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
@@ -151,11 +151,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
 
-    // Uri.file (not Uri.parse) so local paths with spaces / reserved chars —
-    // possible now that Permanent/SD folders are user-chosen (e.g. "My Music")
-    // — are encoded into a valid file:// URI instead of silently mis-parsing.
-    final uri = item.extras?['localPath'] != null
-        ? Uri.file(item.extras!['localPath'])
+    // Play the offline copy if it's actually on disk; otherwise stream
+    // (item.id is the server URL). Re-checking existence here means a file
+    // moved/deleted after the item was built (e.g. mid-migration, SD removed)
+    // falls back to streaming instead of a broken local URI. Uri.file (not
+    // Uri.parse) so paths with spaces — possible with user-chosen folders —
+    // encode correctly.
+    final String? localPath = item.extras?['localPath'];
+    final uri = (localPath != null && File(localPath).existsSync())
+        ? Uri.file(localPath)
         : Uri.parse(item.id);
     await _player.addAudioSource(AudioSource.uri(uri));
   }

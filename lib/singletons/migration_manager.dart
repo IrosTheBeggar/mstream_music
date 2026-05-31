@@ -70,6 +70,14 @@ class MigrationManager {
     }
   }
 
+  // Start/stop the foreground service that keeps the process alive during a
+  // move (so it survives backgrounding). Non-fatal — the move runs regardless.
+  Future<void> _setService(bool active) async {
+    try {
+      await _channel.invokeMethod(active ? 'startMove' : 'stopMove');
+    } catch (_) {}
+  }
+
   // Begin moving [sourcePath] -> [destPath]. [totalFiles]/[totalBytes] are the
   // already-computed source size (from the dialog) so we don't re-walk.
   Future<void> start(String sourcePath, String destPath, int totalFiles,
@@ -184,6 +192,10 @@ class MigrationManager {
       _progress.add(MigrationProgress(moved, total,
           movedBytes: movedBytes, totalBytes: totalBytes));
 
+      // Hold a foreground service for the duration so backgrounding the app
+      // doesn't freeze the move.
+      if (files.isNotEmpty) await _setService(true);
+
       int lastPct = -1;
       bool canceled = false;
       for (int i = 0; i < files.length; i++) {
@@ -254,6 +266,7 @@ class MigrationManager {
           MigrationProgress(0, total, totalBytes: totalBytes, failed: true));
     } finally {
       _running = false;
+      unawaited(_setService(false));
     }
     // Cosmetic: clear the "done" banner after a moment — outside the busy
     // window, so a new move can start immediately.
