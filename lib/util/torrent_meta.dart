@@ -74,9 +74,19 @@ TorrentMeta parseMusicTorrentName(String rawName) {
   const tags =
       'FLAC|MP3|320|256|192|V0|V2|AAC|OGG|OPUS|ALAC|DSD|24[Bb]it|16[Bb]it|'
       'Lossless|Hi-?Res|WEB|CDRip|VINYL|LP|EP|SACD|Remaster(?:ed)?';
+  // Bare (un-bracketed) trailing tags to strip — excludes the short, ambiguous
+  // LP/EP which are often genuinely part of an album name.
+  const bareTags =
+      'FLAC|MP3|320|256|192|V0|V2|AAC|OGG|OPUS|ALAC|DSD|24[Bb]it|16[Bb]it|'
+      'Lossless|Hi-?Res|WEB|CDRip|VINYL|SACD|Remaster(?:ed)?';
   final cleaned = rawName
       .replaceAll(RegExp('\\[($tags)[^\\]]*\\]', caseSensitive: false), '')
       .replaceAll(RegExp('\\(($tags)[^)]*\\)', caseSensitive: false), '')
+      // Strip a trailing run of bare scene tags ("… 2020 FLAC WEB" -> "… 2020").
+      .replaceAll(
+          RegExp('(?:[\\s._-]+(?:$bareTags))+[\\s._-]*\$',
+              caseSensitive: false),
+          '')
       .replaceAll(RegExp(r'\s{2,}'), ' ')
       .trim();
 
@@ -84,23 +94,27 @@ TorrentMeta parseMusicTorrentName(String rawName) {
   String dot(String? s) => (s ?? '').replaceAll('.', ' ').trim();
 
   final patterns = <(RegExp, TorrentMeta Function(Match))>[
-    // "Artist - Album (1973)"
-    (RegExp(r'^(.+?)\s*-\s*(.+?)\s*\((\d{4})\)\s*$'),
+    // "Artist - Album (1973)". The separator requires surrounding spaces so a
+    // hyphenated artist (Jay-Z, AC-DC) isn't split on its own dash.
+    (RegExp(r'^(.+?)\s+-\s+(.+?)\s*\((\d{4})\)\s*$'),
         (m) => TorrentMeta(t(m[1]), t(m[2]), t(m[3]), 'high')),
     // "Artist - Album [1973]"
-    (RegExp(r'^(.+?)\s*-\s*(.+?)\s*\[(\d{4})\]\s*$'),
+    (RegExp(r'^(.+?)\s+-\s+(.+?)\s*\[(\d{4})\]\s*$'),
         (m) => TorrentMeta(t(m[1]), t(m[2]), t(m[3]), 'high')),
     // "Artist - 1973 - Album"
-    (RegExp(r'^(.+?)\s*-\s*(\d{4})\s*-\s*(.+?)\s*$'),
+    (RegExp(r'^(.+?)\s+-\s+(\d{4})\s+-\s+(.+?)\s*$'),
         (m) => TorrentMeta(t(m[1]), t(m[3]), t(m[2]), 'high')),
     // "Artist - Album - 1973"
-    (RegExp(r'^(.+?)\s*-\s*(.+?)\s*-\s*(\d{4})\s*$'),
+    (RegExp(r'^(.+?)\s+-\s+(.+?)\s+-\s+(\d{4})\s*$'),
+        (m) => TorrentMeta(t(m[1]), t(m[2]), t(m[3]), 'high')),
+    // "Artist - Album 1973" (trailing year, space-separated; 19xx/20xx only).
+    (RegExp(r'^(.+?)\s+-\s+(.+?)\s+((?:19|20)\d{2})\s*$'),
         (m) => TorrentMeta(t(m[1]), t(m[2]), t(m[3]), 'high')),
     // "Artist.Album.1973" (dot-separated)
     (RegExp(r'^([^.]+)\.([^.]+(?:\.[^.\d][^.]*)*)\.(\d{4})\s*$'),
         (m) => TorrentMeta(dot(m[1]), dot(m[2]), t(m[3]), 'high')),
     // bare "Artist - Album" (low — software/etc. also match)
-    (RegExp(r'^(.+?)\s*-\s*(.+?)\s*$'),
+    (RegExp(r'^(.+?)\s+-\s+(.+?)\s*$'),
         (m) => TorrentMeta(t(m[1]), t(m[2]), '', 'low')),
   ];
 

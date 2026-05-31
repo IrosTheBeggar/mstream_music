@@ -73,6 +73,38 @@ void main() {
     test('empty input', () {
       expect(parseMusicTorrentName('').confidence, 'none');
     });
+
+    test('hyphenated artist not split on its own dash', () {
+      final m = parseMusicTorrentName('Jay-Z - The Blueprint (2001)');
+      expect(m.artist, 'Jay-Z');
+      expect(m.album, 'The Blueprint');
+      expect(m.year, '2001');
+      expect(m.confidence, 'high');
+    });
+
+    test('hyphenated artist AC-DC', () {
+      final m = parseMusicTorrentName('AC-DC - Back in Black (1980)');
+      expect(m.artist, 'AC-DC');
+      expect(m.album, 'Back in Black');
+      expect(m.year, '1980');
+      expect(m.confidence, 'high');
+    });
+
+    test('strips bare trailing tags + trailing space-separated year', () {
+      final m = parseMusicTorrentName('Boards of Canada - Geogaddi 2002 FLAC');
+      expect(m.artist, 'Boards of Canada');
+      expect(m.album, 'Geogaddi');
+      expect(m.year, '2002');
+      expect(m.confidence, 'high');
+    });
+
+    test('strips a bare trailing tag with no year', () {
+      final m = parseMusicTorrentName('Some Band - Some Album FLAC');
+      expect(m.artist, 'Some Band');
+      expect(m.album, 'Some Album');
+      expect(m.year, '');
+      expect(m.confidence, 'low');
+    });
   });
 
   group('sanitizeTorrentSegment', () {
