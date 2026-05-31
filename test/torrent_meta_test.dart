@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/util/torrent_meta.dart';
 
@@ -83,6 +85,10 @@ void main() {
     test('null -> empty', () {
       expect(sanitizeTorrentSegment(null), '');
     });
+    test('traversal dots collapse to empty', () {
+      expect(sanitizeTorrentSegment('..'), '');
+      expect(sanitizeTorrentSegment('...'), '');
+    });
   });
 
   group('template resolution', () {
@@ -111,6 +117,12 @@ void main() {
               null, const TorrentMeta('', 'Solo Album', '', 'none')),
           'Solo Album');
     });
+    test('traversal metadata sanitizes to empty path', () {
+      expect(
+          resolveTorrentTemplate('{{ARTIST}}/{{ALBUM}}',
+              const TorrentMeta('..', '..', '', 'high')),
+          '');
+    });
   });
 
   group('splitTorrentPath', () {
@@ -128,6 +140,45 @@ void main() {
       final s = splitTorrentPath('A/B/C');
       expect(s.subPath, 'A/B');
       expect(s.directoryName, 'C');
+    });
+    test('drops .. segments (no traversal)', () {
+      final s = splitTorrentPath('a/../b');
+      expect(s.subPath, 'a');
+      expect(s.directoryName, 'b');
+    });
+    test('bare .. collapses to empty', () {
+      final s = splitTorrentPath('..');
+      expect(s.subPath, '');
+      expect(s.directoryName, '');
+    });
+    test('backslash separators split, .. dropped', () {
+      final s = splitTorrentPath(r'..\..\secret');
+      expect(s.subPath, '');
+      expect(s.directoryName, 'secret');
+    });
+    test('absolute path neutralized to relative', () {
+      final s = splitTorrentPath('/etc/passwd');
+      expect(s.subPath, 'etc');
+      expect(s.directoryName, 'passwd');
+    });
+  });
+
+  group('extractTorrentName', () {
+    test('reads the info-dict name', () {
+      expect(extractTorrentName(utf8.encode('d4:infod4:name8:My Albumee')),
+          'My Album');
+    });
+    test('no name in info dict -> empty', () {
+      expect(extractTorrentName(utf8.encode('d4:infod6:lengthi42eee')), '');
+    });
+    test('no info dict -> empty', () {
+      expect(extractTorrentName(utf8.encode('not a torrent at all')), '');
+    });
+    test('oversized length guard -> empty', () {
+      expect(extractTorrentName(utf8.encode('d4:infod4:name9999:x')), '');
+    });
+    test('truncated buffer -> empty', () {
+      expect(extractTorrentName(utf8.encode('d4:infod4:name50:short')), '');
     });
   });
 }

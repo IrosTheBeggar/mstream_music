@@ -165,8 +165,16 @@ String computeTorrentPath(String? template, TorrentMeta meta, {String? genre}) {
 /// Split a computed path for /torrent/add: last segment is the
 /// directoryName, everything before it is the subPath.
 ({String subPath, String directoryName}) splitTorrentPath(String path) {
-  final segs =
-      path.split('/').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  // Sanitize every segment so a hand-typed or torrent-supplied '..', '\',
+  // control char, etc. can't escape the library — defense in depth even
+  // though the server re-validates. sanitizeTorrentSegment maps '..' and
+  // separator-only segments to '', which are then dropped. Split on both
+  // separators (a backslash is a path separator on a Windows server).
+  final segs = path
+      .split(RegExp(r'[/\\]+'))
+      .map(sanitizeTorrentSegment)
+      .where((s) => s.isNotEmpty)
+      .toList();
   if (segs.isEmpty) return (subPath: '', directoryName: '');
   return (
     subPath: segs.length > 1 ? segs.sublist(0, segs.length - 1).join('/') : '',
