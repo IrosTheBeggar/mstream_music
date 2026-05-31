@@ -13,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
+import '../singletons/migration_manager.dart';
 import '../theme/velvet_theme.dart';
 import '../util/server_compat.dart';
 
@@ -510,19 +511,23 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
       return true;
     } catch (_) {
-      // Cross-volume: rename can't move across filesystems — offer a copy.
-      return await _copyAcrossVolumes(oldDir, newDir);
+      // Cross-volume: rename can't cross filesystems — ask what to do.
+      return await _promptCrossVolume(oldDir, newDir);
     }
   }
 
-  // Cross-volume relocation. Prompts (with file count + size): Copy moves the
-  // files (async copy -> verify -> delete originals); "Switch only" leaves
-  // them (re-download), optionally deleting the old copies; Cancel aborts.
-  // Fail-safe: a failed/canceled copy cleans up the partial, keeps the
-  // originals, and aborts the save. Returns true to proceed, false to abort.
-  Future<bool> _copyAcrossVolumes(Directory oldDir, Directory newDir) async {
+  // Cross-volume relocation. The files can't be instantly moved, so offer
+  // three clear choices: move them in the background (per-file copy+delete,
+  // resumable), leave them where they are, or delete the old copies. All
+  // three proceed with the storage change; only Cancel aborts it.
+  Future<bool> _promptCrossVolume(Directory oldDir, Directory newDir) async {
     if (!mounted) return false;
-    // Count + size from the source (App local is internal — fast to walk).
+    if (MigrationManager().isRunning) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('A move is already running — let it finish first.')));
+      return false;
+    }
+    // Count + size for the prompt.
     int count = 0;
     int bytes = 0;
     try {
@@ -535,96 +540,91 @@ class MyCustomFormState extends State<MyCustomForm> {
     } catch (_) {}
 
     if (!mounted) return false;
-    bool deleteOld = false;
     final choice = await showDialog<String>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
-          backgroundColor: VelvetColors.surface,
-          title: Text('Move downloaded files?',
-              style: TextStyle(color: VelvetColors.textPrimary)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  "This server's $count downloaded file${count == 1 ? '' : 's'} "
-                  '(${_formatBytes(bytes)}) are on a different storage volume. '
-                  'Copy them to keep them offline at the new location, or '
-                  "switch without copying (they'll re-download).",
-                  style: TextStyle(color: VelvetColors.textSecondary)),
-              SizedBox(height: 4),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                activeColor: VelvetColors.primary,
-                value: deleteOld,
-                onChanged: (v) => setInner(() => deleteOld = v ?? false),
-                title: Text('Delete the old files',
-                    style: TextStyle(color: VelvetColors.textPrimary)),
-                subtitle: Text('Only applies when switching without copying.',
-                    style: TextStyle(
-                        color: VelvetColors.textTertiary, fontSize: 12)),
-              ),
-            ],
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text('Different storage volume',
+            style: TextStyle(color: VelvetColors.textPrimary, fontSize: 18)),
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Text(
+                "This server's $count downloaded file${count == 1 ? '' : 's'} "
+                '(${_formatBytes(bytes)}) are on a different storage volume '
+                'from the new location. Choose what to do:',
+                style:
+                    TextStyle(color: VelvetColors.textSecondary, fontSize: 13)),
           ),
-          actions: [
-            TextButton(
+          _migrateOption(
+              ctx,
+              'move',
+              Icons.drive_file_move_outline,
+              'Move them',
+              'Copy to the new location in the background, deleting each old '
+                  'copy as it goes. Keep the app open until it finishes.'),
+          _migrateOption(
+              ctx,
+              'leave',
+              Icons.inventory_2_outlined,
+              'Leave them',
+              'Switch now; the old downloads stay where they are and '
+                  're-download at the new location.'),
+          _migrateOption(
+              ctx,
+              'delete',
+              Icons.delete_outline,
+              'Delete old downloads',
+              "Switch now and remove the old files; they'll re-download at "
+                  'the new location.'),
+          Padding(
+            padding: EdgeInsets.fromLTRB(24, 4, 12, 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
                 onPressed: () => Navigator.of(ctx).pop('cancel'),
                 child: Text('Cancel',
-                    style: TextStyle(color: VelvetColors.textSecondary))),
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop('switch'),
-                child: Text('Switch only')),
-            TextButton(
-                onPressed: () => Navigator.of(ctx).pop('copy'),
-                child: Text('Copy')),
-          ],
-        ),
+                    style: TextStyle(color: VelvetColors.textSecondary)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
 
-    if (choice == null || choice == 'cancel') return false; // abort save
-    if (choice == 'switch') {
-      if (deleteOld) {
+    switch (choice) {
+      case 'move':
+        await MigrationManager().start(oldDir.path, newDir.path);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Moving your downloads in the background — keep '
+                  'the app open.')));
+        }
+        return true;
+      case 'leave':
+        return true; // switch; old files stay put
+      case 'delete':
         try {
           await oldDir.delete(recursive: true);
         } catch (_) {}
-      }
-      return true; // switch without copying
+        return true;
+      default: // cancel / dismissed
+        return false;
     }
+  }
 
-    // Copy: run the async copy behind a progress dialog.
-    if (!mounted) return false;
-    final ok = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _CopyProgressDialog(src: oldDir, dst: newDir),
+  // One tappable option row in the cross-volume dialog.
+  Widget _migrateOption(BuildContext ctx, String value, IconData icon,
+      String title, String subtitle) {
+    return ListTile(
+      leading: Icon(icon, color: VelvetColors.primary),
+      title: Text(title,
+          style: TextStyle(
+              color: VelvetColors.textPrimary, fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle,
+          style: TextStyle(color: VelvetColors.textTertiary, fontSize: 12)),
+      onTap: () => Navigator.of(ctx).pop(value),
     );
-
-    if (ok != true) {
-      // Clean up a partial copy; the originals are untouched.
-      try {
-        if (newDir.existsSync()) await newDir.delete(recursive: true);
-      } catch (_) {}
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                'Copy failed — files unchanged, storage location not changed.')));
-      }
-      return false;
-    }
-
-    // Success — remove the originals so the files live only at the new spot.
-    try {
-      await oldDir.delete(recursive: true);
-    } catch (_) {}
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'Moved $count file${count == 1 ? '' : 's'} to the new location.')));
-    }
-    return true;
   }
 
   String _formatBytes(int bytes) {
@@ -634,6 +634,17 @@ class MyCustomFormState extends State<MyCustomForm> {
       return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
     }
     return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  }
+
+  // Collapses a typed folder name to a single safe path segment: strips path
+  // separators and parent refs (no traversal out of media/), then trims
+  // leading/trailing separators and whitespace.
+  String _sanitizeFolderName(String name) {
+    return name
+        .replaceAll(RegExp(r'[\\/]+'), '_')
+        .replaceAll(RegExp(r'\.\.+'), '_')
+        .replaceAll(RegExp(r'^[\s._-]+'), '')
+        .replaceAll(RegExp(r'[\s._-]+$'), '');
   }
 
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
@@ -651,7 +662,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     final password = _publicAccess ? '' : _passwordCtrl.text;
     // The user-chosen download folder (media/<this>). If they cleared it,
     // fall back to the URL-derived name, then a generated id.
-    String folder = _downloadFolderCtrl.text.trim();
+    String folder = _sanitizeFolderName(_downloadFolderCtrl.text.trim());
     if (folder.isEmpty) {
       folder = _computeAutoFolder() ?? Uuid().v4();
     }
@@ -820,7 +831,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       final granted = await _ensureAllFilesAccess();
       if (!granted) return;
     }
-    if (mounted) setState(() => _storageMode = v);
+    // Reset the chosen folder so each mode starts fresh — avoids carrying a
+    // Permanent path over to SD card (or vice versa) without re-picking.
+    if (mounted) {
+      setState(() {
+        _storageMode = v;
+        _storageBasePath = null;
+      });
+    }
   }
 
   // Requests MANAGE_EXTERNAL_STORAGE ("All files access"). On Android 11+
@@ -1014,9 +1032,9 @@ class MyCustomFormState extends State<MyCustomForm> {
     );
     ctrl.dispose();
     if (name == null || name.isEmpty) return;
-    // Single path segment only — strip separators so a name can't escape
-    // the current directory.
-    final safe = name.replaceAll(RegExp(r'[\\/]+'), '_');
+    // Single safe path segment so a name can't escape the current directory.
+    final safe = _sanitizeFolderName(name);
+    if (safe.isEmpty) return;
     try {
       final newDir = Directory(path.join(parent, safe));
       newDir.createSync(recursive: true);
@@ -1384,103 +1402,6 @@ class MyCustomFormState extends State<MyCustomForm> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// Modal progress dialog that copies a directory tree (src -> dst) using async
-// I/O so the UI stays responsive on large libraries. Pops `true` once the
-// copy is verified (file count + total bytes), `false` on error or cancel.
-class _CopyProgressDialog extends StatefulWidget {
-  final Directory src;
-  final Directory dst;
-  const _CopyProgressDialog({required this.src, required this.dst});
-
-  @override
-  State<_CopyProgressDialog> createState() => _CopyProgressDialogState();
-}
-
-class _CopyProgressDialogState extends State<_CopyProgressDialog> {
-  int _copied = 0;
-  int _total = 0;
-  bool _canceled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _run());
-  }
-
-  Future<void> _run() async {
-    try {
-      final files = <File>[];
-      await for (final e
-          in widget.src.list(recursive: true, followLinks: false)) {
-        if (e is File) files.add(e);
-      }
-      if (mounted) setState(() => _total = files.length);
-
-      int srcBytes = 0;
-      int lastPct = -1;
-      for (int i = 0; i < files.length; i++) {
-        if (_canceled) {
-          if (mounted) Navigator.of(context).pop(false);
-          return;
-        }
-        final f = files[i];
-        final rel = path.relative(f.path, from: widget.src.path);
-        final destPath = path.join(widget.dst.path, rel);
-        await Directory(path.dirname(destPath)).create(recursive: true);
-        await f.copy(destPath);
-        srcBytes += await f.length();
-        final done = i + 1;
-        final pct = (done * 100) ~/ files.length;
-        if (mounted && pct != lastPct) {
-          lastPct = pct;
-          setState(() => _copied = done);
-        }
-      }
-
-      // Verify: the destination has at least as many files + bytes.
-      int destCount = 0;
-      int destBytes = 0;
-      await for (final e
-          in widget.dst.list(recursive: true, followLinks: false)) {
-        if (e is File) {
-          destCount++;
-          destBytes += await e.length();
-        }
-      }
-      final ok = destCount >= files.length && destBytes >= srcBytes;
-      if (mounted) Navigator.of(context).pop(ok);
-    } catch (_) {
-      if (mounted) Navigator.of(context).pop(false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final value = _total == 0 ? null : _copied / _total;
-    return AlertDialog(
-      backgroundColor: VelvetColors.surface,
-      title: Text(_canceled ? 'Canceling…' : 'Moving files…',
-          style: TextStyle(color: VelvetColors.textPrimary)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LinearProgressIndicator(value: value),
-          SizedBox(height: 12),
-          Text(_total == 0 ? 'Preparing…' : 'Copied $_copied of $_total files',
-              style: TextStyle(color: VelvetColors.textSecondary)),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _canceled ? null : () => setState(() => _canceled = true),
-          child: Text('Cancel',
-              style: TextStyle(color: VelvetColors.textSecondary)),
-        ),
-      ],
     );
   }
 }

@@ -18,6 +18,7 @@ import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
 import 'singletons/app_messenger.dart';
+import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/playlists_screen.dart';
@@ -80,6 +81,8 @@ class _MStreamAppState extends State<MStreamApp>
     _tabController = TabController(length: 2, vsync: this);
     ServerManager().loadServerList();
     DownloadManager().initDownloader();
+    // Resume a storage move that was interrupted by an app restart.
+    MigrationManager().resumeIfNeeded();
     // Android 13+ (targetSdk >= 33): OS no longer auto-prompts; audio_service
     // can't run its foreground media notification without this, so playback
     // silently fails. Fire-and-forget — first call shows the system dialog,
@@ -92,6 +95,61 @@ class _MStreamAppState extends State<MStreamApp>
   void dispose() {
     DownloadManager().dispose();
     super.dispose();
+  }
+
+  // Thin banner above the tabs showing a background storage move's progress
+  // (and resumed moves after an app restart). Hidden when none is running.
+  Widget _migrationBanner() {
+    return StreamBuilder<MigrationProgress?>(
+      stream: MigrationManager().progressStream,
+      builder: (context, snap) {
+        final p = snap.data;
+        if (p == null) return const SizedBox.shrink();
+        final label = p.failed
+            ? 'Move failed — will retry next time you open the app'
+            : p.done
+                ? 'Move complete'
+                : 'Moving downloads… ${p.moved}/${p.total} — keep the app open';
+        return Material(
+          color: VelvetColors.surface,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(
+                      p.failed
+                          ? Icons.error_outline
+                          : p.done
+                              ? Icons.check_circle_outline
+                              : Icons.drive_file_move_outline,
+                      size: 16,
+                      color:
+                          p.failed ? VelvetColors.error : VelvetColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(label,
+                          style: TextStyle(
+                              color: VelvetColors.textSecondary, fontSize: 12),
+                          overflow: TextOverflow.ellipsis)),
+                ]),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: p.failed ? 0 : p.fraction,
+                    minHeight: 4,
+                    backgroundColor: VelvetColors.border2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -349,9 +407,13 @@ class _MStreamAppState extends State<MStreamApp>
                 },
               ),
             ])),
-            body: TabBarView(
-                children: [Browser(), NowPlaying()],
-                controller: _tabController),
+            body: Column(children: [
+              _migrationBanner(),
+              Expanded(
+                  child: TabBarView(
+                      children: [Browser(), NowPlaying()],
+                      controller: _tabController)),
+            ]),
             bottomNavigationBar: BottomBar()));
   }
 }

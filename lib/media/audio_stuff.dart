@@ -151,8 +151,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> addQueueItem(MediaItem item) async {
     queue.add(queue.value..add(item));
 
+    // Uri.file (not Uri.parse) so local paths with spaces / reserved chars —
+    // possible now that Permanent/SD folders are user-chosen (e.g. "My Music")
+    // — are encoded into a valid file:// URI instead of silently mis-parsing.
     final uri = item.extras?['localPath'] != null
-        ? Uri.parse(item.extras!['localPath'])
+        ? Uri.file(item.extras!['localPath'])
         : Uri.parse(item.id);
     await _player.addAudioSource(AudioSource.uri(uri));
   }
