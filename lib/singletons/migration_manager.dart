@@ -110,6 +110,19 @@ class MigrationManager {
     }
   }
 
+  // The mount root of a path, so resume can tell "source folder deleted" (root
+  // still mounted) from "source volume not mounted" (e.g. SD card removed).
+  String _volumeRoot(String p) {
+    if (p.startsWith('/storage/emulated/')) return '/storage/emulated/0';
+    if (p.startsWith('/storage/')) {
+      final parts = p.split('/'); // ['', 'storage', '<vol>', ...]
+      if (parts.length >= 3 && parts[2].isNotEmpty) {
+        return '/storage/${parts[2]}';
+      }
+    }
+    return '/'; // internal storage is always mounted
+  }
+
   // Begin moving [sourcePath] -> [destPath]. [totalFiles]/[totalBytes] are the
   // already-computed source size (from the dialog) so we don't re-walk.
   Future<void> start(String sourcePath, String destPath, int totalFiles,
@@ -142,8 +155,30 @@ class MigrationManager {
       final totalBytes = (data['totalBytes'] as int?) ?? 0;
       final failures = (data['failures'] as int?) ?? 0;
       if (!source.existsSync()) {
-        await s.delete(); // nothing left to move
-        return;
+        // Distinguish "source folder gone" (move finished / folder deleted —
+        // its volume is still mounted) from "source volume not mounted yet"
+        // (an SD-card source that isn't ready at launch, or was removed).
+        if (Directory(_volumeRoot(source.path)).existsSync()) {
+          await s.delete(); // genuinely gone — nothing to resume
+          return;
+        }
+        // Volume isn't mounted. Give it a moment to appear (cards mount a few
+        // seconds after launch), then resume; if it stays away, pause — keep
+        // the sentinel so the move isn't abandoned. The user can reconnect the
+        // card and Retry, or Cancel.
+        bool back = false;
+        for (int i = 0; i < 10; i++) {
+          await Future.delayed(const Duration(seconds: 1));
+          if (source.existsSync()) {
+            back = true;
+            break;
+          }
+        }
+        if (!back) {
+          _progress.add(MigrationProgress(0, total,
+              totalBytes: totalBytes, failed: true));
+          return; // keep the sentinel for a later attempt
+        }
       }
       if (failures > 0) {
         _progress.add(
