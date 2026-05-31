@@ -646,8 +646,8 @@ class ApiManager {
 
   // Poll active/finished downloads (GET /api/v1/ytdl/downloads). Each
   // entry: { pid, url, directory, outputCodec, status, startTime }.
-  Future<List<Map<String, dynamic>>> ytdlDownloads() async {
-    final s = ServerManager().currentServer;
+  Future<List<Map<String, dynamic>>> ytdlDownloads({Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
     if (s == null) return const [];
     final res = await http
         .get(Uri.parse(s.url).resolve('/api/v1/ytdl/downloads'),
