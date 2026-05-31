@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
@@ -9,27 +10,42 @@ import 'package:rxdart/rxdart.dart';
 // Progress of a background storage migration (moving a server's downloaded
 // files from one storage volume to another, one file at a time).
 class MigrationProgress {
-  final int moved;
-  final int total;
+  final int moved; // files moved so far
+  final int total; // total files
+  final int movedBytes;
+  final int totalBytes;
   final bool done;
-  final bool failed;
+  final bool failed; // stopped on an error; awaiting Retry/Cancel
   const MigrationProgress(this.moved, this.total,
-      {this.done = false, this.failed = false});
+      {this.movedBytes = 0,
+      this.totalBytes = 0,
+      this.done = false,
+      this.failed = false});
 
-  // null = indeterminate (total unknown yet).
-  double? get fraction =>
-      total <= 0 ? null : (moved / total).clamp(0.0, 1.0).toDouble();
+  // Byte-based when known (smoother on big files), else file-count, else
+  // indeterminate (null).
+  double? get fraction {
+    if (totalBytes > 0) {
+      return (movedBytes / totalBytes).clamp(0.0, 1.0).toDouble();
+    }
+    if (total > 0) return (moved / total).clamp(0.0, 1.0).toDouble();
+    return null;
+  }
 }
 
 // Moves a server's downloaded files across storage volumes in the background,
 // one file at a time (rename when possible, otherwise copy then delete the
-// original). Because it deletes each original only after that file is at the
-// destination, an interruption can never blanket-wipe un-copied files. The
-// move is recorded in a sentinel file so it resumes when the app is reopened.
+// original). Deleting each original only after its copy lands means an
+// interruption can never blanket-wipe un-copied files. A sentinel file records
+// the move so it resumes when the app is reopened — but a move that *errored*
+// (e.g. out of space) is not auto-retried; it waits for the user to Retry or
+// Cancel from the banner.
 class MigrationManager {
   MigrationManager._();
   static final MigrationManager _instance = MigrationManager._();
   factory MigrationManager() => _instance;
+
+  static const MethodChannel _channel = MethodChannel('mstream/storage');
 
   final BehaviorSubject<MigrationProgress?> _progress =
       BehaviorSubject<MigrationProgress?>.seeded(null);
@@ -37,41 +53,66 @@ class MigrationManager {
 
   bool _running = false;
   bool get isRunning => _running;
+  bool _cancelRequested = false;
 
   Future<File> get _sentinel async {
     final dir = await getApplicationDocumentsDirectory();
     return File(path.join(dir.path, 'migration.json'));
   }
 
-  // Begin moving [sourcePath] -> [destPath] in the background. Writes the
-  // sentinel first so the move can resume if the app is killed mid-way.
-  Future<void> start(String sourcePath, String destPath) async {
-    if (_running) return;
-    final total = await _countFiles(Directory(sourcePath));
+  // Free bytes on the volume holding [dirPath] (native StatFs), or null if it
+  // can't be determined.
+  Future<int?> freeBytes(String dirPath) async {
     try {
-      final s = await _sentinel;
-      await s.writeAsString(jsonEncode(
-          {'source': sourcePath, 'dest': destPath, 'total': total}));
-    } catch (_) {}
-    unawaited(_run(Directory(sourcePath), Directory(destPath), total));
+      return await _channel.invokeMethod<int>('freeBytes', {'path': dirPath});
+    } catch (_) {
+      return null;
+    }
   }
 
-  // Resume an interrupted move on app startup, if a sentinel is present.
+  // Begin moving [sourcePath] -> [destPath]. [totalFiles]/[totalBytes] are the
+  // already-computed source size (from the dialog) so we don't re-walk.
+  Future<void> start(String sourcePath, String destPath, int totalFiles,
+      int totalBytes) async {
+    if (_running) return;
+    try {
+      final s = await _sentinel;
+      await s.writeAsString(jsonEncode({
+        'source': sourcePath,
+        'dest': destPath,
+        'total': totalFiles,
+        'totalBytes': totalBytes,
+        'failures': 0,
+      }));
+    } catch (_) {}
+    unawaited(
+        _run(Directory(sourcePath), Directory(destPath), totalFiles, totalBytes));
+  }
+
+  // On app startup: auto-resume an interrupted move — UNLESS it previously
+  // errored (failures > 0), in which case surface an actionable banner and
+  // wait for Retry/Cancel rather than looping forever.
   Future<void> resumeIfNeeded() async {
     try {
       final s = await _sentinel;
       if (!s.existsSync()) return;
       final data = jsonDecode(await s.readAsString()) as Map<String, dynamic>;
       final source = Directory(data['source'] as String);
-      final dest = Directory(data['dest'] as String);
       final total = (data['total'] as int?) ?? 0;
+      final totalBytes = (data['totalBytes'] as int?) ?? 0;
+      final failures = (data['failures'] as int?) ?? 0;
       if (!source.existsSync()) {
         await s.delete(); // nothing left to move
         return;
       }
-      unawaited(_run(source, dest, total));
+      if (failures > 0) {
+        _progress.add(
+            MigrationProgress(0, total, totalBytes: totalBytes, failed: true));
+        return;
+      }
+      unawaited(
+          _run(source, Directory(data['dest'] as String), total, totalBytes));
     } catch (_) {
-      // Corrupt/unreadable sentinel — drop it so we don't loop on it.
       try {
         final s = await _sentinel;
         if (s.existsSync()) await s.delete();
@@ -79,52 +120,122 @@ class MigrationManager {
     }
   }
 
-  Future<int> _countFiles(Directory d) async {
-    int n = 0;
+  // User tapped Retry on the failed banner — clear the failure count and run.
+  Future<void> retry() async {
+    if (_running) return;
     try {
-      if (!d.existsSync()) return 0;
-      await for (final e in d.list(recursive: true, followLinks: false)) {
-        if (e is File) n++;
-      }
+      final s = await _sentinel;
+      if (!s.existsSync()) return;
+      final data = jsonDecode(await s.readAsString()) as Map<String, dynamic>;
+      data['failures'] = 0;
+      await s.writeAsString(jsonEncode(data));
+      unawaited(_run(Directory(data['source'] as String),
+          Directory(data['dest'] as String), (data['total'] as int?) ?? 0,
+          (data['totalBytes'] as int?) ?? 0));
     } catch (_) {}
-    return n;
   }
 
-  Future<void> _run(Directory source, Directory dest, int total) async {
+  // User tapped Cancel — stop, drop the sentinel, clear the banner. Files
+  // already moved stay at the destination; the rest stay at the source.
+  Future<void> cancel() async {
+    _cancelRequested = true;
+    try {
+      final s = await _sentinel;
+      if (s.existsSync()) await s.delete();
+    } catch (_) {}
+    _progress.add(null);
+  }
+
+  Future<void> _recordFailure() async {
+    try {
+      final s = await _sentinel;
+      if (!s.existsSync()) return;
+      final data = jsonDecode(await s.readAsString()) as Map<String, dynamic>;
+      data['failures'] = ((data['failures'] as int?) ?? 0) + 1;
+      await s.writeAsString(jsonEncode(data));
+    } catch (_) {}
+  }
+
+  Future<void> _run(
+      Directory source, Directory dest, int total, int totalBytes) async {
     if (_running) return;
     _running = true;
+    _cancelRequested = false;
+    bool succeeded = false;
     try {
-      // moved = already-moved count, so a resumed run shows true progress.
-      final remaining = await _countFiles(source);
-      int moved = (total - remaining).clamp(0, total);
-      _progress.add(MigrationProgress(moved, total));
-
+      // One walk: gather the remaining files + their sizes.
       final files = <File>[];
+      final sizes = <int>[];
+      int remainingBytes = 0;
       try {
         await for (final e
             in source.list(recursive: true, followLinks: false)) {
-          if (e is File) files.add(e);
+          if (e is File) {
+            final sz = await e.length();
+            files.add(e);
+            sizes.add(sz);
+            remainingBytes += sz;
+          }
         }
       } catch (_) {}
 
-      for (final f in files) {
-        if (!f.existsSync()) continue; // already moved on a prior pass
+      int moved = (total - files.length).clamp(0, total);
+      int movedBytes = (totalBytes - remainingBytes).clamp(0, totalBytes);
+      _progress.add(MigrationProgress(moved, total,
+          movedBytes: movedBytes, totalBytes: totalBytes));
+
+      int lastPct = -1;
+      bool canceled = false;
+      for (int i = 0; i < files.length; i++) {
+        if (_cancelRequested) {
+          canceled = true;
+          break;
+        }
+        final f = files[i];
+        if (!f.existsSync()) continue;
         final rel = path.relative(f.path, from: source.path);
         final destPath = path.join(dest.path, rel);
         await Directory(path.dirname(destPath)).create(recursive: true);
         try {
           await f.rename(destPath); // same-volume fast path
         } catch (_) {
-          await f.copy(destPath); // cross-volume: copy then drop the original
+          try {
+            await f.copy(destPath);
+          } catch (e) {
+            // Out of space / write error: clean up the partial destination
+            // file and keep the original. Propagate so the run records a
+            // failure (no blanket delete of un-copied files).
+            try {
+              final p = File(destPath);
+              if (p.existsSync()) await p.delete();
+            } catch (_) {}
+            rethrow;
+          }
           await f.delete();
         }
         moved++;
-        _progress.add(MigrationProgress(moved.clamp(0, total), total));
+        movedBytes += sizes[i];
+        final pct = totalBytes > 0
+            ? (movedBytes * 100) ~/ totalBytes
+            : (total > 0 ? (moved * 100) ~/ total : 100);
+        if (pct != lastPct) {
+          lastPct = pct;
+          _progress.add(MigrationProgress(moved, total,
+              movedBytes: movedBytes, totalBytes: totalBytes));
+        }
+      }
+
+      if (canceled) {
+        _progress.add(null); // sentinel already removed by cancel()
+        return;
       }
 
       // Remove the source tree only if it's now empty — a file that arrived
-      // after our scan (e.g. an in-flight download) is preserved, not wiped.
-      if (await _countFiles(source) == 0) {
+      // mid-move (e.g. an in-flight download) is preserved, not wiped.
+      final hasLeftovers = await source
+          .list(recursive: true, followLinks: false)
+          .any((e) => e is File);
+      if (!hasLeftovers) {
         try {
           if (source.existsSync()) await source.delete(recursive: true);
         } catch (_) {}
@@ -134,14 +245,21 @@ class MigrationManager {
         if (s.existsSync()) await s.delete();
       } catch (_) {}
 
-      _progress.add(MigrationProgress(total, total, done: true));
-      await Future.delayed(const Duration(seconds: 3));
-      _progress.add(null); // clear the banner
+      _progress.add(MigrationProgress(total, total,
+          movedBytes: totalBytes, totalBytes: totalBytes, done: true));
+      succeeded = true;
     } catch (_) {
-      // Leave the sentinel in place so it retries next launch.
-      _progress.add(MigrationProgress(0, total, failed: true));
+      await _recordFailure();
+      _progress.add(
+          MigrationProgress(0, total, totalBytes: totalBytes, failed: true));
     } finally {
       _running = false;
+    }
+    // Cosmetic: clear the "done" banner after a moment — outside the busy
+    // window, so a new move can start immediately.
+    if (succeeded) {
+      await Future.delayed(const Duration(seconds: 3));
+      if (!_running) _progress.add(null);
     }
   }
 }

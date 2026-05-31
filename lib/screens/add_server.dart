@@ -539,6 +539,15 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
     } catch (_) {}
 
+    // Free space on the destination volume (nearest existing ancestor of the
+    // target). If the library won't fit, warn — a "Move" may fail partway.
+    Directory probe = newDir;
+    while (!probe.existsSync() && probe.parent.path != probe.path) {
+      probe = probe.parent;
+    }
+    final free = await MigrationManager().freeBytes(probe.path);
+    final tight = free != null && bytes > free;
+
     if (!mounted) return false;
     final choice = await showDialog<String>(
       context: context,
@@ -556,6 +565,26 @@ class MyCustomFormState extends State<MyCustomForm> {
                 style:
                     TextStyle(color: VelvetColors.textSecondary, fontSize: 13)),
           ),
+          if (tight)
+            Padding(
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 16, color: VelvetColors.warning),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                        'Not enough free space at the destination '
+                        '(${_formatBytes(free)} free). A move may fail '
+                        'partway — free up space first.',
+                        style: TextStyle(
+                            color: VelvetColors.warning, fontSize: 12)),
+                  ),
+                ],
+              ),
+            ),
           _migrateOption(
               ctx,
               'move',
@@ -594,7 +623,7 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     switch (choice) {
       case 'move':
-        await MigrationManager().start(oldDir.path, newDir.path);
+        await MigrationManager().start(oldDir.path, newDir.path, count, bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Moving your downloads in the background — keep '

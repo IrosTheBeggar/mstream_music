@@ -105,11 +105,25 @@ class _MStreamAppState extends State<MStreamApp>
       builder: (context, snap) {
         final p = snap.data;
         if (p == null) return const SizedBox.shrink();
+        final pct = p.fraction;
         final label = p.failed
-            ? 'Move failed — will retry next time you open the app'
+            ? 'Move stopped — not enough space, or the location is unavailable.'
             : p.done
                 ? 'Move complete'
-                : 'Moving downloads… ${p.moved}/${p.total} — keep the app open';
+                : 'Moving downloads… '
+                    '${pct != null ? '${(pct * 100).round()}%' : '${p.moved}/${p.total}'}'
+                    ' — keep the app open';
+        Widget compactButton(String text, Color color, VoidCallback onTap) {
+          return TextButton(
+            onPressed: onTap,
+            style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            child: Text(text, style: TextStyle(color: color, fontSize: 12)),
+          );
+        }
+
         return Material(
           color: VelvetColors.surface,
           child: Padding(
@@ -134,16 +148,24 @@ class _MStreamAppState extends State<MStreamApp>
                           style: TextStyle(
                               color: VelvetColors.textSecondary, fontSize: 12),
                           overflow: TextOverflow.ellipsis)),
+                  if (p.failed)
+                    compactButton('Retry', VelvetColors.primary,
+                        () => MigrationManager().retry()),
+                  if (!p.done)
+                    compactButton('Cancel', VelvetColors.textSecondary,
+                        () => MigrationManager().cancel()),
                 ]),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: p.failed ? 0 : p.fraction,
-                    minHeight: 4,
-                    backgroundColor: VelvetColors.border2,
+                if (!p.failed) ...[
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 4,
+                      backgroundColor: VelvetColors.border2,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
