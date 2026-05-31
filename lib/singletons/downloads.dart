@@ -154,14 +154,6 @@ class DownloadManager {
       return;
     }
 
-    // FAT/exFAT cards can't store certain characters; on an SD-card server,
-    // skip such files (they'd fail to write anyway) and warn once.
-    if (server.storageMode == 'sdCard' &&
-        hasFatIllegalChars(downloadDirectory)) {
-      _warnFatSkip();
-      return;
-    }
-
     final dir = await FileExplorer()
         .getDownloadDir(server.storageMode, server.storageBasePath);
     if (dir == null) {
@@ -170,6 +162,20 @@ class DownloadManager {
       showGlobalSnack(
           'Storage location unavailable — reconnect the SD card or change '
           "this server's storage location in Edit Server.");
+      return;
+    }
+
+    // A user-chosen folder (Permanent / SD card) may sit on a FAT/exFAT
+    // filesystem that can't store certain names. When the name is illegal,
+    // probe the actual destination (cached) — the same source of truth
+    // migration uses, rather than trusting the mode label — and skip it
+    // (it would fail to write anyway), warning once.
+    final isUserFolder =
+        server.storageMode == 'permanent' || server.storageMode == 'sdCard';
+    if (isUserFolder &&
+        hasFatIllegalChars(downloadDirectory) &&
+        await isFatLikeDir(dir.path)) {
+      _warnFatSkip();
       return;
     }
 

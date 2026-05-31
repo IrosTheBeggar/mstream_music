@@ -678,6 +678,25 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
+    // Permanent / SD card need a folder the app can actually write to. If the
+    // mode was selected but no (writable) folder was picked, _storageBasePath
+    // is null — saving would store a null base path and route every download to
+    // "unavailable". Block it with a clear message instead of a silently broken
+    // server. (_storageBasePath is only set after the write-probe in
+    // _chooseStorageFolder passes, so a non-null value already means writable.)
+    if ((_storageMode == 'permanent' || _storageMode == 'sdCard') &&
+        _storageBasePath == null) {
+      if (mounted) {
+        setState(() => submitPending = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(_storageMode == 'sdCard'
+                ? 'Choose a folder on the SD card first. If every folder is '
+                    "rejected, your device may not let apps write to the card — "
+                    'use Permanent or App local instead.'
+                : 'Choose a download folder first.')));
+      }
+      return;
+    }
     bool shouldUpdate = false;
     try {
       ServerManager().serverList[editThisServer ?? -1];
@@ -1098,7 +1117,9 @@ class MyCustomFormState extends State<MyCustomForm> {
       case 'sdCard':
         return Text(
           'Saved to a folder on the SD card you choose. May become '
-          'unavailable if the card is removed.',
+          'unavailable if the card is removed. Some devices don\'t let apps '
+          'write to SD cards — if folder selection keeps failing, use '
+          'Permanent or App local.',
           style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
         );
       case 'appLocal':

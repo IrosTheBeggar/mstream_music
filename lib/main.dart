@@ -110,8 +110,9 @@ class _MStreamAppState extends State<MStreamApp>
             ? 'Move stopped — not enough space, or the location is unavailable.'
             : p.done
                 ? (p.skipped > 0
-                    ? 'Move complete — ${p.skipped} skipped (unsupported '
-                        'name${p.skipped == 1 ? '' : 's'})'
+                    ? 'Move complete — ${p.skipped} file'
+                        "${p.skipped == 1 ? '' : 's'} skipped "
+                        '(unsupported on the destination)'
                     : 'Move complete')
                 : 'Moving downloads… '
                     '${pct != null ? '${(pct * 100).round()}%' : '${p.moved}/${p.total}'}'

@@ -7,14 +7,63 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
-// FAT/exFAT (typical removable SD cards) reject these characters in file and
-// directory names; '/' is the legal path separator between segments.
+// FAT/exFAT (typical removable SD cards) can't store certain names. '/' is the
+// legal segment separator and is never itself illegal.
 final RegExp _fatIllegalChars = RegExp(r'[<>:"|?*\\\x00-\x1f]');
+// Reserved DOS device names (any segment, with or without an extension).
+final RegExp _fatReservedNames =
+    RegExp(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)', caseSensitive: false);
 
-// True if [relativePath] holds a character FAT/exFAT can't store — such files
-// can't be saved to a typical SD card.
-bool hasFatIllegalChars(String relativePath) =>
-    _fatIllegalChars.hasMatch(relativePath);
+// True if [relativePath] has any segment a FAT/exFAT volume can't store: an
+// illegal character, a reserved device name, or a trailing dot/space (FAT
+// strips those, so the saved name wouldn't match what we later look up).
+// Evaluated per '/'-separated segment (the runtime path separator on Android).
+bool hasFatIllegalChars(String relativePath) {
+  if (_fatIllegalChars.hasMatch(relativePath)) return true;
+  for (final seg in relativePath.split('/')) {
+    if (seg.isEmpty) continue;
+    if (seg.endsWith('.') || seg.endsWith(' ')) return true;
+    if (_fatReservedNames.hasMatch(seg)) return true;
+  }
+  return false;
+}
+
+// Cache FAT-probe results per directory so a "Download all" batch or a
+// migration walk doesn't re-probe the same volume repeatedly.
+final Map<String, bool> _fatProbeCache = {};
+
+// Whether [dirPath]'s filesystem rejects FAT-illegal characters (typical of an
+// SD card). Probes by writing a normal file (must succeed) then one containing
+// '?' (fails on FAT/exFAT). This is the single source of truth both downloads
+// and migration use to decide whether to skip un-storable names. Cached.
+// Defaults to false (don't skip) when it can't tell — and a failed cleanup of
+// the probe file never flips the verdict (it only affects the throwaway probe).
+Future<bool> isFatLikeDir(String dirPath) async {
+  final cached = _fatProbeCache[dirPath];
+  if (cached != null) return cached;
+  bool result;
+  try {
+    final ok = File(path.join(dirPath, '.mstream_probe'));
+    await ok.writeAsString('');
+    try {
+      await ok.delete();
+    } catch (_) {}
+    try {
+      final bad = File(path.join(dirPath, '.mstream_probe_q?'));
+      await bad.writeAsString('');
+      try {
+        await bad.delete();
+      } catch (_) {}
+      result = false; // '?' accepted → not FAT
+    } catch (_) {
+      result = true; // normal name OK but '?' rejected → FAT-like
+    }
+  } catch (_) {
+    result = false; // can't write here at all — not a charset limit
+  }
+  _fatProbeCache[dirPath] = result;
+  return result;
+}
 
 // Progress of a background storage migration (moving a server's downloaded
 // files from one storage volume to another, one file at a time).
@@ -87,27 +136,6 @@ class MigrationManager {
     try {
       await _channel.invokeMethod(active ? 'startMove' : 'stopMove');
     } catch (_) {}
-  }
-
-  // Whether [dirPath]'s filesystem rejects FAT-illegal characters (typical of
-  // an SD card). Probes by writing a normal file (must succeed) then one with
-  // a '?' (fails on FAT). Defaults to false (don't skip) if it can't tell.
-  Future<bool> _isFatLike(String dirPath) async {
-    try {
-      final ok = File(path.join(dirPath, '.mstream_probe'));
-      await ok.writeAsString('');
-      await ok.delete();
-    } catch (_) {
-      return false; // can't write here at all — not a charset limit
-    }
-    try {
-      final bad = File(path.join(dirPath, '.mstream_probe_q?'));
-      await bad.writeAsString('');
-      await bad.delete();
-      return false; // illegal char accepted → not FAT
-    } catch (_) {
-      return true; // normal name OK but '?' rejected → FAT-like
-    }
   }
 
   // The mount root of a path, so resume can tell "source folder deleted" (root
@@ -308,7 +336,7 @@ class MigrationManager {
         try {
           await dest.create(recursive: true);
         } catch (_) {}
-        fatLike = await _isFatLike(dest.path);
+        fatLike = await isFatLikeDir(dest.path);
         await _setService(true);
       }
 
@@ -334,23 +362,44 @@ class MigrationManager {
         try {
           await f.rename(destPath); // same-volume fast path (instant)
         } catch (_) {
-          // Cross-volume: stream-copy so the bar advances within a large file
-          // (and Cancel is responsive mid-file). Throws on error after
-          // cleaning up the partial; returns false if canceled mid-copy.
-          final ok = await _copyFileStreamed(f, destPath, (written) {
-            final mb = movedBytes + written;
-            final pct = totalBytes > 0 ? (mb * 100) ~/ totalBytes : -1;
-            if (pct != lastPct) {
-              lastPct = pct;
-              _progress.add(MigrationProgress(moved, total,
-                  movedBytes: mb, totalBytes: totalBytes));
+          // Cross-volume copy. A failure here is either a whole-volume problem
+          // (out of space — stop so the user can Retry/Cancel) or this one file
+          // being un-storable on the destination (e.g. a >4 GB file on FAT32,
+          // or a name the pre-check missed). In the latter case skip just this
+          // file so one bad file can't strand the entire library.
+          bool copied = false;
+          try {
+            // stream-copy so the bar advances within a large file (and Cancel
+            // is responsive mid-file). Throws on I/O error after cleaning up
+            // the partial; returns false if canceled mid-copy.
+            final ok = await _copyFileStreamed(f, destPath, (written) {
+              final mb = movedBytes + written;
+              final pct = totalBytes > 0 ? (mb * 100) ~/ totalBytes : -1;
+              if (pct != lastPct) {
+                lastPct = pct;
+                _progress.add(MigrationProgress(moved, total,
+                    movedBytes: mb, totalBytes: totalBytes));
+              }
+            });
+            if (!ok) {
+              canceled = true; // canceled mid-copy; partial already removed
+              break;
             }
-          });
-          if (!ok) {
-            canceled = true; // canceled mid-copy; partial already removed
-            break;
+            copied = true;
+          } catch (_) {
+            if (_cancelRequested) {
+              canceled = true;
+              break;
+            }
+            // Out of room on the destination volume → stop the move. Otherwise
+            // (or if free space can't be read) treat it as a per-file problem
+            // and skip it, leaving the source copy intact.
+            final free = await freeBytes(dest.path) ?? -1;
+            if (free >= 0 && free < sizes[i]) rethrow;
+            skipped++;
+            continue;
           }
-          await f.delete();
+          if (copied) await f.delete();
         }
         moved++;
         movedBytes += sizes[i];
