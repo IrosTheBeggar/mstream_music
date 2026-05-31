@@ -5,6 +5,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
+import '../singletons/migration_manager.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
@@ -51,6 +52,7 @@ class BrowserManager {
       BehaviorSubject<String>.seeded(listName);
 
   StreamSubscription<int>? _letterStripSub;
+  StreamSubscription<MigrationProgress?>? _migrationSub;
 
   BrowserManager._privateConstructor() {
     // When the letter-strip threshold changes, re-emit the current
@@ -60,6 +62,12 @@ class BrowserManager {
     // requiring the user to navigate away and back.
     _letterStripSub =
         SettingsManager().letterStripStream.listen((_) => updateStream());
+    // When a storage move finishes, re-check on-device download badges so a
+    // background "Move them" re-marks files now present at the new location
+    // (the edit-time refresh ran before the move had finished).
+    _migrationSub = MigrationManager().progressStream.listen((p) {
+      if (p?.done == true) refreshAllDownloadStatus();
+    });
   }
   static final BrowserManager _instance = BrowserManager._privateConstructor();
 
@@ -217,6 +225,32 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
+  // Re-check the on-device download badge for cached file rows against their
+  // server's CURRENT storage location, then refresh the browser once. Used
+  // after a server's download location changes (and when a storage move
+  // finishes) so a badge computed against the old path corrects itself —
+  // including clearing a "downloaded" mark for a file that's no longer there.
+  Future<void> refreshDownloadStatus(Server server) =>
+      _refreshDownloadStatus((i) => i.server == server);
+
+  Future<void> refreshAllDownloadStatus() =>
+      _refreshDownloadStatus((_) => true);
+
+  Future<void> _refreshDownloadStatus(bool Function(DisplayItem) match) async {
+    final items = <DisplayItem>{};
+    for (final frame in browserCache) {
+      for (final item in frame) {
+        if (item.type == 'file' && match(item)) items.add(item);
+      }
+    }
+    for (final item in browserList) {
+      if (item.type == 'file' && match(item)) items.add(item);
+    }
+    if (items.isEmpty) return;
+    await Future.wait(items.map((i) => i.recheckDownloaded()));
+    updateStream();
+  }
+
   void popBrowser() {
     if (BrowserManager().browserCache.length < 2) {
       return;
@@ -267,6 +301,7 @@ class BrowserManager {
   }
 
   void dispose() {
+    _migrationSub?.cancel();
     _browserStream.close();
     _browserLabel.close();
     _loading.close();

@@ -13,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
+import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
@@ -755,6 +756,10 @@ class MyCustomFormState extends State<MyCustomForm> {
           .editServer(editThisServer!, _urlCtrl.text, username, password);
       await ServerManager().getServerPaths(s);
       await ServerManager().callAfterEditServer();
+      // The browser may be showing this server's files with download badges
+      // computed against the OLD location — re-check them against the new one
+      // so stale "downloaded" marks correct themselves.
+      BrowserManager().refreshDownloadStatus(s);
     } else {
       Server newServer =
           new Server(lol.origin, username, password, jwt, folder);
