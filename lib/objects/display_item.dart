@@ -132,7 +132,9 @@ class DisplayItem {
     // Check if file is saved on device
     if (this.type == 'file') {
       String downloadDirectory = this.server!.localname + this.data!;
-      FileExplorer().getDownloadDir(this.server!.saveToSdCard).then((dir) {
+      FileExplorer()
+          .getDownloadDir(this.server!.storageMode, this.server!.storageBasePath)
+          .then((dir) {
         if (dir == null) {
           return;
         }
@@ -146,6 +148,26 @@ class DisplayItem {
         });
       });
     }
+  }
+
+  // Re-evaluates whether this file exists at the server's CURRENT storage
+  // location and updates [downloadProgress] (100 = present, 0 = not). Unlike
+  // the constructor's one-shot check (which only ever sets 100), this also
+  // CLEARS a stale badge — so after a server's download location changes, a row
+  // that no longer has a local copy stops claiming it's downloaded. A row
+  // that's mid-download (1–99%) is left alone. The caller refreshes the
+  // browser stream once after a batch.
+  Future<void> recheckDownloaded() async {
+    if (type != 'file' || server == null || data == null) return;
+    if (downloadProgress > 0 && downloadProgress < 100) return;
+    final dir = await FileExplorer()
+        .getDownloadDir(server!.storageMode, server!.storageBasePath);
+    bool present = false;
+    if (dir != null) {
+      present =
+          await File('${dir.path}/media/${server!.localname}${data!}').exists();
+    }
+    downloadProgress = present ? 100 : 0;
   }
 
   // DisplayItem.fromJson(Map<String, dynamic> json)

@@ -186,57 +186,34 @@ class _BrowserState extends State<Browser> {
   // isn't available.
   Future<MediaItem?> _buildFileItem(DisplayItem i) async {
     String downloadDirectory = i.server!.localname + i.data!;
-    final dir = await FileExplorer().getDownloadDir(i.server!.saveToSdCard);
-    if (dir == null) return null;
-    String finalString = '${dir.path}/media/$downloadDirectory';
+    final dir = await FileExplorer()
+        .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
+    // A null dir means the configured location is unavailable (SD card
+    // removed / folder deleted) — treat as "not downloaded".
+    final String? finalString =
+        dir == null ? null : '${dir.path}/media/$downloadDirectory';
+    final bool isLocal =
+        finalString != null && new File(finalString).existsSync() == true;
 
-    if (new File(finalString).existsSync() == true) {
-      String? artUrl = i.metadata?.albumArt != null
-          ? Uri.parse(i.server!.url.toString())
-              .resolve('/album-art/' +
-                  i.metadata!.albumArt! +
-                  '?compress=l&token=' +
-                  (i.server!.jwt ?? ''))
-              .toString()
-          : null;
-
-      return new MediaItem(
-          id: Uuid().v4(),
-          title: i.metadata?.title ?? i.name,
-          album: i.metadata?.album,
-          artist: i.metadata?.artist,
-          extras: {
-            'path': i.data,
-            'localPath': finalString,
-            'year': i.metadata?.year,
-            'artUrl': artUrl,
-            // bpm + musicalKey power AutoDJ's BPM-continuity /
-            // harmonic-mixing modes — read off the currently
-            // playing item when computing the next pick's payload.
-            'bpm': i.metadata?.bpm,
-            'musicalKey': i.metadata?.musicalKey,
-          });
-    }
-
-    String prefix =
-        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
-
+    // Streaming URL — used as the MediaItem id for BOTH local and online
+    // items, so playback can fall back to streaming if the local file goes
+    // missing (moved mid-migration, SD removed, deleted externally). The
+    // local path lives in extras and is re-checked for existence at play time.
     String p = '';
     i.data!.split("/").forEach((element) {
-      if (element.length == 0) {
-        return;
-      }
+      if (element.length == 0) return;
       p += "/" + Uri.encodeComponent(element);
     });
-
-    String lolUrl = i.server!.url +
+    final String prefix =
+        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
+    final String streamUrl = i.server!.url +
         prefix +
         p +
         '?app_uuid=' +
         Uuid().v4() +
         (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!);
 
-    String? artUrl = i.metadata?.albumArt != null
+    final String? artUrl = i.metadata?.albumArt != null
         ? Uri.parse(i.server!.url.toString())
             .resolve('/album-art/' +
                 i.metadata!.albumArt! +
@@ -246,15 +223,18 @@ class _BrowserState extends State<Browser> {
         : null;
 
     return new MediaItem(
-        id: lolUrl,
+        id: streamUrl,
         title: i.metadata?.title ?? i.name,
         album: i.metadata?.album,
         artist: i.metadata?.artist,
         extras: {
           'server': i.server!.localname,
           'path': i.data,
+          if (isLocal) 'localPath': finalString,
           'year': i.metadata?.year,
           'artUrl': artUrl,
+          // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing
+          // modes — read off the currently playing item.
           'bpm': i.metadata?.bpm,
           'musicalKey': i.metadata?.musicalKey,
         });
@@ -654,8 +634,8 @@ class _BrowserState extends State<Browser> {
                     '/media' +
                     e.data! +
                     (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
-                DownloadManager().downloadOneFile(downloadUrl,
-                    e.server!.localname, e.data!, e.server!.saveToSdCard,
+                DownloadManager().downloadOneFile(
+                    downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
