@@ -263,12 +263,19 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         Navigator.of(context).pop();
         return;
       }
-      if (outcome == 'invalid_torrent' || outcome == 'daemon_error') {
+      if (outcome == 'invalid_torrent') {
         setState(() => _submitting = false);
         messenger.showSnackBar(SnackBar(
-            content: Text(res['error']?.toString() ??
-                'Could not check for existing files')));
+            content: Text(res['error']?.toString() ?? 'Invalid torrent file')));
         return;
+      }
+      if (outcome == 'daemon_error') {
+        // The seed-check itself failed (a server/daemon hiccup) — not a reason
+        // to block the add. Fall through to a normal fresh download, just
+        // letting the user know the existing-files check was skipped.
+        messenger.showSnackBar(const SnackBar(
+            content:
+                Text("Couldn't check for existing files — downloading fresh")));
       }
       if (outcome == 'partial_match') {
         setState(() => _submitting = false);

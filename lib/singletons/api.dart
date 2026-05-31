@@ -613,7 +613,11 @@ class ApiManager {
     if (res.statusCode != 200) {
       throw Exception(_ytdlError(res) ?? 'Could not read metadata');
     }
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected metadata response');
+    }
+    return decoded;
   }
 
   // Start an async download (POST /api/v1/ytdl/). Only non-empty
@@ -654,7 +658,8 @@ class ApiManager {
             headers: _ytdlHeaders(s))
         .timeout(const Duration(seconds: 10));
     if (res.statusCode != 200) return const [];
-    final list = (jsonDecode(res.body) as Map)['downloads'];
+    final decoded = jsonDecode(res.body);
+    final list = decoded is Map ? decoded['downloads'] : null;
     if (list is List) return List<Map<String, dynamic>>.from(list);
     return const [];
   }
