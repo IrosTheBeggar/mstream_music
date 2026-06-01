@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -17,15 +19,25 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
   // Sticky choice: when checked, picking a Chromecast streams the visualizer.
   late bool _visualizer = SettingsManager().castVisualizerEnabled;
 
+  // After an initial window the "searching…" spinner settles to a quiet hint so
+  // it doesn't imply an endless scan — discovery keeps running underneath while
+  // the sheet is open, so a device that wakes up later still appears.
+  bool _searchSettled = false;
+  Timer? _searchTimer;
+
   @override
   void initState() {
     super.initState();
     // Scan only while the picker is visible.
     CastManager().startDiscovery();
+    _searchTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _searchSettled = true);
+    });
   }
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     CastManager().stopDiscovery();
     super.dispose();
   }
@@ -98,27 +110,36 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
             // registered (Phase 3+). Until then the list is just this device.
             if (CastManager().hasDiscoverers) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation(VelvetColors.textSecondary),
+              if (!_searchSettled)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(VelvetColors.textSecondary),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Searching for cast devices…',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: VelvetColors.textSecondary,
+                    const SizedBox(width: 10),
+                    Text(
+                      'Searching for cast devices…',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: VelvetColors.textSecondary,
+                      ),
                     ),
+                  ],
+                )
+              else
+                Text(
+                  'Don\'t see your device? Make sure it\'s on the same Wi-Fi.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: VelvetColors.textSecondary,
                   ),
-                ],
-              ),
+                ),
             ],
             const Divider(height: 24),
             // Stream the app's own visualizer (rendered + encoded on-device) to
