@@ -8,9 +8,14 @@ The app's projectM/shader visualizer is rendered off-screen, encoded to
 H.264+AAC, packaged by a **hand-written MPEG-TS/HLS muxer**, served over the LAN,
 and **plays live on a real Chromecast**. Confirmed working 2026-06-01.
 
-Currently it's a **VOD** proof (transcode a ~25 s clip → cast), triggered by a
-**debug** button. The remaining work is making it real-time/live, wiring the
-real UI, transport, and cleanup (see "Remaining work").
+**LIVE validated (2026-06-01):** now streams a **full track live** — incremental
+EVENT playlist, cast-early (transcode runs in the background, Dart polls the
+growing playlist then casts), no duration cap. A full song played end-to-end on
+the Chromecast. At end-of-track the receiver shows its **idle screen** — this is
+EXPECTED (single-track stream ended); continuing to the next song needs
+track-change handling (see Remaining work #3). Still a **debug** button; pacing
+is as-fast-as-possible (TODO). Remaining: pacing, real UI, transport/track-change,
+cleanup.
 
 ## Branch / PRs
 - Branch: `feature/visualizer-cast`, stacked on `feature/casting-v2` (**PR #28**,
