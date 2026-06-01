@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../native/shader_params.dart';
 import '../native/visualizer_bridge.dart';
-import '../native/visualizer_presets.dart';
 import '../objects/server.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
@@ -58,20 +58,21 @@ class MoreActionsSheet extends StatelessWidget {
       return;
     }
     final source = (item.extras?['localPath'] as String?) ?? item.id;
-    final isShader =
-        SettingsManager().visualizerEngine == VisualizerEngine.shader;
-    final preset = await VisualizerPresets().randomData(
-        isShader ? VisualizerPresetKind.shader : VisualizerPresetKind.milkdrop);
+    // Always render the spectrum-bars ("equalizer") shader for the spike — it's
+    // the most audio-responsive, so it's easy to tell whether reactivity works.
+    String? preset;
+    try {
+      preset =
+          await rootBundle.loadString('assets/shaders/01-spectrum-bars.glsl');
+    } catch (_) {}
     // Shader visuals react to audio through iParams; replicate the on-screen
-    // path's tuning push (global response curve + per-shader defaults) so the
-    // cast visualizer actually reacts. Milkdrop ignores tuning.
-    List<double>? tuning;
-    if (isShader && preset != null) {
-      tuning = [
-        ...SettingsManager.defaultGlobalParams,
-        for (final p in parseShaderParams(preset)) p.def,
-      ];
-    }
+    // path's tuning push (global response curve + per-shader defaults).
+    final tuning = preset != null
+        ? <double>[
+            ...SettingsManager.defaultGlobalParams,
+            for (final p in parseShaderParams(preset)) p.def,
+          ]
+        : null;
     final dir = await getExternalStorageDirectory();
     if (dir == null) {
       messenger.showSnackBar(
@@ -85,9 +86,7 @@ class MoreActionsSheet extends StatelessWidget {
       source: source,
       output: output,
       preset: preset,
-      engine: isShader
-          ? VisualizerBridge.engineShader
-          : VisualizerBridge.engineProjectM,
+      engine: VisualizerBridge.engineShader,
       maxMs: 20000,
       tuning: tuning,
     );
