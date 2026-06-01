@@ -32,8 +32,15 @@ class ChromecastDeviceDiscoverer implements DeviceDiscoverer {
     _running = true;
     try {
       if (!_initialized) {
-        await GoogleCastContext.instance
-            .setSharedInstanceWithOptions(GoogleCastOptions());
+        // The app ID is REQUIRED: the native side does `map["appId"] as
+        // String`, so a bare GoogleCastOptions() (no appId) throws and the
+        // Cast context never initializes — meaning no devices are ever
+        // discovered. Must use the Android-specific options with an appId.
+        // CC1AD845 is Google's Default Media Receiver, supported by every Cast
+        // device, so plain audio URLs play without a custom receiver app.
+        await GoogleCastContext.instance.setSharedInstanceWithOptions(
+          GoogleCastOptionsAndroid(appId: 'CC1AD845'),
+        );
         _sub = GoogleCastDiscoveryManager.instance.devicesStream
             .listen(_onDevices);
         _initialized = true;
