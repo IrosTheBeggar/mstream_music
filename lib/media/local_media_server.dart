@@ -205,9 +205,15 @@ class LocalMediaServer {
           }
         }
       }
-      if (path == null) return _notFound(res);
+      if (path == null) {
+        castLog('LMS 404 ${req.method} /${seg.join('/')}');
+        return _notFound(res);
+      }
       final file = File(path);
-      if (!await file.exists()) return _notFound(res);
+      if (!await file.exists()) {
+        castLog('LMS 404(missing) ${req.method} $path');
+        return _notFound(res);
+      }
 
       final length = await file.length();
       res.headers
@@ -239,6 +245,8 @@ class LocalMediaServer {
       } else {
         res.statusCode = HttpStatus.ok;
       }
+      castLog('LMS ${req.method} /${seg.join('/')} -> ${res.statusCode} '
+          'bytes $start-$end/$length (${contentType ?? mimeForPath(path)})');
 
       final len = end - start + 1;
       if (req.method == 'HEAD') {
