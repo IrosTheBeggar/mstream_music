@@ -56,7 +56,17 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     override fun init(audioEnabled: Boolean) {
         this.audioEnabled = audioEnabled
-        File(dir).mkdirs()
+        val d = File(dir)
+        d.mkdirs()
+        // Clear leftovers from a previous run: a shorter new track would
+        // otherwise leave the old track's higher-index segments on disk (unused
+        // but wasting space). Only our own outputs, never anything else here.
+        d.listFiles()?.forEach { f ->
+            val n = f.name
+            if (n.endsWith(".ts") || n == PLAYLIST || n == "$PLAYLIST.tmp") {
+                try { f.delete() } catch (_: Throwable) {}
+            }
+        }
         patSection = buildPat()
         pmtSection = buildPmt()
     }

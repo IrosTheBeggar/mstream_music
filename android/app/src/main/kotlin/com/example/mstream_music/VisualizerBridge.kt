@@ -167,6 +167,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
         transcoder?.cancelTranscode()
         val main = Handler(Looper.getMainLooper())
+        var created: VisualizerTranscoder? = null
         val t = VisualizerTranscoder(
             source = source,
             sink = sink,
@@ -175,6 +176,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             engineKind = engine,
             fps = fps,
             maxDurationUs = maxMs * 1000L,
+            pace = mode == "hls", // live cast → throttle to ~realtime (battery/thermal)
             presetData = preset,
             tuning = tuning,
             initEncoder = ::nativeInitEncoder,
@@ -185,7 +187,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             dispose = ::nativeDispose,
         ) { ok, payload ->
             main.post {
-                transcoder = null
+                // Only clear the handle if it still points at THIS transcode — a
+                // newer cast may have replaced it while this one was finishing, and
+                // nulling that would orphan it (a later stopTranscode couldn't
+                // cancel it).
+                if (transcoder === created) transcoder = null
                 // HLS replies immediately below (so the caller can start casting
                 // while we keep transcoding the live playlist); only non-HLS
                 // reports its result here.
@@ -197,6 +203,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 }
             }
         }
+        created = t
         transcoder = t
         t.start()
         if (mode == "hls") {

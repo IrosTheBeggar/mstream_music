@@ -13,9 +13,26 @@ EVENT playlist, cast-early (transcode runs in the background, Dart polls the
 growing playlist then casts), no duration cap. A full song played end-to-end on
 the Chromecast. At end-of-track the receiver shows its **idle screen** — this is
 EXPECTED (single-track stream ended); continuing to the next song needs
-track-change handling (see Remaining work #3). Still a **debug** button; pacing
-is as-fast-as-possible (TODO). Remaining: pacing, real UI, transport/track-change,
-cleanup.
+track-change handling (see Remaining work #3). Still a **debug** button.
+
+**Hardening pass (2026-06-01, after an audit):** the prototype is now safe to
+leave running. Changes:
+- **~realtime pacing** (`VisualizerTranscoder`, `pace` flag, on for HLS only):
+  keeps at most `PACING_LEAD_US` (5 s) of media ahead of wall-clock — the first
+  few segments still burst out fast so casting starts quickly, then it throttles
+  to realtime instead of transcoding the whole track in one CPU/thermal burst.
+  The MP4 spike stays unpaced (`pace=false`) so it's still quick.
+- **Transcoder-identity fix** (`VisualizerBridge.handleStartTranscode`): the
+  completion callback now only nulls `transcoder` if it still points at *its own*
+  transcode (`transcoder === created`); a fast re-cast no longer orphans the new
+  transcode so `stopTranscode` can always cancel it.
+- **Stale-segment cleanup** (`TsHlsSink.init`): deletes leftover `*.ts` /
+  `index.m3u8(.tmp)` from a previous run before writing the new one.
+- **Cast-end teardown** (`visualizer_cast_spike`): watches the cast session and
+  on disconnect calls `stopTranscode` + `LocalMediaServer.stop()` — no more
+  encoding/serving after the user stops casting.
+
+Remaining: real UI, transport/track-change, cleanup, device tuning.
 
 ## Branch / PRs
 - Branch: `feature/visualizer-cast`, stacked on `feature/casting-v2` (**PR #28**,
@@ -88,19 +105,19 @@ git history of this session). All in `TsHlsSink.kt` unless noted:
   0x47, PID = ((b1&0x1F)<<8)|b2, PUSI = b1&0x40). PTS at PES+9.
 
 ## Remaining work (make it shippable)
-1. **Make it LIVE** (next task): currently VOD (full transcode → cast). Need:
-   - `TsHlsSink`: write `index.m3u8` **incrementally** after each segment as an
-     EVENT playlist (no `#EXT-X-ENDLIST` until `finish()`); already VOD at finish.
-   - Remove the `maxMs` cap → transcode the full track.
-   - **Cast early**: return the playlist + start casting after the first ~2
-     segments exist, while the transcode keeps running (background). Needs an
-     `onReady` signal from the transcoder (or Dart polls the m3u8 for ≥2 segs).
-   - Pace ~realtime so segments are available just in time.
-2. **Real UI**: wire the cast picker's disabled "Cast visualizer" checkbox
-   (`cast_picker_sheet.dart`) → when checked + a Chromecast is picked, cast the
-   visualizer (via CastManager) instead of audio. Persist the choice.
-3. **Transport**: play/pause/seek/track-change drive the transcode + session.
-4. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + any
-   remaining diagnostics once the real path works.
-5. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.
+0. ~~**Make it LIVE**~~ ✅ DONE — incremental EVENT playlist, cast-early, no
+   duration cap, ~realtime pacing (see Hardening pass above).
+1. **Real UI** (next big task): wire the cast picker's disabled "Cast visualizer"
+   checkbox (`cast_picker_sheet.dart`) → when checked + a Chromecast is picked,
+   cast the visualizer (via `CastManager` → the real `ChromecastPlaybackBackend`,
+   serving the HLS dir with video metadata) instead of audio. Persist the choice.
+   This **retires the debug spike** (`visualizer_cast_spike.dart` +
+   `more_actions_sheet` actions). NOTE: today the only working path is the debug
+   spike — the production cast backends have **no** HLS/video path yet.
+2. **Transport / track-change**: play/pause/seek and, when one song ends, start
+   the next track's transcode + load the new playlist (today it idles at the end
+   of a single track). Drives the transcode + cast session together.
+3. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + this
+   state doc once the real path works.
+4. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.
    DLNA HLS is unreliable → Chromecast-first.

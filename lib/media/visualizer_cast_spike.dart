@@ -2,8 +2,15 @@ import 'dart:async';
 
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 
+import '../native/visualizer_bridge.dart';
 import '../singletons/cast_manager.dart';
 import 'cast_log.dart';
+import 'local_media_server.dart';
+
+// Tears down the live transcode + local server when the cast session ends, so
+// we don't keep encoding (battery/thermal) or leave the HTTP server running
+// after the user stops casting. One active watcher; a re-cast cancels the prior.
+StreamSubscription<dynamic>? _sessionWatch;
 
 /// SPIKE / Phase 0b validation: cast a pre-rendered video [url] to the first
 /// discovered Chromecast, decoupled from the queue-based cast backend.
@@ -56,9 +63,26 @@ Future<String?> castVideoToFirstChromecast(
       ),
       autoPlay: true,
     );
+    _watchSessionEnd();
     return null;
   } catch (e) {
     castLog('Spike video cast failed', error: e);
     return 'Cast failed: $e';
   }
+}
+
+/// Stop the transcode + local server once the cast session disconnects. The
+/// session stream replays the current (connected) state on listen, so the
+/// teardown only fires on a later transition to no-connected-session.
+void _watchSessionEnd() {
+  final sessions = GoogleCastSessionManager.instance;
+  _sessionWatch?.cancel();
+  _sessionWatch = sessions.currentSessionStream.listen((_) async {
+    if (!sessions.hasConnectedSession) {
+      await _sessionWatch?.cancel();
+      _sessionWatch = null;
+      await VisualizerBridge.stopTranscode();
+      await LocalMediaServer().stop();
+    }
+  });
 }

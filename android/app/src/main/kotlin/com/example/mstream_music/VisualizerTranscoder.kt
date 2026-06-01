@@ -24,6 +24,7 @@ class VisualizerTranscoder(
     private val engineKind: Int,
     private val fps: Int,
     private val maxDurationUs: Long,
+    private val pace: Boolean,
     private val presetData: String?,
     private val tuning: FloatArray?,
     private val initEncoder: (Surface, Int, Int, Int) -> Long,
@@ -81,6 +82,7 @@ class VisualizerTranscoder(
             val frameDurUs = 1_000_000L / fps
             var nextFrameUs = 0L
             var pcm: AudioDecoder.Pcm? = firstChunk
+            val startWallNs = System.nanoTime()
             while (!cancelled) {
                 val c = pcm ?: break
                 val tUs = c.presentationTimeUs - startPtsUs
@@ -92,6 +94,21 @@ class VisualizerTranscoder(
                     renderAt(ctx, nextFrameUs * 1000L) // µs → ns
                     video.drain(false)
                     nextFrameUs += frameDurUs
+                }
+                // Live cast: throttle to ~realtime so we don't transcode the whole
+                // track in one CPU/thermal burst. Keep at most PACING_LEAD_US of
+                // media ahead of wall-clock — the initial lead bursts out fast (so
+                // casting can start on the first segments), then we run ~realtime.
+                if (pace) {
+                    val elapsedUs = (System.nanoTime() - startWallNs) / 1000L
+                    val sleepUs = (tUs - elapsedUs) - PACING_LEAD_US
+                    if (sleepUs > 0) {
+                        try {
+                            sleep(sleepUs / 1000L, ((sleepUs % 1000L) * 1000L).toInt())
+                        } catch (_: InterruptedException) {
+                            // woken to re-check `cancelled`
+                        }
+                    }
                 }
                 pcm = decoder.read()
             }
@@ -133,5 +150,7 @@ class VisualizerTranscoder(
 
     companion object {
         private const val TAG = "mstream/viz-xcode"
+        // When pacing a live cast, stay at most this far ahead of realtime.
+        private const val PACING_LEAD_US = 5_000_000L
     }
 }
