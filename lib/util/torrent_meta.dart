@@ -65,27 +65,107 @@ class TorrentMeta {
           year ?? this.year, confidence);
 }
 
-/// Best-effort artist/album/year extraction from a release name (port of
-/// the webapp's parseMusicTorrentName). Strips format/quality tags, then
-/// tries six patterns; ~70–80% of well-named music releases parse, the
-/// rest fall through to manual entry.
+/// Canonicalize a Various-Artists marker (scene releases use "VA"; trackers use
+/// "Various Artists") so compilations resolve consistently.
+String _canonicalArtist(String artist) {
+  final low = artist.trim().toLowerCase().replaceAll('.', '');
+  if (low == 'va' || low == 'various' || low == 'various artists') {
+    return 'Various Artists';
+  }
+  return artist.trim();
+}
+
+/// Strip a featured-artist clause from an album title — "Album (feat. X)" or
+/// "Album feat. X & Y" -> "Album". Conservative: bare "with" is left alone (it's
+/// common in real titles); only its bracketed form is removed.
+String _stripFeat(String album) {
+  return album
+      .replaceAll(
+          RegExp(r'\s*[\(\[]\s*(?:featuring|feat|ft|with)\.?\s[^\)\]]*[\)\]]',
+              caseSensitive: false),
+          '')
+      .replaceAll(
+          RegExp(r'\s+(?:featuring|feat|ft)\.?\s.*$', caseSensitive: false),
+          '')
+      .trim();
+}
+
+/// Scene dirnames use a documented two-tier grammar — '_' (and '.') is the
+/// space *inside* a field and '-' separates fields:
+///   Artist-Title-(Cat)-TYPE-SOURCE-FORMAT-YEAR-GROUP   (no spaces anywhere).
+/// That makes the multi-word artist/album split *deterministic*, which the
+/// spaced/dot heuristics can't manage. Returns null when the name isn't
+/// scene-shaped, so the heuristics run instead. Ref: scenerules.org FLAC/MP3.
+TorrentMeta? _parseSceneName(String raw) {
+  final name = raw.trim();
+  // A space means the human-readable display form, not a scene dirname.
+  if (name.isEmpty || name.contains(' ') || !name.contains('-')) return null;
+  final fields = name.split('-');
+  if (fields.length < 3) return null;
+  // The standalone YEAR field (rightmost) is the anchor: everything after it is
+  // the release group, everything between title and year is source/format/type.
+  int yearIdx = -1;
+  for (int i = fields.length - 1; i >= 0; i--) {
+    if (RegExp(r'^(?:19|20)\d{2}$').hasMatch(fields[i])) {
+      yearIdx = i;
+      break;
+    }
+  }
+  if (yearIdx < 2) return null; // need an artist + a title field before the year
+  String field(int i) => fields[i]
+      .replaceAll(RegExp(r'[_.]'), ' ')
+      .replaceAll(RegExp(r'\s{2,}'), ' ')
+      .trim();
+  final artist = field(0);
+  final album = field(1);
+  if (artist.isEmpty || album.isEmpty) return null;
+  return TorrentMeta(artist, album, fields[yearIdx], 'high');
+}
+
+/// Best-effort artist/album/year extraction from a music release name. Tries the
+/// deterministic scene-dirname grammar first, then a ladder of spaced/dot
+/// heuristics; ~70–80% of well-named releases parse, the rest fall through to
+/// manual entry. Various-Artists + featured-artist noise are normalized.
 TorrentMeta parseMusicTorrentName(String rawName) {
   if (rawName.trim().isEmpty) return const TorrentMeta('', '', '', 'none');
-  const tags =
-      'FLAC|MP3|320|256|192|V0|V2|AAC|OGG|OPUS|ALAC|DSD|24[Bb]it|16[Bb]it|'
-      'Lossless|Hi-?Res|WEB|CDRip|VINYL|LP|EP|SACD|Remaster(?:ed)?';
-  // Bare (un-bracketed) trailing tags to strip — excludes the short, ambiguous
-  // LP/EP which are often genuinely part of an album name.
-  const bareTags =
-      'FLAC|MP3|320|256|192|V0|V2|AAC|OGG|OPUS|ALAC|DSD|24[Bb]it|16[Bb]it|'
-      'Lossless|Hi-?Res|WEB|CDRip|VINYL|SACD|Remaster(?:ed)?';
+  final r = _parseCore(rawName);
+  return TorrentMeta(
+      _canonicalArtist(r.artist), _stripFeat(r.album), r.year, r.confidence);
+}
+
+TorrentMeta _parseCore(String rawName) {
+  // Deterministic scene grammar first.
+  final scene = _parseSceneName(rawName);
+  if (scene != null) return scene;
+
+  // Format/quality/codec tokens (safe to strip anywhere). The bracketed set
+  // also covers editions/types; the bare trailing-strip set omits those, since
+  // an album can be named "Live"/"Bonus"/"Deluxe" — but not "FLAC".
+  const fmt =
+      'FLAC|WEBFLAC|MP3|AAC|M4A|M4B|MP4A|OGG|OGA|Vorbis|OPUS|ALAC|APE|WV|'
+      'WavPack|WAV|PCM|AIFF|WMA|AC3|DTS|TAK|TTA|DSD|320|256|224|192|160|128|'
+      r'V0|V1|V2|CBR|VBR|APS|APX|Q[5-9]|Q10|Lossless|Hi-?Res|'
+      r'24[\s-]?bit|16[\s-]?bit|\d+(?:\.\d+)?\s?kHz';
+  const src =
+      'WEB|CDRip|CDS|CDM|MCD|CDR|CD|VINYL|VLS|LP|SACD|HDCD|BLURAY|BD|DVDA|DVD|'
+      'HDDVD|TAPE|CASSETTE|DAT';
+  const disc = r'\d+x?CD|CD\d+|Dis[ck]\s?\d+';
+  const status = 'PROPER|REPACK|DIRFIX|NFOFIX|RERIP|READNFO|INTERNAL|iNT|INT';
+  const edition =
+      'Retail|Reissue|Remaster(?:ed)?|Remix(?:ed)?|Promo|Advance|Sampler|Bonus|'
+      'Bootleg|Live|Demo|Deluxe|Anniversary|Mono|Stereo|Limited|Special|'
+      'Collectors?|Edition|Explicit|Clean|OST|Soundtrack';
+  final bracketed = '$fmt|$src|$disc|$status|$edition';
+  final bare = '$fmt|$src|$disc|$status';
+
   final cleaned = rawName
-      .replaceAll(RegExp('\\[($tags)[^\\]]*\\]', caseSensitive: false), '')
-      .replaceAll(RegExp('\\(($tags)[^)]*\\)', caseSensitive: false), '')
-      // Strip a trailing run of bare scene tags ("… 2020 FLAC WEB" -> "… 2020").
       .replaceAll(
-          RegExp('(?:[\\s._-]+(?:$bareTags))+[\\s._-]*\$',
-              caseSensitive: false),
+          RegExp('\\[(?:$bracketed)[^\\]]*\\]', caseSensitive: false), '')
+      .replaceAll(
+          RegExp('\\((?:$bracketed)[^)]*\\)', caseSensitive: false), '')
+      // Strip a trailing run of bare format/source tags ("… 2020 FLAC WEB").
+      .replaceAll(
+          RegExp('(?:[\\s._-]+(?:$bare))+[\\s._-]*\$', caseSensitive: false),
           '')
       .replaceAll(RegExp(r'\s{2,}'), ' ')
       .trim();

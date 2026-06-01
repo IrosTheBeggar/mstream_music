@@ -225,4 +225,103 @@ void main() {
       expect(extractTorrentName(utf8.encode('d4:infod4:name50:short')), '');
     });
   });
+
+  group('scene-dirname grammar', () {
+    test('underscore-as-space, dash-as-separator', () {
+      final m = parseMusicTorrentName('Pink_Floyd-The_Wall-1979-FLAC-PMS');
+      expect(m.artist, 'Pink Floyd');
+      expect(m.album, 'The Wall');
+      expect(m.year, '1979');
+      expect(m.confidence, 'high');
+    });
+    test('multi-word title via underscores', () {
+      final m = parseMusicTorrentName(
+          'DMX-Flesh_Of_My_Flesh_Blood_Of_My_Blood-1998-Cesta-aPC');
+      expect(m.artist, 'DMX');
+      expect(m.album, 'Flesh Of My Flesh Blood Of My Blood');
+      expect(m.year, '1998');
+    });
+    test('minimal artist-title-year', () {
+      final m = parseMusicTorrentName('Someone-Something-2007');
+      expect(m.artist, 'Someone');
+      expect(m.album, 'Something');
+      expect(m.year, '2007');
+    });
+    test('numeric album title kept, not taken as the year', () {
+      final m = parseMusicTorrentName('Adele-19-2008-WEB-GROUP');
+      expect(m.artist, 'Adele');
+      expect(m.album, '19');
+      expect(m.year, '2008');
+    });
+    test('dots act as intra-field spaces too', () {
+      final m = parseMusicTorrentName('Pink.Floyd-The.Wall-1979');
+      expect(m.artist, 'Pink Floyd');
+      expect(m.album, 'The Wall');
+      expect(m.year, '1979');
+    });
+    test('VA marker canonicalizes; mid-fields dropped', () {
+      final m = parseMusicTorrentName('VA-Cool_Compilation-OST-WEB-2021-GRP');
+      expect(m.artist, 'Various Artists');
+      expect(m.album, 'Cool Compilation');
+      expect(m.year, '2021');
+    });
+    test('disc token mid-field is dropped', () {
+      final m = parseMusicTorrentName('VA-Party_Mix-2CD-2021-GRP');
+      expect(m.artist, 'Various Artists');
+      expect(m.album, 'Party Mix');
+      expect(m.year, '2021');
+    });
+    test('display form with a space is NOT treated as scene', () {
+      final m = parseMusicTorrentName('Blink-182 - Take Off (1999)');
+      expect(m.artist, 'Blink-182');
+      expect(m.album, 'Take Off');
+      expect(m.year, '1999');
+    });
+  });
+
+  group('VA + featured-artist normalization', () {
+    test('VA in display form', () {
+      final m = parseMusicTorrentName('VA - Summer Hits (2020)');
+      expect(m.artist, 'Various Artists');
+      expect(m.album, 'Summer Hits');
+      expect(m.year, '2020');
+    });
+    test('Various Artists stays canonical', () {
+      final m = parseMusicTorrentName('Various Artists - Chillout (2019)');
+      expect(m.artist, 'Various Artists');
+      expect(m.album, 'Chillout');
+    });
+    test('bracketed feat. stripped from album', () {
+      final m = parseMusicTorrentName(
+          'Kanye West - Stronger (feat. Daft Punk) (2007)');
+      expect(m.artist, 'Kanye West');
+      expect(m.album, 'Stronger');
+      expect(m.year, '2007');
+    });
+    test('bare feat. stripped from album', () {
+      final m = parseMusicTorrentName('Eminem - Stan feat. Dido - 2000');
+      expect(m.artist, 'Eminem');
+      expect(m.album, 'Stan');
+      expect(m.year, '2000');
+    });
+    test('"with" inside a real title is preserved', () {
+      final m = parseMusicTorrentName('Frank Sinatra - Sinatra with Strings (1962)');
+      expect(m.album, 'Sinatra with Strings');
+    });
+  });
+
+  group('expanded tag stripping', () {
+    test('bracketed edition is removed', () {
+      final m = parseMusicTorrentName('Adele - 25 (Deluxe Edition) (2015)');
+      expect(m.artist, 'Adele');
+      expect(m.album, '25');
+      expect(m.year, '2015');
+    });
+    test('trailing codec token (WMA) stripped', () {
+      final m = parseMusicTorrentName('Tool - Lateralus (2001) WMA');
+      expect(m.artist, 'Tool');
+      expect(m.album, 'Lateralus');
+      expect(m.year, '2001');
+    });
+  });
 }
