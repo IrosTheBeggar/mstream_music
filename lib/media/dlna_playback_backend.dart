@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 import 'package:media_cast_dlna/media_cast_dlna.dart' hide MediaItem;
 import 'package:rxdart/rxdart.dart';
 
+import 'cast_art.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a DLNA renderer (TV / AV receiver /
@@ -127,7 +128,8 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   Uri _uriFor(MediaItem item) => Uri.parse(item.id);
 
   AudioMetadata _metaFor(MediaItem item) {
-    final art = item.artUri?.toString() ?? item.extras?['artUrl'] as String?;
+    // Full-res art (drop the compress= size param) — looks sharp on a TV.
+    final art = castArtUrl(item);
     return AudioMetadata(
       title: item.title,
       artist: item.artist,

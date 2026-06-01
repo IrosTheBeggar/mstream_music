@@ -6,6 +6,7 @@ import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 import 'package:rxdart/rxdart.dart';
 
+import 'cast_art.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a Chromecast / Google Cast device via
@@ -225,7 +226,8 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
 
   GoogleCastMediaInformation _mediaInfo(MediaItem item) {
     final url = _uriFor(item).toString();
-    final art = item.artUri?.toString() ?? item.extras?['artUrl'] as String?;
+    // Full-res art (drop the compress= size param) — looks sharp on a TV.
+    final art = castArtUrl(item);
     return GoogleCastMediaInformation(
       contentId: url,
       contentUrl: Uri.parse(url),
