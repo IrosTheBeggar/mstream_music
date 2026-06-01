@@ -180,6 +180,29 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrame(
     eglSwapBuffers(ctx->display, ctx->surface);
 }
 
+// Like nativeRenderFrame, but stamps the frame's presentation time before
+// swapping. Used by the visualizer-cast transcode path, where ctx->surface is
+// a MediaCodec encoder's input Surface: the encoder timestamps each output
+// frame from this value, so video stays in sync with the decoded-audio clock
+// that drives ptsNanos. eglPresentationTimeANDROID is an EGL_ANDROID extension,
+// resolved lazily on first use.
+JNIEXPORT void JNICALL
+Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrameAt(
+        JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr, jlong ptsNanos) {
+    auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
+    if (!ctx || !ctx->engine) return;
+    eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
+    ctx->engine->renderFrame();
+    static PFNEGLPRESENTATIONTIMEANDROIDPROC sPresentationTime =
+        reinterpret_cast<PFNEGLPRESENTATIONTIMEANDROIDPROC>(
+            eglGetProcAddress("eglPresentationTimeANDROID"));
+    if (sPresentationTime != nullptr) {
+        sPresentationTime(ctx->display, ctx->surface,
+                          static_cast<EGLnsecsANDROID>(ptsNanos));
+    }
+    eglSwapBuffers(ctx->display, ctx->surface);
+}
+
 JNIEXPORT void JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeAddPcm(
         JNIEnv* env, jobject /*thiz*/, jlong ctxPtr,
