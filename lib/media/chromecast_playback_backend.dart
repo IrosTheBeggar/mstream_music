@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../native/visualizer_bridge.dart';
+import '../singletons/cast_manager.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
 import 'local_media_server.dart';
@@ -45,6 +46,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   int _loadCounter = 0; // monotonic; names each visualizer transcode's subdir
   String? _currentVizDir; // subdir the active visualizer transcode writes to
   bool _firstVizLoad = true;
+  bool _visualizerFellBack = false; // latched once a transcode fails → audio
   bool _shuffle = false;
   bool _repeatAll = false;
   bool _playing = false;
@@ -300,12 +302,33 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _ensureSession();
       _ensureListeners();
-      if (_visualizer) {
-        // A freshly-started live transcode begins at 0; seeking into it isn't
-        // possible, so startAt is ignored for the visualizer.
-        final url = (await _resolveVisualizerUri(_items[index])).toString();
-        await _client.loadMedia(_visualizerMediaInfo(_items[index], url),
-            autoPlay: play);
+      // True only when this load actually served the visualizer (vs audio or
+      // the audio fallback below) — drives the start position emitted after.
+      var servedVisualizer = false;
+      if (_visualizer && !_visualizerFellBack) {
+        try {
+          // A freshly-started live transcode begins at 0; seeking into it isn't
+          // possible, so startAt is ignored for the visualizer.
+          final url = (await _resolveVisualizerUri(_items[index])).toString();
+          await _client.loadMedia(_visualizerMediaInfo(_items[index], url),
+              autoPlay: play);
+          servedVisualizer = true;
+        } catch (e) {
+          // Transcode/render failed — don't strand the cast on the phone; keep
+          // the music on the TV as plain audio and tell the user. Latched so we
+          // don't re-attempt (and re-fail) the visualizer on every later track.
+          castLog('Visualizer cast failed; casting audio instead', error: e);
+          _visualizerFellBack = true;
+          try {
+            await VisualizerBridge.stopTranscode();
+          } catch (_) {}
+          _deleteDir(_currentVizDir);
+          CastManager().reportCastInfo(
+              "Couldn't start the visualizer — casting audio to the TV");
+          final url = (await _resolveUri(_items[index])).toString();
+          await _client.loadMedia(_mediaInfo(_items[index], url),
+              autoPlay: play, playPosition: startAt);
+        }
       } else {
         final url = (await _resolveUri(_items[index])).toString();
         await _client.loadMedia(_mediaInfo(_items[index], url),
@@ -315,7 +338,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       _playing = play;
       _duration = _items[index].duration;
       _emitDur(_duration);
-      _position = _visualizer ? Duration.zero : startAt;
+      _position = servedVisualizer ? Duration.zero : startAt;
       _emitPos(_position);
     } catch (e) {
       castLog('Chromecast load failed', error: e);

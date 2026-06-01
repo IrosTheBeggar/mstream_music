@@ -144,9 +144,10 @@ fallback until the picker path is confirmed on real hardware.
    `_resolveVisualizerUri` also now **fails fast** (throws) if ≥2 segments don't
    appear in ~20 s, so a wedged transcode falls back instead of casting an empty
    playlist. (Still untested on device.)
-   - Possible follow-up: audio-only fallback (cast the song without the
-     visualizer) instead of dropping to the phone when the transcode fails — today
-     a failure rides the existing remote-start-timeout → `_fallBackToLocal`.
+   - ~~audio-only fallback~~ ✅ DONE — if the transcode fails, the backend keeps
+     the song on the TV as **plain audio** (latched `_visualizerFellBack`) + a
+     toast (`CastManager.reportCastInfo`) instead of dropping to the phone. A
+     genuine device failure (audio load also fails) still drops to local.
 3. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + this
    state doc once the picker path is confirmed.
 4. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.

@@ -121,6 +121,14 @@ class CastManager {
     if (!_castErrors.isClosed) _castErrors.add(message);
   }
 
+  /// Surface an informational cast message (shown as a toast) WITHOUT changing
+  /// the active target — e.g. the visualizer transcode failed so the backend
+  /// degraded to plain audio on the same device, but the cast is still live.
+  void reportCastInfo(String message) {
+    _activeVisualizer = false; // we're no longer streaming the visualizer
+    if (!_castErrors.isClosed) _castErrors.add(message);
+  }
+
   void _recompute() {
     // Local always first; then de-duped remote devices (two discoverers could
     // in principle surface the same physical device).
