@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
@@ -8,6 +9,7 @@ import 'package:rxdart/rxdart.dart';
 
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'local_media_server.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a Chromecast / Google Cast device via
@@ -42,6 +44,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
 
   StreamSubscription<GoggleCastMediaStatus?>? _statusSub;
   StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<dynamic>? _sessionSub;
 
   final BehaviorSubject<int?> _indexSubject = BehaviorSubject<int?>.seeded(null);
   final BehaviorSubject<Duration> _positionSubject =
@@ -53,6 +56,12 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
           BackendProcessingState.idle);
   final StreamController<void> _changeController =
       StreamController<void>.broadcast();
+  // Emits when the Cast session drops unexpectedly mid-cast; the handler falls
+  // back to local. _disposing suppresses our own teardown; _lostFired makes it
+  // one-shot (disconnecting → disconnected would otherwise emit twice).
+  final PublishSubject<String> _rendererLost = PublishSubject<String>();
+  bool _disposing = false;
+  bool _lostFired = false;
 
   // isClosed-guarded emitters so a late async callback after dispose() can't
   // add to a closed subject.
@@ -83,6 +92,21 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       _position = pos;
       _emitPos(pos);
       _change();
+    });
+    // Detect an unexpected session drop (TV off, Wi-Fi lost). Listeners attach
+    // only after _ensureSession connected (_sessionStarted), so a transition to
+    // not-connected we didn't initiate means the renderer is gone.
+    _sessionSub ??= _sessions.currentSessionStream.listen((_) {
+      if (_sessionStarted &&
+          !_disposing &&
+          !_lostFired &&
+          !_sessions.hasConnectedSession) {
+        _lostFired = true;
+        if (!_rendererLost.isClosed) {
+          _rendererLost
+              .add('Lost connection to the cast device — back on this phone');
+        }
+      }
     });
   }
 
@@ -219,28 +243,28 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   }
 
   // ── Media construction ──
-  Uri _uriFor(MediaItem item) => Uri.parse(item.id);
-
-  String _mimeFor(String url) {
-    final path = Uri.parse(url).path.toLowerCase();
-    if (path.endsWith('.flac')) return 'audio/flac';
-    if (path.endsWith('.wav')) return 'audio/wav';
-    if (path.endsWith('.m4a') ||
-        path.endsWith('.aac') ||
-        path.endsWith('.mp4')) return 'audio/mp4';
-    if (path.endsWith('.ogg') || path.endsWith('.opus')) return 'audio/ogg';
-    return 'audio/mpeg';
+  // A network id (server URL) is sent as-is; a local-only item (file-explorer
+  // track — id is a UUID) is served from the phone's LocalMediaServer so the
+  // receiver can reach it.
+  Future<Uri> _resolveUri(MediaItem item) async {
+    final localPath = item.extras?['localPath'] as String?;
+    final isNetwork =
+        item.id.startsWith('http://') || item.id.startsWith('https://');
+    if (!isNetwork && localPath != null && File(localPath).existsSync()) {
+      await LocalMediaServer().ensureStarted();
+      return LocalMediaServer().registerFile(localPath);
+    }
+    return Uri.parse(item.id);
   }
 
-  GoogleCastMediaInformation _mediaInfo(MediaItem item) {
-    final url = _uriFor(item).toString();
+  GoogleCastMediaInformation _mediaInfo(MediaItem item, String url) {
     // Full-res art (drop the compress= size param) — looks sharp on a TV.
     final art = castArtUrl(item);
     return GoogleCastMediaInformation(
       contentId: url,
       contentUrl: Uri.parse(url),
       streamType: CastMediaStreamType.buffered,
-      contentType: _mimeFor(url),
+      contentType: mimeForPath(url),
       duration: item.duration,
       metadata: GoogleCastMusicMediaMetadata(
         title: item.title,
@@ -264,7 +288,8 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _ensureSession();
       _ensureListeners();
-      await _client.loadMedia(_mediaInfo(_items[index]),
+      final url = (await _resolveUri(_items[index])).toString();
+      await _client.loadMedia(_mediaInfo(_items[index], url),
           autoPlay: play, playPosition: startAt);
       _loadedIndex = index;
       _playing = play;
@@ -408,6 +433,9 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   @override
   Stream<void> get changeStream => _changeController.stream;
 
+  @override
+  Stream<String> get rendererLostStream => _rendererLost.stream;
+
   // ── Local-only capabilities (N/A while casting) ──
   @override
   bool get supportsEqualizer => false;
@@ -418,8 +446,10 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
 
   @override
   Future<void> dispose() async {
+    _disposing = true;
     await _statusSub?.cancel();
     await _positionSub?.cancel();
+    await _sessionSub?.cancel();
     try {
       await _sessions.endSessionAndStopCasting();
     } catch (_) {}
@@ -428,5 +458,6 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     await _durationSubject.close();
     await _stateSubject.close();
     await _changeController.close();
+    await _rendererLost.close();
   }
 }

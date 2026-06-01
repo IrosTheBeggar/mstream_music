@@ -11,6 +11,7 @@ import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
+import 'local_media_server.dart';
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
@@ -111,6 +112,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();
     });
+    // A remote backend that loses its renderer mid-cast (TV off, Wi-Fi drop)
+    // emits here; fall back to local playback at the same spot + a toast.
+    _backendSubject
+        .switchMap((b) => b.rendererLostStream)
+        .listen(_onRendererLost);
     // Route cast-target selection (from the picker) to a backend swap.
     CastManager().onTargetSelected = _switchToTarget;
     try {
@@ -220,6 +226,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!identical(prev, _localBackend)) {
       await prev.dispose();
     }
+    // Switched back to the phone — tear down the local file server (no-op if it
+    // was never started). A remote→remote switch keeps it up for the new one.
+    if (identical(next, _localBackend)) {
+      await LocalMediaServer().stop();
+    }
   }
 
   // True once a freshly-activated remote backend actually starts (reaches
@@ -257,8 +268,35 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!identical(prev, _localBackend) && !identical(prev, failed)) {
       await prev.dispose();
     }
+    await LocalMediaServer().stop();
     CastManager().reportCastFailed(
         "Couldn't play on the cast device — back on this phone");
+  }
+
+  // A remote renderer dropped offline *during* playback (not at switch time —
+  // that's _fallBackToLocal). Resume on the phone at the current spot and tell
+  // CastManager (reverts the UI to "This device" + toast). Serialized through
+  // _switchChain so it can't interleave with a user-initiated target switch.
+  void _onRendererLost(String message) {
+    _switchChain = _switchChain.then((_) async {
+      final failed = _backend;
+      if (identical(failed, _localBackend)) return; // already recovered
+      final pos = failed.position;
+      final idx = failed.currentIndex ?? 0;
+      final wasPlaying = failed.playing;
+      await _localBackend.setSources(queue.value);
+      _backendSubject.add(_localBackend);
+      if (queue.value.isNotEmpty) {
+        await _localBackend.seek(pos, index: idx);
+        if (wasPlaying) await _localBackend.play();
+      }
+      _broadcastState();
+      await failed.dispose();
+      await LocalMediaServer().stop();
+      CastManager().reportCastFailed(message);
+    }).catchError((Object e) {
+      castLog('Renderer-lost fallback failed', error: e);
+    });
   }
 
   @override

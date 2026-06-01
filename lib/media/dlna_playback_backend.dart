@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
@@ -10,6 +11,7 @@ import 'package:rxdart/rxdart.dart';
 
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'local_media_server.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a DLNA renderer (TV / AV receiver /
@@ -52,6 +54,11 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   bool _polling = false;
   bool _disposed = false;
 
+  // Consecutive getPlaybackInfo failures; trips a mid-cast "renderer lost"
+  // fallback once it crosses _kMaxPollFailures (so a single Wi-Fi blip doesn't).
+  int _pollFailures = 0;
+  static const int _kMaxPollFailures = 4;
+
   final BehaviorSubject<int?> _indexSubject = BehaviorSubject<int?>.seeded(null);
   final BehaviorSubject<Duration> _positionSubject =
       BehaviorSubject<Duration>.seeded(Duration.zero);
@@ -62,6 +69,9 @@ class DlnaPlaybackBackend implements PlaybackBackend {
           BackendProcessingState.idle);
   final StreamController<void> _changeController =
       StreamController<void>.broadcast();
+  // Emits when the renderer is lost mid-cast (see _poll); the handler listens
+  // and falls back to local playback.
+  final PublishSubject<String> _rendererLost = PublishSubject<String>();
 
   void _change() {
     if (!_changeController.isClosed) _changeController.add(null);
@@ -149,9 +159,19 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   }
 
   // ── Transport ──
-  // DLNA renderers fetch the URL themselves, so use the network id (not the
-  // localPath download, which the renderer can't reach).
-  Uri _uriFor(MediaItem item) => Uri.parse(item.id);
+  // DLNA renderers fetch the URL themselves. A network id (server URL) is
+  // handed over as-is; a local-only item (file-explorer track — id is a UUID)
+  // is served from the phone's LocalMediaServer so the renderer can reach it.
+  Future<Uri> _resolveUri(MediaItem item) async {
+    final localPath = item.extras?['localPath'] as String?;
+    final isNetwork =
+        item.id.startsWith('http://') || item.id.startsWith('https://');
+    if (!isNetwork && localPath != null && File(localPath).existsSync()) {
+      await LocalMediaServer().ensureStarted();
+      return LocalMediaServer().registerFile(localPath);
+    }
+    return Uri.parse(item.id);
+  }
 
   AudioMetadata _metaFor(MediaItem item) {
     // Full-res art (drop the compress= size param) — looks sharp on a TV.
@@ -177,8 +197,8 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     _reachedNearEnd = false;
     _setState(BackendProcessingState.loading);
     try {
-      await _api.setMediaUri(
-          _udn, Url(value: _uriFor(item).toString()), _metaFor(item));
+      final uri = await _resolveUri(item);
+      await _api.setMediaUri(_udn, Url(value: uri.toString()), _metaFor(item));
       _loadedIndex = index;
       _duration = item.duration;
       _emitDur(_duration);
@@ -314,7 +334,9 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     if (_polling || _disposed) return;
     _polling = true;
     try {
-      final info = await _api.getPlaybackInfo(_udn);
+      final info =
+          await _api.getPlaybackInfo(_udn).timeout(const Duration(seconds: 2));
+      _pollFailures = 0;
       _position = Duration(seconds: info.position.seconds);
       _emitPos(_position);
       if (info.duration.seconds > 0) {
@@ -350,7 +372,17 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       }
       _change();
     } catch (_) {
-      // Transient renderer/network error — keep polling.
+      // A single failure is usually a transient renderer/network blip — keep
+      // polling. But a renderer that's genuinely gone (TV off, Wi-Fi dropped)
+      // fails every poll; after _kMaxPollFailures in a row, declare it lost so
+      // the handler can fall back to local playback.
+      if (!_disposed && ++_pollFailures >= _kMaxPollFailures) {
+        _stopPolling();
+        if (!_rendererLost.isClosed) {
+          _rendererLost
+              .add('Lost connection to the cast device — back on this phone');
+        }
+      }
     } finally {
       _polling = false;
     }
@@ -407,6 +439,9 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   @override
   Stream<void> get changeStream => _changeController.stream;
 
+  @override
+  Stream<String> get rendererLostStream => _rendererLost.stream;
+
   // ── Local-only capabilities (N/A while casting) ──
   @override
   bool get supportsEqualizer => false;
@@ -425,5 +460,6 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     await _durationSubject.close();
     await _stateSubject.close();
     await _changeController.close();
+    await _rendererLost.close();
   }
 }

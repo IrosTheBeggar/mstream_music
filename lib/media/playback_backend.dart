@@ -71,6 +71,12 @@ abstract class PlaybackBackend {
   /// audio_service [PlaybackState] on each tick.
   Stream<void> get changeStream;
 
+  /// Emits a user-facing reason when a remote renderer is lost *mid-playback*
+  /// (TV powered off, Wi-Fi dropped, Cast session ended unexpectedly). The
+  /// handler listens to the active backend's stream and falls back to local
+  /// playback + a toast. Never emits on the local backend.
+  Stream<String> get rendererLostStream;
+
   // ── Local-only capabilities (false / null on remote backends) ──
   bool get supportsEqualizer;
 

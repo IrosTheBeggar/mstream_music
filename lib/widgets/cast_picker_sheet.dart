@@ -114,6 +114,32 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 ],
               ),
             ],
+            const Divider(height: 24),
+            // Deferred feature: streaming the on-screen visualizer to the cast
+            // device. Shown disabled so the capability is discoverable; the
+            // wiring lands in a follow-up (it needs on-device A/V encoding plus
+            // the local media server added in this change).
+            Opacity(
+              opacity: 0.5,
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                value: false,
+                onChanged: null,
+                title: Text(
+                  'Cast visualizer',
+                  style: TextStyle(color: VelvetColors.textPrimary),
+                ),
+                subtitle: Text(
+                  'Coming soon',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: VelvetColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -38,3 +38,20 @@ DateTime? releaseDateFor(MediaItem item) {
   final y = intExtra(item, 'year');
   return (y != null && y > 0) ? DateTime(y) : null;
 }
+
+/// Best-effort audio MIME type from a file path or URL, by extension. Used for
+/// the renderer's contentType (Chromecast) and the on-device media server's
+/// Content-Type header. Falls back to audio/mpeg.
+String mimeForPath(String pathOrUrl) {
+  var p = pathOrUrl.toLowerCase();
+  final q = p.indexOf('?'); // drop any URL query string
+  if (q >= 0) p = p.substring(0, q);
+  if (p.endsWith('.flac')) return 'audio/flac';
+  if (p.endsWith('.wav')) return 'audio/wav';
+  if (p.endsWith('.m4a') || p.endsWith('.aac') || p.endsWith('.mp4')) {
+    return 'audio/mp4';
+  }
+  if (p.endsWith('.ogg') || p.endsWith('.opus')) return 'audio/ogg';
+  if (p.endsWith('.aif') || p.endsWith('.aiff')) return 'audio/aiff';
+  return 'audio/mpeg';
+}
