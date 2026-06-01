@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show File;
+import 'dart:io' show Directory, File;
 import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
@@ -42,7 +42,9 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   List<MediaItem> _items = <MediaItem>[];
   int _index = -1;
   int _loadedIndex = -1;
-  int _loadCounter = 0; // monotonic, for cache-busting the visualizer playlist
+  int _loadCounter = 0; // monotonic; names each visualizer transcode's subdir
+  String? _currentVizDir; // subdir the active visualizer transcode writes to
+  bool _firstVizLoad = true;
   bool _shuffle = false;
   bool _repeatAll = false;
   bool _playing = false;
@@ -331,16 +333,22 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   Future<Uri> _resolveVisualizerUri(MediaItem item) async {
     _loadCounter++;
     await VisualizerBridge.stopTranscode(); // stop the previous track's, if any
-    final source = (item.extras?['localPath'] as String?) ?? item.id;
-    final dir = await _visualizerDir();
-    // Clear the old playlist so the readiness poll waits for the NEW one (the
-    // segments themselves are cleared by TsHlsSink.init on the native side).
-    final plFile = File('$dir/index.m3u8');
-    if (plFile.existsSync()) {
-      try {
-        plFile.deleteSync();
-      } catch (_) {}
+    final parent = await _visualizerParentDir();
+    // Each track transcodes into its OWN subdirectory, so a just-stopped
+    // previous transcode can never race the new one on the same files. Keep disk
+    // bounded: on the first load drop any prior session's tree; on later loads
+    // drop the previous track's (its transcode is stopped above, and in the
+    // common track-change case had already finished).
+    if (_firstVizLoad) {
+      _firstVizLoad = false;
+      _deleteDir(parent);
+    } else {
+      _deleteDir(_currentVizDir);
     }
+    final dir = '$parent/$_loadCounter';
+    _currentVizDir = dir;
+
+    final source = (item.extras?['localPath'] as String?) ?? item.id;
     final cfg = await resolveVisualizerCastConfig();
     final playlist = await VisualizerBridge.startTranscode(
       source: source,
@@ -354,29 +362,41 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     if (playlist == null) {
       throw StateError('visualizer transcode failed to start');
     }
-    // Wait (up to ~30 s) for two segments before pointing the receiver at it.
-    for (var i = 0; i < 60; i++) {
+    // Wait (up to ~20 s) for two segments before pointing the receiver at it; if
+    // they never arrive the transcode is wedged — fail so the handler falls back
+    // instead of casting an empty playlist.
+    final plFile = File('$dir/index.m3u8');
+    var ready = false;
+    for (var i = 0; i < 40 && !ready; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       if (plFile.existsSync() &&
           '.ts'.allMatches(plFile.readAsStringSync()).length >= 2) {
-        break;
+        ready = true;
       }
     }
+    if (!ready) {
+      throw StateError('visualizer stream not ready');
+    }
     await LocalMediaServer().ensureStarted();
-    // Cache-bust per track: the same dir/URL is reused across tracks, so add a
-    // changing query param to force the receiver to re-read the rewritten
-    // playlist (the server ignores the query; relative segment refs drop it).
-    return LocalMediaServer()
-        .registerDirectory(dir)
-        .replace(queryParameters: {'v': '$_loadCounter'});
+    // A fresh subdir per track means a fresh URL/token, so the receiver always
+    // re-reads the new playlist (no cache-busting query needed).
+    return LocalMediaServer().registerDirectory(dir);
   }
 
-  Future<String> _visualizerDir() async {
+  Future<String> _visualizerParentDir() async {
     final base = await getExternalStorageDirectory();
     if (base == null) {
       throw StateError('No external storage for visualizer cast');
     }
     return '${base.path}/viz_cast';
+  }
+
+  void _deleteDir(String? path) {
+    if (path == null) return;
+    try {
+      final d = Directory(path);
+      if (d.existsSync()) d.deleteSync(recursive: true);
+    } catch (_) {}
   }
 
   GoogleCastMediaInformation _visualizerMediaInfo(MediaItem item, String url) {
@@ -542,6 +562,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       try {
         await VisualizerBridge.stopTranscode();
       } catch (_) {}
+      _deleteDir(_currentVizDir); // drop the last track's segments
     }
     await _statusSub?.cancel();
     await _positionSub?.cancel();

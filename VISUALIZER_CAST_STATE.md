@@ -137,11 +137,16 @@ fallback until the picker path is confirmed on real hardware.
 1. **Transport polish**: play/pause work (receiver-side); **seek is limited** —
    a live transcode starts at 0, so seeking within a track is best-effort and
    `startAt` is ignored on (re)load. Track-change works via `_loadIndex`.
-2. **Concurrency hardening**: track-change calls `stopTranscode` then
-   `startTranscode` on the same `viz_cast` dir. Pacing means the old transcode is
-   usually already done at end-of-track, but a **rapid manual re-cast** can race
-   (old thread's final segment write vs new `TsHlsSink.init` clearing the dir).
-   Fix: per-load subdir, or join the old transcode off the main thread.
+2. ~~**Concurrency hardening**~~ ✅ DONE — each track now transcodes into its own
+   `viz_cast/<n>` subdir, so a just-stopped transcode can't race the next on the
+   same files. Cleanup: first load drops the prior session's tree, later loads
+   drop the previous track's, `dispose` drops the last (bounds disk to ~1 track).
+   `_resolveVisualizerUri` also now **fails fast** (throws) if ≥2 segments don't
+   appear in ~20 s, so a wedged transcode falls back instead of casting an empty
+   playlist. (Still untested on device.)
+   - Possible follow-up: audio-only fallback (cast the song without the
+     visualizer) instead of dropping to the phone when the transcode fails — today
+     a failure rides the existing remote-start-timeout → `_fallBackToLocal`.
 3. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + this
    state doc once the picker path is confirmed.
 4. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.
