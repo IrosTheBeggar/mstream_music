@@ -27,6 +27,7 @@ class LocalMediaServer {
   String? _host; // LAN IPv4 the renderer connects back to
   final Random _rng = Random();
   final Map<String, String> _files = <String, String>{}; // token -> abs path
+  final Map<String, String> _types = <String, String>{}; // token -> content type
 
   bool get isRunning => _server != null;
 
@@ -47,17 +48,21 @@ class LocalMediaServer {
 
   /// Register [absPath] for serving and return the URL the renderer fetches.
   /// Reuses the token for an already-registered path. Requires [ensureStarted].
-  Uri registerFile(String absPath) {
+  Uri registerFile(String absPath, {String? contentType}) {
     final server = _server;
     final host = _host;
     if (server == null || host == null) {
       throw StateError('registerFile called before ensureStarted');
     }
     for (final e in _files.entries) {
-      if (e.value == absPath) return _urlFor(host, server.port, e.key, absPath);
+      if (e.value == absPath) {
+        if (contentType != null) _types[e.key] = contentType;
+        return _urlFor(host, server.port, e.key, absPath);
+      }
     }
     final token = _newToken();
     _files[token] = absPath;
+    if (contentType != null) _types[token] = contentType;
     return _urlFor(host, server.port, token, absPath);
   }
 
@@ -67,6 +72,7 @@ class LocalMediaServer {
     _server = null;
     _host = null;
     _files.clear();
+    _types.clear();
     if (s != null) {
       try {
         await s.close(force: true);
@@ -138,7 +144,8 @@ class LocalMediaServer {
     final res = req.response;
     try {
       final seg = req.uri.pathSegments;
-      final path = seg.isEmpty ? null : _files[seg.first];
+      final token = seg.isEmpty ? null : seg.first;
+      final path = token == null ? null : _files[token];
       if (path == null) return _notFound(res);
       final file = File(path);
       if (!await file.exists()) return _notFound(res);
@@ -146,7 +153,8 @@ class LocalMediaServer {
       final length = await file.length();
       res.headers
         ..set(HttpHeaders.acceptRangesHeader, 'bytes')
-        ..set(HttpHeaders.contentTypeHeader, mimeForPath(path));
+        ..set(HttpHeaders.contentTypeHeader,
+            _types[token] ?? mimeForPath(path));
 
       // Parse a single byte range (renderers send `bytes=start-` or
       // `bytes=start-end`); multi-range isn't used by media renderers.

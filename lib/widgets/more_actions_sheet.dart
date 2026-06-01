@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../media/local_media_server.dart';
+import '../media/visualizer_cast_spike.dart';
 import '../native/shader_params.dart';
 import '../native/visualizer_bridge.dart';
 import '../objects/server.dart';
@@ -97,6 +99,67 @@ class MoreActionsSheet extends StatelessWidget {
     ));
   }
 
+  // DEBUG (Phase 0b validation): render the current track's visualizer to MP4,
+  // serve it from the on-device server, and cast it to the first Chromecast —
+  // proves the cast-video path end-to-end before the live HLS muxer.
+  Future<void> _castVisualizerToTv(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final item = MediaManager().audioHandler.mediaItem.valueOrNull;
+    if (item == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Queue a track first')));
+      return;
+    }
+    final source = (item.extras?['localPath'] as String?) ?? item.id;
+    String? preset;
+    try {
+      preset =
+          await rootBundle.loadString('assets/shaders/01-spectrum-bars.glsl');
+    } catch (_) {}
+    final tuning = preset != null
+        ? <double>[
+            ...SettingsManager.defaultGlobalParams,
+            for (final p in parseShaderParams(preset)) p.def,
+          ]
+        : null;
+    final dir = await getExternalStorageDirectory();
+    if (dir == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('No external storage available')));
+      return;
+    }
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Rendering visualizer… (~20s)')));
+    final mp4 = await VisualizerBridge.startTranscode(
+      source: source,
+      output: '${dir.path}/viz_cast.mp4',
+      preset: preset,
+      engine: VisualizerBridge.engineShader,
+      maxMs: 25000,
+      tuning: tuning,
+    );
+    if (mp4 == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Transcode failed — see logcat')));
+      return;
+    }
+    try {
+      await LocalMediaServer().ensureStarted();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Local server failed: $e')));
+      return;
+    }
+    final url = LocalMediaServer().registerFile(mp4, contentType: 'video/mp4');
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Connecting to Chromecast…')));
+    final err = await castVideoToFirstChromecast(url,
+        title: item.title, subtitle: item.artist);
+    messenger.showSnackBar(SnackBar(
+      content: Text(err ?? 'Casting to your TV — check the screen'),
+      duration: const Duration(seconds: 8),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -178,6 +241,18 @@ class MoreActionsSheet extends StatelessWidget {
             onTap: () {
               Navigator.of(context).pop();
               _runVisualizerSpike(parentContext);
+            },
+          ),
+          // DEBUG: cast the rendered visualizer to the Chromecast (Phase 0b).
+          ListTile(
+            leading: Icon(Icons.cast, color: VelvetColors.textSecondary),
+            title: Text('Cast visualizer to TV (spike)',
+                style: TextStyle(color: VelvetColors.textPrimary)),
+            subtitle: Text('Render current track → cast to Chromecast',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+            onTap: () {
+              Navigator.of(context).pop();
+              _castVisualizerToTv(parentContext);
             },
           ),
           // Clear queue.
