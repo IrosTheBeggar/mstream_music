@@ -40,7 +40,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -142,6 +143,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
