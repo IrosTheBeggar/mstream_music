@@ -378,6 +378,11 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       output: dir,
       preset: cfg.preset,
       engine: cfg.engine,
+      // Render + encode at 1080p (vs the 720p default) so detailed shaders look
+      // sharp on a TV; the encoder scales bitrate to match. 1080p is safe for
+      // every Chromecast and served over the LAN, so bandwidth isn't a concern.
+      width: 1920,
+      height: 1080,
       maxMs: 0, // whole track
       tuning: cfg.tuning,
       mode: 'hls',

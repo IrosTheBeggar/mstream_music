@@ -150,5 +150,11 @@ fallback until the picker path is confirmed on real hardware.
      genuine device failure (audio load also fails) still drops to local.
 3. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + this
    state doc once the picker path is confirmed.
-4. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.
+4. **Tuning** (in progress): cast now renders + encodes at **1080p30** (was 720p),
+   and `VideoEncoder` **scales bitrate with resolution** (~0.14 bpp → 1080p30
+   ≈ 8.7 Mbps, clamped 2–24 Mbps) instead of a flat 4 Mbps — fixes soft/low-detail
+   shaders (e.g. hex-marching) on a TV. The MP4 spike stays 720p. Possible
+   follow-ups: a **Cast quality setting** (720p / 1080p / 4K — 4K only helps on
+   4K-capable Chromecasts and ~4× the encode load), 60 fps option, watch thermals
+   on long sessions (pacing keeps it ~realtime, so sustained load is bounded).
    DLNA HLS is unreliable → Chromecast-first.

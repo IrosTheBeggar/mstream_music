@@ -25,7 +25,7 @@ class VideoEncoder(
     width: Int,
     height: Int,
     frameRate: Int = 30,
-    bitRate: Int = 4_000_000,
+    bitRate: Int = 0, // 0 = auto from resolution (see autoBitrate)
     private val onFormat: (MediaFormat) -> Unit,
     private val onOutput: (ByteBuffer, MediaCodec.BufferInfo) -> Unit,
 ) {
@@ -35,12 +35,16 @@ class VideoEncoder(
     val inputSurface: Surface
 
     init {
+        // A flat bitrate starves higher resolutions (a 1080p frame has 2.25× the
+        // pixels of 720p), so scale it with resolution unless caller overrides.
+        val effectiveBitrate =
+            if (bitRate > 0) bitRate else autoBitrate(width, height, frameRate)
         val format = MediaFormat.createVideoFormat(MIME, width, height).apply {
             setInteger(
                 MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
             )
-            setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+            setInteger(MediaFormat.KEY_BIT_RATE, effectiveBitrate)
             setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
             // 1s keyframe interval keeps HLS segmentation clean (segment on IDR).
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, I_FRAME_INTERVAL_SECONDS)
@@ -108,5 +112,14 @@ class VideoEncoder(
         private const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC
         private const val I_FRAME_INTERVAL_SECONDS = 1
         private const val TIMEOUT_US = 10_000L
+
+        // ~0.14 bits/pixel — enough for detailed shader/Milkdrop content (sharp
+        // edges, gradients, motion) without obvious H.264 artifacts; clamped to a
+        // sane range. The stream is served over the LAN, so we can be generous.
+        // 1080p30 ≈ 8.7 Mbps, 720p30 ≈ 3.9 Mbps, 4K30 clamps to 24 Mbps.
+        private fun autoBitrate(width: Int, height: Int, frameRate: Int): Int =
+            (width.toLong() * height * frameRate * 14 / 100)
+                .coerceIn(2_000_000L, 24_000_000L)
+                .toInt()
     }
 }
