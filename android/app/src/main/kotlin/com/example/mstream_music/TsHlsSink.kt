@@ -49,6 +49,10 @@ class TsHlsSink(private val dir: String) : AvSink {
     // Audio (pts90, ADTS+AAC) produced before the first segment opens; flushed
     // into it so audio and video both start near PTS 0.
     private val pendingAudio = ArrayList<Pair<Long, ByteArray>>()
+    // H.264 Access Unit Delimiter (NAL type 9). The Cast receiver's TS
+    // transmuxer (mux.js) uses AUDs to find access-unit boundaries; MediaCodec
+    // doesn't emit them, so prepend one to every frame.
+    private val audNal = byteArrayOf(0, 0, 0, 1, 9, 0xF0.toByte())
 
     override fun init(audioEnabled: Boolean) {
         this.audioEnabled = audioEnabled
@@ -93,6 +97,8 @@ class TsHlsSink(private val dir: String) : AvSink {
         // Each segment must be independently decodable, so prepend SPS/PPS on
         // every keyframe (cheap; decoders tolerate repeats).
         if (keyframe) spsPps?.let { es = it + es }
+        // AUD first, so the access unit is [AUD][SPS][PPS][IDR] / [AUD][slice].
+        es = audNal + es
         val pts90 = ptsUs * 9 / 100 // µs → 90 kHz
         writePes(s, VIDEO_PID, videoCc, buildPes(0xE0, pts90, pts90, es), pts90)
         lastVideoUs = ptsUs

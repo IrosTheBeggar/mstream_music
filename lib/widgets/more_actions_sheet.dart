@@ -158,7 +158,8 @@ class MoreActionsSheet extends StatelessWidget {
     final err = await castVideoToFirstChromecast(url,
         title: item.title,
         subtitle: item.artist,
-        contentType: 'application/x-mpegurl');
+        contentType: 'application/x-mpegurl',
+        statusLogPath: '$hlsDir/_status.log');
     messenger.showSnackBar(SnackBar(
       content: Text(err ?? 'Casting to your TV — check the screen'),
       duration: const Duration(seconds: 8),
