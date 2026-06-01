@@ -74,6 +74,7 @@ class MStreamApp extends StatefulWidget {
 class _MStreamAppState extends State<MStreamApp>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  StreamSubscription<String>? _castErrorSub;
 
   @override
   void initState() {
@@ -89,10 +90,16 @@ class _MStreamAppState extends State<MStreamApp>
     // subsequent calls are no-ops once granted. Must run after runApp so the
     // permission_handler plugin has an Activity to attach the dialog to.
     Permission.notification.request();
+    // Surface cast failures (renderer unreachable / session won't connect) as a
+    // toast; the handler has already fallen back to local playback.
+    _castErrorSub = CastManager().castErrorStream.listen((msg) {
+      rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
+    });
   }
 
   @override
   void dispose() {
+    _castErrorSub?.cancel();
     DownloadManager().dispose();
     super.dispose();
   }

@@ -202,9 +202,62 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     _broadcastState();
 
+    // The remote backends swallow load/connection errors internally (so they
+    // never throw here); detect a failed cast by whether playback actually
+    // starts. If the renderer is unreachable / a Cast session won't connect /
+    // the media is unplayable, fall back to local so playback isn't left
+    // silently dead, and surface a toast.
+    final isRemote = !identical(next, _localBackend);
+    if (isRemote && wasPlaying && queue.value.isNotEmpty) {
+      final started = await _awaitRemoteStart(next);
+      if (!started) {
+        await _fallBackToLocal(prev, next, pos, idx);
+        return;
+      }
+    }
+
     if (!identical(prev, _localBackend)) {
       await prev.dispose();
     }
+  }
+
+  // True once a freshly-activated remote backend actually starts (reaches
+  // ready/playing) within a timeout; false if it stays stuck loading (renderer
+  // unreachable / session won't connect / unplayable media).
+  Future<bool> _awaitRemoteStart(PlaybackBackend backend) async {
+    bool started(BackendProcessingState s) =>
+        s == BackendProcessingState.ready ||
+        s == BackendProcessingState.completed;
+    if (started(backend.processingState)) return true;
+    try {
+      await backend.processingStateStream
+          .firstWhere(started)
+          .timeout(const Duration(seconds: 12));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // A cast failed to start — resume on the phone at the same spot, tear down
+  // the failed (and abandoned previous) remote backend, and tell CastManager
+  // so the UI reverts to "This device" and shows a message.
+  Future<void> _fallBackToLocal(PlaybackBackend prev, PlaybackBackend failed,
+      Duration pos, int idx) async {
+    await failed.pause();
+    await _localBackend.setSources(queue.value);
+    _backendSubject.add(_localBackend);
+    if (queue.value.isNotEmpty) {
+      await _localBackend.seek(pos, index: idx);
+      await _localBackend.play();
+    }
+    _broadcastState();
+    if (!identical(failed, _localBackend)) await failed.dispose();
+    if (!identical(prev, _localBackend) && !identical(prev, failed)) {
+      await prev.dispose();
+    }
+    CastManager().reportCastFailed(
+        "Couldn't play on the cast device — back on this phone");
   }
 
   @override

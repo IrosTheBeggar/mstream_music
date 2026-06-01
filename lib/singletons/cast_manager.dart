@@ -33,11 +33,20 @@ class CastManager {
   final BehaviorSubject<CastTarget> _activeTarget =
       BehaviorSubject<CastTarget>.seeded(CastTarget.local);
 
+  // Surfaces "casting failed, fell back to this device" messages for the UI to
+  // show as a toast. PublishSubject so a late listener doesn't replay a stale
+  // error.
+  final PublishSubject<String> _castErrors = PublishSubject<String>();
+
   Stream<List<CastTarget>> get targetsStream => _targets.stream;
   List<CastTarget> get targets => _targets.value;
   Stream<CastTarget> get activeTargetStream => _activeTarget.stream;
   CastTarget get activeTarget => _activeTarget.value;
   bool get isCasting => !_activeTarget.value.isLocal;
+
+  /// Emits a message when a cast attempt failed and playback fell back to this
+  /// device. The UI listens and shows a toast.
+  Stream<String> get castErrorStream => _castErrors.stream;
 
   /// True once at least one discoverer is registered — lets the picker decide
   /// whether to show the "searching…" hint.
@@ -91,6 +100,15 @@ class CastManager {
     }
   }
 
+  /// Called by the handler when a remote backend failed to start. Reflects the
+  /// revert in the UI (active target → local) WITHOUT re-invoking
+  /// [onTargetSelected] (the handler has already reverted the backend), and
+  /// surfaces [message] on [castErrorStream] for a toast.
+  void reportCastFailed(String message) {
+    _activeTarget.add(CastTarget.local);
+    if (!_castErrors.isClosed) _castErrors.add(message);
+  }
+
   void _recompute() {
     // Local always first; then de-duped remote devices (two discoverers could
     // in principle surface the same physical device).
@@ -124,5 +142,6 @@ class CastManager {
     }
     _targets.close();
     _activeTarget.close();
+    _castErrors.close();
   }
 }

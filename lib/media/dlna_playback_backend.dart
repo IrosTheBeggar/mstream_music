@@ -127,6 +127,13 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       _index--;
       _loadedIndex--;
       _emitIndex(_index);
+    } else if (index == _index) {
+      // Removed the now-playing track — advance to whatever now occupies this
+      // slot (the former next track), clamping if it was the last.
+      if (_index >= _items.length) _index = _items.length - 1;
+      _loadedIndex = -1;
+      _emitIndex(_index);
+      await _loadIndex(_index, play: _playing);
     }
   }
 
