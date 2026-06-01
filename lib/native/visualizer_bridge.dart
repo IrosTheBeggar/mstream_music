@@ -143,6 +143,7 @@ class VisualizerBridge {
     int height = 720,
     int fps = 30,
     int maxMs = 20000,
+    List<double>? tuning,
   }) async {
     try {
       return await _channel.invokeMethod<String>('startTranscode', {
@@ -154,6 +155,7 @@ class VisualizerBridge {
         'height': height,
         'fps': fps,
         'maxMs': maxMs,
+        'tuning': tuning != null ? Float32List.fromList(tuning) : null,
       });
     } on PlatformException catch (e) {
       // ignore: avoid_print

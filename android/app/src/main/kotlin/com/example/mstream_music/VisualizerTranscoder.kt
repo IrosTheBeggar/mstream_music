@@ -31,10 +31,12 @@ class VisualizerTranscoder(
     private val fps: Int,
     private val maxDurationUs: Long,
     private val presetData: String?,
+    private val tuning: FloatArray?,
     private val initEncoder: (Surface, Int, Int, Int) -> Long,
     private val renderAt: (Long, Long) -> Unit,
     private val addPcm: (Long, FloatArray) -> Unit,
     private val loadPreset: (Long, String, Boolean) -> Unit,
+    private val setTuning: (Long, FloatArray) -> Unit,
     private val dispose: (Long) -> Unit,
     private val onDone: (Boolean, String?) -> Unit,
 ) : Thread("mstream-viz-transcode") {
@@ -83,6 +85,10 @@ class VisualizerTranscoder(
             ctx = initEncoder(video.inputSurface, width, height, engineKind)
             if (ctx == 0L) throw IllegalStateException("nativeInitEncoder failed")
             presetData?.let { loadPreset(ctx, it, false) }
+            // Push tuning (global audio-response curve + per-shader iParams
+            // defaults) exactly like the on-screen path. Without it a shader's
+            // iParams read 0, so the visuals render but don't react to audio.
+            tuning?.let { if (it.isNotEmpty()) setTuning(ctx, it) }
 
             try {
                 aac = AacEncoder(

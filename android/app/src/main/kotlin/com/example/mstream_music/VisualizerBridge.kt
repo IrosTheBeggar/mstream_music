@@ -147,6 +147,13 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         val fps = (call.argument<Int>("fps") ?: 30).coerceIn(1, 60)
         val maxMs = (call.argument<Int>("maxMs") ?: 20_000).toLong()
         val preset = call.argument<String>("preset")
+        val tuningRaw = call.argument<Any>("tuning")
+        val tuning: FloatArray? = when (tuningRaw) {
+            is FloatArray -> tuningRaw
+            is DoubleArray -> FloatArray(tuningRaw.size) { tuningRaw[it].toFloat() }
+            is List<*> -> FloatArray(tuningRaw.size) { (tuningRaw[it] as Number).toFloat() }
+            else -> null
+        }
 
         transcoder?.cancelTranscode()
         val main = Handler(Looper.getMainLooper())
@@ -159,10 +166,12 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             fps = fps,
             maxDurationUs = maxMs * 1000L,
             presetData = preset,
+            tuning = tuning,
             initEncoder = ::nativeInitEncoder,
             renderAt = ::nativeRenderFrameAt,
             addPcm = ::nativeAddPcm,
             loadPreset = ::nativeLoadPresetData,
+            setTuning = ::nativeSetTuning,
             dispose = ::nativeDispose,
         ) { ok, err ->
             main.post {
