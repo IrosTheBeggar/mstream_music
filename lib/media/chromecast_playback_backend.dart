@@ -238,8 +238,12 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
         title: item.title,
         artist: item.artist,
         albumName: item.album,
+        trackNumber: intExtra(item, 'track'),
+        discNumber: intExtra(item, 'disc'),
+        releaseDate: releaseDateFor(item),
         images: art != null ? [GoogleCastImage(url: Uri.parse(art))] : null,
       ),
+
     );
   }
 

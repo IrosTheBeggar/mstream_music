@@ -511,6 +511,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         'server': autoDJServer!.localname,
         'path': filepath,
         'year': metadata['year'],
+        'track': metadata['track'],
+        'disc': metadata['disc'],
         'artUrl': artUrl,
         // bpm + musicalKey power the next AutoDJ pick's continuity
         // payload (see autoDJ() above). 'musical-key' is the wire

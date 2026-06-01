@@ -134,6 +134,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       title: item.title,
       artist: item.artist,
       album: item.album,
+      originalTrackNumber: intExtra(item, 'track'),
       duration: item.duration != null
           ? TimeDuration(seconds: item.duration!.inSeconds)
           : null,
