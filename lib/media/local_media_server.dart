@@ -28,6 +28,7 @@ class LocalMediaServer {
   final Random _rng = Random();
   final Map<String, String> _files = <String, String>{}; // token -> abs path
   final Map<String, String> _types = <String, String>{}; // token -> content type
+  final Map<String, String> _dirs = <String, String>{}; // token -> directory
 
   bool get isRunning => _server != null;
 
@@ -66,6 +67,30 @@ class LocalMediaServer {
     return _urlFor(host, server.port, token, absPath);
   }
 
+  /// Register a directory and return the URL for its [playlist] entry. Any file
+  /// in the directory is then served at `<base>/<name>` — used for HLS, where
+  /// the `.m3u8` references its `.ts` segments by relative name. Requires
+  /// [ensureStarted].
+  Uri registerDirectory(String dirPath, {String playlist = 'index.m3u8'}) {
+    final server = _server;
+    final host = _host;
+    if (server == null || host == null) {
+      throw StateError('registerDirectory called before ensureStarted');
+    }
+    String? token;
+    for (final e in _dirs.entries) {
+      if (e.value == dirPath) {
+        token = e.key;
+        break;
+      }
+    }
+    token ??= _newToken();
+    _dirs[token] = dirPath;
+    return Uri(
+        scheme: 'http', host: host, port: server.port,
+        pathSegments: [token, playlist]);
+  }
+
   /// Close the server and forget all registered files. Called when casting ends.
   Future<void> stop() async {
     final s = _server;
@@ -73,6 +98,7 @@ class LocalMediaServer {
     _host = null;
     _files.clear();
     _types.clear();
+    _dirs.clear();
     if (s != null) {
       try {
         await s.close(force: true);
@@ -96,7 +122,14 @@ class LocalMediaServer {
       sb.write(chars[_rng.nextInt(chars.length)]);
     }
     final t = sb.toString();
-    return _files.containsKey(t) ? _newToken() : t;
+    return (_files.containsKey(t) || _dirs.containsKey(t)) ? _newToken() : t;
+  }
+
+  String? _hlsType(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.m3u8')) return 'application/vnd.apple.mpegurl';
+    if (n.endsWith('.ts')) return 'video/mp2t';
+    return null;
   }
 
   String _basename(String path) {
@@ -145,7 +178,20 @@ class LocalMediaServer {
     try {
       final seg = req.uri.pathSegments;
       final token = seg.isEmpty ? null : seg.first;
-      final path = token == null ? null : _files[token];
+      String? path;
+      String? contentType;
+      if (token != null) {
+        if (_files.containsKey(token)) {
+          path = _files[token];
+          contentType = _types[token];
+        } else if (_dirs.containsKey(token) && seg.length >= 2) {
+          final name = seg[1];
+          if (name.isNotEmpty && !name.contains('..') && !name.contains('/')) {
+            path = '${_dirs[token]}/$name';
+            contentType = _hlsType(name);
+          }
+        }
+      }
       if (path == null) return _notFound(res);
       final file = File(path);
       if (!await file.exists()) return _notFound(res);
@@ -154,7 +200,7 @@ class LocalMediaServer {
       res.headers
         ..set(HttpHeaders.acceptRangesHeader, 'bytes')
         ..set(HttpHeaders.contentTypeHeader,
-            _types[token] ?? mimeForPath(path));
+            contentType ?? mimeForPath(path));
 
       // Parse a single byte range (renderers send `bytes=start-` or
       // `bytes=start-end`); multi-range isn't used by media renderers.

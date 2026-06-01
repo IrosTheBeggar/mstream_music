@@ -155,11 +155,21 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             else -> null
         }
 
+        // mode "hls" → MPEG-TS/HLS segments in the `output` directory (for
+        // casting); anything else → a single MP4 file at `output`.
+        val mode = call.argument<String>("mode") ?: "mp4"
+        val sink: AvSink = try {
+            if (mode == "hls") TsHlsSink(output) else Mp4Sink(output)
+        } catch (e: Throwable) {
+            result.error("sink_failed", e.message, null)
+            return
+        }
+
         transcoder?.cancelTranscode()
         val main = Handler(Looper.getMainLooper())
         val t = VisualizerTranscoder(
             source = source,
-            outputPath = output,
+            sink = sink,
             width = w,
             height = h,
             engineKind = engine,
@@ -173,11 +183,13 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             loadPreset = ::nativeLoadPresetData,
             setTuning = ::nativeSetTuning,
             dispose = ::nativeDispose,
-        ) { ok, err ->
+        ) { ok, payload ->
+            // payload is the playable path (MP4 file or .m3u8) on success, or an
+            // error message on failure.
             main.post {
                 transcoder = null
-                if (ok) result.success(output)
-                else result.error("transcode_failed", err, null)
+                if (ok) result.success(payload)
+                else result.error("transcode_failed", payload, null)
             }
         }
         transcoder = t

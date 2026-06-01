@@ -19,6 +19,7 @@ Future<String?> castVideoToFirstChromecast(
   Uri url, {
   String? title,
   String? subtitle,
+  String contentType = 'video/mp4',
 }) async {
   // Reuse the registered discoverers (this also initializes the Cast context
   // with the Default Media Receiver app id; see ChromecastDeviceDiscoverer).
@@ -47,7 +48,7 @@ Future<String?> castVideoToFirstChromecast(
         contentId: url.toString(),
         contentUrl: url,
         streamType: CastMediaStreamType.buffered,
-        contentType: 'video/mp4',
+        contentType: contentType,
         metadata: GoogleCastGenericMediaMetadata(
           title: title,
           subtitle: subtitle,

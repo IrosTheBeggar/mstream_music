@@ -144,6 +144,7 @@ class VisualizerBridge {
     int fps = 30,
     int maxMs = 20000,
     List<double>? tuning,
+    String mode = 'mp4',
   }) async {
     try {
       return await _channel.invokeMethod<String>('startTranscode', {
@@ -156,6 +157,7 @@ class VisualizerBridge {
         'fps': fps,
         'maxMs': maxMs,
         'tuning': tuning != null ? Float32List.fromList(tuning) : null,
+        'mode': mode, // 'mp4' (single file) or 'hls' (segments in `output` dir)
       });
     } on PlatformException catch (e) {
       // ignore: avoid_print

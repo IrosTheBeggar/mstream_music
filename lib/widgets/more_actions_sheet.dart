@@ -130,15 +130,17 @@ class MoreActionsSheet extends StatelessWidget {
     }
     messenger.showSnackBar(
         const SnackBar(content: Text('Rendering visualizer… (~20s)')));
-    final mp4 = await VisualizerBridge.startTranscode(
+    final hlsDir = '${dir.path}/viz_hls';
+    final playlist = await VisualizerBridge.startTranscode(
       source: source,
-      output: '${dir.path}/viz_cast.mp4',
+      output: hlsDir,
       preset: preset,
       engine: VisualizerBridge.engineShader,
       maxMs: 25000,
       tuning: tuning,
+      mode: 'hls',
     );
-    if (mp4 == null) {
+    if (playlist == null) {
       messenger.showSnackBar(
           const SnackBar(content: Text('Transcode failed — see logcat')));
       return;
@@ -149,11 +151,14 @@ class MoreActionsSheet extends StatelessWidget {
       messenger.showSnackBar(SnackBar(content: Text('Local server failed: $e')));
       return;
     }
-    final url = LocalMediaServer().registerFile(mp4, contentType: 'video/mp4');
+    // Serve the HLS directory; the .m3u8 references its .ts segments relatively.
+    final url = LocalMediaServer().registerDirectory(hlsDir);
     messenger.showSnackBar(
         const SnackBar(content: Text('Connecting to Chromecast…')));
     final err = await castVideoToFirstChromecast(url,
-        title: item.title, subtitle: item.artist);
+        title: item.title,
+        subtitle: item.artist,
+        contentType: 'application/x-mpegurl');
     messenger.showSnackBar(SnackBar(
       content: Text(err ?? 'Casting to your TV — check the screen'),
       duration: const Duration(seconds: 8),
