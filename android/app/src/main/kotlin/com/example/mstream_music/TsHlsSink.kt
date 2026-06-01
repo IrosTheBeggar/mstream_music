@@ -55,11 +55,18 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     override fun onVideoFormat(format: MediaFormat) {
-        // csd-0 = SPS+PPS as an Annex-B byte stream (start codes included).
-        val csd0 = format.getByteBuffer("csd-0") ?: return
-        val b = ByteArray(csd0.remaining())
-        csd0.get(b)
-        spsPps = b
+        // For AVC, MediaCodec splits the codec config across csd-0 (SPS) and
+        // csd-1 (PPS) — both Annex-B with start codes. Concatenate BOTH; missing
+        // the PPS leaves the decoder unable to decode (symptom: the receiver
+        // fetches every segment but never starts playback).
+        val out = ByteArrayOutputStream()
+        for (key in arrayOf("csd-0", "csd-1")) {
+            val buf = format.getByteBuffer(key) ?: continue
+            val a = ByteArray(buf.remaining())
+            buf.get(a)
+            out.write(a)
+        }
+        if (out.size() > 0) spsPps = out.toByteArray()
     }
 
     override fun onAudioFormat(format: MediaFormat) {
