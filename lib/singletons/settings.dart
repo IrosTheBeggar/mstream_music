@@ -70,6 +70,22 @@ enum VisualizerEngine {
   }
 }
 
+/// Resolution the visualizer is rendered + encoded at when cast to a TV. 1080p
+/// is the default (sharp on any Chromecast, modest encode load); 720p trades
+/// detail for the lightest load; 4K needs a 4K-capable Chromecast and ~4× the
+/// encode work. Persisted.
+enum CastVisualizerQuality {
+  hd720(1280, 720, '720p'),
+  fhd1080(1920, 1080, '1080p'),
+  uhd2160(3840, 2160, '4K');
+
+  const CastVisualizerQuality(this.width, this.height, this.label);
+
+  final int width;
+  final int height;
+  final String label;
+}
+
 /// Where the visualizer screen pulls its frame-driving audio data
 /// from. `synthesized` (the default) generates fake PCM from playback
 /// position — no permissions, works on every platform. `real` taps
@@ -143,6 +159,9 @@ class SettingsManager {
   // restarts; only meaningful for Chromecast targets.
   bool castVisualizerEnabled = false;
 
+  // Resolution the cast visualizer is rendered + encoded at. Sticky.
+  CastVisualizerQuality castVisualizerQuality = CastVisualizerQuality.fhd1080;
+
   /// Native AudioTexture response-curve defaults — keep in sync with
   /// audio_texture.cpp (minDb_ / maxDb_ / smoothing_).
   static const List<double> defaultGlobalParams = [-69.7, -20.7, 0.27];
@@ -196,6 +215,7 @@ class SettingsManager {
         });
       }
       castVisualizerEnabled = m['castVisualizerEnabled'] ?? false;
+      castVisualizerQuality = _readCastVisualizerQuality(m);
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -234,6 +254,16 @@ class SettingsManager {
     return VisualizerEngine.milkdrop;
   }
 
+  CastVisualizerQuality _readCastVisualizerQuality(Map<String, dynamic> m) {
+    final str = m['castVisualizerQuality'];
+    if (str is String) {
+      for (final q in CastVisualizerQuality.values) {
+        if (q.name == str) return q;
+      }
+    }
+    return CastVisualizerQuality.fhd1080;
+  }
+
   /// Reads tapBehavior, with one-shot migration from the old boolean
   /// `autoPlayOnTap` key. Old `true` is the closest semantic match for
   /// the new `appendAndJump` mode (the behavior the toggle used to
@@ -266,6 +296,7 @@ class SettingsManager {
       'visualizerGlobalParams': visualizerGlobalParams,
       'visualizerShaderParams': visualizerShaderParams,
       'castVisualizerEnabled': castVisualizerEnabled,
+      'castVisualizerQuality': castVisualizerQuality.name,
     }));
   }
 
@@ -324,6 +355,11 @@ class SettingsManager {
 
   Future<void> setCastVisualizerEnabled(bool v) async {
     castVisualizerEnabled = v;
+    await _save();
+  }
+
+  Future<void> setCastVisualizerQuality(CastVisualizerQuality v) async {
+    castVisualizerQuality = v;
     await _save();
   }
 

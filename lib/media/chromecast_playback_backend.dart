@@ -10,6 +10,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../native/visualizer_bridge.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/settings.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
 import 'local_media_server.dart';
@@ -373,16 +374,17 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
 
     final source = (item.extras?['localPath'] as String?) ?? item.id;
     final cfg = await resolveVisualizerCastConfig();
+    final quality = SettingsManager().castVisualizerQuality;
     final playlist = await VisualizerBridge.startTranscode(
       source: source,
       output: dir,
       preset: cfg.preset,
       engine: cfg.engine,
-      // Render + encode at 1080p (vs the 720p default) so detailed shaders look
-      // sharp on a TV; the encoder scales bitrate to match. 1080p is safe for
-      // every Chromecast and served over the LAN, so bandwidth isn't a concern.
-      width: 1920,
-      height: 1080,
+      // Resolution from the user's Cast quality setting (default 1080p). The
+      // visualizer draws into the encoder at this size, so render AND encode
+      // scale together; VideoEncoder scales bitrate to match.
+      width: quality.width,
+      height: quality.height,
       maxMs: 0, // whole track
       tuning: cfg.tuning,
       mode: 'hls',
