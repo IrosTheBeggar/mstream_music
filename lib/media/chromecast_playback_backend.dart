@@ -47,7 +47,18 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   int _loadCounter = 0; // monotonic; names each visualizer transcode's subdir
   String? _currentVizDir; // subdir the active visualizer transcode writes to
   bool _firstVizLoad = true;
-  bool _visualizerFellBack = false; // latched once a transcode fails → audio
+  int _visualizerFailures = 0; // consecutive transcode failures → audio fallback
+  // Bumped on every _loadIndex; an in-flight load re-checks it after each await
+  // and bails if a newer load superseded it. The visualizer warm-up is seconds
+  // long, so a Next/seek during it would otherwise interleave two loads and
+  // leave the wrong track casting.
+  int _loadGen = 0;
+
+  // Give up re-attempting the visualizer after this many *consecutive* failures
+  // (a single transient failure still retries on the next track).
+  static const int _kMaxVisualizerFailures = 2;
+  // Readiness poll: 20 × 500 ms = 10 s for the first segments before giving up.
+  static const int _kReadyPollAttempts = 20;
   bool _shuffle = false;
   bool _repeatAll = false;
   bool _playing = false;
@@ -297,29 +308,35 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   Future<void> _loadIndex(int index,
       {required bool play, Duration startAt = Duration.zero}) async {
     if (index < 0 || index >= _items.length) return;
+    final gen = ++_loadGen; // this load owns the pipeline until a newer one starts
     _index = index;
     _emitIndex(index);
     _setState(BackendProcessingState.loading);
     try {
       await _ensureSession();
+      if (gen != _loadGen) return; // superseded by a newer load
       _ensureListeners();
       // True only when this load actually served the visualizer (vs audio or
       // the audio fallback below) — drives the start position emitted after.
       var servedVisualizer = false;
-      if (_visualizer && !_visualizerFellBack) {
+      if (_visualizer && _visualizerFailures < _kMaxVisualizerFailures) {
         try {
           // A freshly-started live transcode begins at 0; seeking into it isn't
           // possible, so startAt is ignored for the visualizer.
-          final url = (await _resolveVisualizerUri(_items[index])).toString();
+          final url =
+              (await _resolveVisualizerUri(_items[index], gen)).toString();
+          if (gen != _loadGen) return; // superseded during the warm-up
           await _client.loadMedia(_visualizerMediaInfo(_items[index], url),
               autoPlay: play);
           servedVisualizer = true;
+          _visualizerFailures = 0; // recovered — a transient failure won't stick
         } catch (e) {
+          if (gen != _loadGen) return; // superseded, not a real failure
           // Transcode/render failed — don't strand the cast on the phone; keep
-          // the music on the TV as plain audio and tell the user. Latched so we
-          // don't re-attempt (and re-fail) the visualizer on every later track.
+          // the music on the TV as plain audio and tell the user. After a couple
+          // of consecutive failures we stop re-attempting (avoids repeated waits).
           castLog('Visualizer cast failed; casting audio instead', error: e);
-          _visualizerFellBack = true;
+          _visualizerFailures++;
           try {
             await VisualizerBridge.stopTranscode();
           } catch (_) {}
@@ -327,14 +344,17 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
           CastManager().reportCastInfo(
               "Couldn't start the visualizer — casting audio to the TV");
           final url = (await _resolveUri(_items[index])).toString();
+          if (gen != _loadGen) return;
           await _client.loadMedia(_mediaInfo(_items[index], url),
               autoPlay: play, playPosition: startAt);
         }
       } else {
         final url = (await _resolveUri(_items[index])).toString();
+        if (gen != _loadGen) return;
         await _client.loadMedia(_mediaInfo(_items[index], url),
             autoPlay: play, playPosition: startAt);
       }
+      if (gen != _loadGen) return;
       _loadedIndex = index;
       _playing = play;
       _duration = _items[index].duration;
@@ -354,9 +374,10 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   // call cancels the previous track's first, so track-change (which routes
   // through _loadIndex) restarts the pipeline cleanly. Blocks until a couple of
   // segments exist so the receiver never loads an empty playlist.
-  Future<Uri> _resolveVisualizerUri(MediaItem item) async {
+  Future<Uri> _resolveVisualizerUri(MediaItem item, int gen) async {
     _loadCounter++;
     await VisualizerBridge.stopTranscode(); // stop the previous track's, if any
+    if (gen != _loadGen) throw StateError('superseded');
     final parent = await _visualizerParentDir();
     // Each track transcodes into its OWN subdirectory, so a just-stopped
     // previous transcode can never race the new one on the same files. Keep disk
@@ -374,6 +395,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
 
     final source = (item.extras?['localPath'] as String?) ?? item.id;
     final cfg = await resolveVisualizerCastConfig();
+    if (gen != _loadGen) throw StateError('superseded');
     final quality = SettingsManager().castVisualizerQuality;
     final playlist = await VisualizerBridge.startTranscode(
       source: source,
@@ -392,17 +414,21 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     if (playlist == null) {
       throw StateError('visualizer transcode failed to start');
     }
-    // Wait (up to ~20 s) for two segments before pointing the receiver at it; if
+    // Wait (up to ~10 s) for two segments before pointing the receiver at it; if
     // they never arrive the transcode is wedged — fail so the handler falls back
-    // instead of casting an empty playlist.
+    // instead of casting an empty playlist. Async I/O so the poll doesn't block
+    // the UI isolate.
     final plFile = File('$dir/index.m3u8');
     var ready = false;
-    for (var i = 0; i < 40 && !ready; i++) {
+    for (var i = 0; i < _kReadyPollAttempts && !ready; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
-      if (plFile.existsSync() &&
-          '.ts'.allMatches(plFile.readAsStringSync()).length >= 2) {
-        ready = true;
-      }
+      if (gen != _loadGen) throw StateError('superseded');
+      try {
+        if (await plFile.exists() &&
+            '.ts'.allMatches(await plFile.readAsString()).length >= 2) {
+          ready = true;
+        }
+      } catch (_) {/* mid-write / not ready yet — try again */}
     }
     if (!ready) {
       throw StateError('visualizer stream not ready');

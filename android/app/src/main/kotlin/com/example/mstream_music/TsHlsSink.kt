@@ -53,6 +53,10 @@ class TsHlsSink(private val dir: String) : AvSink {
     // transmuxer (mux.js) uses AUDs to find access-unit boundaries; MediaCodec
     // doesn't emit them, so prepend one to every frame.
     private val audNal = byteArrayOf(0, 0, 0, 1, 9, 0xF0.toByte())
+    // Scratch buffer for one 188-byte TS packet, reused across writePes calls
+    // (the muxer runs on a single thread) — at 1080p this avoids ~6k packet
+    // allocations/sec (~16k at 4K). Every byte is overwritten per packet.
+    private val tsPacket = ByteArray(188)
 
     override fun init(audioEnabled: Boolean) {
         this.audioEnabled = audioEnabled
@@ -103,14 +107,16 @@ class TsHlsSink(private val dir: String) : AvSink {
             rotate(ptsUs)
         }
         val s = seg ?: return // wait for the first keyframe to open a segment
-        var es = bytesOf(buffer, info)
-        // Each segment must be independently decodable, so prepend SPS/PPS on
-        // every keyframe (cheap; decoders tolerate repeats).
-        if (keyframe) spsPps?.let { es = it + es }
-        // AUD first, so the access unit is [AUD][SPS][PPS][IDR] / [AUD][slice].
-        es = audNal + es
+        val frame = bytesOf(buffer, info)
         val pts90 = ptsUs * 9 / 100 // µs → 90 kHz
-        writePes(s, VIDEO_PID, videoCc, buildPes(0xE0, pts90, pts90, es), pts90)
+        // Access unit = [AUD][SPS][PPS][IDR] on keyframes / [AUD][slice] otherwise.
+        // AUD lets the receiver's transmuxer find AU boundaries; SPS/PPS on every
+        // keyframe keeps each segment independently decodable (decoders tolerate
+        // repeats). Passed as parts so we don't allocate a combined frame array.
+        val sps = if (keyframe) spsPps else null
+        val pes = if (sps != null) buildPes(0xE0, pts90, pts90, audNal, sps, frame)
+        else buildPes(0xE0, pts90, pts90, audNal, frame)
+        writePes(s, VIDEO_PID, videoCc, pes, pts90)
         lastVideoUs = ptsUs
     }
 
@@ -126,6 +132,9 @@ class TsHlsSink(private val dir: String) : AvSink {
             // it instead of dropping it, so the first segment's audio and video
             // both start near PTS 0 (else the receiver stalls on misaligned A/V).
             pendingAudio.add(Pair(pts90, es))
+            // Defensive: if no keyframe ever opens a segment (video wedged), don't
+            // grow without bound — keep only the most recent frames.
+            while (pendingAudio.size > MAX_PENDING_AUDIO) pendingAudio.removeAt(0)
             return
         }
         writePes(s, AUDIO_PID, audioCc, buildPes(0xC0, pts90, null, es), null)
@@ -194,14 +203,18 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     // ── PES / TS packetization ──
 
-    private fun buildPes(streamId: Int, pts90: Long, dts90: Long?, es: ByteArray): ByteArray {
-        val out = ByteArrayOutputStream()
+    // [esParts] are concatenated as the PES payload — passed as parts (e.g.
+    // AUD + SPS/PPS + frame) so callers don't allocate a combined ES array.
+    private fun buildPes(streamId: Int, pts90: Long, dts90: Long?, vararg esParts: ByteArray): ByteArray {
+        var esLen = 0
+        for (p in esParts) esLen += p.size
+        val out = ByteArrayOutputStream(esLen + 19)
         out.write(0x00); out.write(0x00); out.write(0x01) // start code prefix
         out.write(streamId)
         val ptsDtsBytes = if (dts90 != null) 10 else 5
         // PES_packet_length: video uses 0 (unbounded — frames can exceed 64 KB);
         // audio carries its real length.
-        val pesLen = if (streamId == 0xE0) 0 else (3 + ptsDtsBytes + es.size)
+        val pesLen = if (streamId == 0xE0) 0 else (3 + ptsDtsBytes + esLen)
         out.write((pesLen ushr 8) and 0xFF); out.write(pesLen and 0xFF)
         out.write(0x80) // '10' marker, no scrambling/priority flags
         out.write(if (dts90 != null) 0xC0 else 0x80) // PTS+DTS or PTS-only flag
@@ -212,7 +225,7 @@ class TsHlsSink(private val dir: String) : AvSink {
         } else {
             out.write(encodeTs(pts90, 0x2))
         }
-        out.write(es)
+        for (p in esParts) out.write(p)
         return out.toByteArray()
     }
 
@@ -234,8 +247,8 @@ class TsHlsSink(private val dir: String) : AvSink {
     private fun writePes(out: OutputStream, pid: Int, cc: IntArray, pes: ByteArray, pcr90: Long?) {
         var pos = 0
         var first = true
+        val pkt = tsPacket // reused; every byte below is overwritten per packet
         while (pos < pes.size) {
-            val pkt = ByteArray(188) { 0xFF.toByte() }
             pkt[0] = 0x47
             pkt[1] = (((if (first) 0x40 else 0x00)) or ((pid ushr 8) and 0x1F)).toByte()
             pkt[2] = (pid and 0xFF).toByte()
@@ -269,12 +282,12 @@ class TsHlsSink(private val dir: String) : AvSink {
                     pkt[i++] = (((base and 0x1L) shl 7) or 0x7E).toByte() // +reserved, ext hi=0
                     pkt[i++] = 0x00 // PCR ext low
                 }
-                i += stuffing // stuffing bytes stay 0xFF from the pre-fill
+                repeat(stuffing) { pkt[i++] = 0xFF.toByte() } // stuffing bytes
                 System.arraycopy(pes, pos, pkt, i, payload)
                 pos += payload
             }
             pkt[3] = (((afControl and 0x3) shl 4) or counter).toByte()
-            out.write(pkt)
+            out.write(pkt) // BufferedOutputStream copies immediately, so reuse is safe
             first = false
         }
     }
@@ -380,6 +393,9 @@ class TsHlsSink(private val dir: String) : AvSink {
         private const val AUDIO_PID = 0x0101
         private const val TARGET_SEG_US = 2_000_000L
         private const val PLAYLIST = "index.m3u8"
+        // Cap pre-first-segment audio buffering (~256 AAC frames ≈ 6 s) so a
+        // wedged video encoder can't grow it without bound.
+        private const val MAX_PENDING_AUDIO = 256
     }
 }
 
