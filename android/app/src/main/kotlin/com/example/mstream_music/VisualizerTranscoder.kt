@@ -84,7 +84,7 @@ class VisualizerTranscoder(
             while (!cancelled) {
                 val c = pcm ?: break
                 val tUs = c.presentationTimeUs - startPtsUs
-                if (tUs > maxDurationUs) break
+                if (maxDurationUs > 0 && tUs > maxDurationUs) break // <=0 = whole track
                 addPcm(ctx, toStereoFloat(c.data, decoder.channelCount))
                 aac?.encode(c.data, tUs)
                 // Render enough video frames to keep pace with the audio clock.

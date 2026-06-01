@@ -184,16 +184,26 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             setTuning = ::nativeSetTuning,
             dispose = ::nativeDispose,
         ) { ok, payload ->
-            // payload is the playable path (MP4 file or .m3u8) on success, or an
-            // error message on failure.
             main.post {
                 transcoder = null
-                if (ok) result.success(payload)
-                else result.error("transcode_failed", payload, null)
+                // HLS replies immediately below (so the caller can start casting
+                // while we keep transcoding the live playlist); only non-HLS
+                // reports its result here.
+                if (mode != "hls") {
+                    if (ok) result.success(payload)
+                    else result.error("transcode_failed", payload, null)
+                } else if (!ok) {
+                    Log.w("mstream/viz-xcode", "HLS transcode ended: $payload")
+                }
             }
         }
         transcoder = t
         t.start()
+        if (mode == "hls") {
+            // The playlist grows as segments are written; reply now so the caller
+            // can poll it and cast while transcoding continues in the background.
+            result.success("$output/index.m3u8")
+        }
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {

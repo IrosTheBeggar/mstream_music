@@ -123,20 +123,32 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     override fun finish(): String {
         closeSegment(lastVideoUs)
-        val target = ceil(segments.maxOfOrNull { it.second } ?: 2.0).toInt().coerceAtLeast(1)
+        writePlaylist(ended = true)
+        return File(dir, PLAYLIST).absolutePath
+    }
+
+    // Rewrite the playlist with the segments so far. Written incrementally (per
+    // segment) as an EVENT playlist — append-only, the player starts at the
+    // first segment and re-reads for new ones until ENDLIST. This is what makes
+    // it live: the receiver can start while the transcode is still running.
+    private fun writePlaylist(ended: Boolean) {
+        val target = ceil(segments.maxOfOrNull { it.second } ?: 3.0).toInt().coerceAtLeast(1)
         val sb = StringBuilder()
         sb.append("#EXTM3U\n")
         sb.append("#EXT-X-VERSION:3\n")
         sb.append("#EXT-X-TARGETDURATION:$target\n")
         sb.append("#EXT-X-MEDIA-SEQUENCE:0\n")
-        sb.append("#EXT-X-PLAYLIST-TYPE:VOD\n")
+        sb.append("#EXT-X-PLAYLIST-TYPE:EVENT\n")
         for ((name, dur) in segments) {
             sb.append(String.format(Locale.US, "#EXTINF:%.3f,\n", dur))
             sb.append(name).append('\n')
         }
-        sb.append("#EXT-X-ENDLIST\n")
-        File(dir, PLAYLIST).writeText(sb.toString())
-        return File(dir, PLAYLIST).absolutePath
+        if (ended) sb.append("#EXT-X-ENDLIST\n")
+        // Write to a temp file then rename so a polling reader never sees a
+        // half-written playlist.
+        val tmp = File(dir, "$PLAYLIST.tmp")
+        tmp.writeText(sb.toString())
+        tmp.renameTo(File(dir, PLAYLIST))
     }
 
     // ── segmenting ──
@@ -167,6 +179,7 @@ class TsHlsSink(private val dir: String) : AvSink {
         val dur = (endUs - segStartUs) / 1_000_000.0
         segments.add(Pair(segName!!, if (dur > 0.05) dur else 2.0))
         seg = null
+        writePlaylist(ended = false) // publish the just-completed segment
     }
 
     // ── PES / TS packetization ──

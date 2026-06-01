@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -131,12 +133,17 @@ class MoreActionsSheet extends StatelessWidget {
     messenger.showSnackBar(
         const SnackBar(content: Text('Rendering visualizer… (~20s)')));
     final hlsDir = '${dir.path}/viz_hls';
+    // Clear the previous run's playlist so the poll below waits for the new one.
+    final plFile = File('$hlsDir/index.m3u8');
+    if (plFile.existsSync()) plFile.deleteSync();
+    // Live HLS: returns immediately with the (growing) playlist path; the
+    // transcode keeps running in the background. maxMs:0 = the whole track.
     final playlist = await VisualizerBridge.startTranscode(
       source: source,
       output: hlsDir,
       preset: preset,
       engine: VisualizerBridge.engineShader,
-      maxMs: 25000,
+      maxMs: 0,
       tuning: tuning,
       mode: 'hls',
     );
@@ -145,13 +152,28 @@ class MoreActionsSheet extends StatelessWidget {
           const SnackBar(content: Text('Transcode failed — see logcat')));
       return;
     }
+    // Wait until the live playlist has a couple of segments before casting.
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Preparing live stream…')));
+    var ready = false;
+    for (var i = 0; i < 60 && !ready; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (plFile.existsSync() &&
+          '.ts'.allMatches(plFile.readAsStringSync()).length >= 2) {
+        ready = true;
+      }
+    }
+    if (!ready) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Stream not ready — see logcat')));
+      return;
+    }
     try {
       await LocalMediaServer().ensureStarted();
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Local server failed: $e')));
       return;
     }
-    // Serve the HLS directory; the .m3u8 references its .ts segments relatively.
     final url = LocalMediaServer().registerDirectory(hlsDir);
     messenger.showSnackBar(
         const SnackBar(content: Text('Connecting to Chromecast…')));
