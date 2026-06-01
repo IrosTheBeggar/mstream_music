@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.mstream_music">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- DLNA/UPnP casting (media_cast_dlna): SSDP discovery needs Wi-Fi
+         multicast; ACCESS_WIFI_STATE/ACCESS_NETWORK_STATE help the UPnP stack
+         choose the right network interface. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
@@ -67,6 +73,23 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Chromecast / Google Cast (flutter_chrome_cast): points at the
+             plugin's built-in options provider, which uses the Default Media
+             Receiver. Required by the Cast framework.
+
+             Theme note: Cast init (GoogleCastContext.getSharedInstance) works
+             fine under Flutter's default LaunchTheme / NormalTheme above. We
+             only call the SDK's discovery + session APIs and render our own
+             picker UI; the Cast *Material widgets* (MediaRouteButton, expanded
+             controller) are the part that needs a Theme.AppCompat host, and we
+             don't use them. So casting works today by virtue of what we use,
+             not an explicit AppCompat dependency. If you ever add one of those
+             widgets, or change MainActivity's theme, re-test that casting still
+             initializes. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.felnanuke.google_cast.GoogleCastOptionsProvider" />
             
         <service android:name="com.ryanheise.audioservice.AudioService" android:exported="true" android:foregroundServiceType="mediaPlayback">
           <intent-filter>

@@ -24,6 +24,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../media/cast_target.dart';
+import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -38,6 +40,13 @@ class _EqScreenState extends State<EqScreen> {
   bool _loading = true;
   String? _error;
   StreamSubscription<PlaybackState>? _playbackSub;
+  StreamSubscription<CastTarget>? _castSub;
+
+  // Shown in place of the band sliders when audio is on a cast device: the EQ
+  // is a local-playback effect, so it can't act on what the renderer plays.
+  static const _castingMessage =
+      'The equalizer adjusts audio on this device, so it’s unavailable while '
+      'casting. Disconnect to use it.';
 
   @override
   void initState() {
@@ -51,7 +60,28 @@ class _EqScreenState extends State<EqScreen> {
     // back without having to navigate out and back in.
     _playbackSub = MediaManager().audioHandler.playbackState.listen((state) {
       if (_params == null &&
+          !CastManager().isCasting &&
           state.processingState != AudioProcessingState.idle) {
+        _attemptLoad();
+      }
+    });
+    // The EQ only affects local playback. React to cast connect/disconnect so
+    // the screen swaps between the sliders and an explanatory message instead
+    // of leaving stale, inert controls on screen while audio is on the TV.
+    _castSub = CastManager().activeTargetStream.listen((_) {
+      if (!mounted) return;
+      if (CastManager().isCasting) {
+        setState(() {
+          _params = null;
+          _loading = false;
+          _error = _castingMessage;
+        });
+      } else {
+        setState(() {
+          _params = null;
+          _loading = true;
+          _error = null;
+        });
         _attemptLoad();
       }
     });
@@ -60,10 +90,22 @@ class _EqScreenState extends State<EqScreen> {
   @override
   void dispose() {
     _playbackSub?.cancel();
+    _castSub?.cancel();
     super.dispose();
   }
 
   Future<void> _attemptLoad() async {
+    // While casting, the active backend has no equalizer; show why rather than
+    // the generic "Android only" message (which is wrong — we *are* on Android).
+    if (CastManager().isCasting) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _params = null;
+        _error = _castingMessage;
+      });
+      return;
+    }
     final eq = MediaManager().audioHandler.equalizer;
     if (eq == null) {
       if (!mounted) return;

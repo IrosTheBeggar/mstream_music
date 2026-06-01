@@ -47,7 +47,10 @@ android {
 
     defaultConfig {
         applicationId "mstream.music"
-        minSdk = flutter.minSdkVersion
+        // Raised from flutter.minSdkVersion to 26 (Android 8.0): the
+        // media_cast_dlna plugin (DLNA casting) requires API 26+. This drops
+        // support for Android 7.x and below.
+        minSdk = 26
         targetSdk = 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

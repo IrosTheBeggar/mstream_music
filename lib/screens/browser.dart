@@ -232,6 +232,8 @@ class _BrowserState extends State<Browser> {
           'path': i.data,
           if (isLocal) 'localPath': finalString,
           'year': i.metadata?.year,
+          'track': i.metadata?.track,
+          'disc': i.metadata?.disc,
           'artUrl': artUrl,
           // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing
           // modes — read off the currently playing item.
