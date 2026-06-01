@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 
@@ -21,7 +20,6 @@ Future<String?> castVideoToFirstChromecast(
   String? title,
   String? subtitle,
   String contentType = 'video/mp4',
-  String? statusLogPath,
 }) async {
   // Reuse the registered discoverers (this also initializes the Cast context
   // with the Default Media Receiver app id; see ChromecastDeviceDiscoverer).
@@ -58,23 +56,6 @@ Future<String?> castVideoToFirstChromecast(
       ),
       autoPlay: true,
     );
-    // Diagnostics: log the receiver's media status to a file for ~25s — its own
-    // errors aren't visible on the phone, so this shows whether it reports an
-    // error vs buffers forever.
-    if (statusLogPath != null) {
-      final f = File(statusLogPath);
-      try {
-        f.writeAsStringSync('loadMedia ok\n', mode: FileMode.append);
-      } catch (_) {}
-      late final StreamSubscription<dynamic> sub;
-      sub = GoogleCastRemoteMediaClient.instance.mediaStatusStream.listen((s) {
-        try {
-          f.writeAsStringSync('state=${s?.playerState} idle=${s?.idleReason}\n',
-              mode: FileMode.append);
-        } catch (_) {}
-      });
-      Future<void>.delayed(const Duration(seconds: 25), () => sub.cancel());
-    }
     return null;
   } catch (e) {
     castLog('Spike video cast failed', error: e);

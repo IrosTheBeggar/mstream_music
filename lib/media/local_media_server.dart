@@ -125,17 +125,6 @@ class LocalMediaServer {
     return (_files.containsKey(t) || _dirs.containsKey(t)) ? _newToken() : t;
   }
 
-  // Diagnostics: append a request line to <dir>/_access.log for directory
-  // (HLS) requests, so the Cast receiver's fetch pattern can be pulled and
-  // inspected (dart:developer logs don't reach adb logcat).
-  void _accessLog(String? token, String line) {
-    final dir = token == null ? null : _dirs[token];
-    if (dir == null) return;
-    try {
-      File('$dir/_access.log').writeAsStringSync('$line\n', mode: FileMode.append);
-    } catch (_) {}
-  }
-
   String? _hlsType(String name) {
     final n = name.toLowerCase();
     if (n.endsWith('.m3u8')) return 'application/vnd.apple.mpegurl';
@@ -216,15 +205,9 @@ class LocalMediaServer {
           }
         }
       }
-      if (path == null) {
-        _accessLog(token, '404 ${req.method} /${seg.join('/')}');
-        return _notFound(res);
-      }
+      if (path == null) return _notFound(res);
       final file = File(path);
-      if (!await file.exists()) {
-        _accessLog(token, '404-missing ${req.method} /${seg.join('/')}');
-        return _notFound(res);
-      }
+      if (!await file.exists()) return _notFound(res);
 
       final length = await file.length();
       res.headers
@@ -256,9 +239,6 @@ class LocalMediaServer {
       } else {
         res.statusCode = HttpStatus.ok;
       }
-      _accessLog(token, '${req.method} /${seg.join('/')} range=${range ?? '-'} '
-          '-> ${res.statusCode} $start-$end/$length');
-
       final len = end - start + 1;
       if (req.method == 'HEAD') {
         // Set the length as a raw header (not res.contentLength, which would
