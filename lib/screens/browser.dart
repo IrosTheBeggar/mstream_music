@@ -11,6 +11,8 @@ import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/local_search_bar.dart';
+import '../singletons/ytdl_manager.dart';
+import 'add_media_sheet.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -690,6 +692,17 @@ class _BrowserState extends State<Browser> {
                             BrowserManager().popBrowser();
                           }),
                       Row(children: <Widget>[
+                        if (BrowserManager().currentDirectory != null)
+                          IconButton(
+                              icon: Icon(Icons.cloud_download_outlined,
+                                  color: VelvetColors.textSecondary),
+                              tooltip: 'Add media',
+                              onPressed: () {
+                                final dir = BrowserManager().currentDirectory;
+                                if (dir != null) {
+                                  showAddMediaSheet(context, dir);
+                                }
+                              }),
                         IconButton(
                             icon: Icon(Icons.search,
                                 color: VelvetColors.textSecondary),
@@ -783,6 +796,42 @@ class _BrowserState extends State<Browser> {
                     backgroundColor: Colors.transparent,
                   )
                 : null,
+          );
+        },
+      ),
+      // ytdl: a "Downloading N…" banner while server-side downloads run
+      // (YtdlManager polls /api/v1/ytdl/downloads and auto-refreshes the
+      // list when one completes in the directory currently in view).
+      StreamBuilder<int>(
+        stream: YtdlManager().activeCountStream,
+        initialData: YtdlManager().activeCount,
+        builder: (context, snap) {
+          final n = snap.data ?? 0;
+          if (n <= 0) return const SizedBox.shrink();
+          return Material(
+            color: VelvetColors.raised,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(VelvetColors.primary))),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                      n == 1
+                          ? 'Downloading audio…'
+                          : 'Downloading $n files…',
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12)),
+                ),
+              ]),
+            ),
           );
         },
       ),

@@ -562,6 +562,267 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList, alphabetical: true);
+    BrowserManager().addListToStack(newList,
+        alphabetical: true, directory: res['path']?.toString());
+  }
+
+  // ── yt-dlp ─────────────────────────────────────────────────────────
+  // Download audio from a (YouTube) URL straight into a server library
+  // directory, mirroring the webapp's file-explorer "ytdl" tab. These
+  // hit the base mStream routes (not the velvet adapters) and auth with
+  // the same x-access-token makeServerCall uses.
+
+  Map<String, String> _ytdlHeaders(Server s) => {'x-access-token': s.jwt ?? ''};
+
+  // Probe ytdl capability (GET /api/v1/ping): whether the server responded and
+  // the enabled output codecs. A failed ping means a download POST will fail
+  // too, so the UI can gate on [ok] up front instead of surfacing the error
+  // only after the user hits Download. Falls back to 'mp3' for the picker
+  // either way.
+  Future<({bool ok, List<String> codecs})> ytdlCapability() async {
+    final s = ServerManager().currentServer;
+    if (s == null) return (ok: false, codecs: const ['mp3']);
+    try {
+      final res = await http
+          .get(Uri.parse(s.url).resolve('/api/v1/ping'),
+              headers: _ytdlHeaders(s))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final saf = decoded is Map ? decoded['supportedAudioFiles'] : null;
+        if (saf is Map) {
+          final codecs = saf.entries
+              .where((e) => e.value == true)
+              .map((e) => e.key.toString())
+              .toList();
+          if (codecs.isNotEmpty) return (ok: true, codecs: codecs);
+        }
+        return (ok: true, codecs: const ['mp3']);
+      }
+    } catch (_) {}
+    return (ok: false, codecs: const ['mp3']);
+  }
+
+  // Metadata preview for [url] (GET /api/v1/ytdl/metadata):
+  // { title, artist, album, year, thumbnail } — any field may be absent.
+  Future<Map<String, dynamic>> ytdlMetadata(String url) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final uri = Uri.parse(s.url)
+        .resolve('/api/v1/ytdl/metadata')
+        .replace(queryParameters: {'url': url});
+    final res = await http
+        .get(uri, headers: _ytdlHeaders(s))
+        .timeout(const Duration(seconds: 30));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Could not read metadata');
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Unexpected metadata response');
+    }
+    return decoded;
+  }
+
+  // Start an async download (POST /api/v1/ytdl/). Only non-empty
+  // [metadata] fields are forwarded. Throws with the server's error text
+  // on failure (403 uploads-disabled, 500 no yt-dlp/ffmpeg, …).
+  Future<void> ytdl({
+    required String url,
+    required String directory,
+    String? outputCodec,
+    Map<String, String> metadata = const {},
+  }) async {
+    final s = ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final body = <String, dynamic>{
+      'directory': directory,
+      'url': url,
+      if (outputCodec != null && outputCodec.isNotEmpty)
+        'outputCodec': outputCodec,
+      'metadata': metadata,
+    };
+    final res = await http
+        .post(Uri.parse(s.url).resolve('/api/v1/ytdl/'),
+            body: jsonEncode(body),
+            headers: {'Content-Type': 'application/json', ..._ytdlHeaders(s)})
+        .timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Download failed');
+    }
+  }
+
+  // Poll active/finished downloads (GET /api/v1/ytdl/downloads). Each
+  // entry: { pid, url, directory, outputCodec, status, startTime }.
+  Future<List<Map<String, dynamic>>> ytdlDownloads({Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) return const [];
+    final res = await http
+        .get(Uri.parse(s.url).resolve('/api/v1/ytdl/downloads'),
+            headers: _ytdlHeaders(s))
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) return const [];
+    final decoded = jsonDecode(res.body);
+    final list = decoded is Map ? decoded['downloads'] : null;
+    if (list is List) return List<Map<String, dynamic>>.from(list);
+    return const [];
+  }
+
+  // ── Torrent ────────────────────────────────────────────────────────
+  // Add a magnet / .torrent to the server's torrent client, into a
+  // library directory — mirrors the webapp's file-explorer torrent tab.
+
+  // Capability + destination probe for [path] (GET /torrent/preflight):
+  // { active, clientType, displayName, noUpload, userAllowed, vpath,
+  // subPath, vpathConfirmed, daemonPath, reason }.
+  Future<Map<String, dynamic>> torrentPreflight(String path,
+      {Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final uri = Uri.parse(s.url)
+        .resolve('/api/v1/torrent/preflight')
+        .replace(queryParameters: {'path': path});
+    final res = await http
+        .get(uri, headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Torrent unavailable');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // Submit a torrent (POST /torrent/add, multipart). Provide exactly one
+  // of [magnet] or [torrentBytes]. Throws the server's message on
+  // failure; returns { ok, name, downloadPath, isDuplicate,
+  // renameWarning?, … } on success.
+  Future<Map<String, dynamic>> torrentAdd({
+    required String vpath,
+    String? subPath,
+    required String directoryName,
+    bool renameRoot = false,
+    String? magnet,
+    List<int>? torrentBytes,
+    String? torrentFilename,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/add'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    req.fields['vpath'] = vpath;
+    if (subPath != null && subPath.isNotEmpty) req.fields['subPath'] = subPath;
+    req.fields['directoryName'] = directoryName;
+    req.fields['renameRoot'] = renameRoot ? 'true' : 'false';
+    if (magnet != null && magnet.isNotEmpty) {
+      req.fields['magnet'] = magnet;
+    } else if (torrentBytes != null) {
+      req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+          filename: torrentFilename ?? 'upload.torrent'));
+    }
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 30)));
+    Map<String, dynamic> body;
+    try {
+      body = res.body.isNotEmpty
+          ? jsonDecode(res.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+    } catch (_) {
+      body = <String, dynamic>{};
+    }
+    if (res.statusCode != 200 || body['ok'] != true) {
+      throw Exception(body['message']?.toString() ??
+          body['error']?.toString() ??
+          'Torrent add failed (HTTP ${res.statusCode})');
+    }
+    return body;
+  }
+
+  // Per-library destination templates (GET /torrent/path-templates):
+  // { vpaths: { <name>: { template } }, supportedVars, suggestedTemplate }.
+  Future<Map<String, dynamic>> torrentPathTemplates({Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final res = await http
+        .get(Uri.parse(s.url).resolve('/api/v1/torrent/path-templates'),
+            headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_ytdlError(res) ?? 'Could not load path templates');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // Server-side metadata detection for a .torrent (POST /auto-detect,
+  // multipart). Returns the raw body — the caller checks `ok` /
+  // `confidence` / `metadata` / `message`. [vpath] enables the server's
+  // Tier-3 tag fetch.
+  Future<Map<String, dynamic>> torrentAutoDetect({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    String? vpath,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/auto-detect'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpath != null && vpath.isNotEmpty) req.fields['vpath'] = vpath;
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'message': 'Auto-detect failed (HTTP ${res.statusCode})'
+    };
+  }
+
+  // Check whether the torrent's files already exist on the server
+  // (POST /seed-existing, multipart). Returns the raw body — the caller
+  // switches on `outcome` (seeded / already_in_daemon / partial_match /
+  // no_match / invalid_torrent / daemon_error). Omitting [vpaths] scans
+  // all of the user's libraries.
+  Future<Map<String, dynamic>> torrentSeedExisting({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    List<String>? vpaths,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', Uri.parse(s.url).resolve('/api/v1/torrent/seed-existing'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpaths != null && vpaths.isNotEmpty) {
+      req.fields['vpaths'] = jsonEncode(vpaths);
+    }
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'outcome': 'daemon_error',
+      'error': 'Seed check failed (HTTP ${res.statusCode})'
+    };
+  }
+
+  // Pull the server's { error: "…" } message out of a failed response.
+  String? _ytdlError(http.Response res) {
+    try {
+      final m = jsonDecode(res.body);
+      if (m is Map && m['error'] != null) return m['error'].toString();
+    } catch (_) {}
+    return null;
   }
 }
