@@ -130,6 +130,10 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   Stream<void> get changeStream => _player.playbackEventStream.map<void>((_) {});
 
+  // On-device playback never "loses a renderer", so this never emits.
+  @override
+  Stream<String> get rendererLostStream => const Stream<String>.empty();
+
   // ── Local-only capabilities ──
   @override
   bool get supportsEqualizer => _equalizer != null;
