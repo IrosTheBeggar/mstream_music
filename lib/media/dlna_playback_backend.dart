@@ -71,13 +71,31 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     if (!_stateSubject.isClosed) _stateSubject.add(s);
   }
 
+  // isClosed-guarded emitters: an in-flight poll / auto-advance can complete
+  // after dispose() has closed the subjects (we switched away mid-operation),
+  // and adding to a closed subject throws. Mirrors the Chromecast backend.
+  void _emitIndex(int? v) {
+    final s = _indexSubject;
+    if (!s.isClosed) s.add(v);
+  }
+
+  void _emitPos(Duration v) {
+    final s = _positionSubject;
+    if (!s.isClosed) s.add(v);
+  }
+
+  void _emitDur(Duration? v) {
+    final s = _durationSubject;
+    if (!s.isClosed) s.add(v);
+  }
+
   // ── Source list (mirrors just_audio's playlist API) ──
   @override
   Future<void> setSources(List<MediaItem> items) async {
     _items = List<MediaItem>.from(items);
     _index = _items.isEmpty ? -1 : 0;
     _loadedIndex = -1;
-    _indexSubject.add(_index < 0 ? null : _index);
+    _emitIndex(_index < 0 ? null : _index);
     _setState(_items.isEmpty
         ? BackendProcessingState.idle
         : BackendProcessingState.ready);
@@ -88,7 +106,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     _items.add(item);
     if (_index == -1) {
       _index = 0;
-      _indexSubject.add(0);
+      _emitIndex(0);
       _setState(BackendProcessingState.ready);
     }
   }
@@ -100,7 +118,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     if (_items.isEmpty) {
       _index = -1;
       _loadedIndex = -1;
-      _indexSubject.add(null);
+      _emitIndex(null);
       await _stopRenderer();
       _setState(BackendProcessingState.idle);
       return;
@@ -108,7 +126,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     if (index < _index) {
       _index--;
       _loadedIndex--;
-      _indexSubject.add(_index);
+      _emitIndex(_index);
     }
   }
 
@@ -117,7 +135,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     _items = <MediaItem>[];
     _index = -1;
     _loadedIndex = -1;
-    _indexSubject.add(null);
+    _emitIndex(null);
     await _stopRenderer();
     _setState(BackendProcessingState.idle);
   }
@@ -145,7 +163,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   Future<void> _loadIndex(int index, {required bool play}) async {
     if (index < 0 || index >= _items.length) return;
     _index = index;
-    _indexSubject.add(index);
+    _emitIndex(index);
     final item = _items[index];
     _confirmedPlaying = false;
     _reachedNearEnd = false;
@@ -155,9 +173,9 @@ class DlnaPlaybackBackend implements PlaybackBackend {
           _udn, Url(value: _uriFor(item).toString()), _metaFor(item));
       _loadedIndex = index;
       _duration = item.duration;
-      _durationSubject.add(_duration);
+      _emitDur(_duration);
       _position = Duration.zero;
-      _positionSubject.add(_position);
+      _emitPos(_position);
       if (play) {
         await _api.play(_udn);
         _playing = true;
@@ -221,7 +239,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       await _api.seek(_udn, TimePosition(seconds: position.inSeconds));
     } catch (_) {}
     _position = position;
-    _positionSubject.add(position);
+    _emitPos(position);
     _change();
   }
 
@@ -291,10 +309,10 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     try {
       final info = await _api.getPlaybackInfo(_udn);
       _position = Duration(seconds: info.position.seconds);
-      _positionSubject.add(_position);
+      _emitPos(_position);
       if (info.duration.seconds > 0) {
         _duration = Duration(seconds: info.duration.seconds);
-        _durationSubject.add(_duration);
+        _emitDur(_duration);
       }
       // Latch once we've genuinely reached the end while playing — robust to
       // renderers that reset position to 0 when they stop at track end.

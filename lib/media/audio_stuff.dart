@@ -36,6 +36,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       BehaviorSubject<PlaybackBackend>.seeded(_localBackend);
   PlaybackBackend get _backend => _backendSubject.value;
 
+  // Serializes cast-target switches so rapid re-selection can't interleave two
+  // _switchBackend calls (racing on _backend / dispose).
+  Future<void> _switchChain = Future<void>.value();
+
   // Android-only native equalizer, exposed for the EQ screen. Lives on the
   // local backend (null on non-Android / remote backends). eq_screen.dart
   // reads this via MediaManager().audioHandler.equalizer.
@@ -150,7 +154,16 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// matching backend (the persistent local just_audio backend, or a fresh
   /// DLNA session) and hands it the current queue + position so playback
   /// continues on the new device. Wired to CastManager.onTargetSelected.
-  Future<void> _switchToTarget(CastTarget target) async {
+  Future<void> _switchToTarget(CastTarget target) {
+    _switchChain = _switchChain
+        .then((_) => _doSwitchToTarget(target))
+        .catchError((Object e) {
+      print('Cast backend switch failed: $e');
+    });
+    return _switchChain;
+  }
+
+  Future<void> _doSwitchToTarget(CastTarget target) async {
     final PlaybackBackend next;
     if (target.isLocal) {
       next = _localBackend;
