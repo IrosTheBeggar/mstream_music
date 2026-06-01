@@ -46,6 +46,9 @@ class TsHlsSink(private val dir: String) : AvSink {
     private var segStartUs = 0L
     private var lastVideoUs = 0L
     private val segments = ArrayList<Pair<String, Double>>() // name, duration (s)
+    // Audio (pts90, ADTS+AAC) produced before the first segment opens; flushed
+    // into it so audio and video both start near PTS 0.
+    private val pendingAudio = ArrayList<Pair<Long, ByteArray>>()
 
     override fun init(audioEnabled: Boolean) {
         this.audioEnabled = audioEnabled
@@ -97,10 +100,18 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     override fun writeAudio(buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
         if (info.size <= 0) return
-        val s = seg ?: return
         val raw = bytesOf(buffer, info)
         val es = adtsHeader(raw.size) + raw
         val pts90 = info.presentationTimeUs * 9 / 100
+        val s = seg
+        if (s == null) {
+            // The video encoder has more latency than the audio encoder, so
+            // audio is ready before the first keyframe opens a segment. Buffer
+            // it instead of dropping it, so the first segment's audio and video
+            // both start near PTS 0 (else the receiver stalls on misaligned A/V).
+            pendingAudio.add(Pair(pts90, es))
+            return
+        }
         writePes(s, AUDIO_PID, audioCc, buildPes(0xC0, pts90, null, es), null)
     }
 
@@ -135,6 +146,13 @@ class TsHlsSink(private val dir: String) : AvSink {
         seg = s
         segName = name
         segStartUs = ptsUs
+        // Flush audio that arrived before this (first) segment opened.
+        if (pendingAudio.isNotEmpty()) {
+            for ((pts90, es) in pendingAudio) {
+                writePes(s, AUDIO_PID, audioCc, buildPes(0xC0, pts90, null, es), null)
+            }
+            pendingAudio.clear()
+        }
     }
 
     private fun closeSegment(endUs: Long) {
