@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../media/cast_target.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 
 /// Bottom sheet for choosing where audio plays ("This device" or a discovered
@@ -13,6 +14,9 @@ class CastPickerSheet extends StatefulWidget {
 }
 
 class _CastPickerSheetState extends State<CastPickerSheet> {
+  // Sticky choice: when checked, picking a Chromecast streams the visualizer.
+  late bool _visualizer = SettingsManager().castVisualizerEnabled;
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +85,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                         selected: t == active,
                         icon: _iconFor(t.kind),
                         onTap: () {
-                          CastManager().selectTarget(t);
+                          CastManager()
+                              .selectTarget(t, visualizer: _visualizer);
                           Navigator.of(context).pop();
                         },
                       ),
@@ -116,28 +121,28 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
               ),
             ],
             const Divider(height: 24),
-            // Deferred feature: streaming the on-screen visualizer to the cast
-            // device. Shown disabled so the capability is discoverable; the
-            // wiring lands in a follow-up (it needs on-device A/V encoding plus
-            // the local media server added in this change).
-            Opacity(
-              opacity: 0.5,
-              child: CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                value: false,
-                onChanged: null,
-                title: Text(
-                  'Cast visualizer',
-                  style: TextStyle(color: VelvetColors.textPrimary),
-                ),
-                subtitle: Text(
-                  'Coming soon',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: VelvetColors.textSecondary,
-                  ),
+            // Stream the app's own visualizer (rendered + encoded on-device) to
+            // the TV instead of plain audio. Chromecast only; the choice is
+            // sticky (persisted) and applied when a device is picked above.
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              activeColor: VelvetColors.primary,
+              value: _visualizer,
+              onChanged: (v) {
+                setState(() => _visualizer = v ?? false);
+                SettingsManager().setCastVisualizerEnabled(_visualizer);
+              },
+              title: Text(
+                'Cast visualizer',
+                style: TextStyle(color: VelvetColors.textPrimary),
+              ),
+              subtitle: Text(
+                'Stream the visualizer to the TV · Chromecast only',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: VelvetColors.textSecondary,
                 ),
               ),
             ),

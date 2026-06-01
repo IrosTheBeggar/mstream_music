@@ -104,20 +104,45 @@ git history of this session). All in `TsHlsSink.kt` unless noted:
 - TS inspection: `adb pull viz_hls/seg0.ts` then parse 188-byte packets (sync
   0x47, PID = ((b1&0x1F)<<8)|b2, PUSI = b1&0x40). PTS at PES+9.
 
+## Production wiring (2026-06-01) — picker → real backend ✅ (untested on device)
+The visualizer cast now runs through the **real cast path**, not the debug spike:
+- **Picker checkbox** (`cast_picker_sheet.dart`) is enabled + persisted
+  (`SettingsManager.castVisualizerEnabled`). Checked + pick a Chromecast →
+  `CastManager.selectTarget(t, visualizer: true)`.
+- **Flag flow**: `CastManager` (`_activeVisualizer`, `selectTarget({visualizer})`,
+  `onTargetSelected(target, visualizer)`) → `audio_stuff` `_doSwitchToTarget` →
+  `ChromecastPlaybackBackend(deviceId:, visualizer: true)`. Visualizer is honoured
+  only for Chromecast targets (DLNA/local ignore it).
+- **Backend visualizer mode** (`chromecast_playback_backend.dart`): when
+  `_visualizer`, `_loadIndex` calls `_resolveVisualizerUri` instead of
+  `_resolveUri` — stop any prior transcode, `startTranscode(mode:hls, maxMs:0)`
+  into `<ext>/viz_cast`, poll for ≥2 segments, serve via `registerDirectory`
+  (cache-busted `?v=N` per load), `loadMedia` with HLS contentType + generic
+  metadata. **Track-change comes for free**: end-of-track → `_onTrackEnded` →
+  `_loadIndex(next)` → a fresh transcode. `dispose` stops the transcode; the
+  handler stops `LocalMediaServer` on switch-to-local.
+- **Cast config** (`visualizer_cast_config.dart`): mirrors the visualizer screen —
+  uses `SettingsManager.visualizerEngine` + a **random** preset of that kind
+  (`VisualizerPresets.randomData`, no on-screen side effects) + shader tuning
+  (global curve from settings + per-shader defaults). NOTE: default engine is
+  **Milkdrop**, so a default cast renders projectM — the validated path was
+  shader/spectrum-bars, so projectM-in-encoder needs a device check.
+
+**Not yet validated on device.** Build + analyze clean only. The debug spike
+(`visualizer_cast_spike.dart` + More-menu actions) is **kept for now** as an A/B
+fallback until the picker path is confirmed on real hardware.
+
 ## Remaining work (make it shippable)
-0. ~~**Make it LIVE**~~ ✅ DONE — incremental EVENT playlist, cast-early, no
-   duration cap, ~realtime pacing (see Hardening pass above).
-1. **Real UI** (next big task): wire the cast picker's disabled "Cast visualizer"
-   checkbox (`cast_picker_sheet.dart`) → when checked + a Chromecast is picked,
-   cast the visualizer (via `CastManager` → the real `ChromecastPlaybackBackend`,
-   serving the HLS dir with video metadata) instead of audio. Persist the choice.
-   This **retires the debug spike** (`visualizer_cast_spike.dart` +
-   `more_actions_sheet` actions). NOTE: today the only working path is the debug
-   spike — the production cast backends have **no** HLS/video path yet.
-2. **Transport / track-change**: play/pause/seek and, when one song ends, start
-   the next track's transcode + load the new playlist (today it idles at the end
-   of a single track). Drives the transcode + cast session together.
+0. ~~Make it LIVE~~ ✅ · ~~Real UI / picker wiring~~ ✅ (above; needs device test).
+1. **Transport polish**: play/pause work (receiver-side); **seek is limited** —
+   a live transcode starts at 0, so seeking within a track is best-effort and
+   `startAt` is ignored on (re)load. Track-change works via `_loadIndex`.
+2. **Concurrency hardening**: track-change calls `stopTranscode` then
+   `startTranscode` on the same `viz_cast` dir. Pacing means the old transcode is
+   usually already done at end-of-track, but a **rapid manual re-cast** can race
+   (old thread's final segment write vs new `TsHlsSink.init` clearing the dir).
+   Fix: per-load subdir, or join the old transcode off the main thread.
 3. **Cleanup**: delete the debug actions + `visualizer_cast_spike.dart` + this
-   state doc once the real path works.
+   state doc once the picker path is confirmed.
 4. **Tuning**: encoder is 720p30 ~4 Mbps; tune bitrate/res/fps, latency, thermals.
    DLNA HLS is unreliable → Chromecast-first.

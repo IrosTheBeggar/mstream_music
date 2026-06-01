@@ -38,11 +38,16 @@ class CastManager {
   // error.
   final PublishSubject<String> _castErrors = PublishSubject<String>();
 
+  // Whether the active cast is streaming the visualizer (video) rather than
+  // plain audio. Only ever true for a Chromecast target.
+  bool _activeVisualizer = false;
+
   Stream<List<CastTarget>> get targetsStream => _targets.stream;
   List<CastTarget> get targets => _targets.value;
   Stream<CastTarget> get activeTargetStream => _activeTarget.stream;
   CastTarget get activeTarget => _activeTarget.value;
   bool get isCasting => !_activeTarget.value.isLocal;
+  bool get isCastingVisualizer => _activeVisualizer;
 
   /// Emits a message when a cast attempt failed and playback fell back to this
   /// device. The UI listens and shows a toast.
@@ -56,7 +61,7 @@ class CastManager {
   /// backend swap on AudioPlayerHandler. Left null in Phase 2, so selecting a
   /// target only updates [activeTarget] (and only "This device" is ever
   /// listed until a discoverer is registered).
-  Future<void> Function(CastTarget target)? onTargetSelected;
+  Future<void> Function(CastTarget target, bool visualizer)? onTargetSelected;
 
   /// Register a discovery source. Call before [startDiscovery].
   void registerDiscoverer(DeviceDiscoverer d) {
@@ -91,12 +96,18 @@ class CastManager {
 
   /// Select a playback target. Updates [activeTarget] and invokes
   /// [onTargetSelected] (when wired) to perform the actual backend swap.
-  Future<void> selectTarget(CastTarget target) async {
-    if (target == _activeTarget.value) return;
+  /// [visualizer] streams the on-device visualizer (video) to the renderer
+  /// instead of audio — only honoured for Chromecast targets.
+  Future<void> selectTarget(CastTarget target, {bool visualizer = false}) async {
+    final viz = visualizer && target.kind == CastTargetKind.chromecast;
+    // Re-select is a no-op only when both the target AND the visualizer mode
+    // are unchanged (so toggling visualizer on the same device still switches).
+    if (target == _activeTarget.value && viz == _activeVisualizer) return;
     _activeTarget.add(target);
+    _activeVisualizer = viz;
     final cb = onTargetSelected;
     if (cb != null) {
-      await cb(target);
+      await cb(target, viz);
     }
   }
 
@@ -106,6 +117,7 @@ class CastManager {
   /// surfaces [message] on [castErrorStream] for a toast.
   void reportCastFailed(String message) {
     _activeTarget.add(CastTarget.local);
+    _activeVisualizer = false;
     if (!_castErrors.isClosed) _castErrors.add(message);
   }
 

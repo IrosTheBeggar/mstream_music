@@ -5,12 +5,15 @@ import 'dart:math' show Random;
 import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
+import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../native/visualizer_bridge.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
 import 'local_media_server.dart';
 import 'playback_backend.dart';
+import 'visualizer_cast_config.dart';
 
 /// [PlaybackBackend] that plays through a Chromecast / Google Cast device via
 /// the native Cast SDK (flutter_chrome_cast).
@@ -22,9 +25,15 @@ import 'playback_backend.dart';
 /// media-status via streams (no polling), and loadMedia takes autoPlay +
 /// playPosition so resume-at-position is native.
 class ChromecastPlaybackBackend implements PlaybackBackend {
-  ChromecastPlaybackBackend({required String deviceId}) : _deviceId = deviceId;
+  ChromecastPlaybackBackend({required String deviceId, bool visualizer = false})
+      : _deviceId = deviceId,
+        _visualizer = visualizer;
 
   final String _deviceId;
+  // When true, cast the on-device visualizer transcoded to HLS video instead of
+  // the track's audio (see _resolveVisualizerUri). Only the per-track media
+  // construction differs — the playlist/index/session/transport logic is shared.
+  final bool _visualizer;
   final Random _rng = Random();
 
   final _client = GoogleCastRemoteMediaClient.instance;
@@ -33,6 +42,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   List<MediaItem> _items = <MediaItem>[];
   int _index = -1;
   int _loadedIndex = -1;
+  int _loadCounter = 0; // monotonic, for cache-busting the visualizer playlist
   bool _shuffle = false;
   bool _repeatAll = false;
   bool _playing = false;
@@ -288,19 +298,98 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _ensureSession();
       _ensureListeners();
-      final url = (await _resolveUri(_items[index])).toString();
-      await _client.loadMedia(_mediaInfo(_items[index], url),
-          autoPlay: play, playPosition: startAt);
+      if (_visualizer) {
+        // A freshly-started live transcode begins at 0; seeking into it isn't
+        // possible, so startAt is ignored for the visualizer.
+        final url = (await _resolveVisualizerUri(_items[index])).toString();
+        await _client.loadMedia(_visualizerMediaInfo(_items[index], url),
+            autoPlay: play);
+      } else {
+        final url = (await _resolveUri(_items[index])).toString();
+        await _client.loadMedia(_mediaInfo(_items[index], url),
+            autoPlay: play, playPosition: startAt);
+      }
       _loadedIndex = index;
       _playing = play;
       _duration = _items[index].duration;
       _emitDur(_duration);
-      _position = startAt;
-      _emitPos(startAt);
+      _position = _visualizer ? Duration.zero : startAt;
+      _emitPos(_position);
     } catch (e) {
       castLog('Chromecast load failed', error: e);
     }
     _change();
+  }
+
+  // ── Visualizer cast ──
+  // Transcode the current track to an HLS video of the app's visualizer
+  // reacting to it (rendered on-device), serve it from LocalMediaServer, and
+  // return the playlist URL for the receiver. One transcode at a time — each
+  // call cancels the previous track's first, so track-change (which routes
+  // through _loadIndex) restarts the pipeline cleanly. Blocks until a couple of
+  // segments exist so the receiver never loads an empty playlist.
+  Future<Uri> _resolveVisualizerUri(MediaItem item) async {
+    _loadCounter++;
+    await VisualizerBridge.stopTranscode(); // stop the previous track's, if any
+    final source = (item.extras?['localPath'] as String?) ?? item.id;
+    final dir = await _visualizerDir();
+    // Clear the old playlist so the readiness poll waits for the NEW one (the
+    // segments themselves are cleared by TsHlsSink.init on the native side).
+    final plFile = File('$dir/index.m3u8');
+    if (plFile.existsSync()) {
+      try {
+        plFile.deleteSync();
+      } catch (_) {}
+    }
+    final cfg = await resolveVisualizerCastConfig();
+    final playlist = await VisualizerBridge.startTranscode(
+      source: source,
+      output: dir,
+      preset: cfg.preset,
+      engine: cfg.engine,
+      maxMs: 0, // whole track
+      tuning: cfg.tuning,
+      mode: 'hls',
+    );
+    if (playlist == null) {
+      throw StateError('visualizer transcode failed to start');
+    }
+    // Wait (up to ~30 s) for two segments before pointing the receiver at it.
+    for (var i = 0; i < 60; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (plFile.existsSync() &&
+          '.ts'.allMatches(plFile.readAsStringSync()).length >= 2) {
+        break;
+      }
+    }
+    await LocalMediaServer().ensureStarted();
+    // Cache-bust per track: the same dir/URL is reused across tracks, so add a
+    // changing query param to force the receiver to re-read the rewritten
+    // playlist (the server ignores the query; relative segment refs drop it).
+    return LocalMediaServer()
+        .registerDirectory(dir)
+        .replace(queryParameters: {'v': '$_loadCounter'});
+  }
+
+  Future<String> _visualizerDir() async {
+    final base = await getExternalStorageDirectory();
+    if (base == null) {
+      throw StateError('No external storage for visualizer cast');
+    }
+    return '${base.path}/viz_cast';
+  }
+
+  GoogleCastMediaInformation _visualizerMediaInfo(MediaItem item, String url) {
+    return GoogleCastMediaInformation(
+      contentId: url,
+      contentUrl: Uri.parse(url),
+      streamType: CastMediaStreamType.buffered,
+      contentType: 'application/x-mpegurl', // HLS (validated on the receiver)
+      metadata: GoogleCastGenericMediaMetadata(
+        title: item.title,
+        subtitle: item.artist,
+      ),
+    );
   }
 
   // ── Transport ──
@@ -447,6 +536,13 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   @override
   Future<void> dispose() async {
     _disposing = true;
+    if (_visualizer) {
+      // Stop the off-screen transcode so it isn't left encoding after we switch
+      // away. (LocalMediaServer is torn down by the handler on switch-to-local.)
+      try {
+        await VisualizerBridge.stopTranscode();
+      } catch (_) {}
+    }
     await _statusSub?.cancel();
     await _positionSub?.cancel();
     await _sessionSub?.cancel();

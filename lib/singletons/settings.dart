@@ -138,6 +138,11 @@ class SettingsManager {
   List<double> visualizerGlobalParams = const [];
   Map<String, List<double>> visualizerShaderParams = {};
 
+  // Whether picking a Chromecast in the cast picker streams the on-device
+  // visualizer (rendered to video) instead of plain audio. Sticky across
+  // restarts; only meaningful for Chromecast targets.
+  bool castVisualizerEnabled = false;
+
   /// Native AudioTexture response-curve defaults — keep in sync with
   /// audio_texture.cpp (minDb_ / maxDb_ / smoothing_).
   static const List<double> defaultGlobalParams = [-69.7, -20.7, 0.27];
@@ -190,6 +195,7 @@ class SettingsManager {
           }
         });
       }
+      castVisualizerEnabled = m['castVisualizerEnabled'] ?? false;
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
@@ -259,6 +265,7 @@ class SettingsManager {
       'showVisualizerKnobs': showVisualizerKnobs,
       'visualizerGlobalParams': visualizerGlobalParams,
       'visualizerShaderParams': visualizerShaderParams,
+      'castVisualizerEnabled': castVisualizerEnabled,
     }));
   }
 
@@ -312,6 +319,11 @@ class SettingsManager {
 
   Future<void> setVisualizerEngine(VisualizerEngine v) async {
     visualizerEngine = v;
+    await _save();
+  }
+
+  Future<void> setCastVisualizerEnabled(bool v) async {
+    castVisualizerEnabled = v;
     await _save();
   }
 

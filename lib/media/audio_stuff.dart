@@ -161,23 +161,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// matching backend (the persistent local just_audio backend, or a fresh
   /// DLNA session) and hands it the current queue + position so playback
   /// continues on the new device. Wired to CastManager.onTargetSelected.
-  Future<void> _switchToTarget(CastTarget target) {
+  Future<void> _switchToTarget(CastTarget target, bool visualizer) {
     _switchChain = _switchChain
-        .then((_) => _doSwitchToTarget(target))
+        .then((_) => _doSwitchToTarget(target, visualizer))
         .catchError((Object e) {
       castLog('Cast backend switch failed', error: e);
     });
     return _switchChain;
   }
 
-  Future<void> _doSwitchToTarget(CastTarget target) async {
+  Future<void> _doSwitchToTarget(CastTarget target, bool visualizer) async {
     final PlaybackBackend next;
     if (target.isLocal) {
       next = _localBackend;
     } else if (target.kind == CastTargetKind.dlna) {
       next = DlnaPlaybackBackend(udn: target.id);
     } else if (target.kind == CastTargetKind.chromecast) {
-      next = ChromecastPlaybackBackend(deviceId: target.id);
+      // visualizer = stream the on-device visualizer (video) instead of audio.
+      next = ChromecastPlaybackBackend(
+          deviceId: target.id, visualizer: visualizer);
     } else {
       return;
     }
