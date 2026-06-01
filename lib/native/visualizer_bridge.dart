@@ -133,7 +133,7 @@ class VisualizerBridge {
   /// file path or http URL) into an MP4 at [output] of the visualizer reacting
   /// to the track, rendered with the in-memory [preset]/shader text. Caps at
   /// [maxMs] of audio so the test stays quick. Returns the output path on
-  /// success, or null on failure. (Video only for now — audio + live HLS next.)
+  /// success, or null on failure. (Audio + video; live HLS streaming next.)
   static Future<String?> startTranscode({
     required String source,
     required String output,

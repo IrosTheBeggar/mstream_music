@@ -47,7 +47,7 @@ class MoreActionsSheet extends StatelessWidget {
 
   // DEBUG (visualizer-cast Phase 0a spike): transcode the current track to a
   // local MP4 of the visualizer reacting to it, so the A/V pipeline + visual
-  // quality can be judged on the phone with no Chromecast. Video-only for now.
+  // quality (and audio sync) can be judged on the phone with no Chromecast.
   Future<void> _runVisualizerSpike(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final item = MediaManager().audioHandler.mediaItem.valueOrNull;
