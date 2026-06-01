@@ -38,6 +38,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeInit(
         surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
+    // Render + stamp the frame's presentation time (visualizer-cast transcode).
+    private external fun nativeRenderFrameAt(ctxPtr: Long, ptsNanos: Long)
+    // Init an EGL context that renders into a MediaCodec encoder input Surface.
+    private external fun nativeInitEncoder(
+        surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
     private external fun nativeSetTuning(ctxPtr: Long, values: FloatArray)
     private external fun nativeLoadPresetData(
@@ -50,6 +55,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
     private var renderThread: RenderThread? = null
     private var realAudio: RealAudioSource? = null
+    private var transcoder: VisualizerTranscoder? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         registry = binding.textureRegistry
@@ -60,6 +66,8 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        transcoder?.cancelTranscode()
+        transcoder = null
         teardown()
         channel?.setMethodCallHandler(null)
         channel = null
@@ -84,6 +92,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             "startRealAudio" -> handleStartRealAudio(call, result)
             "stopRealAudio" -> {
                 stopRealAudio()
+                result.success(null)
+            }
+            "startTranscode" -> handleStartTranscode(call, result)
+            "stopTranscode" -> {
+                transcoder?.cancelTranscode()
                 result.success(null)
             }
             "dispose" -> {
@@ -116,6 +129,50 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private fun stopRealAudio() {
         realAudio?.stop()
         realAudio = null
+    }
+
+    // Visualizer-cast Phase 0a spike: transcode a track to an MP4 of the
+    // visualizer reacting to it (off-screen, on its own thread). Replies with
+    // the output path on success. See VisualizerTranscoder.
+    private fun handleStartTranscode(call: MethodCall, result: MethodChannel.Result) {
+        val source = call.argument<String>("source")
+        val output = call.argument<String>("output")
+        if (source == null || output == null) {
+            result.error("bad_args", "source and output required", null)
+            return
+        }
+        val w = (call.argument<Int>("width") ?: 1280).coerceAtLeast(2)
+        val h = (call.argument<Int>("height") ?: 720).coerceAtLeast(2)
+        val engine = call.argument<Int>("engine") ?: 0
+        val fps = (call.argument<Int>("fps") ?: 30).coerceIn(1, 60)
+        val maxMs = (call.argument<Int>("maxMs") ?: 20_000).toLong()
+        val preset = call.argument<String>("preset")
+
+        transcoder?.cancelTranscode()
+        val main = Handler(Looper.getMainLooper())
+        val t = VisualizerTranscoder(
+            source = source,
+            outputPath = output,
+            width = w,
+            height = h,
+            engineKind = engine,
+            fps = fps,
+            maxDurationUs = maxMs * 1000L,
+            presetData = preset,
+            initEncoder = ::nativeInitEncoder,
+            renderAt = ::nativeRenderFrameAt,
+            addPcm = ::nativeAddPcm,
+            loadPreset = ::nativeLoadPresetData,
+            dispose = ::nativeDispose,
+        ) { ok, err ->
+            main.post {
+                transcoder = null
+                if (ok) result.success(output)
+                else result.error("transcode_failed", err, null)
+            }
+        }
+        transcoder = t
+        t.start()
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {

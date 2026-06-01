@@ -167,6 +167,44 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeInit(
     return reinterpret_cast<jlong>(ctx);
 }
 
+// Like nativeInit, but for a MediaCodec encoder's input Surface (visualizer
+// cast transcode). The codec dictates the input buffer geometry, so unlike the
+// Flutter-texture path we must NOT call ANativeWindow_setBuffersGeometry (it
+// fights the encoder). Everything else — EGL context/surface + engine init — is
+// identical, and nativeRenderFrameAt / nativeAddPcm / nativeDispose all work on
+// the returned ctx unchanged.
+JNIEXPORT jlong JNICALL
+Java_com_example_mstream_1music_VisualizerBridge_nativeInitEncoder(
+        JNIEnv* env, jobject /*thiz*/, jobject surfaceObj,
+        jint width, jint height, jint engineKind) {
+    auto* ctx = new BridgeContext();
+    ctx->width = width;
+    ctx->height = height;
+    ctx->window = ANativeWindow_fromSurface(env, surfaceObj);
+    if (!ctx->window) {
+        LOGE("nativeInitEncoder: ANativeWindow_fromSurface null");
+        delete ctx;
+        return 0;
+    }
+    if (!setupEgl(ctx)) {
+        ANativeWindow_release(ctx->window);
+        delete ctx;
+        return 0;
+    }
+    ctx->engine = makeEngine(engineKind);
+    if (!ctx->engine || !ctx->engine->init(width, height)) {
+        LOGE("nativeInitEncoder: engine init failed (kind=%d)", engineKind);
+        ctx->engine.reset();
+        teardownEgl(ctx);
+        ANativeWindow_release(ctx->window);
+        delete ctx;
+        return 0;
+    }
+    LOGI("nativeInitEncoder ok: %dx%d ctx=%p engine=%d", width, height, ctx,
+         engineKind);
+    return reinterpret_cast<jlong>(ctx);
+}
+
 JNIEXPORT void JNICALL
 Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrame(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr) {

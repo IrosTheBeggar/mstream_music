@@ -113,6 +113,15 @@ class VisualizerPresets {
     return paths[next];
   }
 
+  /// Raw text of a random preset of [kind], WITHOUT pushing it to the running
+  /// engine — for the visualizer-cast transcode, which loads it into its own
+  /// off-screen engine instance. Null if nothing is bundled.
+  Future<String?> randomData(VisualizerPresetKind kind) async {
+    final paths = await _list(kind);
+    if (paths.isEmpty) return null;
+    return rootBundle.loadString(paths[_rng.nextInt(paths.length)]);
+  }
+
   Future<void> _loadByPath(String assetPath, {required bool smooth}) async {
     final data = await rootBundle.loadString(assetPath);
     _currentPath = assetPath;

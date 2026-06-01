@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
+import '../native/visualizer_bridge.dart';
+import '../native/visualizer_presets.dart';
 import '../objects/server.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../singletons/settings.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 import 'sleep_timer_sheet.dart';
@@ -39,6 +43,47 @@ class MoreActionsSheet extends StatelessWidget {
       messenger.showSnackBar(
           SnackBar(content: Text('Auto DJ Enabled For ${current.url}')));
     }
+  }
+
+  // DEBUG (visualizer-cast Phase 0a spike): transcode the current track to a
+  // local MP4 of the visualizer reacting to it, so the A/V pipeline + visual
+  // quality can be judged on the phone with no Chromecast. Video-only for now.
+  Future<void> _runVisualizerSpike(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final item = MediaManager().audioHandler.mediaItem.valueOrNull;
+    if (item == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Queue a track first')));
+      return;
+    }
+    final source = (item.extras?['localPath'] as String?) ?? item.id;
+    final isShader =
+        SettingsManager().visualizerEngine == VisualizerEngine.shader;
+    final preset = await VisualizerPresets().randomData(
+        isShader ? VisualizerPresetKind.shader : VisualizerPresetKind.milkdrop);
+    final dir = await getExternalStorageDirectory();
+    if (dir == null) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('No external storage available')));
+      return;
+    }
+    final output = '${dir.path}/viz_spike.mp4';
+    messenger.showSnackBar(const SnackBar(
+        content: Text('Transcoding visualizer to MP4… (~20s)')));
+    final result = await VisualizerBridge.startTranscode(
+      source: source,
+      output: output,
+      preset: preset,
+      engine: isShader
+          ? VisualizerBridge.engineShader
+          : VisualizerBridge.engineProjectM,
+      maxMs: 20000,
+    );
+    messenger.showSnackBar(SnackBar(
+      content:
+          Text(result != null ? 'Saved: $result' : 'Transcode failed — see logcat'),
+      duration: const Duration(seconds: 10),
+    ));
   }
 
   @override
@@ -109,6 +154,19 @@ class MoreActionsSheet extends StatelessWidget {
               Navigator.of(parentContext).push(
                 MaterialPageRoute(builder: (_) => VisualizerScreen()),
               );
+            },
+          ),
+          // DEBUG: visualizer-cast spike — render the current track to an MP4.
+          ListTile(
+            leading: Icon(Icons.movie_filter_outlined,
+                color: VelvetColors.textSecondary),
+            title: Text('Cast visualizer (spike test)',
+                style: TextStyle(color: VelvetColors.textPrimary)),
+            subtitle: Text('Render current track → MP4 on this device',
+                style: TextStyle(color: VelvetColors.textSecondary)),
+            onTap: () {
+              Navigator.of(context).pop();
+              _runVisualizerSpike(parentContext);
             },
           ),
           // Clear queue.

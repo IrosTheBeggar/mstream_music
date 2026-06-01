@@ -129,6 +129,48 @@ class VisualizerBridge {
     }
   }
 
+  /// Visualizer-cast Phase 0a spike: ask Kotlin to transcode [source] (a local
+  /// file path or http URL) into an MP4 at [output] of the visualizer reacting
+  /// to the track, rendered with the in-memory [preset]/shader text. Caps at
+  /// [maxMs] of audio so the test stays quick. Returns the output path on
+  /// success, or null on failure. (Video only for now — audio + live HLS next.)
+  static Future<String?> startTranscode({
+    required String source,
+    required String output,
+    String? preset,
+    int engine = engineProjectM,
+    int width = 1280,
+    int height = 720,
+    int fps = 30,
+    int maxMs = 20000,
+  }) async {
+    try {
+      return await _channel.invokeMethod<String>('startTranscode', {
+        'source': source,
+        'output': output,
+        'preset': preset,
+        'engine': engine,
+        'width': width,
+        'height': height,
+        'fps': fps,
+        'maxMs': maxMs,
+      });
+    } on PlatformException catch (e) {
+      // ignore: avoid_print
+      print('VisualizerBridge.startTranscode failed: ${e.code} ${e.message}');
+      return null;
+    }
+  }
+
+  /// Cancels an in-progress [startTranscode].
+  static Future<void> stopTranscode() async {
+    try {
+      await _channel.invokeMethod('stopTranscode');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
   /// Tears down the render thread, EGL context, and projectM handle.
   /// Call from VisualizerScreen.dispose().
   static Future<void> dispose() async {
