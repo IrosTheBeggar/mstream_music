@@ -175,6 +175,19 @@ class LocalMediaServer {
 
   Future<void> _handle(HttpRequest req) async {
     final res = req.response;
+    // CORS: the Cast receiver plays HLS via MSE, i.e. it *fetches* the playlist
+    // and segments cross-origin — blocked without these headers. (A plain MP4
+    // loads via a <video> element and needs no CORS, which is why MP4 casting
+    // worked but HLS showed the idle screen.)
+    res.headers
+      ..set('Access-Control-Allow-Origin', '*')
+      ..set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+      ..set('Access-Control-Allow-Headers', 'Content-Type, Range, Accept-Encoding');
+    if (req.method == 'OPTIONS') {
+      res.statusCode = HttpStatus.ok;
+      await res.close();
+      return;
+    }
     try {
       final seg = req.uri.pathSegments;
       final token = seg.isEmpty ? null : seg.first;
