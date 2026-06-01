@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'cast_log.dart';
 import 'cast_target.dart';
 import 'device_discoverer.dart';
 
@@ -48,8 +49,7 @@ class ChromecastDeviceDiscoverer implements DeviceDiscoverer {
       await GoogleCastDiscoveryManager.instance.startDiscovery();
     } catch (e) {
       _running = false;
-      // ignore: avoid_print
-      print('Chromecast discovery start failed: $e');
+      castLog('Chromecast discovery start failed', error: e);
     }
   }
 

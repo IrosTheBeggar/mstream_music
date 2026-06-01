@@ -11,6 +11,7 @@ import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
+import 'cast_log.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -117,7 +118,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // (typically empty on cold start).
       await _backend.setSources(queue.value);
     } catch (e) {
-      print("Error seeding playback backend: $e");
+      castLog('Error seeding playback backend', error: e);
     }
     await _applySavedEqualizer();
   }
@@ -158,7 +159,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _switchChain = _switchChain
         .then((_) => _doSwitchToTarget(target))
         .catchError((Object e) {
-      print('Cast backend switch failed: $e');
+      castLog('Cast backend switch failed', error: e);
     });
     return _switchChain;
   }

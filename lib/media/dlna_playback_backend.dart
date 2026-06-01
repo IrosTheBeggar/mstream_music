@@ -9,6 +9,7 @@ import 'package:media_cast_dlna/media_cast_dlna.dart' hide MediaItem;
 import 'package:rxdart/rxdart.dart';
 
 import 'cast_art.dart';
+import 'cast_log.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a DLNA renderer (TV / AV receiver /
@@ -190,8 +191,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       _setState(BackendProcessingState.ready);
       _startPolling();
     } catch (e) {
-      // ignore: avoid_print
-      print('DLNA load failed: $e');
+      castLog('DLNA load failed', error: e);
     }
     _change();
   }

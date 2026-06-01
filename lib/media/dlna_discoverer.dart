@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:media_cast_dlna/media_cast_dlna.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'cast_log.dart';
 import 'cast_target.dart';
 import 'device_discoverer.dart';
 
@@ -61,8 +62,7 @@ class DlnaDeviceDiscoverer implements DeviceDiscoverer {
       // Plugin/native failure (e.g. service init) shouldn't crash the picker;
       // the list just stays empty.
       _running = false;
-      // ignore: avoid_print
-      print('DLNA discovery start failed: $e');
+      castLog('DLNA discovery start failed', error: e);
     }
   }
 

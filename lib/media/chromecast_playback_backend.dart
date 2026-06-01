@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 import 'package:rxdart/rxdart.dart';
 
 import 'cast_art.dart';
+import 'cast_log.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a Chromecast / Google Cast device via
@@ -272,8 +273,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       _position = startAt;
       _emitPos(startAt);
     } catch (e) {
-      // ignore: avoid_print
-      print('Chromecast load failed: $e');
+      castLog('Chromecast load failed', error: e);
     }
     _change();
   }
