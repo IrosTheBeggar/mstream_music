@@ -835,4 +835,261 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get close => '关闭';
+
+  @override
+  String get migMoveStopped => '移动已停止 — 空间不足，或该位置不可用。';
+
+  @override
+  String get migMoveComplete => '移动完成';
+
+  @override
+  String migMoveCompleteSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '移动完成 — 已跳过 $count 个文件（目标位置不支持）',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String migMoving(String progress) {
+    return '正在移动下载… $progress — 请保持应用打开';
+  }
+
+  @override
+  String get migRetry => '重试';
+
+  @override
+  String get queueDownloadAll => '全部下载';
+
+  @override
+  String queueDownloadAllBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '将下载 $count 个曲目以供离线播放。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mainMore => '更多';
+
+  @override
+  String get castOn => '开启';
+
+  @override
+  String get castOff => '关闭';
+
+  @override
+  String get settingsCastQuality => '投放可视化质量';
+
+  @override
+  String get settingsCastQualitySubtitle720 => '可视化效果投放到电视的分辨率。720p — 对手机负担最轻。';
+
+  @override
+  String get settingsCastQualitySubtitle1080 =>
+      '可视化效果投放到电视的分辨率。1080p — 在任何 Chromecast 上都清晰（默认）。';
+
+  @override
+  String get settingsCastQualitySubtitle4k =>
+      '可视化效果投放到电视的分辨率。4K — 需要 4K Chromecast；对手机负担大得多。';
+
+  @override
+  String get eqCasting => '均衡器调节的是本设备上的音频，因此投放期间不可用。请断开连接以使用它。';
+
+  @override
+  String get browserNothingToDownload => '此列表中没有可下载的内容';
+
+  @override
+  String get browserDownloadAllTitle => '全部下载';
+
+  @override
+  String browserDownloadAllConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '将下载 $count 个文件。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get browserCloseSearch => '关闭搜索';
+
+  @override
+  String get browserSearchThisList => '搜索此列表';
+
+  @override
+  String get browserSearchList => '搜索列表';
+
+  @override
+  String browserNoMatches(String query) {
+    return '没有与“$query”匹配的结果';
+  }
+
+  @override
+  String get clear => '清除';
+
+  @override
+  String get dlLocationUnavailable => '下载位置不可用';
+
+  @override
+  String get dlLocationUnavailableServer => '此服务器的下载位置不可用。';
+
+  @override
+  String get dlFailed => '下载失败 — 请检查你的网络连接。';
+
+  @override
+  String get dlFatSkip => '部分曲目无法保存到此卡上 — 它们的名称不受支持。将改为流式播放。';
+
+  @override
+  String get dlServerGone => '该服务器已不再配置。';
+
+  @override
+  String get dlStorageUnavailable =>
+      '存储位置不可用 — 请重新连接 SD 卡，或在“编辑服务器”中更改此服务器的存储位置。';
+
+  @override
+  String get dlCouldNotStart => '无法开始下载 — 存储不可用。';
+
+  @override
+  String get storageLocationLabel => '存储位置';
+
+  @override
+  String get storageAppLocal => '应用内部';
+
+  @override
+  String get storagePermanent => '永久';
+
+  @override
+  String get storageSdCard => 'SD 卡';
+
+  @override
+  String get storageHelpAppLocal => '保存在应用内部。卸载或清除应用时会被删除。';
+
+  @override
+  String get storageHelpPermanent => '保存到你选择的文件夹。卸载应用后仍会保留。需要“所有文件访问权限”。';
+
+  @override
+  String get storageHelpSdCard =>
+      '保存到你在 SD 卡上选择的文件夹。移除卡后可能变得不可用。部分设备不允许应用写入 SD 卡 — 如果文件夹选择持续失败，请使用“永久”或“应用内部”。';
+
+  @override
+  String get storageChooseFolder => '选择文件夹';
+
+  @override
+  String get storageNoFolderChosen => '尚未选择文件夹';
+
+  @override
+  String get storageDownloadFolderLabel => '下载文件夹';
+
+  @override
+  String get storageDownloadFolderHint => '文件夹名称';
+
+  @override
+  String get storageBrowse => '浏览';
+
+  @override
+  String get storageDownloadFolderHelp =>
+      '文件将下载到此设备上的“media/<folder>”目录。重新使用先前服务器的文件夹，可在你重新添加丢失的服务器时保留其已下载的歌曲。';
+
+  @override
+  String get storageNoStorageAvailable => '没有可用的存储';
+
+  @override
+  String get storageNoDownloadFolders => '未找到现有的下载文件夹';
+
+  @override
+  String get storageExistingFolders => '现有下载文件夹';
+
+  @override
+  String storageItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个项目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storageAllFilesAccess => '授予“所有文件访问权限”以永久存储下载内容，然后再次选择该模式。';
+
+  @override
+  String get storageSettings => '设置';
+
+  @override
+  String get storageNoVolume => '无法定位存储卷';
+
+  @override
+  String get storageNotWritable => '该文件夹不可写 — 请选择其他文件夹。';
+
+  @override
+  String get storageNewFolder => '新建文件夹';
+
+  @override
+  String get storageFolderNameHint => '文件夹名称';
+
+  @override
+  String get storageCouldNotCreateFolder => '无法创建文件夹';
+
+  @override
+  String get storageNoSubfolders => '此处没有子文件夹';
+
+  @override
+  String get storageUseThisFolder => '使用此文件夹';
+
+  @override
+  String get storageMovedToNewFolder => '已将下载的文件移动到新文件夹。';
+
+  @override
+  String get storageMoveAlreadyRunning => '已有一项移动正在进行 — 请先让它完成。';
+
+  @override
+  String get storageMigrateTitle => '不同的存储卷';
+
+  @override
+  String storageMigrateBody(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '此服务器已下载的 $count 个文件（$size）与新位置位于不同的存储卷上。请选择如何处理：',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storageMigrateNoSpace(String free) {
+    return '目标位置可用空间不足（剩余 $free）。移动可能中途失败 — 请先释放空间。';
+  }
+
+  @override
+  String get storageMigrateMove => '移动它们';
+
+  @override
+  String get storageMigrateMoveBody => '在后台复制到新位置，并随复制进度逐个删除旧副本。请保持应用打开直至完成。';
+
+  @override
+  String get storageMigrateLeave => '保留它们';
+
+  @override
+  String get storageMigrateLeaveBody => '立即切换；旧的下载内容保持原位，并在新位置重新下载。';
+
+  @override
+  String get storageMigrateDelete => '删除旧的下载内容';
+
+  @override
+  String get storageMigrateDeleteBody => '立即切换并移除旧文件；它们将在新位置重新下载。';
+
+  @override
+  String get storageMovingBackground => '正在后台移动你的下载内容 — 请保持应用打开。';
+
+  @override
+  String get storageChooseFolderFirst => '请先选择一个下载文件夹。';
+
+  @override
+  String get storageChooseSdFolderFirst =>
+      '请先在 SD 卡上选择一个文件夹。如果每个文件夹都被拒绝，你的设备可能不允许应用写入该卡 — 请改用“永久”或“应用内部”。';
 }

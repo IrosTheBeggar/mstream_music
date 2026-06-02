@@ -614,11 +614,12 @@ class _BrowserState extends State<Browser> {
   // are ignored); alerts if there are none, otherwise confirms the count
   // before enqueueing. downloadOneFile no-ops on files already on disk.
   void _downloadAll(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final files =
         BrowserManager().browserList.where((e) => e.type == 'file').toList();
     if (files.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Nothing to download in this list')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.browserNothingToDownload)));
       return;
     }
     final n = files.length;
@@ -626,12 +627,12 @@ class _BrowserState extends State<Browser> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Download all'),
-        content: Text('$n file${n == 1 ? '' : 's'} will be downloaded.'),
+        title: Text(l.browserDownloadAllTitle),
+        content: Text(l.browserDownloadAllConfirm(n)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           ElevatedButton(
@@ -647,9 +648,9 @@ class _BrowserState extends State<Browser> {
                     referenceItem: e);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('$n download${n == 1 ? '' : 's'} started')));
+                  content: Text(l.browserDownloadsStarted(n))));
             },
-            child: Text('Download'),
+            child: Text(l.download),
           ),
         ],
       ),
@@ -682,11 +683,11 @@ class _BrowserState extends State<Browser> {
                         IconButton(
                             icon: Icon(Icons.close,
                                 color: VelvetColors.textSecondary),
-                            tooltip: 'Close search',
+                            tooltip: l.browserCloseSearch,
                             onPressed: _closeSearch),
                         Expanded(
                             child: LocalSearchBar(
-                                hintText: 'Search this list',
+                                hintText: l.browserSearchThisList,
                                 onChanged: (q) =>
                                     setState(() => _searchQuery = q))),
                       ] else ...[
@@ -702,7 +703,7 @@ class _BrowserState extends State<Browser> {
                         IconButton(
                             icon: Icon(Icons.search,
                                 color: VelvetColors.textSecondary),
-                            tooltip: 'Search list',
+                            tooltip: l.browserSearchList,
                             onPressed: () =>
                                 setState(() => _searchOpen = true)),
                         IconButton(
@@ -821,7 +822,7 @@ class _BrowserState extends State<Browser> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'No matches for "$q"',
+                            l.browserNoMatches(q),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 color: VelvetColors.textSecondary,

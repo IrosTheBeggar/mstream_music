@@ -871,4 +871,285 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get migMoveStopped =>
+      'Move stopped — not enough space, or the location is unavailable.';
+
+  @override
+  String get migMoveComplete => 'Move complete';
+
+  @override
+  String migMoveCompleteSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Move complete — $count files skipped (unsupported on the destination)',
+      one: 'Move complete — 1 file skipped (unsupported on the destination)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String migMoving(String progress) {
+    return 'Moving downloads… $progress — keep the app open';
+  }
+
+  @override
+  String get migRetry => 'Retry';
+
+  @override
+  String get queueDownloadAll => 'Download all';
+
+  @override
+  String queueDownloadAllBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks will be downloaded for offline playback.',
+      one: '1 track will be downloaded for offline playback.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mainMore => 'More';
+
+  @override
+  String get castOn => 'On';
+
+  @override
+  String get castOff => 'Off';
+
+  @override
+  String get settingsCastQuality => 'Cast visualizer quality';
+
+  @override
+  String get settingsCastQualitySubtitle720 =>
+      'Resolution the visualizer streams to a TV at. 720p — lightest on the phone.';
+
+  @override
+  String get settingsCastQualitySubtitle1080 =>
+      'Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).';
+
+  @override
+  String get settingsCastQualitySubtitle4k =>
+      'Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.';
+
+  @override
+  String get eqCasting =>
+      'The equalizer adjusts audio on this device, so it’s unavailable while casting. Disconnect to use it.';
+
+  @override
+  String get browserNothingToDownload => 'Nothing to download in this list';
+
+  @override
+  String get browserDownloadAllTitle => 'Download all';
+
+  @override
+  String browserDownloadAllConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files will be downloaded.',
+      one: '1 file will be downloaded.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get browserCloseSearch => 'Close search';
+
+  @override
+  String get browserSearchThisList => 'Search this list';
+
+  @override
+  String get browserSearchList => 'Search list';
+
+  @override
+  String browserNoMatches(String query) {
+    return 'No matches for \"$query\"';
+  }
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get dlLocationUnavailable => 'Download location unavailable';
+
+  @override
+  String get dlLocationUnavailableServer =>
+      'Download location unavailable for this server.';
+
+  @override
+  String get dlFailed => 'A download failed — check your connection.';
+
+  @override
+  String get dlFatSkip =>
+      'Some tracks can\'t be saved on this card — their names aren\'t supported. They stream instead.';
+
+  @override
+  String get dlServerGone => 'That server is no longer configured.';
+
+  @override
+  String get dlStorageUnavailable =>
+      'Storage location unavailable — reconnect the SD card or change this server\'s storage location in Edit Server.';
+
+  @override
+  String get dlCouldNotStart =>
+      'Could not start download — storage unavailable.';
+
+  @override
+  String get storageLocationLabel => 'Storage location';
+
+  @override
+  String get storageAppLocal => 'App local';
+
+  @override
+  String get storagePermanent => 'Permanent';
+
+  @override
+  String get storageSdCard => 'SD card';
+
+  @override
+  String get storageHelpAppLocal =>
+      'Saved inside the app. Deleted when you uninstall or clear the app.';
+
+  @override
+  String get storageHelpPermanent =>
+      'Saved to a folder you choose. Survives uninstalling the app. Requires \"All files access\".';
+
+  @override
+  String get storageHelpSdCard =>
+      'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.';
+
+  @override
+  String get storageChooseFolder => 'Choose folder';
+
+  @override
+  String get storageNoFolderChosen => 'No folder chosen yet';
+
+  @override
+  String get storageDownloadFolderLabel => 'Download folder';
+
+  @override
+  String get storageDownloadFolderHint => 'folder name';
+
+  @override
+  String get storageBrowse => 'Browse';
+
+  @override
+  String get storageDownloadFolderHelp =>
+      'Files download to a \'media/<folder>\' directory on this device. Re-using a previous server\'s folder keeps its downloaded songs when you re-add a lost server.';
+
+  @override
+  String get storageNoStorageAvailable => 'No storage available';
+
+  @override
+  String get storageNoDownloadFolders => 'No existing download folders found';
+
+  @override
+  String get storageExistingFolders => 'Existing download folders';
+
+  @override
+  String storageItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storageAllFilesAccess =>
+      'Grant \"All files access\" to store downloads permanently, then pick the mode again.';
+
+  @override
+  String get storageSettings => 'Settings';
+
+  @override
+  String get storageNoVolume => 'Could not locate a storage volume';
+
+  @override
+  String get storageNotWritable =>
+      'That folder isn\'t writable — pick another.';
+
+  @override
+  String get storageNewFolder => 'New folder';
+
+  @override
+  String get storageFolderNameHint => 'Folder name';
+
+  @override
+  String get storageCouldNotCreateFolder => 'Could not create folder';
+
+  @override
+  String get storageNoSubfolders => 'No subfolders here';
+
+  @override
+  String get storageUseThisFolder => 'Use this folder';
+
+  @override
+  String get storageMovedToNewFolder =>
+      'Moved downloaded files to the new folder.';
+
+  @override
+  String get storageMoveAlreadyRunning =>
+      'A move is already running — let it finish first.';
+
+  @override
+  String get storageMigrateTitle => 'Different storage volume';
+
+  @override
+  String storageMigrateBody(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'This server’s $count downloaded files ($size) are on a different storage volume from the new location. Choose what to do:',
+      one:
+          'This server’s 1 downloaded file ($size) is on a different storage volume from the new location. Choose what to do:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storageMigrateNoSpace(String free) {
+    return 'Not enough free space at the destination ($free free). A move may fail partway — free up space first.';
+  }
+
+  @override
+  String get storageMigrateMove => 'Move them';
+
+  @override
+  String get storageMigrateMoveBody =>
+      'Copy to the new location in the background, deleting each old copy as it goes. Keep the app open until it finishes.';
+
+  @override
+  String get storageMigrateLeave => 'Leave them';
+
+  @override
+  String get storageMigrateLeaveBody =>
+      'Switch now; the old downloads stay where they are and re-download at the new location.';
+
+  @override
+  String get storageMigrateDelete => 'Delete old downloads';
+
+  @override
+  String get storageMigrateDeleteBody =>
+      'Switch now and remove the old files; they\'ll re-download at the new location.';
+
+  @override
+  String get storageMovingBackground =>
+      'Moving your downloads in the background — keep the app open.';
+
+  @override
+  String get storageChooseFolderFirst => 'Choose a download folder first.';
+
+  @override
+  String get storageChooseSdFolderFirst =>
+      'Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.';
 }

@@ -124,18 +124,17 @@ class _MStreamAppState extends State<MStreamApp>
       builder: (context, snap) {
         final p = snap.data;
         if (p == null) return const SizedBox.shrink();
+        final l = AppLocalizations.of(context);
         final pct = p.fraction;
         final label = p.failed
-            ? 'Move stopped — not enough space, or the location is unavailable.'
+            ? l.migMoveStopped
             : p.done
                 ? (p.skipped > 0
-                    ? 'Move complete — ${p.skipped} file'
-                        "${p.skipped == 1 ? '' : 's'} skipped "
-                        '(unsupported on the destination)'
-                    : 'Move complete')
-                : 'Moving downloads… '
-                    '${pct != null ? '${(pct * 100).round()}%' : '${p.moved}/${p.total}'}'
-                    ' — keep the app open';
+                    ? l.migMoveCompleteSkipped(p.skipped)
+                    : l.migMoveComplete)
+                : l.migMoving(pct != null
+                    ? '${(pct * 100).round()}%'
+                    : '${p.moved}/${p.total}');
         Widget compactButton(String text, Color color, VoidCallback onTap) {
           return TextButton(
             onPressed: onTap,
@@ -172,10 +171,10 @@ class _MStreamAppState extends State<MStreamApp>
                               color: VelvetColors.textSecondary, fontSize: 12),
                           overflow: TextOverflow.ellipsis)),
                   if (p.failed)
-                    compactButton('Retry', VelvetColors.primary,
+                    compactButton(l.migRetry, VelvetColors.primary,
                         () => MigrationManager().retry()),
                   if (!p.done)
-                    compactButton('Cancel', VelvetColors.textSecondary,
+                    compactButton(l.cancel, VelvetColors.textSecondary,
                         () => MigrationManager().cancel()),
                 ]),
                 if (!p.failed) ...[
@@ -519,7 +518,7 @@ class NowPlaying extends StatelessWidget {
                     IconButton(
                       icon: Icon(Icons.download_for_offline),
                       color: VelvetColors.textSecondary,
-                      tooltip: 'Download all',
+                      tooltip: l.queueDownloadAll,
                       onPressed: () => _downloadAll(context),
                     ),
                   ]),
@@ -727,17 +726,17 @@ class NowPlaying extends StatelessWidget {
     }
 
     final n = pending.length;
+    final l = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Download all'),
-        content: Text(
-            '$n track${n == 1 ? '' : 's'} will be downloaded for offline playback.'),
+        title: Text(l.queueDownloadAll),
+        content: Text(l.queueDownloadAllBody(n)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           ElevatedButton(
@@ -748,10 +747,9 @@ class NowPlaying extends StatelessWidget {
                     m.id, m.extras!['server'], m.extras!['path']);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text('$n download${n == 1 ? '' : 's'} started')));
+                  content: Text(l.browserDownloadsStarted(n))));
             },
-            child: Text('Download'),
+            child: Text(l.download),
           ),
         ],
       ),
@@ -1052,7 +1050,7 @@ class BottomBar extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.more_vert),
                     color: VelvetColors.appBarTextSecondary,
-                    tooltip: 'More',
+                    tooltip: AppLocalizations.of(context).mainMore,
                     onPressed: () {
                       showModalBottomSheet(
                         context: context,

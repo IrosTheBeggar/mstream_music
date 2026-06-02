@@ -505,8 +505,9 @@ class MyCustomFormState extends State<MyCustomForm> {
       Directory(path.join(newBase.path, 'media')).createSync(recursive: true);
       oldDir.renameSync(newDir.path);
       if (mounted) {
+        final l = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Moved downloaded files to the new folder.')));
+            content: Text(l.storageMovedToNewFolder)));
       }
       return true;
     } catch (_) {
@@ -521,9 +522,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   // three proceed with the storage change; only Cancel aborts it.
   Future<bool> _promptCrossVolume(Directory oldDir, Directory newDir) async {
     if (!mounted) return false;
+    final l = AppLocalizations.of(context);
     if (MigrationManager().isRunning) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('A move is already running — let it finish first.')));
+          content: Text(l.storageMoveAlreadyRunning)));
       return false;
     }
     // Count + size for the prompt.
@@ -552,15 +554,12 @@ class MyCustomFormState extends State<MyCustomForm> {
       context: context,
       builder: (ctx) => SimpleDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Different storage volume',
+        title: Text(l.storageMigrateTitle,
             style: TextStyle(color: VelvetColors.textPrimary, fontSize: 18)),
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
-            child: Text(
-                "This server's $count downloaded file${count == 1 ? '' : 's'} "
-                '(${_formatBytes(bytes)}) are on a different storage volume '
-                'from the new location. Choose what to do:',
+            child: Text(l.storageMigrateBody(count, _formatBytes(bytes)),
                 style:
                     TextStyle(color: VelvetColors.textSecondary, fontSize: 13)),
           ),
@@ -574,10 +573,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       size: 16, color: VelvetColors.warning),
                   SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                        'Not enough free space at the destination '
-                        '(${_formatBytes(free)} free). A move may fail '
-                        'partway — free up space first.',
+                    child: Text(l.storageMigrateNoSpace(_formatBytes(free)),
                         style: TextStyle(
                             color: VelvetColors.warning, fontSize: 12)),
                   ),
@@ -588,30 +584,27 @@ class MyCustomFormState extends State<MyCustomForm> {
               ctx,
               'move',
               Icons.drive_file_move_outline,
-              'Move them',
-              'Copy to the new location in the background, deleting each old '
-                  'copy as it goes. Keep the app open until it finishes.'),
+              l.storageMigrateMove,
+              l.storageMigrateMoveBody),
           _migrateOption(
               ctx,
               'leave',
               Icons.inventory_2_outlined,
-              'Leave them',
-              'Switch now; the old downloads stay where they are and '
-                  're-download at the new location.'),
+              l.storageMigrateLeave,
+              l.storageMigrateLeaveBody),
           _migrateOption(
               ctx,
               'delete',
               Icons.delete_outline,
-              'Delete old downloads',
-              "Switch now and remove the old files; they'll re-download at "
-                  'the new location.'),
+              l.storageMigrateDelete,
+              l.storageMigrateDeleteBody),
           Padding(
             padding: EdgeInsets.fromLTRB(24, 4, 12, 4),
             child: Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.of(ctx).pop('cancel'),
-                child: Text('Cancel',
+                child: Text(l.cancel,
                     style: TextStyle(color: VelvetColors.textSecondary)),
               ),
             ),
@@ -625,8 +618,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         await MigrationManager().start(oldDir.path, newDir.path, count, bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Moving your downloads in the background — keep '
-                  'the app open.')));
+              content: Text(l.storageMovingBackground)));
         }
         return true;
       case 'leave':
@@ -685,13 +677,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     if ((_storageMode == 'permanent' || _storageMode == 'sdCard') &&
         _storageBasePath == null) {
       if (mounted) {
+        final l = AppLocalizations.of(context);
         setState(() => submitPending = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(_storageMode == 'sdCard'
-                ? 'Choose a folder on the SD card first. If every folder is '
-                    "rejected, your device may not let apps write to the card — "
-                    'use Permanent or App local instead.'
-                : 'Choose a download folder first.')));
+                ? l.storageChooseSdFolderFirst
+                : l.storageChooseFolderFirst)));
       }
       return;
     }
@@ -798,12 +789,13 @@ class MyCustomFormState extends State<MyCustomForm> {
   // user can point this server at one — recovering a re-added server's
   // previously-downloaded songs.
   Future<void> _browseDownloadFolders() async {
+    final l = AppLocalizations.of(context);
     final base =
         await FileExplorer().getDownloadDir(_storageMode, _storageBasePath);
     if (!mounted) return;
     if (base == null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('No storage available')));
+          .showSnackBar(SnackBar(content: Text(l.storageNoStorageAvailable)));
       return;
     }
     final mediaDir = Directory(path.join(base.path, 'media'));
@@ -813,7 +805,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (!mounted) return;
     if (folders.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No existing download folders found')));
+          SnackBar(content: Text(l.storageNoDownloadFolders)));
       return;
     }
     final chosen = await showModalBottomSheet<String>(
@@ -827,7 +819,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Existing download folders',
+                child: Text(l.storageExistingFolders,
                     style: TextStyle(
                         color: VelvetColors.textPrimary,
                         fontSize: 16,
@@ -851,8 +843,10 @@ class MyCustomFormState extends State<MyCustomForm> {
                         style: TextStyle(color: VelvetColors.textPrimary),
                         overflow: TextOverflow.ellipsis),
                     subtitle: Text(
-                        '$count item${count == 1 ? '' : 's'}'
-                        '${modified != null ? ' · ${modified.toString().split('.').first}' : ''}',
+                        l.storageItemCount(count) +
+                            (modified != null
+                                ? ' · ${modified.toString().split('.').first}'
+                                : ''),
                         style: TextStyle(
                             color: VelvetColors.textSecondary, fontSize: 12)),
                     onTap: () => Navigator.of(ctx).pop(name),
@@ -908,23 +902,24 @@ class MyCustomFormState extends State<MyCustomForm> {
     status = await Permission.manageExternalStorage.request();
     if (status.isGranted) return true;
     if (mounted) {
+      final l = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            'Grant "All files access" to store downloads permanently, '
-            'then pick the mode again.'),
-        action: SnackBarAction(label: 'Settings', onPressed: openAppSettings),
+        content: Text(l.storageAllFilesAccess),
+        action:
+            SnackBarAction(label: l.storageSettings, onPressed: openAppSettings),
       ));
     }
     return false;
   }
 
   Future<void> _chooseStorageFolder() async {
+    final l = AppLocalizations.of(context);
     if (!await _ensureAllFilesAccess()) return;
     final root = _storageMode == 'sdCard' ? _sdCardRoot : _sharedStorageRoot;
     if (root == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not locate a storage volume')));
+            SnackBar(content: Text(l.storageNoVolume)));
       }
       return;
     }
@@ -935,7 +930,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (!await _isWritable(chosen)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("That folder isn't writable — pick another.")));
+            content: Text(l.storageNotWritable)));
       }
       return;
     }
@@ -957,6 +952,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   // [rootPath], descends on tap; "Use this folder" returns the current
   // absolute path. Cannot navigate above the root.
   Future<String?> _browseForFolder(String rootPath) {
+    final l = AppLocalizations.of(context);
     String current = rootPath;
     return showModalBottomSheet<String>(
       context: context,
@@ -1005,7 +1001,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                         IconButton(
                           icon: Icon(Icons.create_new_folder_outlined,
                               color: VelvetColors.primary),
-                          tooltip: 'New folder',
+                          tooltip: l.storageNewFolder,
                           onPressed: () => _createSubfolder(ctx, current,
                               (p) => setSheet(() => current = p)),
                         ),
@@ -1016,7 +1012,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                   Expanded(
                     child: subs.isEmpty
                         ? Center(
-                            child: Text('No subfolders here',
+                            child: Text(l.storageNoSubfolders,
                                 style: TextStyle(
                                     color: VelvetColors.textTertiary)))
                         : ListView(
@@ -1045,7 +1041,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                           padding: EdgeInsets.symmetric(vertical: 14),
                         ),
                         icon: Icon(Icons.check),
-                        label: Text('Use this folder'),
+                        label: Text(l.storageUseThisFolder),
                         onPressed: () => Navigator.of(ctx).pop(current),
                       ),
                     ),
@@ -1063,28 +1059,29 @@ class MyCustomFormState extends State<MyCustomForm> {
   // [onCreated] with the new absolute path so the picker descends into it.
   Future<void> _createSubfolder(BuildContext sheetCtx, String parent,
       void Function(String) onCreated) async {
+    final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: sheetCtx,
       builder: (dctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('New folder',
+        title: Text(l.storageNewFolder,
             style: TextStyle(color: VelvetColors.textPrimary)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           autocorrect: false,
           style: TextStyle(color: VelvetColors.textPrimary),
-          decoration: InputDecoration(hintText: 'Folder name'),
+          decoration: InputDecoration(hintText: l.storageFolderNameHint),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.of(dctx).pop(),
-              child: Text('Cancel',
+              child: Text(l.cancel,
                   style: TextStyle(color: VelvetColors.textSecondary))),
           TextButton(
               onPressed: () => Navigator.of(dctx).pop(ctrl.text.trim()),
-              child: Text('Create')),
+              child: Text(l.create)),
         ],
       ),
     );
@@ -1100,7 +1097,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not create folder')));
+            SnackBar(content: Text(l.storageCouldNotCreateFolder)));
       }
     }
   }
@@ -1109,19 +1106,16 @@ class MyCustomFormState extends State<MyCustomForm> {
   // warning that its files vanish on uninstall (the whole reason this
   // picker exists).
   Widget _storageHelp() {
+    final l = AppLocalizations.of(context);
     switch (_storageMode) {
       case 'permanent':
         return Text(
-          'Saved to a folder you choose. Survives uninstalling the app. '
-          'Requires "All files access".',
+          l.storageHelpPermanent,
           style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
         );
       case 'sdCard':
         return Text(
-          'Saved to a folder on the SD card you choose. May become '
-          'unavailable if the card is removed. Some devices don\'t let apps '
-          'write to SD cards — if folder selection keeps failing, use '
-          'Permanent or App local.',
+          l.storageHelpSdCard,
           style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
         );
       case 'appLocal':
@@ -1134,8 +1128,7 @@ class MyCustomFormState extends State<MyCustomForm> {
             SizedBox(width: 6),
             Expanded(
               child: Text(
-                'Saved inside the app. Deleted when you uninstall or clear '
-                'the app.',
+                l.storageHelpAppLocal,
                 style: TextStyle(color: VelvetColors.warning, fontSize: 11),
               ),
             ),
@@ -1303,7 +1296,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               // this server is already configured for it). Replaces the old
               // SD-card toggle; see _storageHelp for the per-mode caveats.
               SizedBox(height: 16),
-              Text('Storage location',
+              Text(l.storageLocationLabel,
                   style: TextStyle(
                       color: VelvetColors.textSecondary,
                       fontSize: 12,
@@ -1323,12 +1316,12 @@ class MyCustomFormState extends State<MyCustomForm> {
                     style: TextStyle(color: VelvetColors.textPrimary),
                     items: [
                       DropdownMenuItem(
-                          value: 'appLocal', child: Text('App local')),
+                          value: 'appLocal', child: Text(l.storageAppLocal)),
                       DropdownMenuItem(
-                          value: 'permanent', child: Text('Permanent')),
+                          value: 'permanent', child: Text(l.storagePermanent)),
                       if (_hasSdCard || _storageMode == 'sdCard')
                         DropdownMenuItem(
-                            value: 'sdCard', child: Text('SD card')),
+                            value: 'sdCard', child: Text(l.storageSdCard)),
                     ],
                     onChanged: submitPending ? null : _onStorageModeChanged,
                   ),
@@ -1343,7 +1336,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                   children: [
                     Expanded(
                       child: Text(
-                        _storageBasePath ?? 'No folder chosen yet',
+                        _storageBasePath ?? l.storageNoFolderChosen,
                         style: TextStyle(
                             color: _storageBasePath == null
                                 ? VelvetColors.textTertiary
@@ -1365,14 +1358,14 @@ class MyCustomFormState extends State<MyCustomForm> {
                         ),
                       ),
                       icon: Icon(Icons.folder_open, size: 18),
-                      label: Text('Choose folder'),
+                      label: Text(l.storageChooseFolder),
                       onPressed: submitPending ? null : _chooseStorageFolder,
                     ),
                   ],
                 ),
               ],
               SizedBox(height: 8),
-              Text('Download folder',
+              Text(l.storageDownloadFolderLabel,
                   style: TextStyle(
                       color: VelvetColors.textSecondary,
                       fontSize: 12,
@@ -1389,7 +1382,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       decoration: InputDecoration(
                         isDense: true,
                         prefixIcon: Icon(Icons.folder_outlined),
-                        hintText: 'folder name',
+                        hintText: l.storageDownloadFolderHint,
                       ),
                     ),
                   ),
@@ -1406,16 +1399,14 @@ class MyCustomFormState extends State<MyCustomForm> {
                       ),
                     ),
                     icon: Icon(Icons.folder_open, size: 18),
-                    label: Text('Browse'),
+                    label: Text(l.storageBrowse),
                     onPressed: submitPending ? null : _browseDownloadFolders,
                   ),
                 ],
               ),
               SizedBox(height: 6),
               Text(
-                "Files download to a 'media/<folder>' directory on this "
-                "device. Re-using a previous server's folder keeps its "
-                "downloaded songs when you re-add a lost server.",
+                l.storageDownloadFolderHelp,
                 style:
                     TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
               ),

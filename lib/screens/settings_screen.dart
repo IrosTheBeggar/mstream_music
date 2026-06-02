@@ -221,9 +221,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: VelvetColors.primary,
           ),
           ListTile(
-            title: Text('Cast visualizer quality'),
+            title: Text(l.settingsCastQuality),
             subtitle: Text(
-              _castQualitySubtitle(SettingsManager().castVisualizerQuality),
+              _castQualitySubtitle(l, SettingsManager().castVisualizerQuality),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -380,17 +380,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _castQualitySubtitle(CastVisualizerQuality q) {
+  String _castQualitySubtitle(AppLocalizations l, CastVisualizerQuality q) {
     switch (q) {
       case CastVisualizerQuality.hd720:
-        return 'Resolution the visualizer streams to a TV at. 720p — lightest '
-            'on the phone.';
+        return l.settingsCastQualitySubtitle720;
       case CastVisualizerQuality.fhd1080:
-        return 'Resolution the visualizer streams to a TV at. 1080p — sharp on '
-            'any Chromecast (default).';
+        return l.settingsCastQualitySubtitle1080;
       case CastVisualizerQuality.uhd2160:
-        return 'Resolution the visualizer streams to a TV at. 4K — needs a 4K '
-            'Chromecast; much heavier on the phone.';
+        return l.settingsCastQualitySubtitle4k;
     }
   }
 

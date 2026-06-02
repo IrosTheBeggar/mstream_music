@@ -50,12 +50,6 @@ class _EqScreenState extends State<EqScreen> {
   StreamSubscription<PlaybackState>? _playbackSub;
   StreamSubscription<CastTarget>? _castSub;
 
-  // Shown in place of the band sliders when audio is on a cast device: the EQ
-  // is a local-playback effect, so it can't act on what the renderer plays.
-  static const _castingMessage =
-      'The equalizer adjusts audio on this device, so it’s unavailable while '
-      'casting. Disconnect to use it.';
-
   @override
   void initState() {
     super.initState();
@@ -237,7 +231,7 @@ class _EqScreenState extends State<EqScreen> {
           msg = l.eqInitFailed(_errorDetail ?? '');
           break;
         case _EqError.casting:
-          msg = _castingMessage;
+          msg = l.eqCasting;
           break;
       }
       return Padding(

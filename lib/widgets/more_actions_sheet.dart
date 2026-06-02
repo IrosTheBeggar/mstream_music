@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
@@ -20,6 +21,7 @@ class MoreActionsSheet extends StatelessWidget {
   const MoreActionsSheet({required this.parentContext});
 
   void _toggleAutoDJ(BuildContext context, Server? autoDJState) {
+    final l = AppLocalizations.of(context);
     final current = ServerManager().currentServer;
     if (current == null) return;
     final handler = MediaManager().audioHandler;
@@ -28,21 +30,22 @@ class MoreActionsSheet extends StatelessWidget {
       handler.customAction('setAutoDJ', {'autoDJServer': current});
       messenger.showSnackBar(SnackBar(
           content: Text(ServerManager().serverList.length == 1
-              ? 'Auto DJ Enabled'
-              : 'Auto DJ Enabled For ${current.url}')));
+              ? l.autoDjEnabled
+              : l.autoDjEnabledFor(current.url))));
     } else if (current == autoDJState) {
       handler.customAction('setAutoDJ', {'autoDJServer': null});
       messenger
-          .showSnackBar(const SnackBar(content: Text('Auto DJ Disabled')));
+          .showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
     } else {
       handler.customAction('setAutoDJ', {'autoDJServer': current});
       messenger.showSnackBar(
-          SnackBar(content: Text('Auto DJ Enabled For ${current.url}')));
+          SnackBar(content: Text(l.autoDjEnabledFor(current.url))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -60,9 +63,9 @@ class MoreActionsSheet extends StatelessWidget {
                     color: on
                         ? VelvetColors.primary
                         : VelvetColors.textSecondary),
-                title: Text('Auto DJ',
+                title: Text(l.autoDjTitle,
                     style: TextStyle(color: VelvetColors.textPrimary)),
-                subtitle: Text(on ? 'On' : 'Off',
+                subtitle: Text(on ? l.castOn : l.castOff,
                     style: TextStyle(color: VelvetColors.textSecondary)),
                 value: on,
                 activeThumbColor: VelvetColors.primary,
@@ -82,9 +85,10 @@ class MoreActionsSheet extends StatelessWidget {
                     color: active
                         ? VelvetColors.primary
                         : VelvetColors.textSecondary),
-                title: Text('Sleep timer',
+                title: Text(l.sleepTimerTitle,
                     style: TextStyle(color: VelvetColors.textPrimary)),
-                subtitle: Text(d != null ? 'Pauses in ${_fmt(d)}' : 'Off',
+                subtitle: Text(
+                    d != null ? l.sleepTimerPausesIn(_fmt(d)) : l.castOff,
                     style: TextStyle(color: VelvetColors.textSecondary)),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -102,7 +106,7 @@ class MoreActionsSheet extends StatelessWidget {
           ListTile(
             leading:
                 Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-            title: Text('Visualizer',
+            title: Text(l.visualizerTitle,
                 style: TextStyle(color: VelvetColors.textPrimary)),
             onTap: () {
               Navigator.of(context).pop();
@@ -114,7 +118,7 @@ class MoreActionsSheet extends StatelessWidget {
           // Clear queue.
           ListTile(
             leading: Icon(Icons.delete_sweep, color: VelvetColors.error),
-            title: Text('Clear queue',
+            title: Text(l.mainClearQueue,
                 style: TextStyle(color: VelvetColors.textPrimary)),
             onTap: () {
               Navigator.of(context).pop();

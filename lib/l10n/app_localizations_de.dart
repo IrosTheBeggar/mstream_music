@@ -883,4 +883,290 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get close => 'Schließen';
+
+  @override
+  String get migMoveStopped =>
+      'Verschieben gestoppt – nicht genug Speicherplatz oder der Speicherort ist nicht verfügbar.';
+
+  @override
+  String get migMoveComplete => 'Verschieben abgeschlossen';
+
+  @override
+  String migMoveCompleteSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Verschieben abgeschlossen – $count Dateien übersprungen (am Zielort nicht unterstützt)',
+      one:
+          'Verschieben abgeschlossen – 1 Datei übersprungen (am Zielort nicht unterstützt)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String migMoving(String progress) {
+    return 'Downloads werden verschoben… $progress – lass die App geöffnet';
+  }
+
+  @override
+  String get migRetry => 'Erneut versuchen';
+
+  @override
+  String get queueDownloadAll => 'Alle herunterladen';
+
+  @override
+  String queueDownloadAllBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Titel werden für die Offline-Wiedergabe heruntergeladen.',
+      one: '1 Titel wird für die Offline-Wiedergabe heruntergeladen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mainMore => 'Mehr';
+
+  @override
+  String get castOn => 'Ein';
+
+  @override
+  String get castOff => 'Aus';
+
+  @override
+  String get settingsCastQuality => 'Cast-Visualizer-Qualität';
+
+  @override
+  String get settingsCastQualitySubtitle720 =>
+      'Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 720p – am schonendsten für das Telefon.';
+
+  @override
+  String get settingsCastQualitySubtitle1080 =>
+      'Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 1080p – scharf auf jedem Chromecast (Standard).';
+
+  @override
+  String get settingsCastQualitySubtitle4k =>
+      'Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 4K – benötigt einen 4K-Chromecast; deutlich höhere Last für das Telefon.';
+
+  @override
+  String get eqCasting =>
+      'Der Equalizer passt das Audio auf diesem Gerät an, daher ist er beim Streamen nicht verfügbar. Trenne die Verbindung, um ihn zu verwenden.';
+
+  @override
+  String get browserNothingToDownload =>
+      'In dieser Liste gibt es nichts zum Herunterladen';
+
+  @override
+  String get browserDownloadAllTitle => 'Alle herunterladen';
+
+  @override
+  String browserDownloadAllConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Dateien werden heruntergeladen.',
+      one: '1 Datei wird heruntergeladen.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get browserCloseSearch => 'Suche schließen';
+
+  @override
+  String get browserSearchThisList => 'Diese Liste durchsuchen';
+
+  @override
+  String get browserSearchList => 'Liste durchsuchen';
+
+  @override
+  String browserNoMatches(String query) {
+    return 'Keine Treffer für \"$query\"';
+  }
+
+  @override
+  String get clear => 'Leeren';
+
+  @override
+  String get dlLocationUnavailable => 'Download-Speicherort nicht verfügbar';
+
+  @override
+  String get dlLocationUnavailableServer =>
+      'Download-Speicherort für diesen Server nicht verfügbar.';
+
+  @override
+  String get dlFailed =>
+      'Ein Download ist fehlgeschlagen – überprüfe deine Verbindung.';
+
+  @override
+  String get dlFatSkip =>
+      'Einige Titel können auf dieser Karte nicht gespeichert werden – ihre Namen werden nicht unterstützt. Sie werden stattdessen gestreamt.';
+
+  @override
+  String get dlServerGone => 'Dieser Server ist nicht mehr konfiguriert.';
+
+  @override
+  String get dlStorageUnavailable =>
+      'Speicherort nicht verfügbar – verbinde die SD-Karte erneut oder ändere den Speicherort dieses Servers unter \"Server bearbeiten\".';
+
+  @override
+  String get dlCouldNotStart =>
+      'Download konnte nicht gestartet werden – Speicher nicht verfügbar.';
+
+  @override
+  String get storageLocationLabel => 'Speicherort';
+
+  @override
+  String get storageAppLocal => 'App-intern';
+
+  @override
+  String get storagePermanent => 'Dauerhaft';
+
+  @override
+  String get storageSdCard => 'SD-Karte';
+
+  @override
+  String get storageHelpAppLocal =>
+      'Innerhalb der App gespeichert. Wird beim Deinstallieren oder Leeren der App gelöscht.';
+
+  @override
+  String get storageHelpPermanent =>
+      'In einem von dir gewählten Ordner gespeichert. Übersteht das Deinstallieren der App. Erfordert \"Zugriff auf alle Dateien\".';
+
+  @override
+  String get storageHelpSdCard =>
+      'In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht verfügbar werden, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.';
+
+  @override
+  String get storageChooseFolder => 'Ordner wählen';
+
+  @override
+  String get storageNoFolderChosen => 'Noch kein Ordner gewählt';
+
+  @override
+  String get storageDownloadFolderLabel => 'Download-Ordner';
+
+  @override
+  String get storageDownloadFolderHint => 'Ordnername';
+
+  @override
+  String get storageBrowse => 'Durchsuchen';
+
+  @override
+  String get storageDownloadFolderHelp =>
+      'Dateien werden in ein Verzeichnis \'media/<folder>\' auf diesem Gerät heruntergeladen. Den Ordner eines früheren Servers erneut zu verwenden, behält dessen heruntergeladene Songs, wenn du einen verlorenen Server erneut hinzufügst.';
+
+  @override
+  String get storageNoStorageAvailable => 'Kein Speicher verfügbar';
+
+  @override
+  String get storageNoDownloadFolders =>
+      'Keine vorhandenen Download-Ordner gefunden';
+
+  @override
+  String get storageExistingFolders => 'Vorhandene Download-Ordner';
+
+  @override
+  String storageItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Elemente',
+      one: '1 Element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storageAllFilesAccess =>
+      'Gewähre \"Zugriff auf alle Dateien\", um Downloads dauerhaft zu speichern, und wähle dann den Modus erneut.';
+
+  @override
+  String get storageSettings => 'Einstellungen';
+
+  @override
+  String get storageNoVolume => 'Es konnte kein Speichervolume gefunden werden';
+
+  @override
+  String get storageNotWritable =>
+      'In diesen Ordner kann nicht geschrieben werden – wähle einen anderen.';
+
+  @override
+  String get storageNewFolder => 'Neuer Ordner';
+
+  @override
+  String get storageFolderNameHint => 'Ordnername';
+
+  @override
+  String get storageCouldNotCreateFolder =>
+      'Ordner konnte nicht erstellt werden';
+
+  @override
+  String get storageNoSubfolders => 'Hier gibt es keine Unterordner';
+
+  @override
+  String get storageUseThisFolder => 'Diesen Ordner verwenden';
+
+  @override
+  String get storageMovedToNewFolder =>
+      'Heruntergeladene Dateien in den neuen Ordner verschoben.';
+
+  @override
+  String get storageMoveAlreadyRunning =>
+      'Ein Verschiebevorgang läuft bereits – lass ihn zuerst abschließen.';
+
+  @override
+  String get storageMigrateTitle => 'Anderes Speichervolume';
+
+  @override
+  String storageMigrateBody(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die $count heruntergeladenen Dateien dieses Servers ($size) befinden sich auf einem anderen Speichervolume als der neue Speicherort. Wähle, was geschehen soll:',
+      one:
+          'Die 1 heruntergeladene Datei dieses Servers ($size) befindet sich auf einem anderen Speichervolume als der neue Speicherort. Wähle, was geschehen soll:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storageMigrateNoSpace(String free) {
+    return 'Nicht genug freier Speicherplatz am Zielort ($free frei). Ein Verschieben kann mittendrin fehlschlagen – gib zuerst Speicherplatz frei.';
+  }
+
+  @override
+  String get storageMigrateMove => 'Verschieben';
+
+  @override
+  String get storageMigrateMoveBody =>
+      'Im Hintergrund an den neuen Speicherort kopieren und dabei jede alte Kopie löschen. Lass die App geöffnet, bis der Vorgang abgeschlossen ist.';
+
+  @override
+  String get storageMigrateLeave => 'Belassen';
+
+  @override
+  String get storageMigrateLeaveBody =>
+      'Jetzt wechseln; die alten Downloads bleiben, wo sie sind, und werden am neuen Speicherort erneut heruntergeladen.';
+
+  @override
+  String get storageMigrateDelete => 'Alte Downloads löschen';
+
+  @override
+  String get storageMigrateDeleteBody =>
+      'Jetzt wechseln und die alten Dateien entfernen; sie werden am neuen Speicherort erneut heruntergeladen.';
+
+  @override
+  String get storageMovingBackground =>
+      'Deine Downloads werden im Hintergrund verschoben – lass die App geöffnet.';
+
+  @override
+  String get storageChooseFolderFirst => 'Wähle zuerst einen Download-Ordner.';
+
+  @override
+  String get storageChooseSdFolderFirst =>
+      'Wähle zuerst einen Ordner auf der SD-Karte. Falls jeder Ordner abgelehnt wird, lässt dein Gerät Apps möglicherweise nicht auf die Karte schreiben – verwende stattdessen Dauerhaft oder App-intern.';
 }

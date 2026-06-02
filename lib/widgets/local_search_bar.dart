@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/velvet_theme.dart';
 
 /// A small, reusable local-search input: a search-icon-prefixed field
@@ -42,6 +43,7 @@ class _LocalSearchBarState extends State<LocalSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return TextField(
       controller: _controller,
       autofocus: widget.autofocus,
@@ -65,7 +67,7 @@ class _LocalSearchBarState extends State<LocalSearchBar> {
             if (value.text.isEmpty) return const SizedBox.shrink();
             return IconButton(
               icon: Icon(Icons.clear, color: VelvetColors.textSecondary),
-              tooltip: 'Clear',
+              tooltip: l.clear,
               onPressed: _clear,
             );
           },

@@ -1581,6 +1581,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get close;
+
+  /// No description provided for @migMoveStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Move stopped — not enough space, or the location is unavailable.'**
+  String get migMoveStopped;
+
+  /// No description provided for @migMoveComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Move complete'**
+  String get migMoveComplete;
+
+  /// Migration banner: move finished, N files skipped.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Move complete — 1 file skipped (unsupported on the destination)} other{Move complete — {count} files skipped (unsupported on the destination)}}'**
+  String migMoveCompleteSkipped(int count);
+
+  /// Migration banner while a move runs; {progress} is a percent or M/T string.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving downloads… {progress} — keep the app open'**
+  String migMoving(String progress);
+
+  /// No description provided for @migRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get migRetry;
+
+  /// No description provided for @queueDownloadAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all'**
+  String get queueDownloadAll;
+
+  /// Queue download-all confirm dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 track will be downloaded for offline playback.} other{{count} tracks will be downloaded for offline playback.}}'**
+  String queueDownloadAllBody(int count);
+
+  /// No description provided for @mainMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get mainMore;
+
+  /// No description provided for @castOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get castOn;
+
+  /// No description provided for @castOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get castOff;
+
+  /// No description provided for @settingsCastQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast visualizer quality'**
+  String get settingsCastQuality;
+
+  /// No description provided for @settingsCastQualitySubtitle720.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution the visualizer streams to a TV at. 720p — lightest on the phone.'**
+  String get settingsCastQualitySubtitle720;
+
+  /// No description provided for @settingsCastQualitySubtitle1080.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).'**
+  String get settingsCastQualitySubtitle1080;
+
+  /// No description provided for @settingsCastQualitySubtitle4k.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.'**
+  String get settingsCastQualitySubtitle4k;
+
+  /// No description provided for @eqCasting.
+  ///
+  /// In en, this message translates to:
+  /// **'The equalizer adjusts audio on this device, so it’s unavailable while casting. Disconnect to use it.'**
+  String get eqCasting;
+
+  /// No description provided for @browserNothingToDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to download in this list'**
+  String get browserNothingToDownload;
+
+  /// No description provided for @browserDownloadAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download all'**
+  String get browserDownloadAllTitle;
+
+  /// Browser download-all confirm dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file will be downloaded.} other{{count} files will be downloaded.}}'**
+  String browserDownloadAllConfirm(int count);
+
+  /// No description provided for @browserCloseSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Close search'**
+  String get browserCloseSearch;
+
+  /// No description provided for @browserSearchThisList.
+  ///
+  /// In en, this message translates to:
+  /// **'Search this list'**
+  String get browserSearchThisList;
+
+  /// No description provided for @browserSearchList.
+  ///
+  /// In en, this message translates to:
+  /// **'Search list'**
+  String get browserSearchList;
+
+  /// Browser local-search empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches for \"{query}\"'**
+  String browserNoMatches(String query);
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @dlLocationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Download location unavailable'**
+  String get dlLocationUnavailable;
+
+  /// No description provided for @dlLocationUnavailableServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Download location unavailable for this server.'**
+  String get dlLocationUnavailableServer;
+
+  /// No description provided for @dlFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'A download failed — check your connection.'**
+  String get dlFailed;
+
+  /// No description provided for @dlFatSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Some tracks can\'t be saved on this card — their names aren\'t supported. They stream instead.'**
+  String get dlFatSkip;
+
+  /// No description provided for @dlServerGone.
+  ///
+  /// In en, this message translates to:
+  /// **'That server is no longer configured.'**
+  String get dlServerGone;
+
+  /// No description provided for @dlStorageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage location unavailable — reconnect the SD card or change this server\'s storage location in Edit Server.'**
+  String get dlStorageUnavailable;
+
+  /// No description provided for @dlCouldNotStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start download — storage unavailable.'**
+  String get dlCouldNotStart;
+
+  /// No description provided for @storageLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage location'**
+  String get storageLocationLabel;
+
+  /// No description provided for @storageAppLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'App local'**
+  String get storageAppLocal;
+
+  /// No description provided for @storagePermanent.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanent'**
+  String get storagePermanent;
+
+  /// No description provided for @storageSdCard.
+  ///
+  /// In en, this message translates to:
+  /// **'SD card'**
+  String get storageSdCard;
+
+  /// No description provided for @storageHelpAppLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved inside the app. Deleted when you uninstall or clear the app.'**
+  String get storageHelpAppLocal;
+
+  /// No description provided for @storageHelpPermanent.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to a folder you choose. Survives uninstalling the app. Requires \"All files access\".'**
+  String get storageHelpPermanent;
+
+  /// No description provided for @storageHelpSdCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.'**
+  String get storageHelpSdCard;
+
+  /// No description provided for @storageChooseFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folder'**
+  String get storageChooseFolder;
+
+  /// No description provided for @storageNoFolderChosen.
+  ///
+  /// In en, this message translates to:
+  /// **'No folder chosen yet'**
+  String get storageNoFolderChosen;
+
+  /// No description provided for @storageDownloadFolderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Download folder'**
+  String get storageDownloadFolderLabel;
+
+  /// No description provided for @storageDownloadFolderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'folder name'**
+  String get storageDownloadFolderHint;
+
+  /// No description provided for @storageBrowse.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse'**
+  String get storageBrowse;
+
+  /// No description provided for @storageDownloadFolderHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Files download to a \'media/<folder>\' directory on this device. Re-using a previous server\'s folder keeps its downloaded songs when you re-add a lost server.'**
+  String get storageDownloadFolderHelp;
+
+  /// No description provided for @storageNoStorageAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No storage available'**
+  String get storageNoStorageAvailable;
+
+  /// No description provided for @storageNoDownloadFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'No existing download folders found'**
+  String get storageNoDownloadFolders;
+
+  /// No description provided for @storageExistingFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing download folders'**
+  String get storageExistingFolders;
+
+  /// Existing-folders list: item count for a folder.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String storageItemCount(int count);
+
+  /// No description provided for @storageAllFilesAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant \"All files access\" to store downloads permanently, then pick the mode again.'**
+  String get storageAllFilesAccess;
+
+  /// No description provided for @storageSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get storageSettings;
+
+  /// No description provided for @storageNoVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not locate a storage volume'**
+  String get storageNoVolume;
+
+  /// No description provided for @storageNotWritable.
+  ///
+  /// In en, this message translates to:
+  /// **'That folder isn\'t writable — pick another.'**
+  String get storageNotWritable;
+
+  /// No description provided for @storageNewFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get storageNewFolder;
+
+  /// No description provided for @storageFolderNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder name'**
+  String get storageFolderNameHint;
+
+  /// No description provided for @storageCouldNotCreateFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create folder'**
+  String get storageCouldNotCreateFolder;
+
+  /// No description provided for @storageNoSubfolders.
+  ///
+  /// In en, this message translates to:
+  /// **'No subfolders here'**
+  String get storageNoSubfolders;
+
+  /// No description provided for @storageUseThisFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this folder'**
+  String get storageUseThisFolder;
+
+  /// No description provided for @storageMovedToNewFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved downloaded files to the new folder.'**
+  String get storageMovedToNewFolder;
+
+  /// No description provided for @storageMoveAlreadyRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'A move is already running — let it finish first.'**
+  String get storageMoveAlreadyRunning;
+
+  /// No description provided for @storageMigrateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Different storage volume'**
+  String get storageMigrateTitle;
+
+  /// Cross-volume migration dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{This server’s 1 downloaded file ({size}) is on a different storage volume from the new location. Choose what to do:} other{This server’s {count} downloaded files ({size}) are on a different storage volume from the new location. Choose what to do:}}'**
+  String storageMigrateBody(int count, String size);
+
+  /// Migration dialog low-space warning.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough free space at the destination ({free} free). A move may fail partway — free up space first.'**
+  String storageMigrateNoSpace(String free);
+
+  /// No description provided for @storageMigrateMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Move them'**
+  String get storageMigrateMove;
+
+  /// No description provided for @storageMigrateMoveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy to the new location in the background, deleting each old copy as it goes. Keep the app open until it finishes.'**
+  String get storageMigrateMoveBody;
+
+  /// No description provided for @storageMigrateLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave them'**
+  String get storageMigrateLeave;
+
+  /// No description provided for @storageMigrateLeaveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch now; the old downloads stay where they are and re-download at the new location.'**
+  String get storageMigrateLeaveBody;
+
+  /// No description provided for @storageMigrateDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete old downloads'**
+  String get storageMigrateDelete;
+
+  /// No description provided for @storageMigrateDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch now and remove the old files; they\'ll re-download at the new location.'**
+  String get storageMigrateDeleteBody;
+
+  /// No description provided for @storageMovingBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving your downloads in the background — keep the app open.'**
+  String get storageMovingBackground;
+
+  /// No description provided for @storageChooseFolderFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a download folder first.'**
+  String get storageChooseFolderFirst;
+
+  /// No description provided for @storageChooseSdFolderFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.'**
+  String get storageChooseSdFolderFirst;
 }
 
 class _AppLocalizationsDelegate

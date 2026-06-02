@@ -6,6 +6,7 @@ import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/app_messenger.dart';
 import 'package:mstream_music/singletons/migration_manager.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
@@ -67,7 +68,10 @@ class DownloadManager {
           // file that isn't there, and tell the user it didn't work.
           dt.progress = 0;
           terminal = true;
-          showGlobalSnack('A download failed — check your connection.');
+          final ctx = rootMessengerKey.currentContext;
+          showGlobalSnack(ctx != null
+              ? AppLocalizations.of(ctx).dlFailed
+              : 'A download failed — check your connection.');
           break;
         case TaskStatus.canceled:
           dt.progress = 0;
@@ -133,9 +137,11 @@ class DownloadManager {
     if (_lastFatWarn == null ||
         now.difference(_lastFatWarn!) > const Duration(seconds: 3)) {
       _lastFatWarn = now;
-      showGlobalSnack(
-          "Some tracks can't be saved on this card — their names aren't "
-          'supported. They stream instead.');
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null
+          ? AppLocalizations.of(ctx).dlFatSkip
+          : "Some tracks can't be saved on this card — their names aren't "
+              'supported. They stream instead.');
     }
   }
 
@@ -150,7 +156,10 @@ class DownloadManager {
     try {
       server = ServerManager().lookupServer(serverName);
     } catch (_) {
-      showGlobalSnack('That server is no longer configured.');
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null
+          ? AppLocalizations.of(ctx).dlServerGone
+          : 'That server is no longer configured.');
       return;
     }
 
@@ -159,9 +168,11 @@ class DownloadManager {
     if (dir == null) {
       // Storage location unavailable (e.g. SD card removed / chosen folder
       // deleted). Tell the user instead of silently doing nothing.
-      showGlobalSnack(
-          'Storage location unavailable — reconnect the SD card or change '
-          "this server's storage location in Edit Server.");
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null
+          ? AppLocalizations.of(ctx).dlStorageUnavailable
+          : 'Storage location unavailable — reconnect the SD card or change '
+              "this server's storage location in Edit Server.");
       return;
     }
 
@@ -215,7 +226,10 @@ class DownloadManager {
     } catch (e) {
       // The volume could vanish between the null-check and the write.
       _inFlight.remove(downloadDirectory);
-      showGlobalSnack('Could not start download — storage unavailable.');
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null
+          ? AppLocalizations.of(ctx).dlCouldNotStart
+          : 'Could not start download — storage unavailable.');
     }
   }
 

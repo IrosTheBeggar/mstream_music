@@ -879,4 +879,289 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get close => 'Fechar';
+
+  @override
+  String get migMoveStopped =>
+      'Movimentação interrompida — espaço insuficiente ou o local está indisponível.';
+
+  @override
+  String get migMoveComplete => 'Movimentação concluída';
+
+  @override
+  String migMoveCompleteSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Movimentação concluída — $count arquivos ignorados (sem suporte no destino)',
+      one:
+          'Movimentação concluída — 1 arquivo ignorado (sem suporte no destino)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String migMoving(String progress) {
+    return 'Movendo downloads… $progress — mantenha o app aberto';
+  }
+
+  @override
+  String get migRetry => 'Tentar novamente';
+
+  @override
+  String get queueDownloadAll => 'Baixar tudo';
+
+  @override
+  String queueDownloadAllBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count faixas serão baixadas para reprodução offline.',
+      one: '1 faixa será baixada para reprodução offline.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mainMore => 'Mais';
+
+  @override
+  String get castOn => 'Ligado';
+
+  @override
+  String get castOff => 'Desligado';
+
+  @override
+  String get settingsCastQuality => 'Qualidade do visualizador na transmissão';
+
+  @override
+  String get settingsCastQualitySubtitle720 =>
+      'Resolução em que o visualizador é transmitido para a TV. 720p — a mais leve para o celular.';
+
+  @override
+  String get settingsCastQualitySubtitle1080 =>
+      'Resolução em que o visualizador é transmitido para a TV. 1080p — nítida em qualquer Chromecast (padrão).';
+
+  @override
+  String get settingsCastQualitySubtitle4k =>
+      'Resolução em que o visualizador é transmitido para a TV. 4K — exige um Chromecast 4K; muito mais pesada para o celular.';
+
+  @override
+  String get eqCasting =>
+      'O equalizador ajusta o áudio neste dispositivo, então fica indisponível durante a transmissão. Desconecte para usá-lo.';
+
+  @override
+  String get browserNothingToDownload => 'Nada para baixar nesta lista';
+
+  @override
+  String get browserDownloadAllTitle => 'Baixar tudo';
+
+  @override
+  String browserDownloadAllConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arquivos serão baixados.',
+      one: '1 arquivo será baixado.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get browserCloseSearch => 'Fechar pesquisa';
+
+  @override
+  String get browserSearchThisList => 'Pesquisar nesta lista';
+
+  @override
+  String get browserSearchList => 'Pesquisar na lista';
+
+  @override
+  String browserNoMatches(String query) {
+    return 'Nenhum resultado para \"$query\"';
+  }
+
+  @override
+  String get clear => 'Limpar';
+
+  @override
+  String get dlLocationUnavailable => 'Local de download indisponível';
+
+  @override
+  String get dlLocationUnavailableServer =>
+      'Local de download indisponível para este servidor.';
+
+  @override
+  String get dlFailed => 'Um download falhou — verifique sua conexão.';
+
+  @override
+  String get dlFatSkip =>
+      'Algumas faixas não podem ser salvas neste cartão — os nomes delas não são compatíveis. Em vez disso, são transmitidas.';
+
+  @override
+  String get dlServerGone => 'Esse servidor não está mais configurado.';
+
+  @override
+  String get dlStorageUnavailable =>
+      'Local de armazenamento indisponível — reconecte o cartão SD ou altere o local de armazenamento deste servidor em Editar servidor.';
+
+  @override
+  String get dlCouldNotStart =>
+      'Não foi possível iniciar o download — armazenamento indisponível.';
+
+  @override
+  String get storageLocationLabel => 'Local de armazenamento';
+
+  @override
+  String get storageAppLocal => 'Local do app';
+
+  @override
+  String get storagePermanent => 'Permanente';
+
+  @override
+  String get storageSdCard => 'Cartão SD';
+
+  @override
+  String get storageHelpAppLocal =>
+      'Salvo dentro do app. Excluído ao desinstalar ou limpar o app.';
+
+  @override
+  String get storageHelpPermanent =>
+      'Salvo em uma pasta que você escolher. Permanece após desinstalar o app. Exige o \"Acesso a todos os arquivos\".';
+
+  @override
+  String get storageHelpSdCard =>
+      'Salvo em uma pasta do cartão SD que você escolher. Pode ficar indisponível se o cartão for removido. Alguns dispositivos não permitem que apps gravem em cartões SD — se a seleção de pasta continuar falhando, use Permanente ou Local do app.';
+
+  @override
+  String get storageChooseFolder => 'Escolher pasta';
+
+  @override
+  String get storageNoFolderChosen => 'Nenhuma pasta escolhida ainda';
+
+  @override
+  String get storageDownloadFolderLabel => 'Pasta de download';
+
+  @override
+  String get storageDownloadFolderHint => 'nome da pasta';
+
+  @override
+  String get storageBrowse => 'Procurar';
+
+  @override
+  String get storageDownloadFolderHelp =>
+      'Os arquivos são baixados em um diretório \'media/<folder>\' neste dispositivo. Reutilizar a pasta de um servidor anterior mantém as músicas baixadas dele quando você readiciona um servidor perdido.';
+
+  @override
+  String get storageNoStorageAvailable => 'Nenhum armazenamento disponível';
+
+  @override
+  String get storageNoDownloadFolders =>
+      'Nenhuma pasta de download existente encontrada';
+
+  @override
+  String get storageExistingFolders => 'Pastas de download existentes';
+
+  @override
+  String storageItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count itens',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storageAllFilesAccess =>
+      'Conceda o \"Acesso a todos os arquivos\" para armazenar downloads permanentemente e depois escolha o modo novamente.';
+
+  @override
+  String get storageSettings => 'Configurações';
+
+  @override
+  String get storageNoVolume =>
+      'Não foi possível localizar um volume de armazenamento';
+
+  @override
+  String get storageNotWritable =>
+      'Essa pasta não permite gravação — escolha outra.';
+
+  @override
+  String get storageNewFolder => 'Nova pasta';
+
+  @override
+  String get storageFolderNameHint => 'Nome da pasta';
+
+  @override
+  String get storageCouldNotCreateFolder => 'Não foi possível criar a pasta';
+
+  @override
+  String get storageNoSubfolders => 'Nenhuma subpasta aqui';
+
+  @override
+  String get storageUseThisFolder => 'Usar esta pasta';
+
+  @override
+  String get storageMovedToNewFolder =>
+      'Arquivos baixados movidos para a nova pasta.';
+
+  @override
+  String get storageMoveAlreadyRunning =>
+      'Uma movimentação já está em andamento — deixe-a terminar primeiro.';
+
+  @override
+  String get storageMigrateTitle => 'Volume de armazenamento diferente';
+
+  @override
+  String storageMigrateBody(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Os $count arquivos baixados deste servidor ($size) estão em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
+      one:
+          'O 1 arquivo baixado deste servidor ($size) está em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storageMigrateNoSpace(String free) {
+    return 'Espaço livre insuficiente no destino ($free livres). A movimentação pode falhar no meio — libere espaço primeiro.';
+  }
+
+  @override
+  String get storageMigrateMove => 'Mover';
+
+  @override
+  String get storageMigrateMoveBody =>
+      'Copia para o novo local em segundo plano, excluindo cada cópia antiga conforme avança. Mantenha o app aberto até concluir.';
+
+  @override
+  String get storageMigrateLeave => 'Manter onde estão';
+
+  @override
+  String get storageMigrateLeaveBody =>
+      'Troca agora; os downloads antigos permanecem onde estão e são baixados novamente no novo local.';
+
+  @override
+  String get storageMigrateDelete => 'Excluir downloads antigos';
+
+  @override
+  String get storageMigrateDeleteBody =>
+      'Troca agora e remove os arquivos antigos; eles serão baixados novamente no novo local.';
+
+  @override
+  String get storageMovingBackground =>
+      'Movendo seus downloads em segundo plano — mantenha o app aberto.';
+
+  @override
+  String get storageChooseFolderFirst =>
+      'Escolha uma pasta de download primeiro.';
+
+  @override
+  String get storageChooseSdFolderFirst =>
+      'Escolha uma pasta no cartão SD primeiro. Se todas as pastas forem rejeitadas, talvez seu dispositivo não permita que apps gravem no cartão — use Permanente ou Local do app.';
 }
