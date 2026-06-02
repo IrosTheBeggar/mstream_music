@@ -391,7 +391,12 @@ class TsHlsSink(private val dir: String) : AvSink {
         private const val PMT_PID = 0x1000
         private const val VIDEO_PID = 0x0100
         private const val AUDIO_PID = 0x0101
-        private const val TARGET_SEG_US = 2_000_000L
+        // Rotate on the first keyframe ≥ this into a segment. Kept just under the
+        // encoder's 2s keyframe interval (VideoEncoder.I_FRAME_INTERVAL_SECONDS)
+        // so the periodic IDR reliably triggers a rotation despite timing jitter,
+        // giving ~2s segments with exactly one keyframe each. (HLS tolerates the
+        // small duration variance — EXTINF carries each segment's real length.)
+        private const val TARGET_SEG_US = 1_900_000L
         private const val PLAYLIST = "index.m3u8"
         // Cap pre-first-segment audio buffering (~256 AAC frames ≈ 6 s) so a
         // wedged video encoder can't grow it without bound.

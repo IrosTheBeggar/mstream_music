@@ -46,7 +46,10 @@ class VideoEncoder(
             )
             setInteger(MediaFormat.KEY_BIT_RATE, effectiveBitrate)
             setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
-            // 1s keyframe interval keeps HLS segmentation clean (segment on IDR).
+            // Match the keyframe interval to the HLS segment length: one IDR per
+            // ~2s segment. (At 1s we emitted a *second*, mid-segment keyframe that
+            // HLS doesn't need — wasted encode work + bitrate, since an IDR is far
+            // larger/costlier than a P-frame. TsHlsSink rotates on the IDR.)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, I_FRAME_INTERVAL_SECONDS)
         }
         val c = MediaCodec.createEncoderByType(MIME)
@@ -110,7 +113,8 @@ class VideoEncoder(
 
     companion object {
         private const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC
-        private const val I_FRAME_INTERVAL_SECONDS = 1
+        // Matches TsHlsSink.TARGET_SEG_US (one keyframe per HLS segment).
+        private const val I_FRAME_INTERVAL_SECONDS = 2
         private const val TIMEOUT_US = 10_000L
 
         // ~0.14 bits/pixel — enough for detailed shader/Milkdrop content (sharp
