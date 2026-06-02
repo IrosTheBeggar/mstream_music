@@ -253,6 +253,7 @@ class _MStreamAppState extends State<MStreamApp>
                           showModalBottomSheet(
                             context: context,
                             backgroundColor: VelvetColors.surface,
+                            isScrollControlled: true,
                             builder: (_) => CastPickerSheet(),
                           );
                         },

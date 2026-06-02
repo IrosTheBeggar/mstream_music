@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../media/cast_target.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 
 /// Bottom sheet for choosing where audio plays ("This device" or a discovered
@@ -13,15 +16,28 @@ class CastPickerSheet extends StatefulWidget {
 }
 
 class _CastPickerSheetState extends State<CastPickerSheet> {
+  // Sticky choice: when checked, picking a Chromecast streams the visualizer.
+  late bool _visualizer = SettingsManager().castVisualizerEnabled;
+
+  // After an initial window the "searching…" spinner settles to a quiet hint so
+  // it doesn't imply an endless scan — discovery keeps running underneath while
+  // the sheet is open, so a device that wakes up later still appears.
+  bool _searchSettled = false;
+  Timer? _searchTimer;
+
   @override
   void initState() {
     super.initState();
     // Scan only while the picker is visible.
     CastManager().startDiscovery();
+    _searchTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _searchSettled = true);
+    });
   }
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     CastManager().stopDiscovery();
     super.dispose();
   }
@@ -40,7 +56,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -80,7 +97,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                         selected: t == active,
                         icon: _iconFor(t.kind),
                         onTap: () {
-                          CastManager().selectTarget(t);
+                          CastManager()
+                              .selectTarget(t, visualizer: _visualizer);
                           Navigator.of(context).pop();
                         },
                       ),
@@ -92,56 +110,66 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
             // registered (Phase 3+). Until then the list is just this device.
             if (CastManager().hasDiscoverers) ...[
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation(VelvetColors.textSecondary),
+              if (!_searchSettled)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(VelvetColors.textSecondary),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Searching for cast devices…',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: VelvetColors.textSecondary,
+                    const SizedBox(width: 10),
+                    Text(
+                      'Searching for cast devices…',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: VelvetColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-            const Divider(height: 24),
-            // Deferred feature: streaming the on-screen visualizer to the cast
-            // device. Shown disabled so the capability is discoverable; the
-            // wiring lands in a follow-up (it needs on-device A/V encoding plus
-            // the local media server added in this change).
-            Opacity(
-              opacity: 0.5,
-              child: CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                value: false,
-                onChanged: null,
-                title: Text(
-                  'Cast visualizer',
-                  style: TextStyle(color: VelvetColors.textPrimary),
-                ),
-                subtitle: Text(
-                  'Coming soon',
+                  ],
+                )
+              else
+                Text(
+                  'Don\'t see your device? Make sure it\'s on the same Wi-Fi.',
                   style: TextStyle(
                     fontSize: 12,
                     color: VelvetColors.textSecondary,
                   ),
                 ),
+            ],
+            const Divider(height: 24),
+            // Stream the app's own visualizer (rendered + encoded on-device) to
+            // the TV instead of plain audio. Chromecast only; the choice is
+            // sticky (persisted) and applied when a device is picked above.
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              activeColor: VelvetColors.primary,
+              value: _visualizer,
+              onChanged: (v) {
+                setState(() => _visualizer = v ?? false);
+                SettingsManager().setCastVisualizerEnabled(_visualizer);
+              },
+              title: Text(
+                'Cast visualizer',
+                style: TextStyle(color: VelvetColors.textPrimary),
+              ),
+              subtitle: Text(
+                'Stream the visualizer to the TV · Chromecast only',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: VelvetColors.textSecondary,
+                ),
               ),
             ),
           ],
         ),
+      ),
       ),
     );
   }

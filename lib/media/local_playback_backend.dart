@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File, Platform;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
@@ -64,8 +65,17 @@ class LocalPlaybackBackend implements PlaybackBackend {
   Future<void> stop() => _player.stop();
 
   @override
-  Future<void> seek(Duration position, {int? index}) =>
-      _player.seek(position, index: index);
+  Future<void> seek(Duration position, {int? index, bool? play}) async {
+    await _player.seek(position, index: index);
+    // just_audio's play() future completes only when playback pauses/stops, so
+    // it must NOT be awaited in the switch path (that previously blocked the
+    // backend switch). Fire it and move on.
+    if (play == true) {
+      unawaited(_player.play());
+    } else if (play == false) {
+      await _player.pause();
+    }
+  }
 
   @override
   Future<void> seekToNext() => _player.seekToNext();

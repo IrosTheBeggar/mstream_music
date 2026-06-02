@@ -161,23 +161,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// matching backend (the persistent local just_audio backend, or a fresh
   /// DLNA session) and hands it the current queue + position so playback
   /// continues on the new device. Wired to CastManager.onTargetSelected.
-  Future<void> _switchToTarget(CastTarget target) {
+  Future<void> _switchToTarget(CastTarget target, bool visualizer) {
     _switchChain = _switchChain
-        .then((_) => _doSwitchToTarget(target))
+        .then((_) => _doSwitchToTarget(target, visualizer))
         .catchError((Object e) {
       castLog('Cast backend switch failed', error: e);
     });
     return _switchChain;
   }
 
-  Future<void> _doSwitchToTarget(CastTarget target) async {
+  Future<void> _doSwitchToTarget(CastTarget target, bool visualizer) async {
     final PlaybackBackend next;
     if (target.isLocal) {
       next = _localBackend;
     } else if (target.kind == CastTargetKind.dlna) {
       next = DlnaPlaybackBackend(udn: target.id);
     } else if (target.kind == CastTargetKind.chromecast) {
-      next = ChromecastPlaybackBackend(deviceId: target.id);
+      // visualizer = stream the on-device visualizer (video) instead of audio.
+      next = ChromecastPlaybackBackend(
+          deviceId: target.id, visualizer: visualizer);
     } else {
       return;
     }
@@ -202,10 +204,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     await next.setSources(queue.value);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
-      await next.seek(pos, index: idx);
-    }
-    if (wasPlaying) {
-      await next.play();
+      // Carry the play state into the load: a renderer then auto-plays when its
+      // media is ready (no load-paused-then-race-play), and we don't await the
+      // local backend's play() — whose future only completes on pause/stop, so
+      // awaiting it here used to block the switch and leave the cast session
+      // connected until the user hit pause.
+      await next.seek(pos, index: idx, play: wasPlaying);
     }
     _broadcastState();
 
@@ -260,8 +264,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _localBackend.setSources(queue.value);
     _backendSubject.add(_localBackend);
     if (queue.value.isNotEmpty) {
-      await _localBackend.seek(pos, index: idx);
-      await _localBackend.play();
+      await _localBackend.seek(pos, index: idx, play: true);
     }
     _broadcastState();
     if (!identical(failed, _localBackend)) await failed.dispose();
@@ -287,8 +290,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       await _localBackend.setSources(queue.value);
       _backendSubject.add(_localBackend);
       if (queue.value.isNotEmpty) {
-        await _localBackend.seek(pos, index: idx);
-        if (wasPlaying) await _localBackend.play();
+        await _localBackend.seek(pos, index: idx, play: wasPlaying);
       }
       _broadcastState();
       await failed.dispose();

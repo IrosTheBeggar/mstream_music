@@ -38,6 +38,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeInit(
         surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeRenderFrame(ctxPtr: Long)
+    // Render + stamp the frame's presentation time (visualizer-cast transcode).
+    private external fun nativeRenderFrameAt(ctxPtr: Long, ptsNanos: Long)
+    // Init an EGL context that renders into a MediaCodec encoder input Surface.
+    private external fun nativeInitEncoder(
+        surface: Surface, width: Int, height: Int, engineKind: Int): Long
     private external fun nativeAddPcm(ctxPtr: Long, samples: FloatArray)
     private external fun nativeSetTuning(ctxPtr: Long, values: FloatArray)
     private external fun nativeLoadPresetData(
@@ -50,6 +55,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
     private var renderThread: RenderThread? = null
     private var realAudio: RealAudioSource? = null
+    private var transcoder: VisualizerTranscoder? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         registry = binding.textureRegistry
@@ -60,6 +66,8 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        transcoder?.cancelTranscode()
+        transcoder = null
         teardown()
         channel?.setMethodCallHandler(null)
         channel = null
@@ -84,6 +92,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             "startRealAudio" -> handleStartRealAudio(call, result)
             "stopRealAudio" -> {
                 stopRealAudio()
+                result.success(null)
+            }
+            "startTranscode" -> handleStartTranscode(call, result)
+            "stopTranscode" -> {
+                transcoder?.cancelTranscode()
                 result.success(null)
             }
             "dispose" -> {
@@ -116,6 +129,88 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     private fun stopRealAudio() {
         realAudio?.stop()
         realAudio = null
+    }
+
+    // Visualizer-cast Phase 0a spike: transcode a track to an MP4 of the
+    // visualizer reacting to it (off-screen, on its own thread). Replies with
+    // the output path on success. See VisualizerTranscoder.
+    private fun handleStartTranscode(call: MethodCall, result: MethodChannel.Result) {
+        val source = call.argument<String>("source")
+        val output = call.argument<String>("output")
+        if (source == null || output == null) {
+            result.error("bad_args", "source and output required", null)
+            return
+        }
+        val w = (call.argument<Int>("width") ?: 1280).coerceAtLeast(2)
+        val h = (call.argument<Int>("height") ?: 720).coerceAtLeast(2)
+        val engine = call.argument<Int>("engine") ?: 0
+        val fps = (call.argument<Int>("fps") ?: 30).coerceIn(1, 60)
+        val maxMs = (call.argument<Int>("maxMs") ?: 20_000).toLong()
+        val preset = call.argument<String>("preset")
+        val tuningRaw = call.argument<Any>("tuning")
+        val tuning: FloatArray? = when (tuningRaw) {
+            is FloatArray -> tuningRaw
+            is DoubleArray -> FloatArray(tuningRaw.size) { tuningRaw[it].toFloat() }
+            is List<*> -> FloatArray(tuningRaw.size) { (tuningRaw[it] as Number).toFloat() }
+            else -> null
+        }
+
+        // mode "hls" → MPEG-TS/HLS segments in the `output` directory (for
+        // casting); anything else → a single MP4 file at `output`.
+        val mode = call.argument<String>("mode") ?: "mp4"
+        val sink: AvSink = try {
+            if (mode == "hls") TsHlsSink(output) else Mp4Sink(output)
+        } catch (e: Throwable) {
+            result.error("sink_failed", e.message, null)
+            return
+        }
+
+        transcoder?.cancelTranscode()
+        val main = Handler(Looper.getMainLooper())
+        var created: VisualizerTranscoder? = null
+        val t = VisualizerTranscoder(
+            source = source,
+            sink = sink,
+            width = w,
+            height = h,
+            engineKind = engine,
+            fps = fps,
+            maxDurationUs = maxMs * 1000L,
+            pace = mode == "hls", // live cast → throttle to ~realtime (battery/thermal)
+            presetData = preset,
+            tuning = tuning,
+            initEncoder = ::nativeInitEncoder,
+            renderAt = ::nativeRenderFrameAt,
+            addPcm = ::nativeAddPcm,
+            loadPreset = ::nativeLoadPresetData,
+            setTuning = ::nativeSetTuning,
+            dispose = ::nativeDispose,
+        ) { ok, payload ->
+            main.post {
+                // Only clear the handle if it still points at THIS transcode — a
+                // newer cast may have replaced it while this one was finishing, and
+                // nulling that would orphan it (a later stopTranscode couldn't
+                // cancel it).
+                if (transcoder === created) transcoder = null
+                // HLS replies immediately below (so the caller can start casting
+                // while we keep transcoding the live playlist); only non-HLS
+                // reports its result here.
+                if (mode != "hls") {
+                    if (ok) result.success(payload)
+                    else result.error("transcode_failed", payload, null)
+                } else if (!ok) {
+                    Log.w("mstream/viz-xcode", "HLS transcode ended: $payload")
+                }
+            }
+        }
+        created = t
+        transcoder = t
+        t.start()
+        if (mode == "hls") {
+            // The playlist grows as segments are written; reply now so the caller
+            // can poll it and cast while transcoding continues in the background.
+            result.success("$output/index.m3u8")
+        }
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {

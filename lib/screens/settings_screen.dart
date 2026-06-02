@@ -169,6 +169,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             activeThumbColor: VelvetColors.primary,
           ),
+          ListTile(
+            title: Text('Cast visualizer quality'),
+            subtitle: Text(
+              _castQualitySubtitle(SettingsManager().castVisualizerQuality),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<CastVisualizerQuality>(
+              value: SettingsManager().castVisualizerQuality,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: CastVisualizerQuality.values
+                  .map((q) => DropdownMenuItem(
+                        value: q,
+                        child: Text(q.label),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                await SettingsManager().setCastVisualizerQuality(v);
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader('Browse'),
           SwitchListTile(
@@ -312,6 +337,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case VisualizerEngine.shader:
         return 'Shadertoy-style fragment shaders. Lighter, modular — '
             'drop .glsl files in assets/shaders/ to extend the catalog.';
+    }
+  }
+
+  String _castQualitySubtitle(CastVisualizerQuality q) {
+    switch (q) {
+      case CastVisualizerQuality.hd720:
+        return 'Resolution the visualizer streams to a TV at. 720p — lightest '
+            'on the phone.';
+      case CastVisualizerQuality.fhd1080:
+        return 'Resolution the visualizer streams to a TV at. 1080p — sharp on '
+            'any Chromecast (default).';
+      case CastVisualizerQuality.uhd2160:
+        return 'Resolution the visualizer streams to a TV at. 4K — needs a 4K '
+            'Chromecast; much heavier on the phone.';
     }
   }
 
