@@ -877,10 +877,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mainMore => '更多';
 
   @override
-  String get castOn => '开启';
+  String get commonOn => '开启';
 
   @override
-  String get castOff => '关闭';
+  String get commonOff => '关闭';
 
   @override
   String get settingsCastQuality => '投放可视化质量';
@@ -1092,4 +1092,25 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get storageChooseSdFolderFirst =>
       '请先在 SD 卡上选择一个文件夹。如果每个文件夹都被拒绝，你的设备可能不允许应用写入该卡 — 请改用“永久”或“应用内部”。';
+
+  @override
+  String get castPlayOn => '投放到';
+
+  @override
+  String get castPlayOnTooltip => '投放到…';
+
+  @override
+  String get castSearching => '正在搜索投放设备…';
+
+  @override
+  String get castNotSeeing => '没看到你的设备？请确认它连接的是同一个 Wi-Fi。';
+
+  @override
+  String get castVisualizer => '投放可视化';
+
+  @override
+  String get castVisualizerSubtitle => '将可视化效果投放到电视 · 仅限 Chromecast';
+
+  @override
+  String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
 }

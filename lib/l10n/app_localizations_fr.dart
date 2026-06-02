@@ -927,10 +927,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mainMore => 'Plus';
 
   @override
-  String get castOn => 'Activé';
+  String get commonOn => 'Activé';
 
   @override
-  String get castOff => 'Désactivé';
+  String get commonOff => 'Désactivé';
 
   @override
   String get settingsCastQuality => 'Qualité du visualiseur diffusé';
@@ -1166,4 +1166,27 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get storageChooseSdFolderFirst =>
       'Choisissez d\'abord un dossier sur la carte SD. Si chaque dossier est rejeté, votre appareil n\'autorise peut-être pas les applications à écrire sur la carte — utilisez Permanent ou Local à l\'application à la place.';
+
+  @override
+  String get castPlayOn => 'Diffuser sur';
+
+  @override
+  String get castPlayOnTooltip => 'Diffuser sur…';
+
+  @override
+  String get castSearching => 'Recherche d’appareils de diffusion…';
+
+  @override
+  String get castNotSeeing =>
+      'Vous ne voyez pas votre appareil ? Vérifiez qu’il est sur le même réseau Wi-Fi.';
+
+  @override
+  String get castVisualizer => 'Diffuser le visualiseur';
+
+  @override
+  String get castVisualizerSubtitle =>
+      'Diffuser le visualiseur sur le téléviseur · Chromecast uniquement';
+
+  @override
+  String get visualizerNoKnobs => 'Ce shader n’expose aucun réglage.';
 }

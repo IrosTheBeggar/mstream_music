@@ -254,8 +254,8 @@
   "queueDownloadAll": "全部下载",
   "queueDownloadAllBody": "{count, plural, other{将下载 {count} 个曲目以供离线播放。}}",
   "mainMore": "更多",
-  "castOn": "开启",
-  "castOff": "关闭",
+  "commonOn": "开启",
+  "commonOff": "关闭",
   "settingsCastQuality": "投放可视化质量",
   "settingsCastQualitySubtitle720": "可视化效果投放到电视的分辨率。720p — 对手机负担最轻。",
   "settingsCastQualitySubtitle1080": "可视化效果投放到电视的分辨率。1080p — 在任何 Chromecast 上都清晰（默认）。",
@@ -315,5 +315,12 @@
   "storageMigrateDeleteBody": "立即切换并移除旧文件；它们将在新位置重新下载。",
   "storageMovingBackground": "正在后台移动你的下载内容 — 请保持应用打开。",
   "storageChooseFolderFirst": "请先选择一个下载文件夹。",
-  "storageChooseSdFolderFirst": "请先在 SD 卡上选择一个文件夹。如果每个文件夹都被拒绝，你的设备可能不允许应用写入该卡 — 请改用“永久”或“应用内部”。"
+  "storageChooseSdFolderFirst": "请先在 SD 卡上选择一个文件夹。如果每个文件夹都被拒绝，你的设备可能不允许应用写入该卡 — 请改用“永久”或“应用内部”。",
+  "castPlayOn": "投放到",
+  "castPlayOnTooltip": "投放到…",
+  "castSearching": "正在搜索投放设备…",
+  "castNotSeeing": "没看到你的设备？请确认它连接的是同一个 Wi-Fi。",
+  "castVisualizer": "投放可视化",
+  "castVisualizerSubtitle": "将可视化效果投放到电视 · 仅限 Chromecast",
+  "visualizerNoKnobs": "此着色器没有可调节的旋钮。"
 }

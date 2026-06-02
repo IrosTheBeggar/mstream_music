@@ -930,10 +930,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mainMore => 'Mehr';
 
   @override
-  String get castOn => 'Ein';
+  String get commonOn => 'Ein';
 
   @override
-  String get castOff => 'Aus';
+  String get commonOff => 'Aus';
 
   @override
   String get settingsCastQuality => 'Cast-Visualizer-Qualität';
@@ -1037,7 +1037,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get storageHelpSdCard =>
-      'In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht verfügbar werden, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.';
+      'In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht mehr verfügbar sein, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.';
 
   @override
   String get storageChooseFolder => 'Ordner wählen';
@@ -1169,4 +1169,27 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get storageChooseSdFolderFirst =>
       'Wähle zuerst einen Ordner auf der SD-Karte. Falls jeder Ordner abgelehnt wird, lässt dein Gerät Apps möglicherweise nicht auf die Karte schreiben – verwende stattdessen Dauerhaft oder App-intern.';
+
+  @override
+  String get castPlayOn => 'Abspielen auf';
+
+  @override
+  String get castPlayOnTooltip => 'Abspielen auf…';
+
+  @override
+  String get castSearching => 'Suche nach Cast-Geräten…';
+
+  @override
+  String get castNotSeeing =>
+      'Dein Gerät wird nicht angezeigt? Stelle sicher, dass es im selben WLAN ist.';
+
+  @override
+  String get castVisualizer => 'Visualizer streamen';
+
+  @override
+  String get castVisualizerSubtitle =>
+      'Den Visualizer auf den Fernseher streamen · nur Chromecast';
+
+  @override
+  String get visualizerNoKnobs => 'Dieser Shader bietet keine Regler.';
 }

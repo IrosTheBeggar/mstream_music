@@ -441,7 +441,7 @@ class _VisualizerScreenState extends State<VisualizerScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      'This shader exposes no knobs.',
+                      AppLocalizations.of(context).visualizerNoKnobs,
                       style: TextStyle(color: Colors.white60, fontSize: 12),
                     ),
                   ),

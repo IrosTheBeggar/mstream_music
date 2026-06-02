@@ -1,104 +1,70 @@
 {
   "@@locale": "fr",
-
   "appTitle": "mStream Music",
-
   "settingsLanguage": "Langue",
-
   "languageSystemDefault": "Langue du système",
-
   "settingsLanguageSubtitle": "La langue d'affichage de l'application. « Langue du système » suit votre appareil.",
-
   "couldNotOpen": "Impossible d'ouvrir {url}",
-
   "trackCount": "{count, plural, =0{Aucune piste} =1{1 piste} other{{count} pistes}}",
-
   "reset": "Réinitialiser",
-
   "themeVelvet": "Velvet",
   "themeDark": "Sombre",
   "themeLight": "Clair",
-
   "tapAddToQueue": "Ajouter à la file",
   "tapPlayFromHere": "Lire à partir d'ici",
   "tapAppendAndJump": "Ajouter et lire",
-
   "visualizerEngineMilkdrop": "Milkdrop",
   "visualizerEngineShaders": "Shaders",
-
   "visualizerSourceSynthesized": "Synthétisé",
   "visualizerSourceReal": "Audio réel",
-
   "downloadsTitle": "Téléchargements",
-
   "downloadProgress": "progression : {progress} %",
-
   "songInfoTitle": "Infos du morceau",
-
   "eqTitle": "Égaliseur",
-
   "eqOnlyAndroid": "L'égaliseur n'est disponible que sur Android.",
-
   "eqNeedsPlayback": "Lancez un morceau pour configurer l'égaliseur.\n\nL'égaliseur natif d'Android s'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.",
-
   "eqInitFailed": "Impossible d'initialiser l'égaliseur :\n{error}",
-
   "eqNoBands": "Aucune bande d'égaliseur signalée par le pilote audio de cet appareil.",
-
   "eqEnabledOn": "Activé — gains appliqués à la lecture",
   "eqEnabledOff": "Désactivé — mode contournement",
-
   "cancel": "Annuler",
   "continueLabel": "Continuer",
   "openSettings": "Ouvrir les paramètres",
-
   "settingsTitle": "Paramètres",
   "settingsSectionAppearance": "Apparence",
   "settingsSectionPlayback": "Lecture",
   "settingsSectionBrowse": "Navigation",
   "settingsSectionAbout": "À propos",
-
   "settingsTheme": "Thème",
   "themeSubtitleVelvet": "Bleu marine et violet — le thème sombre emblématique.",
   "themeSubtitleDark": "Sombre neutre avec des accents ambrés.",
   "themeSubtitleLight": "Corps clair avec une barre d'application sombre et des accents ambrés — correspond à l'ancien thème livré.",
-
   "settingsTranscode": "Transcoder l'audio",
   "settingsTranscodeSubtitle": "Diffuser une copie transcodée depuis le serveur (fichiers plus légers, démarrage un peu plus lent). Désactivé, lit les fichiers d'origine.",
-
   "settingsTapBehavior": "Lorsque vous touchez un morceau",
   "tapSubtitleAddToQueue": "Toucher un morceau l'ajoute à la file. Si la file est vide, la lecture démarre automatiquement.",
   "tapSubtitlePlayFromHere": "Toucher un morceau remplace la file par les morceaux de la vue actuelle et démarre la lecture au morceau touché.",
   "tapSubtitleAppendAndJump": "Toucher un morceau l'ajoute à la file et y saute la lecture, interrompant ce qui était en cours.",
-
   "settingsEqSubtitle": "Réglez les basses, les médiums et les aigus. Android uniquement.",
-
   "settingsVisualizerEngine": "Moteur du visualiseur",
   "visualizerEngineSubtitleMilkdrop": "Préréglages Milkdrop via projectM (par défaut). Effets plus riches, plus exigeants pour le GPU.",
   "visualizerEngineSubtitleShaders": "Fragment shaders de style Shadertoy. Plus légers et modulaires — déposez des fichiers .glsl dans assets/shaders/ pour enrichir le catalogue.",
-
   "settingsVisualizerSource": "Source audio du visualiseur",
   "visualizerSourceSubtitleSynthesized": "Par défaut. Le visualiseur réagit uniquement au rythme de lecture — aucune autorisation micro requise.",
   "visualizerSourceSubtitleReal": "Le visualiseur réagit à la sortie audio réelle. Nécessite l'autorisation RECORD_AUDIO sur Android.",
-
   "settingsAlbumGrid": "Vue en grille des albums",
   "settingsAlbumGridSubtitle": "Afficher les albums sous forme de grille de cartes avec les pochettes au lieu d'une simple liste.",
-
   "settingsFileMetadata": "Lire les métadonnées dans l'explorateur de fichiers",
   "settingsFileMetadataSubtitle": "Récupérer le titre, l'artiste et la pochette de chaque morceau lors de la navigation dans les fichiers du serveur. Désactivé, affiche les noms de fichiers bruts (plus rapide pour les gros dossiers).",
-
   "settingsLetterStrip": "Seuil du défileur alphabétique",
   "settingsLetterStripSubtitle": "Afficher la bande de défilement rapide A-Z lorsqu'une liste compte au moins ce nombre d'éléments. En dessous de cette taille, la bande est masquée et les longs noms de dossiers/fichiers passent à la ligne au lieu d'être tronqués. Mettez 0 pour toujours afficher la bande.",
-
   "settingsReset": "Réinitialiser aux valeurs par défaut",
   "settingsResetSubtitle": "Rétablir tous les paramètres de cet écran à leurs valeurs par défaut. Les serveurs et les téléchargements ne sont pas affectés.",
   "settingsResetDone": "Paramètres rétablis aux valeurs par défaut",
-
   "realAudioDialogTitle": "Utiliser l'audio réel ?",
   "realAudioDialogBody": "Le mode audio réel lit la forme d'onde de la musique que votre téléphone joue afin que le visualiseur puisse y réagir. Android nécessite l'autorisation RECORD_AUDIO pour cela — l'application n'enregistre ni n'envoie aucun audio où que ce soit. Vous pouvez revenir à l'audio synthétisé à tout moment.",
   "realAudioPermPermanentlyDenied": "Autorisation définitivement refusée. Activez-la dans les paramètres système pour utiliser l'audio réel.",
   "realAudioPermDenied": "Autorisation refusée. Maintien de l'audio synthétisé.",
-
   "visualizerTapHint": "Toucher = préréglage suivant · appui long pour fermer",
   "visualizerFailed": "Échec du démarrage du visualiseur",
   "visualizerBringingUp": "Démarrage du moteur de rendu…",
@@ -107,7 +73,6 @@
   "visualizerAudioSourceLine": "Source audio : {source}",
   "visualizerTapToClose": "Touchez n'importe où pour fermer",
   "visualizerUnsupported": "Le visualiseur n'est actuellement pris en charge que sur Android.",
-
   "aboutTitle": "À propos",
   "aboutBuiltBy": "Créé par {name}",
   "linkDiscordSubtitle": "Discussion communautaire",
@@ -115,7 +80,6 @@
   "linkHomepageSubtitle": "Page d'accueil du projet",
   "aboutAttributions": "Attributions",
   "aboutAttributionsSubtitle": "Licence, crédits des shaders et mentions open source.",
-
   "ok": "OK",
   "delete": "Supprimer",
   "edit": "Modifier",
@@ -129,7 +93,6 @@
   "copy": "Copier",
   "done": "Terminé",
   "copiedToClipboard": "Copié dans le presse-papiers",
-
   "attributionsTitle": "Attributions",
   "attributionsSectionLicense": "Licence",
   "attributionsSectionShaders": "Shaders du visualiseur",
@@ -138,7 +101,6 @@
   "attributionsLicenseBody": "Logiciel libre sous la GNU General Public License v3.0. Vous pouvez l'utiliser, l'étudier, le partager et le modifier selon ces conditions.",
   "attributionsPackages": "Licences des paquets open source",
   "attributionsPackagesSubtitle": "Textes complets des licences de tous les paquets Flutter/Dart inclus.",
-
   "manageServersTitle": "Gérer les serveurs",
   "manageServerInfo": "Infos du serveur",
   "manageServerDownloadFolder": "Dossier de téléchargement :",
@@ -146,7 +108,6 @@
   "manageServerPathCopied": "Chemin copié dans le presse-papiers",
   "confirmRemoveServerTitle": "Confirmer la suppression du serveur",
   "removeSyncedFiles": "Supprimer les fichiers synchronisés de l'appareil ?",
-
   "playlistsTitle": "Listes de lecture",
   "playlistsNew": "Nouvelle liste de lecture",
   "playlistsEmptyTitle": "Aucune liste de lecture",
@@ -155,7 +116,6 @@
   "playlistsRename": "Renommer la liste de lecture",
   "playlistFallbackTitle": "Liste de lecture",
   "playlistEmptyDetail": "La liste de lecture est vide.\nAjoutez des pistes depuis la file.",
-
   "shareEmptyTitle": "File vide",
   "shareEmptyBody": "Ajoutez des morceaux à la file avant de partager.",
   "shareBlockedTitle": "Impossible de partager cette file",
@@ -172,10 +132,8 @@
   "shareAction": "Partager",
   "shareDoneTitle": "Liste de lecture partagée",
   "shareDoneBody": "Toute personne disposant de ce lien peut lire la file :",
-
   "save": "Enregistrer",
   "start": "Démarrer",
-
   "addServerTitle": "Ajouter un serveur",
   "editServerTitle": "Modifier le serveur",
   "fieldServerUrl": "URL du serveur",
@@ -200,7 +158,6 @@
   "failedToLogin": "Échec de la connexion",
   "testConnected": "Connecté — mStream v{version}",
   "testConnectFailed": "Connexion impossible : {error}",
-
   "sleepTimerTitle": "Minuterie de veille",
   "sleepTimerHint": "Choisissez une durée après laquelle mettre la lecture en pause.",
   "sleepTimerCustom": "Personnalisé",
@@ -210,40 +167,32 @@
   "sleepTimerPausesIn": "Pause dans {time}",
   "sleepTimerMinutes": "{minutes} min",
   "sleepTimerSet": "{minutes, plural, =1{Minuterie de veille réglée sur 1 minute} other{Minuterie de veille réglée sur {minutes} minutes}}",
-
   "add": "Ajouter",
-
   "autoDjTitle": "Auto DJ",
   "autoDjAddServerFirst": "Ajoutez d'abord un serveur.",
   "autoDjSectionServer": "Serveur",
   "autoDjSectionSources": "Sources",
   "autoDjSectionContinuity": "Continuité",
   "autoDjSectionFilters": "Filtres",
-
   "autoDjBpmTitle": "Continuité du BPM",
   "autoDjBpmSubtitle": "Privilégier les choix dans une fenêtre de tempo proche du morceau actuel. Prend en compte l'équivalence demi/double tempo.",
   "autoDjTolerance": "Tolérance",
   "autoDjBpmTolerance": "± {bpm} BPM",
-
   "autoDjHarmonicTitle": "Mixage harmonique",
   "autoDjHarmonicSubtitle": "Privilégier les choix dans des tonalités qui se mixent bien avec le morceau verrouillé (voisins de la roue Camelot).",
-
   "autoDjStatusOn": "Auto DJ activé",
   "autoDjStatusOff": "Auto DJ désactivé",
   "autoDjStatusOffDetail": "Touchez ci-dessous pour démarrer. La bibliothèque du serveur actuel sera utilisée.",
   "autoDjStart": "Démarrer Auto DJ",
   "autoDjStop": "Arrêter Auto DJ",
   "autoDjStatusOnDetail": "Les morceaux sont choisis depuis {url} lorsque la file s'épuise.",
-
   "autoDjActiveSource": "Source active",
   "autoDjActiveSourceTap": "Source active — touchez pour changer",
   "autoDjSwitch": "Changer",
   "autoDjOneSourceRequired": "Au moins une source est requise.",
-
   "autoDjMinRating": "Note minimale",
   "autoDjMinRatingSubtitle": "Ne choisir que les morceaux égaux ou supérieurs à cette note.",
   "autoDjRatingAny": "Indifférent",
-
   "autoDjGenreTitle": "Filtre par genre",
   "autoDjGenreSubtitle": "La liste blanche ne lit que les pistes correspondantes ; la liste noire les ignore.",
   "autoDjWhitelist": "Liste blanche",
@@ -251,26 +200,21 @@
   "autoDjNoGenres": "Aucun genre sélectionné. Touchez « Choisir des genres » pour en choisir.",
   "autoDjPickGenres": "Choisir des genres",
   "autoDjGenreLoadError": "Impossible de charger les genres",
-
   "autoDjKeywordTitle": "Filtre par mot-clé",
   "autoDjKeywordSubtitle": "Ignorer les choix dont le titre, l'artiste, l'album ou le chemin de fichier contient l'un de ces mots.",
   "autoDjNoKeywords": "Aucun mot-clé. Ajoutez des mots ci-dessous pour commencer à filtrer.",
   "autoDjKeywordHint": "p. ex. « live » ou « remix »",
-
   "autoDjSearchGenres": "Rechercher des genres…",
   "autoDjNoGenresOnServer": "Aucun genre trouvé sur ce serveur.",
   "autoDjSelectedCount": "{count} sélectionné(s)",
   "autoDjNoGenresMatch": "Aucun genre ne correspond à « {query} ».",
-
   "download": "Télécharger",
   "addAll": "Tout ajouter",
-
   "browserConfirmDeletePlaylist": "Confirmer la suppression de la liste de lecture",
   "browserConfirmDeleteFolder": "Confirmer la suppression du dossier",
   "browserSearchHint": "Rechercher dans la base de données",
   "browserDownloadsStarted": "{count, plural, =1{1 téléchargement démarré} other{{count} téléchargements démarrés}}",
   "browserSongsAdded": "{count, plural, =1{1 morceau ajouté à la file} other{{count} morceaux ajoutés à la file}}",
-
   "tabBrowser": "Explorateur",
   "tabQueue": "File",
   "drawerTagline": "Streaming musical personnel",
@@ -280,17 +224,14 @@
   "mainClearQueue": "Vider la file",
   "mainSync": "Synchroniser",
   "mainQueueCount": "{count, plural, =1{1 piste dans la file} other{{count} pistes dans la file}}",
-
   "autoDjEnabled": "Auto DJ activé",
   "autoDjDisabled": "Auto DJ désactivé",
   "autoDjEnabledFor": "Auto DJ activé pour {url}",
-
   "addToPlaylistTitle": "Ajouter à la liste de lecture",
   "addToPlaylistEmpty": "Aucune liste de lecture — touchez + pour en créer une.",
   "addedToPlaylist": "Ajouté à {name}",
   "testConnectedSignedIn": "Connecté — connexion réussie.",
   "testSignInFailed": "Serveur joint, mais la connexion a échoué — vérifiez votre nom d'utilisateur et votre mot de passe.",
-
   "browserFileExplorer": "Explorateur de fichiers",
   "browserLocalFiles": "Fichiers locaux",
   "browserPlaylists": "Listes de lecture",
@@ -301,12 +242,10 @@
   "browserSearch": "Rechercher",
   "browserWelcomeTitle": "Bienvenue sur mStream",
   "browserWelcomeSubtitle": "Touchez ici pour ajouter un serveur",
-
   "settingsVisualizerKnobs": "Réglages du visualiseur",
   "settingsVisualizerKnobsSubtitle": "Affiche des curseurs sur le visualiseur pour ajuster la réactivité audio de chaque shader. Moteur de shaders uniquement.",
   "visualizerTuningTitle": "Réglage",
   "close": "Fermer",
-
   "migMoveStopped": "Déplacement interrompu — espace insuffisant ou emplacement indisponible.",
   "migMoveComplete": "Déplacement terminé",
   "migMoveCompleteSkipped": "{count, plural, =1{Déplacement terminé — 1 fichier ignoré (non pris en charge sur la destination)} other{Déplacement terminé — {count} fichiers ignorés (non pris en charge sur la destination)}}",
@@ -315,15 +254,13 @@
   "queueDownloadAll": "Tout télécharger",
   "queueDownloadAllBody": "{count, plural, =1{1 piste sera téléchargée pour une lecture hors ligne.} other{{count} pistes seront téléchargées pour une lecture hors ligne.}}",
   "mainMore": "Plus",
-
-  "castOn": "Activé",
-  "castOff": "Désactivé",
+  "commonOn": "Activé",
+  "commonOff": "Désactivé",
   "settingsCastQuality": "Qualité du visualiseur diffusé",
   "settingsCastQualitySubtitle720": "Résolution à laquelle le visualiseur est diffusé sur un téléviseur. 720p — la plus légère pour le téléphone.",
   "settingsCastQualitySubtitle1080": "Résolution à laquelle le visualiseur est diffusé sur un téléviseur. 1080p — net sur tout Chromecast (par défaut).",
   "settingsCastQualitySubtitle4k": "Résolution à laquelle le visualiseur est diffusé sur un téléviseur. 4K — nécessite un Chromecast 4K ; bien plus exigeant pour le téléphone.",
   "eqCasting": "L’égaliseur ajuste l’audio sur cet appareil, il est donc indisponible pendant la diffusion. Déconnectez-vous pour l’utiliser.",
-
   "browserNothingToDownload": "Rien à télécharger dans cette liste",
   "browserDownloadAllTitle": "Tout télécharger",
   "browserDownloadAllConfirm": "{count, plural, =1{1 fichier sera téléchargé.} other{{count} fichiers seront téléchargés.}}",
@@ -339,7 +276,6 @@
   "dlServerGone": "Ce serveur n'est plus configuré.",
   "dlStorageUnavailable": "Emplacement de stockage indisponible — reconnectez la carte SD ou modifiez l'emplacement de stockage de ce serveur dans Modifier le serveur.",
   "dlCouldNotStart": "Impossible de démarrer le téléchargement — stockage indisponible.",
-
   "storageLocationLabel": "Emplacement de stockage",
   "storageAppLocal": "Local à l'application",
   "storagePermanent": "Permanent",
@@ -379,5 +315,12 @@
   "storageMigrateDeleteBody": "Changer maintenant et supprimer les anciens fichiers ; ils seront retéléchargés au nouvel emplacement.",
   "storageMovingBackground": "Déplacement de vos téléchargements en arrière-plan — gardez l'application ouverte.",
   "storageChooseFolderFirst": "Choisissez d'abord un dossier de téléchargement.",
-  "storageChooseSdFolderFirst": "Choisissez d'abord un dossier sur la carte SD. Si chaque dossier est rejeté, votre appareil n'autorise peut-être pas les applications à écrire sur la carte — utilisez Permanent ou Local à l'application à la place."
+  "storageChooseSdFolderFirst": "Choisissez d'abord un dossier sur la carte SD. Si chaque dossier est rejeté, votre appareil n'autorise peut-être pas les applications à écrire sur la carte — utilisez Permanent ou Local à l'application à la place.",
+  "castPlayOn": "Diffuser sur",
+  "castPlayOnTooltip": "Diffuser sur…",
+  "castSearching": "Recherche d’appareils de diffusion…",
+  "castNotSeeing": "Vous ne voyez pas votre appareil ? Vérifiez qu’il est sur le même réseau Wi-Fi.",
+  "castVisualizer": "Diffuser le visualiseur",
+  "castVisualizerSubtitle": "Diffuser le visualiseur sur le téléviseur · Chromecast uniquement",
+  "visualizerNoKnobs": "Ce shader n’expose aucun réglage."
 }

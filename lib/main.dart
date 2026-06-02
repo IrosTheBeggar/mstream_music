@@ -259,7 +259,7 @@ class _MStreamAppState extends State<MStreamApp>
                       return IconButton(
                         icon:
                             Icon(casting ? Icons.cast_connected : Icons.cast),
-                        tooltip: 'Play on…',
+                        tooltip: AppLocalizations.of(context).castPlayOnTooltip,
                         color: casting ? VelvetColors.primary : null,
                         onPressed: () {
                           showModalBottomSheet(

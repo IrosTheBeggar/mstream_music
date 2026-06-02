@@ -316,8 +316,8 @@
   "queueDownloadAllBody": "{count, plural, =1{1 Titel wird für die Offline-Wiedergabe heruntergeladen.} other{{count} Titel werden für die Offline-Wiedergabe heruntergeladen.}}",
   "mainMore": "Mehr",
 
-  "castOn": "Ein",
-  "castOff": "Aus",
+  "commonOn": "Ein",
+  "commonOff": "Aus",
   "settingsCastQuality": "Cast-Visualizer-Qualität",
   "settingsCastQualitySubtitle720": "Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 720p – am schonendsten für das Telefon.",
   "settingsCastQualitySubtitle1080": "Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 1080p – scharf auf jedem Chromecast (Standard).",
@@ -346,7 +346,7 @@
   "storageSdCard": "SD-Karte",
   "storageHelpAppLocal": "Innerhalb der App gespeichert. Wird beim Deinstallieren oder Leeren der App gelöscht.",
   "storageHelpPermanent": "In einem von dir gewählten Ordner gespeichert. Übersteht das Deinstallieren der App. Erfordert \"Zugriff auf alle Dateien\".",
-  "storageHelpSdCard": "In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht verfügbar werden, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.",
+  "storageHelpSdCard": "In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht mehr verfügbar sein, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.",
   "storageChooseFolder": "Ordner wählen",
   "storageNoFolderChosen": "Noch kein Ordner gewählt",
   "storageDownloadFolderLabel": "Download-Ordner",
@@ -379,5 +379,13 @@
   "storageMigrateDeleteBody": "Jetzt wechseln und die alten Dateien entfernen; sie werden am neuen Speicherort erneut heruntergeladen.",
   "storageMovingBackground": "Deine Downloads werden im Hintergrund verschoben – lass die App geöffnet.",
   "storageChooseFolderFirst": "Wähle zuerst einen Download-Ordner.",
-  "storageChooseSdFolderFirst": "Wähle zuerst einen Ordner auf der SD-Karte. Falls jeder Ordner abgelehnt wird, lässt dein Gerät Apps möglicherweise nicht auf die Karte schreiben – verwende stattdessen Dauerhaft oder App-intern."
+  "storageChooseSdFolderFirst": "Wähle zuerst einen Ordner auf der SD-Karte. Falls jeder Ordner abgelehnt wird, lässt dein Gerät Apps möglicherweise nicht auf die Karte schreiben – verwende stattdessen Dauerhaft oder App-intern.",
+
+  "castPlayOn": "Abspielen auf",
+  "castPlayOnTooltip": "Abspielen auf…",
+  "castSearching": "Suche nach Cast-Geräten…",
+  "castNotSeeing": "Dein Gerät wird nicht angezeigt? Stelle sicher, dass es im selben WLAN ist.",
+  "castVisualizer": "Visualizer streamen",
+  "castVisualizerSubtitle": "Den Visualizer auf den Fernseher streamen · nur Chromecast",
+  "visualizerNoKnobs": "Dieser Shader bietet keine Regler."
 }

@@ -258,8 +258,8 @@
   "queueDownloadAllBody": "{count, plural, =1{Se descargará 1 pista para reproducción sin conexión.} other{Se descargarán {count} pistas para reproducción sin conexión.}}",
   "mainMore": "Más",
 
-  "castOn": "Activado",
-  "castOff": "Desactivado",
+  "commonOn": "Activado",
+  "commonOff": "Desactivado",
   "settingsCastQuality": "Calidad del visualizador en Cast",
   "settingsCastQualitySubtitle720": "Resolución a la que el visualizador se transmite a una TV. 720p — la más ligera para el teléfono.",
   "settingsCastQualitySubtitle1080": "Resolución a la que el visualizador se transmite a una TV. 1080p — nítida en cualquier Chromecast (predeterminada).",
@@ -321,5 +321,13 @@
   "storageMigrateDeleteBody": "Cambia ahora y elimina los archivos antiguos; se volverán a descargar en la nueva ubicación.",
   "storageMovingBackground": "Trasladando tus descargas en segundo plano — mantén la aplicación abierta.",
   "storageChooseFolderFirst": "Primero elige una carpeta de descargas.",
-  "storageChooseSdFolderFirst": "Primero elige una carpeta en la tarjeta SD. Si se rechazan todas las carpetas, puede que tu dispositivo no permita que las apps escriban en la tarjeta — usa Permanente o Local de la app en su lugar."
+  "storageChooseSdFolderFirst": "Primero elige una carpeta en la tarjeta SD. Si se rechazan todas las carpetas, puede que tu dispositivo no permita que las apps escriban en la tarjeta — usa Permanente o Local de la app en su lugar.",
+
+  "castPlayOn": "Reproducir en",
+  "castPlayOnTooltip": "Reproducir en…",
+  "castSearching": "Buscando dispositivos de Cast…",
+  "castNotSeeing": "¿No ves tu dispositivo? Asegúrate de que esté en la misma red Wi-Fi.",
+  "castVisualizer": "Transmitir el visualizador",
+  "castVisualizerSubtitle": "Transmite el visualizador a la TV · solo Chromecast",
+  "visualizerNoKnobs": "Este shader no expone ningún control."
 }

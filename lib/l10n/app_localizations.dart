@@ -1630,17 +1630,17 @@ abstract class AppLocalizations {
   /// **'More'**
   String get mainMore;
 
-  /// No description provided for @castOn.
+  /// No description provided for @commonOn.
   ///
   /// In en, this message translates to:
   /// **'On'**
-  String get castOn;
+  String get commonOn;
 
-  /// No description provided for @castOff.
+  /// No description provided for @commonOff.
   ///
   /// In en, this message translates to:
   /// **'Off'**
-  String get castOff;
+  String get commonOff;
 
   /// No description provided for @settingsCastQuality.
   ///
@@ -2001,6 +2001,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.'**
   String get storageChooseSdFolderFirst;
+
+  /// No description provided for @castPlayOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on'**
+  String get castPlayOn;
+
+  /// No description provided for @castPlayOnTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on…'**
+  String get castPlayOnTooltip;
+
+  /// No description provided for @castSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for cast devices…'**
+  String get castSearching;
+
+  /// No description provided for @castNotSeeing.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t see your device? Make sure it\'s on the same Wi-Fi.'**
+  String get castNotSeeing;
+
+  /// No description provided for @castVisualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast visualizer'**
+  String get castVisualizer;
+
+  /// No description provided for @castVisualizerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream the visualizer to the TV · Chromecast only'**
+  String get castVisualizerSubtitle;
+
+  /// No description provided for @visualizerNoKnobs.
+  ///
+  /// In en, this message translates to:
+  /// **'This shader exposes no knobs.'**
+  String get visualizerNoKnobs;
 }
 
 class _AppLocalizationsDelegate

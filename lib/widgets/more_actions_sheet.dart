@@ -65,7 +65,7 @@ class MoreActionsSheet extends StatelessWidget {
                         : VelvetColors.textSecondary),
                 title: Text(l.autoDjTitle,
                     style: TextStyle(color: VelvetColors.textPrimary)),
-                subtitle: Text(on ? l.castOn : l.castOff,
+                subtitle: Text(on ? l.commonOn : l.commonOff,
                     style: TextStyle(color: VelvetColors.textSecondary)),
                 value: on,
                 activeThumbColor: VelvetColors.primary,
@@ -88,7 +88,7 @@ class MoreActionsSheet extends StatelessWidget {
                 title: Text(l.sleepTimerTitle,
                     style: TextStyle(color: VelvetColors.textPrimary)),
                 subtitle: Text(
-                    d != null ? l.sleepTimerPausesIn(_fmt(d)) : l.castOff,
+                    d != null ? l.sleepTimerPausesIn(_fmt(d)) : l.commonOff,
                     style: TextStyle(color: VelvetColors.textSecondary)),
                 onTap: () {
                   Navigator.of(context).pop();

@@ -532,8 +532,8 @@
   "@queueDownloadAllBody": { "description": "Queue download-all confirm dialog body.", "placeholders": { "count": { "type": "int" } } },
   "mainMore": "More",
 
-  "castOn": "On",
-  "castOff": "Off",
+  "commonOn": "On",
+  "commonOff": "Off",
   "settingsCastQuality": "Cast visualizer quality",
   "settingsCastQualitySubtitle720": "Resolution the visualizer streams to a TV at. 720p — lightest on the phone.",
   "settingsCastQualitySubtitle1080": "Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).",
@@ -600,5 +600,13 @@
   "storageMigrateDeleteBody": "Switch now and remove the old files; they'll re-download at the new location.",
   "storageMovingBackground": "Moving your downloads in the background — keep the app open.",
   "storageChooseFolderFirst": "Choose a download folder first.",
-  "storageChooseSdFolderFirst": "Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead."
+  "storageChooseSdFolderFirst": "Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.",
+
+  "castPlayOn": "Play on",
+  "castPlayOnTooltip": "Play on…",
+  "castSearching": "Searching for cast devices…",
+  "castNotSeeing": "Don't see your device? Make sure it's on the same Wi-Fi.",
+  "castVisualizer": "Cast visualizer",
+  "castVisualizerSubtitle": "Stream the visualizer to the TV · Chromecast only",
+  "visualizerNoKnobs": "This shader exposes no knobs."
 }

@@ -917,10 +917,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainMore => 'More';
 
   @override
-  String get castOn => 'On';
+  String get commonOn => 'On';
 
   @override
-  String get castOff => 'Off';
+  String get commonOff => 'Off';
 
   @override
   String get settingsCastQuality => 'Cast visualizer quality';
@@ -1152,4 +1152,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get storageChooseSdFolderFirst =>
       'Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.';
+
+  @override
+  String get castPlayOn => 'Play on';
+
+  @override
+  String get castPlayOnTooltip => 'Play on…';
+
+  @override
+  String get castSearching => 'Searching for cast devices…';
+
+  @override
+  String get castNotSeeing =>
+      'Don\'t see your device? Make sure it\'s on the same Wi-Fi.';
+
+  @override
+  String get castVisualizer => 'Cast visualizer';
+
+  @override
+  String get castVisualizerSubtitle =>
+      'Stream the visualizer to the TV · Chromecast only';
+
+  @override
+  String get visualizerNoKnobs => 'This shader exposes no knobs.';
 }

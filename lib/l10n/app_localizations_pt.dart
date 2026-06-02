@@ -926,10 +926,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get mainMore => 'Mais';
 
   @override
-  String get castOn => 'Ligado';
+  String get commonOn => 'Ligado';
 
   @override
-  String get castOff => 'Desligado';
+  String get commonOff => 'Desligado';
 
   @override
   String get settingsCastQuality => 'Qualidade do visualizador na transmissão';
@@ -1164,4 +1164,27 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get storageChooseSdFolderFirst =>
       'Escolha uma pasta no cartão SD primeiro. Se todas as pastas forem rejeitadas, talvez seu dispositivo não permita que apps gravem no cartão — use Permanente ou Local do app.';
+
+  @override
+  String get castPlayOn => 'Tocar em';
+
+  @override
+  String get castPlayOnTooltip => 'Tocar em…';
+
+  @override
+  String get castSearching => 'Procurando dispositivos de transmissão…';
+
+  @override
+  String get castNotSeeing =>
+      'Não está vendo seu dispositivo? Verifique se ele está na mesma rede Wi-Fi.';
+
+  @override
+  String get castVisualizer => 'Transmitir o visualizador';
+
+  @override
+  String get castVisualizerSubtitle =>
+      'Transmite o visualizador para a TV · apenas Chromecast';
+
+  @override
+  String get visualizerNoKnobs => 'Este shader não expõe nenhum controle.';
 }
