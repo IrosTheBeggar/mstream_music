@@ -7,6 +7,7 @@ import '../media/cast_target.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+import '../l10n/app_localizations.dart';
 
 /// Bottom sheet for choosing where audio plays ("This device" or a discovered
 /// renderer). Discovery runs only while the sheet is open (battery-friendly).
@@ -55,6 +56,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
@@ -68,7 +70,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 Icon(Icons.cast, color: VelvetColors.primary),
                 const SizedBox(width: 10),
                 Text(
-                  'Play on',
+                  l.castPlayOn,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -124,7 +126,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Searching for cast devices…',
+                      l.castSearching,
                       style: TextStyle(
                         fontSize: 12,
                         color: VelvetColors.textSecondary,
@@ -134,7 +136,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 )
               else
                 Text(
-                  'Don\'t see your device? Make sure it\'s on the same Wi-Fi.',
+                  l.castNotSeeing,
                   style: TextStyle(
                     fontSize: 12,
                     color: VelvetColors.textSecondary,
@@ -156,11 +158,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                 SettingsManager().setCastVisualizerEnabled(_visualizer);
               },
               title: Text(
-                'Cast visualizer',
+                l.castVisualizer,
                 style: TextStyle(color: VelvetColors.textPrimary),
               ),
               subtitle: Text(
-                'Stream the visualizer to the TV · Chromecast only',
+                l.castVisualizerSubtitle,
                 style: TextStyle(
                   fontSize: 12,
                   color: VelvetColors.textSecondary,

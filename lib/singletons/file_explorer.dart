@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import './app_messenger.dart';
 import './browser_list.dart';
+import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
@@ -21,7 +22,10 @@ class FileExplorer {
   Future<String> getServerDir(Server s) async {
     Directory? woo = await getDownloadDir(s.storageMode, s.storageBasePath);
     if (woo == null) {
-      return 'Download location unavailable';
+      final ctx = rootMessengerKey.currentContext;
+      return ctx != null
+          ? AppLocalizations.of(ctx).dlLocationUnavailable
+          : 'Download location unavailable';
     }
 
     return new Directory(path.join(woo.path.toString(), 'media/${s.localname}'))
@@ -39,7 +43,10 @@ class FileExplorer {
       Directory? woo = await getDownloadDir(s.storageMode, s.storageBasePath);
       if (woo == null) {
         // permanent/sdCard location is gone (card removed / folder deleted).
-        showGlobalSnack('Download location unavailable for this server.');
+        final ctx = rootMessengerKey.currentContext;
+        showGlobalSnack(ctx != null
+            ? AppLocalizations.of(ctx).dlLocationUnavailableServer
+            : 'Download location unavailable for this server.');
         BrowserManager().addListToStack(newList); // show an empty list
         return;
       }

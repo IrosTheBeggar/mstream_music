@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/downloads.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
+import '../l10n/app_localizations.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
@@ -337,6 +338,7 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     return Container(
       decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
@@ -347,24 +349,24 @@ class _BrowserState extends State<Browser> {
               SlidableAction(
                   backgroundColor: Colors.redAccent,
                   icon: Icons.remove_circle,
-                  label: 'Delete',
+                  label: l.delete,
                   onPressed: (context) {
                     showDialog(
                         context: c,
                         builder: (BuildContext context) {
                           return AlertDialog(
-                              title: Text("Confirm Delete Playlist"),
+                              title: Text(l.browserConfirmDeletePlaylist),
                               content: b[i].getText(),
                               actions: <Widget>[
                                 TextButton(
-                                  child: Text("Go Back"),
+                                  child: Text(l.goBack),
                                   onPressed: () {
                                     Navigator.of(context).pop();
                                   },
                                 ),
                                 TextButton(
                                     child: Text(
-                                      "Delete",
+                                      l.delete,
                                       style: TextStyle(color: Colors.red),
                                     ),
                                     onPressed: () {
@@ -400,6 +402,7 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
@@ -413,24 +416,24 @@ class _BrowserState extends State<Browser> {
                 SlidableAction(
                     backgroundColor: Colors.red,
                     icon: Icons.delete,
-                    label: 'Delete',
+                    label: l.delete,
                     onPressed: (context) {
                       showDialog(
                           context: c,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                                title: Text("Confirm Delete Folder"),
+                                title: Text(l.browserConfirmDeleteFolder),
                                 content: b[i].getText(),
                                 actions: <Widget>[
                                   TextButton(
-                                    child: Text("Go Back"),
+                                    child: Text(l.goBack),
                                     onPressed: () {
                                       Navigator.of(context).pop();
                                     },
                                   ),
                                   TextButton(
                                       child: Text(
-                                        "Delete",
+                                        l.delete,
                                         style: TextStyle(color: Colors.red),
                                       ),
                                       onPressed: () {
@@ -465,6 +468,7 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
@@ -476,7 +480,7 @@ class _BrowserState extends State<Browser> {
                 SlidableAction(
                     backgroundColor: Colors.red,
                     icon: Icons.delete,
-                    label: 'Delete',
+                    label: l.delete,
                     onPressed: (context) {
                       FileExplorer().deleteFile(b[i].data!, b[i].server);
                     })
@@ -504,6 +508,7 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     // Below the letter-strip threshold there's no strip math to keep
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
@@ -518,7 +523,7 @@ class _BrowserState extends State<Browser> {
                 SlidableAction(
                     backgroundColor: Colors.blueGrey,
                     icon: Icons.add_to_queue,
-                    label: 'Add All',
+                    label: l.addAll,
                     onPressed: (context) {
                       ApiManager().getRecursiveFiles(b[i].data!,
                           useThisServer: b[i].server);
@@ -547,13 +552,14 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: ListTile(
             leading: b[i].getImage(),
-            title: b[i].getText(),
-            subtitle: b[i].getSubText(),
+            title: b[i].getText(l: l),
+            subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
             }));
@@ -608,11 +614,12 @@ class _BrowserState extends State<Browser> {
   // are ignored); alerts if there are none, otherwise confirms the count
   // before enqueueing. downloadOneFile no-ops on files already on disk.
   void _downloadAll(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final files =
         BrowserManager().browserList.where((e) => e.type == 'file').toList();
     if (files.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Nothing to download in this list')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.browserNothingToDownload)));
       return;
     }
     final n = files.length;
@@ -620,12 +627,12 @@ class _BrowserState extends State<Browser> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
-        title: Text('Download all'),
-        content: Text('$n file${n == 1 ? '' : 's'} will be downloaded.'),
+        title: Text(l.browserDownloadAllTitle),
+        content: Text(l.browserDownloadAllConfirm(n)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel',
+            child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.textSecondary)),
           ),
           ElevatedButton(
@@ -641,9 +648,9 @@ class _BrowserState extends State<Browser> {
                     referenceItem: e);
               }
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('$n download${n == 1 ? '' : 's'} started')));
+                  content: Text(l.browserDownloadsStarted(n))));
             },
-            child: Text('Download'),
+            child: Text(l.download),
           ),
         ],
       ),
@@ -651,6 +658,7 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
       Material(
         color: VelvetColors.surface,
@@ -675,18 +683,18 @@ class _BrowserState extends State<Browser> {
                         IconButton(
                             icon: Icon(Icons.close,
                                 color: VelvetColors.textSecondary),
-                            tooltip: 'Close search',
+                            tooltip: l.browserCloseSearch,
                             onPressed: _closeSearch),
                         Expanded(
                             child: LocalSearchBar(
-                                hintText: 'Search this list',
+                                hintText: l.browserSearchThisList,
                                 onChanged: (q) =>
                                     setState(() => _searchQuery = q))),
                       ] else ...[
                       IconButton(
                           icon: Icon(Icons.keyboard_arrow_left,
                               color: VelvetColors.textSecondary),
-                          tooltip: 'Go Back',
+                          tooltip: l.goBack,
                           onPressed: () {
                             _closeSearch();
                             BrowserManager().popBrowser();
@@ -695,7 +703,7 @@ class _BrowserState extends State<Browser> {
                         IconButton(
                             icon: Icon(Icons.search,
                                 color: VelvetColors.textSecondary),
-                            tooltip: 'Search list',
+                            tooltip: l.browserSearchList,
                             onPressed: () =>
                                 setState(() => _searchOpen = true)),
                         IconButton(
@@ -703,14 +711,14 @@ class _BrowserState extends State<Browser> {
                               Icons.download_sharp,
                               color: VelvetColors.textSecondary,
                             ),
-                            tooltip: 'Download',
+                            tooltip: l.download,
                             onPressed: () => _downloadAll(context)),
                         IconButton(
                             icon: Icon(
                               Icons.library_add,
                               color: VelvetColors.textSecondary,
                             ),
-                            tooltip: 'Add All',
+                            tooltip: l.addAll,
                             onPressed: () {
                               int n = 0;
 
@@ -737,8 +745,8 @@ class _BrowserState extends State<Browser> {
                               if (n > 0) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text(n.toString() +
-                                            " songs added to queue")));
+                                        content:
+                                            Text(l.browserSongsAdded(n))));
                               }
                             })
                       ])
@@ -762,7 +770,7 @@ class _BrowserState extends State<Browser> {
                                 labelStyle: TextStyle(
                                   color: VelvetColors.textSecondary,
                                 ),
-                                hintText: 'Search Database',
+                                hintText: l.browserSearchHint,
                               )))
                     ]
                   ]);
@@ -814,7 +822,7 @@ class _BrowserState extends State<Browser> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'No matches for "$q"',
+                            l.browserNoMatches(q),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 color: VelvetColors.textSecondary,

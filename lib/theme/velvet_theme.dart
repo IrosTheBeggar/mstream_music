@@ -15,19 +15,11 @@ import 'package:flutter/material.dart';
 enum AppTheme {
   velvet,
   dark,
-  light;
-
-  String get label {
-    switch (this) {
-      case AppTheme.velvet:
-        return 'Velvet';
-      case AppTheme.dark:
-        return 'Dark';
-      case AppTheme.light:
-        return 'Light';
-    }
-  }
+  light,
 }
+
+// Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
+// extension) — a getter here can't reach AppLocalizations.
 
 class VelvetPalette {
   final Brightness brightness;

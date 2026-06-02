@@ -1,0 +1,1212 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Polish (`pl`).
+class AppLocalizationsPl extends AppLocalizations {
+  AppLocalizationsPl([String locale = 'pl']) : super(locale);
+
+  @override
+  String get appTitle => 'mStream Music';
+
+  @override
+  String get settingsLanguage => 'Język';
+
+  @override
+  String get languageSystemDefault => 'Domyślny systemu';
+
+  @override
+  String get settingsLanguageSubtitle =>
+      'Język wyświetlania aplikacji. „Domyślny systemu” podąża za ustawieniem urządzenia.';
+
+  @override
+  String couldNotOpen(String url) {
+    return 'Nie można otworzyć $url';
+  }
+
+  @override
+  String trackCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+      zero: 'Brak utworów',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reset => 'Resetuj';
+
+  @override
+  String get themeVelvet => 'Velvet';
+
+  @override
+  String get themeDark => 'Ciemny';
+
+  @override
+  String get themeLight => 'Jasny';
+
+  @override
+  String get tapAddToQueue => 'Dodaj do kolejki';
+
+  @override
+  String get tapPlayFromHere => 'Odtwarzaj od tego miejsca';
+
+  @override
+  String get tapAppendAndJump => 'Dodaj i odtwórz';
+
+  @override
+  String get visualizerEngineMilkdrop => 'Milkdrop';
+
+  @override
+  String get visualizerEngineShaders => 'Shadery';
+
+  @override
+  String get visualizerSourceSynthesized => 'Syntetyczne';
+
+  @override
+  String get visualizerSourceReal => 'Rzeczywisty dźwięk';
+
+  @override
+  String get downloadsTitle => 'Pobrane';
+
+  @override
+  String downloadProgress(String progress) {
+    return 'postęp: $progress%';
+  }
+
+  @override
+  String get songInfoTitle => 'Informacje o utworze';
+
+  @override
+  String get eqTitle => 'Korektor';
+
+  @override
+  String get eqOnlyAndroid => 'Korektor jest dostępny tylko na Androidzie.';
+
+  @override
+  String get eqNeedsPlayback =>
+      'Rozpocznij odtwarzanie utworu, aby skonfigurować korektor.\n\nNatywny korektor Androida inicjuje się wraz z sesją audio, dlatego do odczytania układu pasm potrzebne jest aktywne odtwarzanie.';
+
+  @override
+  String eqInitFailed(String error) {
+    return 'Nie można zainicjować korektora:\n$error';
+  }
+
+  @override
+  String get eqNoBands =>
+      'Sterownik audio tego urządzenia nie zgłasza żadnych pasm korektora.';
+
+  @override
+  String get eqEnabledOn => 'Włączony — wzmocnienia stosowane do odtwarzania';
+
+  @override
+  String get eqEnabledOff => 'Wyłączony — tryb obejścia';
+
+  @override
+  String get cancel => 'Anuluj';
+
+  @override
+  String get continueLabel => 'Kontynuuj';
+
+  @override
+  String get openSettings => 'Otwórz ustawienia';
+
+  @override
+  String get settingsTitle => 'Ustawienia';
+
+  @override
+  String get settingsSectionAppearance => 'Wygląd';
+
+  @override
+  String get settingsSectionPlayback => 'Odtwarzanie';
+
+  @override
+  String get settingsSectionBrowse => 'Przeglądanie';
+
+  @override
+  String get settingsSectionAbout => 'O aplikacji';
+
+  @override
+  String get settingsTheme => 'Motyw';
+
+  @override
+  String get themeSubtitleVelvet =>
+      'Granat i fiolet — charakterystyczny ciemny motyw.';
+
+  @override
+  String get themeSubtitleDark => 'Neutralny ciemny z bursztynowymi akcentami.';
+
+  @override
+  String get themeSubtitleLight =>
+      'Jasne tło z ciemnym paskiem aplikacji i bursztynowymi akcentami — zgodny ze starszym, fabrycznym motywem.';
+
+  @override
+  String get settingsTranscode => 'Transkoduj dźwięk';
+
+  @override
+  String get settingsTranscodeSubtitle =>
+      'Przesyłaj strumieniowo transkodowaną kopię z serwera (mniejsze pliki, nieco wolniejszy start). Wyłączenie odtwarza oryginalne pliki.';
+
+  @override
+  String get settingsTapBehavior => 'Po dotknięciu utworu';
+
+  @override
+  String get tapSubtitleAddToQueue =>
+      'Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.';
+
+  @override
+  String get tapSubtitlePlayFromHere =>
+      'Dotknięcie utworu zastępuje kolejkę utworami z bieżącego widoku i rozpoczyna odtwarzanie od dotkniętego utworu.';
+
+  @override
+  String get tapSubtitleAppendAndJump =>
+      'Dotknięcie utworu dodaje go do kolejki i przeskakuje do niego odtwarzanie, przerywając to, co było odtwarzane.';
+
+  @override
+  String get settingsEqSubtitle =>
+      'Dostrój basy, średnie i wysokie tony. Tylko na Androidzie.';
+
+  @override
+  String get settingsVisualizerEngine => 'Silnik wizualizatora';
+
+  @override
+  String get visualizerEngineSubtitleMilkdrop =>
+      'Presety Milkdrop przez projectM (domyślnie). Bogatsze efekty, większe obciążenie GPU.';
+
+  @override
+  String get visualizerEngineSubtitleShaders =>
+      'Shadery fragmentów w stylu Shadertoy. Lżejsze, modułowe — umieść pliki .glsl w assets/shaders/, aby rozszerzyć katalog.';
+
+  @override
+  String get settingsVisualizerSource => 'Źródło dźwięku wizualizatora';
+
+  @override
+  String get visualizerSourceSubtitleSynthesized =>
+      'Domyślnie. Wizualizator reaguje tylko na taktowanie odtwarzania — nie wymaga uprawnienia do mikrofonu.';
+
+  @override
+  String get visualizerSourceSubtitleReal =>
+      'Wizualizator reaguje na rzeczywiste wyjście dźwięku. Wymaga uprawnienia RECORD_AUDIO na Androidzie.';
+
+  @override
+  String get settingsAlbumGrid => 'Widok siatki albumów';
+
+  @override
+  String get settingsAlbumGridSubtitle =>
+      'Pokazuj albumy jako siatkę kart z okładkami zamiast zwykłej listy.';
+
+  @override
+  String get settingsFileMetadata =>
+      'Odczytuj metadane utworów w eksploratorze plików';
+
+  @override
+  String get settingsFileMetadataSubtitle =>
+      'Pobieraj tytuł, wykonawcę i okładkę dla każdego utworu podczas przeglądania plików serwera. Wyłączenie pokazuje surowe nazwy plików (szybsze przy dużych folderach).';
+
+  @override
+  String get settingsLetterStrip => 'Próg paska liter';
+
+  @override
+  String get settingsLetterStripSubtitle =>
+      'Pokazuj pasek szybkiego przewijania A–Z, gdy lista ma tyle elementów lub więcej. Poniżej tego rozmiaru pasek jest ukryty, a długie nazwy folderów/plików zawijają się do wielu wierszy zamiast być obcinane. Ustaw 0, aby zawsze pokazywać pasek.';
+
+  @override
+  String get settingsReset => 'Przywróć ustawienia domyślne';
+
+  @override
+  String get settingsResetSubtitle =>
+      'Przywróć wszystkie ustawienia na tym ekranie do wartości domyślnych. Nie wpływa to na serwery ani pobrane pliki.';
+
+  @override
+  String get settingsResetDone => 'Przywrócono ustawienia domyślne';
+
+  @override
+  String get realAudioDialogTitle => 'Użyć rzeczywistego dźwięku?';
+
+  @override
+  String get realAudioDialogBody =>
+      'Tryb rzeczywistego dźwięku odczytuje przebieg muzyki odtwarzanej przez telefon, aby wizualizator mógł na niego reagować. Android wymaga do tego uprawnienia RECORD_AUDIO — aplikacja nie nagrywa ani nigdzie nie wysyła żadnego dźwięku. W każdej chwili możesz wrócić do dźwięku syntetycznego.';
+
+  @override
+  String get realAudioPermPermanentlyDenied =>
+      'Uprawnienie trwale odrzucone. Włącz je w ustawieniach systemowych, aby używać rzeczywistego dźwięku.';
+
+  @override
+  String get realAudioPermDenied =>
+      'Uprawnienie odrzucone. Pozostawiono dźwięk syntetyczny.';
+
+  @override
+  String get visualizerTapHint =>
+      'Dotknięcie = następny preset · strzałka wstecz (lewy górny róg) lub przytrzymaj, aby wyjść';
+
+  @override
+  String get visualizerFailed => 'Nie udało się uruchomić wizualizatora';
+
+  @override
+  String get visualizerBringingUp => 'Uruchamianie renderera…';
+
+  @override
+  String get visualizerReady => 'Wizualizator gotowy';
+
+  @override
+  String get visualizerBridgeFailed => 'Nie udało się uruchomić mostka';
+
+  @override
+  String visualizerAudioSourceLine(String source) {
+    return 'Źródło dźwięku: $source';
+  }
+
+  @override
+  String get visualizerTapToClose => 'Dotknij dowolnego miejsca, aby zamknąć';
+
+  @override
+  String get visualizerUnsupported =>
+      'Wizualizator jest obecnie obsługiwany tylko na Androidzie.';
+
+  @override
+  String get aboutTitle => 'O aplikacji';
+
+  @override
+  String aboutBuiltBy(String name) {
+    return 'Stworzone przez $name';
+  }
+
+  @override
+  String get linkDiscordSubtitle => 'Czat społeczności';
+
+  @override
+  String get linkGithubSubtitle => 'Kod źródłowy serwera mStream';
+
+  @override
+  String get linkHomepageSubtitle => 'Strona projektu';
+
+  @override
+  String get aboutAttributions => 'Podziękowania';
+
+  @override
+  String get aboutAttributionsSubtitle =>
+      'Licencja, podziękowania za shadery i informacje o oprogramowaniu open source.';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get delete => 'Usuń';
+
+  @override
+  String get edit => 'Edytuj';
+
+  @override
+  String get info => 'Informacje';
+
+  @override
+  String get makeDefault => 'Ustaw jako domyślny';
+
+  @override
+  String get goBack => 'Wstecz';
+
+  @override
+  String get play => 'Odtwórz';
+
+  @override
+  String get playAll => 'Odtwórz wszystko';
+
+  @override
+  String get rename => 'Zmień nazwę';
+
+  @override
+  String get create => 'Utwórz';
+
+  @override
+  String get copy => 'Kopiuj';
+
+  @override
+  String get done => 'Gotowe';
+
+  @override
+  String get copiedToClipboard => 'Skopiowano do schowka';
+
+  @override
+  String get attributionsTitle => 'Podziękowania';
+
+  @override
+  String get attributionsSectionLicense => 'Licencja';
+
+  @override
+  String get attributionsSectionShaders => 'Shadery wizualizatora';
+
+  @override
+  String get attributionsSectionLibraries => 'Biblioteki natywne';
+
+  @override
+  String get attributionsSectionEverythingElse => 'Wszystko inne';
+
+  @override
+  String get attributionsLicenseBody =>
+      'Wolne oprogramowanie na licencji GNU General Public License v3.0. Możesz go używać, badać, udostępniać i modyfikować na tych warunkach.';
+
+  @override
+  String get attributionsPackages => 'Licencje pakietów open source';
+
+  @override
+  String get attributionsPackagesSubtitle =>
+      'Pełne teksty licencji wszystkich dołączonych pakietów Flutter/Dart.';
+
+  @override
+  String get manageServersTitle => 'Zarządzaj serwerami';
+
+  @override
+  String get manageServerInfo => 'Informacje o serwerze';
+
+  @override
+  String get manageServerDownloadFolder => 'Folder pobierania:';
+
+  @override
+  String get manageServerCopyPath => 'Kopiuj ścieżkę pobierania';
+
+  @override
+  String get manageServerPathCopied => 'Skopiowano ścieżkę do schowka';
+
+  @override
+  String get confirmRemoveServerTitle => 'Potwierdź usunięcie serwera';
+
+  @override
+  String get removeSyncedFiles => 'Usunąć zsynchronizowane pliki z urządzenia?';
+
+  @override
+  String get playlistsTitle => 'Playlisty';
+
+  @override
+  String get playlistsNew => 'Nowa playlista';
+
+  @override
+  String get playlistsEmptyTitle => 'Brak playlist';
+
+  @override
+  String get playlistsEmptyBody =>
+      'Utwórz playlistę przyciskiem Nowa playlista, a następnie wypełnij ją gestem przesunięcia „Dodaj do playlisty” w kolejce.';
+
+  @override
+  String get playlistNameHint => 'Nazwa';
+
+  @override
+  String get playlistsRename => 'Zmień nazwę playlisty';
+
+  @override
+  String get playlistFallbackTitle => 'Playlista';
+
+  @override
+  String get playlistEmptyDetail =>
+      'Playlista jest pusta.\nDodaj utwory z kolejki.';
+
+  @override
+  String get shareEmptyTitle => 'Pusta kolejka';
+
+  @override
+  String get shareEmptyBody => 'Dodaj utwory do kolejki przed udostępnieniem.';
+
+  @override
+  String get shareBlockedTitle => 'Nie można udostępnić tej kolejki';
+
+  @override
+  String get shareLocalOnlyBody =>
+      'Kolejka zawiera utwory, które znajdują się tylko na tym urządzeniu (na żadnym serwerze). Udostępnianie działa tylko wtedy, gdy każdy utwór w kolejce pochodzi z jednego serwera.';
+
+  @override
+  String shareMultiServerBody(int count, String names) {
+    return 'Kolejka miesza utwory z $count serwerów ($names). Udostępnianie działa tylko wtedy, gdy każdy utwór pochodzi z jednego serwera.';
+  }
+
+  @override
+  String shareServerGoneBody(String name) {
+    return 'Serwera „$name” nie ma już na Twojej liście serwerów. Dodaj go ponownie, aby udostępnić jego kolejkę.';
+  }
+
+  @override
+  String get shareTitle => 'Udostępnij playlistę';
+
+  @override
+  String shareSongCount(int count, String url) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+    );
+    return '$_temp0 z $url';
+  }
+
+  @override
+  String get shareLinkExpires => 'Link wygasa';
+
+  @override
+  String get shareExpireNever => 'Nigdy';
+
+  @override
+  String get shareExpire1Day => 'Po 1 dniu';
+
+  @override
+  String get shareExpire7Days => 'Po 7 dniach';
+
+  @override
+  String get shareExpire30Days => 'Po 30 dniach';
+
+  @override
+  String get shareAction => 'Udostępnij';
+
+  @override
+  String get shareDoneTitle => 'Playlista udostępniona';
+
+  @override
+  String get shareDoneBody => 'Każdy, kto ma ten link, może odtworzyć kolejkę:';
+
+  @override
+  String get save => 'Zapisz';
+
+  @override
+  String get start => 'Rozpocznij';
+
+  @override
+  String get addServerTitle => 'Dodaj serwer';
+
+  @override
+  String get editServerTitle => 'Edytuj serwer';
+
+  @override
+  String get fieldServerUrl => 'Adres URL serwera';
+
+  @override
+  String get fieldPublicAccess => 'Dostęp publiczny';
+
+  @override
+  String get publicAccessSubtitle =>
+      'Serwer jest publicznie dostępny — nazwa użytkownika ani hasło nie są potrzebne.';
+
+  @override
+  String get fieldUsername => 'Nazwa użytkownika';
+
+  @override
+  String get fieldPassword => 'Hasło';
+
+  @override
+  String get fieldSdCard => 'Pobieraj na kartę SD';
+
+  @override
+  String get sdCardSubtitle =>
+      'Zapisuj pobraną muzykę na wyjmowanej karcie SD zamiast w pamięci wewnętrznej.';
+
+  @override
+  String get testConnectionButton => 'Testuj połączenie';
+
+  @override
+  String get testing => 'Testowanie…';
+
+  @override
+  String get connecting => 'Łączenie…';
+
+  @override
+  String get validatorUrlNeeded => 'Adres URL serwera jest wymagany';
+
+  @override
+  String get validatorUrlParse => 'Nie można przetworzyć adresu URL';
+
+  @override
+  String get testEnterUrl => 'Najpierw wprowadź adres URL serwera.';
+
+  @override
+  String get testParseUrl => 'Nie można przetworzyć adresu URL.';
+
+  @override
+  String get testCouldNotConnect =>
+      'Nie można połączyć. Sprawdź adres URL i spróbuj ponownie.';
+
+  @override
+  String get testTimedOut => 'Przekroczono limit czasu połączenia.';
+
+  @override
+  String get connectFailedSnack =>
+      'Nie można połączyć z serwerem. Sprawdź adres URL i spróbuj ponownie.';
+
+  @override
+  String get connectionSuccessful => 'Połączenie udane!';
+
+  @override
+  String get couldNotReachServer =>
+      'Nie można nawiązać połączenia z serwerem. Jeśli wymaga logowania, wyłącz „Dostęp publiczny” i dodaj dane logowania.';
+
+  @override
+  String get failedToLogin => 'Logowanie nie powiodło się';
+
+  @override
+  String testConnected(String version) {
+    return 'Połączono — mStream v$version';
+  }
+
+  @override
+  String testConnectFailed(String error) {
+    return 'Nie można połączyć: $error';
+  }
+
+  @override
+  String get sleepTimerTitle => 'Wyłącznik czasowy';
+
+  @override
+  String get sleepTimerHint => 'Wybierz czas, po którym wstrzymać odtwarzanie.';
+
+  @override
+  String get sleepTimerCustom => 'Niestandardowy';
+
+  @override
+  String get sleepTimerCustomHint => 'minuty (1–600)';
+
+  @override
+  String get sleepTimerCancel => 'Anuluj wyłącznik';
+
+  @override
+  String get sleepTimerInvalid => 'Wprowadź liczbę od 1 do 600 minut';
+
+  @override
+  String sleepTimerPausesIn(String time) {
+    return 'Wstrzyma za $time';
+  }
+
+  @override
+  String sleepTimerMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String sleepTimerSet(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Ustawiono wyłącznik czasowy na $minutes minut',
+      many: 'Ustawiono wyłącznik czasowy na $minutes minut',
+      few: 'Ustawiono wyłącznik czasowy na $minutes minuty',
+      one: 'Ustawiono wyłącznik czasowy na 1 minutę',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get add => 'Dodaj';
+
+  @override
+  String get autoDjTitle => 'Auto DJ';
+
+  @override
+  String get autoDjAddServerFirst => 'Najpierw dodaj serwer.';
+
+  @override
+  String get autoDjSectionServer => 'Serwer';
+
+  @override
+  String get autoDjSectionSources => 'Źródła';
+
+  @override
+  String get autoDjSectionContinuity => 'Ciągłość';
+
+  @override
+  String get autoDjSectionFilters => 'Filtry';
+
+  @override
+  String get autoDjBpmTitle => 'Ciągłość BPM';
+
+  @override
+  String get autoDjBpmSubtitle =>
+      'Preferuj wybory w zakresie tempa bieżącego utworu. Uwzględnia równoważność połowy/podwojonego tempa.';
+
+  @override
+  String get autoDjTolerance => 'Tolerancja';
+
+  @override
+  String autoDjBpmTolerance(int bpm) {
+    return '± $bpm BPM';
+  }
+
+  @override
+  String get autoDjHarmonicTitle => 'Miksowanie harmoniczne';
+
+  @override
+  String get autoDjHarmonicSubtitle =>
+      'Preferuj wybory w tonacjach dobrze pasujących do zablokowanego utworu (sąsiedzi na kole Camelota).';
+
+  @override
+  String get autoDjStatusOn => 'Auto DJ jest włączony';
+
+  @override
+  String get autoDjStatusOff => 'Auto DJ jest wyłączony';
+
+  @override
+  String get autoDjStatusOffDetail =>
+      'Dotknij poniżej, aby rozpocząć. Zostanie użyta biblioteka bieżącego serwera.';
+
+  @override
+  String get autoDjStart => 'Uruchom Auto DJ';
+
+  @override
+  String get autoDjStop => 'Zatrzymaj Auto DJ';
+
+  @override
+  String autoDjStatusOnDetail(String url) {
+    return 'Utwory są wybierane z $url, gdy kolejka się wyczerpuje.';
+  }
+
+  @override
+  String get autoDjActiveSource => 'Aktywne źródło';
+
+  @override
+  String get autoDjActiveSourceTap =>
+      'Aktywne źródło — dotknij, aby przełączyć';
+
+  @override
+  String get autoDjSwitch => 'Przełącz';
+
+  @override
+  String get autoDjOneSourceRequired =>
+      'Wymagane jest co najmniej jedno źródło.';
+
+  @override
+  String get autoDjMinRating => 'Minimalna ocena';
+
+  @override
+  String get autoDjMinRatingSubtitle =>
+      'Wybieraj tylko utwory z tą oceną lub wyższą.';
+
+  @override
+  String get autoDjRatingAny => 'Dowolna';
+
+  @override
+  String get autoDjGenreTitle => 'Filtr gatunków';
+
+  @override
+  String get autoDjGenreSubtitle =>
+      'Biała lista odtwarza tylko pasujące utwory; czarna lista je pomija.';
+
+  @override
+  String get autoDjWhitelist => 'Biała lista';
+
+  @override
+  String get autoDjBlacklist => 'Czarna lista';
+
+  @override
+  String get autoDjNoGenres =>
+      'Nie wybrano gatunków. Dotknij „Wybierz gatunki”, aby wybrać.';
+
+  @override
+  String get autoDjPickGenres => 'Wybierz gatunki';
+
+  @override
+  String get autoDjGenreLoadError => 'Nie można wczytać gatunków';
+
+  @override
+  String get autoDjKeywordTitle => 'Filtr słów kluczowych';
+
+  @override
+  String get autoDjKeywordSubtitle =>
+      'Pomijaj wybory, których tytuł, wykonawca, album lub ścieżka pliku zawiera którekolwiek z tych słów.';
+
+  @override
+  String get autoDjNoKeywords =>
+      'Brak słów kluczowych. Dodaj słowa poniżej, aby rozpocząć filtrowanie.';
+
+  @override
+  String get autoDjKeywordHint => 'np. „live” lub „remix”';
+
+  @override
+  String get autoDjSearchGenres => 'Szukaj gatunków…';
+
+  @override
+  String get autoDjNoGenresOnServer =>
+      'Nie znaleziono gatunków na tym serwerze.';
+
+  @override
+  String autoDjSelectedCount(int count) {
+    return 'Wybrano: $count';
+  }
+
+  @override
+  String autoDjNoGenresMatch(String query) {
+    return 'Żaden gatunek nie pasuje do „$query”.';
+  }
+
+  @override
+  String get download => 'Pobierz';
+
+  @override
+  String get addAll => 'Dodaj wszystkie';
+
+  @override
+  String get browserConfirmDeletePlaylist => 'Potwierdź usunięcie playlisty';
+
+  @override
+  String get browserConfirmDeleteFolder => 'Potwierdź usunięcie folderu';
+
+  @override
+  String get browserSearchHint => 'Szukaj w bazie danych';
+
+  @override
+  String browserDownloadsStarted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Rozpoczęto $count pobrań',
+      many: 'Rozpoczęto $count pobrań',
+      few: 'Rozpoczęto $count pobierania',
+      one: 'Rozpoczęto 1 pobieranie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String browserSongsAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Dodano $count utworów do kolejki',
+      many: 'Dodano $count utworów do kolejki',
+      few: 'Dodano $count utwory do kolejki',
+      one: 'Dodano 1 utwór do kolejki',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tabBrowser => 'Przeglądarka';
+
+  @override
+  String get tabQueue => 'Kolejka';
+
+  @override
+  String get drawerTagline => 'Osobiste strumieniowanie muzyki';
+
+  @override
+  String get mainFailedToConnect => 'Nie udało się połączyć z serwerem';
+
+  @override
+  String get mainQueueEmpty => 'Kolejka jest pusta';
+
+  @override
+  String get visualizerTitle => 'Wizualizator';
+
+  @override
+  String get mainClearQueue => 'Wyczyść kolejkę';
+
+  @override
+  String get mainSync => 'Synchronizuj';
+
+  @override
+  String mainQueueCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworów w kolejce',
+      many: '$count utworów w kolejce',
+      few: '$count utwory w kolejce',
+      one: '1 utwór w kolejce',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get autoDjEnabled => 'Auto DJ włączony';
+
+  @override
+  String get autoDjDisabled => 'Auto DJ wyłączony';
+
+  @override
+  String autoDjEnabledFor(String url) {
+    return 'Auto DJ włączony dla $url';
+  }
+
+  @override
+  String get addToPlaylistTitle => 'Dodaj do playlisty';
+
+  @override
+  String get addToPlaylistEmpty => 'Brak playlist — dotknij +, aby utworzyć.';
+
+  @override
+  String addedToPlaylist(String name) {
+    return 'Dodano do $name';
+  }
+
+  @override
+  String get testConnectedSignedIn => 'Połączono — zalogowano pomyślnie.';
+
+  @override
+  String get testSignInFailed =>
+      'Nawiązano połączenie z serwerem, ale logowanie nie powiodło się — sprawdź nazwę użytkownika i hasło.';
+
+  @override
+  String get browserFileExplorer => 'Eksplorator plików';
+
+  @override
+  String get browserLocalFiles => 'Pliki lokalne';
+
+  @override
+  String get browserPlaylists => 'Playlisty';
+
+  @override
+  String get browserAlbums => 'Albumy';
+
+  @override
+  String get browserArtists => 'Wykonawcy';
+
+  @override
+  String get browserRecent => 'Ostatnie';
+
+  @override
+  String get browserRated => 'Ocenione';
+
+  @override
+  String get browserSearch => 'Szukaj';
+
+  @override
+  String get browserWelcomeTitle => 'Witamy w mStream';
+
+  @override
+  String get browserWelcomeSubtitle => 'Dotknij tutaj, aby dodać serwer';
+
+  @override
+  String get settingsVisualizerKnobs => 'Pokrętła strojenia wizualizatora';
+
+  @override
+  String get settingsVisualizerKnobsSubtitle =>
+      'Pokazuj na żywo suwaki nad wizualizatorem, aby dostrajać reaktywność audio każdego shadera. Tylko silnik shaderów.';
+
+  @override
+  String get visualizerTuningTitle => 'Strojenie';
+
+  @override
+  String get close => 'Zamknij';
+
+  @override
+  String get migMoveStopped =>
+      'Przenoszenie zatrzymane — za mało miejsca lub lokalizacja jest niedostępna.';
+
+  @override
+  String get migMoveComplete => 'Przenoszenie zakończone';
+
+  @override
+  String migMoveCompleteSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Przenoszenie zakończone — pominięto $count plików (nieobsługiwane w miejscu docelowym)',
+      many:
+          'Przenoszenie zakończone — pominięto $count plików (nieobsługiwane w miejscu docelowym)',
+      few:
+          'Przenoszenie zakończone — pominięto $count pliki (nieobsługiwane w miejscu docelowym)',
+      one:
+          'Przenoszenie zakończone — pominięto 1 plik (nieobsługiwany w miejscu docelowym)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String migMoving(String progress) {
+    return 'Przenoszenie pobranych plików… $progress — nie zamykaj aplikacji';
+  }
+
+  @override
+  String get migRetry => 'Ponów';
+
+  @override
+  String get queueDownloadAll => 'Pobierz wszystkie';
+
+  @override
+  String queueDownloadAllBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zostanie pobranych $count utworów do odtwarzania offline.',
+      many: 'Zostanie pobranych $count utworów do odtwarzania offline.',
+      few: 'Zostaną pobrane $count utwory do odtwarzania offline.',
+      one: 'Zostanie pobrany 1 utwór do odtwarzania offline.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mainMore => 'Więcej';
+
+  @override
+  String get commonOn => 'Włączone';
+
+  @override
+  String get commonOff => 'Wyłączone';
+
+  @override
+  String get settingsCastQuality => 'Jakość wizualizatora przy przesyłaniu';
+
+  @override
+  String get settingsCastQualitySubtitle720 =>
+      'Rozdzielczość, w jakiej wizualizator jest przesyłany do telewizora. 720p — najlżejsza dla telefonu.';
+
+  @override
+  String get settingsCastQualitySubtitle1080 =>
+      'Rozdzielczość, w jakiej wizualizator jest przesyłany do telewizora. 1080p — ostra na każdym Chromecaście (domyślna).';
+
+  @override
+  String get settingsCastQualitySubtitle4k =>
+      'Rozdzielczość, w jakiej wizualizator jest przesyłany do telewizora. 4K — wymaga Chromecasta 4K; znacznie większe obciążenie telefonu.';
+
+  @override
+  String get eqCasting =>
+      'Korektor reguluje dźwięk na tym urządzeniu, więc jest niedostępny podczas przesyłania. Rozłącz, aby go użyć.';
+
+  @override
+  String get browserNothingToDownload =>
+      'Brak czegokolwiek do pobrania na tej liście';
+
+  @override
+  String get browserDownloadAllTitle => 'Pobierz wszystkie';
+
+  @override
+  String browserDownloadAllConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zostanie pobranych $count plików.',
+      many: 'Zostanie pobranych $count plików.',
+      few: 'Zostaną pobrane $count pliki.',
+      one: 'Zostanie pobrany 1 plik.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get browserCloseSearch => 'Zamknij wyszukiwanie';
+
+  @override
+  String get browserSearchThisList => 'Szukaj na tej liście';
+
+  @override
+  String get browserSearchList => 'Szukaj na liście';
+
+  @override
+  String browserNoMatches(String query) {
+    return 'Brak wyników dla „$query”';
+  }
+
+  @override
+  String get clear => 'Wyczyść';
+
+  @override
+  String get dlLocationUnavailable => 'Lokalizacja pobierania niedostępna';
+
+  @override
+  String get dlLocationUnavailableServer =>
+      'Lokalizacja pobierania niedostępna dla tego serwera.';
+
+  @override
+  String get dlFailed => 'Pobieranie nie powiodło się — sprawdź połączenie.';
+
+  @override
+  String get dlFatSkip =>
+      'Niektórych utworów nie można zapisać na tej karcie — ich nazwy nie są obsługiwane. Zamiast tego są strumieniowane.';
+
+  @override
+  String get dlServerGone => 'Ten serwer nie jest już skonfigurowany.';
+
+  @override
+  String get dlStorageUnavailable =>
+      'Lokalizacja pamięci niedostępna — podłącz ponownie kartę SD lub zmień lokalizację pamięci tego serwera w Edytuj serwer.';
+
+  @override
+  String get dlCouldNotStart =>
+      'Nie można rozpocząć pobierania — pamięć niedostępna.';
+
+  @override
+  String get storageLocationLabel => 'Lokalizacja pamięci';
+
+  @override
+  String get storageAppLocal => 'Lokalna aplikacji';
+
+  @override
+  String get storagePermanent => 'Trwała';
+
+  @override
+  String get storageSdCard => 'Karta SD';
+
+  @override
+  String get storageHelpAppLocal =>
+      'Zapisywane wewnątrz aplikacji. Usuwane po odinstalowaniu lub wyczyszczeniu aplikacji.';
+
+  @override
+  String get storageHelpPermanent =>
+      'Zapisywane w wybranym folderze. Zachowywane po odinstalowaniu aplikacji. Wymaga uprawnienia „Dostęp do wszystkich plików”.';
+
+  @override
+  String get storageHelpSdCard =>
+      'Zapisywane w wybranym folderze na karcie SD. Może stać się niedostępne po wyjęciu karty. Niektóre urządzenia nie pozwalają aplikacjom zapisywać na kartach SD — jeśli wybór folderu wciąż się nie udaje, użyj opcji Trwała lub Lokalna aplikacji.';
+
+  @override
+  String get storageChooseFolder => 'Wybierz folder';
+
+  @override
+  String get storageNoFolderChosen => 'Nie wybrano jeszcze folderu';
+
+  @override
+  String get storageDownloadFolderLabel => 'Folder pobierania';
+
+  @override
+  String get storageDownloadFolderHint => 'nazwa folderu';
+
+  @override
+  String get storageBrowse => 'Przeglądaj';
+
+  @override
+  String get storageDownloadFolderHelp =>
+      'Pliki są pobierane do katalogu „media/<folder>” na tym urządzeniu. Ponowne użycie folderu poprzedniego serwera zachowuje jego pobrane utwory po ponownym dodaniu utraconego serwera.';
+
+  @override
+  String get storageNoStorageAvailable => 'Brak dostępnej pamięci';
+
+  @override
+  String get storageNoDownloadFolders =>
+      'Nie znaleziono istniejących folderów pobierania';
+
+  @override
+  String get storageExistingFolders => 'Istniejące foldery pobierania';
+
+  @override
+  String storageItemCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count elementów',
+      many: '$count elementów',
+      few: '$count elementy',
+      one: '1 element',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get storageAllFilesAccess =>
+      'Przyznaj uprawnienie „Dostęp do wszystkich plików”, aby trwale przechowywać pobrane pliki, a następnie wybierz tryb ponownie.';
+
+  @override
+  String get storageSettings => 'Ustawienia';
+
+  @override
+  String get storageNoVolume => 'Nie można zlokalizować woluminu pamięci';
+
+  @override
+  String get storageNotWritable =>
+      'Ten folder nie pozwala na zapis — wybierz inny.';
+
+  @override
+  String get storageNewFolder => 'Nowy folder';
+
+  @override
+  String get storageFolderNameHint => 'Nazwa folderu';
+
+  @override
+  String get storageCouldNotCreateFolder => 'Nie można utworzyć folderu';
+
+  @override
+  String get storageNoSubfolders => 'Brak podfolderów tutaj';
+
+  @override
+  String get storageUseThisFolder => 'Użyj tego folderu';
+
+  @override
+  String get storageMovedToNewFolder =>
+      'Przeniesiono pobrane pliki do nowego folderu.';
+
+  @override
+  String get storageMoveAlreadyRunning =>
+      'Przenoszenie już trwa — poczekaj, aż się zakończy.';
+
+  @override
+  String get storageMigrateTitle => 'Inny wolumin pamięci';
+
+  @override
+  String storageMigrateBody(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tych $count pobranych plików serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+      many:
+          'Tych $count pobranych plików serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+      few:
+          'Te $count pobrane pliki serwera ($size) znajdują się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+      one:
+          'Ten 1 pobrany plik serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String storageMigrateNoSpace(String free) {
+    return 'Za mało wolnego miejsca w miejscu docelowym (wolne: $free). Przenoszenie może się nie udać w połowie — najpierw zwolnij miejsce.';
+  }
+
+  @override
+  String get storageMigrateMove => 'Przenieś je';
+
+  @override
+  String get storageMigrateMoveBody =>
+      'Kopiuj do nowej lokalizacji w tle, usuwając kolejno każdą starą kopię. Nie zamykaj aplikacji, dopóki się nie zakończy.';
+
+  @override
+  String get storageMigrateLeave => 'Pozostaw je';
+
+  @override
+  String get storageMigrateLeaveBody =>
+      'Przełącz teraz; stare pobrane pliki pozostają na miejscu i pobierają się ponownie w nowej lokalizacji.';
+
+  @override
+  String get storageMigrateDelete => 'Usuń stare pobrane pliki';
+
+  @override
+  String get storageMigrateDeleteBody =>
+      'Przełącz teraz i usuń stare pliki; pobiorą się ponownie w nowej lokalizacji.';
+
+  @override
+  String get storageMovingBackground =>
+      'Przenoszenie pobranych plików w tle — nie zamykaj aplikacji.';
+
+  @override
+  String get storageChooseFolderFirst => 'Najpierw wybierz folder pobierania.';
+
+  @override
+  String get storageChooseSdFolderFirst =>
+      'Najpierw wybierz folder na karcie SD. Jeśli każdy folder jest odrzucany, Twoje urządzenie może nie pozwalać aplikacjom na zapis na karcie — użyj zamiast tego opcji Trwała lub Lokalna aplikacji.';
+
+  @override
+  String get castPlayOn => 'Odtwórz na';
+
+  @override
+  String get castPlayOnTooltip => 'Odtwórz na…';
+
+  @override
+  String get castSearching => 'Wyszukiwanie urządzeń do przesyłania…';
+
+  @override
+  String get castNotSeeing =>
+      'Nie widzisz swojego urządzenia? Upewnij się, że jest w tej samej sieci Wi-Fi.';
+
+  @override
+  String get castVisualizer => 'Prześlij wizualizator';
+
+  @override
+  String get castVisualizerSubtitle =>
+      'Przesyłaj wizualizator do telewizora · tylko Chromecast';
+
+  @override
+  String get visualizerNoKnobs => 'Ten shader nie udostępnia żadnych pokręteł.';
+}

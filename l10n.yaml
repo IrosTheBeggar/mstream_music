@@ -1,0 +1,13 @@
+# Configuration for Flutter's gen_l10n tool. Runs automatically on
+# `flutter pub get` / `flutter build` because pubspec has `generate: true`.
+#
+# Generated Dart is written into lib/l10n (synthetic-package: false) and
+# committed, so AppLocalizations is greppable and CI needs no extra step.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-dir: lib/l10n
+# Non-null AppLocalizations.of(context) — call sites read `.x` not `!.x`.
+nullable-getter: false
+# Reports keys present in the template but missing in a locale ARB.
+untranslated-messages-file: l10n_untranslated.txt

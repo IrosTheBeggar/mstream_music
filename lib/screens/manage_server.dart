@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
@@ -9,6 +10,7 @@ import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
   Widget generateDropdownMenu(BuildContext context, int index) {
+    final l = AppLocalizations.of(context);
     return PopupMenuButton(
         onSelected: (String command) {
           if (command == 'edit') {
@@ -30,26 +32,26 @@ class ManageServersScreen extends StatelessWidget {
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
-                      title: Text('Server Info'),
+                      title: Text(l.manageServerInfo),
                       content: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(ServerManager().serverList[index].url),
                             Text(''),
-                            Text('Download Folder:'),
+                            Text(l.manageServerDownloadFolder),
                             Text(''),
                             Text(dir)
                           ]),
                       actions: <Widget>[
                         TextButton(
-                          child: Text("Copy Download Path"),
+                          child: Text(l.manageServerCopyPath),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: dir));
                             Navigator.of(context).pop();
 
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text('Path Copied to Clipboard')));
+                                content: Text(l.manageServerPathCopied)));
                           },
                         )
                       ]);
@@ -81,7 +83,8 @@ class ManageServersScreen extends StatelessWidget {
                   Icons.info,
                   color: VelvetColors.textPrimary,
                 ),
-                Text('   Info', style: TextStyle(color: VelvetColors.textPrimary))
+                Text('   ${l.info}',
+                    style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             ),
             PopupMenuItem(
@@ -91,7 +94,8 @@ class ManageServersScreen extends StatelessWidget {
                   Icons.edit,
                   color: VelvetColors.textPrimary,
                 ),
-                Text('   Edit', style: TextStyle(color: VelvetColors.textPrimary))
+                Text('   ${l.edit}',
+                    style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             ),
             PopupMenuItem(
@@ -101,7 +105,8 @@ class ManageServersScreen extends StatelessWidget {
                   Icons.delete,
                   color: Colors.redAccent,
                 ),
-                Text('   Delete', style: TextStyle(color: VelvetColors.textPrimary))
+                Text('   ${l.delete}',
+                    style: TextStyle(color: VelvetColors.textPrimary))
               ]),
             )
           ];
@@ -116,7 +121,7 @@ class ManageServersScreen extends StatelessWidget {
                       Icons.arrow_upward_rounded,
                       color: VelvetColors.textPrimary,
                     ),
-                    Text('   Make Default',
+                    Text('   ${l.makeDefault}',
                         style: TextStyle(color: VelvetColors.textPrimary))
                   ]),
                 ));
@@ -127,9 +132,10 @@ class ManageServersScreen extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
         appBar: AppBar(
-          title: Text("Manage Servers"),
+          title: Text(l.manageServersTitle),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
@@ -195,8 +201,9 @@ class _DeleteServerDialogState extends State<DeleteServerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text("Confirm Remove Server"),
+      title: Text(l.confirmRemoveServerTitle),
       content: Row(children: <Widget>[
         Checkbox(
             value: isRemoveFilesOnServerDeleteSelected,
@@ -206,18 +213,18 @@ class _DeleteServerDialogState extends State<DeleteServerDialog> {
                     !isRemoveFilesOnServerDeleteSelected;
               });
             }),
-        Flexible(child: Text("Remove synced files from device?"))
+        Flexible(child: Text(l.removeSyncedFiles))
       ]),
       actions: <Widget>[
         TextButton(
-          child: Text("Go Back"),
+          child: Text(l.goBack),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
         TextButton(
           child: Text(
-            "Delete",
+            l.delete,
             style: TextStyle(color: Colors.red),
           ),
           onPressed: () {
