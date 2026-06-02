@@ -387,5 +387,16 @@
   "castNotSeeing": "Dein Gerät wird nicht angezeigt? Stelle sicher, dass es im selben WLAN ist.",
   "castVisualizer": "Visualizer streamen",
   "castVisualizerSubtitle": "Den Visualizer auf den Fernseher streamen · nur Chromecast",
-  "visualizerNoKnobs": "Dieser Shader bietet keine Regler."
+  "visualizerNoKnobs": "Dieser Shader bietet keine Regler.",
+
+  "importedShadersTitle": "Importierte Shader",
+  "importedShadersSettingsSubtitle": "Füge deine eigenen .glsl-Dateien zur Rotation der Shader-Engine hinzu.",
+  "importedShadersRescan": "Ordner neu scannen",
+  "importedShadersDropHint": "Lege .glsl-Dateien in diesen Ordner und scanne dann neu:",
+  "importedShadersCopyPath": "Pfad kopieren",
+  "importedShadersReachableHint": "Über USB oder einen Dateimanager erreichbar (unter Android/data). Importierte Shader werden Teil der Rotation, wenn die Shader-Engine aktiv ist.",
+  "importedShadersRemove": "Entfernen",
+  "importedShadersEmptyTitle": "Noch keine Shader im Ordner",
+  "importedShadersEmptyBody": "Kopiere .glsl-Dateien im Shadertoy-Stil in den Ordner oben und tippe dann auf Neu scannen.",
+  "importedShadersInvalid": "Ist möglicherweise kein gültiger Shader — kein mainImage/main-Einstiegspunkt."
 }

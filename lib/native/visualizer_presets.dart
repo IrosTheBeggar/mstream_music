@@ -142,7 +142,12 @@ class VisualizerPresets {
   Future<String?> randomData(VisualizerPresetKind kind) async {
     final paths = await _list(kind);
     if (paths.isEmpty) return null;
-    return rootBundle.loadString(paths[_rng.nextInt(paths.length)]);
+    final pick = paths[_rng.nextInt(paths.length)];
+    // Bundled presets are asset-bundle keys; imported shaders are absolute
+    // filesystem paths read straight off disk (mirrors _loadByPath).
+    return pick.startsWith('assets/')
+        ? await rootBundle.loadString(pick)
+        : await File(pick).readAsString();
   }
 
   Future<void> _loadByPath(String path, {required bool smooth}) async {

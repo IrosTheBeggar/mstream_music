@@ -608,5 +608,46 @@
   "castNotSeeing": "Don't see your device? Make sure it's on the same Wi-Fi.",
   "castVisualizer": "Cast visualizer",
   "castVisualizerSubtitle": "Stream the visualizer to the TV · Chromecast only",
-  "visualizerNoKnobs": "This shader exposes no knobs."
+  "visualizerNoKnobs": "This shader exposes no knobs.",
+
+  "importedShadersTitle": "Imported shaders",
+  "@importedShadersTitle": {
+    "description": "Title of the Imported Shaders screen and its Settings entry."
+  },
+  "importedShadersSettingsSubtitle": "Add your own .glsl files to the Shader engine rotation.",
+  "@importedShadersSettingsSubtitle": {
+    "description": "Subtitle under the Imported shaders entry in Settings."
+  },
+  "importedShadersRescan": "Rescan folder",
+  "@importedShadersRescan": {
+    "description": "Tooltip for the button that re-scans the shader folder for new files."
+  },
+  "importedShadersDropHint": "Drop .glsl files in this folder, then Rescan:",
+  "@importedShadersDropHint": {
+    "description": "Instruction shown above the shader folder path."
+  },
+  "importedShadersCopyPath": "Copy path",
+  "@importedShadersCopyPath": {
+    "description": "Tooltip for the button that copies the shader folder path to the clipboard."
+  },
+  "importedShadersReachableHint": "Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.",
+  "@importedShadersReachableHint": {
+    "description": "Help text explaining where the shader folder is and when imported shaders are used."
+  },
+  "importedShadersRemove": "Remove",
+  "@importedShadersRemove": {
+    "description": "Tooltip for the button that deletes an imported shader file."
+  },
+  "importedShadersEmptyTitle": "No shaders in the folder yet",
+  "@importedShadersEmptyTitle": {
+    "description": "Empty-state title when the shader folder has no files."
+  },
+  "importedShadersEmptyBody": "Copy Shadertoy-style .glsl files into the folder above, then tap Rescan.",
+  "@importedShadersEmptyBody": {
+    "description": "Empty-state body when the shader folder has no files."
+  },
+  "importedShadersInvalid": "May not be a valid shader — no mainImage/main entry point.",
+  "@importedShadersInvalid": {
+    "description": "Warning subtitle when an imported file does not look like a fragment shader."
+  }
 }

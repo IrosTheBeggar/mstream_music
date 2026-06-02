@@ -387,5 +387,16 @@
   "castNotSeeing": "Não está vendo seu dispositivo? Verifique se ele está na mesma rede Wi-Fi.",
   "castVisualizer": "Transmitir o visualizador",
   "castVisualizerSubtitle": "Transmite o visualizador para a TV · apenas Chromecast",
-  "visualizerNoKnobs": "Este shader não expõe nenhum controle."
+  "visualizerNoKnobs": "Este shader não expõe nenhum controle.",
+
+  "importedShadersTitle": "Shaders importados",
+  "importedShadersSettingsSubtitle": "Adicione os seus próprios arquivos .glsl à rotação do motor Shader.",
+  "importedShadersRescan": "Reanalisar pasta",
+  "importedShadersDropHint": "Coloque arquivos .glsl nesta pasta e depois Reanalisar:",
+  "importedShadersCopyPath": "Copiar caminho",
+  "importedShadersReachableHint": "Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor Shader está ativo.",
+  "importedShadersRemove": "Remover",
+  "importedShadersEmptyTitle": "Nenhum shader na pasta ainda",
+  "importedShadersEmptyBody": "Copie arquivos .glsl no estilo Shadertoy para a pasta acima e depois toque em Reanalisar.",
+  "importedShadersInvalid": "Pode não ser um shader válido — sem ponto de entrada mainImage/main."
 }

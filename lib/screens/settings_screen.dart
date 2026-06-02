@@ -228,9 +228,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading:
                 Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-            title: Text('Imported shaders'),
+            title: Text(l.importedShadersTitle),
             subtitle: Text(
-              'Add your own .glsl files to the Shader engine rotation.',
+              l.importedShadersSettingsSubtitle,
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),

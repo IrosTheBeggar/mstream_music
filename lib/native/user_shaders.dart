@@ -74,4 +74,43 @@ class UserShaders {
   /// True if [path] is a user shader (absolute path) vs. a bundled asset
   /// (`assets/...` relative key).
   bool isImported(String path) => !path.startsWith('assets/');
+
+  /// The shader's `// title:` header (e.g. "Spectrum Bars"), or null if the
+  /// file has none or can't be read — callers fall back to the file name.
+  /// Only the top of the file is inspected; the header sits above the code.
+  Future<String?> titleOf(String path) async {
+    try {
+      final lines = await File(path).readAsLines();
+      for (final raw in lines.take(20)) {
+        final line = raw.trim();
+        if (line.isEmpty) continue;
+        if (!line.startsWith('//')) break; // header ends at the first code line
+        final m = _titleRe.firstMatch(line);
+        if (m != null) {
+          final t = m.group(1)!.trim();
+          if (t.isNotEmpty) return t;
+        }
+      }
+    } catch (_) {
+      // Unreadable file → no title; the caller shows the file name instead.
+    }
+    return null;
+  }
+
+  static final RegExp _titleRe =
+      RegExp(r'^//\s*title:\s*(.+)$', caseSensitive: false);
+
+  /// Cheap sanity check that [path] looks like a Shadertoy-style fragment
+  /// shader: non-empty and exposes an entry point (`mainImage` or `main`).
+  /// The native engine does the real GLSL compile — this just flags
+  /// obviously-wrong files (empty / wrong type) in the UI first.
+  Future<bool> looksValid(String path) async {
+    try {
+      final src = await File(path).readAsString();
+      if (src.trim().isEmpty) return false;
+      return src.contains('mainImage') || src.contains('void main');
+    } catch (_) {
+      return false;
+    }
+  }
 }

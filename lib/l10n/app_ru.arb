@@ -322,5 +322,15 @@
   "castNotSeeing": "Не видите своё устройство? Убедитесь, что оно в той же сети Wi-Fi.",
   "castVisualizer": "Транслировать визуализацию",
   "castVisualizerSubtitle": "Транслировать визуализацию на ТВ · только Chromecast",
-  "visualizerNoKnobs": "Этот шейдер не предоставляет регуляторов."
+  "visualizerNoKnobs": "Этот шейдер не предоставляет регуляторов.",
+  "importedShadersTitle": "Импортированные шейдеры",
+  "importedShadersSettingsSubtitle": "Добавьте свои файлы .glsl в ротацию движка Shader.",
+  "importedShadersRescan": "Пересканировать папку",
+  "importedShadersDropHint": "Поместите файлы .glsl в эту папку, затем нажмите «Пересканировать»:",
+  "importedShadersCopyPath": "Копировать путь",
+  "importedShadersReachableHint": "Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок Shader.",
+  "importedShadersRemove": "Удалить",
+  "importedShadersEmptyTitle": "В папке пока нет шейдеров",
+  "importedShadersEmptyBody": "Скопируйте файлы .glsl в стиле Shadertoy в папку выше, затем нажмите «Пересканировать».",
+  "importedShadersInvalid": "Возможно, это недопустимый шейдер — нет точки входа mainImage/main."
 }
