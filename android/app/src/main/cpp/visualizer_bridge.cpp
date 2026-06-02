@@ -229,7 +229,9 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrameAt(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr, jlong ptsNanos) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
     if (!ctx || !ctx->engine) return;
-    eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
+    // No per-frame eglMakeCurrent here (unlike the on-screen path): the context
+    // was made current at nativeInitEncoder and this is a dedicated transcode
+    // thread with no other GL caller, so it stays current.
     ctx->engine->renderFrame();
     static PFNEGLPRESENTATIONTIMEANDROIDPROC sPresentationTime =
         reinterpret_cast<PFNEGLPRESENTATIONTIMEANDROIDPROC>(
@@ -249,11 +251,14 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeAddPcm(
     if (!ctx || !ctx->engine || !samplesArray) return;
     jsize len = env->GetArrayLength(samplesArray);
     if (len <= 0) return;
-    jfloat* data = env->GetFloatArrayElements(samplesArray, nullptr);
+    // Critical (no-copy): addPcm only reads the samples and does no JNI/blocking
+    // work, so we can pin the array in place instead of copying ~8 KB ~43×/s.
+    auto* data = static_cast<jfloat*>(
+        env->GetPrimitiveArrayCritical(samplesArray, nullptr));
     if (!data) return;
     // Interleaved stereo; frameCount is number of L/R pairs.
     ctx->engine->addPcm(data, static_cast<std::size_t>(len / 2));
-    env->ReleaseFloatArrayElements(samplesArray, data, JNI_ABORT);
+    env->ReleasePrimitiveArrayCritical(samplesArray, data, JNI_ABORT);
 }
 
 JNIEXPORT void JNICALL

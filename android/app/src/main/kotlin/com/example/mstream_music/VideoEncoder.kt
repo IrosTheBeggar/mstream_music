@@ -3,6 +3,7 @@ package com.example.mstream_music
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
+import android.util.Log
 import android.view.Surface
 import java.nio.ByteBuffer
 
@@ -39,24 +40,77 @@ class VideoEncoder(
         // pixels of 720p), so scale it with resolution unless caller overrides.
         val effectiveBitrate =
             if (bitRate > 0) bitRate else autoBitrate(width, height, frameRate)
-        val format = MediaFormat.createVideoFormat(MIME, width, height).apply {
+        // Built fresh each time so we can retry without profile/level if the
+        // encoder rejects High profile (MediaFormat.removeKey is API 29+).
+        fun baseFormat() = MediaFormat.createVideoFormat(MIME, width, height).apply {
             setInteger(
                 MediaFormat.KEY_COLOR_FORMAT,
                 MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
             )
             setInteger(MediaFormat.KEY_BIT_RATE, effectiveBitrate)
             setInteger(MediaFormat.KEY_FRAME_RATE, frameRate)
+            // VBR spends bits where the visuals are complex instead of wasting
+            // them on simple frames (better quality-per-bit). The LAN isn't
+            // bitrate-constrained and the receiver buffers, so variance is fine.
+            setInteger(
+                MediaFormat.KEY_BITRATE_MODE,
+                MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR,
+            )
             // Match the keyframe interval to the HLS segment length: one IDR per
             // ~2s segment. (At 1s we emitted a *second*, mid-segment keyframe that
             // HLS doesn't need — wasted encode work + bitrate, since an IDR is far
             // larger/costlier than a P-frame. TsHlsSink rotates on the IDR.)
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, I_FRAME_INTERVAL_SECONDS)
         }
-        val c = MediaCodec.createEncoderByType(MIME)
-        c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+
+        var c = MediaCodec.createEncoderByType(MIME)
+        // H.264 High profile is ~10–15% better quality-per-bit than the default
+        // (Baseline/Main). Only request it if this encoder advertises High at a
+        // level adequate for the resolution, and retry without it if configure
+        // still fails — so we're never worse than the default.
+        val profileLevel = highProfileLevel(c, width, height)
+        val format = baseFormat()
+        if (profileLevel != null) {
+            format.setInteger(MediaFormat.KEY_PROFILE, profileLevel.first)
+            format.setInteger(MediaFormat.KEY_LEVEL, profileLevel.second)
+        }
+        try {
+            c.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        } catch (e: Exception) {
+            Log.w(TAG, "AVC configure failed (High profile?) — retrying default", e)
+            try { c.release() } catch (_: Throwable) {}
+            c = MediaCodec.createEncoderByType(MIME)
+            c.configure(baseFormat(), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        }
         inputSurface = c.createInputSurface()
         c.start()
         codec = c
+    }
+
+    // The (profile, level) to request for H.264 High at this resolution, or null
+    // if the encoder doesn't advertise High at an adequate level. AVC level
+    // constants increase monotonically, so `>=` compares capability; we pick the
+    // lowest supported level that covers the resolution so the receiver's decoder
+    // isn't asked for more than the stream actually needs.
+    private fun highProfileLevel(codec: MediaCodec, width: Int, height: Int): Pair<Int, Int>? {
+        return try {
+            val caps = codec.codecInfo.getCapabilitiesForType(MIME)
+            val pixels = width.toLong() * height
+            val required = when {
+                pixels <= 1280L * 720 -> MediaCodecInfo.CodecProfileLevel.AVCLevel31
+                pixels <= 1920L * 1080 -> MediaCodecInfo.CodecProfileLevel.AVCLevel4
+                else -> MediaCodecInfo.CodecProfileLevel.AVCLevel51
+            }
+            val match = caps.profileLevels
+                ?.filter {
+                    it.profile == MediaCodecInfo.CodecProfileLevel.AVCProfileHigh &&
+                        it.level >= required
+                }
+                ?.minByOrNull { it.level }
+            match?.let { Pair(MediaCodecInfo.CodecProfileLevel.AVCProfileHigh, it.level) }
+        } catch (e: Throwable) {
+            null
+        }
     }
 
     /**
@@ -112,6 +166,7 @@ class VideoEncoder(
     }
 
     companion object {
+        private const val TAG = "mstream/viz-xcode"
         private const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC
         // Matches TsHlsSink.TARGET_SEG_US (one keyframe per HLS segment).
         private const val I_FRAME_INTERVAL_SECONDS = 2
