@@ -38,8 +38,11 @@ abstract class PlaybackBackend {
   Future<void> stop();
 
   /// Seek within the current track, or (with [index]) jump to another item in
-  /// the source list and seek within it.
-  Future<void> seek(Duration position, {int? index});
+  /// the source list and seek within it. [play] forces the play state after the
+  /// seek (true = play, false = pause, null = keep current) — used on a backend
+  /// switch so a renderer loads already-playing via its native autoplay instead
+  /// of loading paused and racing a follow-up play().
+  Future<void> seek(Duration position, {int? index, bool? play});
   Future<void> seekToNext();
   Future<void> seekToPrevious();
   Future<void> setShuffleEnabled(bool enabled);

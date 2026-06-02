@@ -503,10 +503,10 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   }
 
   @override
-  Future<void> seek(Duration position, {int? index}) async {
+  Future<void> seek(Duration position, {int? index, bool? play}) async {
     final target = index ?? _index;
     if (target >= 0 && target != _loadedIndex) {
-      await _loadIndex(target, play: _playing, startAt: position);
+      await _loadIndex(target, play: play ?? _playing, startAt: position);
       return;
     }
     try {
