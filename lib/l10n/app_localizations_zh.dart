@@ -1113,4 +1113,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
+
+  @override
+  String get importedShadersTitle => '导入的着色器';
+
+  @override
+  String get importedShadersSettingsSubtitle =>
+      '将你自己的 .glsl 文件加入 Shader 引擎的轮换。';
+
+  @override
+  String get importedShadersRescan => '重新扫描文件夹';
+
+  @override
+  String get importedShadersDropHint => '将 .glsl 文件放入此文件夹，然后重新扫描：';
+
+  @override
+  String get importedShadersCopyPath => '复制路径';
+
+  @override
+  String get importedShadersReachableHint =>
+      '可通过 USB 或文件管理器访问（位于 Android/data 下）。Shader 引擎处于活动状态时，导入的着色器会加入轮换。';
+
+  @override
+  String get importedShadersRemove => '移除';
+
+  @override
+  String get importedShadersEmptyTitle => '文件夹中还没有着色器';
+
+  @override
+  String get importedShadersEmptyBody =>
+      '将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。';
+
+  @override
+  String get importedShadersInvalid => '可能不是有效的着色器 — 没有 mainImage/main 入口点。';
 }

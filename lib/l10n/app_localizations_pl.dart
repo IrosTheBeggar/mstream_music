@@ -1209,4 +1209,39 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'Ten shader nie udostępnia żadnych pokręteł.';
+
+  @override
+  String get importedShadersTitle => 'Zaimportowane shadery';
+
+  @override
+  String get importedShadersSettingsSubtitle =>
+      'Dodaj własne pliki .glsl do rotacji silnika Shader.';
+
+  @override
+  String get importedShadersRescan => 'Przeskanuj folder ponownie';
+
+  @override
+  String get importedShadersDropHint =>
+      'Umieść pliki .glsl w tym folderze, a następnie przeskanuj ponownie:';
+
+  @override
+  String get importedShadersCopyPath => 'Kopiuj ścieżkę';
+
+  @override
+  String get importedShadersReachableHint =>
+      'Dostępny przez USB lub menedżer plików (w Android/data). Zaimportowane shadery dołączają do rotacji, gdy aktywny jest silnik Shader.';
+
+  @override
+  String get importedShadersRemove => 'Usuń';
+
+  @override
+  String get importedShadersEmptyTitle => 'Brak shaderów w folderze';
+
+  @override
+  String get importedShadersEmptyBody =>
+      'Skopiuj pliki .glsl w stylu Shadertoy do powyższego folderu, a następnie dotknij Przeskanuj ponownie.';
+
+  @override
+  String get importedShadersInvalid =>
+      'Może nie być prawidłowym shaderem — brak punktu wejścia mainImage/main.';
 }

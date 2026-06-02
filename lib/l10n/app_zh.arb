@@ -322,5 +322,15 @@
   "castNotSeeing": "没看到你的设备？请确认它连接的是同一个 Wi-Fi。",
   "castVisualizer": "投放可视化",
   "castVisualizerSubtitle": "将可视化效果投放到电视 · 仅限 Chromecast",
-  "visualizerNoKnobs": "此着色器没有可调节的旋钮。"
+  "visualizerNoKnobs": "此着色器没有可调节的旋钮。",
+  "importedShadersTitle": "导入的着色器",
+  "importedShadersSettingsSubtitle": "将你自己的 .glsl 文件加入 Shader 引擎的轮换。",
+  "importedShadersRescan": "重新扫描文件夹",
+  "importedShadersDropHint": "将 .glsl 文件放入此文件夹，然后重新扫描：",
+  "importedShadersCopyPath": "复制路径",
+  "importedShadersReachableHint": "可通过 USB 或文件管理器访问（位于 Android/data 下）。Shader 引擎处于活动状态时，导入的着色器会加入轮换。",
+  "importedShadersRemove": "移除",
+  "importedShadersEmptyTitle": "文件夹中还没有着色器",
+  "importedShadersEmptyBody": "将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。",
+  "importedShadersInvalid": "可能不是有效的着色器 — 没有 mainImage/main 入口点。"
 }

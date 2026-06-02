@@ -322,5 +322,15 @@
   "castNotSeeing": "デバイスが表示されませんか？ 同じ Wi-Fi に接続されているか確認してください。",
   "castVisualizer": "ビジュアライザーをキャスト",
   "castVisualizerSubtitle": "ビジュアライザーをテレビにストリーミング · Chromecast のみ",
-  "visualizerNoKnobs": "このシェーダーにはつまみがありません。"
+  "visualizerNoKnobs": "このシェーダーにはつまみがありません。",
+  "importedShadersTitle": "インポートしたシェーダー",
+  "importedShadersSettingsSubtitle": "独自の .glsl ファイルを Shader エンジンのローテーションに追加します。",
+  "importedShadersRescan": "フォルダを再スキャン",
+  "importedShadersDropHint": "このフォルダに .glsl ファイルを置き、再スキャンしてください:",
+  "importedShadersCopyPath": "パスをコピー",
+  "importedShadersReachableHint": "USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーは Shader エンジンが有効なときにローテーションに加わります。",
+  "importedShadersRemove": "削除",
+  "importedShadersEmptyTitle": "フォルダにはまだシェーダーがありません",
+  "importedShadersEmptyBody": "Shadertoy スタイルの .glsl ファイルを上のフォルダにコピーし、再スキャンをタップしてください。",
+  "importedShadersInvalid": "有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。"
 }
