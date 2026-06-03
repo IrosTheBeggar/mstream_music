@@ -220,8 +220,12 @@ class _ExpandedPanel extends StatelessWidget {
                             _top(snap.data ?? PlayerLayout.medium),
                       ),
                     ),
-                    const QueueHeader(),
-                    const Expanded(child: QueueList()),
+                    // NB: deliberately not const — these read theme colours
+                    // from the global VelvetColors palette, and a const child is
+                    // skipped on rebuild, so it would keep stale text colours
+                    // until its own stream next ticked after a theme switch.
+                    QueueHeader(),
+                    Expanded(child: QueueList()),
                   ],
                 ),
               ),
@@ -899,7 +903,7 @@ class _AmbientLayer extends StatefulWidget {
 class _AmbientLayerState extends State<_AmbientLayer> {
   StreamSubscription<String?>? _sub;
   String? _url;
-  Gradient? _grad;
+  Color? _seed;
 
   @override
   void initState() {
@@ -915,19 +919,29 @@ class _AmbientLayerState extends State<_AmbientLayer> {
   Future<void> _onUrl(String? url) async {
     _url = url;
     if (url == null) {
-      if (mounted) setState(() => _grad = null);
+      if (mounted) setState(() => _seed = null);
       return;
     }
     // Prefer the vibrant swatch (Spotify-style); fall back to the dominant
-    // field colour when the art has no saturated region.
+    // field colour when the art has no saturated region. The gradient (and its
+    // anchor) is built in build() so it tracks the chosen layout live.
     final seed = await dominantAlbumColor(url, vibrant: true) ??
         await dominantAlbumColor(url);
     if (!mounted || url != _url) return;
-    setState(() {
-      _grad = seed == null
-          ? null
-          : ambientGradient(seed, base: VelvetColors.surface, vibrant: true);
-    });
+    setState(() => _seed = seed);
+  }
+
+  // Left-aligned art (banner / slim pill) reads best with the glow entering
+  // from the top-left corner; centred art (compact / hero) wants top-centre.
+  Alignment _ambientCenter(PlayerLayout layout) {
+    switch (layout) {
+      case PlayerLayout.small:
+      case PlayerLayout.medium:
+        return Alignment.topLeft;
+      case PlayerLayout.large:
+      case PlayerLayout.xl:
+        return Alignment.topCenter;
+    }
   }
 
   @override
@@ -941,10 +955,23 @@ class _AmbientLayerState extends State<_AmbientLayer> {
     return IgnorePointer(
       child: Opacity(
         opacity: widget.opacity.clamp(0.0, 1.0),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 700),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(gradient: _grad),
+        child: StreamBuilder<PlayerLayout>(
+          stream: SettingsManager().playerLayoutStream,
+          initialData: SettingsManager().playerLayout,
+          builder: (context, snap) {
+            final seed = _seed;
+            final grad = seed == null
+                ? null
+                : ambientGradient(seed,
+                    base: VelvetColors.surface,
+                    vibrant: true,
+                    center: _ambientCenter(snap.data ?? PlayerLayout.medium));
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(gradient: grad),
+            );
+          },
         ),
       ),
     );

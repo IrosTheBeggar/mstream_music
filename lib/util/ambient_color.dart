@@ -94,7 +94,10 @@ double _contrastWhite(int r, int g, int b) => 1.05 / (_relLum(r, g, b) + 0.05);
 ///
 /// [vibrant] = false (default) is the calm "muted" look; true is Spotify-style
 /// punch from the more saturated seed.
-Gradient? ambientGradient(Color seed, {required Color base, bool vibrant = false}) {
+Gradient? ambientGradient(Color seed,
+    {required Color base,
+    bool vibrant = false,
+    Alignment center = Alignment.topCenter}) {
   final r = (seed.r * 255.0).round(),
       g = (seed.g * 255.0).round(),
       b = (seed.b * 255.0).round();
@@ -131,7 +134,7 @@ Gradient? ambientGradient(Color seed, {required Color base, bool vibrant = false
   // Top glow — the colour haloes the album art (its source) and fades to the
   // dark base over the lower half, keeping the queue list legible.
   return RadialGradient(
-    center: Alignment.topCenter,
+    center: center,
     radius: 1.25,
     colors: [brightColor, midColor, base],
     stops: const [0.0, 0.40, 0.82],
