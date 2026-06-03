@@ -322,5 +322,20 @@
   "castNotSeeing": "Не видите своё устройство? Убедитесь, что оно в той же сети Wi-Fi.",
   "castVisualizer": "Транслировать визуализацию",
   "castVisualizerSubtitle": "Транслировать визуализацию на ТВ · только Chromecast",
-  "visualizerNoKnobs": "Этот шейдер не предоставляет регуляторов."
+  "visualizerNoKnobs": "Этот шейдер не предоставляет регуляторов.",
+  "nowPlaying": "Сейчас играет",
+  "playerLayoutSmall": "Маленький",
+  "playerLayoutMedium": "Средний",
+  "playerLayoutLarge": "Большой",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Тонкая панель — максимум очереди",
+  "playerLayoutMediumDesc": "Баннер — сбалансированный (по умолчанию)",
+  "playerLayoutLargeDesc": "Компактный — обложка по центру",
+  "playerLayoutXlDesc": "Крупный — полная обложка",
+  "queueNothingToDownloadEmpty": "Очередь пуста — нечего скачивать",
+  "queueNothingToDownloadSaved": "Нечего скачивать — треки уже сохранены",
+  "settingsAccentColor": "Акцентный цвет",
+  "settingsAccentColorSubtitle": "Цвет выделения, используемый во всём приложении.",
+  "accentThemeDefault": "Из темы",
+  "accentCustom": "Свой"
 }

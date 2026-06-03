@@ -1213,4 +1213,52 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'Этот шейдер не предоставляет регуляторов.';
+
+  @override
+  String get nowPlaying => 'Сейчас играет';
+
+  @override
+  String get playerLayoutSmall => 'Маленький';
+
+  @override
+  String get playerLayoutMedium => 'Средний';
+
+  @override
+  String get playerLayoutLarge => 'Большой';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Тонкая панель — максимум очереди';
+
+  @override
+  String get playerLayoutMediumDesc =>
+      'Баннер — сбалансированный (по умолчанию)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Компактный — обложка по центру';
+
+  @override
+  String get playerLayoutXlDesc => 'Крупный — полная обложка';
+
+  @override
+  String get queueNothingToDownloadEmpty => 'Очередь пуста — нечего скачивать';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Нечего скачивать — треки уже сохранены';
+
+  @override
+  String get settingsAccentColor => 'Акцентный цвет';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'Цвет выделения, используемый во всём приложении.';
+
+  @override
+  String get accentThemeDefault => 'Из темы';
+
+  @override
+  String get accentCustom => 'Свой';
 }

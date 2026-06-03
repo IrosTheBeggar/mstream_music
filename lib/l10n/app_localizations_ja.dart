@@ -1137,4 +1137,49 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
+
+  @override
+  String get nowPlaying => '再生中';
+
+  @override
+  String get playerLayoutSmall => '小';
+
+  @override
+  String get playerLayoutMedium => '中';
+
+  @override
+  String get playerLayoutLarge => '大';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => '細いバー — キューを最大化';
+
+  @override
+  String get playerLayoutMediumDesc => 'バナー — バランス型（デフォルト）';
+
+  @override
+  String get playerLayoutLargeDesc => 'コンパクト — 中央寄せのアートワーク';
+
+  @override
+  String get playerLayoutXlDesc => '特大 — フルサイズのアートワーク';
+
+  @override
+  String get queueNothingToDownloadEmpty => 'キューが空です — ダウンロードするものがありません';
+
+  @override
+  String get queueNothingToDownloadSaved => 'ダウンロードするものがありません — 曲は既に保存されています';
+
+  @override
+  String get settingsAccentColor => 'アクセントカラー';
+
+  @override
+  String get settingsAccentColorSubtitle => 'アプリ全体で使用される強調表示の色。';
+
+  @override
+  String get accentThemeDefault => 'テーマの既定';
+
+  @override
+  String get accentCustom => 'カスタム';
 }

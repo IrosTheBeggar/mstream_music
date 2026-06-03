@@ -608,5 +608,20 @@
   "castNotSeeing": "Don't see your device? Make sure it's on the same Wi-Fi.",
   "castVisualizer": "Cast visualizer",
   "castVisualizerSubtitle": "Stream the visualizer to the TV · Chromecast only",
-  "visualizerNoKnobs": "This shader exposes no knobs."
+  "visualizerNoKnobs": "This shader exposes no knobs.",
+  "nowPlaying": "Now Playing",
+  "playerLayoutSmall": "Small",
+  "playerLayoutMedium": "Medium",
+  "playerLayoutLarge": "Large",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Slim bar — maximum queue",
+  "playerLayoutMediumDesc": "Banner — balanced (default)",
+  "playerLayoutLargeDesc": "Compact — centered art",
+  "playerLayoutXlDesc": "Hero — full album art",
+  "queueNothingToDownloadEmpty": "Queue is empty — nothing to download",
+  "queueNothingToDownloadSaved": "Nothing to download — tracks are already saved",
+  "settingsAccentColor": "Accent color",
+  "settingsAccentColorSubtitle": "The highlight color used across the app.",
+  "accentThemeDefault": "Theme default",
+  "accentCustom": "Custom"
 }

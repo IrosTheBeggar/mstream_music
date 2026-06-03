@@ -1209,4 +1209,52 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'Ten shader nie udostępnia żadnych pokręteł.';
+
+  @override
+  String get nowPlaying => 'Teraz odtwarzane';
+
+  @override
+  String get playerLayoutSmall => 'Mały';
+
+  @override
+  String get playerLayoutMedium => 'Średni';
+
+  @override
+  String get playerLayoutLarge => 'Duży';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Wąski pasek — maksymalna kolejka';
+
+  @override
+  String get playerLayoutMediumDesc => 'Baner — zrównoważony (domyślny)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Kompaktowy — wyśrodkowana okładka';
+
+  @override
+  String get playerLayoutXlDesc => 'Wyróżniony — pełna okładka';
+
+  @override
+  String get queueNothingToDownloadEmpty =>
+      'Kolejka jest pusta — nie ma czego pobrać';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Nie ma czego pobrać — utwory są już zapisane';
+
+  @override
+  String get settingsAccentColor => 'Kolor akcentu';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'Kolor wyróżnienia używany w całej aplikacji.';
+
+  @override
+  String get accentThemeDefault => 'Domyślny motywu';
+
+  @override
+  String get accentCustom => 'Niestandardowy';
 }

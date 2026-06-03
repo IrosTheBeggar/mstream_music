@@ -322,5 +322,20 @@
   "castNotSeeing": "Vous ne voyez pas votre appareil ? Vérifiez qu’il est sur le même réseau Wi-Fi.",
   "castVisualizer": "Diffuser le visualiseur",
   "castVisualizerSubtitle": "Diffuser le visualiseur sur le téléviseur · Chromecast uniquement",
-  "visualizerNoKnobs": "Ce shader n’expose aucun réglage."
+  "visualizerNoKnobs": "Ce shader n’expose aucun réglage.",
+  "nowPlaying": "Lecture en cours",
+  "playerLayoutSmall": "Petit",
+  "playerLayoutMedium": "Moyen",
+  "playerLayoutLarge": "Grand",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Barre fine — file maximale",
+  "playerLayoutMediumDesc": "Bannière — équilibré (par défaut)",
+  "playerLayoutLargeDesc": "Compact — pochette centrée",
+  "playerLayoutXlDesc": "Grand format — pochette complète",
+  "queueNothingToDownloadEmpty": "La file est vide — rien à télécharger",
+  "queueNothingToDownloadSaved": "Rien à télécharger — les titres sont déjà enregistrés",
+  "settingsAccentColor": "Couleur d'accent",
+  "settingsAccentColorSubtitle": "La couleur de mise en évidence utilisée dans toute l'application.",
+  "accentThemeDefault": "Par défaut du thème",
+  "accentCustom": "Personnalisé"
 }

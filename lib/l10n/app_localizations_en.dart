@@ -1175,4 +1175,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'This shader exposes no knobs.';
+
+  @override
+  String get nowPlaying => 'Now Playing';
+
+  @override
+  String get playerLayoutSmall => 'Small';
+
+  @override
+  String get playerLayoutMedium => 'Medium';
+
+  @override
+  String get playerLayoutLarge => 'Large';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+
+  @override
+  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Compact — centered art';
+
+  @override
+  String get playerLayoutXlDesc => 'Hero — full album art';
+
+  @override
+  String get queueNothingToDownloadEmpty =>
+      'Queue is empty — nothing to download';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Nothing to download — tracks are already saved';
+
+  @override
+  String get settingsAccentColor => 'Accent color';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'The highlight color used across the app.';
+
+  @override
+  String get accentThemeDefault => 'Theme default';
+
+  @override
+  String get accentCustom => 'Custom';
 }

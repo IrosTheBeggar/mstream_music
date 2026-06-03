@@ -329,5 +329,20 @@
   "castNotSeeing": "¿No ves tu dispositivo? Asegúrate de que esté en la misma red Wi-Fi.",
   "castVisualizer": "Transmitir el visualizador",
   "castVisualizerSubtitle": "Transmite el visualizador a la TV · solo Chromecast",
-  "visualizerNoKnobs": "Este shader no expone ningún control."
+  "visualizerNoKnobs": "Este shader no expone ningún control.",
+  "nowPlaying": "Reproduciendo ahora",
+  "playerLayoutSmall": "Pequeño",
+  "playerLayoutMedium": "Mediano",
+  "playerLayoutLarge": "Grande",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Barra fina — cola máxima",
+  "playerLayoutMediumDesc": "Banner — equilibrado (predeterminado)",
+  "playerLayoutLargeDesc": "Compacto — carátula centrada",
+  "playerLayoutXlDesc": "Destacado — carátula completa",
+  "queueNothingToDownloadEmpty": "La cola está vacía — no hay nada que descargar",
+  "queueNothingToDownloadSaved": "No hay nada que descargar — las pistas ya están guardadas",
+  "settingsAccentColor": "Color de acento",
+  "settingsAccentColorSubtitle": "El color de resalte que se usa en toda la aplicación.",
+  "accentThemeDefault": "Predeterminado del tema",
+  "accentCustom": "Personalizado"
 }

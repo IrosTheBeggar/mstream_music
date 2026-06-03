@@ -387,5 +387,20 @@
   "castNotSeeing": "Dein Gerät wird nicht angezeigt? Stelle sicher, dass es im selben WLAN ist.",
   "castVisualizer": "Visualizer streamen",
   "castVisualizerSubtitle": "Den Visualizer auf den Fernseher streamen · nur Chromecast",
-  "visualizerNoKnobs": "Dieser Shader bietet keine Regler."
+  "visualizerNoKnobs": "Dieser Shader bietet keine Regler.",
+  "nowPlaying": "Aktuelle Wiedergabe",
+  "playerLayoutSmall": "Klein",
+  "playerLayoutMedium": "Mittel",
+  "playerLayoutLarge": "Groß",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Schmale Leiste — maximale Warteschlange",
+  "playerLayoutMediumDesc": "Banner — ausgewogen (Standard)",
+  "playerLayoutLargeDesc": "Kompakt — zentriertes Cover",
+  "playerLayoutXlDesc": "Großformat — volles Cover",
+  "queueNothingToDownloadEmpty": "Warteschlange ist leer — nichts herunterzuladen",
+  "queueNothingToDownloadSaved": "Nichts herunterzuladen — Titel sind bereits gespeichert",
+  "settingsAccentColor": "Akzentfarbe",
+  "settingsAccentColorSubtitle": "Die Hervorhebungsfarbe, die in der gesamten App verwendet wird.",
+  "accentThemeDefault": "Theme-Standard",
+  "accentCustom": "Benutzerdefiniert"
 }

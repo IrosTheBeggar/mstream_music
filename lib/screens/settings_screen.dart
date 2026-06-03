@@ -3,9 +3,11 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../objects/player_layout.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -63,6 +65,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (v == null) return;
                 setState(() {});
                 await SettingsManager().setAppTheme(v);
+                setState(() {});
+              },
+            ),
+          ),
+          ListTile(
+            title: Text(l.settingsAccentColor),
+            subtitle: Text(
+              l.settingsAccentColorSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: VelvetColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: VelvetColors.border),
+              ),
+            ),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              backgroundColor: VelvetColors.surface,
+              isScrollControlled: true,
+              builder: (_) => const AccentColorSheet(),
+            ),
+          ),
+          ListTile(
+            title: const Text('Now Playing layout'),
+            subtitle: Text(
+              _playerLayoutSubtitle(l, SettingsManager().playerLayout),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<PlayerLayout>(
+              value: SettingsManager().playerLayout,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: PlayerLayout.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(_playerLayoutLabel(l, p)),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                setState(() {});
+                await SettingsManager().setPlayerLayout(v);
                 setState(() {});
               },
             ),
@@ -372,6 +423,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.themeSubtitleDark;
       case AppTheme.light:
         return l.themeSubtitleLight;
+    }
+  }
+
+  String _playerLayoutLabel(AppLocalizations l, PlayerLayout p) {
+    switch (p) {
+      case PlayerLayout.small:
+        return l.playerLayoutSmall;
+      case PlayerLayout.medium:
+        return l.playerLayoutMedium;
+      case PlayerLayout.large:
+        return l.playerLayoutLarge;
+      case PlayerLayout.xl:
+        return l.playerLayoutXl;
+    }
+  }
+
+  String _playerLayoutSubtitle(AppLocalizations l, PlayerLayout p) {
+    switch (p) {
+      case PlayerLayout.small:
+        return l.playerLayoutSmallDesc;
+      case PlayerLayout.medium:
+        return l.playerLayoutMediumDesc;
+      case PlayerLayout.large:
+        return l.playerLayoutLargeDesc;
+      case PlayerLayout.xl:
+        return l.playerLayoutXlDesc;
     }
   }
 

@@ -1189,4 +1189,52 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'Ce shader n’expose aucun réglage.';
+
+  @override
+  String get nowPlaying => 'Lecture en cours';
+
+  @override
+  String get playerLayoutSmall => 'Petit';
+
+  @override
+  String get playerLayoutMedium => 'Moyen';
+
+  @override
+  String get playerLayoutLarge => 'Grand';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Barre fine — file maximale';
+
+  @override
+  String get playerLayoutMediumDesc => 'Bannière — équilibré (par défaut)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Compact — pochette centrée';
+
+  @override
+  String get playerLayoutXlDesc => 'Grand format — pochette complète';
+
+  @override
+  String get queueNothingToDownloadEmpty =>
+      'La file est vide — rien à télécharger';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Rien à télécharger — les titres sont déjà enregistrés';
+
+  @override
+  String get settingsAccentColor => 'Couleur d\'accent';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'La couleur de mise en évidence utilisée dans toute l\'application.';
+
+  @override
+  String get accentThemeDefault => 'Par défaut du thème';
+
+  @override
+  String get accentCustom => 'Personnalisé';
 }

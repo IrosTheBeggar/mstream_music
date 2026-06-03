@@ -26,6 +26,11 @@ class WaveformProgress extends StatelessWidget {
   final double height;
   final int barCount;
 
+  /// Overrides the unplayed-bar colour (defaults to [VelvetColors.border2]).
+  /// The Medium layout lightens this so the bar stays visible on the plain
+  /// dark background where the dim default disappears under light album art.
+  final Color? unplayedColor;
+
   const WaveformProgress({
     Key? key,
     required this.progress,
@@ -33,6 +38,7 @@ class WaveformProgress extends StatelessWidget {
     this.onSeek,
     this.height = 32,
     this.barCount = 64,
+    this.unplayedColor,
   }) : super(key: key);
 
   @override
@@ -59,7 +65,7 @@ class WaveformProgress extends StatelessWidget {
             heights: bars,
             progress: clamped,
             playedColor: VelvetColors.primary,
-            unplayedColor: VelvetColors.border2,
+            unplayedColor: unplayedColor ?? VelvetColors.border2,
           ),
         ),
       ),

@@ -1113,4 +1113,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
+
+  @override
+  String get nowPlaying => '正在播放';
+
+  @override
+  String get playerLayoutSmall => '小';
+
+  @override
+  String get playerLayoutMedium => '中';
+
+  @override
+  String get playerLayoutLarge => '大';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => '细条 — 最大化队列';
+
+  @override
+  String get playerLayoutMediumDesc => '横幅 — 平衡（默认）';
+
+  @override
+  String get playerLayoutLargeDesc => '紧凑 — 居中封面';
+
+  @override
+  String get playerLayoutXlDesc => '大图 — 完整封面';
+
+  @override
+  String get queueNothingToDownloadEmpty => '队列为空 — 没有可下载的内容';
+
+  @override
+  String get queueNothingToDownloadSaved => '没有可下载的内容 — 曲目已保存';
+
+  @override
+  String get settingsAccentColor => '强调色';
+
+  @override
+  String get settingsAccentColorSubtitle => '整个应用中使用的高亮颜色。';
+
+  @override
+  String get accentThemeDefault => '主题默认';
+
+  @override
+  String get accentCustom => '自定义';
 }

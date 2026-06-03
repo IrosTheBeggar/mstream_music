@@ -1,19 +1,15 @@
 import 'dart:async';
 
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'screens/browser.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
-import 'objects/metadata.dart';
 import 'screens/about_screen.dart';
-import 'screens/metadata_screen.dart';
 import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
@@ -21,7 +17,6 @@ import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
-import 'screens/playlists_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/share_playlist_dialog.dart';
 import 'singletons/auto_dj_manager.dart';
@@ -32,13 +27,16 @@ import 'theme/velvet_theme.dart';
 import 'media/cast_target.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
-import 'widgets/more_actions_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/enum_labels.dart';
-import 'widgets/waveform_progress.dart';
+import 'widgets/player_panel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Show the system bars edge-to-edge from the first frame, so a launch that
+  // inherits a leftover immersive mode (e.g. the app was killed while the
+  // Visualizer had the nav bar hidden) still comes up with the nav bar visible.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   // Settings load must come before MediaManager.start() so the audio
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
@@ -53,16 +51,25 @@ Future<void> main() async {
   // ThemeData and any direct VelvetColors lookups stay in sync.
   // combineLatest2 (rxdart) merges the two streams into one record so a
   // single StreamBuilder drives both; locale == null follows the device.
-  runApp(StreamBuilder<(AppTheme, Locale?)>(
-    stream: Rx.combineLatest2(
+  runApp(StreamBuilder<(AppTheme, Locale?, int?)>(
+    stream: Rx.combineLatest3(
       SettingsManager().themeStream,
       SettingsManager().localeStream,
-      (AppTheme theme, Locale? locale) => (theme, locale),
+      SettingsManager().accentColorStream,
+      (AppTheme theme, Locale? locale, int? accent) => (theme, locale, accent),
     ),
-    initialData: (SettingsManager().appTheme, SettingsManager().localeOverride),
+    initialData: (
+      SettingsManager().appTheme,
+      SettingsManager().localeOverride,
+      SettingsManager().accentColor,
+    ),
     builder: (context, snapshot) {
-      final (theme, locale) = snapshot.data ?? (AppTheme.dark, null);
-      final palette = paletteFor(theme);
+      final (theme, locale, accent) =
+          snapshot.data ?? (AppTheme.dark, null, null);
+      // A custom accent (if set) overrides the theme's built-in primary and its
+      // derived shades across every theme.
+      var palette = paletteFor(theme);
+      if (accent != null) palette = palette.withAccent(Color(accent));
       VelvetColors.setActive(palette);
       return MaterialApp(
         title: 'mStream Music',
@@ -83,15 +90,22 @@ class MStreamApp extends StatefulWidget {
   _MStreamAppState createState() => new _MStreamAppState();
 }
 
-class _MStreamAppState extends State<MStreamApp>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
+  final GlobalKey<PlayerPanelState> _panelKey = GlobalKey<PlayerPanelState>();
+  // The full-screen player overlay sits above the Scaffold, so it would also
+  // paint over an open drawer; hide it while the drawer is open.
+  final ValueNotifier<bool> _drawerOpen = ValueNotifier<bool>(false);
   StreamSubscription<String>? _castErrorSub;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
+    // Keep the system navigation/status bars visible (drawn edge-to-edge behind
+    // the app) whenever the main screen is up. The Visualizer flips to immersive
+    // and restores this on exit, but a kill mid-immersive can leak that mode to
+    // the next launch — asserting here (and on resume) keeps the nav bar up.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     ServerManager().loadServerList();
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
@@ -110,8 +124,21 @@ class _MStreamAppState extends State<MStreamApp>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // On resume, re-assert edge-to-edge so a hidden nav bar (e.g. left over from
+    // the Visualizer's immersive mode) comes back — but only when the main
+    // screen is the top route, so we don't fight the Visualizer if it's open.
+    if (state == AppLifecycleState.resumed &&
+        (ModalRoute.of(context)?.isCurrent ?? true)) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
+    _drawerOpen.dispose();
     DownloadManager().dispose();
     super.dispose();
   }
@@ -203,15 +230,18 @@ class _MStreamAppState extends State<MStreamApp>
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
-          if (_tabController.index != 0) {
-            _tabController.animateTo(0);
+          final panel = _panelKey.currentState;
+          if (panel != null && panel.isExpanded) {
+            panel.collapse();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {
             SystemNavigator.pop();
           }
         },
-        child: Scaffold(
+        child: Stack(children: [
+          Scaffold(
+            onDrawerChanged: (open) => _drawerOpen.value = open,
             appBar: AppBar(
               title: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +310,6 @@ class _MStreamAppState extends State<MStreamApp>
                         visible: isVisible,
                         child: PopupMenuButton(
                             onSelected: (int selectedServerIndex) async {
-                              _tabController.animateTo(0);
                               if (selectedServerIndex > -1) {
                                 ServerManager()
                                     .changeCurrentServer(selectedServerIndex);
@@ -326,17 +355,30 @@ class _MStreamAppState extends State<MStreamApp>
                       );
                     }),
               ],
-              bottom: TabBar(
-                  tabs: [
-                    StreamBuilder<String>(
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(34),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: StreamBuilder<String>(
                         stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
-                          return Tab(text: browserChromeLabel(l, label));
+                          return Text(
+                            browserChromeLabel(l, label),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: VelvetColors.appBarTextSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3),
+                          );
                         }),
-                    Tab(text: l.tabQueue),
-                  ],
-                  controller: _tabController),
+                  ),
+                ),
+              ),
             ),
             drawer: Drawer(
                 child: ListView(padding: EdgeInsets.zero, children: <Widget>[
@@ -476,641 +518,31 @@ class _MStreamAppState extends State<MStreamApp>
             body: Column(children: [
               _migrationBanner(),
               Expanded(
-                  child: TabBarView(
-                      children: [Browser(), NowPlaying()],
-                      controller: _tabController)),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      bottom: PlayerPanel.kCollapsedHeight +
+                          MediaQuery.of(context).viewPadding.bottom),
+                  child: Browser(),
+                ),
+              ),
             ]),
-            bottomNavigationBar: BottomBar()));
-  }
-}
-
-class NowPlaying extends StatelessWidget {
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Column(children: <Widget>[
-      Material(
-          color: VelvetColors.surface,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  StreamBuilder<List<MediaItem>>(
-                      stream: MediaManager().audioHandler.queue,
-                      builder: (context, snap) {
-                        final n = snap.data?.length ?? 0;
-                        return Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            n == 0 ? l.mainQueueEmpty : l.mainQueueCount(n),
-                            style: TextStyle(
-                                color: VelvetColors.textSecondary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5),
-                          ),
-                        );
-                      }),
-                  // Visualizer + Clear queue moved to the "More" sheet; the
-                  // Download-all bulk action (from the server-download-folder
-                  // PR) stays here as a queue-specific action.
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    IconButton(
-                      icon: Icon(Icons.download_for_offline),
-                      color: VelvetColors.textSecondary,
-                      tooltip: l.queueDownloadAll,
-                      onPressed: () => _downloadAll(context),
-                    ),
-                  ]),
-                ]),
-          )),
-      Expanded(
-          child: SizedBox(
-              child: StreamBuilder<QueueState>(
-                  stream: _queueStateStream,
-                  builder: (context, snapshot) {
-                    final queueState = snapshot.data;
-                    final queue = queueState?.queue ?? [];
-                    final mediaItem = queueState?.mediaItem;
-
-                    return ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: queue.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return Slidable(
-                              key: Key(queue[index].id),
-                              startActionPane: ActionPane(
-                                motion: DrawerMotion(),
-                                extentRatio: 0.18,
-                                children: [
-                                  SlidableAction(
-                                      backgroundColor: Colors.blueGrey,
-                                      icon: Icons.download,
-                                      label: l.mainSync,
-                                      onPressed: (context) {
-                                        if (queue[index]
-                                                .extras!['localPath'] ==
-                                            null) {
-                                          DownloadManager().downloadOneFile(
-                                              queue[index].id,
-                                              queue[index].extras!['server'],
-                                              queue[index].extras!['path']);
-                                        }
-                                      })
-                                ],
-                              ),
-                              endActionPane: ActionPane(
-                                motion: DrawerMotion(),
-                                extentRatio: 0.36,
-                                dismissible: DismissiblePane(
-                                  onDismissed: () {
-                                    MediaManager()
-                                        .audioHandler
-                                        .removeQueueItemAt(index);
-                                  },
-                                ),
-                                children: [
-                                  // "Add to" (local playlist) action hidden
-                                  // alongside the drawer entry. Restore both
-                                  // together when local playlists return.
-                                  // SlidableAction(
-                                  //     backgroundColor: VelvetColors.primary,
-                                  //     foregroundColor: Colors.white,
-                                  //     icon: Icons.playlist_add,
-                                  //     label: 'Add to',
-                                  //     onPressed: (ctx) {
-                                  //       _showAddToPlaylistSheet(
-                                  //           ctx, queue[index]);
-                                  //     }),
-                                  SlidableAction(
-                                      backgroundColor: VelvetColors.raised,
-                                      foregroundColor:
-                                          VelvetColors.textPrimary,
-                                      icon: Icons.info,
-                                      label: l.info,
-                                      onPressed: (context) {
-                                        MusicMetadata m = new MusicMetadata(
-                                            queue[index].artist,
-                                            queue[index].album,
-                                            queue[index].title,
-                                            null,
-                                            null,
-                                            queue[index].extras?['year'],
-                                            'X',
-                                            null,
-                                            queue[index].extras?['artUrl']);
-                                        print(queue[index]);
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    MeteDataScreen(
-                                                        meta: m,
-                                                        path: queue[index]
-                                                            .extras?['path'])));
-                                      }),
-                                ],
-                              ),
-                              child: Container(
-                                  decoration: BoxDecoration(
-                                    color: (queue[index] == mediaItem)
-                                        ? VelvetColors.active
-                                        : null,
-                                    border: Border(
-                                      bottom: BorderSide(
-                                          color: VelvetColors.border,
-                                          width: 0.5),
-                                    ),
-                                  ),
-                                  child: IntrinsicHeight(
-                                      child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: <Widget>[
-                                        Container(
-                                          width: 3,
-                                          color: queue[index].extras![
-                                                      'localPath'] !=
-                                                  null
-                                              ? VelvetColors.success
-                                              : Colors.transparent,
-                                        ),
-                                        Expanded(
-                                            child: ListTile(
-                                                leading: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  child: SizedBox(
-                                                    width: 44,
-                                                    height: 44,
-                                                    child: queue[index].extras?[
-                                                                'artUrl'] !=
-                                                            null
-                                                        ? Image.network(
-                                                            queue[index]
-                                                                    .extras![
-                                                                'artUrl'],
-                                                            fit: BoxFit.cover,
-                                                            errorBuilder:
-                                                                (_, __, ___) =>
-                                                                    _artFallback())
-                                                        : _artFallback(),
-                                                  ),
-                                                ),
-                                                subtitle: queue[index]
-                                                            .artist !=
-                                                        null
-                                                    ? Text(queue[index].artist!,
-                                                        style: TextStyle(
-                                                            color: VelvetColors
-                                                                .textSecondary))
-                                                    : null,
-                                                title: Text(
-                                                    queue[index].title,
-                                                    style: TextStyle(
-                                                        color: queue[index] ==
-                                                                mediaItem
-                                                            ? VelvetColors
-                                                                .primary
-                                                            : VelvetColors
-                                                                .textPrimary,
-                                                        fontWeight:
-                                                            FontWeight.w500)),
-                                                onTap: () {
-                                                  MediaManager()
-                                                      .audioHandler
-                                                      .skipToQueueItem(
-                                                          index);
-                                                  MediaManager()
-                                                      .audioHandler
-                                                      .play();
-                                                }))
-                                      ]))));
-                        });
-                  })))
-    ]);
-  }
-
-  Stream<QueueState> get _queueStateStream =>
-      Rx.combineLatest2<List<MediaItem>?, MediaItem?, QueueState>(
-          MediaManager().audioHandler.queue,
-          MediaManager().audioHandler.mediaItem,
-          (queue, mediaItem) => QueueState(queue, mediaItem));
-
-  Widget _artFallback() => Container(
-        color: VelvetColors.raised,
-        child: Icon(Icons.music_note,
-            color: VelvetColors.textSecondary, size: 22),
-      );
-
-  // Queue "Download all": enqueue every track that isn't already on the
-  // device (no localPath) and is actually downloadable (has a server +
-  // path — local-only files are skipped). Confirms the count first and
-  // lets the user back out. downloadOneFile no-ops on files already on
-  // disk, so re-running is harmless.
-  void _downloadAll(BuildContext context) {
-    final queue = MediaManager().audioHandler.queue.value;
-    final pending = queue
-        .where((m) =>
-            m.extras?['localPath'] == null &&
-            m.extras?['server'] != null &&
-            m.extras?['path'] != null)
-        .toList();
-
-    if (pending.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(queue.isEmpty
-              ? 'Queue is empty — nothing to download'
-              : 'Nothing to download — tracks are already saved')));
-      return;
-    }
-
-    final n = pending.length;
-    final l = AppLocalizations.of(context);
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.queueDownloadAll),
-        content: Text(l.queueDownloadAllBody(n)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              for (final m in pending) {
-                DownloadManager().downloadOneFile(
-                    m.id, m.extras!['server'], m.extras!['path']);
-              }
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(l.browserDownloadsStarted(n))));
-            },
-            child: Text(l.download),
+          // Full-screen player overlay — collapsed it's the bottom mini-player;
+          // expanded it rises over the app bar into a full Now Playing screen.
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _drawerOpen,
+              builder: (_, open, child) =>
+                  Offstage(offstage: open, child: child),
+              child: PlayerPanel(key: _panelKey),
+            ),
           ),
-        ],
-      ),
-    );
+        ]));
   }
-
-  void _showAddToPlaylistSheet(BuildContext context, MediaItem item) {
-    final l = AppLocalizations.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: VelvetColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(VelvetColors.radiusLarge)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: StreamBuilder(
-            stream: PlaylistManager().stream,
-            initialData: PlaylistManager().playlists,
-            builder: (context, snapshot) {
-              final lists = snapshot.data ?? const [];
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Row(children: [
-                      Expanded(
-                        child: Text(l.addToPlaylistTitle,
-                            style: TextStyle(
-                                color: VelvetColors.textPrimary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.add,
-                            color: VelvetColors.primary),
-                        tooltip: l.playlistsNew,
-                        onPressed: () async {
-                          final name = await _promptName(ctx);
-                          if (name != null && name.isNotEmpty) {
-                            final p =
-                                await PlaylistManager().create(name);
-                            await PlaylistManager().addEntry(
-                                PlaylistManager().playlists.indexOf(p),
-                                item);
-                            if (ctx.mounted) Navigator.of(ctx).pop();
-                          }
-                        },
-                      ),
-                    ]),
-                  ),
-                  if (lists.isEmpty)
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(20, 8, 20, 28),
-                      child: Text(
-                        l.addToPlaylistEmpty,
-                        style: TextStyle(
-                            color: VelvetColors.textSecondary,
-                            fontSize: 13),
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: lists.length,
-                        separatorBuilder: (_, __) => Divider(
-                            height: 1, color: VelvetColors.border),
-                        itemBuilder: (_, i) {
-                          final p = lists[i];
-                          return ListTile(
-                            leading: Icon(Icons.queue_music,
-                                color: VelvetColors.primary),
-                            title: Text(p.name),
-                            subtitle: Text(
-                              l.trackCount(p.entries.length),
-                              style: TextStyle(
-                                  color: VelvetColors.textSecondary,
-                                  fontSize: 12),
-                            ),
-                            onTap: () async {
-                              await PlaylistManager().addEntry(i, item);
-                              if (ctx.mounted) {
-                                Navigator.of(ctx).pop();
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          l.addedToPlaylist(p.name))),
-                                );
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Future<String?> _promptName(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.playlistsNew),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: l.playlistNameHint),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(l.cancel,
-                  style:
-                      TextStyle(color: VelvetColors.textSecondary))),
-          ElevatedButton(
-              onPressed: () =>
-                  Navigator.of(ctx).pop(controller.text.trim()),
-              child: Text(l.create)),
-        ],
-      ),
-    );
-  }
-}
-
-class BottomBar extends StatelessWidget {
-  toggleShuffle() {
-    MediaManager().audioHandler.setShuffleMode(AudioServiceShuffleMode.all);
-  }
-
-  toggleRepeat() {
-    MediaManager().audioHandler.setRepeatMode(AudioServiceRepeatMode.all);
-  }
-
-  Widget build(BuildContext context) {
-    // BottomBar mirrors the AppBar (appBarBg) rather than the body
-    // surface, so in the Light theme it stays a dark strip with light
-    // text — master's signature look — instead of a low-contrast
-    // white block on a light gray body. IconTheme wrap sets the
-    // default icon color for the whole bar; per-button overrides
-    // (active shuffle/repeat/autoDJ) still apply.
-    return BottomAppBar(
-        padding: EdgeInsets.symmetric(vertical: 0.0, horizontal: 0.0),
-        color: VelvetColors.appBarBg,
-        child: IconTheme(
-          data: IconThemeData(color: VelvetColors.appBarTextSecondary),
-          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          // Compact now-playing row: title — artist on the left,
-          // mm:ss / mm:ss on the right, then the waveform on the row
-          // BELOW. Both share a single ~36px tall line each so the
-          // BottomAppBar stays inside the Scaffold's allocation.
-          StreamBuilder<MediaItem?>(
-            stream: MediaManager().audioHandler.mediaItem,
-            builder: (context, snap) {
-              final item = snap.data;
-              return Padding(
-                padding: EdgeInsets.fromLTRB(12, 0, 12, 0),
-                child: SizedBox(
-                  height: 16,
-                  child: item == null
-                      ? null
-                      : Row(children: [
-                          Expanded(
-                            child: Text(
-                              item.artist == null
-                                  ? item.title
-                                  : '${item.title}  ·  ${item.artist}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: VelvetColors.appBarText,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                          StreamBuilder<MediaState>(
-                            stream: _mediaStateStream,
-                            builder: (context, snap) {
-                              final position =
-                                  snap.data?.position ?? Duration.zero;
-                              final duration = item.duration;
-                              return Text(
-                                duration == null
-                                    ? _fmt(position)
-                                    : '${_fmt(position)} / ${_fmt(duration)}',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    color: VelvetColors.appBarTextSecondary),
-                              );
-                            },
-                          ),
-                        ]),
-                ),
-              );
-            },
-          ),
-          StreamBuilder<MediaState>(
-            stream: _mediaStateStream,
-            builder: (context, snapshot) {
-              final mediaState = snapshot.data;
-              final dur = mediaState?.mediaItem?.duration;
-              final progress = (dur == null || dur.inMilliseconds == 0)
-                  ? 0.0
-                  : (mediaState!.position.inMilliseconds /
-                          dur.inMilliseconds)
-                      .clamp(0.0, 1.0);
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: WaveformProgress(
-                  height: 16,
-                  progress: progress,
-                  seed: mediaState?.mediaItem?.id,
-                  onSeek: dur == null
-                      ? null
-                      : (fraction) {
-                          MediaManager().audioHandler.seek(
-                                Duration(
-                                    milliseconds:
-                                        (dur.inMilliseconds * fraction)
-                                            .toInt()),
-                              );
-                        },
-                ),
-              );
-            },
-          ),
-          Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Row(children: [
-                  IconButton(
-                    icon: Icon(Icons.skip_previous),
-                    onPressed: MediaManager().audioHandler.skipToPrevious,
-                  ),
-                  StreamBuilder<bool>(
-                    stream: MediaManager()
-                        .audioHandler
-                        .playbackState
-                        .map((state) => state.playing)
-                        .distinct(),
-                    builder: (context, snapshot) {
-                      final playing = snapshot.data ?? false;
-                      if (playing)
-                        return pauseButton();
-                      else
-                        return playButton();
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.skip_next),
-                    onPressed: MediaManager().audioHandler.skipToNext,
-                  ),
-                ]),
-                Row(children: [
-                  StreamBuilder<AudioServiceShuffleMode>(
-                      // stream: MediaManager().audioHandler.playbackState,
-                      stream: MediaManager()
-                          .audioHandler
-                          .playbackState
-                          .map((state) => state.shuffleMode)
-                          .distinct(),
-                      builder: (context, snapshot) {
-                        final mediaState = snapshot.data;
-                        return IconButton(
-                            icon: Icon(Icons.shuffle),
-                            color: (mediaState == AudioServiceShuffleMode.all)
-                                ? VelvetColors.primary
-                                : VelvetColors.appBarTextSecondary,
-                            onPressed: toggleShuffle);
-                      }),
-                  StreamBuilder<AudioServiceRepeatMode>(
-                      // stream: MediaManager().audioHandler.playbackState,
-                      stream: MediaManager()
-                          .audioHandler
-                          .playbackState
-                          .map((state) => state.repeatMode)
-                          .distinct(),
-                      builder: (context, snapshot) {
-                        final mediaState = snapshot.data;
-                        return IconButton(
-                            icon: Icon(Icons.loop_sharp),
-                            color: (mediaState == AudioServiceRepeatMode.all)
-                                ? VelvetColors.primary
-                                : VelvetColors.appBarTextSecondary,
-                            onPressed: toggleRepeat);
-                      }),
-                  IconButton(
-                    icon: Icon(Icons.more_vert),
-                    color: VelvetColors.appBarTextSecondary,
-                    tooltip: AppLocalizations.of(context).mainMore,
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: VelvetColors.surface,
-                        builder: (_) =>
-                            MoreActionsSheet(parentContext: context),
-                      );
-                    },
-                  ),
-                ])
-              ])
-        ])));
-  }
-
-  /// A stream reporting the combined state of the current media item and its
-  /// current position.
-  Stream<MediaState> get _mediaStateStream =>
-      Rx.combineLatest2<MediaItem?, Duration, MediaState>(
-          MediaManager().audioHandler.mediaItem,
-          MediaManager().audioHandler.positionStream,
-          (mediaItem, position) => MediaState(mediaItem, position));
-
-  IconButton playButton() => IconButton(
-        icon: Icon(Icons.play_arrow),
-        // iconSize: 64.0,
-        onPressed: MediaManager().audioHandler.play,
-      );
-
-  IconButton pauseButton() => IconButton(
-        icon: Icon(Icons.pause),
-        // iconSize: 64.0,
-        onPressed: MediaManager().audioHandler.pause,
-      );
-}
-
-class QueueState {
-  final List<MediaItem>? queue;
-  final MediaItem? mediaItem;
-
-  QueueState(this.queue, this.mediaItem);
-}
-
-class MediaState {
-  final MediaItem? mediaItem;
-  final Duration position;
-
-  MediaState(this.mediaItem, this.position);
 }
 
 class CustomEvent {
   final Server? autoDJState;
 
   CustomEvent(this.autoDJState);
-}
-
-String _fmt(Duration d) {
-  final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-  final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  if (d.inHours > 0) {
-    return '${d.inHours}:$mm:$ss';
-  }
-  return '$mm:$ss';
 }

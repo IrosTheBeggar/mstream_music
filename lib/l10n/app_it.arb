@@ -322,5 +322,20 @@
   "castNotSeeing": "Non vedi il tuo dispositivo? Assicurati che sia sulla stessa rete Wi-Fi.",
   "castVisualizer": "Trasmetti il visualizzatore",
   "castVisualizerSubtitle": "Trasmetti il visualizzatore alla TV · solo Chromecast",
-  "visualizerNoKnobs": "Questo shader non espone alcuna manopola."
+  "visualizerNoKnobs": "Questo shader non espone alcuna manopola.",
+  "nowPlaying": "In riproduzione",
+  "playerLayoutSmall": "Piccolo",
+  "playerLayoutMedium": "Medio",
+  "playerLayoutLarge": "Grande",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Barra sottile — coda massima",
+  "playerLayoutMediumDesc": "Banner — bilanciato (predefinito)",
+  "playerLayoutLargeDesc": "Compatto — copertina centrata",
+  "playerLayoutXlDesc": "In evidenza — copertina intera",
+  "queueNothingToDownloadEmpty": "La coda è vuota — niente da scaricare",
+  "queueNothingToDownloadSaved": "Niente da scaricare — i brani sono già salvati",
+  "settingsAccentColor": "Colore d'accento",
+  "settingsAccentColorSubtitle": "Il colore di evidenziazione usato in tutta l'app.",
+  "accentThemeDefault": "Predefinito del tema",
+  "accentCustom": "Personalizzato"
 }

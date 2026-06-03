@@ -1192,4 +1192,52 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'Dieser Shader bietet keine Regler.';
+
+  @override
+  String get nowPlaying => 'Aktuelle Wiedergabe';
+
+  @override
+  String get playerLayoutSmall => 'Klein';
+
+  @override
+  String get playerLayoutMedium => 'Mittel';
+
+  @override
+  String get playerLayoutLarge => 'Groß';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Schmale Leiste — maximale Warteschlange';
+
+  @override
+  String get playerLayoutMediumDesc => 'Banner — ausgewogen (Standard)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Kompakt — zentriertes Cover';
+
+  @override
+  String get playerLayoutXlDesc => 'Großformat — volles Cover';
+
+  @override
+  String get queueNothingToDownloadEmpty =>
+      'Warteschlange ist leer — nichts herunterzuladen';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Nichts herunterzuladen — Titel sind bereits gespeichert';
+
+  @override
+  String get settingsAccentColor => 'Akzentfarbe';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'Die Hervorhebungsfarbe, die in der gesamten App verwendet wird.';
+
+  @override
+  String get accentThemeDefault => 'Theme-Standard';
+
+  @override
+  String get accentCustom => 'Benutzerdefiniert';
 }
