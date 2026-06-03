@@ -322,5 +322,16 @@
   "castNotSeeing": "Nie widzisz swojego urządzenia? Upewnij się, że jest w tej samej sieci Wi-Fi.",
   "castVisualizer": "Prześlij wizualizator",
   "castVisualizerSubtitle": "Przesyłaj wizualizator do telewizora · tylko Chromecast",
-  "visualizerNoKnobs": "Ten shader nie udostępnia żadnych pokręteł."
+  "visualizerNoKnobs": "Ten shader nie udostępnia żadnych pokręteł.",
+  "nowPlaying": "Teraz odtwarzane",
+  "playerLayoutSmall": "Mały",
+  "playerLayoutMedium": "Średni",
+  "playerLayoutLarge": "Duży",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Wąski pasek — maksymalna kolejka",
+  "playerLayoutMediumDesc": "Baner — zrównoważony (domyślny)",
+  "playerLayoutLargeDesc": "Kompaktowy — wyśrodkowana okładka",
+  "playerLayoutXlDesc": "Wyróżniony — pełna okładka",
+  "queueNothingToDownloadEmpty": "Kolejka jest pusta — nie ma czego pobrać",
+  "queueNothingToDownloadSaved": "Nie ma czego pobrać — utwory są już zapisane"
 }

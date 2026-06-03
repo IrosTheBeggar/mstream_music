@@ -1215,37 +1215,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get visualizerNoKnobs => 'Этот шейдер не предоставляет регуляторов.';
 
   @override
-  String get nowPlaying => 'Now Playing';
+  String get nowPlaying => 'Сейчас играет';
 
   @override
-  String get playerLayoutSmall => 'Small';
+  String get playerLayoutSmall => 'Маленький';
 
   @override
-  String get playerLayoutMedium => 'Medium';
+  String get playerLayoutMedium => 'Средний';
 
   @override
-  String get playerLayoutLarge => 'Large';
+  String get playerLayoutLarge => 'Большой';
 
   @override
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+  String get playerLayoutSmallDesc => 'Тонкая панель — максимум очереди';
 
   @override
-  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+  String get playerLayoutMediumDesc =>
+      'Баннер — сбалансированный (по умолчанию)';
 
   @override
-  String get playerLayoutLargeDesc => 'Compact — centered art';
+  String get playerLayoutLargeDesc => 'Компактный — обложка по центру';
 
   @override
-  String get playerLayoutXlDesc => 'Hero — full album art';
+  String get playerLayoutXlDesc => 'Крупный — полная обложка';
 
   @override
-  String get queueNothingToDownloadEmpty =>
-      'Queue is empty — nothing to download';
+  String get queueNothingToDownloadEmpty => 'Очередь пуста — нечего скачивать';
 
   @override
   String get queueNothingToDownloadSaved =>
-      'Nothing to download — tracks are already saved';
+      'Нечего скачивать — треки уже сохранены';
 }

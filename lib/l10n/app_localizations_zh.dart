@@ -1115,37 +1115,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
 
   @override
-  String get nowPlaying => 'Now Playing';
+  String get nowPlaying => '正在播放';
 
   @override
-  String get playerLayoutSmall => 'Small';
+  String get playerLayoutSmall => '小';
 
   @override
-  String get playerLayoutMedium => 'Medium';
+  String get playerLayoutMedium => '中';
 
   @override
-  String get playerLayoutLarge => 'Large';
+  String get playerLayoutLarge => '大';
 
   @override
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+  String get playerLayoutSmallDesc => '细条 — 最大化队列';
 
   @override
-  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+  String get playerLayoutMediumDesc => '横幅 — 平衡（默认）';
 
   @override
-  String get playerLayoutLargeDesc => 'Compact — centered art';
+  String get playerLayoutLargeDesc => '紧凑 — 居中封面';
 
   @override
-  String get playerLayoutXlDesc => 'Hero — full album art';
+  String get playerLayoutXlDesc => '大图 — 完整封面';
 
   @override
-  String get queueNothingToDownloadEmpty =>
-      'Queue is empty — nothing to download';
+  String get queueNothingToDownloadEmpty => '队列为空 — 没有可下载的内容';
 
   @override
-  String get queueNothingToDownloadSaved =>
-      'Nothing to download — tracks are already saved';
+  String get queueNothingToDownloadSaved => '没有可下载的内容 — 曲目已保存';
 }

@@ -1191,37 +1191,37 @@ class AppLocalizationsFr extends AppLocalizations {
   String get visualizerNoKnobs => 'Ce shader n’expose aucun réglage.';
 
   @override
-  String get nowPlaying => 'Now Playing';
+  String get nowPlaying => 'Lecture en cours';
 
   @override
-  String get playerLayoutSmall => 'Small';
+  String get playerLayoutSmall => 'Petit';
 
   @override
-  String get playerLayoutMedium => 'Medium';
+  String get playerLayoutMedium => 'Moyen';
 
   @override
-  String get playerLayoutLarge => 'Large';
+  String get playerLayoutLarge => 'Grand';
 
   @override
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+  String get playerLayoutSmallDesc => 'Barre fine — file maximale';
 
   @override
-  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+  String get playerLayoutMediumDesc => 'Bannière — équilibré (par défaut)';
 
   @override
-  String get playerLayoutLargeDesc => 'Compact — centered art';
+  String get playerLayoutLargeDesc => 'Compact — pochette centrée';
 
   @override
-  String get playerLayoutXlDesc => 'Hero — full album art';
+  String get playerLayoutXlDesc => 'Grand format — pochette complète';
 
   @override
   String get queueNothingToDownloadEmpty =>
-      'Queue is empty — nothing to download';
+      'La file est vide — rien à télécharger';
 
   @override
   String get queueNothingToDownloadSaved =>
-      'Nothing to download — tracks are already saved';
+      'Rien à télécharger — les titres sont déjà enregistrés';
 }

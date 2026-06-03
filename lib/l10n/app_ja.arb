@@ -322,5 +322,16 @@
   "castNotSeeing": "デバイスが表示されませんか？ 同じ Wi-Fi に接続されているか確認してください。",
   "castVisualizer": "ビジュアライザーをキャスト",
   "castVisualizerSubtitle": "ビジュアライザーをテレビにストリーミング · Chromecast のみ",
-  "visualizerNoKnobs": "このシェーダーにはつまみがありません。"
+  "visualizerNoKnobs": "このシェーダーにはつまみがありません。",
+  "nowPlaying": "再生中",
+  "playerLayoutSmall": "小",
+  "playerLayoutMedium": "中",
+  "playerLayoutLarge": "大",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "細いバー — キューを最大化",
+  "playerLayoutMediumDesc": "バナー — バランス型（デフォルト）",
+  "playerLayoutLargeDesc": "コンパクト — 中央寄せのアートワーク",
+  "playerLayoutXlDesc": "特大 — フルサイズのアートワーク",
+  "queueNothingToDownloadEmpty": "キューが空です — ダウンロードするものがありません",
+  "queueNothingToDownloadSaved": "ダウンロードするものがありません — 曲は既に保存されています"
 }

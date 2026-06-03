@@ -1139,37 +1139,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
 
   @override
-  String get nowPlaying => 'Now Playing';
+  String get nowPlaying => '再生中';
 
   @override
-  String get playerLayoutSmall => 'Small';
+  String get playerLayoutSmall => '小';
 
   @override
-  String get playerLayoutMedium => 'Medium';
+  String get playerLayoutMedium => '中';
 
   @override
-  String get playerLayoutLarge => 'Large';
+  String get playerLayoutLarge => '大';
 
   @override
   String get playerLayoutXl => 'XL';
 
   @override
-  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+  String get playerLayoutSmallDesc => '細いバー — キューを最大化';
 
   @override
-  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+  String get playerLayoutMediumDesc => 'バナー — バランス型（デフォルト）';
 
   @override
-  String get playerLayoutLargeDesc => 'Compact — centered art';
+  String get playerLayoutLargeDesc => 'コンパクト — 中央寄せのアートワーク';
 
   @override
-  String get playerLayoutXlDesc => 'Hero — full album art';
+  String get playerLayoutXlDesc => '特大 — フルサイズのアートワーク';
 
   @override
-  String get queueNothingToDownloadEmpty =>
-      'Queue is empty — nothing to download';
+  String get queueNothingToDownloadEmpty => 'キューが空です — ダウンロードするものがありません';
 
   @override
-  String get queueNothingToDownloadSaved =>
-      'Nothing to download — tracks are already saved';
+  String get queueNothingToDownloadSaved => 'ダウンロードするものがありません — 曲は既に保存されています';
 }

@@ -387,5 +387,16 @@
   "castNotSeeing": "Não está vendo seu dispositivo? Verifique se ele está na mesma rede Wi-Fi.",
   "castVisualizer": "Transmitir o visualizador",
   "castVisualizerSubtitle": "Transmite o visualizador para a TV · apenas Chromecast",
-  "visualizerNoKnobs": "Este shader não expõe nenhum controle."
+  "visualizerNoKnobs": "Este shader não expõe nenhum controle.",
+  "nowPlaying": "Tocando agora",
+  "playerLayoutSmall": "Pequeno",
+  "playerLayoutMedium": "Médio",
+  "playerLayoutLarge": "Grande",
+  "playerLayoutXl": "XL",
+  "playerLayoutSmallDesc": "Barra fina — fila máxima",
+  "playerLayoutMediumDesc": "Banner — equilibrado (padrão)",
+  "playerLayoutLargeDesc": "Compacto — capa centralizada",
+  "playerLayoutXlDesc": "Destaque — capa completa",
+  "queueNothingToDownloadEmpty": "A fila está vazia — nada para baixar",
+  "queueNothingToDownloadSaved": "Nada para baixar — as faixas já estão salvas"
 }
