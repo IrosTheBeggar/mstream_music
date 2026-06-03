@@ -13,6 +13,7 @@ import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
+import '../util/media_format.dart';
 import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'queue_list.dart';
@@ -92,6 +93,10 @@ class PlayerPanelState extends State<PlayerPanel>
         // the panel replaced the Scaffold's bottomNavigationBar slot.
         final pad = MediaQuery.of(context).viewPadding.bottom;
         final topPad = MediaQuery.of(context).viewPadding.top;
+        // Soft keyboard up (e.g. browser search): hide the collapsed mini-player
+        // rather than leave it half-covered — it's an overlay the Scaffold can't
+        // lift above the keyboard the way a bottomNavigationBar would be.
+        final keyboardUp = MediaQuery.of(context).viewInsets.bottom > 0;
         final maxH = constraints.maxHeight;
         final minH = widget.collapsedHeight + pad;
         _dragExtent = (maxH - minH).clamp(1.0, double.infinity);
@@ -117,7 +122,7 @@ class PlayerPanelState extends State<PlayerPanel>
                     onCollapse: collapse,
                   ),
                 ),
-                if (t < 0.999)
+                if (t < 0.999 && !keyboardUp)
                   Positioned(
                     left: 0,
                     right: 0,
@@ -177,15 +182,19 @@ class _ExpandedPanel extends StatelessWidget {
   });
 
   Widget _top(PlayerLayout layout) {
+    // NB: deliberately NOT const-constructed. Each reads the global VelvetColors
+    // palette, so a const (canonicalised) instance would be reused verbatim on a
+    // theme switch and keep stale text colours until the next track change — the
+    // same trap the queue rows hit. A fresh instance per build lets it rebuild.
     switch (layout) {
       case PlayerLayout.small:
         return _TopSmall(onCollapse: onCollapse);
       case PlayerLayout.large:
-        return const _TopLarge();
+        return _TopLarge();
       case PlayerLayout.xl:
-        return const _TopXL();
+        return _TopXL();
       case PlayerLayout.medium:
-        return const _TopMedium();
+        return _TopMedium();
     }
   }
 
@@ -194,7 +203,18 @@ class _ExpandedPanel extends StatelessWidget {
     return Material(
       color: VelvetColors.surface,
       elevation: 12,
-      child: Stack(
+      // The now-playing + queue stay mounted even while collapsed (parked
+      // off-screen behind the mini-player). Lazily building them only on drag
+      // hitched the first frame of a swipe and made small swipes snap back —
+      // keeping them mounted makes every drag frame-perfect. (#6's stream
+      // memoisation still trims the per-frame rebuild cost during the drag.)
+      child: ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          // Hosts SnackBars (e.g. "downloads started") ON the panel rather than
+          // behind it on the app's root Scaffold while it's expanded.
+          body: Stack(
         children: [
           // Album-art ambient wash (glows in from bottom-right), only visible
           // as the panel expands — the collapsed mini-player stays glow-free.
@@ -245,7 +265,7 @@ class _ExpandedPanel extends StatelessWidget {
             ),
           ),
         ],
-      ),
+      ))),
     );
   }
 }
@@ -285,7 +305,7 @@ class _SheetHeader extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  'NOW PLAYING',
+                  l.nowPlaying.toUpperCase(),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 10.5,
@@ -372,7 +392,7 @@ class _DiscoveryButtons extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopMedium extends StatelessWidget {
-  const _TopMedium();
+  _TopMedium(); // not const — see _top() (theme-reactive colours)
 
   @override
   Widget build(BuildContext context) {
@@ -435,9 +455,15 @@ class _TopMedium extends StatelessWidget {
             },
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(18, 0, 18, 0),
-          child: _Scrubber(wave: true, waveHeight: 28),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+          child: _Scrubber(
+              wave: true,
+              waveHeight: 28,
+              // Lighter unplayed bars: the Medium waveform sits on the plain
+              // dark surface (the ambient glow is up by the art), where the
+              // default dim colour vanishes — especially with light album art.
+              unplayedColor: VelvetColors.textTertiary),
         ),
         const Padding(
           padding: EdgeInsets.fromLTRB(18, 8, 18, 12),
@@ -453,12 +479,16 @@ class _TopMedium extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopLarge extends StatelessWidget {
-  const _TopLarge();
+  _TopLarge(); // not const — see _top() (theme-reactive colours)
 
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    final art = (w * 0.5).clamp(120.0, 178.0);
+    final h = MediaQuery.of(context).size.height;
+    // Cap by height too: on short viewports (landscape, small devices, large
+    // text scale) shrink the art rather than starve the queue below into a
+    // RenderFlex overflow. The inner clamp keeps the cap >= the min.
+    final art = (w * 0.5).clamp(120.0, (h * 0.26).clamp(120.0, 178.0));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -536,12 +566,15 @@ class _TopLarge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopXL extends StatelessWidget {
-  const _TopXL();
+  _TopXL(); // not const — see _top() (theme-reactive colours)
 
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    final art = (w * 0.56).clamp(150.0, 240.0);
+    final h = MediaQuery.of(context).size.height;
+    // Height-cap the hero art (see _TopLarge) so a short viewport doesn't
+    // squeeze the queue below to a negative height.
+    final art = (w * 0.56).clamp(150.0, (h * 0.34).clamp(150.0, 240.0));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -835,17 +868,20 @@ class _Scrubber extends StatelessWidget {
   final double waveHeight;
   final bool showTimes;
   final double slimHeight;
+  // Optional override for the waveform's unplayed-bar colour.
+  final Color? unplayedColor;
   const _Scrubber({
     this.wave = false,
     this.waveHeight = 30,
     this.showTimes = true,
     this.slimHeight = 16,
+    this.unplayedColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<_MediaPos>(
-      stream: _mediaPosStream(),
+      stream: _mediaPos,
       builder: (context, snap) {
         final item = snap.data?.item;
         final pos = snap.data?.position ?? Duration.zero;
@@ -861,6 +897,7 @@ class _Scrubber extends StatelessWidget {
                 height: waveHeight,
                 progress: ratio,
                 seed: item?.id,
+                unplayedColor: unplayedColor,
                 onSeek: dur == null ? null : seek)
             : _SeekBar(
                 ratio: ratio, height: slimHeight, onSeek: dur == null ? null : seek);
@@ -1124,7 +1161,7 @@ class _MiniPlayer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 3),
               child: StreamBuilder<_MediaPos>(
-                stream: _mediaPosStream(),
+                stream: _mediaPos,
                 builder: (context, snap) {
                   final item = snap.data?.item;
                   final pos = snap.data?.position ?? Duration.zero;
@@ -1168,7 +1205,7 @@ class _MiniPlayer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: StreamBuilder<_MediaPos>(
-                stream: _mediaPosStream(),
+                stream: _mediaPos,
                 builder: (context, snap) {
                   final item = snap.data?.item;
                   final pos = snap.data?.position ?? Duration.zero;
@@ -1303,11 +1340,7 @@ Widget _albumArt(String? url,
   );
 }
 
-Widget _fallback(double size) => Container(
-      color: VelvetColors.raised,
-      child:
-          Icon(Icons.music_note, color: VelvetColors.textSecondary, size: size),
-    );
+Widget _fallback(double size) => albumArtFallback(iconSize: size);
 
 String _artistAlbum(MediaItem? item) {
   if (item == null) return '';
@@ -1327,15 +1360,18 @@ class _MediaPos {
   const _MediaPos(this.item, this.position);
 }
 
-Stream<_MediaPos> _mediaPosStream() =>
-    Rx.combineLatest2<MediaItem?, Duration, _MediaPos>(
-      MediaManager().audioHandler.mediaItem,
-      MediaManager().audioHandler.positionStream,
-      (item, pos) => _MediaPos(item, pos),
-    );
+/// Combined now-playing item + position, shared by every StreamBuilder that
+/// needs it (mini-player title + waveform, the layout scrubbers). Memoised as a
+/// single broadcast subject so each build — including the per-frame rebuilds
+/// while the panel is dragged — reuses ONE upstream subscription instead of
+/// spinning up a fresh combineLatest (and re-listening) on every build. A
+/// BehaviorSubject replays the latest value to each new listener, so a freshly
+/// (re)mounted scrubber shows the current position immediately.
+final Stream<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
+  ..addStream(Rx.combineLatest2<MediaItem?, Duration, _MediaPos>(
+    MediaManager().audioHandler.mediaItem,
+    MediaManager().audioHandler.positionStream,
+    (item, pos) => _MediaPos(item, pos),
+  ));
 
-String _fmt(Duration d) {
-  final mm = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-  final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return d.inHours > 0 ? '${d.inHours}:$mm:$ss' : '$mm:$ss';
-}
+String _fmt(Duration d) => formatDuration(d);

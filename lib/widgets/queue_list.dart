@@ -9,6 +9,7 @@ import '../screens/metadata_screen.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 
 /// Combined snapshot of the queue, the currently-playing item, and whether
 /// playback is running — so a row can render the list, highlight the active
@@ -20,29 +21,24 @@ class _QueueSnapshot {
   const _QueueSnapshot(this.queue, this.current, this.playing);
 }
 
-Stream<_QueueSnapshot> _queueStream() =>
-    Rx.combineLatest3<List<MediaItem>, MediaItem?, PlaybackState,
-        _QueueSnapshot>(
-      MediaManager().audioHandler.queue,
-      MediaManager().audioHandler.mediaItem,
-      MediaManager().audioHandler.playbackState,
-      (q, m, s) => _QueueSnapshot(q, m, s.playing),
-    );
+/// Memoised as a single broadcast subject (mirrors player_panel's _mediaPos):
+/// the queue list is rebuilt by the panel's drag AnimationController, so a fresh
+/// combineLatest per build would re-subscribe three handler streams every frame.
+/// One shared upstream subscription, replayed to each new listener so a freshly
+/// (re)mounted list paints the current queue immediately.
+final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
+  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, PlaybackState,
+      _QueueSnapshot>(
+    MediaManager().audioHandler.queue,
+    MediaManager().audioHandler.mediaItem,
+    MediaManager().audioHandler.playbackState,
+    (q, m, s) => _QueueSnapshot(q, m, s.playing),
+  ));
 
-Widget _artFallback() => Container(
-      color: VelvetColors.raised,
-      child:
-          Icon(Icons.music_note, color: VelvetColors.textSecondary, size: 20),
-    );
+Widget _artFallback() => albumArtFallback(iconSize: 20);
 
-String _fmtDur(Duration? d) {
-  if (d == null) return '';
-  final mm = d.inMinutes.remainder(60).toString();
-  final ss = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return d.inHours > 0
-      ? '${d.inHours}:${mm.padLeft(2, '0')}:$ss'
-      : '$mm:$ss';
-}
+String _fmtDur(Duration? d) =>
+    d == null ? '' : formatDuration(d, padMinutes: false);
 
 /// The "Up Next" queue list (design Variant B rows). Reads/writes the queue
 /// purely through `MediaManager().audioHandler`, so it works identically
@@ -54,7 +50,7 @@ class QueueList extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return StreamBuilder<_QueueSnapshot>(
-      stream: _queueStream(),
+      stream: _queueStream,
       builder: (context, snapshot) {
         final queue = snapshot.data?.queue ?? const <MediaItem>[];
         final current = snapshot.data?.current;
@@ -80,7 +76,10 @@ class QueueList extends StatelessWidget {
             final downloaded = item.extras?['localPath'] != null;
 
             return Slidable(
-              key: Key(item.id),
+              // Composite key: the queue can legitimately hold the same track
+              // (same id) more than once, so id alone would collide and trip
+              // Flutter's duplicate-key assertion — the index disambiguates.
+              key: ValueKey('${item.id}#$index'),
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.18,
@@ -103,7 +102,15 @@ class QueueList extends StatelessWidget {
                 extentRatio: 0.36,
                 dismissible: DismissiblePane(
                   onDismissed: () {
-                    MediaManager().audioHandler.removeQueueItemAt(index);
+                    // Re-resolve the row's CURRENT position at dismiss time: the
+                    // build-time index can be stale if the queue shifted during
+                    // the swipe (e.g. the playing track auto-advanced), which
+                    // would otherwise delete the wrong item. -1 → already gone.
+                    final live = MediaManager().audioHandler.queue.value;
+                    final at = live.indexOf(item);
+                    if (at >= 0) {
+                      MediaManager().audioHandler.removeQueueItemAt(at);
+                    }
                   },
                 ),
                 children: [
@@ -373,8 +380,8 @@ void downloadQueue(BuildContext context) {
     if (pending.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(queue.isEmpty
-              ? 'Queue is empty — nothing to download'
-              : 'Nothing to download — tracks are already saved')));
+              ? l.queueNothingToDownloadEmpty
+              : l.queueNothingToDownloadSaved)));
       return;
     }
 
