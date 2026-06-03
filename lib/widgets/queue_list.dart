@@ -115,6 +115,19 @@ class QueueList extends StatelessWidget {
             final active = item == current;
             final downloaded = item.extras?['localPath'] != null;
 
+            // Remove this row from the queue. Re-resolves the row's CURRENT
+            // position at dismiss time: the build-time index can be stale if the
+            // queue shifted during the swipe (e.g. the playing track
+            // auto-advanced), so deleting by the stale index would remove the
+            // wrong item. -1 → already gone.
+            void removeItem() {
+              final live = MediaManager().audioHandler.queue.value;
+              final at = live.indexOf(item);
+              if (at >= 0) {
+                MediaManager().audioHandler.removeQueueItemAt(at);
+              }
+            }
+
             return Slidable(
               // Identity key: it follows the *item* across a reorder (an
               // index-based key is positional, so reordering would swap row
@@ -126,6 +139,10 @@ class QueueList extends StatelessWidget {
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.18,
+                // Swiping right past the download action removes the track too,
+                // so a full swipe in EITHER direction dismisses (matching the
+                // end pane). Fixes "swiping right can't remove the song".
+                dismissible: DismissiblePane(onDismissed: removeItem),
                 children: [
                   SlidableAction(
                     backgroundColor: Colors.blueGrey,
@@ -143,19 +160,7 @@ class QueueList extends StatelessWidget {
               endActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.36,
-                dismissible: DismissiblePane(
-                  onDismissed: () {
-                    // Re-resolve the row's CURRENT position at dismiss time: the
-                    // build-time index can be stale if the queue shifted during
-                    // the swipe (e.g. the playing track auto-advanced), which
-                    // would otherwise delete the wrong item. -1 → already gone.
-                    final live = MediaManager().audioHandler.queue.value;
-                    final at = live.indexOf(item);
-                    if (at >= 0) {
-                      MediaManager().audioHandler.removeQueueItemAt(at);
-                    }
-                  },
-                ),
+                dismissible: DismissiblePane(onDismissed: removeItem),
                 children: [
                   SlidableAction(
                     backgroundColor: VelvetColors.raised,
