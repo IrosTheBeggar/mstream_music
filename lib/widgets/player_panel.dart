@@ -19,9 +19,13 @@ import 'more_actions_sheet.dart';
 import 'queue_list.dart';
 import 'waveform_progress.dart';
 
-/// Ink color for content on top of the amber accent button (a dark espresso,
-/// straight from the design — `#1a1206`).
-const Color _kAmberInk = Color(0xFF1A1206);
+/// Ink for content on top of the accent-filled play button. The dark espresso
+/// (`#1a1206`, from the design) reads on bright accents (amber/orange/yellow),
+/// but flips to white on a dark custom accent so the play/pause glyph stays
+/// visible whatever accent the user picks.
+Color get _kAmberInk => VelvetColors.primary.computeLuminance() > 0.42
+    ? const Color(0xFF1A1206)
+    : Colors.white;
 
 /// A Spotify/Apple-Music-style player panel pinned to the bottom of the
 /// screen. Collapsed it shows a mini-player (art + title + play/pause).
@@ -465,8 +469,10 @@ class _TopMedium extends StatelessWidget {
               // default dim colour vanishes — especially with light album art.
               unplayedColor: VelvetColors.textTertiary),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(18, 8, 18, 12),
+        Padding(
+          // Not const: _TransportControls paints the play button in the accent
+          // (VelvetColors.primary), so it must rebuild on a theme/accent change.
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
           child: _TransportControls(playSize: 46),
         ),
       ],
@@ -548,12 +554,14 @@ class _TopLarge extends StatelessWidget {
             },
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(22, 10, 22, 0),
+        Padding(
+          // Not const: the waveform paints its played bars in the accent, so it
+          // must rebuild on a theme/accent change.
+          padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
           child: _Scrubber(wave: true, waveHeight: 30),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(22, 6, 22, 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 6, 22, 12),
           child: _TransportControls(playSize: 52),
         ),
       ],
@@ -636,12 +644,12 @@ class _TopXL extends StatelessWidget {
             },
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(22, 12, 22, 0),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
           child: _Scrubber(wave: true, waveHeight: 38),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(18, 6, 18, 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
           child: _TransportControls(playSize: 56, sideSize: 28),
         ),
       ],

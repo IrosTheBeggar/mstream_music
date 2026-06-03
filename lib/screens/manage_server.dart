@@ -146,9 +146,9 @@ class ManageServersScreen extends StatelessWidget {
           },
           child: Icon(
             Icons.add,
-            color: VelvetColors.textPrimary,
+            color: VelvetColors.onPrimary,
           ),
-          backgroundColor: Color(0xFFFFAB00),
+          backgroundColor: VelvetColors.primary,
         ),
         body: SafeArea(top: false, child: Row(children: [
           Expanded(

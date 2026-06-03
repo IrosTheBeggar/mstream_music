@@ -47,16 +47,25 @@ Future<void> main() async {
   // ThemeData and any direct VelvetColors lookups stay in sync.
   // combineLatest2 (rxdart) merges the two streams into one record so a
   // single StreamBuilder drives both; locale == null follows the device.
-  runApp(StreamBuilder<(AppTheme, Locale?)>(
-    stream: Rx.combineLatest2(
+  runApp(StreamBuilder<(AppTheme, Locale?, int?)>(
+    stream: Rx.combineLatest3(
       SettingsManager().themeStream,
       SettingsManager().localeStream,
-      (AppTheme theme, Locale? locale) => (theme, locale),
+      SettingsManager().accentColorStream,
+      (AppTheme theme, Locale? locale, int? accent) => (theme, locale, accent),
     ),
-    initialData: (SettingsManager().appTheme, SettingsManager().localeOverride),
+    initialData: (
+      SettingsManager().appTheme,
+      SettingsManager().localeOverride,
+      SettingsManager().accentColor,
+    ),
     builder: (context, snapshot) {
-      final (theme, locale) = snapshot.data ?? (AppTheme.dark, null);
-      final palette = paletteFor(theme);
+      final (theme, locale, accent) =
+          snapshot.data ?? (AppTheme.dark, null, null);
+      // A custom accent (if set) overrides the theme's built-in primary and its
+      // derived shades across every theme.
+      var palette = paletteFor(theme);
+      if (accent != null) palette = palette.withAccent(Color(accent));
       VelvetColors.setActive(palette);
       return MaterialApp(
         title: 'mStream Music',

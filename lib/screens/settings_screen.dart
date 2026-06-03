@@ -7,6 +7,7 @@ import '../objects/player_layout.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -66,6 +67,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await SettingsManager().setAppTheme(v);
                 setState(() {});
               },
+            ),
+          ),
+          ListTile(
+            title: Text(l.settingsAccentColor),
+            subtitle: Text(
+              l.settingsAccentColorSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: VelvetColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: VelvetColors.border),
+              ),
+            ),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              backgroundColor: VelvetColors.surface,
+              isScrollControlled: true,
+              builder: (_) => const AccentColorSheet(),
             ),
           ),
           ListTile(

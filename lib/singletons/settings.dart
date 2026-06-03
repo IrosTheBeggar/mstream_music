@@ -105,6 +105,9 @@ class SettingsManager {
   AppTheme appTheme = AppTheme.dark;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
+  // Custom accent colour as an ARGB int, or null to use each theme's built-in
+  // primary. When set it overrides the accent across all three themes.
+  int? accentColor;
   // UI language. `null` means "follow the device locale" (the default);
   // a language code like 'en'/'es' forces that language regardless of
   // the OS setting. Persisted as the JSON 'language' key.
@@ -156,6 +159,8 @@ class SettingsManager {
       BehaviorSubject<AppTheme>.seeded(appTheme);
   late final BehaviorSubject<PlayerLayout> _playerLayoutStream =
       BehaviorSubject<PlayerLayout>.seeded(playerLayout);
+  late final BehaviorSubject<int?> _accentColorStream =
+      BehaviorSubject<int?>.seeded(accentColor);
   late final BehaviorSubject<Locale?> _localeStream =
       BehaviorSubject<Locale?>.seeded(localeOverride);
 
@@ -200,6 +205,8 @@ class SettingsManager {
       tapBehavior = _readTapBehavior(m);
       appTheme = _readTheme(m);
       playerLayout = _readPlayerLayout(m);
+      final accent = m['accentColor'];
+      accentColor = accent is int ? accent : null;
       eqEnabled = m['eqEnabled'] ?? false;
       final rawGains = m['eqBandGains'];
       eqBandGains = rawGains is List
@@ -230,6 +237,7 @@ class SettingsManager {
       _letterStripStream.add(letterStripThreshold);
       _themeStream.add(appTheme);
       _playerLayoutStream.add(playerLayout);
+      _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
     } catch (_) {
       // Corrupt or missing file: fall back to defaults.
@@ -311,6 +319,7 @@ class SettingsManager {
       'tapBehavior': tapBehavior.name,
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
+      'accentColor': accentColor,
       'eqEnabled': eqEnabled,
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
@@ -360,6 +369,14 @@ class SettingsManager {
   Future<void> setPlayerLayout(PlayerLayout v) async {
     playerLayout = v;
     _playerLayoutStream.add(v);
+    await _save();
+  }
+
+  /// Set the custom accent colour (ARGB int), or `null` to fall back to each
+  /// theme's built-in primary.
+  Future<void> setAccentColor(int? v) async {
+    accentColor = v;
+    _accentColorStream.add(v);
     await _save();
   }
 
@@ -432,6 +449,7 @@ class SettingsManager {
     tapBehavior = TapBehavior.addToQueue;
     appTheme = AppTheme.dark;
     playerLayout = PlayerLayout.medium;
+    accentColor = null;
     eqEnabled = false;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
@@ -443,6 +461,7 @@ class SettingsManager {
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _themeStream.add(appTheme);
+    _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
     await _save();
   }
@@ -451,6 +470,7 @@ class SettingsManager {
   Stream<int> get letterStripStream => _letterStripStream.stream;
   Stream<AppTheme> get themeStream => _themeStream.stream;
   Stream<PlayerLayout> get playerLayoutStream => _playerLayoutStream.stream;
+  Stream<int?> get accentColorStream => _accentColorStream.stream;
   Stream<Locale?> get localeStream => _localeStream.stream;
 
   void dispose() {
@@ -458,6 +478,7 @@ class SettingsManager {
     _letterStripStream.close();
     _themeStream.close();
     _playerLayoutStream.close();
+    _accentColorStream.close();
     _localeStream.close();
   }
 }

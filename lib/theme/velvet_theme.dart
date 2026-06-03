@@ -25,6 +25,10 @@ class VelvetPalette {
   final Brightness brightness;
   final Color bg, surface, raised, card, border, border2;
   final Color primary, primaryHover, primaryDim, primaryGlow;
+  /// Text/icon colour painted ON [primary] (e.g. button labels). White by
+  /// default; recomputed by luminance when a custom accent is applied so a
+  /// light accent doesn't end up with white-on-white text (see [withAccent]).
+  final Color onPrimary;
   final Color accent, success, error, warning;
   final Color textPrimary, textSecondary, textTertiary, textDim;
   final Color hover, active;
@@ -44,6 +48,7 @@ class VelvetPalette {
     required this.primaryHover,
     required this.primaryDim,
     required this.primaryGlow,
+    this.onPrimary = Colors.white,
     required this.accent,
     required this.success,
     required this.error,
@@ -58,7 +63,83 @@ class VelvetPalette {
     required this.appBarText,
     required this.appBarTextSecondary,
   });
+
+  VelvetPalette copyWith({
+    Brightness? brightness,
+    Color? bg,
+    Color? surface,
+    Color? raised,
+    Color? card,
+    Color? border,
+    Color? border2,
+    Color? primary,
+    Color? primaryHover,
+    Color? primaryDim,
+    Color? primaryGlow,
+    Color? onPrimary,
+    Color? accent,
+    Color? success,
+    Color? error,
+    Color? warning,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textTertiary,
+    Color? textDim,
+    Color? hover,
+    Color? active,
+    Color? appBarBg,
+    Color? appBarText,
+    Color? appBarTextSecondary,
+  }) =>
+      VelvetPalette(
+        brightness: brightness ?? this.brightness,
+        bg: bg ?? this.bg,
+        surface: surface ?? this.surface,
+        raised: raised ?? this.raised,
+        card: card ?? this.card,
+        border: border ?? this.border,
+        border2: border2 ?? this.border2,
+        primary: primary ?? this.primary,
+        primaryHover: primaryHover ?? this.primaryHover,
+        primaryDim: primaryDim ?? this.primaryDim,
+        primaryGlow: primaryGlow ?? this.primaryGlow,
+        onPrimary: onPrimary ?? this.onPrimary,
+        accent: accent ?? this.accent,
+        success: success ?? this.success,
+        error: error ?? this.error,
+        warning: warning ?? this.warning,
+        textPrimary: textPrimary ?? this.textPrimary,
+        textSecondary: textSecondary ?? this.textSecondary,
+        textTertiary: textTertiary ?? this.textTertiary,
+        textDim: textDim ?? this.textDim,
+        hover: hover ?? this.hover,
+        active: active ?? this.active,
+        appBarBg: appBarBg ?? this.appBarBg,
+        appBarText: appBarText ?? this.appBarText,
+        appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
+      );
+
+  /// This palette with [a] as the accent: [primary] plus its dependent shades
+  /// (hover/dim/glow/active) and the on-accent text colour are all derived from
+  /// it, so one chosen colour recolours everything that keys off the accent.
+  VelvetPalette withAccent(Color a) {
+    final hsl = HSLColor.fromColor(a);
+    return copyWith(
+      primary: a,
+      primaryHover:
+          hsl.withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0)).toColor(),
+      primaryDim: a.withValues(alpha: 0.16),
+      primaryGlow: a.withValues(alpha: 0.42),
+      active: a.withValues(alpha: 0.18),
+      onPrimary: onAccent(a),
+    );
+  }
 }
+
+/// Black or white — whichever reads better on top of [c]. Keeps button / badge
+/// labels legible whatever accent the user picks.
+Color onAccent(Color c) =>
+    c.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 
 // Original Velvet palette — navy bg, purple primary.
 const _velvetPalette = VelvetPalette(
@@ -187,6 +268,7 @@ class VelvetColors {
   static Color get primaryHover => _active.primaryHover;
   static Color get primaryDim => _active.primaryDim;
   static Color get primaryGlow => _active.primaryGlow;
+  static Color get onPrimary => _active.onPrimary;
 
   static Color get accent => _active.accent;
   static Color get success => _active.success;
@@ -223,7 +305,7 @@ ThemeData buildAppTheme(VelvetPalette p) {
     colorScheme: ColorScheme(
       brightness: p.brightness,
       primary: p.primary,
-      onPrimary: Colors.white,
+      onPrimary: p.onPrimary,
       primaryContainer: p.primaryDim,
       onPrimaryContainer: p.textPrimary,
       secondary: p.accent,
@@ -316,7 +398,7 @@ ThemeData buildAppTheme(VelvetPalette p) {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: p.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: p.onPrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
         ),
