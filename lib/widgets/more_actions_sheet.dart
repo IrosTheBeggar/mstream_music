@@ -7,6 +7,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
@@ -143,9 +144,5 @@ class MoreActionsSheet extends StatelessWidget {
     );
   }
 
-  static String _fmt(Duration d) {
-    final m = d.inMinutes;
-    final s = d.inSeconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
+  static String _fmt(Duration d) => formatDuration(d, padMinutes: false);
 }

@@ -144,7 +144,18 @@ Gradient? ambientGradient(Color seed,
 // ─────────────────────────────────────────────────────────────
 // Dominant-color extraction (no third-party package)
 // ─────────────────────────────────────────────────────────────
+// Bounded so a long session across a large library can't grow the cache
+// without limit (each unique art URL adds up to two entries). Oldest-first
+// (FIFO) eviction is plenty for ambient seeds — exact recency doesn't matter.
+const int _seedCacheMax = 128;
 final Map<String, Color?> _seedCache = {};
+
+Color? _cacheSeed(String key, Color? color) {
+  if (_seedCache.length >= _seedCacheMax && !_seedCache.containsKey(key)) {
+    _seedCache.remove(_seedCache.keys.first);
+  }
+  return _seedCache[key] = color;
+}
 
 /// Extracts a representative color from the artwork at [url] for use as the
 /// ambient seed. [vibrant] picks the most saturated swatch; otherwise the
@@ -157,12 +168,12 @@ Future<Color?> dominantAlbumColor(String url, {bool vibrant = false}) async {
     final image = await _loadDownscaled(url);
     final w = image.width, h = image.height;
     final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-    if (data == null) return _seedCache[key] = null;
+    if (data == null) return _cacheSeed(key, null);
     final px = data.buffer.asUint8List();
     final color = vibrant ? _vibrantOf(px, w, h) : _dominantOf(px, w, h);
-    return _seedCache[key] = color;
+    return _cacheSeed(key, color);
   } catch (_) {
-    return _seedCache[key] = null;
+    return _cacheSeed(key, null);
   }
 }
 
