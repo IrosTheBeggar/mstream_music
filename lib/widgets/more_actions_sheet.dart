@@ -7,6 +7,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
+import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
 /// "More" actions bottom sheet — collects the session/secondary controls that
@@ -113,6 +114,17 @@ class MoreActionsSheet extends StatelessWidget {
               Navigator.of(parentContext).push(
                 MaterialPageRoute(builder: (_) => VisualizerScreen()),
               );
+            },
+          ),
+          // Download queue — save every downloadable track to the device.
+          ListTile(
+            leading: Icon(Icons.download_for_offline,
+                color: VelvetColors.textSecondary),
+            title: Text(l.queueDownloadAll,
+                style: TextStyle(color: VelvetColors.textPrimary)),
+            onTap: () {
+              Navigator.of(context).pop();
+              downloadQueue(parentContext);
             },
           ),
           // Clear queue.

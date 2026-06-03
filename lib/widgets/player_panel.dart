@@ -5,11 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
+import '../media/cast_target.dart';
 import '../objects/player_layout.dart';
+import '../screens/visualizer_screen.dart';
+import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
+import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'queue_list.dart';
 import 'waveform_progress.dart';
@@ -177,11 +181,11 @@ class _ExpandedPanel extends StatelessWidget {
       case PlayerLayout.small:
         return _TopSmall(onCollapse: onCollapse);
       case PlayerLayout.large:
-        return _TopLarge(onCollapse: onCollapse);
+        return const _TopLarge();
       case PlayerLayout.xl:
-        return _TopXL(onCollapse: onCollapse);
+        return const _TopXL();
       case PlayerLayout.medium:
-        return _TopMedium(onCollapse: onCollapse);
+        return const _TopMedium();
     }
   }
 
@@ -204,29 +208,38 @@ class _ExpandedPanel extends StatelessWidget {
               // content is inset above the system nav bar.
               child: Padding(
                 padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
-                child: Column(
-                  children: [
-                    // The now-playing block doubles as the drag handle; the
-                    // queue below scrolls independently. Which block renders is
-                    // driven live by the Settings layout choice.
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: onDragUpdate,
-                      onVerticalDragEnd: onDragEnd,
-                      child: StreamBuilder<PlayerLayout>(
-                        stream: SettingsManager().playerLayoutStream,
-                        initialData: SettingsManager().playerLayout,
-                        builder: (context, snap) =>
-                            _top(snap.data ?? PlayerLayout.medium),
-                      ),
-                    ),
-                    // NB: deliberately not const — these read theme colours
-                    // from the global VelvetColors palette, and a const child is
-                    // skipped on rebuild, so it would keep stale text colours
-                    // until its own stream next ticked after a theme switch.
-                    QueueHeader(),
-                    Expanded(child: QueueList()),
-                  ],
+                child: StreamBuilder<PlayerLayout>(
+                  stream: SettingsManager().playerLayoutStream,
+                  initialData: SettingsManager().playerLayout,
+                  builder: (context, snap) {
+                    final layout = snap.data ?? PlayerLayout.medium;
+                    return Column(
+                      children: [
+                        // The now-playing block doubles as the drag handle; the
+                        // queue below scrolls independently.
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: onDragUpdate,
+                          onVerticalDragEnd: onDragEnd,
+                          child: _top(layout),
+                        ),
+                        // Not const — reads theme colours from the global
+                        // VelvetColors palette, so it must rebuild on a theme
+                        // switch (a const child would keep stale colours).
+                        QueueHeader(
+                          // ⋮ in the queue header for every layout now.
+                          showOptions: true,
+                          onOptions: () => showModalBottomSheet(
+                            context: context,
+                            backgroundColor: VelvetColors.surface,
+                            builder: (_) =>
+                                MoreActionsSheet(parentContext: context),
+                          ),
+                        ),
+                        Expanded(child: QueueList()),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -282,20 +295,72 @@ class _SheetHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.more_vert, size: 22),
-                color: VelvetColors.textPrimary,
-                tooltip: l.mainMore,
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    backgroundColor: VelvetColors.surface,
-                    builder: (_) => MoreActionsSheet(parentContext: context),
-                  );
-                },
-              ),
+              const _DiscoveryButtons(),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Just the grab-handle lip — used by the larger layouts, which drop the full
+/// header row (no chevron/title/⋮; the lip + swipe-down is the affordance).
+Widget _grabHandle() => Container(
+      width: 36,
+      height: 4,
+      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+
+/// Discoverable quick actions above the scrubber: Visualizer + Cast. (Cast
+/// especially — the expanded panel now covers the app-bar cast icon.)
+class _DiscoveryButtons extends StatelessWidget {
+  const _DiscoveryButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    Widget btn(IconData icon, VoidCallback onTap,
+            {String? tooltip, bool active = false}) =>
+        IconButton(
+          icon: Icon(icon, size: 20),
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          color: active ? VelvetColors.primary : VelvetColors.textSecondary,
+          tooltip: tooltip,
+          onPressed: onTap,
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        btn(
+          Icons.auto_awesome,
+          () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => VisualizerScreen())),
+          tooltip: l.visualizerTitle,
+        ),
+        StreamBuilder<CastTarget>(
+          stream: CastManager().activeTargetStream,
+          initialData: CastManager().activeTarget,
+          builder: (context, snap) {
+            final casting = !(snap.data ?? CastTarget.local).isLocal;
+            return btn(
+              casting ? Icons.cast_connected : Icons.cast,
+              () => showModalBottomSheet(
+                context: context,
+                backgroundColor: VelvetColors.surface,
+                isScrollControlled: true,
+                builder: (_) => CastPickerSheet(),
+              ),
+              tooltip: l.castPlayOnTooltip,
+              active: casting,
+            );
+          },
         ),
       ],
     );
@@ -307,15 +372,14 @@ class _SheetHeader extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopMedium extends StatelessWidget {
-  final VoidCallback onCollapse;
-  const _TopMedium({required this.onCollapse});
+  const _TopMedium();
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SheetHeader(onCollapse: onCollapse),
+        _grabHandle(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: StreamBuilder<MediaItem?>(
@@ -349,15 +413,20 @@ class _TopMedium extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 13.5,
                                 color: VelvetColors.textSecondary)),
-                        if (year != null && year.isNotEmpty) ...[
-                          const SizedBox(height: 5),
-                          Text(year,
-                              style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  letterSpacing: 0.3,
-                                  color: VelvetColors.textTertiary)),
-                        ],
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (year != null && year.isNotEmpty)
+                              Text(year,
+                                  style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      letterSpacing: 0.3,
+                                      color: VelvetColors.textTertiary)),
+                            const Spacer(),
+                            const _DiscoveryButtons(),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -368,7 +437,7 @@ class _TopMedium extends StatelessWidget {
         ),
         const Padding(
           padding: EdgeInsets.fromLTRB(18, 0, 18, 0),
-          child: _Scrubber(wave: false),
+          child: _Scrubber(wave: true, waveHeight: 28),
         ),
         const Padding(
           padding: EdgeInsets.fromLTRB(18, 8, 18, 12),
@@ -384,8 +453,7 @@ class _TopMedium extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopLarge extends StatelessWidget {
-  final VoidCallback onCollapse;
-  const _TopLarge({required this.onCollapse});
+  const _TopLarge();
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +462,7 @@ class _TopLarge extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SheetHeader(onCollapse: onCollapse),
+        _grabHandle(),
         Padding(
           padding: const EdgeInsets.fromLTRB(28, 2, 28, 0),
           child: StreamBuilder<MediaItem?>(
@@ -411,6 +479,7 @@ class _TopLarge extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
+              final year = item?.extras?['year']?.toString();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -430,6 +499,20 @@ class _TopLarge extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 13.5,
                           color: VelvetColors.textSecondary)),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      if (year != null && year.isNotEmpty)
+                        Text(year,
+                            style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 10,
+                                letterSpacing: 0.3,
+                                color: VelvetColors.textTertiary)),
+                      const Spacer(),
+                      const _DiscoveryButtons(),
+                    ],
+                  ),
                 ],
               );
             },
@@ -453,8 +536,7 @@ class _TopLarge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TopXL extends StatelessWidget {
-  final VoidCallback onCollapse;
-  const _TopXL({required this.onCollapse});
+  const _TopXL();
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +545,7 @@ class _TopXL extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SheetHeader(onCollapse: onCollapse),
+        _grabHandle(),
         Padding(
           padding: const EdgeInsets.fromLTRB(28, 4, 28, 4),
           child: StreamBuilder<MediaItem?>(
@@ -502,15 +584,20 @@ class _TopXL extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 14.5,
                           color: VelvetColors.textSecondary)),
-                  if (year != null && year.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(year,
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10.5,
-                            letterSpacing: 0.3,
-                            color: VelvetColors.textTertiary)),
-                  ],
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      if (year != null && year.isNotEmpty)
+                        Text(year,
+                            style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 10.5,
+                                letterSpacing: 0.3,
+                                color: VelvetColors.textTertiary)),
+                      const Spacer(),
+                      const _DiscoveryButtons(),
+                    ],
+                  ),
                 ],
               );
             },

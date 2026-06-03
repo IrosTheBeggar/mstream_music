@@ -275,7 +275,12 @@ class _QueueRow extends StatelessWidget {
 /// on the left, and the functional bulk actions (download-all, clear) on the
 /// right.
 class QueueHeader extends StatelessWidget {
-  const QueueHeader({Key? key}) : super(key: key);
+  /// When true (non-Small layouts) the right side collapses to a single ⋮ menu
+  /// that opens [onOptions]; otherwise it shows the download-all + clear icons.
+  final bool showOptions;
+  final VoidCallback? onOptions;
+  const QueueHeader({Key? key, this.showOptions = false, this.onOptions})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -316,35 +321,46 @@ class QueueHeader extends StatelessWidget {
                 );
               },
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.download_for_offline, size: 20),
-                  color: VelvetColors.textSecondary,
-                  tooltip: l.queueDownloadAll,
-                  onPressed: () => _downloadAll(context),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_sweep, size: 20),
-                  color: VelvetColors.textSecondary,
-                  tooltip: l.mainClearQueue,
-                  onPressed: () => MediaManager()
-                      .audioHandler
-                      .customAction('clearPlaylist'),
-                ),
-              ],
-            ),
+            if (showOptions)
+              IconButton(
+                icon: const Icon(Icons.more_vert, size: 20),
+                color: VelvetColors.textSecondary,
+                tooltip: l.mainMore,
+                onPressed: onOptions,
+              )
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.download_for_offline, size: 20),
+                    color: VelvetColors.textSecondary,
+                    tooltip: l.queueDownloadAll,
+                    onPressed: () => downloadQueue(context),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep, size: 20),
+                    color: VelvetColors.textSecondary,
+                    tooltip: l.mainClearQueue,
+                    onPressed: () => MediaManager()
+                        .audioHandler
+                        .customAction('clearPlaylist'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
-  // Enqueue every track that isn't already on the device (no localPath) and
-  // is actually downloadable (has a server + path). Confirms the count
-  // first; downloadOneFile no-ops on files already on disk.
-  void _downloadAll(BuildContext context) {
+}
+
+/// Enqueue every track that isn't already on the device (no localPath) and is
+/// actually downloadable (has a server + path). Confirms the count first;
+/// downloadOneFile no-ops on files already on disk. Top-level so the queue
+/// header and the More sheet can both trigger it.
+void downloadQueue(BuildContext context) {
     final l = AppLocalizations.of(context);
     final queue = MediaManager().audioHandler.queue.value;
     final pending = queue
@@ -390,5 +406,4 @@ class QueueHeader extends StatelessWidget {
         ],
       ),
     );
-  }
 }
