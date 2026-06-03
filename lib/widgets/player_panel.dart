@@ -107,7 +107,19 @@ class PlayerPanelState extends State<PlayerPanel>
 
         return AnimatedBuilder(
           animation: _ctrl,
-          builder: (context, _) {
+          // Build the expanded sheet ONCE and pass it through as `child`, so a
+          // drag only re-runs the cheap position/fade wrapper below instead of
+          // rebuilding the whole Scaffold + queue + now-playing subtree on every
+          // animation frame. The sheet still rebuilds on theme/accent/stream
+          // changes through the normal path — just not per drag tick.
+          child: _ExpandedPanel(
+            bottomInset: pad,
+            topInset: topPad,
+            onDragUpdate: _onDragUpdate,
+            onDragEnd: _onDragEnd,
+            onCollapse: collapse,
+          ),
+          builder: (context, child) {
             final t = _ctrl.value.clamp(0.0, 1.0);
             final top = (1 - t) * (maxH - minH);
             return Stack(
@@ -117,13 +129,16 @@ class PlayerPanelState extends State<PlayerPanel>
                   right: 0,
                   top: top,
                   height: maxH,
-                  child: _ExpandedPanel(
-                    t: t,
-                    bottomInset: pad,
-                    topInset: topPad,
-                    onDragUpdate: _onDragUpdate,
-                    onDragEnd: _onDragEnd,
-                    onCollapse: collapse,
+                  child: Material(
+                    color: VelvetColors.surface,
+                    elevation: 12,
+                    child: Opacity(
+                      // Fade the sheet in just after the mini-player lifts away
+                      // (fade-through). The opaque Material stays put so the
+                      // browser never shows through during the slide.
+                      opacity: ((t - 0.1) / 0.9).clamp(0.0, 1.0),
+                      child: child,
+                    ),
                   ),
                 ),
                 if (t < 0.999 && !keyboardUp)
@@ -170,14 +185,12 @@ class PlayerPanelState extends State<PlayerPanel>
 // ---------------------------------------------------------------------------
 
 class _ExpandedPanel extends StatelessWidget {
-  final double t;
   final double bottomInset;
   final double topInset;
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   final VoidCallback onCollapse;
   const _ExpandedPanel({
-    required this.t,
     required this.bottomInset,
     required this.topInset,
     required this.onDragUpdate,
@@ -204,30 +217,22 @@ class _ExpandedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: VelvetColors.surface,
-      elevation: 12,
-      // The now-playing + queue stay mounted even while collapsed (parked
-      // off-screen behind the mini-player). Lazily building them only on drag
-      // hitched the first frame of a swipe and made small swipes snap back —
-      // keeping them mounted makes every drag frame-perfect. (#6's stream
-      // memoisation still trims the per-frame rebuild cost during the drag.)
-      child: ScaffoldMessenger(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          resizeToAvoidBottomInset: false,
-          // Hosts SnackBars (e.g. "downloads started") ON the panel rather than
-          // behind it on the app's root Scaffold while it's expanded.
-          body: Stack(
-        children: [
-          // Album-art ambient wash (glows in from bottom-right), only visible
-          // as the panel expands — the collapsed mini-player stays glow-free.
-          Positioned.fill(child: _AmbientLayer(opacity: t)),
-          Positioned.fill(
-            child: Opacity(
-              // Fade the now-playing in slightly after the mini-player starts
-              // lifting away, so the swap reads as one motion (fade-through).
-              opacity: ((t - 0.1) / 0.9).clamp(0.0, 1.0),
+    // The opaque Material, the per-frame fade Opacity and the slide are applied
+    // by the parent's AnimatedBuilder, so a drag re-runs only that cheap wrapper
+    // — not this Scaffold/queue/now-playing subtree. Built once here; still
+    // rebuilds on theme/accent/stream changes via the normal path.
+    return ScaffoldMessenger(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: false,
+        // Hosts SnackBars (e.g. "downloads started") ON the panel rather than
+        // behind it on the app's root Scaffold while it's expanded.
+        body: Stack(
+          children: [
+            // Album-art ambient wash; the parent's fade reveals it as the panel
+            // expands (the collapsed mini-player stays glow-free).
+            Positioned.fill(child: _AmbientLayer()),
+            Positioned.fill(
               // Background (Material + ambient) stays edge-to-edge; only the
               // content is inset above the system nav bar.
               child: Padding(
@@ -250,14 +255,22 @@ class _ExpandedPanel extends StatelessWidget {
                         // Not const — reads theme colours from the global
                         // VelvetColors palette, so it must rebuild on a theme
                         // switch (a const child would keep stale colours).
-                        QueueHeader(
-                          // ⋮ in the queue header for every layout now.
-                          showOptions: true,
-                          onOptions: () => showModalBottomSheet(
-                            context: context,
-                            backgroundColor: VelvetColors.surface,
-                            builder: (_) =>
-                                MoreActionsSheet(parentContext: context),
+                        // The header bar is a drag handle too — swiping it
+                        // (down) collapses the panel, like the now-playing block
+                        // above. Taps still reach the ⋮ button.
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: onDragUpdate,
+                          onVerticalDragEnd: onDragEnd,
+                          child: QueueHeader(
+                            // ⋮ in the queue header for every layout now.
+                            showOptions: true,
+                            onOptions: () => showModalBottomSheet(
+                              context: context,
+                              backgroundColor: VelvetColors.surface,
+                              builder: (_) =>
+                                  MoreActionsSheet(parentContext: context),
+                            ),
                           ),
                         ),
                         Expanded(child: QueueList()),
@@ -267,9 +280,9 @@ class _ExpandedPanel extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
-      ))),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1025,8 +1038,7 @@ class _SeekBar extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _AmbientLayer extends StatefulWidget {
-  final double opacity;
-  const _AmbientLayer({required this.opacity});
+  const _AmbientLayer();
 
   @override
   State<_AmbientLayer> createState() => _AmbientLayerState();
@@ -1084,10 +1096,10 @@ class _AmbientLayerState extends State<_AmbientLayer> {
 
   @override
   Widget build(BuildContext context) {
+    // The parent fades the whole sheet (this layer included) as it expands, so
+    // no per-layer Opacity is needed here.
     return IgnorePointer(
-      child: Opacity(
-        opacity: widget.opacity.clamp(0.0, 1.0),
-        child: StreamBuilder<PlayerLayout>(
+      child: StreamBuilder<PlayerLayout>(
           stream: SettingsManager().playerLayoutStream,
           initialData: SettingsManager().playerLayout,
           builder: (context, snap) {
@@ -1105,7 +1117,6 @@ class _AmbientLayerState extends State<_AmbientLayer> {
             );
           },
         ),
-      ),
     );
   }
 }
