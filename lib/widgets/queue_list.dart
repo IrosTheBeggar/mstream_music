@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -78,6 +79,29 @@ class QueueList extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: queue.length,
+          // Haptic tick on pickup / drop — every polished native reorder does
+          // this, and ReorderableListView fires none by default.
+          onReorderStart: (_) => HapticFeedback.mediumImpact(),
+          onReorderEnd: (_) => HapticFeedback.selectionClick(),
+          // Lift the dragged row: scale it up slightly with an accent-tinted
+          // shadow so it clearly detaches (vs the flat default elevation).
+          proxyDecorator: (child, index, animation) => AnimatedBuilder(
+            animation: animation,
+            child: child,
+            builder: (context, child) {
+              final t = Curves.easeInOut.transform(animation.value);
+              return Transform.scale(
+                scale: 1 + 0.03 * t,
+                child: Material(
+                  color: VelvetColors.surface,
+                  elevation: 8 * t,
+                  shadowColor: VelvetColors.primary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  child: child,
+                ),
+              );
+            },
+          ),
           // onReorderItem (vs the deprecated onReorder) hands us the
           // post-removal target index already — matching what the handler and
           // just_audio's moveAudioSource expect, so no off-by-one fixup here.
@@ -292,14 +316,23 @@ class _QueueRow extends StatelessWidget {
                   color: VelvetColors.textTertiary,
                 ),
               ),
-              // Drag-to-reorder grip. Its own listener so it starts a reorder
-              // without fighting the row tap / swipe.
+              // Drag-to-reorder grip — a comfortable 44px touch target. The
+              // ReorderableDragStartListener starts the reorder; the inner
+              // tap-absorbing GestureDetector keeps a tap on the grip from also
+              // triggering row-play (the grip sits inside the row's tap area).
               ReorderableDragStartListener(
                 index: index,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: Icon(Icons.drag_handle,
-                      color: VelvetColors.textTertiary, size: 20),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Icon(Icons.drag_handle,
+                          color: VelvetColors.textTertiary, size: 20),
+                    ),
+                  ),
                 ),
               ),
             ],
