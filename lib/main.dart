@@ -36,6 +36,7 @@ import 'widgets/more_actions_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/enum_labels.dart';
 import 'widgets/waveform_progress.dart';
+import 'widgets/player_panel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,15 +84,16 @@ class MStreamApp extends StatefulWidget {
   _MStreamAppState createState() => new _MStreamAppState();
 }
 
-class _MStreamAppState extends State<MStreamApp>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MStreamAppState extends State<MStreamApp> {
+  final GlobalKey<PlayerPanelState> _panelKey = GlobalKey<PlayerPanelState>();
+  // The full-screen player overlay sits above the Scaffold, so it would also
+  // paint over an open drawer; hide it while the drawer is open.
+  final ValueNotifier<bool> _drawerOpen = ValueNotifier<bool>(false);
   StreamSubscription<String>? _castErrorSub;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     ServerManager().loadServerList();
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
@@ -112,6 +114,7 @@ class _MStreamAppState extends State<MStreamApp>
   @override
   void dispose() {
     _castErrorSub?.cancel();
+    _drawerOpen.dispose();
     DownloadManager().dispose();
     super.dispose();
   }
@@ -203,15 +206,18 @@ class _MStreamAppState extends State<MStreamApp>
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
-          if (_tabController.index != 0) {
-            _tabController.animateTo(0);
+          final panel = _panelKey.currentState;
+          if (panel != null && panel.isExpanded) {
+            panel.collapse();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {
             SystemNavigator.pop();
           }
         },
-        child: Scaffold(
+        child: Stack(children: [
+          Scaffold(
+            onDrawerChanged: (open) => _drawerOpen.value = open,
             appBar: AppBar(
               title: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +286,6 @@ class _MStreamAppState extends State<MStreamApp>
                         visible: isVisible,
                         child: PopupMenuButton(
                             onSelected: (int selectedServerIndex) async {
-                              _tabController.animateTo(0);
                               if (selectedServerIndex > -1) {
                                 ServerManager()
                                     .changeCurrentServer(selectedServerIndex);
@@ -326,17 +331,30 @@ class _MStreamAppState extends State<MStreamApp>
                       );
                     }),
               ],
-              bottom: TabBar(
-                  tabs: [
-                    StreamBuilder<String>(
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(34),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: StreamBuilder<String>(
                         stream: BrowserManager().browserLabelStream,
                         builder: (context, snapshot) {
                           final String? label = snapshot.data;
-                          return Tab(text: browserChromeLabel(l, label));
+                          return Text(
+                            browserChromeLabel(l, label),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: VelvetColors.appBarTextSecondary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3),
+                          );
                         }),
-                    Tab(text: l.tabQueue),
-                  ],
-                  controller: _tabController),
+                  ),
+                ),
+              ),
             ),
             drawer: Drawer(
                 child: ListView(padding: EdgeInsets.zero, children: <Widget>[
@@ -476,11 +494,26 @@ class _MStreamAppState extends State<MStreamApp>
             body: Column(children: [
               _migrationBanner(),
               Expanded(
-                  child: TabBarView(
-                      children: [Browser(), NowPlaying()],
-                      controller: _tabController)),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      bottom: PlayerPanel.kCollapsedHeight +
+                          MediaQuery.of(context).viewPadding.bottom),
+                  child: Browser(),
+                ),
+              ),
             ]),
-            bottomNavigationBar: BottomBar()));
+          ),
+          // Full-screen player overlay — collapsed it's the bottom mini-player;
+          // expanded it rises over the app bar into a full Now Playing screen.
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _drawerOpen,
+              builder: (_, open, child) =>
+                  Offstage(offstage: open, child: child),
+              child: PlayerPanel(key: _panelKey),
+            ),
+          ),
+        ]));
   }
 }
 

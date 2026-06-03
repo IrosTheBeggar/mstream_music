@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../objects/player_layout.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
@@ -63,6 +64,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (v == null) return;
                 setState(() {});
                 await SettingsManager().setAppTheme(v);
+                setState(() {});
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Now Playing layout'),
+            subtitle: Text(
+              _playerLayoutSubtitle(SettingsManager().playerLayout),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<PlayerLayout>(
+              value: SettingsManager().playerLayout,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: PlayerLayout.values
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(_playerLayoutLabel(p)),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                setState(() {});
+                await SettingsManager().setPlayerLayout(v);
                 setState(() {});
               },
             ),
@@ -372,6 +399,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.themeSubtitleDark;
       case AppTheme.light:
         return l.themeSubtitleLight;
+    }
+  }
+
+  String _playerLayoutLabel(PlayerLayout p) {
+    switch (p) {
+      case PlayerLayout.small:
+        return 'Small';
+      case PlayerLayout.medium:
+        return 'Medium';
+      case PlayerLayout.large:
+        return 'Large';
+      case PlayerLayout.xl:
+        return 'XL';
+    }
+  }
+
+  String _playerLayoutSubtitle(PlayerLayout p) {
+    switch (p) {
+      case PlayerLayout.small:
+        return 'Slim bar — maximum queue';
+      case PlayerLayout.medium:
+        return 'Banner — balanced (default)';
+      case PlayerLayout.large:
+        return 'Compact — centered art';
+      case PlayerLayout.xl:
+        return 'Hero — full album art';
     }
   }
 

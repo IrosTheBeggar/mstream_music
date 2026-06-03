@@ -168,3 +168,6 @@ settings.json
 # gen_l10n rewrites this untranslated-keys report on every build; it is
 # generated output, not source. (Currently empty — full locale parity.)
 l10n_untranslated.txt
+
+# Design reference bundle (exported from Claude Design) — local reference only.
+/design/
