@@ -33,6 +33,10 @@ import 'widgets/player_panel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Show the system bars edge-to-edge from the first frame, so a launch that
+  // inherits a leftover immersive mode (e.g. the app was killed while the
+  // Visualizer had the nav bar hidden) still comes up with the nav bar visible.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   // Settings load must come before MediaManager.start() so the audio
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
@@ -86,7 +90,7 @@ class MStreamApp extends StatefulWidget {
   _MStreamAppState createState() => new _MStreamAppState();
 }
 
-class _MStreamAppState extends State<MStreamApp> {
+class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<PlayerPanelState> _panelKey = GlobalKey<PlayerPanelState>();
   // The full-screen player overlay sits above the Scaffold, so it would also
   // paint over an open drawer; hide it while the drawer is open.
@@ -96,6 +100,12 @@ class _MStreamAppState extends State<MStreamApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Keep the system navigation/status bars visible (drawn edge-to-edge behind
+    // the app) whenever the main screen is up. The Visualizer flips to immersive
+    // and restores this on exit, but a kill mid-immersive can leak that mode to
+    // the next launch — asserting here (and on resume) keeps the nav bar up.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     ServerManager().loadServerList();
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
@@ -114,7 +124,19 @@ class _MStreamAppState extends State<MStreamApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // On resume, re-assert edge-to-edge so a hidden nav bar (e.g. left over from
+    // the Visualizer's immersive mode) comes back — but only when the main
+    // screen is the top route, so we don't fight the Visualizer if it's open.
+    if (state == AppLifecycleState.resumed &&
+        (ModalRoute.of(context)?.isCurrent ?? true)) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _drawerOpen.dispose();
     DownloadManager().dispose();
