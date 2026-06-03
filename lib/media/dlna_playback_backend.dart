@@ -149,6 +149,12 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   }
 
   @override
+  Future<void> moveSource(int from, int to) async {
+    // v1 reorder is gated to local playback in the UI (the renderer queue isn't
+    // reordered in place yet), so this is a no-op on the DLNA backend.
+  }
+
+  @override
   Future<void> clearSources() async {
     _items = <MediaItem>[];
     _index = -1;

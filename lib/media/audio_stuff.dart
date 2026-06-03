@@ -397,6 +397,28 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState();
         break;
+      case 'moveQueueItem':
+        // Drag-to-reorder. [to] is the post-removal target index
+        // (ReorderableListView convention). Reorder the queue list first, then
+        // the backend's source list, so the backend's current-index emit lands
+        // against the already-updated queue.
+        final from = extras?['from'];
+        final to = extras?['to'];
+        if (from is int && to is int) {
+          final q = queue.value;
+          if (from >= 0 &&
+              from < q.length &&
+              to >= 0 &&
+              to < q.length &&
+              from != to) {
+            final item = q.removeAt(from);
+            q.insert(to, item);
+            queue.add(q);
+            await _backend.moveSource(from, to);
+            _broadcastState();
+          }
+        }
+        break;
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;

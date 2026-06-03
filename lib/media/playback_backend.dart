@@ -30,6 +30,11 @@ abstract class PlaybackBackend {
   Future<void> setSources(List<MediaItem> items);
   Future<void> addSource(MediaItem item);
   Future<void> removeSourceAt(int index);
+
+  /// Move the source at [from] to [to] (the post-removal target index, matching
+  /// ReorderableListView), keeping the currently-playing item playing. The
+  /// handler reorders the queue's MediaItem list in lockstep.
+  Future<void> moveSource(int from, int to);
   Future<void> clearSources();
 
   // ── Transport ──
