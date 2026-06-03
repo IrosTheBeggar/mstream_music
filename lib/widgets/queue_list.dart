@@ -6,8 +6,6 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/metadata.dart';
 import '../screens/metadata_screen.dart';
-import '../media/cast_target.dart';
-import '../singletons/cast_manager.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
@@ -20,10 +18,7 @@ class _QueueSnapshot {
   final List<MediaItem> queue;
   final MediaItem? current;
   final bool playing;
-  // Reorder is wired up only for local playback in v1, so the drag grip is
-  // hidden while casting (the renderer queue isn't reordered in place yet).
-  final bool isLocal;
-  const _QueueSnapshot(this.queue, this.current, this.playing, this.isLocal);
+  const _QueueSnapshot(this.queue, this.current, this.playing);
 }
 
 /// Memoised as a single broadcast subject (mirrors player_panel's _mediaPos):
@@ -32,7 +27,7 @@ class _QueueSnapshot {
 /// One shared upstream subscription, replayed to each new listener so a freshly
 /// (re)mounted list paints the current queue immediately.
 final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest4<List<MediaItem>, MediaItem?, bool, CastTarget,
+  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, bool,
       _QueueSnapshot>(
     MediaManager().audioHandler.queue,
     MediaManager().audioHandler.mediaItem,
@@ -41,8 +36,7 @@ final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
     // want that rebuilding the whole reorderable queue (jank). The queue only
     // cares whether playback is running, for the active-row EQ/pause badge.
     MediaManager().audioHandler.playbackState.map((s) => s.playing).distinct(),
-    CastManager().activeTargetStream.startWith(CastManager().activeTarget),
-    (q, m, playing, target) => _QueueSnapshot(q, m, playing, target.isLocal),
+    (q, m, playing) => _QueueSnapshot(q, m, playing),
   ));
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
@@ -65,8 +59,6 @@ class QueueList extends StatelessWidget {
         final queue = snapshot.data?.queue ?? const <MediaItem>[];
         final current = snapshot.data?.current;
         final playing = snapshot.data?.playing ?? false;
-        // Drag-to-reorder is local-only in v1 (no-op on cast/DLNA backends).
-        final reorderable = snapshot.data?.isLocal ?? true;
 
         if (queue.isEmpty) {
           return Center(
@@ -90,7 +82,6 @@ class QueueList extends StatelessWidget {
           // post-removal target index already — matching what the handler and
           // just_audio's moveAudioSource expect, so no off-by-one fixup here.
           onReorderItem: (oldIndex, newIndex) {
-            if (!reorderable) return; // grip is hidden while casting anyway
             if (newIndex == oldIndex) return;
             MediaManager().audioHandler.customAction(
                 'moveQueueItem', {'from': oldIndex, 'to': newIndex});
@@ -173,7 +164,6 @@ class QueueList extends StatelessWidget {
               child: _QueueRow(
                 item: item,
                 index: index,
-                reorderable: reorderable,
                 active: active,
                 playing: playing,
                 downloaded: downloaded,
@@ -193,7 +183,6 @@ class QueueList extends StatelessWidget {
 class _QueueRow extends StatelessWidget {
   final MediaItem item;
   final int index;
-  final bool reorderable;
   final bool active;
   final bool playing;
   final bool downloaded;
@@ -201,7 +190,6 @@ class _QueueRow extends StatelessWidget {
   const _QueueRow({
     required this.item,
     required this.index,
-    required this.reorderable,
     required this.active,
     required this.playing,
     required this.downloaded,
@@ -304,17 +292,16 @@ class _QueueRow extends StatelessWidget {
                   color: VelvetColors.textTertiary,
                 ),
               ),
-              // Drag-to-reorder grip (local playback only). Its own listener so
-              // it starts a reorder without fighting the row tap / swipe.
-              if (reorderable)
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Icon(Icons.drag_handle,
-                        color: VelvetColors.textTertiary, size: 20),
-                  ),
+              // Drag-to-reorder grip. Its own listener so it starts a reorder
+              // without fighting the row tap / swipe.
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Icon(Icons.drag_handle,
+                      color: VelvetColors.textTertiary, size: 20),
                 ),
+              ),
             ],
           ),
         ),
