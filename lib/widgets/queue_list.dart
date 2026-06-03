@@ -32,13 +32,17 @@ class _QueueSnapshot {
 /// One shared upstream subscription, replayed to each new listener so a freshly
 /// (re)mounted list paints the current queue immediately.
 final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest4<List<MediaItem>, MediaItem?, PlaybackState,
-      CastTarget, _QueueSnapshot>(
+  ..addStream(Rx.combineLatest4<List<MediaItem>, MediaItem?, bool, CastTarget,
+      _QueueSnapshot>(
     MediaManager().audioHandler.queue,
     MediaManager().audioHandler.mediaItem,
-    MediaManager().audioHandler.playbackState,
+    // Only the play/pause flag from playbackState, distinct() — playbackState
+    // re-emits on every position tick (several times a second), and we don't
+    // want that rebuilding the whole reorderable queue (jank). The queue only
+    // cares whether playback is running, for the active-row EQ/pause badge.
+    MediaManager().audioHandler.playbackState.map((s) => s.playing).distinct(),
     CastManager().activeTargetStream.startWith(CastManager().activeTarget),
-    (q, m, s, target) => _QueueSnapshot(q, m, s.playing, target.isLocal),
+    (q, m, playing, target) => _QueueSnapshot(q, m, playing, target.isLocal),
   ));
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
@@ -97,10 +101,13 @@ class QueueList extends StatelessWidget {
             final downloaded = item.extras?['localPath'] != null;
 
             return Slidable(
-              // Composite key: the queue can legitimately hold the same track
-              // (same id) more than once, so id alone would collide and trip
-              // Flutter's duplicate-key assertion — the index disambiguates.
-              key: ValueKey('${item.id}#$index'),
+              // Identity key: it follows the *item* across a reorder (an
+              // index-based key is positional, so reordering would swap row
+              // content instead of animating items to new slots — the jank).
+              // Distinct MediaItem instances (the realistic duplicate-track
+              // case) get distinct keys, so this still avoids the duplicate-key
+              // assertion the index suffix originally guarded against.
+              key: ObjectKey(item),
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.18,
