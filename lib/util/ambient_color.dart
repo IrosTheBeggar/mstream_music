@@ -18,7 +18,7 @@ import 'package:flutter/painting.dart';
 
 // ── Tunables (mirror color.jsx) ──
 const double _chromaFloor = 0.030; // below this the art is "grayscale" → no tint
-const double _chromaCap = 0.150; // keep tones rich but never neon
+const double _chromaCap = 0.220; // saturation ceiling — vivid, still not neon
 const double _minContrast = 4.5; // white queue text must clear this (WCAG)
 
 // ─────────────────────────────────────────────────────────────
@@ -106,8 +106,11 @@ Gradient? ambientGradient(Color seed, {required Color base, bool vibrant = false
   if (chroma < _chromaFloor) return null;
 
   // (3) work in OKLCH: lift muted seeds into a visible glow; keep vibrant rich.
-  double l = vibrant ? math.max(lab.l, 0.42) : lab.l + 0.16;
-  final c = math.min(chroma * (vibrant ? 1.05 : 1.1), _chromaCap);
+  double l = vibrant ? math.max(lab.l, 0.46) : lab.l + 0.16;
+  // Push saturation hard: vividness comes from chroma, not lightness, so the
+  // tint reads clearly as a colour while staying text-safe under the contrast
+  // floor below.
+  final c = math.min(chroma * (vibrant ? 1.35 : 1.15), _chromaCap);
 
   // (4) hard contrast floor: darken in L until white text clears MIN_CONTRAST.
   var bright = _oklchToRgb(l, c, hue);
@@ -122,15 +125,16 @@ Gradient? ambientGradient(Color seed, {required Color base, bool vibrant = false
   final brightColor = Color.fromARGB(255, bright[0], bright[1], bright[2]);
   final midRgb = _mixOk(bright,
       [(base.r * 255.0).round(), (base.g * 255.0).round(), (base.b * 255.0).round()],
-      0.55);
+      0.40);
   final midColor = Color.fromARGB(255, midRgb[0], midRgb[1], midRgb[2]);
 
-  // CSS: radial-gradient(130% 100% at 100% 100%, bright 0%, mid 38%, bg 72%)
+  // Top glow — the colour haloes the album art (its source) and fades to the
+  // dark base over the lower half, keeping the queue list legible.
   return RadialGradient(
-    center: Alignment.bottomRight,
-    radius: 1.3,
+    center: Alignment.topCenter,
+    radius: 1.25,
     colors: [brightColor, midColor, base],
-    stops: const [0.0, 0.38, 0.72],
+    stops: const [0.0, 0.40, 0.82],
   );
 }
 

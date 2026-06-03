@@ -120,15 +120,24 @@ class PlayerPanelState extends State<PlayerPanel>
                     bottom: 0,
                     height: minH,
                     child: IgnorePointer(
-                      ignoring: t > 0.5,
-                      child: Opacity(
-                        opacity: (1 - t * 2).clamp(0.0, 1.0),
-                        child: Padding(
-                          padding: EdgeInsets.only(bottom: pad),
-                          child: _MiniPlayer(
-                            onTap: expand,
-                            onDragUpdate: _onDragUpdate,
-                            onDragEnd: _onDragEnd,
+                      ignoring: t > 0.4,
+                      child: Transform.translate(
+                        // Lift the bar up as the sheet expands so it rises into
+                        // the now-playing view rather than staying pinned to the
+                        // bottom (Material "container transform").
+                        offset: Offset(0, -t * (maxH - minH) * 0.45),
+                        child: Opacity(
+                          // Front-loaded fade (gone by ~40%) so it doesn't
+                          // muddily overlap the incoming content — the rise
+                          // already separates them spatially.
+                          opacity: (1 - t / 0.4).clamp(0.0, 1.0),
+                          child: Padding(
+                            padding: EdgeInsets.only(bottom: pad),
+                            child: _MiniPlayer(
+                              onTap: expand,
+                              onDragUpdate: _onDragUpdate,
+                              onDragEnd: _onDragEnd,
+                            ),
                           ),
                         ),
                       ),
@@ -188,7 +197,9 @@ class _ExpandedPanel extends StatelessWidget {
           Positioned.fill(child: _AmbientLayer(opacity: t)),
           Positioned.fill(
             child: Opacity(
-              opacity: t.clamp(0.0, 1.0),
+              // Fade the now-playing in slightly after the mini-player starts
+              // lifting away, so the swap reads as one motion (fade-through).
+              opacity: ((t - 0.1) / 0.9).clamp(0.0, 1.0),
               // Background (Material + ambient) stays edge-to-edge; only the
               // content is inset above the system nav bar.
               child: Padding(
@@ -907,12 +918,15 @@ class _AmbientLayerState extends State<_AmbientLayer> {
       if (mounted) setState(() => _grad = null);
       return;
     }
-    final seed = await dominantAlbumColor(url);
+    // Prefer the vibrant swatch (Spotify-style); fall back to the dominant
+    // field colour when the art has no saturated region.
+    final seed = await dominantAlbumColor(url, vibrant: true) ??
+        await dominantAlbumColor(url);
     if (!mounted || url != _url) return;
     setState(() {
       _grad = seed == null
           ? null
-          : ambientGradient(seed, base: VelvetColors.surface);
+          : ambientGradient(seed, base: VelvetColors.surface, vibrant: true);
     });
   }
 
