@@ -150,6 +150,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void _emitCurrentMediaItem() {
+    if (_reordering) return;
     if (queue.value.isEmpty) return;
     final i = (index ?? 0).clamp(0, queue.value.length - 1);
     final item = queue.value[i];
@@ -305,6 +306,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   BehaviorSubject<dynamic> customState =
       BehaviorSubject<dynamic>.seeded(CustomEvent(null));
 
+  // True only while a queue reorder is rewiring the backend's source list.
+  // moveAudioSource emits transient currentIndex values, so re-deriving the
+  // now-playing MediaItem from queue.value[currentIndex] mid-reorder briefly
+  // resolves to the *moved* item and flashes its art / title / waveform. The
+  // playing track never changes during a reorder, so we hold the last good
+  // MediaItem instead.
+  bool _reordering = false;
+
   @override
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
@@ -414,7 +423,15 @@ class AudioPlayerHandler extends BaseAudioHandler
             final item = q.removeAt(from);
             q.insert(to, item);
             queue.add(q);
-            await _backend.moveSource(from, to);
+            // Hold the now-playing item steady while the backend rewires its
+            // source order, so its art/title/waveform don't flash the moved
+            // track as the backend's currentIndex transiently re-points.
+            _reordering = true;
+            try {
+              await _backend.moveSource(from, to);
+            } finally {
+              _reordering = false;
+            }
             _broadcastState();
           }
         }
