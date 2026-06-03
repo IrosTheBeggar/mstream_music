@@ -71,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             title: const Text('Now Playing layout'),
             subtitle: Text(
-              _playerLayoutSubtitle(SettingsManager().playerLayout),
+              _playerLayoutSubtitle(l, SettingsManager().playerLayout),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
@@ -83,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: PlayerLayout.values
                   .map((p) => DropdownMenuItem(
                         value: p,
-                        child: Text(_playerLayoutLabel(p)),
+                        child: Text(_playerLayoutLabel(l, p)),
                       ))
                   .toList(),
               onChanged: (v) async {
@@ -402,29 +402,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _playerLayoutLabel(PlayerLayout p) {
+  String _playerLayoutLabel(AppLocalizations l, PlayerLayout p) {
     switch (p) {
       case PlayerLayout.small:
-        return 'Small';
+        return l.playerLayoutSmall;
       case PlayerLayout.medium:
-        return 'Medium';
+        return l.playerLayoutMedium;
       case PlayerLayout.large:
-        return 'Large';
+        return l.playerLayoutLarge;
       case PlayerLayout.xl:
-        return 'XL';
+        return l.playerLayoutXl;
     }
   }
 
-  String _playerLayoutSubtitle(PlayerLayout p) {
+  String _playerLayoutSubtitle(AppLocalizations l, PlayerLayout p) {
     switch (p) {
       case PlayerLayout.small:
-        return 'Slim bar — maximum queue';
+        return l.playerLayoutSmallDesc;
       case PlayerLayout.medium:
-        return 'Banner — balanced (default)';
+        return l.playerLayoutMediumDesc;
       case PlayerLayout.large:
-        return 'Compact — centered art';
+        return l.playerLayoutLargeDesc;
       case PlayerLayout.xl:
-        return 'Hero — full album art';
+        return l.playerLayoutXlDesc;
     }
   }
 

@@ -1137,4 +1137,39 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
+
+  @override
+  String get nowPlaying => 'Now Playing';
+
+  @override
+  String get playerLayoutSmall => 'Small';
+
+  @override
+  String get playerLayoutMedium => 'Medium';
+
+  @override
+  String get playerLayoutLarge => 'Large';
+
+  @override
+  String get playerLayoutXl => 'XL';
+
+  @override
+  String get playerLayoutSmallDesc => 'Slim bar — maximum queue';
+
+  @override
+  String get playerLayoutMediumDesc => 'Banner — balanced (default)';
+
+  @override
+  String get playerLayoutLargeDesc => 'Compact — centered art';
+
+  @override
+  String get playerLayoutXlDesc => 'Hero — full album art';
+
+  @override
+  String get queueNothingToDownloadEmpty =>
+      'Queue is empty — nothing to download';
+
+  @override
+  String get queueNothingToDownloadSaved =>
+      'Nothing to download — tracks are already saved';
 }

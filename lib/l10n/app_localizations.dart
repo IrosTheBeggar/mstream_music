@@ -2051,6 +2051,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This shader exposes no knobs.'**
   String get visualizerNoKnobs;
+
+  /// No description provided for @nowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing'**
+  String get nowPlaying;
+
+  /// No description provided for @playerLayoutSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Small'**
+  String get playerLayoutSmall;
+
+  /// No description provided for @playerLayoutMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get playerLayoutMedium;
+
+  /// No description provided for @playerLayoutLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Large'**
+  String get playerLayoutLarge;
+
+  /// No description provided for @playerLayoutXl.
+  ///
+  /// In en, this message translates to:
+  /// **'XL'**
+  String get playerLayoutXl;
+
+  /// No description provided for @playerLayoutSmallDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Slim bar — maximum queue'**
+  String get playerLayoutSmallDesc;
+
+  /// No description provided for @playerLayoutMediumDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Banner — balanced (default)'**
+  String get playerLayoutMediumDesc;
+
+  /// No description provided for @playerLayoutLargeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact — centered art'**
+  String get playerLayoutLargeDesc;
+
+  /// No description provided for @playerLayoutXlDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Hero — full album art'**
+  String get playerLayoutXlDesc;
+
+  /// No description provided for @queueNothingToDownloadEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue is empty — nothing to download'**
+  String get queueNothingToDownloadEmpty;
+
+  /// No description provided for @queueNothingToDownloadSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to download — tracks are already saved'**
+  String get queueNothingToDownloadSaved;
 }
 
 class _AppLocalizationsDelegate
