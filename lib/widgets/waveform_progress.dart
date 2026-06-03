@@ -85,12 +85,17 @@ class WaveformProgress extends StatelessWidget {
   static final Map<String, List<double>> _barsCache = {};
 
   static List<double> _seedBars(String seed, int n) {
-    return _barsCache.putIfAbsent('$n:$seed', () {
-      final hash =
-          seed.isEmpty ? 1 : seed.codeUnits.fold(1, (a, b) => a * 31 + b);
-      final rng = Random(hash);
-      return List.generate(n, (_) => 0.18 + rng.nextDouble() * 0.82);
-    });
+    final key = '$n:$seed';
+    final cached = _barsCache[key];
+    if (cached != null) return cached;
+    // Bound the cache (FIFO) like ambient_color's _seedCache: item ids are
+    // per-track URLs, so an unbounded map would leak one list per track shown.
+    if (_barsCache.length >= 128) _barsCache.remove(_barsCache.keys.first);
+    final hash = seed.isEmpty ? 1 : seed.codeUnits.fold(1, (a, b) => a * 31 + b);
+    final rng = Random(hash);
+    final bars = List.generate(n, (_) => 0.18 + rng.nextDouble() * 0.82);
+    _barsCache[key] = bars;
+    return bars;
   }
 }
 

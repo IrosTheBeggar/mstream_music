@@ -93,6 +93,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // working across a cast backend swap — the new backend's streams are
     // subscribed automatically and the old ones cancelled.
     _backendSubject.switchMap((b) => b.currentIndexStream).listen((index) {
+      // A reorder re-points the backend's currentIndex without playback
+      // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
+      // otherwise dragging the playing track to the last slot would append a
+      // spurious Auto-DJ track.
+      if (_reordering) return;
       if (index == queue.value.length - 1) {
         autoDJ();
       }
