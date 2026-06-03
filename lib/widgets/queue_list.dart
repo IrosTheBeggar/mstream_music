@@ -11,28 +11,37 @@ import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 
-/// Combined snapshot of the queue, the currently-playing item, and whether
-/// playback is running — so a row can render the list, highlight the active
-/// track, and show a live EQ / paused badge over its art.
+/// Combined snapshot of the queue, the index of the currently-playing slot,
+/// and whether playback is running — so a row can render the list, highlight
+/// the active track, and show a live EQ / paused badge over its art.
+///
+/// The active row is keyed off [activeIndex] (the queue position, from
+/// PlaybackState.queueIndex) rather than by matching the playing MediaItem:
+/// MediaItem.== is id-based, so a queue that legitimately holds the same track
+/// id more than once would light up every matching row at once. A position is
+/// unambiguous.
 class _QueueSnapshot {
   final List<MediaItem> queue;
-  final MediaItem? current;
+  final int? activeIndex;
   final bool playing;
-  const _QueueSnapshot(this.queue, this.current, this.playing);
+  const _QueueSnapshot(this.queue, this.activeIndex, this.playing);
 }
 
 /// Memoised as a single broadcast subject (mirrors player_panel's _mediaPos):
 /// the queue list is rebuilt by the panel's drag AnimationController, so a fresh
-/// combineLatest per build would re-subscribe three handler streams every frame.
+/// combineLatest per build would re-subscribe its handler streams every frame.
 /// One shared upstream subscription, replayed to each new listener so a freshly
 /// (re)mounted list paints the current queue immediately.
+///
+/// queueIndex (not mediaItem) drives the active highlight: it's the playing
+/// queue *position*, which updates off the same just_audio playbackEvent that
+/// mediaItem does, but stays unambiguous when the queue holds a track id twice.
 final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, PlaybackState,
-      _QueueSnapshot>(
+  ..addStream(
+      Rx.combineLatest2<List<MediaItem>, PlaybackState, _QueueSnapshot>(
     MediaManager().audioHandler.queue,
-    MediaManager().audioHandler.mediaItem,
     MediaManager().audioHandler.playbackState,
-    (q, m, s) => _QueueSnapshot(q, m, s.playing),
+    (q, s) => _QueueSnapshot(q, s.queueIndex, s.playing),
   ));
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
@@ -53,7 +62,7 @@ class QueueList extends StatelessWidget {
       stream: _queueStream,
       builder: (context, snapshot) {
         final queue = snapshot.data?.queue ?? const <MediaItem>[];
-        final current = snapshot.data?.current;
+        final activeIndex = snapshot.data?.activeIndex;
         final playing = snapshot.data?.playing ?? false;
 
         if (queue.isEmpty) {
@@ -72,14 +81,18 @@ class QueueList extends StatelessWidget {
           itemCount: queue.length,
           itemBuilder: (BuildContext context, int index) {
             final item = queue[index];
-            final active = item == current;
+            final active = index == activeIndex;
             final downloaded = item.extras?['localPath'] != null;
 
             return Slidable(
-              // Composite key: the queue can legitimately hold the same track
-              // (same id) more than once, so id alone would collide and trip
-              // Flutter's duplicate-key assertion — the index disambiguates.
-              key: ValueKey('${item.id}#$index'),
+              // Identity key: the queue can legitimately hold the same track
+              // (same id) more than once, so a value key on the id would collide
+              // and trip Flutter's duplicate-key assertion. Every queue entry is a
+              // distinct MediaItem instance, so ObjectKey keys the row to the
+              // instance — unique even for duplicate ids, and it follows the item
+              // if the queue reorders or an earlier row is removed (so in-flight
+              // Slidable state isn't reset by an index shift).
+              key: ObjectKey(item),
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.18,
@@ -104,10 +117,14 @@ class QueueList extends StatelessWidget {
                   onDismissed: () {
                     // Re-resolve the row's CURRENT position at dismiss time: the
                     // build-time index can be stale if the queue shifted during
-                    // the swipe (e.g. the playing track auto-advanced), which
-                    // would otherwise delete the wrong item. -1 → already gone.
+                    // the swipe (e.g. another row was removed or the queue was
+                    // reordered), which would otherwise delete the wrong item.
+                    // Match by instance identity, not MediaItem.== (indexOf) —
+                    // that's id-based, so a duplicate track id resolves to the
+                    // FIRST copy and removes the wrong row. -1 → this exact
+                    // instance is already gone.
                     final live = MediaManager().audioHandler.queue.value;
-                    final at = live.indexOf(item);
+                    final at = live.indexWhere((m) => identical(m, item));
                     if (at >= 0) {
                       MediaManager().audioHandler.removeQueueItemAt(at);
                     }
