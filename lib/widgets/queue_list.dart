@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -27,12 +28,16 @@ class _QueueSnapshot {
 /// One shared upstream subscription, replayed to each new listener so a freshly
 /// (re)mounted list paints the current queue immediately.
 final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, PlaybackState,
+  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, bool,
       _QueueSnapshot>(
     MediaManager().audioHandler.queue,
     MediaManager().audioHandler.mediaItem,
-    MediaManager().audioHandler.playbackState,
-    (q, m, s) => _QueueSnapshot(q, m, s.playing),
+    // Only the play/pause flag from playbackState, distinct() — playbackState
+    // re-emits on every position tick (several times a second), and we don't
+    // want that rebuilding the whole reorderable queue (jank). The queue only
+    // cares whether playback is running, for the active-row EQ/pause badge.
+    MediaManager().audioHandler.playbackState.map((s) => s.playing).distinct(),
+    (q, m, playing) => _QueueSnapshot(q, m, playing),
   ));
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
@@ -66,20 +71,58 @@ class QueueList extends StatelessWidget {
           );
         }
 
-        return ListView.builder(
+        return ReorderableListView.builder(
+          // We supply our own per-row drag grip so reorder never competes with
+          // the Slidable's horizontal swipe; the default long-press-anywhere
+          // reorder is off.
+          buildDefaultDragHandles: false,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: queue.length,
+          // Haptic tick on pickup / drop — every polished native reorder does
+          // this, and ReorderableListView fires none by default.
+          onReorderStart: (_) => HapticFeedback.mediumImpact(),
+          onReorderEnd: (_) => HapticFeedback.selectionClick(),
+          // Lift the dragged row: scale it up slightly with an accent-tinted
+          // shadow so it clearly detaches (vs the flat default elevation).
+          proxyDecorator: (child, index, animation) => AnimatedBuilder(
+            animation: animation,
+            child: child,
+            builder: (context, child) {
+              final t = Curves.easeInOut.transform(animation.value);
+              return Transform.scale(
+                scale: 1 + 0.03 * t,
+                child: Material(
+                  color: VelvetColors.surface,
+                  elevation: 8 * t,
+                  shadowColor: VelvetColors.primary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                  child: child,
+                ),
+              );
+            },
+          ),
+          // onReorderItem (vs the deprecated onReorder) hands us the
+          // post-removal target index already — matching what the handler and
+          // just_audio's moveAudioSource expect, so no off-by-one fixup here.
+          onReorderItem: (oldIndex, newIndex) {
+            if (newIndex == oldIndex) return;
+            MediaManager().audioHandler.customAction(
+                'moveQueueItem', {'from': oldIndex, 'to': newIndex});
+          },
           itemBuilder: (BuildContext context, int index) {
             final item = queue[index];
             final active = item == current;
             final downloaded = item.extras?['localPath'] != null;
 
             return Slidable(
-              // Composite key: the queue can legitimately hold the same track
-              // (same id) more than once, so id alone would collide and trip
-              // Flutter's duplicate-key assertion — the index disambiguates.
-              key: ValueKey('${item.id}#$index'),
+              // Identity key: it follows the *item* across a reorder (an
+              // index-based key is positional, so reordering would swap row
+              // content instead of animating items to new slots — the jank).
+              // Distinct MediaItem instances (the realistic duplicate-track
+              // case) get distinct keys, so this still avoids the duplicate-key
+              // assertion the index suffix originally guarded against.
+              key: ObjectKey(item),
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
                 extentRatio: 0.18,
@@ -144,6 +187,7 @@ class QueueList extends StatelessWidget {
               ),
               child: _QueueRow(
                 item: item,
+                index: index,
                 active: active,
                 playing: playing,
                 downloaded: downloaded,
@@ -162,12 +206,14 @@ class QueueList extends StatelessWidget {
 
 class _QueueRow extends StatelessWidget {
   final MediaItem item;
+  final int index;
   final bool active;
   final bool playing;
   final bool downloaded;
   final VoidCallback onTap;
   const _QueueRow({
     required this.item,
+    required this.index,
     required this.active,
     required this.playing,
     required this.downloaded,
@@ -268,6 +314,25 @@ class _QueueRow extends StatelessWidget {
                   fontFamily: 'monospace',
                   fontSize: 11.5,
                   color: VelvetColors.textTertiary,
+                ),
+              ),
+              // Drag-to-reorder grip — a comfortable 44px touch target. The
+              // ReorderableDragStartListener starts the reorder; the inner
+              // tap-absorbing GestureDetector keeps a tap on the grip from also
+              // triggering row-play (the grip sits inside the row's tap area).
+              ReorderableDragStartListener(
+                index: index,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Icon(Icons.drag_handle,
+                          color: VelvetColors.textTertiary, size: 20),
+                    ),
+                  ),
                 ),
               ),
             ],

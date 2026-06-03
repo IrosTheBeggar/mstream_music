@@ -52,6 +52,10 @@ class LocalPlaybackBackend implements PlaybackBackend {
   Future<void> removeSourceAt(int index) => _player.removeAudioSourceAt(index);
 
   @override
+  Future<void> moveSource(int from, int to) =>
+      _player.moveAudioSource(from, to);
+
+  @override
   Future<void> clearSources() => _player.clearAudioSources();
 
   // ── Transport ──

@@ -60,12 +60,17 @@ class WaveformProgress extends StatelessWidget {
       child: SizedBox(
         height: height,
         width: double.infinity,
-        child: CustomPaint(
-          painter: _WaveformPainter(
-            heights: bars,
-            progress: clamped,
-            playedColor: VelvetColors.primary,
-            unplayedColor: unplayedColor ?? VelvetColors.border2,
+        // RepaintBoundary: the waveform repaints on every position tick; keep
+        // it in its own layer so it doesn't re-rasterize neighbours (notably
+        // the panel's full-screen ambient gradient) and hitch the whole panel.
+        child: RepaintBoundary(
+          child: CustomPaint(
+            painter: _WaveformPainter(
+              heights: bars,
+              progress: clamped,
+              playedColor: VelvetColors.primary,
+              unplayedColor: unplayedColor ?? VelvetColors.border2,
+            ),
           ),
         ),
       ),
@@ -74,10 +79,23 @@ class WaveformProgress extends StatelessWidget {
 
   /// Deterministic pseudo-random bar heights in [0.18, 1.0]. Same seed
   /// returns the same shape so the bar is stable across rebuilds.
+  // Bar heights are deterministic per track, so cache them by (count, seed):
+  // recomputing on every build is wasted work, and reusing the same list
+  // instance also stabilises the shape (no flicker if a build briefly re-runs).
+  static final Map<String, List<double>> _barsCache = {};
+
   static List<double> _seedBars(String seed, int n) {
+    final key = '$n:$seed';
+    final cached = _barsCache[key];
+    if (cached != null) return cached;
+    // Bound the cache (FIFO) like ambient_color's _seedCache: item ids are
+    // per-track URLs, so an unbounded map would leak one list per track shown.
+    if (_barsCache.length >= 128) _barsCache.remove(_barsCache.keys.first);
     final hash = seed.isEmpty ? 1 : seed.codeUnits.fold(1, (a, b) => a * 31 + b);
     final rng = Random(hash);
-    return List.generate(n, (_) => 0.18 + rng.nextDouble() * 0.82);
+    final bars = List.generate(n, (_) => 0.18 + rng.nextDouble() * 0.82);
+    _barsCache[key] = bars;
+    return bars;
   }
 }
 

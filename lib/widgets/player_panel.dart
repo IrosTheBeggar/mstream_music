@@ -231,7 +231,10 @@ class _ExpandedPanel extends StatelessWidget {
           children: [
             // Album-art ambient wash; the parent's fade reveals it as the panel
             // expands (the collapsed mini-player stays glow-free).
-            Positioned.fill(child: _AmbientLayer()),
+            // RepaintBoundary: cache the full-screen ambient gradient in its
+            // own layer so per-tick repaints elsewhere (the scrubber waveform)
+            // don't force it to re-rasterize and hitch the whole panel.
+            Positioned.fill(child: RepaintBoundary(child: _AmbientLayer())),
             Positioned.fill(
               // Background (Material + ambient) stays edge-to-edge; only the
               // content is inset above the system nav bar.
@@ -273,7 +276,10 @@ class _ExpandedPanel extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Expanded(child: QueueList()),
+                        // RepaintBoundary: the queue is its own cached layer,
+                        // so a per-tick repaint up in the now-playing block
+                        // can't force the whole list to re-rasterize.
+                        Expanded(child: RepaintBoundary(child: QueueList())),
                       ],
                     );
                   },
@@ -901,8 +907,15 @@ class _Scrubber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<_MediaPos>(
+    // RepaintBoundary: the scrubber rebuilds + repaints on every position tick;
+    // isolate it so that doesn't re-rasterize the now-playing block (and, via
+    // the layer they shared, the queue below).
+    return RepaintBoundary(
+        child: StreamBuilder<_MediaPos>(
       stream: _mediaPos,
+      // Seed with the current value so a (re)subscribe never renders a frame of
+      // null data — which would flash an empty/default waveform shape.
+      initialData: _mediaPos.valueOrNull,
       builder: (context, snap) {
         final item = snap.data?.item;
         final pos = snap.data?.position ?? Duration.zero;
@@ -951,7 +964,7 @@ class _Scrubber extends StatelessWidget {
           ],
         );
       },
-    );
+    ));
   }
 }
 
@@ -1386,7 +1399,7 @@ class _MediaPos {
 /// spinning up a fresh combineLatest (and re-listening) on every build. A
 /// BehaviorSubject replays the latest value to each new listener, so a freshly
 /// (re)mounted scrubber shows the current position immediately.
-final Stream<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
+final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
   ..addStream(Rx.combineLatest2<MediaItem?, Duration, _MediaPos>(
     MediaManager().audioHandler.mediaItem,
     MediaManager().audioHandler.positionStream,

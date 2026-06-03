@@ -260,6 +260,36 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   }
 
   @override
+  Future<void> moveSource(int from, int to) async {
+    if (from < 0 ||
+        from >= _items.length ||
+        to < 0 ||
+        to >= _items.length ||
+        from == to) {
+      return;
+    }
+    // Single-item-push model: reorder the internal list and shift the current /
+    // loaded pointers so they follow the still-playing track to its new slot.
+    // The renderer keeps playing that track — only the upcoming order changes,
+    // so nothing is reloaded; the next advance just loads the new next item.
+    final item = _items.removeAt(from);
+    _items.insert(to, item);
+    if (_index == from) {
+      _index = to;
+    } else if (_index >= 0) {
+      if (from < _index) _index--;
+      if (to <= _index) _index++;
+    }
+    if (_loadedIndex == from) {
+      _loadedIndex = to;
+    } else if (_loadedIndex >= 0) {
+      if (from < _loadedIndex) _loadedIndex--;
+      if (to <= _loadedIndex) _loadedIndex++;
+    }
+    if (_index >= 0) _emitIndex(_index);
+  }
+
+  @override
   Future<void> clearSources() async {
     _items = <MediaItem>[];
     _index = -1;

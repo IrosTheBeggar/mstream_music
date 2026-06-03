@@ -93,6 +93,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // working across a cast backend swap — the new backend's streams are
     // subscribed automatically and the old ones cancelled.
     _backendSubject.switchMap((b) => b.currentIndexStream).listen((index) {
+      // A reorder re-points the backend's currentIndex without playback
+      // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
+      // otherwise dragging the playing track to the last slot would append a
+      // spurious Auto-DJ track.
+      if (_reordering) return;
       if (index == queue.value.length - 1) {
         autoDJ();
       }
@@ -150,6 +155,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void _emitCurrentMediaItem() {
+    if (_reordering) return;
     if (queue.value.isEmpty) return;
     final i = (index ?? 0).clamp(0, queue.value.length - 1);
     final item = queue.value[i];
@@ -305,6 +311,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   BehaviorSubject<dynamic> customState =
       BehaviorSubject<dynamic>.seeded(CustomEvent(null));
 
+  // True only while a queue reorder is rewiring the backend's source list.
+  // moveAudioSource emits transient currentIndex values, so re-deriving the
+  // now-playing MediaItem from queue.value[currentIndex] mid-reorder briefly
+  // resolves to the *moved* item and flashes its art / title / waveform. The
+  // playing track never changes during a reorder, so we hold the last good
+  // MediaItem instead.
+  bool _reordering = false;
+
   @override
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
@@ -396,6 +410,36 @@ class AudioPlayerHandler extends BaseAudioHandler
         await _backend.clearSources();
         queue.add(queue.value..clear());
         _broadcastState();
+        break;
+      case 'moveQueueItem':
+        // Drag-to-reorder. [to] is the post-removal target index
+        // (ReorderableListView convention). Reorder the queue list first, then
+        // the backend's source list, so the backend's current-index emit lands
+        // against the already-updated queue.
+        final from = extras?['from'];
+        final to = extras?['to'];
+        if (from is int && to is int) {
+          final q = queue.value;
+          if (from >= 0 &&
+              from < q.length &&
+              to >= 0 &&
+              to < q.length &&
+              from != to) {
+            final item = q.removeAt(from);
+            q.insert(to, item);
+            queue.add(q);
+            // Hold the now-playing item steady while the backend rewires its
+            // source order, so its art/title/waveform don't flash the moved
+            // track as the backend's currentIndex transiently re-points.
+            _reordering = true;
+            try {
+              await _backend.moveSource(from, to);
+            } finally {
+              _reordering = false;
+            }
+            _broadcastState();
+          }
+        }
         break;
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
