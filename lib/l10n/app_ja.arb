@@ -333,5 +333,9 @@
   "playerLayoutLargeDesc": "コンパクト — 中央寄せのアートワーク",
   "playerLayoutXlDesc": "特大 — フルサイズのアートワーク",
   "queueNothingToDownloadEmpty": "キューが空です — ダウンロードするものがありません",
-  "queueNothingToDownloadSaved": "ダウンロードするものがありません — 曲は既に保存されています"
+  "queueNothingToDownloadSaved": "ダウンロードするものがありません — 曲は既に保存されています",
+  "settingsAccentColor": "アクセントカラー",
+  "settingsAccentColorSubtitle": "アプリ全体で使用される強調表示の色。",
+  "accentThemeDefault": "テーマの既定",
+  "accentCustom": "カスタム"
 }

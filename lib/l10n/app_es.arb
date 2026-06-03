@@ -340,5 +340,9 @@
   "playerLayoutLargeDesc": "Compacto — carátula centrada",
   "playerLayoutXlDesc": "Destacado — carátula completa",
   "queueNothingToDownloadEmpty": "La cola está vacía — no hay nada que descargar",
-  "queueNothingToDownloadSaved": "No hay nada que descargar — las pistas ya están guardadas"
+  "queueNothingToDownloadSaved": "No hay nada que descargar — las pistas ya están guardadas",
+  "settingsAccentColor": "Color de acento",
+  "settingsAccentColorSubtitle": "El color de resalte que se usa en toda la aplicación.",
+  "accentThemeDefault": "Predeterminado del tema",
+  "accentCustom": "Personalizado"
 }

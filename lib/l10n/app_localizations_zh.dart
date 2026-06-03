@@ -1146,4 +1146,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get queueNothingToDownloadSaved => '没有可下载的内容 — 曲目已保存';
+
+  @override
+  String get settingsAccentColor => '强调色';
+
+  @override
+  String get settingsAccentColorSubtitle => '整个应用中使用的高亮颜色。';
+
+  @override
+  String get accentThemeDefault => '主题默认';
+
+  @override
+  String get accentCustom => '自定义';
 }

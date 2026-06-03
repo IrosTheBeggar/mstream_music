@@ -1248,4 +1248,17 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get queueNothingToDownloadSaved =>
       'Нечего скачивать — треки уже сохранены';
+
+  @override
+  String get settingsAccentColor => 'Акцентный цвет';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'Цвет выделения, используемый во всём приложении.';
+
+  @override
+  String get accentThemeDefault => 'Из темы';
+
+  @override
+  String get accentCustom => 'Свой';
 }

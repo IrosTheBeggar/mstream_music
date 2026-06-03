@@ -398,5 +398,9 @@
   "playerLayoutLargeDesc": "Compacto — capa centralizada",
   "playerLayoutXlDesc": "Destaque — capa completa",
   "queueNothingToDownloadEmpty": "A fila está vazia — nada para baixar",
-  "queueNothingToDownloadSaved": "Nada para baixar — as faixas já estão salvas"
+  "queueNothingToDownloadSaved": "Nada para baixar — as faixas já estão salvas",
+  "settingsAccentColor": "Cor de destaque",
+  "settingsAccentColorSubtitle": "A cor de destaque usada em todo o aplicativo.",
+  "accentThemeDefault": "Padrão do tema",
+  "accentCustom": "Personalizado"
 }

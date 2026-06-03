@@ -333,5 +333,9 @@
   "playerLayoutLargeDesc": "Compact — pochette centrée",
   "playerLayoutXlDesc": "Grand format — pochette complète",
   "queueNothingToDownloadEmpty": "La file est vide — rien à télécharger",
-  "queueNothingToDownloadSaved": "Rien à télécharger — les titres sont déjà enregistrés"
+  "queueNothingToDownloadSaved": "Rien à télécharger — les titres sont déjà enregistrés",
+  "settingsAccentColor": "Couleur d'accent",
+  "settingsAccentColorSubtitle": "La couleur de mise en évidence utilisée dans toute l'application.",
+  "accentThemeDefault": "Par défaut du thème",
+  "accentCustom": "Personnalisé"
 }

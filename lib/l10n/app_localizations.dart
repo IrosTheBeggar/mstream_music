@@ -2117,6 +2117,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing to download — tracks are already saved'**
   String get queueNothingToDownloadSaved;
+
+  /// No description provided for @settingsAccentColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Accent color'**
+  String get settingsAccentColor;
+
+  /// No description provided for @settingsAccentColorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The highlight color used across the app.'**
+  String get settingsAccentColorSubtitle;
+
+  /// No description provided for @accentThemeDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme default'**
+  String get accentThemeDefault;
+
+  /// No description provided for @accentCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get accentCustom;
 }
 
 class _AppLocalizationsDelegate

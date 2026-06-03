@@ -333,5 +333,9 @@
   "playerLayoutLargeDesc": "Kompaktowy — wyśrodkowana okładka",
   "playerLayoutXlDesc": "Wyróżniony — pełna okładka",
   "queueNothingToDownloadEmpty": "Kolejka jest pusta — nie ma czego pobrać",
-  "queueNothingToDownloadSaved": "Nie ma czego pobrać — utwory są już zapisane"
+  "queueNothingToDownloadSaved": "Nie ma czego pobrać — utwory są już zapisane",
+  "settingsAccentColor": "Kolor akcentu",
+  "settingsAccentColorSubtitle": "Kolor wyróżnienia używany w całej aplikacji.",
+  "accentThemeDefault": "Domyślny motywu",
+  "accentCustom": "Niestandardowy"
 }

@@ -1222,4 +1222,17 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get queueNothingToDownloadSaved =>
       'Nada para baixar — as faixas já estão salvas';
+
+  @override
+  String get settingsAccentColor => 'Cor de destaque';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'A cor de destaque usada em todo o aplicativo.';
+
+  @override
+  String get accentThemeDefault => 'Padrão do tema';
+
+  @override
+  String get accentCustom => 'Personalizado';
 }

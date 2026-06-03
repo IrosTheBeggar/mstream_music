@@ -1170,4 +1170,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get queueNothingToDownloadSaved => 'ダウンロードするものがありません — 曲は既に保存されています';
+
+  @override
+  String get settingsAccentColor => 'アクセントカラー';
+
+  @override
+  String get settingsAccentColorSubtitle => 'アプリ全体で使用される強調表示の色。';
+
+  @override
+  String get accentThemeDefault => 'テーマの既定';
+
+  @override
+  String get accentCustom => 'カスタム';
 }

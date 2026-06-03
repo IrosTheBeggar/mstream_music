@@ -1224,4 +1224,17 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get queueNothingToDownloadSaved =>
       'Rien à télécharger — les titres sont déjà enregistrés';
+
+  @override
+  String get settingsAccentColor => 'Couleur d\'accent';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'La couleur de mise en évidence utilisée dans toute l\'application.';
+
+  @override
+  String get accentThemeDefault => 'Par défaut du thème';
+
+  @override
+  String get accentCustom => 'Personnalisé';
 }

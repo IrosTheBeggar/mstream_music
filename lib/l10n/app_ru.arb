@@ -333,5 +333,9 @@
   "playerLayoutLargeDesc": "Компактный — обложка по центру",
   "playerLayoutXlDesc": "Крупный — полная обложка",
   "queueNothingToDownloadEmpty": "Очередь пуста — нечего скачивать",
-  "queueNothingToDownloadSaved": "Нечего скачивать — треки уже сохранены"
+  "queueNothingToDownloadSaved": "Нечего скачивать — треки уже сохранены",
+  "settingsAccentColor": "Акцентный цвет",
+  "settingsAccentColorSubtitle": "Цвет выделения, используемый во всём приложении.",
+  "accentThemeDefault": "Из темы",
+  "accentCustom": "Свой"
 }

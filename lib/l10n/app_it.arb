@@ -333,5 +333,9 @@
   "playerLayoutLargeDesc": "Compatto — copertina centrata",
   "playerLayoutXlDesc": "In evidenza — copertina intera",
   "queueNothingToDownloadEmpty": "La coda è vuota — niente da scaricare",
-  "queueNothingToDownloadSaved": "Niente da scaricare — i brani sono già salvati"
+  "queueNothingToDownloadSaved": "Niente da scaricare — i brani sono già salvati",
+  "settingsAccentColor": "Colore d'accento",
+  "settingsAccentColorSubtitle": "Il colore di evidenziazione usato in tutta l'app.",
+  "accentThemeDefault": "Predefinito del tema",
+  "accentCustom": "Personalizzato"
 }

@@ -1226,4 +1226,17 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get queueNothingToDownloadSaved =>
       'Niente da scaricare — i brani sono già salvati';
+
+  @override
+  String get settingsAccentColor => 'Colore d\'accento';
+
+  @override
+  String get settingsAccentColorSubtitle =>
+      'Il colore di evidenziazione usato in tutta l\'app.';
+
+  @override
+  String get accentThemeDefault => 'Predefinito del tema';
+
+  @override
+  String get accentCustom => 'Personalizzato';
 }

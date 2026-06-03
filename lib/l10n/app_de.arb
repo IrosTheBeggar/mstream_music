@@ -398,5 +398,9 @@
   "playerLayoutLargeDesc": "Kompakt — zentriertes Cover",
   "playerLayoutXlDesc": "Großformat — volles Cover",
   "queueNothingToDownloadEmpty": "Warteschlange ist leer — nichts herunterzuladen",
-  "queueNothingToDownloadSaved": "Nichts herunterzuladen — Titel sind bereits gespeichert"
+  "queueNothingToDownloadSaved": "Nichts herunterzuladen — Titel sind bereits gespeichert",
+  "settingsAccentColor": "Akzentfarbe",
+  "settingsAccentColorSubtitle": "Die Hervorhebungsfarbe, die in der gesamten App verwendet wird.",
+  "accentThemeDefault": "Theme-Standard",
+  "accentCustom": "Benutzerdefiniert"
 }

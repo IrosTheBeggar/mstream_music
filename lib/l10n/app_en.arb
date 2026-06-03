@@ -619,5 +619,9 @@
   "playerLayoutLargeDesc": "Compact — centered art",
   "playerLayoutXlDesc": "Hero — full album art",
   "queueNothingToDownloadEmpty": "Queue is empty — nothing to download",
-  "queueNothingToDownloadSaved": "Nothing to download — tracks are already saved"
+  "queueNothingToDownloadSaved": "Nothing to download — tracks are already saved",
+  "settingsAccentColor": "Accent color",
+  "settingsAccentColorSubtitle": "The highlight color used across the app.",
+  "accentThemeDefault": "Theme default",
+  "accentCustom": "Custom"
 }
