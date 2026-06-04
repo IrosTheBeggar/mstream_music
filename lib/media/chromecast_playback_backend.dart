@@ -310,7 +310,6 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       height: quality.height,
       maxMs: 0, // whole track
       tuning: cfg.tuning,
-      mode: 'hls',
     );
     if (playlist == null) {
       throw StateError('visualizer transcode failed to start');
@@ -325,8 +324,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       if (gen != _loadGen) throw StateError('superseded');
       try {
+        // Count #EXTINF tags — one per segment — rather than '.ts' substrings,
+        // which would also match anything else in the playlist ending in .ts.
         if (await plFile.exists() &&
-            '.ts'.allMatches(await plFile.readAsString()).length >= 2) {
+            '#EXTINF'.allMatches(await plFile.readAsString()).length >= 2) {
           ready = true;
         }
       } catch (_) {/* mid-write / not ready yet — try again */}
@@ -361,7 +362,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       contentId: url,
       contentUrl: Uri.parse(url),
       streamType: CastMediaStreamType.buffered,
-      contentType: 'application/x-mpegurl', // HLS (validated on the receiver)
+      contentType:
+          'application/vnd.apple.mpegurl', // HLS (IANA type; matches LocalMediaServer)
       metadata: GoogleCastGenericMediaMetadata(
         title: item.title,
         subtitle: item.artist,

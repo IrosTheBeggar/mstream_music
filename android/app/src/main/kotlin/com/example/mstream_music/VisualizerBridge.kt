@@ -142,9 +142,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         realAudio = null
     }
 
-    // Visualizer-cast Phase 0a spike: transcode a track to an MP4 of the
-    // visualizer reacting to it (off-screen, on its own thread). Replies with
-    // the output path on success. See VisualizerTranscoder.
+    // Visualizer cast: transcode a track into a live MPEG-TS/HLS stream of the
+    // visualizer reacting to it (off-screen, on its own thread), writing segments
+    // into the `output` directory. Replies with the playlist path right away so
+    // the caller can start casting while transcoding continues. See
+    // VisualizerTranscoder.
     private fun handleStartTranscode(call: MethodCall, result: MethodChannel.Result) {
         val source = call.argument<String>("source")
         val output = call.argument<String>("output")
@@ -156,7 +158,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         val h = (call.argument<Int>("height") ?: 720).coerceAtLeast(2)
         val engine = call.argument<Int>("engine") ?: 0
         val fps = (call.argument<Int>("fps") ?: 30).coerceIn(1, 60)
-        val maxMs = (call.argument<Int>("maxMs") ?: 20_000).toLong()
+        val maxMs = (call.argument<Int>("maxMs") ?: 0).toLong() // 0 = whole track
         val preset = call.argument<String>("preset")
         val tuningRaw = call.argument<Any>("tuning")
         val tuning: FloatArray? = when (tuningRaw) {
@@ -166,11 +168,8 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             else -> null
         }
 
-        // mode "hls" → MPEG-TS/HLS segments in the `output` directory (for
-        // casting); anything else → a single MP4 file at `output`.
-        val mode = call.argument<String>("mode") ?: "mp4"
         val sink: AvSink = try {
-            if (mode == "hls") TsHlsSink(output) else Mp4Sink(output)
+            TsHlsSink(output)
         } catch (e: Throwable) {
             result.error("sink_failed", e.message, null)
             return
@@ -193,7 +192,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             engineKind = engine,
             fps = fps,
             maxDurationUs = maxMs * 1000L,
-            pace = mode == "hls", // live cast → throttle to ~realtime (battery/thermal)
+            pace = true, // live cast → throttle to ~realtime (battery/thermal)
             presetData = preset,
             tuning = tuning,
             initEncoder = ::nativeInitEncoder,
@@ -210,25 +209,18 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 // nulling that would orphan it (a later stopTranscode couldn't
                 // cancel it).
                 if (transcoder === created) transcoder = null
-                // HLS replies immediately below (so the caller can start casting
-                // while we keep transcoding the live playlist); only non-HLS
-                // reports its result here.
-                if (mode != "hls") {
-                    if (ok) result.success(payload)
-                    else result.error("transcode_failed", payload, null)
-                } else if (!ok) {
-                    Log.w("mstream/viz-xcode", "HLS transcode ended: $payload")
-                }
+                // We already replied with the playlist path below (so the caller
+                // could start casting while the live playlist keeps growing), so
+                // there's nothing to reply here — just note an early end.
+                if (!ok) Log.w(TAG, "transcode ended: $payload")
             }
         }
         created = t
         transcoder = t
         t.start()
-        if (mode == "hls") {
-            // The playlist grows as segments are written; reply now so the caller
-            // can poll it and cast while transcoding continues in the background.
-            result.success("$output/index.m3u8")
-        }
+        // The playlist grows as segments are written; reply now so the caller can
+        // poll it and cast while transcoding continues in the background.
+        result.success("$output/index.m3u8")
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {

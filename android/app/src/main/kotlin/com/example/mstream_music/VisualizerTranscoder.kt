@@ -8,8 +8,8 @@ import android.view.Surface
  * it. Decodes the source audio to PCM; that PCM both drives an off-screen
  * visualizer engine (rendering into an H.264 encoder's input Surface, stamped
  * from the audio clock) and is re-encoded to AAC. The two elementary streams
- * are handed to an [AvSink] — [Mp4Sink] for an on-phone MP4, or [TsHlsSink] for
- * MPEG-TS/HLS segments to cast.
+ * are handed to an [AvSink] ([TsHlsSink]), which writes the live MPEG-TS/HLS
+ * segments to cast.
  *
  * Runs on its own thread (owns the EGL context via the native bridge). Audio is
  * best-effort: if the AAC encoder can't be set up, the output is video-only.

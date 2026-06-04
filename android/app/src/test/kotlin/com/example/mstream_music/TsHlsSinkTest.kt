@@ -93,7 +93,8 @@ class TsHlsSinkTest {
     fun audioPesHeaderIsWellFormed() {
         val sink = newSink()
         val payload = ByteArray(20) { (it + 1).toByte() }
-        val pes = sink.buildPes(0xC0, 90_000L, null, payload)
+        val len = sink.buildPesInto(0xC0, 90_000L, null, payload)
+        val pes = sink.pesBuf.copyOf(len)
         assertEquals(0x00, u(pes[0])); assertEquals(0x00, u(pes[1])); assertEquals(0x01, u(pes[2]))
         assertEquals(0xC0, u(pes[3]))                          // audio stream id
         val pesLen = (u(pes[4]) shl 8) or u(pes[5])
@@ -108,7 +109,8 @@ class TsHlsSinkTest {
     fun videoPesUsesUnboundedLengthAndDts() {
         val sink = newSink()
         val es = ByteArray(10) { it.toByte() }
-        val pes = sink.buildPes(0xE0, 90_000L, 90_000L, es)
+        val len = sink.buildPesInto(0xE0, 90_000L, 90_000L, es)
+        val pes = sink.pesBuf.copyOf(len)
         assertEquals(0xE0, u(pes[3]))
         assertEquals(0, (u(pes[4]) shl 8) or u(pes[5]))        // unbounded for video
         assertEquals(0xC0, u(pes[7]))                          // PTS+DTS flag
@@ -121,7 +123,7 @@ class TsHlsSinkTest {
         val pes = ByteArray(500) { (it and 0xFF).toByte() } // spans several packets
         val out = ByteArrayOutputStream()
         val cc = intArrayOf(0)
-        sink.writePes(out, 0x0100, cc, pes, null)
+        sink.writePes(out, 0x0100, cc, pes, pes.size, null)
         val ts = out.toByteArray()
         assertEquals(0, ts.size % 188)                        // whole 188-byte packets
         val packets = ts.size / 188
@@ -142,7 +144,7 @@ class TsHlsSinkTest {
         val sink = newSink()
         val pcr = 1_234_567L
         val out = ByteArrayOutputStream()
-        sink.writePes(out, 0x0100, intArrayOf(0), ByteArray(50), pcr)
+        sink.writePes(out, 0x0100, intArrayOf(0), ByteArray(50), 50, pcr)
         val ts = out.toByteArray()
         assertEquals(0x3, (u(ts[3]) ushr 4) and 0x3)          // adaptation field + payload
         assertTrue(u(ts[4]) >= 7)                             // af_len ≥ flags(1)+PCR(6)
