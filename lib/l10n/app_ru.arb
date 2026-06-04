@@ -1,4 +1,5 @@
 {
+  "mainRemove": "Убрать",
   "@@locale": "ru",
   "appTitle": "mStream Music",
   "settingsLanguage": "Язык",

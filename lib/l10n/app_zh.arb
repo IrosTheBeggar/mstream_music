@@ -1,4 +1,5 @@
 {
+  "mainRemove": "移除",
   "@@locale": "zh",
   "appTitle": "mStream Music",
   "settingsLanguage": "语言",

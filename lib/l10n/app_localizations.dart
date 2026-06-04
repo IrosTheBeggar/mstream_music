@@ -114,6 +114,12 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// No description provided for @mainRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get mainRemove;
+
   /// Application title (brand name; not translated).
   ///
   /// In en, this message translates to:

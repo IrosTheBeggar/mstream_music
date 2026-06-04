@@ -9,6 +9,9 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get mainRemove => 'Usuń';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override
