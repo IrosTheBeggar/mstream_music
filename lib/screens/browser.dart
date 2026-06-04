@@ -228,6 +228,9 @@ class _BrowserState extends State<Browser> {
         title: i.metadata?.title ?? i.name,
         album: i.metadata?.album,
         artist: i.metadata?.artist,
+        genre: (i.metadata?.genres.isNotEmpty ?? false)
+            ? i.metadata!.genres.join(', ')
+            : null,
         extras: {
           'server': i.server!.localname,
           'path': i.data,

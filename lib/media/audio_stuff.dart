@@ -662,6 +662,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       title: metadata['title'] ?? filepath.split('/').last,
       album: metadata['album'],
       artist: metadata['artist'],
+      genre:
+          (metadata['genres'] is List && (metadata['genres'] as List).isNotEmpty)
+              ? (metadata['genres'] as List).join(', ')
+              : null,
       extras: {
         // Tag with the source server so Share Playlist's multi-server
         // detection recognises AutoDJ-added songs as shareable.
@@ -669,7 +673,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         'path': filepath,
         'year': metadata['year'],
         'track': metadata['track'],
-        'disc': metadata['disc'],
+        // Server emits this as `disk`; fall back to `disc` for other servers.
+        'disc': metadata['disk'] ?? metadata['disc'],
         'artUrl': artUrl,
         // bpm + musicalKey power the next AutoDJ pick's continuity
         // payload (see autoDJ() above). 'musical-key' is the wire

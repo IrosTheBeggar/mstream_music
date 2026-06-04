@@ -15,10 +15,14 @@ class MusicMetadata {
   // mixing + BPM-continuity modes (see audio_stuff.dart#autoDJ).
   int? bpm;
   String? musicalKey;
+  // Genre names for this track. Velvet servers emit `metadata.genres` as a
+  // string list (many-to-many via track_genres); empty when untagged or on
+  // servers that don't surface genres.
+  List<String> genres;
 
   MusicMetadata(this.artist, this.album, this.title, this.track, this.disc,
       this.year, this.hash, this.rating, this.albumArt,
-      {this.bpm, this.musicalKey});
+      {this.bpm, this.musicalKey, this.genres = const []});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
       : artist = json['artist'],
@@ -31,7 +35,9 @@ class MusicMetadata {
         rating = json['rating'],
         albumArt = json['albumArt'],
         bpm = json['bpm'],
-        musicalKey = json['musicalKey'];
+        musicalKey = json['musicalKey'],
+        genres = (json['genres'] as List?)?.map((g) => g.toString()).toList() ??
+            const [];
 
   Map<String, dynamic> toJson() => {
         'artist': artist,
@@ -45,5 +51,6 @@ class MusicMetadata {
         'albumArt': albumArt,
         'bpm': bpm,
         'musicalKey': musicalKey,
+        'genres': genres,
       };
 }

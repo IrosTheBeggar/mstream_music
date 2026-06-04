@@ -288,13 +288,19 @@ class ApiManager {
           e['metadata']['album'],
           e['metadata']['title'],
           e['metadata']['track'],
-          e['metadata']['disc'],
+          // Server emits the disc field as `disk`; keep `disc` as a fallback
+          // for any server that uses the un-quirked name.
+          e['metadata']['disk'] ?? e['metadata']['disc'],
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
           e['metadata']['album-art'],
           bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+          musicalKey: e['metadata']['musical-key'],
+          genres: (e['metadata']['genres'] as List?)
+                  ?.map((g) => g.toString())
+                  .toList() ??
+              const []);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -332,13 +338,19 @@ class ApiManager {
           e['metadata']['album'],
           e['metadata']['title'],
           e['metadata']['track'],
-          e['metadata']['disc'],
+          // Server emits the disc field as `disk`; keep `disc` as a fallback
+          // for any server that uses the un-quirked name.
+          e['metadata']['disk'] ?? e['metadata']['disc'],
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
           e['metadata']['album-art'],
           bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+          musicalKey: e['metadata']['musical-key'],
+          genres: (e['metadata']['genres'] as List?)
+                  ?.map((g) => g.toString())
+                  .toList() ??
+              const []);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -374,13 +386,19 @@ class ApiManager {
           e['metadata']['album'],
           e['metadata']['title'],
           e['metadata']['track'],
-          e['metadata']['disc'],
+          // Server emits the disc field as `disk`; keep `disc` as a fallback
+          // for any server that uses the un-quirked name.
+          e['metadata']['disk'] ?? e['metadata']['disc'],
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
           e['metadata']['album-art'],
           bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+          musicalKey: e['metadata']['musical-key'],
+          genres: (e['metadata']['genres'] as List?)
+                  ?.map((g) => g.toString())
+                  .toList() ??
+              const []);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -470,13 +488,19 @@ class ApiManager {
           e['metadata']['album'],
           e['metadata']['title'],
           e['metadata']['track'],
-          e['metadata']['disc'],
+          // Server emits the disc field as `disk`; keep `disc` as a fallback
+          // for any server that uses the un-quirked name.
+          e['metadata']['disk'] ?? e['metadata']['disc'],
           e['metadata']['year'],
           e['metadata']['hash'],
           e['metadata']['rating'],
           e['metadata']['album-art'],
           bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+          musicalKey: e['metadata']['musical-key'],
+          genres: (e['metadata']['genres'] as List?)
+                  ?.map((g) => g.toString())
+                  .toList() ??
+              const []);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -556,7 +580,11 @@ class ApiManager {
             inner['rating'],
             inner['album-art'],
             bpm: inner['bpm'],
-            musicalKey: inner['musical-key']);
+            musicalKey: inner['musical-key'],
+            genres: (inner['genres'] as List?)
+                    ?.map((g) => g.toString())
+                    .toList() ??
+                const []);
       }
 
       newList.add(newItem);
