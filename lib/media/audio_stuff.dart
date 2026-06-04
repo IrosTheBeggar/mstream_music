@@ -398,8 +398,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int i) async {
     await super.removeQueueItemAt(i);
-    await _backend.removeSourceAt(i);
+    // Update the queue BEFORE the backend. removeSourceAt makes the backend emit
+    // its new currentIndex, and the currentIndexStream listener re-derives the
+    // now-playing item as queue.value[index]. If the queue still held the
+    // removed item, the wrong row would briefly render as the active/playing row
+    // (a flash in the accent colour) before correcting — same root cause as the
+    // reorder flash. Reordering keeps the queue and the emitted index in sync.
     queue.add(queue.value..removeAt(i));
+    await _backend.removeSourceAt(i);
   }
 
   customAction(String name, [Map<String, dynamic>? extras]) async {
