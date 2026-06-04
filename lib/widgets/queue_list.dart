@@ -5,7 +5,6 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
-import '../objects/metadata.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
@@ -115,47 +114,35 @@ class QueueList extends StatelessWidget {
             final active = item == current;
             final downloaded = item.extras?['localPath'] != null;
 
+            // Remove this row from the queue. Re-resolves the row's CURRENT
+            // position at dismiss time by IDENTITY: the build-time index can be
+            // stale if the queue shifted during the swipe (e.g. the playing
+            // track auto-advanced). We match the exact MediaItem instance —
+            // not `indexOf`, whose `==` is id-only — so that when two entries
+            // share an id (e.g. the same playlist track loaded twice) we delete
+            // the row the user actually swiped, not its twin. The ObjectKey
+            // below guarantees every queue entry is a distinct instance.
+            // -1 → already gone.
+            void removeItem() {
+              final live = MediaManager().audioHandler.queue.value;
+              final at = live.indexWhere((e) => identical(e, item));
+              if (at >= 0) {
+                MediaManager().audioHandler.removeQueueItemAt(at);
+              }
+            }
+
             return Slidable(
-              // Identity key: it follows the *item* across a reorder (an
-              // index-based key is positional, so reordering would swap row
-              // content instead of animating items to new slots — the jank).
-              // Distinct MediaItem instances (the realistic duplicate-track
-              // case) get distinct keys, so this still avoids the duplicate-key
-              // assertion the index suffix originally guarded against.
+              // Identity key (also the ReorderableListView item key): follows
+              // the *item* across reorders; distinct MediaItem instances avoid a
+              // duplicate-key clash.
               key: ObjectKey(item),
+              // RIGHT swipe (or a grip tap, see _QueueRow) → Info.
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
-                extentRatio: 0.18,
-                children: [
-                  SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.download,
-                    label: l.mainSync,
-                    onPressed: (_) {
-                      if (!downloaded) {
-                        DownloadManager().downloadOneFile(item.id,
-                            item.extras!['server'], item.extras!['path']);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              endActionPane: ActionPane(
-                motion: const DrawerMotion(),
-                extentRatio: 0.36,
-                dismissible: DismissiblePane(
-                  onDismissed: () {
-                    // Re-resolve the row's CURRENT position at dismiss time: the
-                    // build-time index can be stale if the queue shifted during
-                    // the swipe (e.g. the playing track auto-advanced), which
-                    // would otherwise delete the wrong item. -1 → already gone.
-                    final live = MediaManager().audioHandler.queue.value;
-                    final at = live.indexOf(item);
-                    if (at >= 0) {
-                      MediaManager().audioHandler.removeQueueItemAt(at);
-                    }
-                  },
-                ),
+                extentRatio: 0.25,
+                // A full right-swipe past Info also removes the track, so a full
+                // swipe in EITHER direction removes.
+                dismissible: DismissiblePane(onDismissed: removeItem),
                 children: [
                   SlidableAction(
                     backgroundColor: VelvetColors.raised,
@@ -163,25 +150,29 @@ class QueueList extends StatelessWidget {
                     icon: Icons.info,
                     label: l.info,
                     onPressed: (context) {
-                      final m = MusicMetadata(
-                        item.artist,
-                        item.album,
-                        item.title,
-                        null,
-                        null,
-                        item.extras?['year'],
-                        'X',
-                        null,
-                        item.extras?['artUrl'],
-                      );
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MeteDataScreen(
-                              meta: m, path: item.extras?['path']),
+                          builder: (_) => MetadataScreen(item: item),
                         ),
                       );
                     },
+                  ),
+                ],
+              ),
+              // LEFT swipe → Remove; a full left-swipe also removes (the
+              // DismissiblePane), so swipe-to-remove is back — on this side.
+              endActionPane: ActionPane(
+                motion: const DrawerMotion(),
+                extentRatio: 0.25,
+                dismissible: DismissiblePane(onDismissed: removeItem),
+                children: [
+                  SlidableAction(
+                    backgroundColor: Colors.red.shade700,
+                    foregroundColor: Colors.white,
+                    icon: Icons.delete_outline,
+                    label: l.mainRemove,
+                    onPressed: (_) => removeItem(),
                   ),
                 ],
               ),
@@ -316,15 +307,16 @@ class _QueueRow extends StatelessWidget {
                   color: VelvetColors.textTertiary,
                 ),
               ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. The
-              // ReorderableDragStartListener starts the reorder; the inner
-              // tap-absorbing GestureDetector keeps a tap on the grip from also
-              // triggering row-play (the grip sits inside the row's tap area).
+              // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
+              // (ReorderableDragStartListener) to reorder, or TAP it to open the
+              // action drawer (the start/left pane). The GestureDetector also
+              // keeps the tap from falling through to the row's play-on-tap.
               ReorderableDragStartListener(
                 index: index,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () {},
+                  // Tap → open the download/info drawer; drag → reorder.
+                  onTap: () => Slidable.of(context)?.openStartActionPane(),
                   child: SizedBox(
                     width: 44,
                     height: 44,

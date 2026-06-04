@@ -9,6 +9,9 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get mainRemove => '移除';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override

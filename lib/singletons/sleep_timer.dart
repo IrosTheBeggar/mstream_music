@@ -14,7 +14,6 @@ class SleepTimerManager {
   factory SleepTimerManager() => _instance;
 
   Timer? _ticker;
-  DateTime? _endsAt;
 
   // null = inactive. Non-null = remaining time, refreshed every second
   // so the picker sheet can show a live countdown.
@@ -28,7 +27,6 @@ class SleepTimerManager {
   void start(Duration d) {
     cancel();
     final ends = DateTime.now().add(d);
-    _endsAt = ends;
     _remaining.add(d);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       final left = ends.difference(DateTime.now());
@@ -43,14 +41,12 @@ class SleepTimerManager {
   void cancel() {
     _ticker?.cancel();
     _ticker = null;
-    _endsAt = null;
     _remaining.add(null);
   }
 
   void _fire() {
     _ticker?.cancel();
     _ticker = null;
-    _endsAt = null;
     _remaining.add(null);
     MediaManager().audioHandler.pause();
   }

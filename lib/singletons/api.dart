@@ -283,18 +283,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
-      MusicMetadata m = new MusicMetadata(
-          e['metadata']['artist'],
-          e['metadata']['album'],
-          e['metadata']['title'],
-          e['metadata']['track'],
-          e['metadata']['disc'],
-          e['metadata']['year'],
-          e['metadata']['hash'],
-          e['metadata']['rating'],
-          e['metadata']['album-art'],
-          bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -327,18 +316,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
-      MusicMetadata m = new MusicMetadata(
-          e['metadata']['artist'],
-          e['metadata']['album'],
-          e['metadata']['title'],
-          e['metadata']['track'],
-          e['metadata']['disc'],
-          e['metadata']['year'],
-          e['metadata']['hash'],
-          e['metadata']['rating'],
-          e['metadata']['album-art'],
-          bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -369,18 +347,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
-      MusicMetadata m = new MusicMetadata(
-          e['metadata']['artist'],
-          e['metadata']['album'],
-          e['metadata']['title'],
-          e['metadata']['track'],
-          e['metadata']['disc'],
-          e['metadata']['year'],
-          e['metadata']['hash'],
-          e['metadata']['rating'],
-          e['metadata']['album-art'],
-          bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -465,18 +432,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res.forEach((e) {
-      MusicMetadata m = new MusicMetadata(
-          e['metadata']['artist'],
-          e['metadata']['album'],
-          e['metadata']['title'],
-          e['metadata']['track'],
-          e['metadata']['disc'],
-          e['metadata']['year'],
-          e['metadata']['hash'],
-          e['metadata']['rating'],
-          e['metadata']['album-art'],
-          bpm: e['metadata']['bpm'],
-          musicalKey: e['metadata']['musical-key']);
+      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
       DisplayItem newItem = new DisplayItem(
           useThisServer,
@@ -541,22 +497,10 @@ class ApiManager {
       // pullMetadata=true was sent AND the file is in the library DB
       // (unscanned files still arrive without an inner metadata
       // object; we tolerate that and fall back to filename display).
-      // Field name quirk: server uses `disk`, not `disc`.
       final outer = e['metadata'];
       final inner = outer is Map ? outer['metadata'] : null;
       if (inner is Map) {
-        newItem.metadata = MusicMetadata(
-            inner['artist'],
-            inner['album'],
-            inner['title'],
-            inner['track'],
-            inner['disk'] ?? inner['disc'],
-            inner['year'],
-            inner['hash'] ?? '',
-            inner['rating'],
-            inner['album-art'],
-            bpm: inner['bpm'],
-            musicalKey: inner['musical-key']);
+        newItem.metadata = MusicMetadata.fromServerMap(inner);
       }
 
       newList.add(newItem);

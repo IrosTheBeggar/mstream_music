@@ -235,26 +235,11 @@ class ServerManager {
     }
 
     await writeServerFile();
-
-    // delete synced files
-    // if (removeSyncedFiles == true) {
-    //   _deleteServeDirectory(removeThisServer);
-    // }
   }
 
   Future<void> callAfterEditServer() async {
     _serverListStream.sink.add(serverList);
     await writeServerFile();
-  }
-
-  Future<void> _deleteServeDirectory(Server removedServer) async {
-    Directory? directory = await FileExplorer().getDownloadDir(
-        removedServer.storageMode, removedServer.storageBasePath);
-    if (directory != null) {
-      Directory dir = new Directory(path.join(
-          directory.path.toString(), "media/${removedServer.localname}"));
-      dir.delete(recursive: true);
-    }
   }
 
   void makeDefault(int i) {

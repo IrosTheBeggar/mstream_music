@@ -302,6 +302,7 @@ class BrowserManager {
 
   void dispose() {
     _migrationSub?.cancel();
+    _letterStripSub?.cancel();
     _browserStream.close();
     _browserLabel.close();
     _loading.close();

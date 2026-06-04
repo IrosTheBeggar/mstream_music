@@ -9,6 +9,9 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get mainRemove => 'Убрать';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override

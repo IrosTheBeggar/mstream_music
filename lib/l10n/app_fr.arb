@@ -1,4 +1,5 @@
 {
+  "mainRemove": "Retirer",
   "@@locale": "fr",
   "appTitle": "mStream Music",
   "settingsLanguage": "Langue",
