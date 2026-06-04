@@ -202,10 +202,15 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     // ── PES / TS packetization ──
+    //
+    // The pure byte-encoding helpers below — and the PSI / ADTS / CRC ones
+    // further down — are `internal` rather than `private` so the JVM unit tests
+    // in src/test can exercise this bit-level packing directly (it has no Android
+    // dependencies). There is no other caller in the module.
 
     // [esParts] are concatenated as the PES payload — passed as parts (e.g.
     // AUD + SPS/PPS + frame) so callers don't allocate a combined ES array.
-    private fun buildPes(streamId: Int, pts90: Long, dts90: Long?, vararg esParts: ByteArray): ByteArray {
+    internal fun buildPes(streamId: Int, pts90: Long, dts90: Long?, vararg esParts: ByteArray): ByteArray {
         var esLen = 0
         for (p in esParts) esLen += p.size
         val out = ByteArrayOutputStream(esLen + 19)
@@ -230,7 +235,7 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     // 5-byte PTS/DTS field with the given 4-bit prefix nibble.
-    private fun encodeTs(value: Long, prefix: Int): ByteArray {
+    internal fun encodeTs(value: Long, prefix: Int): ByteArray {
         val v = value and 0x1FFFFFFFFL
         return byteArrayOf(
             (((prefix and 0xF) shl 4) or (((v ushr 30).toInt() and 0x7) shl 1) or 1).toByte(),
@@ -244,7 +249,7 @@ class TsHlsSink(private val dir: String) : AvSink {
     // Emit [pes] as 188-byte TS packets on [pid]. The first packet sets PUSI; if
     // [pcr90] != null it carries a PCR in its adaptation field; the last packet
     // is padded with an adaptation-field stuffing region to fill 188.
-    private fun writePes(out: OutputStream, pid: Int, cc: IntArray, pes: ByteArray, pcr90: Long?) {
+    internal fun writePes(out: OutputStream, pid: Int, cc: IntArray, pes: ByteArray, pcr90: Long?) {
         var pos = 0
         var first = true
         val pkt = tsPacket // reused; every byte below is overwritten per packet
@@ -307,7 +312,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     // ── PSI tables ──
 
-    private fun buildPat(): ByteArray {
+    internal fun buildPat(): ByteArray {
         val body = ByteArrayOutputStream()
         body.write(0x00); body.write(0x01) // transport_stream_id = 1
         body.write(0xC1) // reserved(11) + version(0) + current_next(1)
@@ -318,7 +323,7 @@ class TsHlsSink(private val dir: String) : AvSink {
         return wrapSection(0x00, body.toByteArray())
     }
 
-    private fun buildPmt(): ByteArray {
+    internal fun buildPmt(): ByteArray {
         val body = ByteArrayOutputStream()
         body.write(0x00); body.write(0x01) // program_number = 1
         body.write(0xC1)
@@ -340,7 +345,7 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     // Prepend table_id + section_length header and append the MPEG CRC-32.
-    private fun wrapSection(tableId: Int, body: ByteArray): ByteArray {
+    internal fun wrapSection(tableId: Int, body: ByteArray): ByteArray {
         val sectionLength = body.size + 4 // + CRC
         val head = ByteArrayOutputStream()
         head.write(tableId)
@@ -358,7 +363,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     // ── ADTS ──
 
-    private fun adtsHeader(frameLen: Int): ByteArray {
+    internal fun adtsHeader(frameLen: Int): ByteArray {
         val full = frameLen + 7
         val profile = 1 // AAC-LC (audio object type 2 → ADTS profile 1)
         return byteArrayOf(
@@ -380,7 +385,7 @@ class TsHlsSink(private val dir: String) : AvSink {
         return b
     }
 
-    private fun freqIndex(rate: Int): Int = when (rate) {
+    internal fun freqIndex(rate: Int): Int = when (rate) {
         96000 -> 0; 88200 -> 1; 64000 -> 2; 48000 -> 3; 44100 -> 4; 32000 -> 5
         24000 -> 6; 22050 -> 7; 16000 -> 8; 12000 -> 9; 11025 -> 10; 8000 -> 11
         7350 -> 12; else -> 4
@@ -405,7 +410,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 }
 
 /** MPEG CRC-32 (poly 0x04C11DB7, init 0xFFFFFFFF, MSB-first) for PSI sections. */
-private object Crc32Mpeg {
+internal object Crc32Mpeg {
     private val table = IntArray(256)
 
     init {

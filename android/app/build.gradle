@@ -39,6 +39,11 @@ android {
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
     }
 
     lintOptions {
@@ -115,4 +120,7 @@ kotlin {
 
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
+    // JVM unit tests for the hand-written MPEG-TS muxer (TsHlsSinkTest). Only
+    // compiled/run by the test*UnitTest tasks, never bundled into the APK.
+    testImplementation 'junit:junit:4.13.2'
 }
