@@ -37,6 +37,11 @@ Future<void> main() async {
   // inherits a leftover immersive mode (e.g. the app was killed while the
   // Visualizer had the nav bar hidden) still comes up with the nav bar visible.
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // Lock to portrait: the player panel, queue, and browser layouts are designed
+  // for a tall aspect ratio and are unusable in landscape. Also pinned in the
+  // Android manifest (android:screenOrientation) so the launch splash can't
+  // flash sideways before Flutter starts.
+  SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
   // Settings load must come before MediaManager.start() so the audio
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
