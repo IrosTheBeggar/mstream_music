@@ -229,12 +229,20 @@ class MetadataScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: VelvetColors.primary),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: VelvetColors.textSecondary,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
+          // Flexible + ellipsis so a long value (notably a multi-genre
+          // "Rock, Electronic, …" string) caps at the available width instead
+          // of overflowing the chip's Row. The Wrap gives each chip a bounded
+          // width, so Flexible resolves correctly here.
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

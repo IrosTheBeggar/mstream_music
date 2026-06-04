@@ -36,8 +36,7 @@ class MusicMetadata {
         albumArt = json['albumArt'],
         bpm = json['bpm'],
         musicalKey = json['musicalKey'],
-        genres = (json['genres'] as List?)?.map((g) => g.toString()).toList() ??
-            const [];
+        genres = parseGenres(json['genres']);
 
   Map<String, dynamic> toJson() => {
         'artist': artist,
@@ -53,4 +52,36 @@ class MusicMetadata {
         'musicalKey': musicalKey,
         'genres': genres,
       };
+
+  /// Builds a [MusicMetadata] from a raw server `metadata` map. Centralises the
+  /// wire-shape quirks so every parse site stays in sync: kebab-case keys
+  /// (`album-art`, `musical-key`), the disc field spelled `disk` (with a `disc`
+  /// fallback), a possibly-absent `hash`, and the `genres` string list.
+  factory MusicMetadata.fromServerMap(Map m) => MusicMetadata(
+        m['artist'],
+        m['album'],
+        m['title'],
+        m['track'],
+        m['disk'] ?? m['disc'],
+        m['year'],
+        m['hash'] ?? '',
+        m['rating'],
+        m['album-art'],
+        bpm: m['bpm'],
+        musicalKey: m['musical-key'],
+        genres: parseGenres(m['genres']),
+      );
+
+  /// Parses the server's `genres` value (normally a string list) into a
+  /// `List<String>`, tolerating a bare string or a missing value without
+  /// throwing.
+  static List<String> parseGenres(dynamic value) {
+    if (value is List) return value.map((g) => g.toString()).toList();
+    if (value is String && value.trim().isNotEmpty) return [value.trim()];
+    return const [];
+  }
+
+  /// The genres as a single display string (`"Rock, Electronic"`), or null when
+  /// there are none — convenient for `MediaItem.genre`.
+  String? get genreLabel => genres.isEmpty ? null : genres.join(', ');
 }

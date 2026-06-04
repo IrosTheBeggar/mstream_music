@@ -15,6 +15,7 @@ import 'local_media_server.dart';
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
+import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
@@ -657,31 +658,30 @@ class AudioPlayerHandler extends BaseAudioHandler
             .toString()
         : null;
 
+    // Parse the raw server map once so the genre / disc / key wire quirks are
+    // handled in one place (MusicMetadata.fromServerMap) — the same path that
+    // browse-added items take.
+    final meta = MusicMetadata.fromServerMap(metadata);
     final item = MediaItem(
       id: mediaUrl,
-      title: metadata['title'] ?? filepath.split('/').last,
-      album: metadata['album'],
-      artist: metadata['artist'],
-      genre:
-          (metadata['genres'] is List && (metadata['genres'] as List).isNotEmpty)
-              ? (metadata['genres'] as List).join(', ')
-              : null,
+      title: meta.title ?? filepath.split('/').last,
+      album: meta.album,
+      artist: meta.artist,
+      genre: meta.genreLabel,
       extras: {
         // Tag with the source server so Share Playlist's multi-server
         // detection recognises AutoDJ-added songs as shareable.
         'server': autoDJServer!.localname,
         'path': filepath,
-        'year': metadata['year'],
-        'track': metadata['track'],
-        // Server emits this as `disk`; fall back to `disc` for other servers.
-        'disc': metadata['disk'] ?? metadata['disc'],
+        'year': meta.year,
+        'track': meta.track,
+        'disc': meta.disc,
         'artUrl': artUrl,
-        // bpm + musicalKey power the next AutoDJ pick's continuity
-        // payload (see autoDJ() above). 'musical-key' is the wire
-        // shape from the server — we stash it under our camelCase
-        // key for consistency with browser-added items.
-        'bpm': metadata['bpm'],
-        'musicalKey': metadata['musical-key'],
+        // bpm + musicalKey power the next AutoDJ pick's continuity payload
+        // (see autoDJ() above), stashed under our camelCase keys for
+        // consistency with browser-added items.
+        'bpm': meta.bpm,
+        'musicalKey': meta.musicalKey,
       },
     );
 

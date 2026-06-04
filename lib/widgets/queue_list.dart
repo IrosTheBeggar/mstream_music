@@ -115,13 +115,17 @@ class QueueList extends StatelessWidget {
             final downloaded = item.extras?['localPath'] != null;
 
             // Remove this row from the queue. Re-resolves the row's CURRENT
-            // position at dismiss time: the build-time index can be stale if the
-            // queue shifted during the swipe (e.g. the playing track
-            // auto-advanced), so deleting by the stale index would remove the
-            // wrong item. -1 → already gone.
+            // position at dismiss time by IDENTITY: the build-time index can be
+            // stale if the queue shifted during the swipe (e.g. the playing
+            // track auto-advanced). We match the exact MediaItem instance —
+            // not `indexOf`, whose `==` is id-only — so that when two entries
+            // share an id (e.g. the same playlist track loaded twice) we delete
+            // the row the user actually swiped, not its twin. The ObjectKey
+            // below guarantees every queue entry is a distinct instance.
+            // -1 → already gone.
             void removeItem() {
               final live = MediaManager().audioHandler.queue.value;
-              final at = live.indexOf(item);
+              final at = live.indexWhere((e) => identical(e, item));
               if (at >= 0) {
                 MediaManager().audioHandler.removeQueueItemAt(at);
               }
