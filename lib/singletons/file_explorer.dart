@@ -33,7 +33,14 @@ class FileExplorer {
         .toString();
   }
 
+  // The in-flight directory listing, so a fast re-navigation cancels it instead
+  // of leaving an orphan subscription that keeps building a list — and fires
+  // addListToStack — for a screen the user already left.
+  StreamSubscription<FileSystemEntity>? _listSub;
+
   Future<void> getLocalFiles(String? directory, Server s) async {
+    await _listSub?.cancel();
+    _listSub = null;
     BrowserManager().setBrowserLabel('Local Files');
     List<DisplayItem> newList = [];
 
@@ -58,10 +65,8 @@ class FileExplorer {
     int stringLength = file.path.toString().length +
         1; // The plug ones covers the extra `/` that will be on the results
 
-    file
-        .list(recursive: false, followLinks: false)
-        .listen((FileSystemEntity entity) {
-      print(entity.path);
+    final sub =
+        file.list(recursive: false, followLinks: false).listen((entity) {
       Icon useIcon;
       String type;
       if (entity is File) {
@@ -76,9 +81,12 @@ class FileExplorer {
       DisplayItem newItem =
           new DisplayItem(s, thisName, type, entity.path, useIcon, null);
       newList.add(newItem);
-    }).onDone(() {
+    });
+    sub.onDone(() {
+      _listSub = null;
       BrowserManager().addListToStack(newList);
     });
+    _listSub = sub;
   }
 
   Future<void> getPathForServer(Server s) async {

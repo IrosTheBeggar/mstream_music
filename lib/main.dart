@@ -47,8 +47,12 @@ Future<void> main() async {
   // AndroidEqualizer to the player.
   await SettingsManager().load();
   await MediaManager().start();
-  await PlaylistManager().load();
-  await AutoDJManager().load();
+  // Saved playlists + AutoDJ config aren't needed for the first frame, and both
+  // are independent pure-disk reads — start them off the critical path so two
+  // sequential disk round-trips don't delay first paint. Stream-backed, so the
+  // playlists / AutoDJ screens populate when the reads land.
+  unawaited(PlaylistManager().load());
+  unawaited(AutoDJManager().load());
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs

@@ -827,9 +827,14 @@ class MyCustomFormState extends State<MyCustomForm> {
               ),
             ),
             Flexible(
-              child: ListView(
+              // .builder so each folder's synchronous listSync()/statSync()
+              // runs only as its row scrolls into view — the old map().toList()
+              // stat-ed every folder up front before the sheet could paint.
+              child: ListView.builder(
                 shrinkWrap: true,
-                children: folders.map((d) {
+                itemCount: folders.length,
+                itemBuilder: (_, i) {
+                  final d = folders[i];
                   final name = path.basename(d.path);
                   int count = 0;
                   DateTime? modified;
@@ -851,7 +856,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                             color: VelvetColors.textSecondary, fontSize: 12)),
                     onTap: () => Navigator.of(ctx).pop(name),
                   );
-                }).toList(),
+                },
               ),
             ),
             SizedBox(height: 8),

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'server.dart';
 import 'metadata.dart';
-import '../singletons/browser_list.dart';
 import '../singletons/file_explorer.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
@@ -25,7 +25,7 @@ class DisplayItem {
 
   int downloadProgress = 0;
 
-  Widget? getImage() {
+  Widget? getImage(BuildContext context) {
     String? aaFile = altAlbumArt ?? this.metadata?.albumArt ?? null;
 
     if (this.server != null && aaFile != null) {
@@ -35,7 +35,10 @@ class DisplayItem {
           '?compress=s' +
           (this.server!.jwt == null ? '' : '&token=' + this.server!.jwt!));
 
-      return Image.network(lolUrl.toString());
+      // Browser-row leading thumbnail (~36dp in the dense list theme): decode
+      // at that size, not the server image's full resolution.
+      return Image.network(lolUrl.toString(),
+          cacheWidth: artCacheWidth(context, 40));
     }
 
     return icon;
@@ -137,28 +140,14 @@ class DisplayItem {
         hit(data?.split('/').last);
   }
 
+  // The on-device download badge is no longer probed here. Building a folder
+  // of N files used to fire N independent File.exists() checks from the
+  // constructor, each re-emitting the whole browser list on a hit (a burst of
+  // rebuilds right as the new screen first paints). The check is now a single
+  // batched pass (BrowserManager._checkDownloadStatus → recheckDownloaded) run
+  // once after the list is built, emitting one coalesced refresh.
   DisplayItem(
-      this.server, this.name, this.type, this.data, this.icon, this.subtext) {
-    // Check if file is saved on device
-    if (this.type == 'file') {
-      String downloadDirectory = this.server!.localname + this.data!;
-      FileExplorer()
-          .getDownloadDir(this.server!.storageMode, this.server!.storageBasePath)
-          .then((dir) {
-        if (dir == null) {
-          return;
-        }
-        String finalString = '${dir.path}/media/$downloadDirectory';
-
-        new File(finalString).exists().then((ex) {
-          if (ex == true) {
-            this.downloadProgress = 100;
-            BrowserManager().updateStream();
-          }
-        });
-      });
-    }
-  }
+      this.server, this.name, this.type, this.data, this.icon, this.subtext);
 
   // Re-evaluates whether this file exists at the server's CURRENT storage
   // location and updates [downloadProgress] (100 = present, 0 = not). Unlike

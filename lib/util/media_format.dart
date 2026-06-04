@@ -26,3 +26,12 @@ Widget albumArtFallback({double iconSize = 20}) => Container(
       child: Icon(Icons.music_note,
           color: VelvetColors.textSecondary, size: iconSize),
     );
+
+/// Physical-pixel decode cap for album art shown at [logicalSize] dp on the
+/// current display. Pass this as `Image.network`'s `cacheWidth` so a large
+/// server image is downsampled at decode time to the size it's actually drawn
+/// at — instead of holding a full-resolution bitmap in memory (and re-uploading
+/// it to the GPU) for a small thumbnail. Passing only `cacheWidth` lets Flutter
+/// infer the height, preserving aspect ratio.
+int artCacheWidth(BuildContext context, double logicalSize) =>
+    (logicalSize * MediaQuery.devicePixelRatioOf(context)).ceil();

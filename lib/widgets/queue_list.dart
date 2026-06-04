@@ -263,6 +263,9 @@ class _QueueRow extends StatelessWidget {
                       child: url != null
                           ? Image.network(url,
                               fit: BoxFit.cover,
+                              // 40dp thumbnail — decode at that size, not the
+                              // full server resolution (× queue length in RAM).
+                              cacheWidth: artCacheWidth(context, 40),
                               errorBuilder: (_, __, ___) => _artFallback())
                           : _artFallback(),
                     ),

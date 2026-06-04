@@ -88,6 +88,10 @@ class MetadataScreen extends StatelessWidget {
                     art,
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
+                    // Heavily blurred (sigma 48), so a small decode looks
+                    // identical — and a sigma-48 blur over a full-res bitmap is
+                    // the jank spike on opening this screen. Decode small.
+                    cacheWidth: artCacheWidth(context, 200),
                     errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
                 ),
@@ -138,6 +142,7 @@ class MetadataScreen extends StatelessWidget {
                         ? Image.network(
                             art,
                             fit: BoxFit.cover,
+                            cacheWidth: artCacheWidth(context, 224),
                             errorBuilder: (_, __, ___) =>
                                 albumArtFallback(iconSize: 60),
                           )
