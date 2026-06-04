@@ -558,7 +558,7 @@ class _BrowserState extends State<Browser> {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
         child: ListTile(
-            leading: b[i].getImage(),
+            leading: b[i].getImage(c),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
             onTap: () {
@@ -601,7 +601,7 @@ class _BrowserState extends State<Browser> {
                       ),
                       Expanded(
                           child: ListTile(
-                              leading: b[i].getImage(),
+                              leading: b[i].getImage(c),
                               title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
                               onTap: () {

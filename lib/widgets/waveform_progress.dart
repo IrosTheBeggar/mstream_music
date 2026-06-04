@@ -118,11 +118,15 @@ class _WaveformPainter extends CustomPainter {
     final gap = 1.5;
     final barWidth = (size.width - gap * (n - 1)) / n;
     final progressX = size.width * progress;
+    final centerY = size.height / 2;
+    // Two Paints reused for every bar instead of allocating one per bar on each
+    // repaint (this repaints on every position tick × 64 bars).
+    final playedPaint = Paint()..color = playedColor;
+    final unplayedPaint = Paint()..color = unplayedColor;
 
     for (int i = 0; i < n; i++) {
       final h = heights[i] * size.height;
       final left = i * (barWidth + gap);
-      final centerY = size.height / 2;
       final rect = RRect.fromLTRBR(
         left,
         centerY - h / 2,
@@ -131,10 +135,7 @@ class _WaveformPainter extends CustomPainter {
         Radius.circular(barWidth / 2),
       );
       final isPlayed = (left + barWidth / 2) <= progressX;
-      canvas.drawRRect(
-        rect,
-        Paint()..color = isPlayed ? playedColor : unplayedColor,
-      );
+      canvas.drawRRect(rect, isPlayed ? playedPaint : unplayedPaint);
     }
   }
 

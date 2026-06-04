@@ -102,9 +102,14 @@ class VisualizerAudio {
   // playback state — louder when something's playing, quiet (but
   // not silent) when paused so the screen never goes dead.
   final _rng = Random();
+  // Reused across ticks: addPcm() serialises the buffer into the platform-
+  // channel message synchronously (before its first await), so the bytes are
+  // copied out before the next tick overwrites this — no per-tick 4 KB alloc on
+  // the UI isolate (30×/s) and the GC churn that came with it.
+  late final Float32List _scratch = Float32List(_samplesPerTick * 2);
   Float32List _generate() {
     final amp = _playing ? 0.65 : 0.18;
-    final out = Float32List(_samplesPerTick * 2);
+    final out = _scratch;
     const beatHz = 2.0;
 
     for (var i = 0; i < _samplesPerTick; i++) {

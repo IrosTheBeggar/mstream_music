@@ -219,10 +219,35 @@ class BrowserManager {
     if (sc.hasClients) sc.jumpTo(0);
 
     _browserStream.sink.add(browserList);
+
+    // Set on-device download badges for the new list in one batched pass +
+    // a single coalesced refresh, rather than each DisplayItem probing
+    // File.exists() in its constructor and re-emitting the whole list per hit.
+    _checkDownloadStatus(newList);
   }
 
+  // Probe which file rows in [list] are already on disk (concurrently), then
+  // emit one refresh. Non-file lists (albums/artists) short-circuit for free.
+  Future<void> _checkDownloadStatus(List<DisplayItem> list) async {
+    final files = list.where((i) => i.type == 'file').toList();
+    if (files.isEmpty) return;
+    await Future.wait(files.map((i) => i.recheckDownloaded()));
+    updateStream();
+  }
+
+  // Coalesces bursts of "soft" refreshes (download-progress ticks, badge
+  // updates) into at most one emit per ~100ms. Navigation emits bypass this —
+  // they call _browserStream.sink.add directly, so back/forward stays instant;
+  // only this badge/progress path, which can fire dozens of times a second
+  // during a "Download all", is throttled.
+  Timer? _refreshTimer;
+
   updateStream() {
-    _browserStream.sink.add(browserList);
+    if (_refreshTimer != null) return; // a flush is already scheduled
+    _refreshTimer = Timer(const Duration(milliseconds: 100), () {
+      _refreshTimer = null;
+      _browserStream.sink.add(browserList);
+    });
   }
 
   // Re-check the on-device download badge for cached file rows against their
@@ -303,6 +328,7 @@ class BrowserManager {
   void dispose() {
     _migrationSub?.cancel();
     _letterStripSub?.cancel();
+    _refreshTimer?.cancel();
     _browserStream.close();
     _browserLabel.close();
     _loading.close();

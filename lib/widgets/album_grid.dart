@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 
 class AlbumGrid extends StatelessWidget {
   final List<DisplayItem> items;
@@ -80,7 +81,7 @@ class _AlbumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = _buildArt();
+    final image = _buildArt(context);
     return Material(
       color: VelvetColors.card,
       borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
@@ -145,7 +146,7 @@ class _AlbumCard extends StatelessWidget {
     );
   }
 
-  Widget _buildArt() {
+  Widget _buildArt(BuildContext context) {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
       final url = Uri.encodeFull(item.server!.url +
@@ -153,9 +154,19 @@ class _AlbumCard extends StatelessWidget {
           aaFile +
           '?compress=m' +
           (item.server!.jwt == null ? '' : '&token=' + item.server!.jwt!));
+      // Decode at the card's on-screen width, not the server image's full
+      // resolution — a grid of covers otherwise pins many full-size bitmaps in
+      // memory and re-uploads them to the GPU while scrolling.
+      final w = MediaQuery.sizeOf(context).width;
+      final cols = AlbumGrid.columnsFor(w);
+      final itemWidth = (w -
+              AlbumGrid.padHorizontal * 2 -
+              AlbumGrid.spacing * (cols - 1)) /
+          cols;
       return Image.network(
         url,
         fit: BoxFit.cover,
+        cacheWidth: artCacheWidth(context, itemWidth),
         errorBuilder: (_, __, ___) => _NoArtPlaceholder(),
         loadingBuilder: (_, child, prog) => prog == null
             ? child

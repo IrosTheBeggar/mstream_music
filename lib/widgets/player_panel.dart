@@ -433,7 +433,7 @@ class _TopMedium extends StatelessWidget {
               final year = item?.extras?['year']?.toString();
               return Row(
                 children: [
-                  _albumArt(url, size: 92, radius: 8),
+                  _albumArt(context, url, size: 92, radius: 8),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -524,7 +524,8 @@ class _TopLarge extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final url = snap.data?.extras?['artUrl'] as String?;
-              return Center(child: _albumArt(url, size: art, radius: 9));
+              return Center(
+                  child: _albumArt(context, url, size: art, radius: 9));
             },
           ),
         ),
@@ -613,7 +614,8 @@ class _TopXL extends StatelessWidget {
             builder: (context, snap) {
               final url = snap.data?.extras?['artUrl'] as String?;
               return Center(
-                  child: _albumArt(url, size: art, radius: 10, glowBlur: 38));
+                  child: _albumArt(context, url,
+                      size: art, radius: 10, glowBlur: 38));
             },
           ),
         ),
@@ -713,6 +715,7 @@ class _TopSmall extends StatelessWidget {
                         child: url != null
                             ? Image.network(url,
                                 fit: BoxFit.cover,
+                                cacheWidth: artCacheWidth(context, 44),
                                 errorBuilder: (_, __, ___) => _fallback(20))
                             : _fallback(20)),
                   ),
@@ -1343,7 +1346,7 @@ class _MiniPlayer extends StatelessWidget {
 // Shared helpers.
 // ---------------------------------------------------------------------------
 
-Widget _albumArt(String? url,
+Widget _albumArt(BuildContext context, String? url,
     {required double size, double radius = 8, double glowBlur = 22}) {
   Widget fallback() => _fallback(size * 0.5);
   return Container(
@@ -1366,7 +1369,12 @@ Widget _albumArt(String? url,
       borderRadius: BorderRadius.circular(radius),
       child: url != null
           ? Image.network(url,
-              fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback())
+              fit: BoxFit.cover,
+              // Decode at the displayed art size rather than the server's full
+              // resolution (the hero layouts can request 240dp; capping the
+              // decode still saves vs a 600px+ source bitmap).
+              cacheWidth: artCacheWidth(context, size),
+              errorBuilder: (_, __, ___) => fallback())
           : fallback(),
     ),
   );
