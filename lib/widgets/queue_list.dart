@@ -11,14 +11,20 @@ import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 
-/// Combined snapshot of the queue, the currently-playing item, and whether
-/// playback is running — so a row can render the list, highlight the active
-/// track, and show a live EQ / paused badge over its art.
+/// Combined snapshot of the queue, the index of the currently-playing slot,
+/// and whether playback is running — so a row can render the list, highlight
+/// the active track, and show a live EQ / paused badge over its art.
+///
+/// The active row is keyed off [activeIndex] (the queue position, from
+/// PlaybackState.queueIndex) rather than by matching the playing MediaItem:
+/// MediaItem.== is id-based, so a queue that legitimately holds the same track
+/// id more than once would light up every matching row at once. A position is
+/// unambiguous.
 class _QueueSnapshot {
   final List<MediaItem> queue;
-  final MediaItem? current;
+  final int? activeIndex;
   final bool playing;
-  const _QueueSnapshot(this.queue, this.current, this.playing);
+  const _QueueSnapshot(this.queue, this.activeIndex, this.playing);
 }
 
 /// Memoised as a single broadcast subject (mirrors player_panel's _mediaPos):
@@ -27,16 +33,20 @@ class _QueueSnapshot {
 /// One shared upstream subscription, replayed to each new listener so a freshly
 /// (re)mounted list paints the current queue immediately.
 final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest3<List<MediaItem>, MediaItem?, bool,
-      _QueueSnapshot>(
+  ..addStream(Rx.combineLatest3<List<MediaItem>, int?, bool, _QueueSnapshot>(
     MediaManager().audioHandler.queue,
-    MediaManager().audioHandler.mediaItem,
+    // The playing queue *position* drives the active highlight (not the playing
+    // MediaItem — MediaItem.== is id-based, so a queue holding the same track id
+    // twice would light up every matching row). queueIndex updates off the same
+    // playbackEvent that drives mediaItem, so the highlight is just as prompt;
+    // distinct() so the position ticks below don't rebuild the queue.
+    MediaManager().audioHandler.playbackState.map((s) => s.queueIndex).distinct(),
     // Only the play/pause flag from playbackState, distinct() — playbackState
     // re-emits on every position tick (several times a second), and we don't
     // want that rebuilding the whole reorderable queue (jank). The queue only
     // cares whether playback is running, for the active-row EQ/pause badge.
     MediaManager().audioHandler.playbackState.map((s) => s.playing).distinct(),
-    (q, m, playing) => _QueueSnapshot(q, m, playing),
+    (q, activeIndex, playing) => _QueueSnapshot(q, activeIndex, playing),
   ));
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
@@ -57,7 +67,7 @@ class QueueList extends StatelessWidget {
       stream: _queueStream,
       builder: (context, snapshot) {
         final queue = snapshot.data?.queue ?? const <MediaItem>[];
-        final current = snapshot.data?.current;
+        final activeIndex = snapshot.data?.activeIndex;
         final playing = snapshot.data?.playing ?? false;
 
         if (queue.isEmpty) {
@@ -111,7 +121,7 @@ class QueueList extends StatelessWidget {
           },
           itemBuilder: (BuildContext context, int index) {
             final item = queue[index];
-            final active = item == current;
+            final active = index == activeIndex;
             final downloaded = item.extras?['localPath'] != null;
 
             // Remove this row from the queue. Re-resolves the row's CURRENT
