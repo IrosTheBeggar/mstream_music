@@ -5,7 +5,6 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
-import '../objects/metadata.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
@@ -147,22 +146,10 @@ class QueueList extends StatelessWidget {
                     icon: Icons.info,
                     label: l.info,
                     onPressed: (context) {
-                      final m = MusicMetadata(
-                        item.artist,
-                        item.album,
-                        item.title,
-                        null,
-                        null,
-                        item.extras?['year'],
-                        'X',
-                        null,
-                        item.extras?['artUrl'],
-                      );
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MeteDataScreen(
-                              meta: m, path: item.extras?['path']),
+                          builder: (_) => MetadataScreen(item: item),
                         ),
                       );
                     },
