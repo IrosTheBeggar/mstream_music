@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:io' show File;
-import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
-import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 // Hide media_cast_dlna's own MediaItem — we use audio_service's MediaItem for
 // queue items and only need the plugin's control/metadata types here.
 import 'package:media_cast_dlna/media_cast_dlna.dart' hide MediaItem;
-import 'package:rxdart/rxdart.dart';
+import 'package:meta/meta.dart';
 
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'emulated_playlist_backend.dart';
 import 'local_media_server.dart';
 import 'playback_backend.dart';
 
@@ -18,37 +17,28 @@ import 'playback_backend.dart';
 /// speaker) via the native `media_cast_dlna` plugin.
 ///
 /// A DLNA renderer plays ONE track at a time, so this emulates just_audio's
-/// playlist: it owns the source list + current index, pushes the current track
-/// with `setMediaUri`, and advances to the next when the renderer reports it
-/// has STOPPED near the end. Position/duration/state are polled ~1 Hz via
-/// `getPlaybackInfo` and re-broadcast through the same streams the
-/// AudioPlayerHandler already consumes — so the queue, Auto-DJ and now-playing
-/// UI keep working unchanged while casting.
+/// playlist through [EmulatedPlaylistBackend]: the base owns the source list +
+/// current index and the add/remove/move/clear arithmetic; this subclass pushes
+/// the current track with `setMediaUri`, polls position/duration/state ~1 Hz via
+/// `getPlaybackInfo`, and advances to the next track when the renderer reports
+/// it has STOPPED near the end. Position/duration/state are re-broadcast through
+/// the base's streams (the same ones the AudioPlayerHandler already consumes) —
+/// so the queue, Auto-DJ and now-playing UI keep working unchanged while
+/// casting.
 ///
-/// Shuffle/repeat are emulated here (just_audio handles them natively for the
-/// local backend); the implementation is intentionally simple for a first cut.
-class DlnaPlaybackBackend implements PlaybackBackend {
+/// Shuffle/repeat are emulated by the base (just_audio handles them natively for
+/// the local backend).
+class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   DlnaPlaybackBackend({required String udn, MediaCastDlnaApi? api})
       : _udn = DeviceUdn(value: udn),
         _api = api ?? MediaCastDlnaApi();
 
   final MediaCastDlnaApi _api;
   final DeviceUdn _udn;
-  final Random _rng = Random();
 
-  List<MediaItem> _items = <MediaItem>[];
-  int _index = -1; // logical current index into _items
-  int _loadedIndex = -1; // index actually pushed to the renderer
-  bool _shuffle = false;
-  bool _repeatAll = false;
-
-  bool _playing = false;
   bool _advancing = false; // guards against double-advance while a track loads
   bool _confirmedPlaying = false; // renderer reached PLAYING for the current track
   bool _reachedNearEnd = false; // position reached end-of-track while playing
-  Duration _position = Duration.zero;
-  Duration? _duration;
-  BackendProcessingState _state = BackendProcessingState.idle;
 
   Timer? _pollTimer;
   bool _polling = false;
@@ -58,135 +48,6 @@ class DlnaPlaybackBackend implements PlaybackBackend {
   // fallback once it crosses _kMaxPollFailures (so a single Wi-Fi blip doesn't).
   int _pollFailures = 0;
   static const int _kMaxPollFailures = 4;
-
-  final BehaviorSubject<int?> _indexSubject = BehaviorSubject<int?>.seeded(null);
-  final BehaviorSubject<Duration> _positionSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<Duration?> _durationSubject =
-      BehaviorSubject<Duration?>.seeded(null);
-  final BehaviorSubject<BackendProcessingState> _stateSubject =
-      BehaviorSubject<BackendProcessingState>.seeded(
-          BackendProcessingState.idle);
-  final StreamController<void> _changeController =
-      StreamController<void>.broadcast();
-  // Emits when the renderer is lost mid-cast (see _poll); the handler listens
-  // and falls back to local playback.
-  final PublishSubject<String> _rendererLost = PublishSubject<String>();
-
-  void _change() {
-    if (!_changeController.isClosed) _changeController.add(null);
-  }
-
-  void _setState(BackendProcessingState s) {
-    _state = s;
-    if (!_stateSubject.isClosed) _stateSubject.add(s);
-  }
-
-  // isClosed-guarded emitters: an in-flight poll / auto-advance can complete
-  // after dispose() has closed the subjects (we switched away mid-operation),
-  // and adding to a closed subject throws. Mirrors the Chromecast backend.
-  void _emitIndex(int? v) {
-    final s = _indexSubject;
-    if (!s.isClosed) s.add(v);
-  }
-
-  void _emitPos(Duration v) {
-    final s = _positionSubject;
-    if (!s.isClosed) s.add(v);
-  }
-
-  void _emitDur(Duration? v) {
-    final s = _durationSubject;
-    if (!s.isClosed) s.add(v);
-  }
-
-  // ── Source list (mirrors just_audio's playlist API) ──
-  @override
-  Future<void> setSources(List<MediaItem> items) async {
-    _items = List<MediaItem>.from(items);
-    _index = _items.isEmpty ? -1 : 0;
-    _loadedIndex = -1;
-    _emitIndex(_index < 0 ? null : _index);
-    _setState(_items.isEmpty
-        ? BackendProcessingState.idle
-        : BackendProcessingState.ready);
-  }
-
-  @override
-  Future<void> addSource(MediaItem item) async {
-    _items.add(item);
-    if (_index == -1) {
-      _index = 0;
-      _emitIndex(0);
-      _setState(BackendProcessingState.ready);
-    }
-  }
-
-  @override
-  Future<void> removeSourceAt(int index) async {
-    if (index < 0 || index >= _items.length) return;
-    _items.removeAt(index);
-    if (_items.isEmpty) {
-      _index = -1;
-      _loadedIndex = -1;
-      _emitIndex(null);
-      await _stopRenderer();
-      _setState(BackendProcessingState.idle);
-      return;
-    }
-    if (index < _index) {
-      _index--;
-      _loadedIndex--;
-      _emitIndex(_index);
-    } else if (index == _index) {
-      // Removed the now-playing track — advance to whatever now occupies this
-      // slot (the former next track), clamping if it was the last.
-      if (_index >= _items.length) _index = _items.length - 1;
-      _loadedIndex = -1;
-      _emitIndex(_index);
-      await _loadIndex(_index, play: _playing);
-    }
-  }
-
-  @override
-  Future<void> moveSource(int from, int to) async {
-    if (from < 0 ||
-        from >= _items.length ||
-        to < 0 ||
-        to >= _items.length ||
-        from == to) {
-      return;
-    }
-    // Single-item-push model: reorder the internal list and shift the current /
-    // loaded pointers so they follow the still-playing track to its new slot.
-    // The renderer keeps playing that track — only the upcoming order changes,
-    // so nothing is reloaded; the next advance just loads the new next item.
-    final item = _items.removeAt(from);
-    _items.insert(to, item);
-    if (_index == from) {
-      _index = to;
-    } else if (_index >= 0) {
-      if (from < _index) _index--;
-      if (to <= _index) _index++;
-    }
-    if (_loadedIndex == from) {
-      _loadedIndex = to;
-    } else if (_loadedIndex >= 0) {
-      if (from < _loadedIndex) _loadedIndex--;
-      if (to <= _loadedIndex) _loadedIndex++;
-    }
-    if (_index >= 0) _emitIndex(_index);
-  }
-
-  @override
-  Future<void> clearSources() async {
-    _items = <MediaItem>[];
-    _index = -1;
-    _loadedIndex = -1;
-    _emitIndex(null);
-    await _stopRenderer();
-    _setState(BackendProcessingState.idle);
-  }
 
   // ── Transport ──
   // DLNA renderers fetch the URL themselves. A network id (server URL) is
@@ -218,48 +79,50 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     );
   }
 
-  Future<void> _loadIndex(int index, {required bool play}) async {
-    if (index < 0 || index >= _items.length) return;
-    _index = index;
-    _emitIndex(index);
-    final item = _items[index];
+  @protected
+  @override
+  Future<void> loadIndex(int target, {required bool play}) async {
+    if (target < 0 || target >= items.length) return;
+    index = target;
+    emitIndex(target);
+    final item = items[target];
     _confirmedPlaying = false;
     _reachedNearEnd = false;
-    _setState(BackendProcessingState.loading);
+    setProcessingState(BackendProcessingState.loading);
     try {
       final uri = await _resolveUri(item);
       await _api.setMediaUri(_udn, Url(value: uri.toString()), _metaFor(item));
-      _loadedIndex = index;
-      _duration = item.duration;
-      _emitDur(_duration);
-      _position = Duration.zero;
-      _emitPos(_position);
+      loadedIndex = target;
+      duration = item.duration;
+      emitDur(duration);
+      position = Duration.zero;
+      emitPos(position);
       if (play) {
         await _api.play(_udn);
-        _playing = true;
+        playing = true;
       }
-      _setState(BackendProcessingState.ready);
+      setProcessingState(BackendProcessingState.ready);
       _startPolling();
     } catch (e) {
       castLog('DLNA load failed', error: e);
     }
-    _change();
+    change();
   }
 
   @override
   Future<void> play() async {
-    if (_index < 0) return;
-    if (_loadedIndex != _index) {
-      await _loadIndex(_index, play: true);
+    if (index < 0) return;
+    if (loadedIndex != index) {
+      await loadIndex(index, play: true);
       return;
     }
     try {
       await _api.play(_udn);
     } catch (_) {}
-    _playing = true;
-    _setState(BackendProcessingState.ready);
+    playing = true;
+    setProcessingState(BackendProcessingState.ready);
     _startPolling();
-    _change();
+    change();
   }
 
   @override
@@ -267,16 +130,16 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     try {
       await _api.pause(_udn);
     } catch (_) {}
-    _playing = false;
-    _change();
+    playing = false;
+    change();
   }
 
   @override
   Future<void> stop() async {
     await _stopRenderer();
-    _playing = false;
-    _setState(BackendProcessingState.idle);
-    _change();
+    playing = false;
+    setProcessingState(BackendProcessingState.idle);
+    change();
   }
 
   Future<void> _stopRenderer() async {
@@ -286,59 +149,43 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     } catch (_) {}
   }
 
+  @protected
+  @override
+  Future<void> stopForEmptyList() async {
+    await _stopRenderer();
+    setProcessingState(BackendProcessingState.idle);
+  }
+
   @override
   Future<void> seek(Duration position, {int? index, bool? play}) async {
-    final target = index ?? _index;
-    if (target >= 0 && target != _loadedIndex) {
-      await _loadIndex(target, play: play ?? _playing);
+    final target = index ?? this.index;
+    if (target >= 0 && target != loadedIndex) {
+      await loadIndex(target, play: play ?? playing);
     }
     try {
       await _api.seek(_udn, TimePosition(seconds: position.inSeconds));
     } catch (_) {}
-    _position = position;
-    _emitPos(position);
-    _change();
+    this.position = position;
+    emitPos(position);
+    change();
   }
 
   @override
   Future<void> seekToNext() async {
-    final n = _nextIndex();
-    if (n != null) await _loadIndex(n, play: _playing || _state == BackendProcessingState.ready);
+    final n = nextIndex();
+    if (n != null) {
+      await loadIndex(n,
+          play: playing || processingState == BackendProcessingState.ready);
+    }
   }
 
   @override
   Future<void> seekToPrevious() async {
-    if (_index > 0) {
-      await _loadIndex(_index - 1, play: _playing);
+    if (index > 0) {
+      await loadIndex(index - 1, play: playing);
     } else {
       await seek(Duration.zero);
     }
-  }
-
-  int? _nextIndex() {
-    if (_items.isEmpty) return null;
-    if (_shuffle && _items.length > 1) {
-      int n;
-      do {
-        n = _rng.nextInt(_items.length);
-      } while (n == _index);
-      return n;
-    }
-    if (_index + 1 < _items.length) return _index + 1;
-    if (_repeatAll) return 0;
-    return null;
-  }
-
-  @override
-  Future<void> setShuffleEnabled(bool enabled) async {
-    _shuffle = enabled;
-    _change();
-  }
-
-  @override
-  Future<void> setRepeatAll(bool enabled) async {
-    _repeatAll = enabled;
-    _change();
   }
 
   @override
@@ -367,32 +214,32 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       final info =
           await _api.getPlaybackInfo(_udn).timeout(const Duration(seconds: 2));
       _pollFailures = 0;
-      _position = Duration(seconds: info.position.seconds);
-      _emitPos(_position);
+      position = Duration(seconds: info.position.seconds);
+      emitPos(position);
       if (info.duration.seconds > 0) {
-        _duration = Duration(seconds: info.duration.seconds);
-        _emitDur(_duration);
+        duration = Duration(seconds: info.duration.seconds);
+        emitDur(duration);
       }
       // Latch once we've genuinely reached the end while playing — robust to
       // renderers that reset position to 0 when they stop at track end.
-      final dur = _duration;
+      final dur = duration;
       if (dur != null &&
           dur > Duration.zero &&
-          _position >= dur - const Duration(seconds: 5)) {
+          position >= dur - const Duration(seconds: 5)) {
         _reachedNearEnd = true;
       }
       switch (info.state) {
         case TransportState.playing:
-          _playing = true;
+          playing = true;
           _advancing = false;
           _confirmedPlaying = true;
-          _setState(BackendProcessingState.ready);
+          setProcessingState(BackendProcessingState.ready);
           break;
         case TransportState.paused:
-          _playing = false;
+          playing = false;
           break;
         case TransportState.transitioning:
-          _setState(BackendProcessingState.buffering);
+          setProcessingState(BackendProcessingState.buffering);
           break;
         case TransportState.stopped:
           await _onRendererStopped();
@@ -400,7 +247,7 @@ class DlnaPlaybackBackend implements PlaybackBackend {
         case TransportState.noMediaPresent:
           break;
       }
-      _change();
+      change();
     } catch (_) {
       // A single failure is usually a transient renderer/network blip — keep
       // polling. But a renderer that's genuinely gone (TV off, Wi-Fi dropped)
@@ -408,10 +255,8 @@ class DlnaPlaybackBackend implements PlaybackBackend {
       // the handler can fall back to local playback.
       if (!_disposed && ++_pollFailures >= _kMaxPollFailures) {
         _stopPolling();
-        if (!_rendererLost.isClosed) {
-          _rendererLost
-              .add('Lost connection to the cast device — back on this phone');
-        }
+        emitRendererLost(
+            'Lost connection to the cast device — back on this phone');
       }
     } finally {
       _polling = false;
@@ -425,71 +270,22 @@ class DlnaPlaybackBackend implements PlaybackBackend {
     // Without these guards a just-loaded track skips after a few seconds.
     if (_advancing || !_confirmedPlaying || !_reachedNearEnd) return;
     _advancing = true;
-    final n = _nextIndex();
+    final n = nextIndex();
     if (n != null) {
-      await _loadIndex(n, play: true); // _advancing cleared when poll sees PLAYING
+      await loadIndex(n, play: true); // _advancing cleared when poll sees PLAYING
     } else {
-      _playing = false;
+      playing = false;
       _advancing = false;
-      _setState(BackendProcessingState.completed);
+      setProcessingState(BackendProcessingState.completed);
       _stopPolling();
     }
   }
 
-  // ── Synchronous state ──
+  @protected
   @override
-  bool get playing => _playing;
-  @override
-  bool get shuffleEnabled => _shuffle;
-  @override
-  bool get repeatAll => _repeatAll;
-  @override
-  Duration get position => _position;
-  @override
-  Duration get bufferedPosition => _position; // DLNA exposes no buffer info
-  @override
-  double get speed => 1.0;
-  @override
-  Duration? get duration => _duration;
-  @override
-  int? get currentIndex => _index < 0 ? null : _index;
-  @override
-  BackendProcessingState get processingState => _state;
-
-  // ── Streams ──
-  @override
-  Stream<int?> get currentIndexStream => _indexSubject.stream;
-  @override
-  Stream<Duration> get positionStream => _positionSubject.stream;
-  @override
-  Stream<Duration?> get durationStream => _durationSubject.stream;
-  @override
-  Stream<BackendProcessingState> get processingStateStream =>
-      _stateSubject.stream;
-  @override
-  Stream<void> get changeStream => _changeController.stream;
-
-  @override
-  Stream<String> get rendererLostStream => _rendererLost.stream;
-
-  // ── Local-only capabilities (N/A while casting) ──
-  @override
-  bool get supportsEqualizer => false;
-  @override
-  AndroidEqualizer? get equalizer => null;
-  @override
-  int? get androidAudioSessionId => null;
-
-  @override
-  Future<void> dispose() async {
+  Future<void> disposeRenderer() async {
     _disposed = true;
     _stopPolling();
     await _stopRenderer();
-    await _indexSubject.close();
-    await _positionSubject.close();
-    await _durationSubject.close();
-    await _stateSubject.close();
-    await _changeController.close();
-    await _rendererLost.close();
   }
 }
