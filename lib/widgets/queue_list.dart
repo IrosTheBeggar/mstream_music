@@ -11,43 +11,25 @@ import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 
-/// Combined snapshot of the queue, the index of the currently-playing slot,
-/// and whether playback is running — so a row can render the list, highlight
-/// the active track, and show a live EQ / paused badge over its art.
+/// Active-row state — which queue slot is playing, and whether it's playing —
+/// pushed down to each row (see [QueueList.build]) so a track advancing rebuilds
+/// only the two rows whose highlight flips, never the ReorderableListView /
+/// Slidable rows above them (which used to hitch the whole queue on every
+/// advance, because the active flag lived in the list-wide snapshot).
 ///
-/// The active row is keyed off [activeIndex] (the queue position, from
-/// PlaybackState.queueIndex) rather than by matching the playing MediaItem:
-/// MediaItem.== is id-based, so a queue that legitimately holds the same track
-/// id more than once would light up every matching row at once. A position is
-/// unambiguous.
-class _QueueSnapshot {
-  final List<MediaItem> queue;
-  final int? activeIndex;
-  final bool playing;
-  const _QueueSnapshot(this.queue, this.activeIndex, this.playing);
-}
-
-/// Memoised as a single broadcast subject (mirrors player_panel's _mediaPos):
-/// the queue list is rebuilt by the panel's drag AnimationController, so a fresh
-/// combineLatest per build would re-subscribe three handler streams every frame.
-/// One shared upstream subscription, replayed to each new listener so a freshly
-/// (re)mounted list paints the current queue immediately.
-final Stream<_QueueSnapshot> _queueStream = BehaviorSubject<_QueueSnapshot>()
-  ..addStream(Rx.combineLatest3<List<MediaItem>, int?, bool, _QueueSnapshot>(
-    MediaManager().audioHandler.queue,
-    // The playing queue *position* drives the active highlight (not the playing
-    // MediaItem — MediaItem.== is id-based, so a queue holding the same track id
-    // twice would light up every matching row). queueIndex updates off the same
-    // playbackEvent that drives mediaItem, so the highlight is just as prompt;
-    // distinct() so the position ticks below don't rebuild the queue.
-    MediaManager().audioHandler.playbackState.map((s) => s.queueIndex).distinct(),
-    // Only the play/pause flag from playbackState, distinct() — playbackState
-    // re-emits on every position tick (several times a second), and we don't
-    // want that rebuilding the whole reorderable queue (jank). The queue only
-    // cares whether playback is running, for the active-row EQ/pause badge.
-    MediaManager().audioHandler.playbackState.map((s) => s.playing).distinct(),
-    (q, activeIndex, playing) => _QueueSnapshot(q, activeIndex, playing),
-  ));
+/// queueIndex is the playing *position*, not the playing MediaItem: MediaItem.==
+/// is id-based, so a queue that legitimately holds the same track id more than
+/// once would light up every matching row at once. A position is unambiguous.
+///
+/// Memoised as a single broadcast subject + distinct() so the per-position-tick
+/// playbackState emissions (several a second) don't churn it.
+final BehaviorSubject<({int? index, bool playing})> _activeStream =
+    BehaviorSubject<({int? index, bool playing})>()
+      ..addStream(MediaManager()
+          .audioHandler
+          .playbackState
+          .map((s) => (index: s.queueIndex, playing: s.playing))
+          .distinct());
 
 Widget _artFallback() => albumArtFallback(iconSize: 20);
 
@@ -63,12 +45,15 @@ class QueueList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return StreamBuilder<_QueueSnapshot>(
-      stream: _queueStream,
+    return StreamBuilder<List<MediaItem>>(
+      // The list depends ONLY on the queue, so a track advancing (which just
+      // moves the active highlight — handled per-row via _activeStream below)
+      // never rebuilds the ReorderableListView. queue is already a
+      // BehaviorSubject on the handler.
+      stream: MediaManager().audioHandler.queue,
+      initialData: MediaManager().audioHandler.queue.valueOrNull,
       builder: (context, snapshot) {
-        final queue = snapshot.data?.queue ?? const <MediaItem>[];
-        final activeIndex = snapshot.data?.activeIndex;
-        final playing = snapshot.data?.playing ?? false;
+        final queue = snapshot.data ?? const <MediaItem>[];
 
         if (queue.isEmpty) {
           return Center(
@@ -121,8 +106,18 @@ class QueueList extends StatelessWidget {
           },
           itemBuilder: (BuildContext context, int index) {
             final item = queue[index];
-            final active = index == activeIndex;
             final downloaded = item.extras?['localPath'] != null;
+
+            // This row's (active, playing) from the shared active-state stream,
+            // distinct() per row so only the two rows whose active flag actually
+            // flips rebuild on a track change (not the whole visible list).
+            ({bool active, bool playing}) rowState(
+                ({int? index, bool playing}) s) {
+              final on = s.index == index;
+              return (active: on, playing: on && s.playing);
+            }
+
+            final activeNow = _activeStream.valueOrNull;
 
             // Remove this row from the queue. Re-resolves the row's CURRENT
             // position at dismiss time by IDENTITY: the build-time index can be
@@ -186,16 +181,30 @@ class QueueList extends StatelessWidget {
                   ),
                 ],
               ),
-              child: _QueueRow(
-                item: item,
-                index: index,
-                active: active,
-                playing: playing,
-                downloaded: downloaded,
-                onTap: () {
-                  MediaManager().audioHandler.skipToQueueItem(index);
-                  MediaManager().audioHandler.play();
-                },
+              // RepaintBoundary so a highlight flip repaints only this row's
+              // layer — the panel wraps QueueList in one RepaintBoundary, so
+              // without this every advance would re-raster all visible rows.
+              child: RepaintBoundary(
+                child: StreamBuilder<({bool active, bool playing})>(
+                  initialData: activeNow == null
+                      ? (active: false, playing: false)
+                      : rowState(activeNow),
+                  stream: _activeStream.map(rowState).distinct(),
+                  builder: (context, snap) {
+                    final st = snap.data ?? (active: false, playing: false);
+                    return _QueueRow(
+                      item: item,
+                      index: index,
+                      active: st.active,
+                      playing: st.playing,
+                      downloaded: downloaded,
+                      onTap: () {
+                        MediaManager().audioHandler.skipToQueueItem(index);
+                        MediaManager().audioHandler.play();
+                      },
+                    );
+                  },
+                ),
               ),
             );
           },
