@@ -33,11 +33,21 @@ class VisualizerTranscoder(
     private val loadPreset: (Long, String, Boolean) -> Unit,
     private val setTuning: (Long, FloatArray) -> Unit,
     private val dispose: (Long) -> Unit,
+    // The just-cancelled previous transcode, if any. We join it (bounded) before
+    // allocating our own hardware encoder so two never coexist — see run().
+    private val predecessor: Thread? = null,
     private val onDone: (Boolean, String?) -> Unit,
 ) : Thread("mstream-viz-transcode") {
 
     @Volatile private var cancelled = false
-    fun cancelTranscode() { cancelled = true }
+
+    /** Request cancellation. Sets the flag *and* interrupts the thread, so one
+     *  parked in the pacing sleep (or a predecessor join) wakes immediately to
+     *  observe it instead of finishing the current sleep first. */
+    fun cancelTranscode() {
+        cancelled = true
+        interrupt()
+    }
 
     override fun run() {
         var decoder: AudioDecoder? = null
@@ -49,6 +59,26 @@ class VisualizerTranscoder(
             val firstChunk =
                 decoder.read() ?: throw IllegalStateException("no audio decoded")
             val startPtsUs = firstChunk.presentationTimeUs
+
+            // A just-cancelled previous transcode may still hold the hardware
+            // H.264 encoder, and many SoCs allow only one AVC encoder instance —
+            // so allocating ours now could fail its configure(). Wait (bounded)
+            // for it to release first. cancelTranscode() interrupts, so this is
+            // normally instant; the timeout guards a predecessor wedged in a
+            // blocking decode. Opening our decoder above already overlapped with
+            // its teardown, so the join usually returns with no extra delay.
+            predecessor?.let {
+                try {
+                    it.join(PREDECESSOR_JOIN_TIMEOUT_MS)
+                } catch (_: InterruptedException) {
+                    // we were cancelled while waiting — the check below bails
+                    // out before we grab the encoder
+                }
+            }
+            if (cancelled) {
+                onDone(false, "cancelled")
+                return
+            }
 
             video = VideoEncoder(
                 width = width,
@@ -113,8 +143,14 @@ class VisualizerTranscoder(
                 pcm = decoder.read()
             }
 
-            aac?.finish()
-            video.drain(true) // signal EOS + flush remaining video
+            // On cancel, skip the encoders' EOS flush: the output is about to be
+            // discarded, and we want to release the hardware encoder ASAP so a
+            // replacement transcode's predecessor join returns quickly. Still
+            // close the sink, so its open segment file / muxer isn't leaked.
+            if (!cancelled) {
+                aac?.finish()
+                video.drain(true) // signal EOS + flush remaining video
+            }
             val out = sink.finish()
             onDone(!cancelled, if (cancelled) "cancelled" else out)
         } catch (e: Throwable) {
@@ -152,5 +188,8 @@ class VisualizerTranscoder(
         private const val TAG = "mstream/viz-xcode"
         // When pacing a live cast, stay at most this far ahead of realtime.
         private const val PACING_LEAD_US = 5_000_000L
+        // Cap the wait for a cancelled predecessor to release its hardware
+        // encoder before we allocate ours (see run()).
+        private const val PREDECESSOR_JOIN_TIMEOUT_MS = 3_000L
     }
 }

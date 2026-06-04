@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val TAG = "mstream/viz"
 private const val CHANNEL = "mstream/visualizer"
+// Bounded wait for the transcode thread to wind down on plugin teardown.
+private const val TRANSCODE_JOIN_TIMEOUT_MS = 1_000L
 
 class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
@@ -66,7 +68,16 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        transcoder?.cancelTranscode()
+        // Cancel and (briefly) join the transcode so it can't outlive the plugin
+        // still holding an EGL context + hardware encoder. Bounded like the
+        // render thread's shutdown so a wedged transcode can't hang teardown.
+        transcoder?.let {
+            it.cancelTranscode()
+            try {
+                it.join(TRANSCODE_JOIN_TIMEOUT_MS)
+            } catch (_: InterruptedException) {
+            }
+        }
         transcoder = null
         teardown()
         channel?.setMethodCallHandler(null)
@@ -165,7 +176,13 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             return
         }
 
-        transcoder?.cancelTranscode()
+        // Hand the outgoing transcode to the new one as its predecessor: the new
+        // thread waits for it to release the hardware encoder before grabbing its
+        // own (cancelTranscode interrupts, so the wind-down is prompt). We must
+        // NOT join here — this is the main thread and the outgoing decode may
+        // briefly block.
+        val previous = transcoder
+        previous?.cancelTranscode()
         val main = Handler(Looper.getMainLooper())
         var created: VisualizerTranscoder? = null
         val t = VisualizerTranscoder(
@@ -185,6 +202,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             loadPreset = ::nativeLoadPresetData,
             setTuning = ::nativeSetTuning,
             dispose = ::nativeDispose,
+            predecessor = previous,
         ) { ok, payload ->
             main.post {
                 // Only clear the handle if it still points at THIS transcode — a
