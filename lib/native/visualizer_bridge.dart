@@ -129,11 +129,12 @@ class VisualizerBridge {
     }
   }
 
-  /// Visualizer-cast Phase 0a spike: ask Kotlin to transcode [source] (a local
-  /// file path or http URL) into an MP4 at [output] of the visualizer reacting
-  /// to the track, rendered with the in-memory [preset]/shader text. Caps at
-  /// [maxMs] of audio so the test stays quick. Returns the output path on
-  /// success, or null on failure. (Audio + video; live HLS streaming next.)
+  /// Ask Kotlin to transcode [source] (a local file path or http URL) into a
+  /// live MPEG-TS/HLS stream in the [output] directory — the app's visualizer
+  /// reacting to the track, rendered with the in-memory [preset]/shader text.
+  /// [maxMs] caps the transcoded duration (0 = whole track). Returns the
+  /// playlist (`.m3u8`) path, available as soon as transcoding starts (segments
+  /// keep being written in the background), or null on failure.
   static Future<String?> startTranscode({
     required String source,
     required String output,
@@ -142,9 +143,8 @@ class VisualizerBridge {
     int width = 1280,
     int height = 720,
     int fps = 30,
-    int maxMs = 20000,
+    int maxMs = 0,
     List<double>? tuning,
-    String mode = 'mp4',
   }) async {
     try {
       return await _channel.invokeMethod<String>('startTranscode', {
@@ -157,7 +157,6 @@ class VisualizerBridge {
         'fps': fps,
         'maxMs': maxMs,
         'tuning': tuning != null ? Float32List.fromList(tuning) : null,
-        'mode': mode, // 'mp4' (single file) or 'hls' (segments in `output` dir)
       });
     } on PlatformException catch (e) {
       // ignore: avoid_print

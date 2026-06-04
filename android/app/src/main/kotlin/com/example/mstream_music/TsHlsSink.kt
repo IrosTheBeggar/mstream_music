@@ -2,6 +2,7 @@ package com.example.mstream_music
 
 import android.media.MediaCodec
 import android.media.MediaFormat
+import android.util.Log
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -16,10 +17,9 @@ import kotlin.math.ceil
  * `.ts` segments (each starting at a keyframe with PAT/PMT) plus an `index.m3u8`
  * playlist in [dir]. Hand-written because Android has no live TS muxer.
  *
- * This first cut writes a complete VOD playlist (ENDLIST on [finish]); the
- * transcoder runs to completion before the playlist is cast. Making it a *live*
- * (incrementally-written, cast-while-growing) playlist is a follow-up — this
- * step exists to validate the muxer + Chromecast HLS playback.
+ * The playlist is written incrementally as a live EVENT playlist: each completed
+ * segment is published as soon as it closes (ENDLIST only on [finish]), so the
+ * receiver can start casting while the transcode is still running.
  *
  * Assumes the video has no B-frames (PTS == DTS), which holds for our encoder.
  */
@@ -47,8 +47,9 @@ class TsHlsSink(private val dir: String) : AvSink {
     private var lastVideoUs = 0L
     private val segments = ArrayList<Pair<String, Double>>() // name, duration (s)
     // Audio (pts90, ADTS+AAC) produced before the first segment opens; flushed
-    // into it so audio and video both start near PTS 0.
-    private val pendingAudio = ArrayList<Pair<Long, ByteArray>>()
+    // into it so audio and video both start near PTS 0. ArrayDeque so the
+    // over-capacity trim drops the oldest in O(1) (vs ArrayList.removeAt(0)).
+    private val pendingAudio = ArrayDeque<Pair<Long, ByteArray>>()
     // H.264 Access Unit Delimiter (NAL type 9). The Cast receiver's TS
     // transmuxer (mux.js) uses AUDs to find access-unit boundaries; MediaCodec
     // doesn't emit them, so prepend one to every frame.
@@ -57,6 +58,11 @@ class TsHlsSink(private val dir: String) : AvSink {
     // (the muxer runs on a single thread) — at 1080p this avoids ~6k packet
     // allocations/sec (~16k at 4K). Every byte is overwritten per packet.
     private val tsPacket = ByteArray(188)
+    // Reused scratch for the current PES (header + ES), grown to the largest
+    // keyframe seen and kept — so we don't allocate a fresh hundreds-of-KB array
+    // per video frame. Single-threaded, like tsPacket. internal (not private) so
+    // the unit tests can read the bytes buildPesInto wrote.
+    internal var pesBuf = ByteArray(64 * 1024)
 
     override fun init(audioEnabled: Boolean) {
         this.audioEnabled = audioEnabled
@@ -114,9 +120,10 @@ class TsHlsSink(private val dir: String) : AvSink {
         // keyframe keeps each segment independently decodable (decoders tolerate
         // repeats). Passed as parts so we don't allocate a combined frame array.
         val sps = if (keyframe) spsPps else null
-        val pes = if (sps != null) buildPes(0xE0, pts90, pts90, audNal, sps, frame)
-        else buildPes(0xE0, pts90, pts90, audNal, frame)
-        writePes(s, VIDEO_PID, videoCc, pes, pts90)
+        // len first: buildPesInto may regrow pesBuf, so read pesBuf only after.
+        val len = if (sps != null) buildPesInto(0xE0, pts90, pts90, audNal, sps, frame)
+        else buildPesInto(0xE0, pts90, pts90, audNal, frame)
+        writePes(s, VIDEO_PID, videoCc, pesBuf, len, pts90)
         lastVideoUs = ptsUs
     }
 
@@ -134,10 +141,11 @@ class TsHlsSink(private val dir: String) : AvSink {
             pendingAudio.add(Pair(pts90, es))
             // Defensive: if no keyframe ever opens a segment (video wedged), don't
             // grow without bound — keep only the most recent frames.
-            while (pendingAudio.size > MAX_PENDING_AUDIO) pendingAudio.removeAt(0)
+            while (pendingAudio.size > MAX_PENDING_AUDIO) pendingAudio.removeFirst()
             return
         }
-        writePes(s, AUDIO_PID, audioCc, buildPes(0xC0, pts90, null, es), null)
+        val len = buildPesInto(0xC0, pts90, null, es)
+        writePes(s, AUDIO_PID, audioCc, pesBuf, len, null)
     }
 
     override fun finish(): String {
@@ -167,7 +175,21 @@ class TsHlsSink(private val dir: String) : AvSink {
         // half-written playlist.
         val tmp = File(dir, "$PLAYLIST.tmp")
         tmp.writeText(sb.toString())
-        tmp.renameTo(File(dir, PLAYLIST))
+        val dst = File(dir, PLAYLIST)
+        if (!tmp.renameTo(dst)) {
+            // Rename can fail (returns false rather than throwing). Fall back to a
+            // single-write overwrite of the in-memory content: one write() call,
+            // so a concurrent HTTP reader is far less likely to catch a partial
+            // file than the previous chunked copyTo (open-truncate + 8 KiB loop).
+            // Not atomic — the rename above is — but it keeps the live playlist
+            // updating instead of freezing at the last good version.
+            try {
+                dst.writeText(sb.toString())
+            } catch (e: Throwable) {
+                Log.w(TAG, "playlist publish failed", e)
+            }
+            tmp.delete()
+        }
     }
 
     // ── segmenting ──
@@ -186,7 +208,8 @@ class TsHlsSink(private val dir: String) : AvSink {
         // Flush audio that arrived before this (first) segment opened.
         if (pendingAudio.isNotEmpty()) {
             for ((pts90, es) in pendingAudio) {
-                writePes(s, AUDIO_PID, audioCc, buildPes(0xC0, pts90, null, es), null)
+                val len = buildPesInto(0xC0, pts90, null, es)
+                writePes(s, AUDIO_PID, audioCc, pesBuf, len, null)
             }
             pendingAudio.clear()
         }
@@ -202,60 +225,73 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     // ── PES / TS packetization ──
+    //
+    // The pure byte-encoding helpers below — and the PSI / ADTS / CRC ones
+    // further down — are `internal` rather than `private` so the JVM unit tests
+    // in src/test can exercise this bit-level packing directly (it has no Android
+    // dependencies). There is no other caller in the module.
 
-    // [esParts] are concatenated as the PES payload — passed as parts (e.g.
-    // AUD + SPS/PPS + frame) so callers don't allocate a combined ES array.
-    private fun buildPes(streamId: Int, pts90: Long, dts90: Long?, vararg esParts: ByteArray): ByteArray {
+    // Build a PES packet — header from the timing args + [esParts] as the ES
+    // payload — into the reused [pesBuf], returning its length. Callers hand
+    // pesBuf + len to [writePes]. Parts are passed separately (AUD + SPS/PPS +
+    // frame) so we never materialise a combined ES array.
+    internal fun buildPesInto(streamId: Int, pts90: Long, dts90: Long?, vararg esParts: ByteArray): Int {
         var esLen = 0
         for (p in esParts) esLen += p.size
-        val out = ByteArrayOutputStream(esLen + 19)
-        out.write(0x00); out.write(0x00); out.write(0x01) // start code prefix
-        out.write(streamId)
         val ptsDtsBytes = if (dts90 != null) 10 else 5
+        val total = 9 + ptsDtsBytes + esLen // 3 startcode +1 id +2 len +1 +1 +1 +PTS/DTS
+        if (pesBuf.size < total) pesBuf = ByteArray(total) // grow + keep for reuse
+        val b = pesBuf
+        var o = 0
+        b[o++] = 0x00; b[o++] = 0x00; b[o++] = 0x01 // start code prefix
+        b[o++] = streamId.toByte()
         // PES_packet_length: video uses 0 (unbounded — frames can exceed 64 KB);
         // audio carries its real length.
         val pesLen = if (streamId == 0xE0) 0 else (3 + ptsDtsBytes + esLen)
-        out.write((pesLen ushr 8) and 0xFF); out.write(pesLen and 0xFF)
-        out.write(0x80) // '10' marker, no scrambling/priority flags
-        out.write(if (dts90 != null) 0xC0 else 0x80) // PTS+DTS or PTS-only flag
-        out.write(ptsDtsBytes) // PES_header_data_length
-        if (dts90 != null) {
-            out.write(encodeTs(pts90, 0x3))
-            out.write(encodeTs(dts90, 0x1))
-        } else {
-            out.write(encodeTs(pts90, 0x2))
-        }
-        for (p in esParts) out.write(p)
-        return out.toByteArray()
+        b[o++] = ((pesLen ushr 8) and 0xFF).toByte()
+        b[o++] = (pesLen and 0xFF).toByte()
+        b[o++] = 0x80.toByte() // '10' marker, no scrambling/priority flags
+        b[o++] = (if (dts90 != null) 0xC0 else 0x80).toByte() // PTS+DTS or PTS-only
+        b[o++] = ptsDtsBytes.toByte() // PES_header_data_length
+        o = encodeTsInto(b, o, pts90, if (dts90 != null) 0x3 else 0x2)
+        if (dts90 != null) o = encodeTsInto(b, o, dts90, 0x1)
+        for (p in esParts) { System.arraycopy(p, 0, b, o, p.size); o += p.size }
+        return o
     }
 
     // 5-byte PTS/DTS field with the given 4-bit prefix nibble.
-    private fun encodeTs(value: Long, prefix: Int): ByteArray {
-        val v = value and 0x1FFFFFFFFL
-        return byteArrayOf(
-            (((prefix and 0xF) shl 4) or (((v ushr 30).toInt() and 0x7) shl 1) or 1).toByte(),
-            ((v ushr 22) and 0xFF).toByte(),
-            ((((v ushr 15) and 0x7F) shl 1) or 1).toByte(),
-            ((v ushr 7) and 0xFF).toByte(),
-            (((v and 0x7F) shl 1) or 1).toByte(),
-        )
+    internal fun encodeTs(value: Long, prefix: Int): ByteArray {
+        val out = ByteArray(5)
+        encodeTsInto(out, 0, value, prefix)
+        return out
     }
 
-    // Emit [pes] as 188-byte TS packets on [pid]. The first packet sets PUSI; if
-    // [pcr90] != null it carries a PCR in its adaptation field; the last packet
-    // is padded with an adaptation-field stuffing region to fill 188.
-    private fun writePes(out: OutputStream, pid: Int, cc: IntArray, pes: ByteArray, pcr90: Long?) {
+    // Write the 5-byte PTS/DTS field into [dst] at [off]; returns off + 5.
+    private fun encodeTsInto(dst: ByteArray, off: Int, value: Long, prefix: Int): Int {
+        val v = value and 0x1FFFFFFFFL
+        dst[off] = (((prefix and 0xF) shl 4) or (((v ushr 30).toInt() and 0x7) shl 1) or 1).toByte()
+        dst[off + 1] = ((v ushr 22) and 0xFF).toByte()
+        dst[off + 2] = ((((v ushr 15) and 0x7F) shl 1) or 1).toByte()
+        dst[off + 3] = ((v ushr 7) and 0xFF).toByte()
+        dst[off + 4] = (((v and 0x7F) shl 1) or 1).toByte()
+        return off + 5
+    }
+
+    // Emit [pes] (its first [len] bytes) as 188-byte TS packets on [pid]. The
+    // first packet sets PUSI; if [pcr90] != null it carries a PCR in its
+    // adaptation field; the last packet is padded with adaptation-field stuffing.
+    internal fun writePes(out: OutputStream, pid: Int, cc: IntArray, pes: ByteArray, len: Int, pcr90: Long?) {
         var pos = 0
         var first = true
         val pkt = tsPacket // reused; every byte below is overwritten per packet
-        while (pos < pes.size) {
+        while (pos < len) {
             pkt[0] = 0x47
             pkt[1] = (((if (first) 0x40 else 0x00)) or ((pid ushr 8) and 0x1F)).toByte()
             pkt[2] = (pid and 0xFF).toByte()
             val counter = cc[0] and 0x0F
             cc[0] = (cc[0] + 1) and 0x0F
 
-            val remaining = pes.size - pos
+            val remaining = len - pos
             val wantPcr = first && pcr90 != null
             val afControl: Int
             if (!wantPcr && remaining >= 184) {
@@ -307,7 +343,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     // ── PSI tables ──
 
-    private fun buildPat(): ByteArray {
+    internal fun buildPat(): ByteArray {
         val body = ByteArrayOutputStream()
         body.write(0x00); body.write(0x01) // transport_stream_id = 1
         body.write(0xC1) // reserved(11) + version(0) + current_next(1)
@@ -318,7 +354,7 @@ class TsHlsSink(private val dir: String) : AvSink {
         return wrapSection(0x00, body.toByteArray())
     }
 
-    private fun buildPmt(): ByteArray {
+    internal fun buildPmt(): ByteArray {
         val body = ByteArrayOutputStream()
         body.write(0x00); body.write(0x01) // program_number = 1
         body.write(0xC1)
@@ -340,7 +376,7 @@ class TsHlsSink(private val dir: String) : AvSink {
     }
 
     // Prepend table_id + section_length header and append the MPEG CRC-32.
-    private fun wrapSection(tableId: Int, body: ByteArray): ByteArray {
+    internal fun wrapSection(tableId: Int, body: ByteArray): ByteArray {
         val sectionLength = body.size + 4 // + CRC
         val head = ByteArrayOutputStream()
         head.write(tableId)
@@ -358,7 +394,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 
     // ── ADTS ──
 
-    private fun adtsHeader(frameLen: Int): ByteArray {
+    internal fun adtsHeader(frameLen: Int): ByteArray {
         val full = frameLen + 7
         val profile = 1 // AAC-LC (audio object type 2 → ADTS profile 1)
         return byteArrayOf(
@@ -380,13 +416,14 @@ class TsHlsSink(private val dir: String) : AvSink {
         return b
     }
 
-    private fun freqIndex(rate: Int): Int = when (rate) {
+    internal fun freqIndex(rate: Int): Int = when (rate) {
         96000 -> 0; 88200 -> 1; 64000 -> 2; 48000 -> 3; 44100 -> 4; 32000 -> 5
         24000 -> 6; 22050 -> 7; 16000 -> 8; 12000 -> 9; 11025 -> 10; 8000 -> 11
         7350 -> 12; else -> 4
     }
 
     companion object {
+        private const val TAG = "mstream/viz-xcode"
         private const val PAT_PID = 0x0000
         private const val PMT_PID = 0x1000
         private const val VIDEO_PID = 0x0100
@@ -405,7 +442,7 @@ class TsHlsSink(private val dir: String) : AvSink {
 }
 
 /** MPEG CRC-32 (poly 0x04C11DB7, init 0xFFFFFFFF, MSB-first) for PSI sections. */
-private object Crc32Mpeg {
+internal object Crc32Mpeg {
     private val table = IntArray(256)
 
     init {

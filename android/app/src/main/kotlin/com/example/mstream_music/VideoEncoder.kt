@@ -14,9 +14,9 @@ import java.nio.ByteBuffer
  * render thread draws each frame into [inputSurface] (an EGL window surface; see
  * the C++ `nativeRenderFrameAt`, which stamps the presentation time the encoder
  * reads), and encoded access units are delivered to [onOutput] when [drain] is
- * called. The compressed video is then muxed with the song's AAC audio — to a
- * local MP4 for the Phase 0a spike, and to a live MPEG-TS/HLS stream once that's
- * proven — and served to the cast renderer via LocalMediaServer.
+ * called. The compressed video is then muxed with the song's AAC audio into a
+ * live MPEG-TS/HLS stream ([TsHlsSink]) and served to the cast renderer via
+ * LocalMediaServer.
  *
  * Lifecycle: construct (configures + starts the codec, exposes [inputSurface]),
  * call [drain] from the render loop as frames are produced, [drain(endOfStream
@@ -31,6 +31,9 @@ class VideoEncoder(
     private val onOutput: (ByteBuffer, MediaCodec.BufferInfo) -> Unit,
 ) {
     private var codec: MediaCodec? = null
+    // Reused across drain() calls (single-threaded; dequeueOutputBuffer fully
+    // overwrites it each time) instead of allocating one per drained frame.
+    private val drainInfo = MediaCodec.BufferInfo()
 
     /** EGL-renderable surface the visualizer draws into. Valid until [release]. */
     val inputSurface: Surface
@@ -121,7 +124,7 @@ class VideoEncoder(
     fun drain(endOfStream: Boolean = false) {
         val c = codec ?: return
         if (endOfStream) c.signalEndOfInputStream()
-        val info = MediaCodec.BufferInfo()
+        val info = drainInfo
         while (true) {
             val index = c.dequeueOutputBuffer(info, if (endOfStream) TIMEOUT_US else 0)
             when {

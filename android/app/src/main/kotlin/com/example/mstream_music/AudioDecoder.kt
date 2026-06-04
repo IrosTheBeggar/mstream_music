@@ -9,9 +9,8 @@ import android.media.MediaFormat
  * 16-bit PCM. Pull-based: call [read] repeatedly until it returns null (EOS).
  *
  * Part of the visualizer-cast transcode — the PCM drives the off-screen
- * visualizer (and, once audio muxing lands, is re-encoded to AAC for the cast
- * stream), all on one presentation-time timeline so audio and the rendered
- * video stay in sync.
+ * visualizer and is re-encoded to AAC for the cast stream, all on one
+ * presentation-time timeline so audio and the rendered video stay in sync.
  */
 class AudioDecoder(source: String) {
     private val extractor = MediaExtractor()

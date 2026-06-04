@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val TAG = "mstream/viz"
 private const val CHANNEL = "mstream/visualizer"
+// Bounded wait for the transcode thread to wind down on plugin teardown.
+private const val TRANSCODE_JOIN_TIMEOUT_MS = 1_000L
 
 class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
@@ -66,7 +68,27 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        transcoder?.cancelTranscode()
+        // Cancel and (briefly) join the transcode so it can't outlive the plugin
+        // still holding an EGL context + hardware encoder. Bounded like the
+        // render thread's shutdown so a wedged transcode can't hang teardown.
+        transcoder?.let {
+            it.cancelTranscode()
+            try {
+                it.join(TRANSCODE_JOIN_TIMEOUT_MS)
+            } catch (_: InterruptedException) {
+            }
+            // A transcode wedged in a non-interruptible blocking native call (a
+            // stalled remote source) can't be force-stopped — interrupt() won't
+            // free it. The bounded join keeps teardown from hanging, but the
+            // thread then briefly outlives the plugin, still holding its encoder +
+            // EGL context until its I/O returns. It self-releases via its finally
+            // (its native ctx is per-transcode, so no use-after-teardown); log the
+            // window so it's visible rather than a silent leak.
+            if (it.isAlive) {
+                Log.w(TAG, "transcode still running after ${TRANSCODE_JOIN_TIMEOUT_MS}ms " +
+                    "join; it will release its encoder when its blocking I/O returns")
+            }
+        }
         transcoder = null
         teardown()
         channel?.setMethodCallHandler(null)
@@ -131,9 +153,11 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         realAudio = null
     }
 
-    // Visualizer-cast Phase 0a spike: transcode a track to an MP4 of the
-    // visualizer reacting to it (off-screen, on its own thread). Replies with
-    // the output path on success. See VisualizerTranscoder.
+    // Visualizer cast: transcode a track into a live MPEG-TS/HLS stream of the
+    // visualizer reacting to it (off-screen, on its own thread), writing segments
+    // into the `output` directory. Replies with the playlist path right away so
+    // the caller can start casting while transcoding continues. See
+    // VisualizerTranscoder.
     private fun handleStartTranscode(call: MethodCall, result: MethodChannel.Result) {
         val source = call.argument<String>("source")
         val output = call.argument<String>("output")
@@ -145,7 +169,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
         val h = (call.argument<Int>("height") ?: 720).coerceAtLeast(2)
         val engine = call.argument<Int>("engine") ?: 0
         val fps = (call.argument<Int>("fps") ?: 30).coerceIn(1, 60)
-        val maxMs = (call.argument<Int>("maxMs") ?: 20_000).toLong()
+        val maxMs = (call.argument<Int>("maxMs") ?: 0).toLong() // 0 = whole track
         val preset = call.argument<String>("preset")
         val tuningRaw = call.argument<Any>("tuning")
         val tuning: FloatArray? = when (tuningRaw) {
@@ -155,17 +179,20 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             else -> null
         }
 
-        // mode "hls" → MPEG-TS/HLS segments in the `output` directory (for
-        // casting); anything else → a single MP4 file at `output`.
-        val mode = call.argument<String>("mode") ?: "mp4"
         val sink: AvSink = try {
-            if (mode == "hls") TsHlsSink(output) else Mp4Sink(output)
+            TsHlsSink(output)
         } catch (e: Throwable) {
             result.error("sink_failed", e.message, null)
             return
         }
 
-        transcoder?.cancelTranscode()
+        // Hand the outgoing transcode to the new one as its predecessor: the new
+        // thread waits for it to release the hardware encoder before grabbing its
+        // own (cancelTranscode interrupts, so the wind-down is prompt). We must
+        // NOT join here — this is the main thread and the outgoing decode may
+        // briefly block.
+        val previous = transcoder
+        previous?.cancelTranscode()
         val main = Handler(Looper.getMainLooper())
         var created: VisualizerTranscoder? = null
         val t = VisualizerTranscoder(
@@ -176,7 +203,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             engineKind = engine,
             fps = fps,
             maxDurationUs = maxMs * 1000L,
-            pace = mode == "hls", // live cast → throttle to ~realtime (battery/thermal)
+            pace = true, // live cast → throttle to ~realtime (battery/thermal)
             presetData = preset,
             tuning = tuning,
             initEncoder = ::nativeInitEncoder,
@@ -185,6 +212,7 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
             loadPreset = ::nativeLoadPresetData,
             setTuning = ::nativeSetTuning,
             dispose = ::nativeDispose,
+            predecessor = previous,
         ) { ok, payload ->
             main.post {
                 // Only clear the handle if it still points at THIS transcode — a
@@ -192,25 +220,18 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 // nulling that would orphan it (a later stopTranscode couldn't
                 // cancel it).
                 if (transcoder === created) transcoder = null
-                // HLS replies immediately below (so the caller can start casting
-                // while we keep transcoding the live playlist); only non-HLS
-                // reports its result here.
-                if (mode != "hls") {
-                    if (ok) result.success(payload)
-                    else result.error("transcode_failed", payload, null)
-                } else if (!ok) {
-                    Log.w("mstream/viz-xcode", "HLS transcode ended: $payload")
-                }
+                // We already replied with the playlist path below (so the caller
+                // could start casting while the live playlist keeps growing), so
+                // there's nothing to reply here — just note an early end.
+                if (!ok) Log.w(TAG, "transcode ended: $payload")
             }
         }
         created = t
         transcoder = t
         t.start()
-        if (mode == "hls") {
-            // The playlist grows as segments are written; reply now so the caller
-            // can poll it and cast while transcoding continues in the background.
-            result.success("$output/index.m3u8")
-        }
+        // The playlist grows as segments are written; reply now so the caller can
+        // poll it and cast while transcoding continues in the background.
+        result.success("$output/index.m3u8")
     }
 
     private fun handleLoadPreset(call: MethodCall, result: MethodChannel.Result) {
