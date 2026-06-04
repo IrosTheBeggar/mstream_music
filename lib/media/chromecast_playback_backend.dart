@@ -1,18 +1,17 @@
 import 'dart:async';
 import 'dart:io' show Directory, File;
-import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
-import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
+import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:rxdart/rxdart.dart';
 
 import '../native/visualizer_bridge.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'emulated_playlist_backend.dart';
 import 'local_media_server.dart';
 import 'playback_backend.dart';
 import 'visualizer_cast_config.dart';
@@ -20,13 +19,15 @@ import 'visualizer_cast_config.dart';
 /// [PlaybackBackend] that plays through a Chromecast / Google Cast device via
 /// the native Cast SDK (flutter_chrome_cast).
 ///
-/// Like the DLNA backend it emulates just_audio's playlist (the receiver plays
-/// one track at a time): it owns the source list + index, loads the current
-/// track with the Remote Media Client, and advances when the receiver reports
-/// IDLE with idleReason FINISHED. Unlike DLNA, the Cast SDK pushes position +
-/// media-status via streams (no polling), and loadMedia takes autoPlay +
-/// playPosition so resume-at-position is native.
-class ChromecastPlaybackBackend implements PlaybackBackend {
+/// Like the DLNA backend it emulates just_audio's playlist through
+/// [EmulatedPlaylistBackend] (the receiver plays one track at a time): the base
+/// owns the source list + index + the add/remove/move/clear arithmetic and the
+/// broadcast streams; this subclass loads the current track with the Remote
+/// Media Client and advances when the receiver reports IDLE with idleReason
+/// FINISHED. Unlike DLNA, the Cast SDK pushes position + media-status via
+/// streams (no polling), and loadMedia takes autoPlay + playPosition so
+/// resume-at-position is native.
+class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   ChromecastPlaybackBackend({required String deviceId, bool visualizer = false})
       : _deviceId = deviceId,
         _visualizer = visualizer;
@@ -36,19 +37,15 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   // the track's audio (see _resolveVisualizerUri). Only the per-track media
   // construction differs — the playlist/index/session/transport logic is shared.
   final bool _visualizer;
-  final Random _rng = Random();
 
   final _client = GoogleCastRemoteMediaClient.instance;
   final _sessions = GoogleCastSessionManager.instance;
 
-  List<MediaItem> _items = <MediaItem>[];
-  int _index = -1;
-  int _loadedIndex = -1;
   int _loadCounter = 0; // monotonic; names each visualizer transcode's subdir
   String? _currentVizDir; // subdir the active visualizer transcode writes to
   bool _firstVizLoad = true;
   int _visualizerFailures = 0; // consecutive transcode failures → audio fallback
-  // Bumped on every _loadIndex; an in-flight load re-checks it after each await
+  // Bumped on every loadIndex; an in-flight load re-checks it after each await
   // and bails if a newer load superseded it. The visualizer warm-up is seconds
   // long, so a Next/seek during it would otherwise interleave two loads and
   // leave the wrong track casting.
@@ -59,65 +56,26 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   static const int _kMaxVisualizerFailures = 2;
   // Readiness poll: 20 × 500 ms = 10 s for the first segments before giving up.
   static const int _kReadyPollAttempts = 20;
-  bool _shuffle = false;
-  bool _repeatAll = false;
-  bool _playing = false;
+
   bool _advancing = false;
   bool _sessionStarted = false;
-  Duration _position = Duration.zero;
-  Duration? _duration;
-  BackendProcessingState _state = BackendProcessingState.idle;
 
   StreamSubscription<GoggleCastMediaStatus?>? _statusSub;
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<dynamic>? _sessionSub;
 
-  final BehaviorSubject<int?> _indexSubject = BehaviorSubject<int?>.seeded(null);
-  final BehaviorSubject<Duration> _positionSubject =
-      BehaviorSubject<Duration>.seeded(Duration.zero);
-  final BehaviorSubject<Duration?> _durationSubject =
-      BehaviorSubject<Duration?>.seeded(null);
-  final BehaviorSubject<BackendProcessingState> _stateSubject =
-      BehaviorSubject<BackendProcessingState>.seeded(
-          BackendProcessingState.idle);
-  final StreamController<void> _changeController =
-      StreamController<void>.broadcast();
-  // Emits when the Cast session drops unexpectedly mid-cast; the handler falls
-  // back to local. _disposing suppresses our own teardown; _lostFired makes it
-  // one-shot (disconnecting → disconnected would otherwise emit twice).
-  final PublishSubject<String> _rendererLost = PublishSubject<String>();
+  // Guards the renderer-lost emit. _disposing suppresses our own teardown;
+  // _lostFired makes it one-shot (disconnecting → disconnected would otherwise
+  // emit twice).
   bool _disposing = false;
   bool _lostFired = false;
-
-  // isClosed-guarded emitters so a late async callback after dispose() can't
-  // add to a closed subject.
-  void _emitIndex(int? v) {
-    if (!_indexSubject.isClosed) _indexSubject.add(v);
-  }
-
-  void _emitPos(Duration v) {
-    if (!_positionSubject.isClosed) _positionSubject.add(v);
-  }
-
-  void _emitDur(Duration? v) {
-    if (!_durationSubject.isClosed) _durationSubject.add(v);
-  }
-
-  void _change() {
-    if (!_changeController.isClosed) _changeController.add(null);
-  }
-
-  void _setState(BackendProcessingState s) {
-    _state = s;
-    if (!_stateSubject.isClosed) _stateSubject.add(s);
-  }
 
   void _ensureListeners() {
     _statusSub ??= _client.mediaStatusStream.listen(_onStatus);
     _positionSub ??= _client.playerPositionStream.listen((pos) {
-      _position = pos;
-      _emitPos(pos);
-      _change();
+      position = pos;
+      emitPos(pos);
+      change();
     });
     // Detect an unexpected session drop (TV off, Wi-Fi lost). Listeners attach
     // only after _ensureSession connected (_sessionStarted), so a transition to
@@ -128,10 +86,8 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
           !_lostFired &&
           !_sessions.hasConnectedSession) {
         _lostFired = true;
-        if (!_rendererLost.isClosed) {
-          _rendererLost
-              .add('Lost connection to the cast device — back on this phone');
-        }
+        emitRendererLost(
+            'Lost connection to the cast device — back on this phone');
       }
     });
   }
@@ -140,24 +96,24 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     if (status == null) return;
     final d = status.mediaInformation?.duration;
     if (d != null) {
-      _duration = d;
-      _emitDur(d);
+      duration = d;
+      emitDur(d);
     }
     switch (status.playerState) {
       case CastMediaPlayerState.playing:
-        _playing = true;
+        playing = true;
         _advancing = false;
-        _setState(BackendProcessingState.ready);
+        setProcessingState(BackendProcessingState.ready);
         break;
       case CastMediaPlayerState.paused:
-        _playing = false;
-        _setState(BackendProcessingState.ready);
+        playing = false;
+        setProcessingState(BackendProcessingState.ready);
         break;
       case CastMediaPlayerState.buffering:
-        _setState(BackendProcessingState.buffering);
+        setProcessingState(BackendProcessingState.buffering);
         break;
       case CastMediaPlayerState.loading:
-        _setState(BackendProcessingState.loading);
+        setProcessingState(BackendProcessingState.loading);
         break;
       case CastMediaPlayerState.idle:
         // Only a natural FINISH means end-of-track; cancelled/interrupted are
@@ -169,19 +125,19 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       case CastMediaPlayerState.unknown:
         break;
     }
-    _change();
+    change();
   }
 
   Future<void> _onTrackEnded() async {
     if (_advancing) return;
     _advancing = true;
-    final n = _nextIndex();
+    final n = nextIndex();
     if (n != null) {
-      await _loadIndex(n, play: true);
+      await loadIndex(n, play: true);
     } else {
-      _playing = false;
+      playing = false;
       _advancing = false;
-      _setState(BackendProcessingState.completed);
+      setProcessingState(BackendProcessingState.completed);
     }
   }
 
@@ -210,92 +166,6 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
       }
     }
     _sessionStarted = true;
-  }
-
-  // ── Source list ──
-  @override
-  Future<void> setSources(List<MediaItem> items) async {
-    _items = List<MediaItem>.from(items);
-    _index = _items.isEmpty ? -1 : 0;
-    _loadedIndex = -1;
-    _emitIndex(_index < 0 ? null : _index);
-    _setState(_items.isEmpty
-        ? BackendProcessingState.idle
-        : BackendProcessingState.ready);
-  }
-
-  @override
-  Future<void> addSource(MediaItem item) async {
-    _items.add(item);
-    if (_index == -1) {
-      _index = 0;
-      _emitIndex(0);
-      _setState(BackendProcessingState.ready);
-    }
-  }
-
-  @override
-  Future<void> removeSourceAt(int index) async {
-    if (index < 0 || index >= _items.length) return;
-    _items.removeAt(index);
-    if (_items.isEmpty) {
-      _index = -1;
-      _loadedIndex = -1;
-      _emitIndex(null);
-      await stop();
-      return;
-    }
-    if (index < _index) {
-      _index--;
-      _loadedIndex--;
-      _emitIndex(_index);
-    } else if (index == _index) {
-      // Removed the now-playing track — advance to whatever now occupies this
-      // slot (the former next track), clamping if it was the last.
-      if (_index >= _items.length) _index = _items.length - 1;
-      _loadedIndex = -1;
-      _emitIndex(_index);
-      await _loadIndex(_index, play: _playing);
-    }
-  }
-
-  @override
-  Future<void> moveSource(int from, int to) async {
-    if (from < 0 ||
-        from >= _items.length ||
-        to < 0 ||
-        to >= _items.length ||
-        from == to) {
-      return;
-    }
-    // Single-item-push model: reorder the internal list and shift the current /
-    // loaded pointers so they follow the still-playing track to its new slot.
-    // The renderer keeps playing that track — only the upcoming order changes,
-    // so nothing is reloaded; the next advance just loads the new next item.
-    final item = _items.removeAt(from);
-    _items.insert(to, item);
-    if (_index == from) {
-      _index = to;
-    } else if (_index >= 0) {
-      if (from < _index) _index--;
-      if (to <= _index) _index++;
-    }
-    if (_loadedIndex == from) {
-      _loadedIndex = to;
-    } else if (_loadedIndex >= 0) {
-      if (from < _loadedIndex) _loadedIndex--;
-      if (to <= _loadedIndex) _loadedIndex++;
-    }
-    if (_index >= 0) _emitIndex(_index);
-  }
-
-  @override
-  Future<void> clearSources() async {
-    _items = <MediaItem>[];
-    _index = -1;
-    _loadedIndex = -1;
-    _emitIndex(null);
-    await stop();
   }
 
   // ── Media construction ──
@@ -331,17 +201,18 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
         releaseDate: releaseDateFor(item),
         images: art != null ? [GoogleCastImage(url: Uri.parse(art))] : null,
       ),
-
     );
   }
 
-  Future<void> _loadIndex(int index,
+  @protected
+  @override
+  Future<void> loadIndex(int target,
       {required bool play, Duration startAt = Duration.zero}) async {
-    if (index < 0 || index >= _items.length) return;
+    if (target < 0 || target >= items.length) return;
     final gen = ++_loadGen; // this load owns the pipeline until a newer one starts
-    _index = index;
-    _emitIndex(index);
-    _setState(BackendProcessingState.loading);
+    index = target;
+    emitIndex(target);
+    setProcessingState(BackendProcessingState.loading);
     try {
       await _ensureSession();
       if (gen != _loadGen) return; // superseded by a newer load
@@ -354,9 +225,9 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
           // A freshly-started live transcode begins at 0; seeking into it isn't
           // possible, so startAt is ignored for the visualizer.
           final url =
-              (await _resolveVisualizerUri(_items[index], gen)).toString();
+              (await _resolveVisualizerUri(items[target], gen)).toString();
           if (gen != _loadGen) return; // superseded during the warm-up
-          await _client.loadMedia(_visualizerMediaInfo(_items[index], url),
+          await _client.loadMedia(_visualizerMediaInfo(items[target], url),
               autoPlay: play);
           servedVisualizer = true;
           _visualizerFailures = 0; // recovered — a transient failure won't stick
@@ -373,28 +244,28 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
           _deleteDir(_currentVizDir);
           CastManager().reportCastInfo(
               "Couldn't start the visualizer — casting audio to the TV");
-          final url = (await _resolveUri(_items[index])).toString();
+          final url = (await _resolveUri(items[target])).toString();
           if (gen != _loadGen) return;
-          await _client.loadMedia(_mediaInfo(_items[index], url),
+          await _client.loadMedia(_mediaInfo(items[target], url),
               autoPlay: play, playPosition: startAt);
         }
       } else {
-        final url = (await _resolveUri(_items[index])).toString();
+        final url = (await _resolveUri(items[target])).toString();
         if (gen != _loadGen) return;
-        await _client.loadMedia(_mediaInfo(_items[index], url),
+        await _client.loadMedia(_mediaInfo(items[target], url),
             autoPlay: play, playPosition: startAt);
       }
       if (gen != _loadGen) return;
-      _loadedIndex = index;
-      _playing = play;
-      _duration = _items[index].duration;
-      _emitDur(_duration);
-      _position = servedVisualizer ? Duration.zero : startAt;
-      _emitPos(_position);
+      loadedIndex = target;
+      playing = play;
+      duration = items[target].duration;
+      emitDur(duration);
+      position = servedVisualizer ? Duration.zero : startAt;
+      emitPos(position);
     } catch (e) {
       castLog('Chromecast load failed', error: e);
     }
-    _change();
+    change();
   }
 
   // ── Visualizer cast ──
@@ -402,7 +273,7 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   // reacting to it (rendered on-device), serve it from LocalMediaServer, and
   // return the playlist URL for the receiver. One transcode at a time — each
   // call cancels the previous track's first, so track-change (which routes
-  // through _loadIndex) restarts the pipeline cleanly. Blocks until a couple of
+  // through loadIndex) restarts the pipeline cleanly. Blocks until a couple of
   // segments exist so the receiver never loads an empty playlist.
   Future<Uri> _resolveVisualizerUri(MediaItem item, int gen) async {
     _loadCounter++;
@@ -501,16 +372,16 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
   // ── Transport ──
   @override
   Future<void> play() async {
-    if (_index < 0) return;
-    if (_loadedIndex != _index) {
-      await _loadIndex(_index, play: true);
+    if (index < 0) return;
+    if (loadedIndex != index) {
+      await loadIndex(index, play: true);
       return;
     }
     try {
       await _client.play();
     } catch (_) {}
-    _playing = true;
-    _change();
+    playing = true;
+    change();
   }
 
   @override
@@ -518,8 +389,8 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _client.pause();
     } catch (_) {}
-    _playing = false;
-    _change();
+    playing = false;
+    change();
   }
 
   @override
@@ -527,65 +398,43 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _client.stop();
     } catch (_) {}
-    _playing = false;
-    _setState(BackendProcessingState.idle);
-    _change();
+    playing = false;
+    setProcessingState(BackendProcessingState.idle);
+    change();
   }
+
+  @protected
+  @override
+  Future<void> stopForEmptyList() => stop();
 
   @override
   Future<void> seek(Duration position, {int? index, bool? play}) async {
-    final target = index ?? _index;
-    if (target >= 0 && target != _loadedIndex) {
-      await _loadIndex(target, play: play ?? _playing, startAt: position);
+    final target = index ?? this.index;
+    if (target >= 0 && target != loadedIndex) {
+      await loadIndex(target, play: play ?? playing, startAt: position);
       return;
     }
     try {
       await _client.seek(GoogleCastMediaSeekOption(position: position));
     } catch (_) {}
-    _position = position;
-    _emitPos(position);
-    _change();
+    this.position = position;
+    emitPos(position);
+    change();
   }
 
   @override
   Future<void> seekToNext() async {
-    final n = _nextIndex();
-    if (n != null) await _loadIndex(n, play: _playing);
+    final n = nextIndex();
+    if (n != null) await loadIndex(n, play: playing);
   }
 
   @override
   Future<void> seekToPrevious() async {
-    if (_index > 0) {
-      await _loadIndex(_index - 1, play: _playing);
+    if (index > 0) {
+      await loadIndex(index - 1, play: playing);
     } else {
       await seek(Duration.zero);
     }
-  }
-
-  int? _nextIndex() {
-    if (_items.isEmpty) return null;
-    if (_shuffle && _items.length > 1) {
-      int n;
-      do {
-        n = _rng.nextInt(_items.length);
-      } while (n == _index);
-      return n;
-    }
-    if (_index + 1 < _items.length) return _index + 1;
-    if (_repeatAll) return 0;
-    return null;
-  }
-
-  @override
-  Future<void> setShuffleEnabled(bool enabled) async {
-    _shuffle = enabled;
-    _change();
-  }
-
-  @override
-  Future<void> setRepeatAll(bool enabled) async {
-    _repeatAll = enabled;
-    _change();
   }
 
   @override
@@ -595,52 +444,9 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     } catch (_) {}
   }
 
-  // ── Synchronous state ──
+  @protected
   @override
-  bool get playing => _playing;
-  @override
-  bool get shuffleEnabled => _shuffle;
-  @override
-  bool get repeatAll => _repeatAll;
-  @override
-  Duration get position => _position;
-  @override
-  Duration get bufferedPosition => _position;
-  @override
-  double get speed => 1.0;
-  @override
-  Duration? get duration => _duration;
-  @override
-  int? get currentIndex => _index < 0 ? null : _index;
-  @override
-  BackendProcessingState get processingState => _state;
-
-  // ── Streams ──
-  @override
-  Stream<int?> get currentIndexStream => _indexSubject.stream;
-  @override
-  Stream<Duration> get positionStream => _positionSubject.stream;
-  @override
-  Stream<Duration?> get durationStream => _durationSubject.stream;
-  @override
-  Stream<BackendProcessingState> get processingStateStream =>
-      _stateSubject.stream;
-  @override
-  Stream<void> get changeStream => _changeController.stream;
-
-  @override
-  Stream<String> get rendererLostStream => _rendererLost.stream;
-
-  // ── Local-only capabilities (N/A while casting) ──
-  @override
-  bool get supportsEqualizer => false;
-  @override
-  AndroidEqualizer? get equalizer => null;
-  @override
-  int? get androidAudioSessionId => null;
-
-  @override
-  Future<void> dispose() async {
+  Future<void> disposeRenderer() async {
     _disposing = true;
     if (_visualizer) {
       // Stop the off-screen transcode so it isn't left encoding after we switch
@@ -656,11 +462,5 @@ class ChromecastPlaybackBackend implements PlaybackBackend {
     try {
       await _sessions.endSessionAndStopCasting();
     } catch (_) {}
-    await _indexSubject.close();
-    await _positionSubject.close();
-    await _durationSubject.close();
-    await _stateSubject.close();
-    await _changeController.close();
-    await _rendererLost.close();
   }
 }
