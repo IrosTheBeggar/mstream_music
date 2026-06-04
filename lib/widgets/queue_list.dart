@@ -129,37 +129,16 @@ class QueueList extends StatelessWidget {
             }
 
             return Slidable(
-              // Identity key: it follows the *item* across a reorder (an
-              // index-based key is positional, so reordering would swap row
-              // content instead of animating items to new slots — the jank).
-              // Distinct MediaItem instances (the realistic duplicate-track
-              // case) get distinct keys, so this still avoids the duplicate-key
-              // assertion the index suffix originally guarded against.
+              // Identity key (also the ReorderableListView item key): follows
+              // the *item* across reorders; distinct MediaItem instances avoid a
+              // duplicate-key clash.
               key: ObjectKey(item),
+              // RIGHT swipe (or a grip tap, see _QueueRow) → Info.
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
-                extentRatio: 0.18,
-                // Swiping right past the download action removes the track too,
-                // so a full swipe in EITHER direction dismisses (matching the
-                // end pane). Fixes "swiping right can't remove the song".
-                dismissible: DismissiblePane(onDismissed: removeItem),
-                children: [
-                  SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.download,
-                    label: l.mainSync,
-                    onPressed: (_) {
-                      if (!downloaded) {
-                        DownloadManager().downloadOneFile(item.id,
-                            item.extras!['server'], item.extras!['path']);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              endActionPane: ActionPane(
-                motion: const DrawerMotion(),
-                extentRatio: 0.36,
+                extentRatio: 0.25,
+                // A full right-swipe past Info also removes the track, so a full
+                // swipe in EITHER direction removes.
                 dismissible: DismissiblePane(onDismissed: removeItem),
                 children: [
                   SlidableAction(
@@ -187,6 +166,22 @@ class QueueList extends StatelessWidget {
                         ),
                       );
                     },
+                  ),
+                ],
+              ),
+              // LEFT swipe → Remove; a full left-swipe also removes (the
+              // DismissiblePane), so swipe-to-remove is back — on this side.
+              endActionPane: ActionPane(
+                motion: const DrawerMotion(),
+                extentRatio: 0.25,
+                dismissible: DismissiblePane(onDismissed: removeItem),
+                children: [
+                  SlidableAction(
+                    backgroundColor: Colors.red.shade700,
+                    foregroundColor: Colors.white,
+                    icon: Icons.delete_outline,
+                    label: l.mainRemove,
+                    onPressed: (_) => removeItem(),
                   ),
                 ],
               ),
@@ -321,15 +316,16 @@ class _QueueRow extends StatelessWidget {
                   color: VelvetColors.textTertiary,
                 ),
               ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. The
-              // ReorderableDragStartListener starts the reorder; the inner
-              // tap-absorbing GestureDetector keeps a tap on the grip from also
-              // triggering row-play (the grip sits inside the row's tap area).
+              // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
+              // (ReorderableDragStartListener) to reorder, or TAP it to open the
+              // action drawer (the start/left pane). The GestureDetector also
+              // keeps the tap from falling through to the row's play-on-tap.
               ReorderableDragStartListener(
                 index: index,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () {},
+                  // Tap → open the download/info drawer; drag → reorder.
+                  onTap: () => Slidable.of(context)?.openStartActionPane(),
                   child: SizedBox(
                     width: 44,
                     height: 44,
