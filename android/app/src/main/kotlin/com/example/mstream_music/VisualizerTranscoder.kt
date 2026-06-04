@@ -74,6 +74,21 @@ class VisualizerTranscoder(
                     // we were cancelled while waiting — the check below bails
                     // out before we grab the encoder
                 }
+                // Fail-fast if it's STILL alive after the bounded wait. interrupt()
+                // can't break a blocking native call (a stalled remote
+                // setDataSource / readSampleData), so a wedged predecessor keeps
+                // its AVC encoder past the timeout. Allocating ours now would
+                // recreate the two-encoder overlap this join exists to prevent
+                // (and configure() throws on single-encoder SoCs, leaving a
+                // half-set-up codec). Bail cleanly so the cast falls back to audio
+                // instead of churning a doomed encoder. (let is inline, so this
+                // returns from run(); the finally still releases the decoder.)
+                if (it.isAlive) {
+                    Log.w(TAG, "predecessor transcode still active after " +
+                        "${PREDECESSOR_JOIN_TIMEOUT_MS}ms; aborting to avoid encoder overlap")
+                    onDone(false, "predecessor still active")
+                    return
+                }
             }
             if (cancelled) {
                 onDone(false, "cancelled")

@@ -178,10 +178,13 @@ class TsHlsSink(private val dir: String) : AvSink {
         val dst = File(dir, PLAYLIST)
         if (!tmp.renameTo(dst)) {
             // Rename can fail (returns false rather than throwing). Fall back to a
-            // direct overwrite so the live playlist keeps updating instead of
-            // silently freezing at the last good version.
+            // single-write overwrite of the in-memory content: one write() call,
+            // so a concurrent HTTP reader is far less likely to catch a partial
+            // file than the previous chunked copyTo (open-truncate + 8 KiB loop).
+            // Not atomic — the rename above is — but it keeps the live playlist
+            // updating instead of freezing at the last good version.
             try {
-                tmp.copyTo(dst, overwrite = true)
+                dst.writeText(sb.toString())
             } catch (e: Throwable) {
                 Log.w(TAG, "playlist publish failed", e)
             }

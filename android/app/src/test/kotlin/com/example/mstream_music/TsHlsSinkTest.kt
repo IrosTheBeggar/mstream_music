@@ -201,4 +201,34 @@ class TsHlsSinkTest {
         assertEquals(8, sink.freqIndex(16000))
         assertEquals(4, sink.freqIndex(12345))                // unknown rate → 44100 default
     }
+
+    @Test
+    fun crc32MatchesCanonicalMpeg2CheckVector() {
+        // The published CRC-32/MPEG-2 check value for ASCII "123456789" is
+        // 0x0376E6E7. Pins the table-driven impl to a constant, not just to our
+        // own reference encoder (which could share a transcription slip).
+        val data = "123456789".toByteArray(Charsets.US_ASCII)
+        assertEquals(0x0376E6E7, Crc32Mpeg.compute(data, 0, data.size))
+    }
+
+    @Test
+    fun pesBufReuseAcrossLargeThenSmallFrameLeavesNoStaleBytes() {
+        // pesBuf is grown to the largest frame seen and reused. A large frame
+        // (forcing growth past the 64 KiB initial size) followed by a small one
+        // must produce a correct small PES in [0, len) — none of the large
+        // frame's bytes bleeding into the region callers actually read.
+        val sink = newSink()
+        val big = ByteArray(96 * 1024) { (it and 0xFF).toByte() }
+        val bigLen = sink.buildPesInto(0xE0, 90_000L, 90_000L, big)
+        assertTrue(bigLen > 64 * 1024)
+        assertTrue(sink.pesBuf.size >= bigLen)                 // buffer grew + retained
+
+        val small = ByteArray(8) { (0xA0 + it).toByte() }
+        val smallLen = sink.buildPesInto(0xC0, 180_000L, null, small)
+        val pes = sink.pesBuf.copyOf(smallLen)
+        assertEquals(9 + 5 + small.size, smallLen)             // audio PES header + ES only
+        assertEquals(0xC0, u(pes[3]))                          // audio stream id
+        assertEquals(5, u(pes[8]))                             // PTS-only header_data_length
+        assertArrayEquals(small, pes.copyOfRange(9 + 5, smallLen)) // ES is `small`, not `big`
+    }
 }

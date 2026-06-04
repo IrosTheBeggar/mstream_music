@@ -77,6 +77,17 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
                 it.join(TRANSCODE_JOIN_TIMEOUT_MS)
             } catch (_: InterruptedException) {
             }
+            // A transcode wedged in a non-interruptible blocking native call (a
+            // stalled remote source) can't be force-stopped — interrupt() won't
+            // free it. The bounded join keeps teardown from hanging, but the
+            // thread then briefly outlives the plugin, still holding its encoder +
+            // EGL context until its I/O returns. It self-releases via its finally
+            // (its native ctx is per-transcode, so no use-after-teardown); log the
+            // window so it's visible rather than a silent leak.
+            if (it.isAlive) {
+                Log.w(TAG, "transcode still running after ${TRANSCODE_JOIN_TIMEOUT_MS}ms " +
+                    "join; it will release its encoder when its blocking I/O returns")
+            }
         }
         transcoder = null
         teardown()
