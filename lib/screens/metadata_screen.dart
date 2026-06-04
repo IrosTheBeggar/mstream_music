@@ -9,10 +9,10 @@ import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
-/// backdrop, a hero cover, the title / artist / album·year, self-labelling
-/// metadata chips (length, BPM, key, track, disc, genre, source server), and
-/// the file location with a copy button. Reads straight off the [MediaItem], so
-/// every field the queue carries is surfaced — and only when present.
+/// backdrop, a hero cover, the title / artist / album·year, a track/disc line,
+/// self-labelling metadata chips (length, BPM, key, genre), and the file
+/// location with a copy button. Reads straight off the [MediaItem], so every
+/// field the queue carries is surfaced — and only when present.
 class MetadataScreen extends StatelessWidget {
   const MetadataScreen({Key? key, required this.item}) : super(key: key);
 
@@ -29,12 +29,17 @@ class MetadataScreen extends StatelessWidget {
     final year = extras['year'];
     final key = extras['musicalKey'] as String?;
     final genre = item.genre;
-    final server = extras['server'] as String?;
 
     final subtitle = <String>[
       if (item.album != null && item.album!.trim().isNotEmpty) item.album!.trim(),
       if (year != null && '$year'.isNotEmpty && '$year' != '0') '$year',
     ].join('   ·   ');
+
+    // Track / disc as a plain line under the album.
+    final trackDisc = <String>[
+      if (extras['track'] != null) 'track: ${_v(extras['track'])}',
+      if (extras['disc'] != null) 'disc: ${_v(extras['disc'])}',
+    ].join(', ');
 
     // Self-labelling chips (icon + value) — no extra translated strings, shown
     // only when the field is present.
@@ -45,14 +50,8 @@ class MetadataScreen extends StatelessWidget {
         _chip(Icons.speed_rounded, '${_v(extras['bpm'])} BPM'),
       if (key != null && key.trim().isNotEmpty)
         _chip(Icons.music_note_rounded, key.trim()),
-      if (extras['track'] != null)
-        _chip(Icons.tag_rounded, '${_v(extras['track'])}'),
-      if (extras['disc'] != null)
-        _chip(Icons.album_rounded, '${_v(extras['disc'])}'),
       if (genre != null && genre.trim().isNotEmpty)
         _chip(Icons.category_rounded, genre.trim()),
-      if (server != null && server.trim().isNotEmpty)
-        _chip(Icons.dns_rounded, server.trim()),
     ];
 
     return Scaffold(
@@ -178,6 +177,17 @@ class MetadataScreen extends StatelessWidget {
                   style: TextStyle(
                     color: VelvetColors.textTertiary,
                     fontSize: 13,
+                  ),
+                ),
+              ],
+              if (trackDisc.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  trackDisc,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: VelvetColors.textDim,
+                    fontSize: 12.5,
                   ),
                 ),
               ],
