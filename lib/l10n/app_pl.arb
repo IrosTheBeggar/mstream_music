@@ -1,6 +1,7 @@
 {
   "mainRemove": "Usuń",
   "@@locale": "pl",
+  "playlistActionFailed": "Nie udało się zapisać playlisty — nazwa może być już zajęta.",
   "queueAddNext": "Dodaj jako następny",
   "queuePlayNow": "Odtwórz teraz",
   "queueAddToEnd": "Dodaj na koniec kolejki",

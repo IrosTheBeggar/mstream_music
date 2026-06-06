@@ -12,6 +12,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mainRemove => 'Quitar';
 
   @override
+  String get playlistActionFailed =>
+      'No se pudo guardar la lista: puede que el nombre ya esté en uso.';
+
+  @override
   String get queueAddNext => 'Añadir a continuación';
 
   @override

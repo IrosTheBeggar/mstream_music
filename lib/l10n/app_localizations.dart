@@ -120,6 +120,12 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get mainRemove;
 
+  /// Toast shown when creating or renaming a playlist fails (often a duplicate name).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the playlist — the name may already be in use.'**
+  String get playlistActionFailed;
+
   /// Track row menu: insert after the current track.
   ///
   /// In en, this message translates to:

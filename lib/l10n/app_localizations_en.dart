@@ -12,6 +12,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainRemove => 'Remove';
 
   @override
+  String get playlistActionFailed =>
+      'Couldn\'t save the playlist — the name may already be in use.';
+
+  @override
   String get queueAddNext => 'Add next';
 
   @override

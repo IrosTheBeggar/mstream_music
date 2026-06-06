@@ -12,6 +12,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mainRemove => '削除';
 
   @override
+  String get playlistActionFailed => 'プレイリストを保存できませんでした。その名前は既に使われている可能性があります。';
+
+  @override
   String get queueAddNext => '次に追加';
 
   @override

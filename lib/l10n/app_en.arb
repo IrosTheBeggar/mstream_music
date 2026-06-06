@@ -1,6 +1,8 @@
 {
   "mainRemove": "Remove",
   "@@locale": "en",
+  "playlistActionFailed": "Couldn't save the playlist — the name may already be in use.",
+  "@playlistActionFailed": { "description": "Toast shown when creating or renaming a playlist fails (often a duplicate name)." },
   "queueAddNext": "Add next",
   "@queueAddNext": { "description": "Track row menu: insert after the current track." },
   "queuePlayNow": "Play now",

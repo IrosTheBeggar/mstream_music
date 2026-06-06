@@ -1,6 +1,7 @@
 {
   "mainRemove": "Entfernen",
   "@@locale": "de",
+  "playlistActionFailed": "Wiedergabeliste konnte nicht gespeichert werden — der Name ist möglicherweise bereits vergeben.",
   "queueAddNext": "Als Nächstes",
   "queuePlayNow": "Jetzt abspielen",
   "queueAddToEnd": "Ans Ende der Warteschlange",

@@ -12,6 +12,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mainRemove => 'Retirer';
 
   @override
+  String get playlistActionFailed =>
+      'Impossible d\'enregistrer la liste : ce nom est peut-être déjà utilisé.';
+
+  @override
   String get queueAddNext => 'Ajouter à la suite';
 
   @override

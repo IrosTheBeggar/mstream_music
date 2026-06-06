@@ -17,11 +17,19 @@ class BrowserManager {
   // overlays the current screen. Tracked per stack frame so back-nav
   // brings the strip back when returning to an alphabetical screen.
   final List<bool> alphabeticalCache = [];
+  // 1:1 with browserCache. The File Explorer's current directory path per frame
+  // (null for non-file-explorer frames), so the path row shows the right folder
+  // and reverts on back-nav. Display-only — no navigation logic reads it.
+  final List<String?> pathCache = [];
 
   final List<DisplayItem> browserList = [];
 
   bool get isAlphabetical =>
       alphabeticalCache.isNotEmpty ? alphabeticalCache.last : false;
+
+  /// Current File Explorer directory path for the top frame, or null when the
+  /// current view isn't the file explorer.
+  String? get currentPath => pathCache.isNotEmpty ? pathCache.last : null;
 
   String listName = 'Welcome';
 
@@ -141,6 +149,7 @@ class BrowserManager {
   void clear() {
     List<DisplayItem> hold = browserCache[0];
     bool holdAlpha = alphabeticalCache.isNotEmpty ? alphabeticalCache[0] : false;
+    String? holdPath = pathCache.isNotEmpty ? pathCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -151,6 +160,9 @@ class BrowserManager {
     alphabeticalCache
       ..clear()
       ..add(holdAlpha);
+    pathCache
+      ..clear()
+      ..add(holdPath);
   }
 
   void goToNavScreen() {
@@ -161,6 +173,7 @@ class BrowserManager {
     // Reset alongside the cache or pops will pull stale offsets.
     scrollCache.clear();
     alphabeticalCache.clear();
+    pathCache.clear();
 
     if (ServerManager().currentServer == null) {
       return;
@@ -226,6 +239,7 @@ class BrowserManager {
         [newItem1, newItem2, newItem3, newItem4, newItem5, newItem6, newItem7]);
     // Nav screen isn't alphabetical content — just the section list.
     alphabeticalCache.add(false);
+    pathCache.add(null); // home nav isn't the file explorer — no path row
     browserList.add(newItem1);
     browserList.add(newItem2);
     browserList.add(newItem3);
@@ -244,6 +258,7 @@ class BrowserManager {
     browserList.clear();
     scrollCache.clear();
     alphabeticalCache.clear();
+    pathCache.clear();
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -251,7 +266,8 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
-  void addListToStack(List<DisplayItem> newList, {bool alphabetical = false}) {
+  void addListToStack(List<DisplayItem> newList,
+      {bool alphabetical = false, String? path}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -263,6 +279,7 @@ class BrowserManager {
 
     browserCache.add(newList);
     alphabeticalCache.add(alphabetical);
+    pathCache.add(path);
 
     browserList.clear();
     newList.forEach((element) {
@@ -279,6 +296,19 @@ class BrowserManager {
   }
 
   updateStream() {
+    _browserStream.sink.add(browserList);
+  }
+
+  /// Replaces the current (top) frame's list in place — no push/pop, so the
+  /// back-stack is unchanged. Used to refresh a view (e.g. after a playlist
+  /// create/rename) without adding a navigation entry.
+  void replaceTop(List<DisplayItem> newList) {
+    if (browserCache.isNotEmpty) {
+      browserCache[browserCache.length - 1] = newList;
+    }
+    browserList
+      ..clear()
+      ..addAll(newList);
     _browserStream.sink.add(browserList);
   }
 
@@ -315,6 +345,7 @@ class BrowserManager {
 
     browserCache.removeLast();
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
+    if (pathCache.isNotEmpty) pathCache.removeLast();
     browserList.clear();
     browserCache[browserCache.length - 1].forEach((el) {
       browserList.add(el);

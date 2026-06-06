@@ -9,6 +9,7 @@ import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
+import '../widgets/player_panel.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
@@ -218,66 +219,217 @@ class _BrowserState extends State<Browser> {
 
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    return Container(
-      decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
-      child: Slidable(
-          endActionPane: ActionPane(
-            motion: DrawerMotion(),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => handleTap(b, i, c),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+                bottom: BorderSide(color: VelvetColors.border, width: 0.5)),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          child: Row(
             children: [
-              SlidableAction(
-                  backgroundColor: Colors.redAccent,
-                  icon: Icons.remove_circle,
-                  label: l.delete,
-                  onPressed: (context) {
-                    showDialog(
-                        context: c,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                              title: Text(l.browserConfirmDeletePlaylist),
-                              content: b[i].getText(),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: Text(l.goBack),
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                ),
-                                TextButton(
-                                    child: Text(
-                                      l.delete,
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                    onPressed: () {
-                                      ApiManager().removePlaylist(b[i].data!,
-                                          useThisServer: b[i].server);
-                                      Navigator.of(context).pop();
-                                    })
-                              ]);
-                        });
-                  })
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: VelvetColors.raised,
+                  borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+                child: Icon(Icons.queue_music, color: VelvetColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  b[i].name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: VelvetColors.textPrimary,
+                  ),
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+                color: VelvetColors.surface,
+                tooltip: l.mainMore,
+                onSelected: (v) {
+                  if (v == 'rename') _renamePlaylist(c, b[i]);
+                  if (v == 'delete') _deletePlaylist(c, b[i]);
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(l.delete,
+                        style: TextStyle(color: VelvetColors.error)),
+                  ),
+                ],
+              ),
             ],
           ),
-          child: Builder(
-            builder: (context) => ListTile(
-                leading: b[i].icon ?? null,
-                title: b[i].getText(),
-                subtitle: b[i].getSubText(),
-                trailing: IconButton(
-                  icon: Icon(
-                    Icons.keyboard_arrow_left,
-                    size: 20.0,
-                    color: Colors.brown[900],
-                  ),
-                  onPressed: () {
-                    Slidable.of(context)?.openEndActionPane();
-                  },
-                ),
-                onTap: () {
-                  handleTap(b, i, c);
-                }),
-          )),
+        ),
+      ),
     );
+  }
+
+  // ── Server playlists view: New-playlist button + the playlist rows ──
+  Widget _playlistsView(BuildContext context, List<DisplayItem> playlists) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      color: VelvetColors.bg,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _createPlaylist(context),
+                icon: const Icon(Icons.add, size: 20),
+                label: Text(l.playlistsNew),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: VelvetColors.primary,
+                  side: BorderSide(
+                      color: VelvetColors.primary.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall)),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: playlists.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        l.playlistsEmptyTitle,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary, fontSize: 14),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: BrowserManager().sc,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    itemCount: playlists.length,
+                    itemBuilder: (context, i) =>
+                        makePlaylistWidget(playlists, i, context),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Name-entry dialog shared by create + rename. Returns the trimmed name, or
+  // null if cancelled.
+  Future<String?> _playlistNameDialog(BuildContext context,
+      {required String title, required String action, String? initial}) {
+    final l = AppLocalizations.of(context);
+    final controller = TextEditingController(text: initial ?? '');
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: VelvetColors.textPrimary),
+          decoration: InputDecoration(hintText: l.playlistNameHint),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createPlaylist(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final name = await _playlistNameDialog(context,
+        title: l.playlistsNew, action: l.create);
+    if (name == null || name.isEmpty) return;
+    try {
+      await ApiManager().createPlaylist(name);
+    } catch (_) {
+      if (context.mounted) _playlistError(context);
+    }
+  }
+
+  Future<void> _renamePlaylist(BuildContext context, DisplayItem item) async {
+    final l = AppLocalizations.of(context);
+    final name = await _playlistNameDialog(context,
+        title: l.playlistsRename, action: l.rename, initial: item.name);
+    if (name == null || name.isEmpty || name == item.name) return;
+    try {
+      await ApiManager().renamePlaylist(item.name, name);
+    } catch (_) {
+      if (context.mounted) _playlistError(context);
+    }
+  }
+
+  void _deletePlaylist(BuildContext context, DisplayItem item) {
+    final l = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text(l.browserConfirmDeletePlaylist),
+        content:
+            Text(item.name, style: TextStyle(color: VelvetColors.textPrimary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              ApiManager()
+                  .removePlaylist(item.data!, useThisServer: item.server);
+              Navigator.of(ctx).pop();
+            },
+            child: Text(l.delete, style: TextStyle(color: VelvetColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Floating so it clears the docked mini-player overlay (a plain bottom
+  // snackbar renders behind it).
+  void _playlistError(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(l.playlistActionFailed),
+      behavior: SnackBarBehavior.floating,
+      margin: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: PlayerPanel.kCollapsedHeight +
+            MediaQuery.of(context).viewPadding.bottom +
+            8,
+      ),
+    ));
   }
 
   Widget makeLocalFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -491,6 +643,43 @@ class _BrowserState extends State<Browser> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
+      // Current File Explorer path — a thin strip under the toolbar/back button.
+      // Only shown in the file explorer (BrowserManager.currentPath is null
+      // elsewhere); rebuilds on each navigation via browserListStream.
+      StreamBuilder<List<DisplayItem>>(
+        stream: BrowserManager().browserListStream,
+        builder: (context, _) {
+          final path = BrowserManager().currentPath;
+          if (path == null) return const SizedBox.shrink();
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
+            decoration: BoxDecoration(
+              color: VelvetColors.raised,
+              border: Border(bottom: BorderSide(color: VelvetColors.border)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.folder_outlined,
+                    size: 13, color: VelvetColors.textTertiary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    path.isEmpty ? '/' : path,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11.5,
+                      color: VelvetColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
       // slot — empty when idle — so the list never jumps.
@@ -549,6 +738,18 @@ class _BrowserState extends State<Browser> {
                           ),
                         ),
                       );
+                    }
+
+                    // The server "Playlists" view gets its own layout: a New-
+                    // playlist button + modern rows with a rename/delete menu.
+                    // Detected by item type ('playlist'); the empty-list case is
+                    // keyed off the section label.
+                    final isPlaylistView =
+                        browserList.every((e) => e.type == 'playlist') &&
+                            (browserList.isNotEmpty ||
+                                BrowserManager().listName == 'Playlists');
+                    if (isPlaylistView) {
+                      return _playlistsView(context, browserList);
                     }
 
                     // If the whole list is albums and the user has the

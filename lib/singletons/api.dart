@@ -151,6 +151,16 @@ class ApiManager {
     });
   }
 
+  // Builds 'playlist' DisplayItems from a getall response.
+  List<DisplayItem> _playlistItems(dynamic res, Server? server) {
+    final List<DisplayItem> newList = [];
+    res.forEach((e) {
+      newList.add(new DisplayItem(server, e['name'], 'playlist', e['name'],
+          Icon(Icons.queue_music, color: VelvetColors.textSecondary), null));
+    });
+    return newList;
+  }
+
   Future<void> getPlaylists({Server? useThisServer}) async {
     var res;
     try {
@@ -163,20 +173,36 @@ class ApiManager {
     }
 
     BrowserManager().setBrowserLabel('Playlists');
+    BrowserManager().addListToStack(_playlistItems(res, useThisServer));
+  }
 
-    List<DisplayItem> newList = [];
-    res.forEach((e) {
-      DisplayItem newItem = new DisplayItem(
-          useThisServer,
-          e['name'],
-          'playlist',
-          e['name'],
-          Icon(Icons.queue_music, color: VelvetColors.textSecondary),
-          null);
-      newList.add(newItem);
-    });
+  /// Re-fetches playlists and replaces the current view in place (no new
+  /// back-stack frame) — used after a create / rename so the list updates
+  /// without pushing a navigation entry.
+  Future<void> refreshPlaylists() async {
+    var res;
+    try {
+      res = await makeServerCall(null, '/api/v1/playlist/getall', {}, 'GET');
+    } catch (err) {
+      print(err);
+      return;
+    }
+    BrowserManager()
+        .replaceTop(_playlistItems(res, ServerManager().currentServer));
+  }
 
-    BrowserManager().addListToStack(newList);
+  /// Creates an empty playlist (POST /playlist/new). Throws on failure (e.g. the
+  /// server's 400 when the name already exists) so the caller can surface it.
+  Future<void> createPlaylist(String title) async {
+    await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST');
+    await refreshPlaylists();
+  }
+
+  /// Renames a playlist (POST /playlist/rename). Throws on failure.
+  Future<void> renamePlaylist(String oldName, String newName) async {
+    await makeServerCall(null, '/api/v1/playlist/rename',
+        {'oldName': oldName, 'newName': newName}, 'POST');
+    await refreshPlaylists();
   }
 
   Future<void> removePlaylist(String playlistId,
@@ -526,6 +552,7 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList, alphabetical: true);
+    BrowserManager()
+        .addListToStack(newList, alphabetical: true, path: res['path']);
   }
 }
