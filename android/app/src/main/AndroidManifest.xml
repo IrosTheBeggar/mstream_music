@@ -28,6 +28,11 @@
          mode for the visualizer. Android's AudioFx Visualizer API
          requires RECORD_AUDIO even to read the app's own audio output. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- The mic is optional (only the opt-in "real audio" visualizer uses it),
+         so stop RECORD_AUDIO from implying a REQUIRED microphone: keeps the app
+         installable on mic-less devices and signals to Play that mic use is
+         optional — supporting the permission justification. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.
          In most cases you can leave this as-is, but you if you want to provide
