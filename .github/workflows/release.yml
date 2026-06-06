@@ -1,16 +1,24 @@
 name: Release
 
-# Tag-driven Android release pipeline. Pushing a tag like `v0.15.0`
-# builds a signed APK and creates a GitHub Release with it attached.
-# Phase 2 (Play Store) will hook in here as an additional job when
-# the Play Console account is squared away.
+# Tag-driven Android release pipeline. Pushing a tag like `v0.15.0`:
+#   1. builds the `full` APK (sideload) + the `play` AAB,
+#   2. creates a GitHub Release with both attached,
+#   3. uploads the AAB to Google Play's `internal` track — but ONLY once the
+#      PLAY_SERVICE_ACCOUNT_JSON secret is set (otherwise that step is skipped,
+#      so the GitHub Release still publishes regardless).
 #
-# Required repository secrets (Settings → Secrets and variables →
-# Actions):
+# Required repository secrets (Settings → Secrets and variables → Actions):
 #   ANDROID_KEYSTORE_BASE64    base64-encoded contents of the .jks file
 #   ANDROID_KEYSTORE_PASSWORD  storePassword from android/key.properties
 #   ANDROID_KEY_PASSWORD       keyPassword from android/key.properties
 #   ANDROID_KEY_ALIAS          keyAlias from android/key.properties (currently "key")
+#   PLAY_SERVICE_ACCOUNT_JSON  (optional) Google Play service-account JSON key
+#                              with Release-manager access to mstream.music.play.
+#                              Until it's set, the Play-upload step is skipped.
+#
+# Play prerequisites (one-time, manual): create the app `mstream.music.play` in
+# the Play Console, do the FIRST AAB upload by hand (Google requires it for a
+# brand-new app), enable Play App Signing, and grant the service account access.
 
 on:
   push:
@@ -22,6 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed for softprops/action-gh-release to create the release
+    env:
+      # Surfaced as an env var so the Play-upload step can guard on its presence
+      # (secrets.* can't be referenced directly in a step `if:`).
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
 
     steps:
       - name: Checkout
@@ -106,3 +118,19 @@ jobs:
           files: |
             build/app/outputs/flutter-apk/mstream_music-*.apk
             build/app/outputs/bundle/playRelease/mstream_music-play-*.aab
+
+      - name: Upload AAB to Google Play (internal track)
+        # Skipped until PLAY_SERVICE_ACCOUNT_JSON is configured, so a release
+        # never fails just because Play isn't wired up yet. `internal` track +
+        # status: completed = the build auto-lands in internal testing; promote
+        # to production from the console. Change track/status here for
+        # closed/open/production or a manual `draft` rollout. (The app uses no
+        # R8/mapping — minifyEnabled is false — so no mappingFile is uploaded.)
+        if: env.PLAY_SERVICE_ACCOUNT_JSON != ''
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: mstream.music.play
+          releaseFiles: build/app/outputs/bundle/playRelease/mstream_music-play-${{ github.ref_name }}.aab
+          track: internal
+          status: completed
