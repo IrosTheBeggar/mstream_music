@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
@@ -190,6 +191,10 @@ class _BrowserState extends State<Browser> {
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
+      case "album":
+        {
+          return makeAlbumWidget(b, i, c);
+        }
       case "file":
         {
           return makeFileWidget(b, i, c);
@@ -439,7 +444,7 @@ class _BrowserState extends State<Browser> {
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Slidable(
             endActionPane: ActionPane(
               motion: DrawerMotion(),
@@ -503,7 +508,7 @@ class _BrowserState extends State<Browser> {
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Slidable(
             endActionPane: ActionPane(
               motion: DrawerMotion(),
@@ -546,7 +551,7 @@ class _BrowserState extends State<Browser> {
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Slidable(
             endActionPane: ActionPane(
               motion: DrawerMotion(),
@@ -582,11 +587,30 @@ class _BrowserState extends State<Browser> {
             )));
   }
 
+  // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
+  // thumbnail (cover art or a same-size placeholder) so the title/subtitle
+  // start at the same x whether or not a row has art — getImage() returns a
+  // full-height image for art rows but a tiny Icon for the rest, which
+  // misaligns the text.
+  Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
+        child: ListTile(
+            leading: b[i].getAlbumThumb(),
+            title: b[i].getText(l: l),
+            subtitle: b[i].getSubText(l: l),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
+  }
+
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     return Container(
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: ListTile(
             leading: b[i].getImage(),
             title: b[i].getText(l: l),
@@ -596,6 +620,67 @@ class _BrowserState extends State<Browser> {
             }));
   }
 
+  // ── Default browser landing: section shortcuts as a modern card grid ──
+  Widget _homeView(BuildContext context, List<DisplayItem> items) {
+    final l = AppLocalizations.of(context);
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final item = items[i];
+        final iconData = item.icon?.icon ?? Icons.chevron_right;
+        return Material(
+          color: VelvetColors.surface,
+          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => handleTap(items, i, context),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: VelvetColors.border),
+                borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+              ),
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: VelvetColors.primaryDim,
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
+                    child: Icon(iconData,
+                        color: VelvetColors.primary, size: 24),
+                  ),
+                  Text(
+                    browserChromeLabel(l, item.name),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: VelvetColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
@@ -603,7 +688,7 @@ class _BrowserState extends State<Browser> {
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
         decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xFFbdbdbd)))),
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Material(
             color: VelvetColors.bg,
             child: InkWell(
@@ -738,6 +823,12 @@ class _BrowserState extends State<Browser> {
                           ),
                         ),
                       );
+                    }
+
+                    // The default browser landing (section shortcuts) gets a
+                    // modern card grid instead of plain list rows.
+                    if (isHome) {
+                      return _homeView(context, browserList);
                     }
 
                     // The server "Playlists" view gets its own layout: a New-

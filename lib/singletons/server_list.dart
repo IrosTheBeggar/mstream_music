@@ -242,13 +242,24 @@ class ServerManager {
     await writeServerFile();
   }
 
-  void makeDefault(int i) {
+  Future<void> makeDefault(int i) async {
     Server s = serverList[i];
 
     serverList.remove(s);
     serverList.insert(0, s);
-
     _serverListStream.sink.add(serverList);
+
+    // Switch the active server to it right away (not just on next launch)
+    // and reset the browser onto the new server — mirrors
+    // changeCurrentServer().
+    currentServer = s;
+    _currentServerStream.sink.add(currentServer);
+    BrowserManager().goToNavScreen();
+
+    // Persist the new order so serverList[0] — the default loaded on the
+    // next launch — is this server. Without this the choice was lost on
+    // restart (every other mutator writes the file; this one didn't).
+    await writeServerFile();
   }
 
   Server lookupServer(String id) {
