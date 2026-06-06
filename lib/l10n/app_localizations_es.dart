@@ -1268,4 +1268,29 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnóstico';
+
+  @override
+  String get diagnosticsEnable => 'Activar registro';
+
+  @override
+  String get diagnosticsHint =>
+      'Los registros se quedan en tu dispositivo. Los tokens se ocultan antes de copiar o compartir.';
+
+  @override
+  String get diagnosticsCopy => 'Copiar';
+
+  @override
+  String get diagnosticsShare => 'Compartir';
+
+  @override
+  String get diagnosticsClear => 'Borrar';
+
+  @override
+  String get diagnosticsCopied => 'Registros copiados al portapapeles';
+
+  @override
+  String get diagnosticsEmpty => 'Aún no hay registros';
 }

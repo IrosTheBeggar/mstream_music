@@ -45,6 +45,8 @@ dependencies:
   ffi: ^2.1.4
   media_cast_dlna: ^0.3.1
   flutter_chrome_cast: ^1.4.6
+  # Native share sheet for exporting diagnostic logs (Diagnostics screen).
+  share_plus: ^10.1.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

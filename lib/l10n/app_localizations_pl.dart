@@ -1286,4 +1286,29 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostyka';
+
+  @override
+  String get diagnosticsEnable => 'Włącz rejestrowanie';
+
+  @override
+  String get diagnosticsHint =>
+      'Dzienniki pozostają na Twoim urządzeniu. Tokeny są ukrywane przed skopiowaniem lub udostępnieniem.';
+
+  @override
+  String get diagnosticsCopy => 'Kopiuj';
+
+  @override
+  String get diagnosticsShare => 'Udostępnij';
+
+  @override
+  String get diagnosticsClear => 'Wyczyść';
+
+  @override
+  String get diagnosticsCopied => 'Skopiowano dzienniki do schowka';
+
+  @override
+  String get diagnosticsEmpty => 'Brak dzienników';
 }

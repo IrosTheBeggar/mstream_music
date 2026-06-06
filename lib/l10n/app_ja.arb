@@ -346,5 +346,13 @@
   "accentThemeDefault": "テーマの既定",
   "accentCustom": "カスタム",
   "settingsResumeQueue": "起動時にキューを復元",
-  "settingsResumeQueueSubtitle": "再生キューと再生位置を保存し、アプリを再び開いたときに復元します。"
+  "settingsResumeQueueSubtitle": "再生キューと再生位置を保存し、アプリを再び開いたときに復元します。",
+  "diagnosticsTitle": "診断",
+  "diagnosticsEnable": "ログ記録を有効にする",
+  "diagnosticsHint": "ログは端末内にのみ保存されます。コピーや共有の前にトークンは隠されます。",
+  "diagnosticsCopy": "コピー",
+  "diagnosticsShare": "共有",
+  "diagnosticsClear": "クリア",
+  "diagnosticsCopied": "ログをクリップボードにコピーしました",
+  "diagnosticsEmpty": "まだログがありません"
 }

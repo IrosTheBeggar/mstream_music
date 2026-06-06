@@ -346,5 +346,13 @@
   "accentThemeDefault": "Domyślny motywu",
   "accentCustom": "Niestandardowy",
   "settingsResumeQueue": "Wznów kolejkę po uruchomieniu",
-  "settingsResumeQueueSubtitle": "Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji."
+  "settingsResumeQueueSubtitle": "Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji.",
+  "diagnosticsTitle": "Diagnostyka",
+  "diagnosticsEnable": "Włącz rejestrowanie",
+  "diagnosticsHint": "Dzienniki pozostają na Twoim urządzeniu. Tokeny są ukrywane przed skopiowaniem lub udostępnieniem.",
+  "diagnosticsCopy": "Kopiuj",
+  "diagnosticsShare": "Udostępnij",
+  "diagnosticsClear": "Wyczyść",
+  "diagnosticsCopied": "Skopiowano dzienniki do schowka",
+  "diagnosticsEmpty": "Brak dzienników"
 }

@@ -1290,4 +1290,29 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.';
+
+  @override
+  String get diagnosticsTitle => 'Диагностика';
+
+  @override
+  String get diagnosticsEnable => 'Включить журналирование';
+
+  @override
+  String get diagnosticsHint =>
+      'Журналы хранятся на вашем устройстве. Токены скрываются перед копированием или отправкой.';
+
+  @override
+  String get diagnosticsCopy => 'Копировать';
+
+  @override
+  String get diagnosticsShare => 'Поделиться';
+
+  @override
+  String get diagnosticsClear => 'Очистить';
+
+  @override
+  String get diagnosticsCopied => 'Журналы скопированы в буфер обмена';
+
+  @override
+  String get diagnosticsEmpty => 'Журналов пока нет';
 }

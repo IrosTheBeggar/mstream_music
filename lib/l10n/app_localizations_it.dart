@@ -1268,4 +1268,29 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell\'app.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostica';
+
+  @override
+  String get diagnosticsEnable => 'Abilita registrazione';
+
+  @override
+  String get diagnosticsHint =>
+      'I log restano sul tuo dispositivo. I token vengono nascosti prima di copiare o condividere.';
+
+  @override
+  String get diagnosticsCopy => 'Copia';
+
+  @override
+  String get diagnosticsShare => 'Condividi';
+
+  @override
+  String get diagnosticsClear => 'Cancella';
+
+  @override
+  String get diagnosticsCopied => 'Log copiati negli appunti';
+
+  @override
+  String get diagnosticsEmpty => 'Nessun log ancora';
 }

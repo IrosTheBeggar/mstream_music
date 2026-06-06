@@ -1209,4 +1209,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsResumeQueueSubtitle => '再生キューと再生位置を保存し、アプリを再び開いたときに復元します。';
+
+  @override
+  String get diagnosticsTitle => '診断';
+
+  @override
+  String get diagnosticsEnable => 'ログ記録を有効にする';
+
+  @override
+  String get diagnosticsHint => 'ログは端末内にのみ保存されます。コピーや共有の前にトークンは隠されます。';
+
+  @override
+  String get diagnosticsCopy => 'コピー';
+
+  @override
+  String get diagnosticsShare => '共有';
+
+  @override
+  String get diagnosticsClear => 'クリア';
+
+  @override
+  String get diagnosticsCopied => 'ログをクリップボードにコピーしました';
+
+  @override
+  String get diagnosticsEmpty => 'まだログがありません';
 }

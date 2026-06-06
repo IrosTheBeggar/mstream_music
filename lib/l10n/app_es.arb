@@ -353,5 +353,13 @@
   "accentThemeDefault": "Predeterminado del tema",
   "accentCustom": "Personalizado",
   "settingsResumeQueue": "Reanudar la cola al iniciar",
-  "settingsResumeQueueSubtitle": "Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app."
+  "settingsResumeQueueSubtitle": "Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.",
+  "diagnosticsTitle": "Diagnóstico",
+  "diagnosticsEnable": "Activar registro",
+  "diagnosticsHint": "Los registros se quedan en tu dispositivo. Los tokens se ocultan antes de copiar o compartir.",
+  "diagnosticsCopy": "Copiar",
+  "diagnosticsShare": "Compartir",
+  "diagnosticsClear": "Borrar",
+  "diagnosticsCopied": "Registros copiados al portapapeles",
+  "diagnosticsEmpty": "Aún no hay registros"
 }
