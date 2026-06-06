@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import '../build_variant.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
@@ -869,10 +870,17 @@ class MyCustomFormState extends State<MyCustomForm> {
   // 'legacyExternal' server displays as App local but keeps its stored
   // mode until the user actively changes it (so its old downloads aren't
   // orphaned just by opening this screen).
-  String get _displayStorageMode =>
-      (_storageMode == 'permanent' || _storageMode == 'sdCard')
-          ? _storageMode
-          : 'appLocal';
+  String get _displayStorageMode {
+    // Map the stored mode to a value the dropdown actually offers, so a hidden
+    // (Play flavor omits permanent/sdCard) or legacy value never breaks the
+    // DropdownButton's value==one-of-items invariant.
+    if (_storageMode == 'appExternal') return 'appExternal';
+    if (!isPlayBuild &&
+        (_storageMode == 'permanent' || _storageMode == 'sdCard')) {
+      return _storageMode;
+    }
+    return 'appLocal';
+  }
 
   Future<void> _onStorageModeChanged(String? v) async {
     if (v == null || v == _storageMode) return;
@@ -1318,8 +1326,18 @@ class MyCustomFormState extends State<MyCustomForm> {
                       DropdownMenuItem(
                           value: 'appLocal', child: Text(l.storageAppLocal)),
                       DropdownMenuItem(
-                          value: 'permanent', child: Text(l.storagePermanent)),
-                      if (_hasSdCard || _storageMode == 'sdCard')
+                          value: 'appExternal',
+                          child: Text(l.storageAppExternal)),
+                      // Permanent / SD card write to a user-chosen shared-storage
+                      // folder, which needs All-files-access — full flavor only.
+                      // The Play build omits the permission from its manifest, so
+                      // these modes aren't offered there.
+                      if (!isPlayBuild)
+                        DropdownMenuItem(
+                            value: 'permanent',
+                            child: Text(l.storagePermanent)),
+                      if (!isPlayBuild &&
+                          (_hasSdCard || _storageMode == 'sdCard'))
                         DropdownMenuItem(
                             value: 'sdCard', child: Text(l.storageSdCard)),
                     ],

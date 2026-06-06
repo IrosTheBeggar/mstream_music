@@ -653,5 +653,6 @@
   "diagnosticsShare": "Share",
   "diagnosticsClear": "Clear",
   "diagnosticsCopied": "Logs copied to clipboard",
-  "diagnosticsEmpty": "No logs yet"
+  "diagnosticsEmpty": "No logs yet",
+  "storageAppExternal": "App external"
 }

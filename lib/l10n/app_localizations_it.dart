@@ -1316,4 +1316,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Nessun log ancora';
+
+  @override
+  String get storageAppExternal => 'App esterna';
 }

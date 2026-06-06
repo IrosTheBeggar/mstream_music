@@ -361,5 +361,6 @@
   "diagnosticsShare": "Udostępnij",
   "diagnosticsClear": "Wyczyść",
   "diagnosticsCopied": "Skopiowano dzienniki do schowka",
-  "diagnosticsEmpty": "Brak dzienników"
+  "diagnosticsEmpty": "Brak dzienników",
+  "storageAppExternal": "Aplikacja (zewn.)"
 }

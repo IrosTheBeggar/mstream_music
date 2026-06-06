@@ -1334,4 +1334,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Brak dzienników';
+
+  @override
+  String get storageAppExternal => 'Aplikacja (zewn.)';
 }

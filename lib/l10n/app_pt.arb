@@ -426,5 +426,6 @@
   "diagnosticsShare": "Compartilhar",
   "diagnosticsClear": "Limpar",
   "diagnosticsCopied": "Registros copiados para a área de transferência",
-  "diagnosticsEmpty": "Ainda não há registros"
+  "diagnosticsEmpty": "Ainda não há registros",
+  "storageAppExternal": "App externo"
 }

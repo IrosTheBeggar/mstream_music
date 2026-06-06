@@ -361,5 +361,6 @@
   "diagnosticsShare": "Поделиться",
   "diagnosticsClear": "Очистить",
   "diagnosticsCopied": "Журналы скопированы в буфер обмена",
-  "diagnosticsEmpty": "Журналов пока нет"
+  "diagnosticsEmpty": "Журналов пока нет",
+  "storageAppExternal": "Внешнее (приложение)"
 }

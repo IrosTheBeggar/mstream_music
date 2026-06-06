@@ -1317,4 +1317,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Noch keine Protokolle';
+
+  @override
+  String get storageAppExternal => 'App extern';
 }

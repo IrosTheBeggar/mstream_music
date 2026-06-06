@@ -126,7 +126,12 @@ class FileExplorer {
         if (storageBasePath == null) return null;
         final dir = Directory(storageBasePath);
         return dir.existsSync() ? dir : null;
+      case 'appExternal':
       case 'legacyExternal':
+        // App-scoped external storage (Android/data/<pkg>/files): more room /
+        // SD-capable, needs NO permission. 'appExternal' is the Play-compliant
+        // option offered in the UI; 'legacyExternal' is the migration-only
+        // value that resolves to the same place.
         return getExternalStorageDirectory();
       case 'appLocal':
       default:

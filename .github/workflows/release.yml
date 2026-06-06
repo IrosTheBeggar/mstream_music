@@ -76,23 +76,33 @@ jobs:
         # pubspec.yaml's `version:` field — gradle reads those.
         run: flutter pub get
 
-      - name: Build signed release APK
-        run: flutter build apk --release
-
-      - name: Rename APK to include tag
-        # Default output is build/app/outputs/flutter-apk/app-release.apk.
-        # Rename to include the tag so users downloading multiple
-        # releases can disambiguate locally.
+      - name: Build signed artifacts (full APK for sideload + Play AAB)
+        # Two product flavors (see android/app/build.gradle): `full` keeps the
+        # All-files-access storage feature for sideloading; `play` is the
+        # Google-Play-compliant build (distinct applicationId, no
+        # MANAGE_EXTERNAL_STORAGE). VARIANT=play gates the storage UI to match.
         run: |
-          mv build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/mstream_music-${{ github.ref_name }}.apk
+          flutter build apk --release --flavor full
+          flutter build appbundle --release --flavor play --dart-define=VARIANT=play
 
-      - name: Create GitHub Release and attach APK
-        # generate_release_notes: true asks GitHub to auto-build the
-        # release body from PRs/commits between this tag and the
-        # previous tag on the same branch lineage.
+      - name: Rename artifacts to include tag
+        # Flutter names flavored outputs app-<flavor>-<buildtype>.{apk,aab}.
+        # Rename so multiple releases disambiguate locally.
+        run: |
+          mv build/app/outputs/flutter-apk/app-full-release.apk \
+             build/app/outputs/flutter-apk/mstream_music-${{ github.ref_name }}.apk
+          mv build/app/outputs/bundle/playRelease/app-play-release.aab \
+             build/app/outputs/bundle/playRelease/mstream_music-play-${{ github.ref_name }}.aab
+
+      - name: Create GitHub Release and attach artifacts
+        # The .apk is the sideload build; the .aab is the Play upload bundle
+        # (not directly installable — upload it to the Play Console).
+        # generate_release_notes auto-builds the body from PRs/commits since the
+        # previous tag.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
-          files: build/app/outputs/flutter-apk/mstream_music-*.apk
+          files: |
+            build/app/outputs/flutter-apk/mstream_music-*.apk
+            build/app/outputs/bundle/playRelease/mstream_music-play-*.aab

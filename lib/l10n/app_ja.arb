@@ -361,5 +361,6 @@
   "diagnosticsShare": "共有",
   "diagnosticsClear": "クリア",
   "diagnosticsCopied": "ログをクリップボードにコピーしました",
-  "diagnosticsEmpty": "まだログがありません"
+  "diagnosticsEmpty": "まだログがありません",
+  "storageAppExternal": "アプリ外部"
 }

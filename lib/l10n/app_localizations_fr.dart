@@ -1314,4 +1314,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Aucun journal pour l\'instant';
+
+  @override
+  String get storageAppExternal => 'App externe';
 }

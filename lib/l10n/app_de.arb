@@ -426,5 +426,6 @@
   "diagnosticsShare": "Teilen",
   "diagnosticsClear": "Löschen",
   "diagnosticsCopied": "Protokolle in die Zwischenablage kopiert",
-  "diagnosticsEmpty": "Noch keine Protokolle"
+  "diagnosticsEmpty": "Noch keine Protokolle",
+  "storageAppExternal": "App extern"
 }

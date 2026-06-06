@@ -1231,4 +1231,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => '暂无日志';
+
+  @override
+  String get storageAppExternal => '应用外部';
 }
