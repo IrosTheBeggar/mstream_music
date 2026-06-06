@@ -12,6 +12,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:uuid/uuid.dart';
 
 import '../objects/display_item.dart';
+import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
@@ -24,6 +25,28 @@ MediaItem buildLocalFileMediaItem(DisplayItem i) {
     title: i.name.split('/').last,
     extras: {'path': i.data, 'localPath': i.data!},
   );
+}
+
+/// Builds the streaming URL for a server file [path] (the leading-slash data
+/// path, e.g. "/Music/foo.mp3"). Honors the current transcode setting and
+/// appends a fresh cache-busting app_uuid plus the server token. Shared by the
+/// browse-time MediaItem builder and the queue-restore rebuild so both stay in
+/// lockstep — and so the rebuilt URL always carries the CURRENT token (a saved
+/// URL's token can go stale between sessions).
+String buildServerStreamUrl(Server server, String path) {
+  String p = '';
+  path.split('/').forEach((element) {
+    if (element.isEmpty) return;
+    p += '/' + Uri.encodeComponent(element);
+  });
+  final String prefix =
+      TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
+  return server.url +
+      prefix +
+      p +
+      '?app_uuid=' +
+      Uuid().v4() +
+      (server.jwt == null ? '' : '&token=' + server.jwt!);
 }
 
 /// Builds a server-file MediaItem, preferring a locally-cached copy when one is
@@ -43,19 +66,7 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
   final bool isLocal =
       finalString != null && File(finalString).existsSync() == true;
 
-  String p = '';
-  i.data!.split('/').forEach((element) {
-    if (element.isEmpty) return;
-    p += '/' + Uri.encodeComponent(element);
-  });
-  final String prefix =
-      TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
-  final String streamUrl = i.server!.url +
-      prefix +
-      p +
-      '?app_uuid=' +
-      Uuid().v4() +
-      (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!);
+  final String streamUrl = buildServerStreamUrl(i.server!, i.data!);
 
   final String? artUrl = i.metadata?.albumArt != null
       ? Uri.parse(i.server!.url.toString())
