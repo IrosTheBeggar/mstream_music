@@ -120,6 +120,36 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get mainRemove;
 
+  /// Track row menu: insert after the current track.
+  ///
+  /// In en, this message translates to:
+  /// **'Add next'**
+  String get queueAddNext;
+
+  /// Track row menu: play this track immediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Play now'**
+  String get queuePlayNow;
+
+  /// Track row menu: append to the end of the queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to end of queue'**
+  String get queueAddToEnd;
+
+  /// Shuffle-play button on the album detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get shuffle;
+
+  /// Shown as the album artist when an album's tracks span multiple artists.
+  ///
+  /// In en, this message translates to:
+  /// **'Various Artists'**
+  String get variousArtists;
+
   /// Application title (brand name; not translated).
   ///
   /// In en, this message translates to:

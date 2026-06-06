@@ -1,6 +1,11 @@
 {
   "mainRemove": "Rimuovi",
   "@@locale": "it",
+  "queueAddNext": "Aggiungi dopo",
+  "queuePlayNow": "Riproduci ora",
+  "queueAddToEnd": "Aggiungi alla fine della coda",
+  "shuffle": "Casuale",
+  "variousArtists": "Artisti vari",
   "appTitle": "mStream Music",
   "settingsLanguage": "Lingua",
   "languageSystemDefault": "Predefinita di sistema",

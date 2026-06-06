@@ -256,13 +256,24 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res['albums'].forEach((e) {
+      // Newer servers include `album_artist`; fold it into the subtitle as
+      // "Artist · Year" for the browse card/list. Older servers omit it, so the
+      // subtitle gracefully falls back to just the year.
+      final artist = (e['album_artist'] ?? e['albumArtist'] ?? e['artist'])
+          ?.toString()
+          .trim();
+      final year = e['year']?.toString().trim();
+      final subtitle = [
+        if (artist != null && artist.isNotEmpty) artist,
+        if (year != null && year.isNotEmpty) year,
+      ].join(' · ');
       DisplayItem newItem = new DisplayItem(
           useThisServer,
           e['name'],
           'album',
           e['name'],
           Icon(Icons.album, color: VelvetColors.textSecondary),
-          e['year']?.toString() ?? '');
+          subtitle);
       newItem.altAlbumArt = e['album_art_file'];
       newList.add(newItem);
     });
@@ -270,18 +281,15 @@ class ApiManager {
     BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
-  Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
-    var res;
-    try {
-      res = await makeServerCall(
-          useThisServer, '/api/v1/db/album-songs', {'album': album}, 'POST');
-    } catch (err) {
-      // TODO: Handle Errors
-      print(err);
-      return;
-    }
+  /// Fetches an album's songs as a list of `file` DisplayItems WITHOUT touching
+  /// the browser stack — used by the album detail screen, which renders its own
+  /// tracklist. Throws on a server error so the caller can show its own state.
+  Future<List<DisplayItem>> fetchAlbumSongs(String? album,
+      {Server? useThisServer}) async {
+    final res = await makeServerCall(
+        useThisServer, '/api/v1/db/album-songs', {'album': album}, 'POST');
 
-    List<DisplayItem> newList = [];
+    final List<DisplayItem> newList = [];
     res.forEach((e) {
       MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
@@ -297,6 +305,18 @@ class ApiManager {
 
       newList.add(newItem);
     });
+    return newList;
+  }
+
+  Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
+    List<DisplayItem> newList;
+    try {
+      newList = await fetchAlbumSongs(album, useThisServer: useThisServer);
+    } catch (err) {
+      // TODO: Handle Errors
+      print(err);
+      return;
+    }
 
     BrowserManager().addListToStack(newList);
   }

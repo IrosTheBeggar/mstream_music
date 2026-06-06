@@ -1,6 +1,11 @@
 {
   "mainRemove": "移除",
   "@@locale": "zh",
+  "queueAddNext": "添加为下一首",
+  "queuePlayNow": "立即播放",
+  "queueAddToEnd": "添加到队列末尾",
+  "shuffle": "随机播放",
+  "variousArtists": "群星",
   "appTitle": "mStream Music",
   "settingsLanguage": "语言",
   "languageSystemDefault": "跟随系统",

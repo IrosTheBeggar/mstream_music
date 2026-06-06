@@ -1,6 +1,11 @@
 {
   "mainRemove": "削除",
   "@@locale": "ja",
+  "queueAddNext": "次に追加",
+  "queuePlayNow": "今すぐ再生",
+  "queueAddToEnd": "キューの最後に追加",
+  "shuffle": "シャッフル",
+  "variousArtists": "様々なアーティスト",
   "appTitle": "mStream Music",
   "settingsLanguage": "言語",
   "languageSystemDefault": "システムのデフォルト",

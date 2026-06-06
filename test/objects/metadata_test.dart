@@ -61,5 +61,64 @@ void main() {
       expect(reparsed.rating, original.rating);
       expect(reparsed.albumArt, original.albumArt);
     });
+
+    test('round-trips the audio-spec fields', () {
+      final original = MusicMetadata(
+          'A', 'Al', 'Ti', 1, 1, 2020, 'h', 5, 'art.jpg',
+          durationSeconds: 200.0, bitrate: 1000, sampleRate: 44100);
+      final reparsed = MusicMetadata.fromJson(original.toJson());
+      expect(reparsed.durationSeconds, 200.0);
+      expect(reparsed.bitrate, 1000);
+      expect(reparsed.sampleRate, 44100);
+    });
+  });
+
+  // The album detail screen renders duration / bitrate / sample-rate only when
+  // present, so the client must parse them off newer servers AND leave them null
+  // on older builds that don't send them.
+  group('MusicMetadata.fromServerMap progressive fields', () {
+    test('reads duration / bitrate / sample-rate when present', () {
+      final m = MusicMetadata.fromServerMap({
+        'artist': 'A',
+        'title': 'T',
+        'album-art': 'x.jpg',
+        'duration': 225,
+        'bitrate': 1411,
+        'sample-rate': 44100,
+      });
+      expect(m.durationSeconds, 225);
+      expect(m.duration, const Duration(seconds: 225));
+      expect(m.bitrate, 1411);
+      expect(m.sampleRate, 44100);
+    });
+
+    test('tolerates alternate key spellings and numeric strings', () {
+      final m = MusicMetadata.fromServerMap({
+        'hash': 'h',
+        'length': '180.5',
+        'bit-rate': '320',
+        'sampleRate': 48000,
+      });
+      expect(m.durationSeconds, 180.5);
+      expect(m.duration, const Duration(milliseconds: 180500));
+      expect(m.bitrate, 320);
+      expect(m.sampleRate, 48000);
+    });
+
+    test('leaves the new fields null on an older server (keys absent)', () {
+      final m = MusicMetadata.fromServerMap({'hash': 'h', 'title': 'T'});
+      expect(m.durationSeconds, isNull);
+      expect(m.duration, isNull);
+      expect(m.bitrate, isNull);
+      expect(m.sampleRate, isNull);
+    });
+
+    test('rejects non-positive / non-numeric values', () {
+      final m = MusicMetadata.fromServerMap(
+          {'hash': 'h', 'duration': 0, 'bitrate': 'abc'});
+      expect(m.durationSeconds, isNull);
+      expect(m.duration, isNull);
+      expect(m.bitrate, isNull);
+    });
   });
 }

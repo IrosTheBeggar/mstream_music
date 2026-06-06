@@ -97,7 +97,8 @@ double _contrastWhite(int r, int g, int b) => 1.05 / (_relLum(r, g, b) + 0.05);
 Gradient? ambientGradient(Color seed,
     {required Color base,
     bool vibrant = false,
-    Alignment center = Alignment.topCenter}) {
+    Alignment center = Alignment.topCenter,
+    double radius = 1.25}) {
   final r = (seed.r * 255.0).round(),
       g = (seed.g * 255.0).round(),
       b = (seed.b * 255.0).round();
@@ -135,7 +136,7 @@ Gradient? ambientGradient(Color seed,
   // dark base over the lower half, keeping the queue list legible.
   return RadialGradient(
     center: center,
-    radius: 1.25,
+    radius: radius,
     colors: [brightColor, midColor, base],
     stops: const [0.0, 0.40, 0.82],
   );
