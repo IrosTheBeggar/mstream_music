@@ -88,9 +88,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               TextStyle(color: VelvetColors.textSecondary)),
                     );
                   }
-                  // Newest first so the latest entries are visible immediately.
+                  // Terminal-style: oldest at the top, newest at the bottom,
+                  // pinned to the latest line. reverse:true lays the
+                  // newest-first list out from the bottom up and keeps the view
+                  // following new entries as they arrive.
                   final display = lines.reversed.toList();
                   return ListView.builder(
+                    reverse: true,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     itemCount: display.length,
