@@ -355,5 +355,7 @@
   "diagnosticsClear": "クリア",
   "diagnosticsCopied": "ログをクリップボードにコピーしました",
   "diagnosticsEmpty": "まだログがありません",
-  "storageAppExternal": "アプリ外部"
+  "storageAppExternal": "アプリ外部",
+  "selfSignedTitle": "自己署名証明書を許可",
+  "selfSignedSubtitle": "このサーバーの TLS 検証をスキップします。信頼できるネットワークでのみ有効にしてください。"
 }

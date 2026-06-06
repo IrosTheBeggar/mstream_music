@@ -1280,4 +1280,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'App external';
+
+  @override
+  String get selfSignedTitle => 'Allow self-signed certificate';
+
+  @override
+  String get selfSignedSubtitle =>
+      'Skip TLS validation for this server. Only enable on a network you trust.';
 }

@@ -1212,4 +1212,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get storageAppExternal => '应用外部';
+
+  @override
+  String get selfSignedTitle => '允许自签名证书';
+
+  @override
+  String get selfSignedSubtitle => '跳过此服务器的 TLS 验证。仅在可信网络中启用。';
 }

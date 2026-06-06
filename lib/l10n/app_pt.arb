@@ -420,5 +420,7 @@
   "diagnosticsClear": "Limpar",
   "diagnosticsCopied": "Registros copiados para a área de transferência",
   "diagnosticsEmpty": "Ainda não há registros",
-  "storageAppExternal": "App externo"
+  "storageAppExternal": "App externo",
+  "selfSignedTitle": "Permitir certificado autoassinado",
+  "selfSignedSubtitle": "Ignora a validação TLS deste servidor. Ative apenas em uma rede confiável."
 }
