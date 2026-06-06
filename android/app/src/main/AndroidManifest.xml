@@ -14,7 +14,10 @@
          downloaded files (MigrationService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- CAMERA removed: the only consumer (QR-code add-server via
+         flutter_barcode_scanner) is commented out, so declaring it was an
+         unused-sensitive-permission flag for Play review. Re-add it (ideally in
+         the full flavor) if the QR scanner is restored. -->
     <!-- Storage permissions for the user-chosen download folders (Permanent /
          SD-card modes, which need "All files access") live in the `full` flavor
          ONLY — see android/app/src/full/AndroidManifest.xml. The Play edition
