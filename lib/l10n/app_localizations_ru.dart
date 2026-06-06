@@ -12,6 +12,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mainRemove => 'Убрать';
 
   @override
+  String get queueAddNext => 'Добавить следующим';
+
+  @override
+  String get queuePlayNow => 'Воспроизвести сейчас';
+
+  @override
+  String get queueAddToEnd => 'Добавить в конец очереди';
+
+  @override
+  String get shuffle => 'Перемешать';
+
+  @override
+  String get variousArtists => 'Разные исполнители';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override

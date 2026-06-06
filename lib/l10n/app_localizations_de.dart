@@ -12,6 +12,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mainRemove => 'Entfernen';
 
   @override
+  String get queueAddNext => 'Als Nächstes';
+
+  @override
+  String get queuePlayNow => 'Jetzt abspielen';
+
+  @override
+  String get queueAddToEnd => 'Ans Ende der Warteschlange';
+
+  @override
+  String get shuffle => 'Zufallswiedergabe';
+
+  @override
+  String get variousArtists => 'Verschiedene Interpreten';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override

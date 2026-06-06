@@ -1,23 +1,18 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'package:mstream_music/singletons/downloads.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
-import '../singletons/transcode.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
-import '../widgets/local_search_bar.dart';
-import 'package:uuid/uuid.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-import 'dart:io';
-
 import '../singletons/media.dart';
+import '../util/queue_actions.dart';
 
 import 'add_server.dart';
 
@@ -27,15 +22,6 @@ class Browser extends StatefulWidget {
 }
 
 class _BrowserState extends State<Browser> {
-  // Local-search state. _searchOpen toggles the header search field;
-  // _searchQuery filters the *displayed* list only — BrowserManager's
-  // browserList and back-stack are never mutated, so navigation, the
-  // letter-strip math and scroll restore all stay intact. Any
-  // navigation (folder/album/etc. tap, or Back) clears both via
-  // _closeSearch() so a filter never carries over into a new view.
-  String _searchQuery = '';
-  bool _searchOpen = false;
-
   // Item types whose tap loads a new list (vs. file/localFile, which
   // just enqueue and leave the current list in place). Tapping any of
   // these closes local search.
@@ -49,18 +35,10 @@ class _BrowserState extends State<Browser> {
     'localDirectory',
   };
 
-  void _closeSearch() {
-    if (!_searchOpen && _searchQuery.isEmpty) return;
-    setState(() {
-      _searchOpen = false;
-      _searchQuery = '';
-    });
-  }
-
   void handleTap(
       List<DisplayItem> browserList, int index, BuildContext context) {
     if (_navTypes.contains(browserList[index].type)) {
-      _closeSearch();
+      BrowserManager().closeSearch();
     }
 
     if (browserList[index].type == 'addServer') {
@@ -132,8 +110,10 @@ class _BrowserState extends State<Browser> {
     }
 
     if (browserList[index].type == 'album') {
-      ApiManager().getAlbumSongs(browserList[index].data,
-          useThisServer: browserList[index].server);
+      // Open the album detail over the browser body (no route) — keeps the
+      // file-explorer model and the mini-player visible. See main.dart's
+      // IndexedStack and BrowserManager.albumDetail.
+      BrowserManager().openAlbumDetail(browserList[index]);
       return;
     }
 
@@ -165,85 +145,12 @@ class _BrowserState extends State<Browser> {
   // Side-effect entry points. Build the MediaItem then run it through
   // _enqueue, which applies the user's tap behavior preference.
   Future<void> addLocalFile(DisplayItem i) async {
-    await _enqueue(_buildLocalFileItem(i));
+    await _enqueue(buildLocalFileMediaItem(i));
   }
 
   Future<void> addFile(DisplayItem i) async {
-    final item = await _buildFileItem(i);
+    final item = await buildServerFileMediaItem(i);
     if (item != null) await _enqueue(item);
-  }
-
-  // Pure builder for a localFile MediaItem. No I/O.
-  MediaItem _buildLocalFileItem(DisplayItem i) {
-    return new MediaItem(
-        id: Uuid().v4(),
-        title: i.name.split('/').last,
-        extras: {'path': i.data, 'localPath': i.data!});
-  }
-
-  // Builder for a server-file MediaItem. Async because it has to check
-  // whether the file is already cached locally to decide between a
-  // local path and a streaming URL. Returns null if the download dir
-  // isn't available.
-  Future<MediaItem?> _buildFileItem(DisplayItem i) async {
-    String downloadDirectory = i.server!.localname + i.data!;
-    final dir = await FileExplorer()
-        .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
-    // A null dir means the configured location is unavailable (SD card
-    // removed / folder deleted) — treat as "not downloaded".
-    final String? finalString =
-        dir == null ? null : '${dir.path}/media/$downloadDirectory';
-    final bool isLocal =
-        finalString != null && new File(finalString).existsSync() == true;
-
-    // Streaming URL — used as the MediaItem id for BOTH local and online
-    // items, so playback can fall back to streaming if the local file goes
-    // missing (moved mid-migration, SD removed, deleted externally). The
-    // local path lives in extras and is re-checked for existence at play time.
-    String p = '';
-    i.data!.split("/").forEach((element) {
-      if (element.length == 0) return;
-      p += "/" + Uri.encodeComponent(element);
-    });
-    final String prefix =
-        TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
-    final String streamUrl = i.server!.url +
-        prefix +
-        p +
-        '?app_uuid=' +
-        Uuid().v4() +
-        (i.server!.jwt == null ? '' : '&token=' + i.server!.jwt!);
-
-    final String? artUrl = i.metadata?.albumArt != null
-        ? Uri.parse(i.server!.url.toString())
-            .resolve('/album-art/' +
-                i.metadata!.albumArt! +
-                '?compress=l&token=' +
-                (i.server!.jwt ?? ''))
-            .toString()
-        : null;
-
-    return new MediaItem(
-        id: streamUrl,
-        title: i.metadata?.title ?? i.name,
-        album: i.metadata?.album,
-        artist: i.metadata?.artist,
-        genre: i.metadata?.genreLabel,
-        extras: {
-          'server': i.server!.localname,
-          'path': i.data,
-          if (isLocal) 'localPath': finalString,
-          'year': i.metadata?.year,
-          'track': i.metadata?.track,
-          'disc': i.metadata?.disc,
-          'artUrl': artUrl,
-          // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing
-          // modes — read off the currently playing item.
-          'bpm': i.metadata?.bpm,
-          'musicalKey': i.metadata?.musicalKey,
-        });
-
-    // TODO: Fire of request for metadata
   }
 
   // Adds the item to the queue, then dispatches on the user's tap
@@ -273,41 +180,12 @@ class _BrowserState extends State<Browser> {
     }
   }
 
-  // Pattern A: clear the queue, fill it with every playable item from
-  // the current browser view (in order), jump to the tapped one, play.
-  Future<void> _playFromHere(
-      List<DisplayItem> browserList, int tappedIndex) async {
-    // Filter to playable rows, remember where the tap lands within
-    // the filtered list. Non-song rows (folders, headers) are skipped.
-    final playable = <DisplayItem>[];
-    int newIndex = 0;
-    for (var j = 0; j < browserList.length; j++) {
-      final t = browserList[j].type;
-      if (t == 'file' || t == 'localFile') {
-        if (j == tappedIndex) newIndex = playable.length;
-        playable.add(browserList[j]);
-      }
-    }
-    if (playable.isEmpty) return;
-
-    // Build all MediaItems first so a failed build doesn't leave us
-    // with a half-replaced queue.
-    final items = <MediaItem>[];
-    for (final i in playable) {
-      final m = i.type == 'localFile'
-          ? _buildLocalFileItem(i)
-          : await _buildFileItem(i);
-      if (m != null) items.add(m);
-    }
-    if (items.isEmpty) return;
-
-    await MediaManager().audioHandler.customAction('clearPlaylist');
-    for (final m in items) {
-      await MediaManager().audioHandler.addQueueItem(m);
-    }
-    await MediaManager().audioHandler.skipToQueueItem(newIndex);
-    await MediaManager().audioHandler.play();
-  }
+  // Pattern A: clear the queue, fill it with every playable item from the
+  // current browser view (in order), jump to the tapped one, play. Delegates to
+  // the shared helper (util/queue_actions.dart) so the album-detail screen plays
+  // albums with identical semantics.
+  Future<void> _playFromHere(List<DisplayItem> browserList, int tappedIndex) =>
+      playFromHere(browserList, tappedIndex);
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
@@ -610,173 +488,9 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
-  // Browser "Download all": same confirm + empty-state UX as the queue's
-  // button. Counts the file rows in the *current* list (folders / headers
-  // are ignored); alerts if there are none, otherwise confirms the count
-  // before enqueueing. downloadOneFile no-ops on files already on disk.
-  void _downloadAll(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final files =
-        BrowserManager().browserList.where((e) => e.type == 'file').toList();
-    if (files.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.browserNothingToDownload)));
-      return;
-    }
-    final n = files.length;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.browserDownloadAllTitle),
-        content: Text(l.browserDownloadAllConfirm(n)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              for (final e in files) {
-                String downloadUrl = e.server!.url +
-                    '/media' +
-                    e.data! +
-                    (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
-                DownloadManager().downloadOneFile(
-                    downloadUrl, e.server!.localname, e.data!,
-                    referenceItem: e);
-              }
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(l.browserDownloadsStarted(n))));
-            },
-            child: Text(l.download),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
-      Material(
-        color: VelvetColors.surface,
-        child: StreamBuilder<List<DisplayItem>>(
-            stream: BrowserManager().browserListStream,
-            builder: (context, snapshot) {
-              final List<DisplayItem> browserList = snapshot.data ?? [];
-
-              if (browserList.length > 0) {
-                print(browserList[0].type);
-              }
-              return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    if (browserList.length == 0 ||
-                        browserList[0].type != 'execAction') ...[
-                      if (_searchOpen) ...[
-                        // Search mode: a close button + the live-filtering
-                        // field fill the header. Download / Add All are
-                        // hidden here so they always act on the full list,
-                        // never the filtered subset.
-                        IconButton(
-                            icon: Icon(Icons.close,
-                                color: VelvetColors.textSecondary),
-                            tooltip: l.browserCloseSearch,
-                            onPressed: _closeSearch),
-                        Expanded(
-                            child: LocalSearchBar(
-                                hintText: l.browserSearchThisList,
-                                onChanged: (q) =>
-                                    setState(() => _searchQuery = q))),
-                      ] else ...[
-                      IconButton(
-                          icon: Icon(Icons.keyboard_arrow_left,
-                              color: VelvetColors.textSecondary),
-                          tooltip: l.goBack,
-                          onPressed: () {
-                            _closeSearch();
-                            BrowserManager().popBrowser();
-                          }),
-                      Row(children: <Widget>[
-                        IconButton(
-                            icon: Icon(Icons.search,
-                                color: VelvetColors.textSecondary),
-                            tooltip: l.browserSearchList,
-                            onPressed: () =>
-                                setState(() => _searchOpen = true)),
-                        IconButton(
-                            icon: Icon(
-                              Icons.download_sharp,
-                              color: VelvetColors.textSecondary,
-                            ),
-                            tooltip: l.download,
-                            onPressed: () => _downloadAll(context)),
-                        IconButton(
-                            icon: Icon(
-                              Icons.library_add,
-                              color: VelvetColors.textSecondary,
-                            ),
-                            tooltip: l.addAll,
-                            onPressed: () {
-                              int n = 0;
-
-                              BrowserManager().browserList.forEach((element) {
-                                if (element.type == 'localFile') {
-                                  if (element.data!.substring(
-                                          element.data!.length - 4) ==
-                                      '.m3u') {
-                                    return;
-                                  }
-                                  addLocalFile(element);
-                                  n++;
-                                } else if (element.type == 'file') {
-                                  if (element.data!.substring(
-                                          element.data!.length - 4) ==
-                                      '.m3u') {
-                                    return;
-                                  }
-                                  addFile(element);
-                                  n++;
-                                }
-                              });
-
-                              if (n > 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text(l.browserSongsAdded(n))));
-                              }
-                            })
-                      ])
-                      ],
-                    ] else ...[
-                      Expanded(
-                          child: TextField(
-                              onSubmitted: (text) {
-                                ApiManager().searchServer(text);
-                                print('First text field: $text');
-                              },
-                              style: TextStyle(color: VelvetColors.textSecondary),
-                              decoration: InputDecoration(
-                                prefixIcon: Icon(
-                                  Icons.search,
-                                  color: VelvetColors.textSecondary,
-                                ),
-                                hintStyle: TextStyle(
-                                  color: VelvetColors.textSecondary,
-                                ),
-                                labelStyle: TextStyle(
-                                  color: VelvetColors.textSecondary,
-                                ),
-                                hintText: l.browserSearchHint,
-                              )))
-                    ]
-                  ]);
-            }),
-      ),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
       // slot — empty when idle — so the list never jumps.
@@ -811,9 +525,13 @@ class _BrowserState extends State<Browser> {
                     // is never filtered.
                     final bool isHome = rawList.isNotEmpty &&
                         rawList[0].type == 'execAction';
-                    final String q = _searchQuery.trim();
+                    // Search state lives in BrowserManager (the top toolbar owns
+                    // the field) and re-emits this list on every change, so
+                    // reading it synchronously here re-filters live.
+                    final search = BrowserManager().search;
+                    final String q = search.query.trim();
                     final bool filtering =
-                        _searchOpen && q.isNotEmpty && !isHome;
+                        search.open && q.isNotEmpty && !isHome;
                     final List<DisplayItem> browserList = filtering
                         ? rawList.where((it) => it.matchesQuery(q)).toList()
                         : rawList;

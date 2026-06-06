@@ -12,6 +12,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mainRemove => '移除';
 
   @override
+  String get queueAddNext => '添加为下一首';
+
+  @override
+  String get queuePlayNow => '立即播放';
+
+  @override
+  String get queueAddToEnd => '添加到队列末尾';
+
+  @override
+  String get shuffle => '随机播放';
+
+  @override
+  String get variousArtists => '群星';
+
+  @override
   String get appTitle => 'mStream Music';
 
   @override

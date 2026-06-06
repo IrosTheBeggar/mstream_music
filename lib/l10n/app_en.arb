@@ -1,6 +1,16 @@
 {
   "mainRemove": "Remove",
   "@@locale": "en",
+  "queueAddNext": "Add next",
+  "@queueAddNext": { "description": "Track row menu: insert after the current track." },
+  "queuePlayNow": "Play now",
+  "@queuePlayNow": { "description": "Track row menu: play this track immediately." },
+  "queueAddToEnd": "Add to end of queue",
+  "@queueAddToEnd": { "description": "Track row menu: append to the end of the queue." },
+  "shuffle": "Shuffle",
+  "@shuffle": { "description": "Shuffle-play button on the album detail screen." },
+  "variousArtists": "Various Artists",
+  "@variousArtists": { "description": "Shown as the album artist when an album's tracks span multiple artists." },
 
   "appTitle": "mStream Music",
   "@appTitle": {

@@ -7,6 +7,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'screens/browser.dart';
+import 'screens/album_detail_view.dart';
+import 'objects/display_item.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
@@ -28,8 +30,8 @@ import 'media/cast_target.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'l10n/app_localizations.dart';
-import 'l10n/enum_labels.dart';
 import 'widgets/player_panel.dart';
+import 'widgets/browser_toolbar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -238,6 +240,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           final panel = _panelKey.currentState;
           if (panel != null && panel.isExpanded) {
             panel.collapse();
+          } else if (BrowserManager().albumDetail != null) {
+            BrowserManager().closeAlbumDetail();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {
@@ -360,30 +364,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                       );
                     }),
               ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(34),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: StreamBuilder<String>(
-                        stream: BrowserManager().browserLabelStream,
-                        builder: (context, snapshot) {
-                          final String? label = snapshot.data;
-                          return Text(
-                            browserChromeLabel(l, label),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: VelvetColors.appBarTextSecondary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3),
-                          );
-                        }),
-                  ),
-                ),
-              ),
+              // Consolidated browser chrome (back · label/album · search ·
+              // download · add-all) — replaces both the old label-only strip and
+              // the Browser's in-body header row. See widgets/browser_toolbar.dart.
+              bottom: const BrowserToolbar(),
             ),
             drawer: Drawer(
                 child: ListView(padding: EdgeInsets.zero, children: <Widget>[
@@ -527,7 +511,28 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   padding: EdgeInsets.only(
                       bottom: PlayerPanel.kCollapsedHeight +
                           MediaQuery.of(context).viewPadding.bottom),
-                  child: Browser(),
+                  child: StreamBuilder<DisplayItem?>(
+                    stream: BrowserManager().albumDetailStream,
+                    initialData: BrowserManager().albumDetail,
+                    builder: (context, snap) {
+                      final album = snap.data;
+                      // Album detail renders over the browser, which stays alive
+                      // in the IndexedStack so its scroll/search survive. Same
+                      // browser model (no route), so the mini-player overlay —
+                      // which sits above this Scaffold — stays visible.
+                      return IndexedStack(
+                        index: album == null ? 0 : 1,
+                        sizing: StackFit.expand,
+                        children: [
+                          Browser(),
+                          album == null
+                              ? const SizedBox.shrink()
+                              : AlbumDetailView(
+                                  key: ValueKey(album), album: album),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ]),

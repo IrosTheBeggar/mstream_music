@@ -1,6 +1,11 @@
 {
   "mainRemove": "Убрать",
   "@@locale": "ru",
+  "queueAddNext": "Добавить следующим",
+  "queuePlayNow": "Воспроизвести сейчас",
+  "queueAddToEnd": "Добавить в конец очереди",
+  "shuffle": "Перемешать",
+  "variousArtists": "Разные исполнители",
   "appTitle": "mStream Music",
   "settingsLanguage": "Язык",
   "languageSystemDefault": "Системный по умолчанию",

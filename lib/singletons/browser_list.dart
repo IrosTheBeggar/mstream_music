@@ -51,6 +51,22 @@ class BrowserManager {
   late final BehaviorSubject<String> _browserLabel =
       BehaviorSubject<String>.seeded(listName);
 
+  // Album-detail overlay. When non-null, the browser body shows the album detail
+  // view over the file list (same browser model — no Navigator route — so the
+  // mini-player stays visible). Cleared by Back and by a server switch.
+  late final BehaviorSubject<DisplayItem?> _albumDetail =
+      BehaviorSubject<DisplayItem?>.seeded(null);
+
+  // The album-detail view publishes its loaded songs here so the top toolbar's
+  // download / add-all act on them (the songs live in the view's state).
+  List<DisplayItem>? albumDetailSongs;
+
+  // Browser local-search state, shared so the top toolbar owns the field/toggle
+  // while the body does the filtering. open = field shown; query = filter text.
+  late final BehaviorSubject<({bool open, String query})> _search =
+      BehaviorSubject<({bool open, String query})>.seeded(
+          (open: false, query: ''));
+
   StreamSubscription<int>? _letterStripSub;
   StreamSubscription<MigrationProgress?>? _migrationSub;
 
@@ -83,6 +99,45 @@ class BrowserManager {
     _browserLabel.sink.add(label);
   }
 
+  /// Show the album-detail view over the browser body (no route).
+  void openAlbumDetail(DisplayItem album) {
+    albumDetailSongs = null; // new album — its songs load asynchronously
+    _albumDetail.add(album);
+  }
+
+  /// Hide the album-detail view. Returns true if it was open, so the back
+  /// handler knows it consumed the gesture.
+  bool closeAlbumDetail() {
+    if (_albumDetail.value == null) return false;
+    albumDetailSongs = null;
+    _albumDetail.add(null);
+    return true;
+  }
+
+  // ── browser local search (field lives in the top toolbar) ──
+  // Each mutation re-emits the browser list so the body re-filters live (the
+  // body reads `search` synchronously at build time).
+  void openSearch() {
+    if (_search.value.open) return;
+    _search.add((open: true, query: ''));
+    updateStream();
+  }
+
+  void setSearchQuery(String q) {
+    _search.add((open: _search.value.open, query: q));
+    updateStream();
+  }
+
+  /// Clears an active search. Returns true if there was one (so the back
+  /// handler can consume the gesture).
+  bool closeSearch() {
+    final s = _search.value;
+    if (!s.open && s.query.isEmpty) return false;
+    _search.add((open: false, query: ''));
+    updateStream();
+    return true;
+  }
+
   void clear() {
     List<DisplayItem> hold = browserCache[0];
     bool holdAlpha = alphabeticalCache.isNotEmpty ? alphabeticalCache[0] : false;
@@ -99,6 +154,7 @@ class BrowserManager {
   }
 
   void goToNavScreen() {
+    _albumDetail.add(null);
     browserCache.clear();
     browserList.clear();
     // Invariant: scrollCache.length == browserCache.length - 1.
@@ -183,6 +239,7 @@ class BrowserManager {
   }
 
   void noServerScreen() {
+    _albumDetail.add(null);
     browserCache.clear();
     browserList.clear();
     scrollCache.clear();
@@ -305,9 +362,15 @@ class BrowserManager {
     _letterStripSub?.cancel();
     _browserStream.close();
     _browserLabel.close();
+    _albumDetail.close();
+    _search.close();
     _loading.close();
   }
 
   Stream<List<DisplayItem>> get browserListStream => _browserStream.stream;
   Stream<String> get browserLabelStream => _browserLabel.stream;
+  Stream<DisplayItem?> get albumDetailStream => _albumDetail.stream;
+  DisplayItem? get albumDetail => _albumDetail.value;
+  Stream<({bool open, String query})> get searchStream => _search.stream;
+  ({bool open, String query}) get search => _search.value;
 }
