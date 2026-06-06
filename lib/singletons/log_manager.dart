@@ -4,6 +4,17 @@ import 'package:rxdart/rxdart.dart';
 
 import 'settings.dart';
 
+/// App-wide informational logging for non-cast subsystems. Routed through
+/// `print()` so the main() print-Zone tees it into the in-app buffer (redacted,
+/// gated by the logging toggle) AND forwards it to the console / logcat — one
+/// path, no double entry. Use for happy-path activity (server calls, playback,
+/// startup) so the Diagnostics screen shows a real trail, not just errors.
+void appLog(String message) {
+  // ignore: avoid_print — deliberate: the print Zone in main() captures this
+  // into the diagnostic buffer; this is the app's info-logging entry point.
+  print(message);
+}
+
 /// In-app diagnostic log buffer. Captures `print()` output (via a custom print
 /// Zone installed in main()), the cast subsystem's `castLog()`, and uncaught
 /// errors into a bounded ring buffer that the user can view, copy and share from

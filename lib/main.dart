@@ -26,6 +26,7 @@ import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
+import 'app_version.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -70,6 +71,7 @@ Future<void> _startApp() async {
   await MediaManager().start();
   await PlaylistManager().load();
   await AutoDJManager().load();
+  appLog('[app] mStream $kAppVersion started');
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
