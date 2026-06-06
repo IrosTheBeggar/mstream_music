@@ -411,5 +411,13 @@
   "accentThemeDefault": "Padrão do tema",
   "accentCustom": "Personalizado",
   "settingsResumeQueue": "Retomar a fila ao iniciar",
-  "settingsResumeQueueSubtitle": "Salva a fila de reprodução e sua posição e as restaura ao reabrir o app."
+  "settingsResumeQueueSubtitle": "Salva a fila de reprodução e sua posição e as restaura ao reabrir o app.",
+  "diagnosticsTitle": "Diagnóstico",
+  "diagnosticsEnable": "Ativar registro",
+  "diagnosticsHint": "Os registros ficam no seu dispositivo. Os tokens são ocultados antes de copiar ou compartilhar.",
+  "diagnosticsCopy": "Copiar",
+  "diagnosticsShare": "Compartilhar",
+  "diagnosticsClear": "Limpar",
+  "diagnosticsCopied": "Registros copiados para a área de transferência",
+  "diagnosticsEmpty": "Ainda não há registros"
 }

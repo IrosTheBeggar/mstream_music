@@ -638,5 +638,13 @@
   "accentThemeDefault": "Theme default",
   "accentCustom": "Custom",
   "settingsResumeQueue": "Resume queue on launch",
-  "settingsResumeQueueSubtitle": "Save the play queue and your place, and restore them when you reopen the app."
+  "settingsResumeQueueSubtitle": "Save the play queue and your place, and restore them when you reopen the app.",
+  "diagnosticsTitle": "Diagnostics",
+  "diagnosticsEnable": "Enable logging",
+  "diagnosticsHint": "Logs stay on your device. Tokens are hidden before copying or sharing.",
+  "diagnosticsCopy": "Copy",
+  "diagnosticsShare": "Share",
+  "diagnosticsClear": "Clear",
+  "diagnosticsCopied": "Logs copied to clipboard",
+  "diagnosticsEmpty": "No logs yet"
 }

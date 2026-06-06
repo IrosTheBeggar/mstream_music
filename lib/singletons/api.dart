@@ -1,5 +1,6 @@
 import './server_list.dart';
 import './browser_list.dart';
+import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
@@ -105,18 +106,27 @@ class ApiManager {
 
       Uri currentUri = Uri.parse(server.url).resolve(location);
 
+      final sw = Stopwatch()..start();
       var response;
-      if (getOrPost == 'GET') {
-        response = await client
-            .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
-      } else {
-        response = await client.post(currentUri,
-            body: json.encode(payload),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? ''
-            });
+      try {
+        if (getOrPost == 'GET') {
+          response = await client
+              .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
+        } else {
+          response = await client.post(currentUri,
+              body: json.encode(payload),
+              headers: {
+                'Content-Type': 'application/json',
+                'x-access-token': server.jwt ?? ''
+              });
+        }
+      } catch (e) {
+        appLog('[api] $getOrPost $location → error: $e '
+            '(${sw.elapsedMilliseconds}ms)');
+        rethrow;
       }
+      appLog('[api] $getOrPost $location → ${response.statusCode} '
+          '(${sw.elapsedMilliseconds}ms)');
 
       if (response.statusCode > 299) {
         throw Exception('Server Call Failed');

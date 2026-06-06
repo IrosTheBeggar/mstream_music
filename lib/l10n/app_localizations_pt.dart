@@ -1264,4 +1264,30 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Salva a fila de reprodução e sua posição e as restaura ao reabrir o app.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnóstico';
+
+  @override
+  String get diagnosticsEnable => 'Ativar registro';
+
+  @override
+  String get diagnosticsHint =>
+      'Os registros ficam no seu dispositivo. Os tokens são ocultados antes de copiar ou compartilhar.';
+
+  @override
+  String get diagnosticsCopy => 'Copiar';
+
+  @override
+  String get diagnosticsShare => 'Compartilhar';
+
+  @override
+  String get diagnosticsClear => 'Limpar';
+
+  @override
+  String get diagnosticsCopied =>
+      'Registros copiados para a área de transferência';
+
+  @override
+  String get diagnosticsEmpty => 'Ainda não há registros';
 }

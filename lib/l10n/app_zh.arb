@@ -346,5 +346,13 @@
   "accentThemeDefault": "主题默认",
   "accentCustom": "自定义",
   "settingsResumeQueue": "启动时恢复播放队列",
-  "settingsResumeQueueSubtitle": "保存播放队列和当前播放位置，并在重新打开应用时恢复。"
+  "settingsResumeQueueSubtitle": "保存播放队列和当前播放位置，并在重新打开应用时恢复。",
+  "diagnosticsTitle": "诊断",
+  "diagnosticsEnable": "启用日志记录",
+  "diagnosticsHint": "日志仅保存在您的设备上。复制或分享前会隐藏令牌。",
+  "diagnosticsCopy": "复制",
+  "diagnosticsShare": "分享",
+  "diagnosticsClear": "清除",
+  "diagnosticsCopied": "日志已复制到剪贴板",
+  "diagnosticsEmpty": "暂无日志"
 }

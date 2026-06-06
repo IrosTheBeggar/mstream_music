@@ -1266,4 +1266,29 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Enregistre la file de lecture et votre position, puis les restaure à la réouverture de l\'application.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get diagnosticsEnable => 'Activer la journalisation';
+
+  @override
+  String get diagnosticsHint =>
+      'Les journaux restent sur votre appareil. Les jetons sont masqués avant copie ou partage.';
+
+  @override
+  String get diagnosticsCopy => 'Copier';
+
+  @override
+  String get diagnosticsShare => 'Partager';
+
+  @override
+  String get diagnosticsClear => 'Effacer';
+
+  @override
+  String get diagnosticsCopied => 'Journaux copiés dans le presse-papiers';
+
+  @override
+  String get diagnosticsEmpty => 'Aucun journal pour l\'instant';
 }

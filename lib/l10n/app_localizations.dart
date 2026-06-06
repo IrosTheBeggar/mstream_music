@@ -2195,6 +2195,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save the play queue and your place, and restore them when you reopen the app.'**
   String get settingsResumeQueueSubtitle;
+
+  /// No description provided for @diagnosticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get diagnosticsTitle;
+
+  /// No description provided for @diagnosticsEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable logging'**
+  String get diagnosticsEnable;
+
+  /// No description provided for @diagnosticsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs stay on your device. Tokens are hidden before copying or sharing.'**
+  String get diagnosticsHint;
+
+  /// No description provided for @diagnosticsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get diagnosticsCopy;
+
+  /// No description provided for @diagnosticsShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get diagnosticsShare;
+
+  /// No description provided for @diagnosticsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get diagnosticsClear;
+
+  /// No description provided for @diagnosticsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs copied to clipboard'**
+  String get diagnosticsCopied;
+
+  /// No description provided for @diagnosticsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs yet'**
+  String get diagnosticsEmpty;
 }
 
 class _AppLocalizationsDelegate

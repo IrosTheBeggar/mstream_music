@@ -121,6 +121,9 @@ class SettingsManager {
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
+  // Whether in-app diagnostic logging is captured (see LogManager) so users can
+  // view / copy / share logs from the Diagnostics screen. On by default.
+  bool diagnosticsLogging = true;
   // Visualizer audio source — synthesized is the default so the
   // visualizer Just Works without prompting for RECORD_AUDIO. Users
   // can opt into real audio in Settings; the toggle there walks them
@@ -212,6 +215,7 @@ class SettingsManager {
       accentColor = accent is int ? accent : null;
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
+      diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       final rawGains = m['eqBandGains'];
       eqBandGains = rawGains is List
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
@@ -326,6 +330,7 @@ class SettingsManager {
       'accentColor': accentColor,
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
+      'diagnosticsLogging': diagnosticsLogging,
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
       'visualizerEngine': visualizerEngine.name,
@@ -402,6 +407,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setDiagnosticsLogging(bool v) async {
+    diagnosticsLogging = v;
+    await _save();
+  }
+
   Future<void> setEqBandGains(List<double> v) async {
     eqBandGains = v;
     await _save();
@@ -462,6 +472,7 @@ class SettingsManager {
     accentColor = null;
     eqEnabled = false;
     resumeQueue = true;
+    diagnosticsLogging = true;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
     visualizerEngine = VisualizerEngine.milkdrop;

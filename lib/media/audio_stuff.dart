@@ -18,6 +18,7 @@ import '../objects/server.dart';
 import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../util/camelot.dart';
 
@@ -105,6 +106,14 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (_reordering) return;
       if (index == queue.value.length - 1) {
         autoDJ();
+      }
+      if (index != null && index >= 0 && index < queue.value.length) {
+        final item = queue.value[index];
+        if (item.id != _lastPlayLoggedId) {
+          _lastPlayLoggedId = item.id;
+          appLog('[play] track ${index + 1}/${queue.value.length}: '
+              '${item.title}');
+        }
       }
       _emitCurrentMediaItem();
     });
@@ -324,6 +333,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   // MediaItem instead.
   bool _reordering = false;
 
+  // Last item id logged by the [play] track-change diagnostic, so repeated
+  // currentIndex emits for the same track don't spam the log.
+  String? _lastPlayLoggedId;
+
   @override
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
@@ -359,13 +372,20 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (File.existsSync + Uri.file) from the server-download-folder PR now lives
     // in LocalPlaybackBackend._uriFor.
     await _backend.addSource(item);
+    appLog('[queue] add: ${item.title} (now ${queue.value.length})');
   }
 
   @override
-  Future<void> play() => _backend.play();
+  Future<void> play() {
+    appLog('[play] play');
+    return _backend.play();
+  }
 
   @override
-  Future<void> pause() => _backend.pause();
+  Future<void> pause() {
+    appLog('[play] pause');
+    return _backend.pause();
+  }
 
   @override
   Future<void> skipToNext() async {
@@ -382,6 +402,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> stop() async {
+    appLog('[play] stop');
     await _backend.stop();
     await super.stop();
   }
@@ -434,6 +455,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'clearPlaylist':
+        appLog('[queue] cleared');
         await _backend.stop();
         await super.stop();
         await _backend.clearSources();

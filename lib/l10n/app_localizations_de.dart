@@ -1269,4 +1269,29 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Speichert die Wiedergabeliste und deine Position und stellt sie beim erneuten Öffnen der App wieder her.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnose';
+
+  @override
+  String get diagnosticsEnable => 'Protokollierung aktivieren';
+
+  @override
+  String get diagnosticsHint =>
+      'Protokolle bleiben auf deinem Gerät. Tokens werden vor dem Kopieren oder Teilen ausgeblendet.';
+
+  @override
+  String get diagnosticsCopy => 'Kopieren';
+
+  @override
+  String get diagnosticsShare => 'Teilen';
+
+  @override
+  String get diagnosticsClear => 'Löschen';
+
+  @override
+  String get diagnosticsCopied => 'Protokolle in die Zwischenablage kopiert';
+
+  @override
+  String get diagnosticsEmpty => 'Noch keine Protokolle';
 }

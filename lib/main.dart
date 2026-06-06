@@ -20,10 +20,13 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
+import 'screens/diagnostics_screen.dart';
 import 'screens/share_playlist_dialog.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/queue_store.dart';
+import 'singletons/log_manager.dart';
+import 'app_version.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -34,7 +37,23 @@ import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
 
-Future<void> main() async {
+void main() {
+  // Run the app inside a Zone whose print() handler tees every log line into
+  // the in-app diagnostic buffer (LogManager) — so users can view / copy /
+  // share logs from the Diagnostics screen — while still forwarding to the
+  // console / logcat. Uncaught async errors are captured here too; Flutter
+  // framework errors reach the buffer via their default debugPrint path.
+  runZonedGuarded(_startApp, (Object error, StackTrace stack) {
+    LogManager().add('Uncaught: $error\n$stack');
+  }, zoneSpecification: ZoneSpecification(
+    print: (self, parent, zone, String line) {
+      LogManager().add(line);
+      parent.print(zone, line);
+    },
+  ));
+}
+
+Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Show the system bars edge-to-edge from the first frame, so a launch that
   // inherits a leftover immersive mode (e.g. the app was killed while the
@@ -52,6 +71,7 @@ Future<void> main() async {
   await MediaManager().start();
   await PlaylistManager().load();
   await AutoDJManager().load();
+  appLog('[app] mStream $kAppVersion started');
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
@@ -505,6 +525,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.bug_report_outlined),
+                title: Text(l.diagnosticsTitle),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DiagnosticsScreen()),
                   );
                 },
               ),

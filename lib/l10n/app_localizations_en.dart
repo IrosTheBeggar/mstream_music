@@ -1252,4 +1252,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsResumeQueueSubtitle =>
       'Save the play queue and your place, and restore them when you reopen the app.';
+
+  @override
+  String get diagnosticsTitle => 'Diagnostics';
+
+  @override
+  String get diagnosticsEnable => 'Enable logging';
+
+  @override
+  String get diagnosticsHint =>
+      'Logs stay on your device. Tokens are hidden before copying or sharing.';
+
+  @override
+  String get diagnosticsCopy => 'Copy';
+
+  @override
+  String get diagnosticsShare => 'Share';
+
+  @override
+  String get diagnosticsClear => 'Clear';
+
+  @override
+  String get diagnosticsCopied => 'Logs copied to clipboard';
+
+  @override
+  String get diagnosticsEmpty => 'No logs yet';
 }

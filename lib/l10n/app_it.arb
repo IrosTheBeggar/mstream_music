@@ -346,5 +346,13 @@
   "accentThemeDefault": "Predefinito del tema",
   "accentCustom": "Personalizzato",
   "settingsResumeQueue": "Riprendi la coda all'avvio",
-  "settingsResumeQueueSubtitle": "Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell'app."
+  "settingsResumeQueueSubtitle": "Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell'app.",
+  "diagnosticsTitle": "Diagnostica",
+  "diagnosticsEnable": "Abilita registrazione",
+  "diagnosticsHint": "I log restano sul tuo dispositivo. I token vengono nascosti prima di copiare o condividere.",
+  "diagnosticsCopy": "Copia",
+  "diagnosticsShare": "Condividi",
+  "diagnosticsClear": "Cancella",
+  "diagnosticsCopied": "Log copiati negli appunti",
+  "diagnosticsEmpty": "Nessun log ancora"
 }

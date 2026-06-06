@@ -346,5 +346,13 @@
   "accentThemeDefault": "Из темы",
   "accentCustom": "Свой",
   "settingsResumeQueue": "Восстанавливать очередь при запуске",
-  "settingsResumeQueueSubtitle": "Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения."
+  "settingsResumeQueueSubtitle": "Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.",
+  "diagnosticsTitle": "Диагностика",
+  "diagnosticsEnable": "Включить журналирование",
+  "diagnosticsHint": "Журналы хранятся на вашем устройстве. Токены скрываются перед копированием или отправкой.",
+  "diagnosticsCopy": "Копировать",
+  "diagnosticsShare": "Поделиться",
+  "diagnosticsClear": "Очистить",
+  "diagnosticsCopied": "Журналы скопированы в буфер обмена",
+  "diagnosticsEmpty": "Журналов пока нет"
 }

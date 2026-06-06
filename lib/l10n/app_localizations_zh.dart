@@ -1185,4 +1185,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
+
+  @override
+  String get diagnosticsTitle => '诊断';
+
+  @override
+  String get diagnosticsEnable => '启用日志记录';
+
+  @override
+  String get diagnosticsHint => '日志仅保存在您的设备上。复制或分享前会隐藏令牌。';
+
+  @override
+  String get diagnosticsCopy => '复制';
+
+  @override
+  String get diagnosticsShare => '分享';
+
+  @override
+  String get diagnosticsClear => '清除';
+
+  @override
+  String get diagnosticsCopied => '日志已复制到剪贴板';
+
+  @override
+  String get diagnosticsEmpty => '暂无日志';
 }
