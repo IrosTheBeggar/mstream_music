@@ -2243,6 +2243,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No logs yet'**
   String get diagnosticsEmpty;
+
+  /// No description provided for @storageAppExternal.
+  ///
+  /// In en, this message translates to:
+  /// **'App external'**
+  String get storageAppExternal;
 }
 
 class _AppLocalizationsDelegate

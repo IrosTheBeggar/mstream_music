@@ -4,13 +4,18 @@ class Server {
 
   // Where downloaded files are stored. One of:
   //   'appLocal'       — internal app-private storage (default; wiped on uninstall)
-  //   'permanent'      — a user-chosen folder in shared storage (survives uninstall)
-  //   'sdCard'         — a user-chosen folder on a removable SD card
+  //   'appExternal'    — app-scoped external storage (Android/data/<pkg>; more
+  //                      room / SD-capable, NO permission; wiped on uninstall).
+  //                      The Play-compliant alternative to permanent/sdCard.
+  //   'permanent'      — a user-chosen folder in shared storage (survives
+  //                      uninstall). Needs All-files-access — FULL flavor only.
+  //   'sdCard'         — a user-chosen folder on a removable SD card. Needs
+  //                      All-files-access — FULL flavor only.
   //   'legacyExternal' — migration-only: the pre-existing saveToSdCard==true
   //                      location (getExternalStorageDirectory). Not offered in
   //                      the UI; a server keeps it until the user re-picks a mode.
   // 'permanent'/'sdCard' keep their absolute base dir in [storageBasePath];
-  // 'appLocal'/'legacyExternal' resolve their base at runtime (basePath null).
+  // the app-scoped modes resolve their base at runtime (basePath null).
   String storageMode = 'appLocal';
   String? storageBasePath;
 

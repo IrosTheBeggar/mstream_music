@@ -354,5 +354,6 @@
   "diagnosticsShare": "Partager",
   "diagnosticsClear": "Effacer",
   "diagnosticsCopied": "Journaux copiés dans le presse-papiers",
-  "diagnosticsEmpty": "Aucun journal pour l'instant"
+  "diagnosticsEmpty": "Aucun journal pour l'instant",
+  "storageAppExternal": "App externe"
 }

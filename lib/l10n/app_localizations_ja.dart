@@ -1233,4 +1233,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'まだログがありません';
+
+  @override
+  String get storageAppExternal => 'アプリ外部';
 }

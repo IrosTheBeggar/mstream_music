@@ -361,5 +361,6 @@
   "diagnosticsShare": "Compartir",
   "diagnosticsClear": "Borrar",
   "diagnosticsCopied": "Registros copiados al portapapeles",
-  "diagnosticsEmpty": "Aún no hay registros"
+  "diagnosticsEmpty": "Aún no hay registros",
+  "storageAppExternal": "App externa"
 }

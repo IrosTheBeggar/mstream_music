@@ -15,14 +15,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <!-- "All files access": lets the user store downloads in a folder they
-         choose in shared storage (Permanent / SD card modes) so the files
-         survive an app uninstall. Requested at runtime via permission_handler
-         (Permission.manageExternalStorage) only when one of those modes is
-         selected; App local mode needs no storage permission. -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+    <!-- Storage permissions for the user-chosen download folders (Permanent /
+         SD-card modes, which need "All files access") live in the `full` flavor
+         ONLY — see android/app/src/full/AndroidManifest.xml. The Play edition
+         omits them entirely so its merged manifest complies with Google's
+         storage policy; it downloads to app-scoped storage (no permission). -->
+
     <!-- Optional: only requested when the user opts into "real audio"
          mode for the visualizer. Android's AudioFx Visualizer API
          requires RECORD_AUDIO even to read the app's own audio output. -->

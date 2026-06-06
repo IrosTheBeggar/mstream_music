@@ -354,5 +354,6 @@
   "diagnosticsShare": "Condividi",
   "diagnosticsClear": "Cancella",
   "diagnosticsCopied": "Log copiati negli appunti",
-  "diagnosticsEmpty": "Nessun log ancora"
+  "diagnosticsEmpty": "Nessun log ancora",
+  "storageAppExternal": "App esterna"
 }

@@ -76,6 +76,25 @@ android {
         }
     }
 
+    // Two distributions from one codebase:
+    //   full — sideload / direct APK; keeps All-files-access (MANAGE_EXTERNAL_
+    //          STORAGE lives in src/full/AndroidManifest.xml) for the Permanent
+    //          / SD-card download folders.
+    //   play — Google Play edition; distinct applicationId so it can sit beside
+    //          a sideloaded full build, and NO All-files-access (the play source
+    //          set adds no storage permission, so the merged manifest is clean).
+    flavorDimensions "dist"
+    productFlavors {
+        full {
+            dimension "dist"
+        }
+        play {
+            dimension "dist"
+            applicationIdSuffix ".play"
+            versionNameSuffix "-play"
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"

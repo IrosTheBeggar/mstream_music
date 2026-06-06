@@ -1315,4 +1315,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Журналов пока нет';
+
+  @override
+  String get storageAppExternal => 'Внешнее (приложение)';
 }

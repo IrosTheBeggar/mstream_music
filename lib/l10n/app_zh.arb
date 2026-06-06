@@ -354,5 +354,6 @@
   "diagnosticsShare": "分享",
   "diagnosticsClear": "清除",
   "diagnosticsCopied": "日志已复制到剪贴板",
-  "diagnosticsEmpty": "暂无日志"
+  "diagnosticsEmpty": "暂无日志",
+  "storageAppExternal": "应用外部"
 }
