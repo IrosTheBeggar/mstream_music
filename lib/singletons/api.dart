@@ -81,15 +81,20 @@ class ApiManager {
   }
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
-      String getOrPost) async {
+      String getOrPost,
+      {bool cancelable = true}) async {
     // Bracket every browse fetch so the browser can show one global loading bar,
-    // block taps while it's in flight, and let Back cancel it. The per-call
-    // http.Client is what makes cancelLoading() actually abort the request:
-    // closing the client makes the pending get/post throw. The finally balances
-    // the in-flight set and closes the client on every path (throw / HTTP error
-    // / cancel) so a socket is never leaked.
+    // block taps while it's in flight, and (when [cancelable]) let Back cancel
+    // it. The per-call http.Client is what makes cancelLoading() actually abort
+    // the request: closing the client makes the pending get/post throw. Mutating
+    // calls (playlist create / rename / delete) pass cancelable: false so Back
+    // can't abort them mid-flight — they still show the bar + block taps, they
+    // just run to completion. The finally balances the in-flight set and closes
+    // the client on every path (throw / HTTP error / cancel) so a socket is
+    // never leaked.
     final client = http.Client();
-    final int loadToken = BrowserManager().beginLoading(onCancel: client.close);
+    final int loadToken = BrowserManager()
+        .beginLoading(onCancel: cancelable ? client.close : null);
     try {
       Server server = ServerManager().currentServer ??
           (throw Exception('No Server Selected'));
@@ -119,7 +124,8 @@ class ApiManager {
 
       // Back was pressed while this was in flight: drop the result so a slow
       // folder can't pop onto the stack after the user cancelled / navigated.
-      if (BrowserManager().isLoadCancelled(loadToken)) {
+      // Skipped for non-cancelable mutations — those must run to completion.
+      if (cancelable && BrowserManager().isLoadCancelled(loadToken)) {
         throw Exception('Navigation cancelled');
       }
 
@@ -205,14 +211,15 @@ class ApiManager {
   /// Creates an empty playlist (POST /playlist/new). Throws on failure (e.g. the
   /// server's 400 when the name already exists) so the caller can surface it.
   Future<void> createPlaylist(String title) async {
-    await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST');
+    await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST',
+        cancelable: false);
     await refreshPlaylists();
   }
 
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
   Future<void> renamePlaylist(String oldName, String newName) async {
     await makeServerCall(null, '/api/v1/playlist/rename',
-        {'oldName': oldName, 'newName': newName}, 'POST');
+        {'oldName': oldName, 'newName': newName}, 'POST', cancelable: false);
     await refreshPlaylists();
   }
 
@@ -220,7 +227,7 @@ class ApiManager {
       {Server? useThisServer}) async {
     try {
       await makeServerCall(useThisServer, '/api/v1/playlist/delete',
-          {'playlistname': playlistId}, 'POST');
+          {'playlistname': playlistId}, 'POST', cancelable: false);
     } catch (err) {
       // TODO: Handle Errors
       print(err);

@@ -49,5 +49,15 @@ void main() {
     // 4. Cancelling with nothing in flight is a no-op (Back then falls through
     //    to normal navigation).
     expect(bm.cancelLoading(), isFalse);
+
+    // 5. cancelable: false path — a load registered WITHOUT a canceler (a
+    //    mutation like playlist create/rename/delete) is not aborted by Back:
+    //    cancelLoading fires only registered cancelers, so the mutation's
+    //    request runs to completion.
+    var cancelerFires = 0;
+    bm.beginLoading(onCancel: () => cancelerFires++); // cancelable read/nav
+    bm.beginLoading(); // non-cancelable mutation — no canceler registered
+    expect(bm.cancelLoading(), isTrue);
+    expect(cancelerFires, 1, reason: 'only the cancelable load is aborted');
   });
 }
