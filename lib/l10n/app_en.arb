@@ -636,5 +636,7 @@
   "settingsAccentColor": "Accent color",
   "settingsAccentColorSubtitle": "The highlight color used across the app.",
   "accentThemeDefault": "Theme default",
-  "accentCustom": "Custom"
+  "accentCustom": "Custom",
+  "settingsResumeQueue": "Resume queue on launch",
+  "settingsResumeQueueSubtitle": "Save the play queue and your place, and restore them when you reopen the app."
 }

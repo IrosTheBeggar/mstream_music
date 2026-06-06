@@ -1245,4 +1245,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accentCustom => 'Custom';
+
+  @override
+  String get settingsResumeQueue => 'Resume queue on launch';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Save the play queue and your place, and restore them when you reopen the app.';
 }

@@ -1179,4 +1179,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accentCustom => '自定义';
+
+  @override
+  String get settingsResumeQueue => '启动时恢复播放队列';
+
+  @override
+  String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
 }

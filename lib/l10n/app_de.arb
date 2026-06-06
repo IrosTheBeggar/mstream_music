@@ -409,5 +409,7 @@
   "settingsAccentColor": "Akzentfarbe",
   "settingsAccentColorSubtitle": "Die Hervorhebungsfarbe, die in der gesamten App verwendet wird.",
   "accentThemeDefault": "Theme-Standard",
-  "accentCustom": "Benutzerdefiniert"
+  "accentCustom": "Benutzerdefiniert",
+  "settingsResumeQueue": "Warteschlange beim Start fortsetzen",
+  "settingsResumeQueueSubtitle": "Speichert die Wiedergabeliste und deine Position und stellt sie beim erneuten Öffnen der App wieder her."
 }

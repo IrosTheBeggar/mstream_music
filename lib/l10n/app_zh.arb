@@ -344,5 +344,7 @@
   "settingsAccentColor": "强调色",
   "settingsAccentColorSubtitle": "整个应用中使用的高亮颜色。",
   "accentThemeDefault": "主题默认",
-  "accentCustom": "自定义"
+  "accentCustom": "自定义",
+  "settingsResumeQueue": "启动时恢复播放队列",
+  "settingsResumeQueueSubtitle": "保存播放队列和当前播放位置，并在重新打开应用时恢复。"
 }

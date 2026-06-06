@@ -1279,4 +1279,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get accentCustom => 'Niestandardowy';
+
+  @override
+  String get settingsResumeQueue => 'Wznów kolejkę po uruchomieniu';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji.';
 }

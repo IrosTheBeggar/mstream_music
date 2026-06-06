@@ -23,6 +23,7 @@ import 'screens/settings_screen.dart';
 import 'screens/share_playlist_dialog.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
+import 'singletons/queue_store.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -113,7 +114,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // and restores this on exit, but a kill mid-immersive can leak that mode to
     // the next launch — asserting here (and on resume) keeps the nav bar up.
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    ServerManager().loadServerList();
+    // Restore the persisted queue/position once servers are loaded (server
+    // items are matched to a configured server by localname to rebuild their
+    // streaming URLs). loadServerList's future completes after the list is
+    // populated, so the queue comes back at the spot it was left.
+    ServerManager().loadServerList().then((_) => QueueStore().init());
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
     MigrationManager().resumeIfNeeded();
@@ -138,6 +143,13 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed &&
         (ModalRoute.of(context)?.isCurrent ?? true)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    // Flush the queue/position to disk when leaving the foreground, so a
+    // backgrounded app that's later killed by the OS still reopens in place.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      QueueStore().saveNow();
     }
   }
 

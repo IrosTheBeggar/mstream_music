@@ -50,6 +50,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   int? get index => _backend.currentIndex;
 
+  /// Live playback position of the active backend (read by QueueStore so the
+  /// saved snapshot carries the exact spot in the current track).
+  Duration get position => _backend.position;
+
   Stream<Duration> get positionStream =>
       _backendSubject.switchMap((b) => b.positionStream);
 
@@ -327,6 +331,24 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (index < 0 || index > queue.value.length) return;
     // This jumps to the beginning of the queue item at newIndex.
     _backend.seek(Duration.zero, index: index);
+  }
+
+  /// Reinstate a persisted queue at launch WITHOUT auto-playing: seed the queue
+  /// + backend sources, park playback at [index]/[position] paused, and restore
+  /// shuffle/repeat. Used by QueueStore.init() so the app reopens exactly where
+  /// it left off. No-op for an empty list.
+  Future<void> restoreQueue(List<MediaItem> items, int index, Duration position,
+      {bool shuffle = false, bool repeat = false}) async {
+    if (items.isEmpty) return;
+    queue.add(items.toList());
+    await _backend.setSources(items);
+    final int i = index.clamp(0, items.length - 1);
+    // play: false → load paused at the saved spot (don't blast audio on open).
+    await _backend.seek(position, index: i, play: false);
+    if (repeat) await _backend.setRepeatAll(true);
+    if (shuffle) await _backend.setShuffleEnabled(true);
+    _emitCurrentMediaItem();
+    _broadcastState();
   }
 
   @override

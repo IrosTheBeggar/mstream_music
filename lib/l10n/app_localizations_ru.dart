@@ -1283,4 +1283,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get accentCustom => 'Свой';
+
+  @override
+  String get settingsResumeQueue => 'Восстанавливать очередь при запуске';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.';
 }

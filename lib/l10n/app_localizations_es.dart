@@ -1261,4 +1261,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accentCustom => 'Personalizado';
+
+  @override
+  String get settingsResumeQueue => 'Reanudar la cola al iniciar';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.';
 }

@@ -1261,4 +1261,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get accentCustom => 'Personalizzato';
+
+  @override
+  String get settingsResumeQueue => 'Riprendi la coda all\'avvio';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell\'app.';
 }

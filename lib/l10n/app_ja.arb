@@ -344,5 +344,7 @@
   "settingsAccentColor": "アクセントカラー",
   "settingsAccentColorSubtitle": "アプリ全体で使用される強調表示の色。",
   "accentThemeDefault": "テーマの既定",
-  "accentCustom": "カスタム"
+  "accentCustom": "カスタム",
+  "settingsResumeQueue": "起動時にキューを復元",
+  "settingsResumeQueueSubtitle": "再生キューと再生位置を保存し、アプリを再び開いたときに復元します。"
 }

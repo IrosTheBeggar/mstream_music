@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/player_layout.dart';
+import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
@@ -170,6 +171,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 TranscodeManager().transcodeOn = v;
               });
               await SettingsManager().setTranscode(v);
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          SwitchListTile(
+            title: Text(l.settingsResumeQueue),
+            subtitle: Text(
+              l.settingsResumeQueueSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().resumeQueue,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setResumeQueue(v);
+              // Apply immediately: persist the current queue when turning on,
+              // or delete the stored queue when turning off.
+              await QueueStore().saveNow();
+              setState(() {});
             },
             activeThumbColor: VelvetColors.primary,
           ),
