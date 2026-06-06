@@ -1257,4 +1257,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get accentCustom => 'Personalizado';
+
+  @override
+  String get settingsResumeQueue => 'Retomar a fila ao iniciar';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Salva a fila de reprodução e sua posição e as restaura ao reabrir o app.';
 }

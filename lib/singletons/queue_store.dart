@@ -10,6 +10,7 @@ import '../objects/server.dart';
 import '../util/queue_actions.dart';
 import 'media.dart';
 import 'server_list.dart';
+import 'settings.dart';
 
 /// Persists the play queue + current track/position so they survive the app
 /// being closed and reopened. Mirrors the servers.json approach: a single JSON
@@ -64,6 +65,7 @@ class QueueStore {
   }
 
   Future<void> _restore() async {
+    if (!SettingsManager().resumeQueue) return; // feature disabled
     final file = await _file;
     if (!await file.exists()) return;
 
@@ -133,9 +135,14 @@ class QueueStore {
     if (_restoring) return;
     _debounceTimer?.cancel();
     try {
+      final file = await _file;
+      if (!SettingsManager().resumeQueue) {
+        // Feature disabled — drop any saved queue so it can't be restored.
+        if (await file.exists()) await file.delete();
+        return;
+      }
       final handler = MediaManager().audioHandler;
       final queue = handler.queue.value;
-      final file = await _file;
       if (queue.isEmpty) {
         if (await file.exists()) await file.delete();
         return;

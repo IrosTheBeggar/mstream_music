@@ -1203,4 +1203,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get accentCustom => 'カスタム';
+
+  @override
+  String get settingsResumeQueue => '起動時にキューを復元';
+
+  @override
+  String get settingsResumeQueueSubtitle => '再生キューと再生位置を保存し、アプリを再び開いたときに復元します。';
 }

@@ -1259,4 +1259,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get accentCustom => 'Personnalisé';
+
+  @override
+  String get settingsResumeQueue => 'Reprendre la file au démarrage';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Enregistre la file de lecture et votre position, puis les restaure à la réouverture de l\'application.';
 }

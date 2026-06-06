@@ -344,5 +344,7 @@
   "settingsAccentColor": "Kolor akcentu",
   "settingsAccentColorSubtitle": "Kolor wyróżnienia używany w całej aplikacji.",
   "accentThemeDefault": "Domyślny motywu",
-  "accentCustom": "Niestandardowy"
+  "accentCustom": "Niestandardowy",
+  "settingsResumeQueue": "Wznów kolejkę po uruchomieniu",
+  "settingsResumeQueueSubtitle": "Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji."
 }

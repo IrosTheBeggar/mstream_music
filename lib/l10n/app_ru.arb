@@ -344,5 +344,7 @@
   "settingsAccentColor": "Акцентный цвет",
   "settingsAccentColorSubtitle": "Цвет выделения, используемый во всём приложении.",
   "accentThemeDefault": "Из темы",
-  "accentCustom": "Свой"
+  "accentCustom": "Свой",
+  "settingsResumeQueue": "Восстанавливать очередь при запуске",
+  "settingsResumeQueueSubtitle": "Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения."
 }

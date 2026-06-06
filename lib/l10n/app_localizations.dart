@@ -2183,6 +2183,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom'**
   String get accentCustom;
+
+  /// No description provided for @settingsResumeQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume queue on launch'**
+  String get settingsResumeQueue;
+
+  /// No description provided for @settingsResumeQueueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save the play queue and your place, and restore them when you reopen the app.'**
+  String get settingsResumeQueueSubtitle;
 }
 
 class _AppLocalizationsDelegate

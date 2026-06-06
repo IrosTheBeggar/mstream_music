@@ -1262,4 +1262,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get accentCustom => 'Benutzerdefiniert';
+
+  @override
+  String get settingsResumeQueue => 'Warteschlange beim Start fortsetzen';
+
+  @override
+  String get settingsResumeQueueSubtitle =>
+      'Speichert die Wiedergabeliste und deine Position und stellt sie beim erneuten Öffnen der App wieder her.';
 }

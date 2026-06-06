@@ -344,5 +344,7 @@
   "settingsAccentColor": "Colore d'accento",
   "settingsAccentColorSubtitle": "Il colore di evidenziazione usato in tutta l'app.",
   "accentThemeDefault": "Predefinito del tema",
-  "accentCustom": "Personalizzato"
+  "accentCustom": "Personalizzato",
+  "settingsResumeQueue": "Riprendi la coda all'avvio",
+  "settingsResumeQueueSubtitle": "Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell'app."
 }
