@@ -427,5 +427,7 @@
   "diagnosticsClear": "Löschen",
   "diagnosticsCopied": "Protokolle in die Zwischenablage kopiert",
   "diagnosticsEmpty": "Noch keine Protokolle",
-  "storageAppExternal": "App extern"
+  "storageAppExternal": "App extern",
+  "selfSignedTitle": "Selbstsigniertes Zertifikat zulassen",
+  "selfSignedSubtitle": "Überspringt die TLS-Prüfung für diesen Server. Nur in einem vertrauenswürdigen Netzwerk aktivieren."
 }

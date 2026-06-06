@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show HttpOverrides;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,8 @@ import 'singletons/media.dart';
 import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
+import 'build_variant.dart';
+import 'util/self_signed_overrides.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -56,6 +59,11 @@ void main() {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Full flavor only: route API HTTPS through an override that accepts a
+  // self-signed cert for servers the user explicitly opted in
+  // (Server.allowSelfSigned). Must be set before any HttpClient is created.
+  // Streaming self-signed is handled separately (native, ExoPlayer).
+  if (!isPlayBuild) HttpOverrides.global = SelfSignedHttpOverrides();
   // Show the system bars edge-to-edge from the first frame, so a launch that
   // inherits a leftover immersive mode (e.g. the app was killed while the
   // Visualizer had the nav bar hidden) still comes up with the nav bar visible.

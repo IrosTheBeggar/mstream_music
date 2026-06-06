@@ -7,6 +7,8 @@ import '../objects/server.dart';
 import '../util/server_compat.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
+import '../build_variant.dart';
+import '../util/insecure_tls_channel.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -79,6 +81,7 @@ class ServerManager {
     });
 
     _serverListStream.sink.add(serverList);
+    syncInsecureTls();
 
     if (serverList.length > 0) {
       currentServer = serverList[0];
@@ -150,6 +153,7 @@ class ServerManager {
     await writeServerFile();
 
     _serverListStream.sink.add(serverList);
+    syncInsecureTls();
   }
 
   // Storage mode + base path are set directly on the Server in the
@@ -271,10 +275,12 @@ class ServerManager {
     }
 
     await writeServerFile();
+    syncInsecureTls();
   }
 
   Future<void> callAfterEditServer() async {
     _serverListStream.sink.add(serverList);
+    syncInsecureTls();
     await writeServerFile();
   }
 
@@ -307,6 +313,30 @@ class ServerManager {
       if (s.localname == localname) return s;
     }
     return null;
+  }
+
+  // Self-signed / insecure TLS (full flavor only) — see SelfSignedHttpOverrides
+  // (Dart API path) and InsecureTlsChannel (native ExoPlayer streaming path).
+
+  /// True if [host] belongs to a configured server that opted into accepting a
+  /// self-signed cert — SelfSignedHttpOverrides bypasses validation for just
+  /// that host. Always false on the Play build.
+  bool allowsSelfSigned(String host) {
+    if (isPlayBuild) return false;
+    for (final s in serverList) {
+      if (!s.allowSelfSigned) continue;
+      try {
+        if (Uri.parse(s.url).host == host) return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  /// Enable the native trust-all TLS bridge (ExoPlayer streaming) iff some
+  /// server opted into self-signed. No-op on the Play build. Call whenever the
+  /// server list changes.
+  void syncInsecureTls() {
+    InsecureTlsChannel.setEnabled(serverList.any((s) => s.allowSelfSigned));
   }
 
   /// Like [byLocalname] but throws when no server matches — for legacy callers

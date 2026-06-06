@@ -1259,4 +1259,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'アプリ外部';
+
+  @override
+  String get selfSignedTitle => '自己署名証明書を許可';
+
+  @override
+  String get selfSignedSubtitle =>
+      'このサーバーの TLS 検証をスキップします。信頼できるネットワークでのみ有効にしてください。';
 }

@@ -2291,6 +2291,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App external'**
   String get storageAppExternal;
+
+  /// No description provided for @selfSignedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow self-signed certificate'**
+  String get selfSignedTitle;
+
+  /// No description provided for @selfSignedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip TLS validation for this server. Only enable on a network you trust.'**
+  String get selfSignedSubtitle;
 }
 
 class _AppLocalizationsDelegate

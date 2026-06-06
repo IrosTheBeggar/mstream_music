@@ -1341,4 +1341,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'Внешнее (приложение)';
+
+  @override
+  String get selfSignedTitle => 'Разрешить самоподписанный сертификат';
+
+  @override
+  String get selfSignedSubtitle =>
+      'Пропускать проверку TLS для этого сервера. Включайте только в доверенной сети.';
 }

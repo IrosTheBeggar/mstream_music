@@ -18,6 +18,10 @@ class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(VisualizerBridge())
 
+        // Flavor-specific: full installs the self-signed/insecure-TLS bridge for
+        // ExoPlayer streaming; play provides a no-op (see src/<flavor>/kotlin).
+        InsecureTls.register(flutterEngine.dartExecutor.binaryMessenger)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mstream/storage")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

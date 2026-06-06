@@ -369,5 +369,7 @@
   "diagnosticsClear": "Borrar",
   "diagnosticsCopied": "Registros copiados al portapapeles",
   "diagnosticsEmpty": "Aún no hay registros",
-  "storageAppExternal": "App externa"
+  "storageAppExternal": "App externa",
+  "selfSignedTitle": "Permitir certificado autofirmado",
+  "selfSignedSubtitle": "Omite la validación TLS de este servidor. Actívalo solo en una red de confianza."
 }

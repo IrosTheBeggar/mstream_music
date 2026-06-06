@@ -654,5 +654,7 @@
   "diagnosticsClear": "Clear",
   "diagnosticsCopied": "Logs copied to clipboard",
   "diagnosticsEmpty": "No logs yet",
-  "storageAppExternal": "App external"
+  "storageAppExternal": "App external",
+  "selfSignedTitle": "Allow self-signed certificate",
+  "selfSignedSubtitle": "Skip TLS validation for this server. Only enable on a network you trust."
 }

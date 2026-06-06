@@ -40,6 +40,12 @@ class Server {
   String? password;
   String? jwt;
 
+  // Full-flavor only: accept a self-signed / untrusted TLS cert for this server
+  // — API calls (via Dart HttpOverrides) and streaming (via the native
+  // insecure-TLS bridge for ExoPlayer). Off by default; the Play build never
+  // exposes the toggle and ignores the flag.
+  bool allowSelfSigned = false;
+
   // Auto DJ
   int? autoDJminRating;
   Map<String, bool> autoDJPaths = {};
@@ -56,6 +62,7 @@ class Server {
         autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
         playlists = List<String>.from(json['playlists'] ?? []),
+        allowSelfSigned = json['allowSelfSigned'] == true,
         // Migrate the old boolean: absent/false → appLocal; true → the
         // legacy external-app-private location (preserved losslessly so
         // existing SD-toggle downloads keep resolving).
@@ -78,6 +85,7 @@ class Server {
         'autoDJPaths': autoDJPaths,
         'autoDJminRating': autoDJminRating,
         'playlists': playlists,
+        'allowSelfSigned': allowSelfSigned,
         'storageMode': storageMode,
         'storageBasePath': storageBasePath,
         'transcodeAvailable': transcodeAvailable,

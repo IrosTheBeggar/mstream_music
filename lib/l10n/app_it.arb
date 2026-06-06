@@ -362,5 +362,7 @@
   "diagnosticsClear": "Cancella",
   "diagnosticsCopied": "Log copiati negli appunti",
   "diagnosticsEmpty": "Nessun log ancora",
-  "storageAppExternal": "App esterna"
+  "storageAppExternal": "App esterna",
+  "selfSignedTitle": "Consenti certificato autofirmato",
+  "selfSignedSubtitle": "Salta la convalida TLS per questo server. Attiva solo su una rete affidabile."
 }

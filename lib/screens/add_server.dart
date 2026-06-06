@@ -82,6 +82,8 @@ class MyCustomFormState extends State<MyCustomForm> {
   // (+ migration-only 'legacyExternal', shown as App local). 'permanent'
   // and 'sdCard' also keep an absolute base dir in _storageBasePath.
   String _storageMode = 'appLocal';
+  // Full flavor only: accept a self-signed / untrusted TLS cert for this server.
+  bool _allowSelfSigned = false;
   String? _storageBasePath;
   // Browsable volume roots derived in _detectSdCard for the folder picker.
   String? _sharedStorageRoot;
@@ -116,6 +118,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _usernameCtrl.text = s.username ?? '';
       _passwordCtrl.text = s.password ?? '';
       _storageMode = s.storageMode;
+      _allowSelfSigned = s.allowSelfSigned;
       _storageBasePath = s.storageBasePath;
       _downloadFolderCtrl.text = s.localname;
       isEdit = true;
@@ -740,6 +743,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       // them directly (callAfterEditServer below persists the change).
       s.localname = folder;
       s.storageMode = _storageMode;
+      s.allowSelfSigned = _allowSelfSigned;
       s.storageBasePath = basePath;
       ServerManager()
           .editServer(editThisServer!, _urlCtrl.text, username, password);
@@ -753,6 +757,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       Server newServer =
           new Server(lol.origin, username, password, jwt, folder);
       newServer.storageMode = _storageMode;
+      newServer.allowSelfSigned = _allowSelfSigned;
       newServer.storageBasePath = basePath;
       await ServerManager().getServerPaths(newServer);
 
@@ -1199,6 +1204,23 @@ class MyCustomFormState extends State<MyCustomForm> {
                     : (v) => setState(() => _publicAccess = v),
                 activeThumbColor: VelvetColors.primary,
               ),
+              // Full flavor only: opt into a self-signed / untrusted TLS cert
+              // for this server (API + streaming). Hidden on the Play build.
+              if (!isPlayBuild)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.selfSignedTitle),
+                  subtitle: Text(
+                    l.selfSignedSubtitle,
+                    style: TextStyle(
+                        color: VelvetColors.warning, fontSize: 12),
+                  ),
+                  value: _allowSelfSigned,
+                  onChanged: submitPending
+                      ? null
+                      : (v) => setState(() => _allowSelfSigned = v),
+                  activeThumbColor: VelvetColors.primary,
+                ),
               SizedBox(height: 8),
               // Stacked instead of side-by-side: bigger tap targets
               // and a single-column flow plays nicer with autofill /
