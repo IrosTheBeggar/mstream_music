@@ -39,6 +39,16 @@ class _BrowserState extends State<Browser> {
 
   void handleTap(
       List<DisplayItem> browserList, int index, BuildContext context) {
+    // A browse fetch is already in flight — ignore taps until it resolves (or
+    // is cancelled with Back). Without this, tapping a second folder before the
+    // first finished kicked off a racing request and the screen showed whichever
+    // returned last. addServer stays actionable (the no-server screen never has
+    // a load in flight, but never lock the user out of adding a server).
+    if (BrowserManager().isLoading &&
+        browserList[index].type != 'addServer') {
+      return;
+    }
+
     if (_navTypes.contains(browserList[index].type)) {
       BrowserManager().closeSearch();
     }

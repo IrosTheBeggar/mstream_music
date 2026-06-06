@@ -254,6 +254,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             panel.collapse();
           } else if (BrowserManager().albumDetail != null) {
             BrowserManager().closeAlbumDetail();
+          } else if (BrowserManager().isLoading) {
+            // A browse fetch is in flight — Back stops it (and re-enables taps)
+            // instead of navigating away.
+            BrowserManager().cancelLoading();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {

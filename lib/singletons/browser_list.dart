@@ -33,25 +33,63 @@ class BrowserManager {
 
   String listName = 'Welcome';
 
-  // In-flight server-call tracking for the browser's global loading bar.
-  // makeServerCall (the chokepoint every browse fetch passes through)
-  // brackets each request with beginLoading()/endLoading(); the counter
-  // keeps the bar up across overlapping calls and flips the stream only
-  // on the 0<->1 transition, so there are no redundant rebuilds.
-  int _inFlightCalls = 0;
+  // In-flight server-call tracking. makeServerCall (the chokepoint every browse
+  // fetch passes through) brackets each request with beginLoading()/endLoading().
+  // This drives three things:
+  //   1. the browser's global loading bar (the _loading stream),
+  //   2. the tap-guard — the browser ignores item taps while [isLoading] is
+  //      true, so tapping a second folder before the first resolves can't kick
+  //      off a racing request (whichever finished last used to win the screen),
+  //   3. Back-to-cancel — [cancelLoading] aborts every in-flight request via the
+  //      registered cancelers (which close the http client) and marks their
+  //      tokens cancelled so a late response is dropped instead of navigated to.
+  // Each call gets a monotonic token and we track the live set (not a bare
+  // counter) so a cancelled call's late endLoading() can't zero out a newer one.
+  final Set<int> _inFlight = {};
+  final Map<int, void Function()> _loadCancelers = {};
+  int _lastLoadToken = 0;
+  // Tokens <= this were cancelled by Back; their results must be discarded.
+  int _cancelledThrough = 0;
   late final BehaviorSubject<bool> _loading =
       BehaviorSubject<bool>.seeded(false);
   Stream<bool> get loadingStream => _loading.stream;
-  bool get isLoading => _loading.value;
+  bool get isLoading => _inFlight.isNotEmpty;
 
-  void beginLoading() {
-    _inFlightCalls++;
-    if (_inFlightCalls == 1) _loading.add(true);
+  /// Begin tracking a server call. [onCancel] (e.g. closing the http client) is
+  /// invoked if Back cancels the load while it's still in flight. Returns a
+  /// token to pass to [endLoading] / [isLoadCancelled].
+  int beginLoading({void Function()? onCancel}) {
+    final token = ++_lastLoadToken;
+    _inFlight.add(token);
+    if (onCancel != null) _loadCancelers[token] = onCancel;
+    if (_inFlight.length == 1) _loading.add(true);
+    return token;
   }
 
-  void endLoading() {
-    if (_inFlightCalls > 0) _inFlightCalls--;
-    if (_inFlightCalls == 0) _loading.add(false);
+  void endLoading(int token) {
+    _loadCancelers.remove(token);
+    if (_inFlight.remove(token) && _inFlight.isEmpty) _loading.add(false);
+  }
+
+  /// True if load [token] was cancelled (Back pressed) — the caller should drop
+  /// whatever the request returned rather than pushing it onto the stack.
+  bool isLoadCancelled(int token) => token <= _cancelledThrough;
+
+  /// Cancel every in-flight server call — used by Back to stop a long load.
+  /// Fires each canceler (aborting the http request) and marks the tokens
+  /// cancelled so any response that still lands is discarded. Returns true if
+  /// anything was in flight (so the Back handler knows it consumed the press).
+  bool cancelLoading() {
+    if (_inFlight.isEmpty) return false;
+    _cancelledThrough = _lastLoadToken;
+    final cancelers = List.of(_loadCancelers.values);
+    _loadCancelers.clear();
+    _inFlight.clear();
+    _loading.add(false);
+    for (final c in cancelers) {
+      c(); // closes the http client → the pending request throws → dropped
+    }
+    return true;
   }
 
   late final BehaviorSubject<List<DisplayItem>> _browserStream =
