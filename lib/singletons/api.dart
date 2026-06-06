@@ -82,10 +82,14 @@ class ApiManager {
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
       String getOrPost) async {
-    // Bracket every browse fetch so the browser can show one global
-    // loading bar. The finally guarantees the in-flight counter is
-    // balanced even on the early throws / HTTP-error / network paths.
-    BrowserManager().beginLoading();
+    // Bracket every browse fetch so the browser can show one global loading bar,
+    // block taps while it's in flight, and let Back cancel it. The per-call
+    // http.Client is what makes cancelLoading() actually abort the request:
+    // closing the client makes the pending get/post throw. The finally balances
+    // the in-flight set and closes the client on every path (throw / HTTP error
+    // / cancel) so a socket is never leaked.
+    final client = http.Client();
+    final int loadToken = BrowserManager().beginLoading(onCancel: client.close);
     try {
       Server server = ServerManager().currentServer ??
           (throw Exception('No Server Selected'));
@@ -98,10 +102,10 @@ class ApiManager {
 
       var response;
       if (getOrPost == 'GET') {
-        response = await http
+        response = await client
             .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
       } else {
-        response = await http.post(currentUri,
+        response = await client.post(currentUri,
             body: json.encode(payload),
             headers: {
               'Content-Type': 'application/json',
@@ -113,9 +117,16 @@ class ApiManager {
         throw Exception('Server Call Failed');
       }
 
+      // Back was pressed while this was in flight: drop the result so a slow
+      // folder can't pop onto the stack after the user cancelled / navigated.
+      if (BrowserManager().isLoadCancelled(loadToken)) {
+        throw Exception('Navigation cancelled');
+      }
+
       return jsonDecode(response.body);
     } finally {
-      BrowserManager().endLoading();
+      client.close();
+      BrowserManager().endLoading(loadToken);
     }
   }
 
