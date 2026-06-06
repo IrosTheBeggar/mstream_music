@@ -41,6 +41,52 @@ class DisplayItem {
     return icon;
   }
 
+  // A fixed-size album thumbnail for list rows. Returns the cover art
+  // when present, otherwise a SAME-SIZE placeholder tile — so the row
+  // title/subtitle line up whether or not an album has art. (A bare
+  // Icon is far narrower than a loaded image, which knocks the text out
+  // of alignment between art / no-art rows.) Mirrors getImage's
+  // art-URL building (compress=s for a small thumbnail).
+  Widget getAlbumThumb({double size = 48}) {
+    final String? aaFile = altAlbumArt ?? metadata?.albumArt;
+    final BorderRadius radius =
+        BorderRadius.circular(VelvetColors.radiusSmall);
+    if (server != null && aaFile != null) {
+      final String url = Uri.encodeFull(server!.url +
+          '/album-art/' +
+          aaFile +
+          '?compress=s' +
+          (server!.jwt == null ? '' : '&token=' + server!.jwt!));
+      return ClipRRect(
+        borderRadius: radius,
+        child: Image.network(
+          url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _albumThumbPlaceholder(size, radius),
+        ),
+      );
+    }
+    return _albumThumbPlaceholder(size, radius);
+  }
+
+  Widget _albumThumbPlaceholder(double size, BorderRadius radius) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: VelvetColors.raised,
+        borderRadius: radius,
+      ),
+      child: Icon(
+        Icons.album,
+        color: VelvetColors.textSecondary,
+        size: size * 0.56,
+      ),
+    );
+  }
+
   // Title/subtitle text widgets cap at one line with ellipsis so long
   // directory or song names don't wrap and make their row taller than
   // the others. Keeps the letter-scrub offset math (cumulative sum of

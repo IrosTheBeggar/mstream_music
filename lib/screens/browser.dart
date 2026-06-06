@@ -191,6 +191,10 @@ class _BrowserState extends State<Browser> {
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
+      case "album":
+        {
+          return makeAlbumWidget(b, i, c);
+        }
       case "file":
         {
           return makeFileWidget(b, i, c);
@@ -581,6 +585,25 @@ class _BrowserState extends State<Browser> {
                     handleTap(b, i, c);
                   }),
             )));
+  }
+
+  // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
+  // thumbnail (cover art or a same-size placeholder) so the title/subtitle
+  // start at the same x whether or not a row has art — getImage() returns a
+  // full-height image for art rows but a tiny Icon for the rest, which
+  // misaligns the text.
+  Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    return Container(
+        decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: VelvetColors.border))),
+        child: ListTile(
+            leading: b[i].getAlbumThumb(),
+            title: b[i].getText(l: l),
+            subtitle: b[i].getSubText(l: l),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
