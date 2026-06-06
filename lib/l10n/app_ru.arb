@@ -1,6 +1,7 @@
 {
   "mainRemove": "Убрать",
   "@@locale": "ru",
+  "playlistActionFailed": "Не удалось сохранить плейлист — возможно, имя уже занято.",
   "queueAddNext": "Добавить следующим",
   "queuePlayNow": "Воспроизвести сейчас",
   "queueAddToEnd": "Добавить в конец очереди",

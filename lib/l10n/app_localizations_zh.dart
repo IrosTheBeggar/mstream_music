@@ -12,6 +12,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mainRemove => '移除';
 
   @override
+  String get playlistActionFailed => '无法保存播放列表——该名称可能已被使用。';
+
+  @override
   String get queueAddNext => '添加为下一首';
 
   @override

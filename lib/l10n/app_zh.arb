@@ -1,6 +1,7 @@
 {
   "mainRemove": "移除",
   "@@locale": "zh",
+  "playlistActionFailed": "无法保存播放列表——该名称可能已被使用。",
   "queueAddNext": "添加为下一首",
   "queuePlayNow": "立即播放",
   "queueAddToEnd": "添加到队列末尾",

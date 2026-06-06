@@ -1,6 +1,7 @@
 {
   "mainRemove": "Remover",
   "@@locale": "pt",
+  "playlistActionFailed": "Não foi possível guardar a playlist — o nome pode já estar em uso.",
   "queueAddNext": "Adicionar a seguir",
   "queuePlayNow": "Reproduzir agora",
   "queueAddToEnd": "Adicionar ao fim da fila",

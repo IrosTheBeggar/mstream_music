@@ -12,6 +12,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mainRemove => 'Entfernen';
 
   @override
+  String get playlistActionFailed =>
+      'Wiedergabeliste konnte nicht gespeichert werden — der Name ist möglicherweise bereits vergeben.';
+
+  @override
   String get queueAddNext => 'Als Nächstes';
 
   @override

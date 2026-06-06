@@ -1,6 +1,7 @@
 {
   "mainRemove": "削除",
   "@@locale": "ja",
+  "playlistActionFailed": "プレイリストを保存できませんでした。その名前は既に使われている可能性があります。",
   "queueAddNext": "次に追加",
   "queuePlayNow": "今すぐ再生",
   "queueAddToEnd": "キューの最後に追加",

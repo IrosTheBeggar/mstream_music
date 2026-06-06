@@ -1,6 +1,7 @@
 {
   "mainRemove": "Retirer",
   "@@locale": "fr",
+  "playlistActionFailed": "Impossible d'enregistrer la liste : ce nom est peut-être déjà utilisé.",
   "queueAddNext": "Ajouter à la suite",
   "queuePlayNow": "Lire maintenant",
   "queueAddToEnd": "Ajouter à la fin de la file",

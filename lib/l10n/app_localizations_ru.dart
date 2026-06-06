@@ -12,6 +12,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mainRemove => 'Убрать';
 
   @override
+  String get playlistActionFailed =>
+      'Не удалось сохранить плейлист — возможно, имя уже занято.';
+
+  @override
   String get queueAddNext => 'Добавить следующим';
 
   @override
