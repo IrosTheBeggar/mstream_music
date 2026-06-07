@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark splash background (deep navy, slight blue tint to match the brand
+         mark). Used by launch_background.xml (legacy splash + the window behind
+         Flutter during init) and by the Android 12+ system splash
+         (windowSplashScreenBackground in values-v31/styles.xml). -->
+    <color name="splash_background">#0E1621</color>
+</resources>

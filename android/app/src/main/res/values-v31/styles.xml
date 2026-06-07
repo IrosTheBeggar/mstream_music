@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31) overrides. On these versions the OS draws its own
+     splash from these attributes (the legacy windowBackground drawable can't
+     style it), so set the dark background + the enlarged white wordmark as the
+     splash icon here. A values-v31 style REPLACES the same-named style from
+     values/ wholesale on API 31+, so every item is repeated. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <!-- Plain dark (NOT the launch_background drawable with the wordmark): on
+             API 31+ the OS system splash below already shows the logo, so the
+             post-splash window stays a flat dark fill — avoids a brief second,
+             larger wordmark "popping" before Flutter's first frame. -->
+        <item name="android:windowBackground">@color/splash_background</item>
+        <!-- System splash background + centred icon. No icon background colour,
+             so the transparent white wordmark sits directly on the dark bg. The
+             icon asset is a 288dp-canvas PNG with the wordmark sized to clear the
+             circular safe-zone mask (drawable-xxxhdpi/splash_logo_android12.png). -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo_android12</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+</resources>
