@@ -48,6 +48,7 @@
   "themeSubtitleLight": "Jasne tło z ciemnym paskiem aplikacji i bursztynowymi akcentami — zgodny ze starszym, fabrycznym motywem.",
   "settingsTranscode": "Transkoduj dźwięk",
   "settingsTranscodeSubtitle": "Przesyłaj strumieniowo transkodowaną kopię z serwera (mniejsze pliki, nieco wolniejszy start). Wyłączenie odtwarza oryginalne pliki.",
+  "transcodeTitle": "Transkodowanie",
   "settingsTapBehavior": "Po dotknięciu utworu",
   "tapSubtitleAddToQueue": "Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.",
   "tapSubtitlePlayFromHere": "Dotknięcie utworu zastępuje kolejkę utworami z bieżącego widoku i rozpoczyna odtwarzanie od dotkniętego utworu.",

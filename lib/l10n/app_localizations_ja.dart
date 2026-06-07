@@ -171,6 +171,9 @@ class AppLocalizationsJa extends AppLocalizations {
       'サーバーからトランスコードしたコピーをストリーミングします（ファイルが小さくなり、開始がやや遅くなります）。オフのときは元のファイルを再生します。';
 
   @override
+  String get transcodeTitle => 'トランスコード';
+
+  @override
   String get settingsTapBehavior => '曲をタップしたとき';
 
   @override

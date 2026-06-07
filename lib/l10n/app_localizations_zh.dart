@@ -169,6 +169,9 @@ class AppLocalizationsZh extends AppLocalizations {
       '从服务器以转码副本进行流式播放（文件更小，启动略慢）。关闭时播放原始文件。';
 
   @override
+  String get transcodeTitle => '转码';
+
+  @override
   String get settingsTapBehavior => '点击歌曲时';
 
   @override

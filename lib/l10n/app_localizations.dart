@@ -402,6 +402,12 @@ abstract class AppLocalizations {
   /// **'Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.'**
   String get settingsTranscodeSubtitle;
 
+  /// No description provided for @transcodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcoding'**
+  String get transcodeTitle;
+
   /// Tap-behavior picker row label + per-mode subtitles.
   ///
   /// In en, this message translates to:

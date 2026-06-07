@@ -176,6 +176,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Streame eine transkodierte Kopie vom Server (kleinere Dateien, etwas langsamerer Start). Aus spielt Originaldateien ab.';
 
   @override
+  String get transcodeTitle => 'Transkodierung';
+
+  @override
   String get settingsTapBehavior => 'Beim Antippen eines Songs';
 
   @override

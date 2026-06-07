@@ -48,6 +48,7 @@
   "themeSubtitleLight": "Corpo chiaro con barra dell’app scura e dettagli ambra — corrisponde al vecchio tema.",
   "settingsTranscode": "Transcodifica audio",
   "settingsTranscodeSubtitle": "Trasmetti una copia transcodificata dal server (file più piccoli, avvio leggermente più lento). Disattivato riproduce i file originali.",
+  "transcodeTitle": "Transcodifica",
   "settingsTapBehavior": "Quando tocchi un brano",
   "tapSubtitleAddToQueue": "Toccando un brano lo aggiungi alla coda. Se la coda è vuota, la riproduzione si avvia automaticamente.",
   "tapSubtitlePlayFromHere": "Toccando un brano sostituisci la coda con i brani della vista corrente e la riproduzione inizia dal brano toccato.",

@@ -175,6 +175,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'Trasmetti una copia transcodificata dal server (file più piccoli, avvio leggermente più lento). Disattivato riproduce i file originali.';
 
   @override
+  String get transcodeTitle => 'Transcodifica';
+
+  @override
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override

@@ -72,6 +72,7 @@
 
   "settingsTranscode": "Transcodificar áudio",
   "settingsTranscodeSubtitle": "Transmite uma cópia transcodificada do servidor (arquivos menores, início um pouco mais lento). Desligado, toca os arquivos originais.",
+  "transcodeTitle": "Transcodificação",
 
   "settingsTapBehavior": "Ao tocar em uma música",
   "tapSubtitleAddToQueue": "Tocar em uma música a adiciona à fila. Se a fila estiver vazia, a reprodução começa automaticamente.",

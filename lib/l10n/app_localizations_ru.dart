@@ -177,6 +177,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Транслировать перекодированную копию с сервера (файлы меньше, старт немного медленнее). При выключении воспроизводятся исходные файлы.';
 
   @override
+  String get transcodeTitle => 'Перекодирование';
+
+  @override
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override

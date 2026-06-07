@@ -6,7 +6,6 @@ import '../l10n/enum_labels.dart';
 import '../objects/player_layout.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
-import '../singletons/transcode.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
@@ -158,22 +157,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionPlayback),
-          SwitchListTile(
-            title: Text(l.settingsTranscode),
-            subtitle: Text(
-              l.settingsTranscodeSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: TranscodeManager().transcodeOn,
-            onChanged: (v) async {
-              setState(() {
-                TranscodeManager().transcodeOn = v;
-              });
-              await SettingsManager().setTranscode(v);
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
           SwitchListTile(
             title: Text(l.settingsResumeQueue),
             subtitle: Text(

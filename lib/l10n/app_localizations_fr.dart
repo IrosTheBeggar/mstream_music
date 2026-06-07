@@ -175,6 +175,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Diffuser une copie transcodée depuis le serveur (fichiers plus légers, démarrage un peu plus lent). Désactivé, lit les fichiers d\'origine.';
 
   @override
+  String get transcodeTitle => 'Transcodage';
+
+  @override
   String get settingsTapBehavior => 'Lorsque vous touchez un morceau';
 
   @override

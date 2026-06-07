@@ -21,6 +21,7 @@ import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
 import 'screens/diagnostics_screen.dart';
+import 'screens/transcode_screen.dart';
 import 'screens/share_playlist_dialog.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
@@ -525,6 +526,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.transform),
+                title: Text(l.transcodeTitle),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TranscodeScreen()),
                   );
                 },
               ),

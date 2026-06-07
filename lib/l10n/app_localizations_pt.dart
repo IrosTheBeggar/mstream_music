@@ -175,6 +175,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Transmite uma cópia transcodificada do servidor (arquivos menores, início um pouco mais lento). Desligado, toca os arquivos originais.';
 
   @override
+  String get transcodeTitle => 'Transcodificação';
+
+  @override
   String get settingsTapBehavior => 'Ao tocar em uma música';
 
   @override

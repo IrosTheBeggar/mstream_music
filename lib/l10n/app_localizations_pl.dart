@@ -177,6 +177,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Przesyłaj strumieniowo transkodowaną kopię z serwera (mniejsze pliki, nieco wolniejszy start). Wyłączenie odtwarza oryginalne pliki.';
 
   @override
+  String get transcodeTitle => 'Transkodowanie';
+
+  @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override

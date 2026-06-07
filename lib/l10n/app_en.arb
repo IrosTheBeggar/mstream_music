@@ -131,6 +131,7 @@
 
   "settingsTranscode": "Transcode audio",
   "settingsTranscodeSubtitle": "Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.",
+  "transcodeTitle": "Transcoding",
   "@settingsTranscode": { "description": "Transcode toggle row." },
 
   "settingsTapBehavior": "When you tap a song",
