@@ -408,6 +408,24 @@ abstract class AppLocalizations {
   /// **'Transcoding'**
   String get transcodeTitle;
 
+  /// No description provided for @transcodeCodec.
+  ///
+  /// In en, this message translates to:
+  /// **'Codec'**
+  String get transcodeCodec;
+
+  /// No description provided for @transcodeBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get transcodeBitrate;
+
+  /// No description provided for @transcodeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Server default'**
+  String get transcodeAuto;
+
   /// Tap-behavior picker row label + per-mode subtitles.
   ///
   /// In en, this message translates to:

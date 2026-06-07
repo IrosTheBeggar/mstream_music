@@ -179,6 +179,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transcodeTitle => 'Transkodierung';
 
   @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Bitrate';
+
+  @override
+  String get transcodeAuto => 'Serverstandard';
+
+  @override
   String get settingsTapBehavior => 'Beim Antippen eines Songs';
 
   @override

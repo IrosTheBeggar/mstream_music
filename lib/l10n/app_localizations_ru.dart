@@ -180,6 +180,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get transcodeTitle => 'Перекодирование';
 
   @override
+  String get transcodeCodec => 'Кодек';
+
+  @override
+  String get transcodeBitrate => 'Битрейт';
+
+  @override
+  String get transcodeAuto => 'По умолчанию сервера';
+
+  @override
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override

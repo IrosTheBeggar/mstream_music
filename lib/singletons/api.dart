@@ -6,10 +6,10 @@ import '../objects/server.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
+import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
-import 'package:uuid/uuid.dart';
 import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
@@ -158,20 +158,13 @@ class ApiManager {
       return;
     }
 
-    // String prefix =
-    //     TranscodeManager().transcodeOn == true ? '/transcode' : '/media';
-
     res.forEach((e) {
-      String lolUrl = Uri.encodeFull(useThisServer!.url +
-          '/media' +
-          (e.toString()[0] != '/' ? '/' : '') +
-          e +
-          '?app_uuid=' +
-          Uuid().v4() +
-          (useThisServer.jwt == null ? '' : '&token=' + useThisServer.jwt!));
-
+      // Same transcode-aware stream URL as the rest of the app (honors the
+      // /transcode endpoint + codec/bitrate when transcoding is on).
+      final String streamUrl =
+          buildServerStreamUrl(useThisServer!, e.toString());
       MediaItem lol = new MediaItem(
-          id: lolUrl,
+          id: streamUrl,
           title: e.split("/").last,
           extras: {'server': useThisServer.localname, 'path': e});
       MediaManager().audioHandler.addQueueItem(lol);

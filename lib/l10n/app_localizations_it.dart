@@ -178,6 +178,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String get transcodeTitle => 'Transcodifica';
 
   @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Bitrate';
+
+  @override
+  String get transcodeAuto => 'Predefinito del server';
+
+  @override
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override

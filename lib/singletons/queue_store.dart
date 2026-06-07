@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
-import '../util/queue_actions.dart';
+import '../util/stream_url.dart';
 import 'media.dart';
 import 'server_list.dart';
 import 'settings.dart';

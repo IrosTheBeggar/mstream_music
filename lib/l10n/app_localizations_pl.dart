@@ -180,6 +180,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get transcodeTitle => 'Transkodowanie';
 
   @override
+  String get transcodeCodec => 'Kodek';
+
+  @override
+  String get transcodeBitrate => 'Przepływność';
+
+  @override
+  String get transcodeAuto => 'Domyślne serwera';
+
+  @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override

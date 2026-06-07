@@ -73,6 +73,9 @@
   "settingsTranscode": "Audio transkodieren",
   "settingsTranscodeSubtitle": "Streame eine transkodierte Kopie vom Server (kleinere Dateien, etwas langsamerer Start). Aus spielt Originaldateien ab.",
   "transcodeTitle": "Transkodierung",
+  "transcodeCodec": "Codec",
+  "transcodeBitrate": "Bitrate",
+  "transcodeAuto": "Serverstandard",
 
   "settingsTapBehavior": "Beim Antippen eines Songs",
   "tapSubtitleAddToQueue": "Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.",

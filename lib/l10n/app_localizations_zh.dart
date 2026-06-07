@@ -172,6 +172,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transcodeTitle => '转码';
 
   @override
+  String get transcodeCodec => '编解码器';
+
+  @override
+  String get transcodeBitrate => '比特率';
+
+  @override
+  String get transcodeAuto => '服务器默认';
+
+  @override
   String get settingsTapBehavior => '点击歌曲时';
 
   @override

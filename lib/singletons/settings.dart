@@ -205,6 +205,13 @@ class SettingsManager {
       final raw = await f.readAsString();
       final m = jsonDecode(raw) as Map<String, dynamic>;
       TranscodeManager().transcodeOn = m['transcode'] ?? false;
+      final tcCodec = m['transcodeCodec'];
+      TranscodeManager().codec =
+          TranscodeManager.codecs.contains(tcCodec) ? tcCodec as String : null;
+      final tcBitrate = m['transcodeBitrate'];
+      TranscodeManager().bitrate = TranscodeManager.bitrates.contains(tcBitrate)
+          ? tcBitrate as String
+          : null;
       albumGrid = m['albumGrid'] ?? true;
       fileExplorerMetadata = m['fileExplorerMetadata'] ?? true;
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
@@ -321,6 +328,8 @@ class SettingsManager {
     final f = await _file;
     await f.writeAsString(jsonEncode({
       'transcode': TranscodeManager().transcodeOn,
+      'transcodeCodec': TranscodeManager().codec,
+      'transcodeBitrate': TranscodeManager().bitrate,
       'albumGrid': albumGrid,
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
@@ -345,6 +354,16 @@ class SettingsManager {
 
   Future<void> setTranscode(bool v) async {
     TranscodeManager().transcodeOn = v;
+    await _save();
+  }
+
+  Future<void> setTranscodeCodec(String? v) async {
+    TranscodeManager().codec = v;
+    await _save();
+  }
+
+  Future<void> setTranscodeBitrate(String? v) async {
+    TranscodeManager().bitrate = v;
     await _save();
   }
 
@@ -463,6 +482,8 @@ class SettingsManager {
 
   Future<void> resetAll() async {
     TranscodeManager().transcodeOn = false;
+    TranscodeManager().codec = null;
+    TranscodeManager().bitrate = null;
     albumGrid = true;
     fileExplorerMetadata = true;
     letterStripThreshold = 25;

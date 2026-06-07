@@ -5,7 +5,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
@@ -21,6 +20,7 @@ import '../singletons/cast_manager.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../util/camelot.dart';
+import '../util/stream_url.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -680,18 +680,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String;
 
-    String p = '';
-    for (final segment in filepath.split('/')) {
-      if (segment.isEmpty) continue;
-      p += '/' + Uri.encodeComponent(segment);
-    }
-
-    final mediaUrl = autoDJServer!.url +
-        '/media' +
-        p +
-        '?app_uuid=' +
-        Uuid().v4() +
-        (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
+    // Transcode-aware stream URL (honors the /transcode endpoint + codec/bitrate
+    // when transcoding is on), shared with browse / queue-restore / recursive.
+    final mediaUrl = buildServerStreamUrl(autoDJServer!, filepath);
 
     final artUrl = metadata['album-art'] != null
         ? Uri.parse(autoDJServer!.url)

@@ -174,6 +174,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get transcodeTitle => 'トランスコード';
 
   @override
+  String get transcodeCodec => 'コーデック';
+
+  @override
+  String get transcodeBitrate => 'ビットレート';
+
+  @override
+  String get transcodeAuto => 'サーバー既定';
+
+  @override
   String get settingsTapBehavior => '曲をタップしたとき';
 
   @override
