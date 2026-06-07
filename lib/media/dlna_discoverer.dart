@@ -52,18 +52,46 @@ class DlnaDeviceDiscoverer implements DeviceDiscoverer {
         _subs.add(_events!.onRendererOffline.listen(_onLost));
         _initialized = true;
       }
+      // initializeUpnpService() only *starts* the asynchronous Android service
+      // bind (bindService) and returns before it completes — so the service can
+      // still be unbound here and startDiscovery() would throw "UPnP service is
+      // not bound". Wait for the plugin to report the bind landed first.
+      if (!await _awaitServiceBound()) {
+        throw StateError('UPnP service did not bind in time');
+      }
       await _api.startDiscovery(
         DiscoveryOptions(
           searchTarget: SearchTarget(target: _rendererTarget),
           timeout: DiscoveryTimeout(seconds: 5),
         ),
       );
+      castLog('DLNA discovery started');
     } catch (e) {
       // Plugin/native failure (e.g. service init) shouldn't crash the picker;
       // the list just stays empty.
       _running = false;
       castLog('DLNA discovery start failed', error: e);
     }
+  }
+
+  /// Polls the plugin's readiness flag until the native UPnP service has bound
+  /// (or [timeout] elapses); returns whether it bound.
+  ///
+  /// The bind (bindService → onServiceConnected) is asynchronous and is *not*
+  /// awaited by initializeUpnpService(), so without this the first discovery
+  /// attempt races the bind and fails with "UPnP service is not bound". A later
+  /// retry usually wins the race — which is why DLNA discovery was flaky rather
+  /// than permanently broken.
+  Future<bool> _awaitServiceBound({
+    Duration timeout = const Duration(seconds: 5),
+    Duration interval = const Duration(milliseconds: 100),
+  }) async {
+    final sw = Stopwatch()..start();
+    while (sw.elapsed < timeout) {
+      if (await _api.isUpnpServiceInitialized()) return true;
+      await Future<void>.delayed(interval);
+    }
+    return await _api.isUpnpServiceInitialized();
   }
 
   @override
