@@ -52,6 +52,7 @@
   "transcodeCodec": "Códec",
   "transcodeBitrate": "Tasa de bits",
   "transcodeAuto": "Predeterminado del servidor",
+  "transcodeUnavailable": "Este servidor no tiene la transcodificación habilitada: sus pistas se transmiten en calidad original.",
   "settingsTapBehavior": "Al tocar una canción",
   "tapSubtitleAddToQueue": "Al tocar una canción se añade a la cola. Si la cola está vacía, la reproducción comienza automáticamente.",
   "tapSubtitlePlayFromHere": "Al tocar una canción se reemplaza la cola con las canciones de la vista actual y la reproducción comienza en la canción tocada.",

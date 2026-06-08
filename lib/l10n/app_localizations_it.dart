@@ -187,6 +187,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get transcodeAuto => 'Predefinito del server';
 
   @override
+  String get transcodeUnavailable =>
+      'Questo server non ha la transcodifica abilitata: i suoi brani vengono trasmessi in qualità originale.';
+
+  @override
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override

@@ -6,10 +6,11 @@ import '../singletons/transcode.dart';
 /// Single source of truth for a server file's streaming URL.
 ///
 /// [path] is the leading-slash data path, e.g. "/Music/foo.mp3". When
-/// transcoding is on this targets the server's `/transcode` endpoint and
-/// appends the chosen `codec` / `bitrate` (each omitted when null, so the
-/// server falls back to its configured default — matching the official mStream
-/// web client); otherwise it hits the plain `/media` endpoint. A fresh
+/// transcoding is on AND this server supports it, this targets the server's
+/// `/transcode` endpoint and appends the chosen `codec` / `bitrate` (each
+/// omitted when null, so the server falls back to its configured default —
+/// matching the official mStream web client); otherwise it hits the plain
+/// `/media` endpoint. A fresh
 /// cache-busting `app_uuid` and the server token are always appended.
 ///
 /// Used by the browse-time MediaItem builder, the queue-restore rebuild, the
@@ -24,7 +25,13 @@ String buildServerStreamUrl(Server server, String path) {
   }
   final tm = TranscodeManager();
   final String token = server.jwt == null ? '' : '&token=' + server.jwt!;
-  if (tm.transcodeOn != true) {
+  // Use /transcode only when the user enabled it AND this server can actually
+  // transcode (ffmpeg present, per /api/v1/ping → server.transcodeAvailable).
+  // Otherwise stream the original via /media — so a server without transcoding
+  // never 500s, and a queue mixing capable + incapable servers does the right
+  // thing per track. (Availability is false until the server is pinged, so a
+  // not-yet-connected server streams original quality until then — safe.)
+  if (tm.transcodeOn != true || !server.transcodeAvailable) {
     return server.url + '/media' + p + '?app_uuid=' + Uuid().v4() + token;
   }
   final sb = StringBuffer(server.url)

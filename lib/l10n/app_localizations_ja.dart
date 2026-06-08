@@ -183,6 +183,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get transcodeAuto => 'サーバー既定';
 
   @override
+  String get transcodeUnavailable =>
+      'このサーバーではトランスコードが有効になっていません。曲は元の品質でストリーミングされます。';
+
+  @override
   String get settingsTapBehavior => '曲をタップしたとき';
 
   @override

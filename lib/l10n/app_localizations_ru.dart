@@ -189,6 +189,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get transcodeAuto => 'По умолчанию сервера';
 
   @override
+  String get transcodeUnavailable =>
+      'На этом сервере транскодирование не включено — его треки воспроизводятся в оригинальном качестве.';
+
+  @override
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override

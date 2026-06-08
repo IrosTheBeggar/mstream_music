@@ -188,6 +188,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transcodeAuto => 'Serverstandard';
 
   @override
+  String get transcodeUnavailable =>
+      'Auf diesem Server ist Transkodierung nicht aktiviert – seine Titel werden in Originalqualität gestreamt.';
+
+  @override
   String get settingsTapBehavior => 'Beim Antippen eines Songs';
 
   @override

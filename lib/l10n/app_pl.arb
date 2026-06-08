@@ -52,6 +52,7 @@
   "transcodeCodec": "Kodek",
   "transcodeBitrate": "Przepływność",
   "transcodeAuto": "Domyślne serwera",
+  "transcodeUnavailable": "Ten serwer nie ma włączonej transkodyzacji — jego utwory są przesyłane w oryginalnej jakości.",
   "settingsTapBehavior": "Po dotknięciu utworu",
   "tapSubtitleAddToQueue": "Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.",
   "tapSubtitlePlayFromHere": "Dotknięcie utworu zastępuje kolejkę utworami z bieżącego widoku i rozpoczyna odtwarzanie od dotkniętego utworu.",

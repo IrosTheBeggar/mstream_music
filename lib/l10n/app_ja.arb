@@ -52,6 +52,7 @@
   "transcodeCodec": "コーデック",
   "transcodeBitrate": "ビットレート",
   "transcodeAuto": "サーバー既定",
+  "transcodeUnavailable": "このサーバーではトランスコードが有効になっていません。曲は元の品質でストリーミングされます。",
   "settingsTapBehavior": "曲をタップしたとき",
   "tapSubtitleAddToQueue": "曲をタップするとキューに追加されます。キューが空の場合は自動的に再生が始まります。",
   "tapSubtitlePlayFromHere": "曲をタップすると、現在のビューにある曲でキューを置き換え、タップした曲から再生を開始します。",

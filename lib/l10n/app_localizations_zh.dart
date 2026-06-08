@@ -181,6 +181,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transcodeAuto => '服务器默认';
 
   @override
+  String get transcodeUnavailable => '此服务器未启用转码，其曲目将以原始质量流式传输。';
+
+  @override
   String get settingsTapBehavior => '点击歌曲时';
 
   @override

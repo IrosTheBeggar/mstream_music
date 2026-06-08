@@ -426,6 +426,12 @@ abstract class AppLocalizations {
   /// **'Server default'**
   String get transcodeAuto;
 
+  /// No description provided for @transcodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t have transcoding enabled — its tracks stream in original quality.'**
+  String get transcodeUnavailable;
+
   /// Tap-behavior picker row label + per-mode subtitles.
   ///
   /// In en, this message translates to:

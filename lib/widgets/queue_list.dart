@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
+import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 
@@ -232,10 +233,27 @@ class _QueueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final url = item.extras?['artUrl'] as String?;
     final edgeColor = active
         ? VelvetColors.primary
         : (downloaded ? VelvetColors.success : Colors.transparent);
+
+    // "Being transcoded" = streamed (not a local copy) via the server's
+    // /transcode endpoint. Matched against the resolved server URL so a base
+    // path or a folder literally named "transcode" can't false-positive.
+    bool transcoding = false;
+    if (!downloaded) {
+      final name = item.extras?['server'] as String?;
+      if (name != null) {
+        for (final s in ServerManager().serverList) {
+          if (s.localname == name) {
+            transcoding = item.id.startsWith('${s.url}/transcode');
+            break;
+          }
+        }
+      }
+    }
 
     return Material(
       color: active ? VelvetColors.active : Colors.transparent,
@@ -317,6 +335,24 @@ class _QueueRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
+              // Transcoding badge — shown when this track streams via the
+              // server's /transcode endpoint (not a local copy / not /media).
+              if (transcoding) ...[
+                Tooltip(
+                  message: l.transcodeTitle,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: VelvetColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Icon(Icons.transform,
+                        size: 12, color: VelvetColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               // Duration.
               Text(
                 _fmtDur(item.duration),

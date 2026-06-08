@@ -135,6 +135,7 @@
   "transcodeCodec": "Codec",
   "transcodeBitrate": "Bitrate",
   "transcodeAuto": "Server default",
+  "transcodeUnavailable": "This server doesn't have transcoding enabled — its tracks stream in original quality.",
   "@settingsTranscode": { "description": "Transcode toggle row." },
 
   "settingsTapBehavior": "When you tap a song",

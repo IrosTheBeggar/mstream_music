@@ -189,6 +189,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get transcodeAuto => 'Domyślne serwera';
 
   @override
+  String get transcodeUnavailable =>
+      'Ten serwer nie ma włączonej transkodyzacji — jego utwory są przesyłane w oryginalnej jakości.';
+
+  @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override

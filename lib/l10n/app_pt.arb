@@ -76,6 +76,7 @@
   "transcodeCodec": "Codec",
   "transcodeBitrate": "Taxa de bits",
   "transcodeAuto": "Padrão do servidor",
+  "transcodeUnavailable": "Este servidor não tem a transcodificação ativada — as suas faixas são transmitidas na qualidade original.",
 
   "settingsTapBehavior": "Ao tocar em uma música",
   "tapSubtitleAddToQueue": "Tocar em uma música a adiciona à fila. Se a fila estiver vazia, a reprodução começa automaticamente.",

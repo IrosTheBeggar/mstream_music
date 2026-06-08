@@ -19,21 +19,33 @@ class TranscodeScreen extends StatefulWidget {
 }
 
 class _TranscodeScreenState extends State<TranscodeScreen> {
+  // Track the ping so the "server can't transcode" note only shows once we
+  // actually know (ping succeeded) — never while loading or on ping failure.
+  bool _loading = true;
+  bool _pingOk = false;
+
   @override
   void initState() {
     super.initState();
     _refreshServerDefaults();
   }
 
-  /// Refresh the active server's transcode defaults (and availability) from
-  /// `/api/v1/ping` so the "Server default (…)" labels are accurate.
+  /// Refresh the active server's transcode defaults + availability from
+  /// `/api/v1/ping` so the "Server default (…)" labels and the unavailable
+  /// note are accurate.
   Future<void> _refreshServerDefaults() async {
     final server = ServerManager().currentServer;
-    if (server == null) return;
+    if (server == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
     try {
-      await ServerManager().getServerPaths(server);
-    } catch (_) {/* labels just stay generic on failure */}
-    if (mounted) setState(() {});
+      await ServerManager().getServerPaths(server, throwErr: true);
+      _pingOk = true;
+    } catch (_) {
+      _pingOk = false; // unknown — don't claim transcoding is unavailable
+    }
+    if (mounted) setState(() => _loading = false);
   }
 
   // Codec tokens are lowercase on the wire; show them with conventional casing.
@@ -92,6 +104,28 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
               activeThumbColor: VelvetColors.primary,
             ),
             Divider(height: 1, color: VelvetColors.border),
+            if (!_loading &&
+                _pingOk &&
+                server != null &&
+                !server.transcodeAvailable)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 16, color: VelvetColors.textSecondary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l.transcodeUnavailable,
+                        style: TextStyle(
+                            color: VelvetColors.textSecondary, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ListTile(
               enabled: on,
               title: Text(l.transcodeCodec, style: TextStyle(color: labelColor)),

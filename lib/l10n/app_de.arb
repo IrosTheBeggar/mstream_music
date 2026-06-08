@@ -76,6 +76,7 @@
   "transcodeCodec": "Codec",
   "transcodeBitrate": "Bitrate",
   "transcodeAuto": "Serverstandard",
+  "transcodeUnavailable": "Auf diesem Server ist Transkodierung nicht aktiviert – seine Titel werden in Originalqualität gestreamt.",
 
   "settingsTapBehavior": "Beim Antippen eines Songs",
   "tapSubtitleAddToQueue": "Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.",
