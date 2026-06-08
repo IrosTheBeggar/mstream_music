@@ -19,6 +19,14 @@ class Server {
   // true, calls against this server short-circuit to a generic failure.
   bool unsupported = false;
 
+  // Runtime-only (never persisted): the server's transcoding capability from
+  // /api/v1/ping. [transcodeAvailable] is false when the server has no working
+  // ffmpeg; the defaults are the codec/bitrate /transcode falls back to when
+  // the client omits those params. Refreshed on each ping (getServerPaths).
+  bool transcodeAvailable = false;
+  String? transcodeDefaultCodec;
+  String? transcodeDefaultBitrate;
+
   // authentication is optional (mstream servers can be public OR private)
   String? username;
   String? password;

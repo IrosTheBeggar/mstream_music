@@ -209,6 +209,22 @@ class ServerManager {
       for (var i = 0; i < res['playlists'].length; i++) {
         server.playlists.add(res['playlists'][i]);
       }
+
+      // Transcoding capability (mStream/Velvet /api/v1/ping): `transcode` is
+      // false when the server has no working ffmpeg, otherwise
+      // { defaultCodec, defaultBitrate } — the values /transcode falls back to
+      // when we omit the codec/bitrate params.
+      final transcodeInfo = res['transcode'];
+      if (transcodeInfo is Map) {
+        server.transcodeAvailable = true;
+        server.transcodeDefaultCodec = transcodeInfo['defaultCodec'] as String?;
+        server.transcodeDefaultBitrate =
+            transcodeInfo['defaultBitrate'] as String?;
+      } else {
+        server.transcodeAvailable = false;
+        server.transcodeDefaultCodec = null;
+        server.transcodeDefaultBitrate = null;
+      }
     } catch (err) {
       if (throwErr) {
         throw err;
