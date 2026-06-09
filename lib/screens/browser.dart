@@ -838,6 +838,15 @@ class _BrowserState extends State<Browser> {
                     // The default browser landing (section shortcuts) gets a
                     // modern card grid instead of plain list rows.
                     if (isHome) {
+                      // While a configured "startup view" loads on launch, show
+                      // a spinner instead of the home grid so the app lands
+                      // straight on the chosen section (no home-grid flash).
+                      if (BrowserManager().awaitingStartupView) {
+                        return Center(
+                          child: CircularProgressIndicator(
+                              color: VelvetColors.primary),
+                        );
+                      }
                       return _homeView(context, browserList);
                     }
 

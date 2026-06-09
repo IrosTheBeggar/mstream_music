@@ -201,6 +201,13 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override
+  String get settingsStartupPage => 'Schermata iniziale';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Apri l’app su questa vista del browser; Indietro torna al browser.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Toccando un brano lo aggiungi alla coda. Se la coda è vuota, la riproduzione si avvia automaticamente.';
 

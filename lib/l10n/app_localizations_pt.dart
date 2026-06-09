@@ -201,6 +201,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsTapBehavior => 'Ao tocar em uma música';
 
   @override
+  String get settingsStartupPage => 'Tela inicial';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Abrir o app nesta visualização do navegador; Voltar retorna ao navegador.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Tocar em uma música a adiciona à fila. Se a fila estiver vazia, a reprodução começa automaticamente.';
 

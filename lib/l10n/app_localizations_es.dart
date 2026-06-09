@@ -201,6 +201,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTapBehavior => 'Al tocar una canción';
 
   @override
+  String get settingsStartupPage => 'Pantalla de inicio';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Abrir la app en esta vista del navegador; Atrás vuelve al navegador.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Al tocar una canción se añade a la cola. Si la cola está vacía, la reproducción comienza automáticamente.';
 

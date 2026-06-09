@@ -33,6 +33,22 @@ enum TapBehavior {
   // Localized labels: TapBehaviorLabel extension in lib/l10n/enum_labels.dart.
 }
 
+/// Which view the app opens into on launch. `browser` is the normal home grid;
+/// any other value loads that browser section on top of the home grid at
+/// startup, so the system Back button returns to the browser home. Persisted.
+enum StartupView {
+  browser,
+  fileExplorer,
+  playlists,
+  albums,
+  artists,
+  rated,
+  recent,
+  localFiles;
+
+  // Localized labels: StartupViewLabel extension in lib/l10n/enum_labels.dart.
+}
+
 /// Which rendering engine the visualizer screen uses. Milkdrop is the
 /// projectM Cream-of-the-Crop pack; Shadertoy is our Shadertoy-style
 /// fragment shader catalog (drop .glsl files in assets/shaders/ to
@@ -102,6 +118,7 @@ class SettingsManager {
   // items. Single knob driving both behaviors.
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
+  StartupView startupView = StartupView.browser;
   AppTheme appTheme = AppTheme.dark;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
@@ -218,6 +235,7 @@ class SettingsManager {
       fileExplorerMetadata = m['fileExplorerMetadata'] ?? true;
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
+      startupView = _readStartupView(m);
       appTheme = _readTheme(m);
       playerLayout = _readPlayerLayout(m);
       final accent = m['accentColor'];
@@ -326,6 +344,16 @@ class SettingsManager {
     return TapBehavior.addToQueue;
   }
 
+  StartupView _readStartupView(Map<String, dynamic> m) {
+    final str = m['startupView'];
+    if (str is String) {
+      for (final v in StartupView.values) {
+        if (v.name == str) return v;
+      }
+    }
+    return StartupView.browser;
+  }
+
   Future<void> _save() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
@@ -337,6 +365,7 @@ class SettingsManager {
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
+      'startupView': startupView.name,
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
@@ -394,6 +423,11 @@ class SettingsManager {
 
   Future<void> setTapBehavior(TapBehavior v) async {
     tapBehavior = v;
+    await _save();
+  }
+
+  Future<void> setStartupView(StartupView v) async {
+    startupView = v;
     await _save();
   }
 
@@ -497,6 +531,7 @@ class SettingsManager {
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;
+    startupView = StartupView.browser;
     appTheme = AppTheme.dark;
     playerLayout = PlayerLayout.medium;
     accentColor = null;

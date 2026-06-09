@@ -81,6 +81,8 @@
   "transcodeReloadQueueSubtitle": "Wenn du Transkodierungseinstellungen änderst – aktiviert: die ganze Warteschlange jetzt neu laden (der laufende Titel puffert kurz neu); deaktiviert: nur kommende Titel ändern sich, der aktuelle wird unverändert zu Ende gespielt.",
 
   "settingsTapBehavior": "Beim Antippen eines Songs",
+  "settingsStartupPage": "Startbildschirm",
+  "settingsStartupPageSubtitle": "Die App in dieser Browser-Ansicht öffnen; Zurück kehrt zum Browser zurück.",
   "tapSubtitleAddToQueue": "Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.",
   "tapSubtitlePlayFromHere": "Beim Antippen wird die Warteschlange durch die Songs der aktuellen Ansicht ersetzt und die Wiedergabe beim angetippten Song gestartet.",
   "tapSubtitleAppendAndJump": "Beim Antippen wird der Song an die Warteschlange angehängt und die Wiedergabe springt dorthin, was gerade läuft, wird unterbrochen.",

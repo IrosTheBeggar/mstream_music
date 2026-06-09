@@ -201,6 +201,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTapBehavior => 'When you tap a song';
 
   @override
+  String get settingsStartupPage => 'Startup page';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Open the app to this browser view; Back returns to the browser.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.';
 

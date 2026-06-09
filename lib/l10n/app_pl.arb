@@ -56,6 +56,8 @@
   "transcodeReloadQueue": "Zastosuj do bieżącej kolejki",
   "transcodeReloadQueueSubtitle": "Gdy zmienisz ustawienia transkodyzacji — zaznaczone: przeładuj całą kolejkę teraz (odtwarzany utwór na chwilę się buforuje); odznaczone: zmieniają się tylko kolejne utwory, bieżący kończy się bez zmian.",
   "settingsTapBehavior": "Po dotknięciu utworu",
+  "settingsStartupPage": "Ekran startowy",
+  "settingsStartupPageSubtitle": "Otwórz aplikację w tym widoku przeglądarki; Wstecz wraca do przeglądarki.",
   "tapSubtitleAddToQueue": "Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.",
   "tapSubtitlePlayFromHere": "Dotknięcie utworu zastępuje kolejkę utworami z bieżącego widoku i rozpoczyna odtwarzanie od dotkniętego utworu.",
   "tapSubtitleAppendAndJump": "Dotknięcie utworu dodaje go do kolejki i przeskakuje do niego odtwarzanie, przerywając to, co było odtwarzane.",
