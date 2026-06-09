@@ -356,6 +356,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         },
         child: Stack(children: [
           Scaffold(
+            // The only text input over this Scaffold is the search field in the
+            // toolbar (always at the top, never under the keyboard), so don't
+            // resize the body when the keyboard opens. Resizing shrank the body
+            // and turned the reserved mini-player strip into a grey band above
+            // the keyboard — and squeezed the 27-letter scrubber into a RenderFlex
+            // overflow. Leaving the body full-height keeps the list under the
+            // keyboard (scrollable) with no grey gap.
+            resizeToAvoidBottomInset: false,
             onDrawerChanged: (open) => _drawerOpen.value = open,
             appBar: AppBar(
               title: Column(
