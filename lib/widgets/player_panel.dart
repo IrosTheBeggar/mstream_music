@@ -10,6 +10,7 @@ import '../objects/player_layout.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
+import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
@@ -949,11 +950,19 @@ class _Scrubber extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(_fmt(pos),
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: VelvetColors.primary)),
+                // Transcoding glyph (when active) sits just left of the elapsed
+                // time, out of the way.
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _transcodeBadge(context, item),
+                    Text(_fmt(pos),
+                        style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: VelvetColors.primary)),
+                  ],
+                ),
                 Text(right,
                     style: TextStyle(
                         fontFamily: 'monospace',
@@ -1218,6 +1227,7 @@ class _MiniPlayer extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        _transcodeBadge(context, item),
                         Text(
                           dur == null
                               ? _fmt(pos)
@@ -1407,3 +1417,25 @@ final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
   ));
 
 String _fmt(Duration d) => formatDuration(d);
+
+/// True when the now-playing [item] is streaming transcoded (the server's
+/// /transcode endpoint, not a local copy). Matched against the resolved server
+/// URL so a base path / a folder named "transcode" can't false-positive.
+bool _isTranscoding(MediaItem? item) {
+  if (item == null || item.extras?['localPath'] != null) return false;
+  final s = ServerManager().byLocalname(item.extras?['server'] as String?);
+  return s != null && item.id.startsWith('${s.url}/transcode');
+}
+
+/// Small transcoding glyph that sits just left of a time readout in the player;
+/// collapses to nothing (no space) when the current track isn't transcoded.
+Widget _transcodeBadge(BuildContext context, MediaItem? item) {
+  if (!_isTranscoding(item)) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.only(right: 5),
+    child: Tooltip(
+      message: AppLocalizations.of(context).transcodeTitle,
+      child: Icon(Icons.transform, size: 13, color: VelvetColors.primary),
+    ),
+  );
+}

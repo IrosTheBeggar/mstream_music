@@ -175,6 +175,29 @@ class AppLocalizationsIt extends AppLocalizations {
       'Trasmetti una copia transcodificata dal server (file più piccoli, avvio leggermente più lento). Disattivato riproduce i file originali.';
 
   @override
+  String get transcodeTitle => 'Transcodifica';
+
+  @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Bitrate';
+
+  @override
+  String get transcodeAuto => 'Predefinito del server';
+
+  @override
+  String get transcodeUnavailable =>
+      'Questo server non ha la transcodifica abilitata: i suoi brani vengono trasmessi in qualità originale.';
+
+  @override
+  String get transcodeReloadQueue => 'Applica alla coda attuale';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Quando cambi le impostazioni di transcodifica — selezionato: ricarica subito l\'intera coda (il brano in riproduzione si ricarica brevemente); deselezionato: cambiano solo i brani successivi, quello attuale termina invariato.';
+
+  @override
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override

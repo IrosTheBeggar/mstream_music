@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
-import '../util/queue_actions.dart';
+import '../util/stream_url.dart';
 import 'media.dart';
 import 'server_list.dart';
 import 'settings.dart';
@@ -212,10 +212,6 @@ class QueueStore {
     );
   }
 
-  static Server? _defaultResolve(String localname) {
-    for (final s in ServerManager().serverList) {
-      if (s.localname == localname) return s;
-    }
-    return null;
-  }
+  static Server? _defaultResolve(String localname) =>
+      ServerManager().byLocalname(localname);
 }

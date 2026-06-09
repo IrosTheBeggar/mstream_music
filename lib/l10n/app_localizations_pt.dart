@@ -175,6 +175,29 @@ class AppLocalizationsPt extends AppLocalizations {
       'Transmite uma cópia transcodificada do servidor (arquivos menores, início um pouco mais lento). Desligado, toca os arquivos originais.';
 
   @override
+  String get transcodeTitle => 'Transcodificação';
+
+  @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Taxa de bits';
+
+  @override
+  String get transcodeAuto => 'Padrão do servidor';
+
+  @override
+  String get transcodeUnavailable =>
+      'Este servidor não tem a transcodificação ativada — as suas faixas são transmitidas na qualidade original.';
+
+  @override
+  String get transcodeReloadQueue => 'Aplicar à fila atual';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Ao alterar as definições de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.';
+
+  @override
   String get settingsTapBehavior => 'Ao tocar em uma música';
 
   @override

@@ -175,6 +175,29 @@ class AppLocalizationsFr extends AppLocalizations {
       'Diffuser une copie transcodée depuis le serveur (fichiers plus légers, démarrage un peu plus lent). Désactivé, lit les fichiers d\'origine.';
 
   @override
+  String get transcodeTitle => 'Transcodage';
+
+  @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Débit binaire';
+
+  @override
+  String get transcodeAuto => 'Valeur par défaut du serveur';
+
+  @override
+  String get transcodeUnavailable =>
+      'Ce serveur n\'a pas le transcodage activé — ses pistes sont diffusées en qualité d\'origine.';
+
+  @override
+  String get transcodeReloadQueue => 'Appliquer à la file d\'attente actuelle';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Quand vous modifiez les réglages de transcodage — coché : recharger toute la file maintenant (la piste en cours se remet brièvement en mémoire tampon) ; décoché : seules les pistes à venir changent, celle en cours se termine telle quelle.';
+
+  @override
   String get settingsTapBehavior => 'Lorsque vous touchez un morceau';
 
   @override

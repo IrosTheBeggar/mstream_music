@@ -177,6 +177,29 @@ class AppLocalizationsRu extends AppLocalizations {
       'Транслировать перекодированную копию с сервера (файлы меньше, старт немного медленнее). При выключении воспроизводятся исходные файлы.';
 
   @override
+  String get transcodeTitle => 'Перекодирование';
+
+  @override
+  String get transcodeCodec => 'Кодек';
+
+  @override
+  String get transcodeBitrate => 'Битрейт';
+
+  @override
+  String get transcodeAuto => 'По умолчанию сервера';
+
+  @override
+  String get transcodeUnavailable =>
+      'На этом сервере транскодирование не включено — его треки воспроизводятся в оригинальном качестве.';
+
+  @override
+  String get transcodeReloadQueue => 'Применить к текущей очереди';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'При изменении настроек транскодирования — включено: перезагрузить всю очередь сейчас (текущий трек ненадолго буферизуется); выключено: меняются только следующие треки, текущий доигрывает без изменений.';
+
+  @override
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override

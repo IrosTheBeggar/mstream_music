@@ -176,6 +176,29 @@ class AppLocalizationsDe extends AppLocalizations {
       'Streame eine transkodierte Kopie vom Server (kleinere Dateien, etwas langsamerer Start). Aus spielt Originaldateien ab.';
 
   @override
+  String get transcodeTitle => 'Transkodierung';
+
+  @override
+  String get transcodeCodec => 'Codec';
+
+  @override
+  String get transcodeBitrate => 'Bitrate';
+
+  @override
+  String get transcodeAuto => 'Serverstandard';
+
+  @override
+  String get transcodeUnavailable =>
+      'Auf diesem Server ist Transkodierung nicht aktiviert – seine Titel werden in Originalqualität gestreamt.';
+
+  @override
+  String get transcodeReloadQueue => 'Auf aktuelle Warteschlange anwenden';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Wenn du Transkodierungseinstellungen änderst – aktiviert: die ganze Warteschlange jetzt neu laden (der laufende Titel puffert kurz neu); deaktiviert: nur kommende Titel ändern sich, der aktuelle wird unverändert zu Ende gespielt.';
+
+  @override
   String get settingsTapBehavior => 'Beim Antippen eines Songs';
 
   @override

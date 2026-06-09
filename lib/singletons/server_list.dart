@@ -36,11 +36,21 @@ class ServerManager {
     return File('$path/servers.json');
   }
 
-  Future<File> writeServerFile() async {
-    final file = await _serverFile;
+  // Serializes writes through a single chain so overlapping truncate+writes
+  // can't corrupt servers.json — notably the parallel getServerPaths() pings
+  // fired at startup (loadServerList), which can each trigger a
+  // capability-change write at the same moment.
+  Future<void> _writeChain = Future.value();
 
-    // Write the file
-    return file.writeAsString(jsonEncode(serverList));
+  Future<void> writeServerFile() {
+    final write = _writeChain.then((_) async {
+      final file = await _serverFile;
+      await file.writeAsString(jsonEncode(serverList));
+    });
+    // The baton swallows errors so one failed write can't block later writes;
+    // the caller still sees this write's own error via [write].
+    _writeChain = write.catchError((_) {});
+    return write;
   }
 
   Future<List> readServerManager() async {
@@ -209,6 +219,32 @@ class ServerManager {
       for (var i = 0; i < res['playlists'].length; i++) {
         server.playlists.add(res['playlists'][i]);
       }
+
+      // Transcoding capability (mStream/Velvet /api/v1/ping): `transcode` is
+      // false when the server has no working ffmpeg, otherwise
+      // { defaultCodec, defaultBitrate } — the values /transcode falls back to
+      // when we omit the codec/bitrate params.
+      final bool? prevAvail = server.transcodeAvailable;
+      final String? prevCodec = server.transcodeDefaultCodec;
+      final String? prevBitrate = server.transcodeDefaultBitrate;
+      final transcodeInfo = res['transcode'];
+      if (transcodeInfo is Map) {
+        server.transcodeAvailable = true;
+        server.transcodeDefaultCodec = transcodeInfo['defaultCodec'] as String?;
+        server.transcodeDefaultBitrate =
+            transcodeInfo['defaultBitrate'] as String?;
+      } else {
+        server.transcodeAvailable = false;
+        server.transcodeDefaultCodec = null;
+        server.transcodeDefaultBitrate = null;
+      }
+      // Persist the capability so the NEXT launch knows it before the queue is
+      // restored — otherwise restore races the ping and bakes in /media URLs.
+      if (server.transcodeAvailable != prevAvail ||
+          server.transcodeDefaultCodec != prevCodec ||
+          server.transcodeDefaultBitrate != prevBitrate) {
+        unawaited(writeServerFile());
+      }
     } catch (err) {
       if (throwErr) {
         throw err;
@@ -262,8 +298,23 @@ class ServerManager {
     await writeServerFile();
   }
 
+  /// The configured server with this [localname], or null when none match.
+  /// One place to resolve a queue item's / download's server by its stable
+  /// localname (used by playback, the transcode badge, queue restore, …).
+  Server? byLocalname(String? localname) {
+    if (localname == null) return null;
+    for (final s in serverList) {
+      if (s.localname == localname) return s;
+    }
+    return null;
+  }
+
+  /// Like [byLocalname] but throws when no server matches — for legacy callers
+  /// that expect a non-null result (and handle the throw).
   Server lookupServer(String id) {
-    return serverList.firstWhere((e) => e.localname == id);
+    final s = byLocalname(id);
+    if (s == null) throw StateError('No server with localname "$id"');
+    return s;
   }
 
   void dispose() {

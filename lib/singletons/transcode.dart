@@ -1,11 +1,26 @@
-import 'dart:async';
-import 'package:rxdart/rxdart.dart';
-
+/// Holds the user's transcoding preferences, sent to the mStream `/transcode`
+/// endpoint when streaming. See the server's src/api/transcode.js for the
+/// accepted values; [codec] / [bitrate] are passed as `&codec=` / `&bitrate=`
+/// query params and a null value omits the param (server uses its default).
 class TranscodeManager {
   bool transcodeOn = false;
 
-  late final BehaviorSubject<bool> _transcodeOnStream =
-      BehaviorSubject<bool>.seeded(transcodeOn);
+  /// Selected codec, one of [codecs], or null = let the server pick its
+  /// configured default.
+  String? codec;
+
+  /// Selected bitrate, one of [bitrates], or null = server default.
+  String? bitrate;
+
+  /// When a transcode setting changes, whether to rebuild the WHOLE current
+  /// queue immediately (true — the playing track re-buffers) or only the
+  /// not-yet-played tracks (false). Default true.
+  bool rebuildWholeQueue = true;
+
+  /// Values the mStream `/transcode` endpoint accepts (codecMap / bitrateSet in
+  /// the server's src/api/transcode.js).
+  static const List<String> codecs = ['mp3', 'opus', 'aac'];
+  static const List<String> bitrates = ['64k', '96k', '128k', '192k'];
 
   TranscodeManager._privateConstructor();
   static final TranscodeManager _instance =
@@ -14,10 +29,4 @@ class TranscodeManager {
   factory TranscodeManager() {
     return _instance;
   }
-
-  void dispose() {
-    _transcodeOnStream.close();
-  } //initializes the subject with element already;
-
-  Stream<bool> get currentServerStream => _transcodeOnStream.stream;
 }

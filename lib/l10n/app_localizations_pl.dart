@@ -177,6 +177,29 @@ class AppLocalizationsPl extends AppLocalizations {
       'Przesyłaj strumieniowo transkodowaną kopię z serwera (mniejsze pliki, nieco wolniejszy start). Wyłączenie odtwarza oryginalne pliki.';
 
   @override
+  String get transcodeTitle => 'Transkodowanie';
+
+  @override
+  String get transcodeCodec => 'Kodek';
+
+  @override
+  String get transcodeBitrate => 'Przepływność';
+
+  @override
+  String get transcodeAuto => 'Domyślne serwera';
+
+  @override
+  String get transcodeUnavailable =>
+      'Ten serwer nie ma włączonej transkodyzacji — jego utwory są przesyłane w oryginalnej jakości.';
+
+  @override
+  String get transcodeReloadQueue => 'Zastosuj do bieżącej kolejki';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Gdy zmienisz ustawienia transkodyzacji — zaznaczone: przeładuj całą kolejkę teraz (odtwarzany utwór na chwilę się buforuje); odznaczone: zmieniają się tylko kolejne utwory, bieżący kończy się bez zmian.';
+
+  @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override

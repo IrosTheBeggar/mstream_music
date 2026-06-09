@@ -402,6 +402,48 @@ abstract class AppLocalizations {
   /// **'Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.'**
   String get settingsTranscodeSubtitle;
 
+  /// No description provided for @transcodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcoding'**
+  String get transcodeTitle;
+
+  /// No description provided for @transcodeCodec.
+  ///
+  /// In en, this message translates to:
+  /// **'Codec'**
+  String get transcodeCodec;
+
+  /// No description provided for @transcodeBitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitrate'**
+  String get transcodeBitrate;
+
+  /// No description provided for @transcodeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Server default'**
+  String get transcodeAuto;
+
+  /// No description provided for @transcodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t have transcoding enabled — its tracks stream in original quality.'**
+  String get transcodeUnavailable;
+
+  /// No description provided for @transcodeReloadQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to current queue'**
+  String get transcodeReloadQueue;
+
+  /// No description provided for @transcodeReloadQueueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.'**
+  String get transcodeReloadQueueSubtitle;
+
   /// Tap-behavior picker row label + per-mode subtitles.
   ///
   /// In en, this message translates to:

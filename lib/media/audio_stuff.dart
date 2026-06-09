@@ -5,7 +5,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
@@ -20,7 +19,9 @@ import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
+import '../singletons/server_list.dart';
 import '../util/camelot.dart';
+import '../util/stream_url.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 class AudioPlayerHandler extends BaseAudioHandler
@@ -519,7 +520,94 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
 
         break;
+      case 'rebuildTranscodeUrls':
+        await _rebuildTranscodeUrls(
+            upcomingOnly: extras?['upcomingOnly'] == true);
+        break;
     }
+  }
+
+  // Resolve a queue item's server from the localname stored in its extras.
+  Server? _serverFor(MediaItem m) =>
+      ServerManager().byLocalname(m.extras?['server'] as String?);
+
+  /// Re-derive [m]'s stream URL under the CURRENT transcode settings. Returns
+  /// the same instance when nothing changes, so callers can detect a no-op.
+  /// Downloaded items are left alone — they play from the local copy, so their
+  /// URL is irrelevant.
+  MediaItem _withRebuiltUrl(MediaItem m) {
+    if (m.extras?['localPath'] != null) return m;
+    final path = m.extras?['path'] as String?;
+    final server = _serverFor(m);
+    if (path == null || server == null) return m; // local-only / unknown server
+    final newId = buildServerStreamUrl(server, path);
+    return newId == m.id ? m : m.copyWith(id: newId);
+  }
+
+  /// Rebuild queue stream URLs after a transcode-setting change.
+  ///
+  /// [upcomingOnly] leaves the current track playing and only swaps the
+  /// not-yet-played tracks; otherwise the whole queue reloads at the current
+  /// index/position (the current track briefly re-buffers). No-op when no URL
+  /// actually changes (e.g. nothing to convert, or transcoding unavailable).
+  Future<void> _rebuildTranscodeUrls({required bool upcomingOnly}) async {
+    final q = queue.value;
+    if (q.isEmpty) return;
+    final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
+
+    if (upcomingOnly) {
+      final rebuilt = <MediaItem>[];
+      bool changed = false;
+      for (int i = 0; i < q.length; i++) {
+        if (i <= cur) {
+          rebuilt.add(q[i]);
+        } else {
+          final nm = _withRebuiltUrl(q[i]);
+          if (!identical(nm, q[i])) changed = true;
+          rebuilt.add(nm);
+        }
+      }
+      if (!changed) return;
+      _reordering = true;
+      try {
+        // Swap the upcoming sources without touching the playing one: drop them
+        // from the end, then re-append the rebuilt versions in the same order.
+        for (int i = q.length - 1; i > cur; i--) {
+          await _backend.removeSourceAt(i);
+        }
+        for (int i = cur + 1; i < rebuilt.length; i++) {
+          await _backend.addSource(rebuilt[i]);
+        }
+        queue.add(rebuilt);
+      } finally {
+        _reordering = false;
+      }
+    } else {
+      final rebuilt = q.map(_withRebuiltUrl).toList();
+      bool changed = false;
+      for (int i = 0; i < q.length; i++) {
+        if (rebuilt[i].id != q[i].id) changed = true;
+      }
+      if (!changed) return;
+      final pos = _backend.position;
+      final wasPlaying = _backend.playing;
+      final wasShuffle = _backend.shuffleEnabled;
+      final wasRepeat = _backend.repeatAll;
+      _reordering = true;
+      try {
+        queue.add(rebuilt);
+        await _backend.setSources(rebuilt);
+        await _backend.seek(pos, index: cur, play: wasPlaying);
+        // setSources rebuilds the playlist; re-apply shuffle/repeat so a
+        // transcode change doesn't silently drop them (mirrors restoreQueue).
+        await _backend.setShuffleEnabled(wasShuffle);
+        await _backend.setRepeatAll(wasRepeat);
+      } finally {
+        _reordering = false;
+      }
+    }
+    _emitCurrentMediaItem();
+    _broadcastState();
   }
 
   /// Broadcasts the current state to all clients.
@@ -680,18 +768,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String;
 
-    String p = '';
-    for (final segment in filepath.split('/')) {
-      if (segment.isEmpty) continue;
-      p += '/' + Uri.encodeComponent(segment);
-    }
-
-    final mediaUrl = autoDJServer!.url +
-        '/media' +
-        p +
-        '?app_uuid=' +
-        Uuid().v4() +
-        (autoDJServer?.jwt == null ? '' : '&token=' + autoDJServer!.jwt!);
+    // Transcode-aware stream URL (honors the /transcode endpoint + codec/bitrate
+    // when transcoding is on), shared with browse / queue-restore / recursive.
+    final mediaUrl = buildServerStreamUrl(autoDJServer!, filepath);
 
     final artUrl = metadata['album-art'] != null
         ? Uri.parse(autoDJServer!.url)

@@ -131,6 +131,13 @@
 
   "settingsTranscode": "Transcode audio",
   "settingsTranscodeSubtitle": "Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.",
+  "transcodeTitle": "Transcoding",
+  "transcodeCodec": "Codec",
+  "transcodeBitrate": "Bitrate",
+  "transcodeAuto": "Server default",
+  "transcodeUnavailable": "This server doesn't have transcoding enabled — its tracks stream in original quality.",
+  "transcodeReloadQueue": "Apply to current queue",
+  "transcodeReloadQueueSubtitle": "When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.",
   "@settingsTranscode": { "description": "Transcode toggle row." },
 
   "settingsTapBehavior": "When you tap a song",

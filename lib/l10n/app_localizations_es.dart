@@ -175,6 +175,29 @@ class AppLocalizationsEs extends AppLocalizations {
       'Transmite una copia transcodificada desde el servidor (archivos más pequeños, inicio algo más lento). Desactivado reproduce los archivos originales.';
 
   @override
+  String get transcodeTitle => 'Transcodificación';
+
+  @override
+  String get transcodeCodec => 'Códec';
+
+  @override
+  String get transcodeBitrate => 'Tasa de bits';
+
+  @override
+  String get transcodeAuto => 'Predeterminado del servidor';
+
+  @override
+  String get transcodeUnavailable =>
+      'Este servidor no tiene la transcodificación habilitada: sus pistas se transmiten en calidad original.';
+
+  @override
+  String get transcodeReloadQueue => 'Aplicar a la cola actual';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Al cambiar los ajustes de transcodificación — marcado: recargar toda la cola ahora (la pista en reproducción se almacena en búfer brevemente); sin marcar: solo cambian las pistas siguientes, la actual termina sin cambios.';
+
+  @override
   String get settingsTapBehavior => 'Al tocar una canción';
 
   @override
