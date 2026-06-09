@@ -151,6 +151,15 @@ private:
     void releaseBufferTarget(int idx);
     void releaseAllBufferTargets();
     void clearCurrentSet();
+    // Upload the uniforms that are constant for a program's lifetime (or
+    // change only on setTuning): iChannelResolution, iSampleRate, iMouse,
+    // iDate, the iChannel sampler-unit bindings, and iParams. Called once
+    // when a PassSet is adopted, instead of re-uploading them every frame in
+    // renderPass. Uniform values live in the program object, so they persist
+    // across the glUseProgram switches between passes.
+    void primeConstantUniforms(PassSet* set);
+    // Re-upload just iParams to the current set's programs (after setTuning).
+    void applyParamsToCurrentSet();
 
     // === Worker-thread methods ===
     void workerLoop();
@@ -211,6 +220,10 @@ private:
     // declared defaults on load, so shaders that read iParams[i] always
     // see a sensible value.
     float params_[NUM_PARAMS] = {0.0f};
+    // Set by setTuning(), cleared once the new params_ have been pushed to the
+    // current set's programs. Lets renderFrame skip the per-frame iParams
+    // re-upload when tuning hasn't changed.
+    bool paramsDirty_ = false;
 
     // --- Worker thread state ---
     std::thread worker_;
