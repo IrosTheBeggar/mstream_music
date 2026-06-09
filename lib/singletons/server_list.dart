@@ -318,11 +318,25 @@ class ServerManager {
   // Self-signed / insecure TLS (full flavor only) — see SelfSignedHttpOverrides
   // (Dart API path) and InsecureTlsChannel (native ExoPlayer streaming path).
 
+  // Hosts the add/edit screen is actively testing or saving with self-signed
+  // enabled, before the server is persisted to serverList. Lets allowsSelfSigned
+  // trust the in-progress server during its connection test and first
+  // getServerPaths; cleared when that screen closes.
+  final Set<String> _pendingSelfSignedHosts = {};
+
+  void addPendingSelfSigned(String host) {
+    if (host.isNotEmpty) _pendingSelfSignedHosts.add(host);
+  }
+
+  void clearPendingSelfSigned() => _pendingSelfSignedHosts.clear();
+
   /// True if [host] belongs to a configured server that opted into accepting a
   /// self-signed cert — SelfSignedHttpOverrides bypasses validation for just
-  /// that host. Always false on the Play build.
+  /// that host — or a host the add/edit screen is currently testing/saving with
+  /// self-signed on. Always false on the Play build.
   bool allowsSelfSigned(String host) {
     if (isPlayBuild) return false;
+    if (_pendingSelfSignedHosts.contains(host)) return true;
     for (final s in serverList) {
       if (!s.allowSelfSigned) continue;
       try {

@@ -84,6 +84,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   String _storageMode = 'appLocal';
   // Full flavor only: accept a self-signed / untrusted TLS cert for this server.
   bool _allowSelfSigned = false;
+
+  // Show/hide toggle for the password field.
+  bool _obscurePassword = true;
   String? _storageBasePath;
   // Browsable volume roots derived in _detectSdCard for the folder picker.
   String? _sharedStorageRoot;
@@ -261,6 +264,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       return;
     }
 
+    // Trust this host's self-signed cert for the duration of the test — it isn't
+    // in serverList yet, so SelfSignedHttpOverrides can't know to otherwise.
+    // Full flavor only: the toggle is hidden on Play and isPlayBuild short-
+    // circuits both this and allowsSelfSigned().
+    if (!isPlayBuild && _allowSelfSigned) {
+      ServerManager().addPendingSelfSigned(url.host);
+    }
+
     setState(() {
       _testing = true;
       _testResult = null;
@@ -383,6 +394,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _downloadFolderCtrl.dispose();
+    ServerManager().clearPendingSelfSigned();
 
     super.dispose();
   }
@@ -690,6 +702,13 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
       return;
     }
+
+    // Trust this host's self-signed cert during the first getServerPaths below
+    // (a brand-new server isn't in serverList yet). Full flavor only.
+    if (!isPlayBuild && _allowSelfSigned) {
+      ServerManager().addPendingSelfSigned(lol.host);
+    }
+
     bool shouldUpdate = false;
     try {
       ServerManager().serverList[editThisServer ?? -1];
@@ -1242,7 +1261,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 16),
               TextFormField(
                 controller: _passwordCtrl,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 autocorrect: false,
                 enableSuggestions: false,
                 enabled: !_publicAccess,
@@ -1250,6 +1269,15 @@ class MyCustomFormState extends State<MyCustomForm> {
                   labelText: l.fieldPassword,
                   hintText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: _publicAccess
+                        ? null
+                        : () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                  ),
                 ),
                 onSaved: (v) => _passwordCtrl.text = v ?? '',
               ),
