@@ -10,8 +10,8 @@ import '../singletons/transcode.dart';
 /// `/transcode` endpoint and appends the chosen `codec` / `bitrate` (each
 /// omitted when null, so the server falls back to its configured default —
 /// matching the official mStream web client); otherwise it hits the plain
-/// `/media` endpoint. A fresh
-/// cache-busting `app_uuid` and the server token are always appended.
+/// `/media` endpoint. A fresh cache-busting `app_uuid` and the server token are
+/// always appended.
 ///
 /// Used by the browse-time MediaItem builder, the queue-restore rebuild, the
 /// recursive "add folder" path, and AutoDJ — so every playback path honors the

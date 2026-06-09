@@ -528,14 +528,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   // Resolve a queue item's server from the localname stored in its extras.
-  Server? _serverFor(MediaItem m) {
-    final name = m.extras?['server'] as String?;
-    if (name == null) return null;
-    for (final s in ServerManager().serverList) {
-      if (s.localname == name) return s;
-    }
-    return null;
-  }
+  Server? _serverFor(MediaItem m) =>
+      ServerManager().byLocalname(m.extras?['server'] as String?);
 
   /// Re-derive [m]'s stream URL under the CURRENT transcode settings. Returns
   /// the same instance when nothing changes, so callers can detect a no-op.
@@ -597,11 +591,17 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (!changed) return;
       final pos = _backend.position;
       final wasPlaying = _backend.playing;
+      final wasShuffle = _backend.shuffleEnabled;
+      final wasRepeat = _backend.repeatAll;
       _reordering = true;
       try {
         queue.add(rebuilt);
         await _backend.setSources(rebuilt);
         await _backend.seek(pos, index: cur, play: wasPlaying);
+        // setSources rebuilds the playlist; re-apply shuffle/repeat so a
+        // transcode change doesn't silently drop them (mirrors restoreQueue).
+        await _backend.setShuffleEnabled(wasShuffle);
+        await _backend.setRepeatAll(wasRepeat);
       } finally {
         _reordering = false;
       }

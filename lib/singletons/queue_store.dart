@@ -212,10 +212,6 @@ class QueueStore {
     );
   }
 
-  static Server? _defaultResolve(String localname) {
-    for (final s in ServerManager().serverList) {
-      if (s.localname == localname) return s;
-    }
-    return null;
-  }
+  static Server? _defaultResolve(String localname) =>
+      ServerManager().byLocalname(localname);
 }

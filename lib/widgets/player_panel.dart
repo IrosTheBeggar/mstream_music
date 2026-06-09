@@ -1423,12 +1423,8 @@ String _fmt(Duration d) => formatDuration(d);
 /// URL so a base path / a folder named "transcode" can't false-positive.
 bool _isTranscoding(MediaItem? item) {
   if (item == null || item.extras?['localPath'] != null) return false;
-  final name = item.extras?['server'] as String?;
-  if (name == null) return false;
-  for (final s in ServerManager().serverList) {
-    if (s.localname == name) return item.id.startsWith('${s.url}/transcode');
-  }
-  return false;
+  final s = ServerManager().byLocalname(item.extras?['server'] as String?);
+  return s != null && item.id.startsWith('${s.url}/transcode');
 }
 
 /// Small transcoding glyph that sits just left of a time readout in the player;

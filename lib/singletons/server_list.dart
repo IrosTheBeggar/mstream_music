@@ -288,8 +288,23 @@ class ServerManager {
     await writeServerFile();
   }
 
+  /// The configured server with this [localname], or null when none match.
+  /// One place to resolve a queue item's / download's server by its stable
+  /// localname (used by playback, the transcode badge, queue restore, …).
+  Server? byLocalname(String? localname) {
+    if (localname == null) return null;
+    for (final s in serverList) {
+      if (s.localname == localname) return s;
+    }
+    return null;
+  }
+
+  /// Like [byLocalname] but throws when no server matches — for legacy callers
+  /// that expect a non-null result (and handle the throw).
   Server lookupServer(String id) {
-    return serverList.firstWhere((e) => e.localname == id);
+    final s = byLocalname(id);
+    if (s == null) throw StateError('No server with localname "$id"');
+    return s;
   }
 
   void dispose() {
