@@ -36,11 +36,21 @@ class ServerManager {
     return File('$path/servers.json');
   }
 
-  Future<File> writeServerFile() async {
-    final file = await _serverFile;
+  // Serializes writes through a single chain so overlapping truncate+writes
+  // can't corrupt servers.json — notably the parallel getServerPaths() pings
+  // fired at startup (loadServerList), which can each trigger a
+  // capability-change write at the same moment.
+  Future<void> _writeChain = Future.value();
 
-    // Write the file
-    return file.writeAsString(jsonEncode(serverList));
+  Future<void> writeServerFile() {
+    final write = _writeChain.then((_) async {
+      final file = await _serverFile;
+      await file.writeAsString(jsonEncode(serverList));
+    });
+    // The baton swallows errors so one failed write can't block later writes;
+    // the caller still sees this write's own error via [write].
+    _writeChain = write.catchError((_) {});
+    return write;
   }
 
   Future<List> readServerManager() async {
