@@ -214,6 +214,9 @@ class ServerManager {
       // false when the server has no working ffmpeg, otherwise
       // { defaultCodec, defaultBitrate } — the values /transcode falls back to
       // when we omit the codec/bitrate params.
+      final bool? prevAvail = server.transcodeAvailable;
+      final String? prevCodec = server.transcodeDefaultCodec;
+      final String? prevBitrate = server.transcodeDefaultBitrate;
       final transcodeInfo = res['transcode'];
       if (transcodeInfo is Map) {
         server.transcodeAvailable = true;
@@ -224,6 +227,13 @@ class ServerManager {
         server.transcodeAvailable = false;
         server.transcodeDefaultCodec = null;
         server.transcodeDefaultBitrate = null;
+      }
+      // Persist the capability so the NEXT launch knows it before the queue is
+      // restored — otherwise restore races the ping and bakes in /media URLs.
+      if (server.transcodeAvailable != prevAvail ||
+          server.transcodeDefaultCodec != prevCodec ||
+          server.transcodeDefaultBitrate != prevBitrate) {
+        unawaited(writeServerFile());
       }
     } catch (err) {
       if (throwErr) {

@@ -118,7 +118,7 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
             if (!_loading &&
                 _pingOk &&
                 server != null &&
-                !server.transcodeAvailable)
+                server.transcodeAvailable == false)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(

@@ -25,13 +25,13 @@ String buildServerStreamUrl(Server server, String path) {
   }
   final tm = TranscodeManager();
   final String token = server.jwt == null ? '' : '&token=' + server.jwt!;
-  // Use /transcode only when the user enabled it AND this server can actually
-  // transcode (ffmpeg present, per /api/v1/ping → server.transcodeAvailable).
-  // Otherwise stream the original via /media — so a server without transcoding
-  // never 500s, and a queue mixing capable + incapable servers does the right
-  // thing per track. (Availability is false until the server is pinged, so a
-  // not-yet-connected server streams original quality until then — safe.)
-  if (tm.transcodeOn != true || !server.transcodeAvailable) {
+  // Use /transcode only when the user enabled it AND this server isn't known to
+  // lack ffmpeg. transcodeAvailable: true = confirmed capable; false = confirmed
+  // incapable (stream the original, never 500); null = not pinged yet →
+  // optimistic (use /transcode) so a capable server works immediately at launch
+  // without waiting for the ping. A queue mixing capable + incapable servers
+  // resolves to the right endpoint per track once each server is pinged.
+  if (tm.transcodeOn != true || server.transcodeAvailable == false) {
     return server.url + '/media' + p + '?app_uuid=' + Uuid().v4() + token;
   }
   final sb = StringBuffer(server.url)

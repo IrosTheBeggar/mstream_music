@@ -19,11 +19,14 @@ class Server {
   // true, calls against this server short-circuit to a generic failure.
   bool unsupported = false;
 
-  // Runtime-only (never persisted): the server's transcoding capability from
-  // /api/v1/ping. [transcodeAvailable] is false when the server has no working
-  // ffmpeg; the defaults are the codec/bitrate /transcode falls back to when
-  // the client omits those params. Refreshed on each ping (getServerPaths).
-  bool transcodeAvailable = false;
+  // The server's transcoding capability from /api/v1/ping, refreshed on each
+  // ping (getServerPaths) and PERSISTED so it's known at launch — before the
+  // queue is restored, which would otherwise race the ping and bake in /media
+  // URLs. null = unknown (not pinged yet) → treated optimistically as available
+  // so a capable server isn't blocked during that window; false = no working
+  // ffmpeg → stream the original; true = available. The defaults are the
+  // codec/bitrate /transcode falls back to when the client omits those params.
+  bool? transcodeAvailable;
   String? transcodeDefaultCodec;
   String? transcodeDefaultBitrate;
 
@@ -55,7 +58,11 @@ class Server {
             ? json['storageMode'] as String
             : ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
         storageBasePath =
-            json['storageBasePath'] is String ? json['storageBasePath'] : null;
+            json['storageBasePath'] is String ? json['storageBasePath'] : null,
+        transcodeAvailable =
+            json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
+        transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
+        transcodeDefaultBitrate = json['transcodeDefaultBitrate'] as String?;
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -67,6 +74,9 @@ class Server {
         'autoDJminRating': autoDJminRating,
         'playlists': playlists,
         'storageMode': storageMode,
-        'storageBasePath': storageBasePath
+        'storageBasePath': storageBasePath,
+        'transcodeAvailable': transcodeAvailable,
+        'transcodeDefaultCodec': transcodeDefaultCodec,
+        'transcodeDefaultBitrate': transcodeDefaultBitrate
       };
 }
