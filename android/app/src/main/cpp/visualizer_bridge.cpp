@@ -95,6 +95,17 @@ bool setupEgl(BridgeContext* ctx) {
         LOGE("eglMakeCurrent failed: 0x%x", eglGetError());
         return false;
     }
+    // Don't vsync-block the buffer swap. The render thread already paces itself
+    // to a fixed frame budget (RenderThread.frameNanos), and the surface is
+    // consumed by Flutter's compositor, which does its own vsync-synced present.
+    // At the default swap interval (1), eglSwapBuffers *also* waits for vsync, so
+    // the loop is double-paced — and on a demanding shader that vsync stall
+    // stacks on top of the GPU render time, roughly halving the achievable
+    // framerate. Interval 0 makes the manual pacer the sole authority; the
+    // SurfaceTexture buffer queue still back-pressures if we ever outrun the
+    // consumer, and Flutter's compositor prevents tearing. (No-op on the encoder
+    // path's MediaCodec input surface, which has no display vsync.)
+    eglSwapInterval(ctx->display, 0);
     return true;
 }
 
