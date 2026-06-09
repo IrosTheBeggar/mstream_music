@@ -789,7 +789,7 @@ void ShaderEngine::renderFrame() {
         }
     }
 
-    // === Present pass: fboCurrent_ (with optional crossfade) → window ===
+    // === Present: fboCurrent_ → window, with optional crossfade ===
     float mixT = 1.0f;
     if (transitioning_) {
         const float t = std::chrono::duration<float>(now - transitionStart_).count()
@@ -797,23 +797,40 @@ void ShaderEngine::renderFrame() {
         if (t >= 1.0f) { transitioning_ = false; mixT = 1.0f; }
         else mixT = t * t * (3.0f - 2.0f * t);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, width_, height_);
-    glUseProgram(presentProgram_);
-    if (locPresentCurrent_ >= 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texCurrent_);
-        glUniform1i(locPresentCurrent_, 0);
+
+    if (!transitioning_) {
+        // Common case (no crossfade in flight): fboCurrent_ and the window
+        // are the same size, so a straight blit copies it to the screen.
+        // Cheaper than binding the present program + samplers and drawing a
+        // textured triangle just to sample one texture 1:1 every frame —
+        // and the old path bound *both* present textures + set uniforms even
+        // though the shader only sampled `current` when not transitioning.
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fboCurrent_);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, width_, height_, 0, 0, width_, height_,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    } else {
+        // Crossfade in progress: blend the held previous frame (texOld_)
+        // with the new shader's current frame (texCurrent_).
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, width_, height_);
+        glUseProgram(presentProgram_);
+        if (locPresentCurrent_ >= 0) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texCurrent_);
+            glUniform1i(locPresentCurrent_, 0);
+        }
+        if (locPresentOld_ >= 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, texOld_);
+            glUniform1i(locPresentOld_, 1);
+        }
+        if (locPresentMixT_ >= 0) glUniform1f(locPresentMixT_, mixT);
+        glBindVertexArray(vao_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
     }
-    if (locPresentOld_ >= 0) {
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texOld_);
-        glUniform1i(locPresentOld_, 1);
-    }
-    if (locPresentMixT_ >= 0) glUniform1f(locPresentMixT_, mixT);
-    glBindVertexArray(vao_);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glBindVertexArray(0);
 
     ++frameCount_;
 }
