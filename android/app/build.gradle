@@ -76,6 +76,31 @@ android {
         }
     }
 
+    // Two distributions from one codebase, both descending from applicationId
+    // mstream.music:
+    //   play — Google Play edition. Keeps the CANONICAL applicationId
+    //          `mstream.music` — chosen before the first Play upload, since a
+    //          Play package name is permanent and we don't want to be stuck on a
+    //          `.play` suffix. No All-files-access (its source set adds no
+    //          storage permission, so the merged manifest is clean).
+    //   full — "mStream Plus" sideload / direct APK; applicationId
+    //          `mstream.music.plus` so it coexists with the Play build. Keeps
+    //          All-files-access (MANAGE_EXTERNAL_STORAGE lives in
+    //          src/full/AndroidManifest.xml) for the Permanent / SD-card folders,
+    //          plus self-signed TLS. (Gradle flavor stays named `full`; the
+    //          source set src/full/ is unchanged — only the applicationId moved.)
+    flavorDimensions "dist"
+    productFlavors {
+        play {
+            dimension "dist"
+        }
+        full {
+            dimension "dist"
+            applicationIdSuffix ".plus"
+            versionNameSuffix "-plus"
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"

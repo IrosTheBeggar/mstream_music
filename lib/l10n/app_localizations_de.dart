@@ -1317,4 +1317,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Noch keine Protokolle';
+
+  @override
+  String get storageAppExternal => 'App extern';
+
+  @override
+  String get selfSignedTitle => 'Selbstsigniertes Zertifikat zulassen';
+
+  @override
+  String get selfSignedSubtitle =>
+      'Überspringt die TLS-Prüfung für diesen Server. Nur in einem vertrauenswürdigen Netzwerk aktivieren.';
 }

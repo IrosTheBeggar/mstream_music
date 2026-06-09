@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- FULL (sideload) flavor only. These let the user store downloads in a
+         folder they choose in shared storage (Permanent / SD-card modes) so the
+         files survive an app uninstall. "All files access" is requested at
+         runtime via permission_handler (Permission.manageExternalStorage) only
+         when one of those modes is selected.
+
+         Deliberately NOT in src/main: Google Play rejects MANAGE_EXTERNAL_STORAGE
+         for a music player, so the `play` flavor (which has no flavor manifest)
+         ships without these and uses app-scoped storage instead. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+
+    <!-- Distinct label so the "Plus" sideload build (mstream.music.plus) is
+         tellable apart on-device from the Play build (mstream.music), which
+         keeps the plain "mStream Music" label from the main manifest. -->
+    <application android:label="mStream Plus" tools:replace="android:label"/>
+</manifest>

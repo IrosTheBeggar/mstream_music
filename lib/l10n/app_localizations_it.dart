@@ -1316,4 +1316,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get diagnosticsEmpty => 'Nessun log ancora';
+
+  @override
+  String get storageAppExternal => 'App esterna';
+
+  @override
+  String get selfSignedTitle => 'Consenti certificato autofirmato';
+
+  @override
+  String get selfSignedSubtitle =>
+      'Salta la convalida TLS per questo server. Attiva solo su una rete affidabile.';
 }

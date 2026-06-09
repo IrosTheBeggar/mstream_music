@@ -361,5 +361,8 @@
   "diagnosticsShare": "分享",
   "diagnosticsClear": "清除",
   "diagnosticsCopied": "日志已复制到剪贴板",
-  "diagnosticsEmpty": "暂无日志"
+  "diagnosticsEmpty": "暂无日志",
+  "storageAppExternal": "应用外部",
+  "selfSignedTitle": "允许自签名证书",
+  "selfSignedSubtitle": "跳过此服务器的 TLS 验证。仅在可信网络中启用。"
 }

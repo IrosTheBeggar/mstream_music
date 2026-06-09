@@ -361,5 +361,8 @@
   "diagnosticsShare": "Udostępnij",
   "diagnosticsClear": "Wyczyść",
   "diagnosticsCopied": "Skopiowano dzienniki do schowka",
-  "diagnosticsEmpty": "Brak dzienników"
+  "diagnosticsEmpty": "Brak dzienników",
+  "storageAppExternal": "Aplikacja (zewn.)",
+  "selfSignedTitle": "Zezwól na certyfikat samopodpisany",
+  "selfSignedSubtitle": "Pomija weryfikację TLS dla tego serwera. Włączaj tylko w zaufanej sieci."
 }

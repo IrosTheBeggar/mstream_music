@@ -361,5 +361,8 @@
   "diagnosticsShare": "Partager",
   "diagnosticsClear": "Effacer",
   "diagnosticsCopied": "Journaux copiés dans le presse-papiers",
-  "diagnosticsEmpty": "Aucun journal pour l'instant"
+  "diagnosticsEmpty": "Aucun journal pour l'instant",
+  "storageAppExternal": "App externe",
+  "selfSignedTitle": "Autoriser le certificat auto-signé",
+  "selfSignedSubtitle": "Ignore la validation TLS pour ce serveur. À n'activer que sur un réseau de confiance."
 }

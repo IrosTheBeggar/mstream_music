@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.mstream_music">
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- DLNA/UPnP casting (media_cast_dlna): SSDP discovery needs Wi-Fi
@@ -14,19 +15,36 @@
          downloaded files (MigrationService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <!-- "All files access": lets the user store downloads in a folder they
-         choose in shared storage (Permanent / SD card modes) so the files
-         survive an app uninstall. Requested at runtime via permission_handler
-         (Permission.manageExternalStorage) only when one of those modes is
-         selected; App local mode needs no storage permission. -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+    <!-- CAMERA removed: the only consumer (QR-code add-server via
+         flutter_barcode_scanner) is commented out, so declaring it was an
+         unused-sensitive-permission flag for Play review. Re-add it (ideally in
+         the full flavor) if the QR scanner is restored. -->
+    <!-- Storage permissions for the user-chosen download folders (Permanent /
+         SD-card modes, which need "All files access") live in the `full` flavor
+         ONLY — see android/app/src/full/AndroidManifest.xml. The Play edition
+         omits them entirely so its merged manifest complies with Google's
+         storage policy; it downloads to app-scoped storage (no permission). -->
+
     <!-- Optional: only requested when the user opts into "real audio"
          mode for the visualizer. Android's AudioFx Visualizer API
          requires RECORD_AUDIO even to read the app's own audio output. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- The mic is optional (only the opt-in "real audio" visualizer uses it),
+         so stop RECORD_AUDIO from implying a REQUIRED microphone: keeps the app
+         installable on mic-less devices and signals to Play that mic use is
+         optional — supporting the permission justification. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <!-- The cast plugins (Chromecast / DLNA) pull in location permissions
+         transitively, but discovery here is mDNS + SSDP multicast (we already
+         hold CHANGE_WIFI_MULTICAST_STATE) and the app never requests location at
+         runtime. Strip them so the build doesn't carry a high-scrutiny location
+         permission it doesn't use. If Chromecast discovery ever regresses on a
+         device, the modern replacement is NEARBY_WIFI_DEVICES (with
+         android:usesPermissionFlags="neverForLocation"), not location. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:node="remove"/>
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.
          In most cases you can leave this as-is, but you if you want to provide

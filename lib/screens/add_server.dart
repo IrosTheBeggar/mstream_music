@@ -10,6 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 // import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import '../build_variant.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
@@ -81,6 +82,11 @@ class MyCustomFormState extends State<MyCustomForm> {
   // (+ migration-only 'legacyExternal', shown as App local). 'permanent'
   // and 'sdCard' also keep an absolute base dir in _storageBasePath.
   String _storageMode = 'appLocal';
+  // Full flavor only: accept a self-signed / untrusted TLS cert for this server.
+  bool _allowSelfSigned = false;
+
+  // Show/hide toggle for the password field.
+  bool _obscurePassword = true;
   String? _storageBasePath;
   // Browsable volume roots derived in _detectSdCard for the folder picker.
   String? _sharedStorageRoot;
@@ -115,6 +121,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _usernameCtrl.text = s.username ?? '';
       _passwordCtrl.text = s.password ?? '';
       _storageMode = s.storageMode;
+      _allowSelfSigned = s.allowSelfSigned;
       _storageBasePath = s.storageBasePath;
       _downloadFolderCtrl.text = s.localname;
       isEdit = true;
@@ -167,10 +174,37 @@ class MyCustomFormState extends State<MyCustomForm> {
   // on the same domain don't share one download directory. (Checks the
   // server list, not the filesystem, so re-adding a lost server can still
   // reuse its orphaned folder for recovery.)
+  //
+  // A bare IP host (e.g. a LAN server at 192.168.1.71) makes a poor,
+  // collision-prone folder name, so those become "my-server-N" with the lowest
+  // free N instead — distinct folders for multiple LAN instances.
   String? _computeAutoFolder() {
+    if (_hostIsIp(_urlCtrl.text)) return _nextMyServerName();
     final base = _defaultLocalName(_urlCtrl.text);
     if (base == null) return null;
     return _localNameTaken(base) ? '$base-$_folderSuffix' : base;
+  }
+
+  // True when the server URL's host is a bare IP address (v4 or v6).
+  bool _hostIsIp(String url) {
+    final raw = url.trim();
+    if (raw.isEmpty) return false;
+    try {
+      final host = Uri.parse(raw.contains('://') ? raw : 'https://$raw').host;
+      return host.isNotEmpty && InternetAddress.tryParse(host) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Lowest free "my-server-N" (N starts at 1) so multiple LAN-IP servers each
+  // get a distinct download folder. Deterministic given the current server
+  // list, so it doesn't churn while the user is still typing the URL.
+  String _nextMyServerName() {
+    for (int n = 1; ; n++) {
+      final candidate = 'my-server-$n';
+      if (!_localNameTaken(candidate)) return candidate;
+    }
   }
 
   // Does any *other* configured server already use this folder name?
@@ -255,6 +289,14 @@ class MyCustomFormState extends State<MyCustomForm> {
         _testSuccess = false;
       });
       return;
+    }
+
+    // Trust this host's self-signed cert for the duration of the test — it isn't
+    // in serverList yet, so SelfSignedHttpOverrides can't know to otherwise.
+    // Full flavor only: the toggle is hidden on Play and isPlayBuild short-
+    // circuits both this and allowsSelfSigned().
+    if (!isPlayBuild && _allowSelfSigned) {
+      ServerManager().addPendingSelfSigned(url.host);
     }
 
     setState(() {
@@ -379,6 +421,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _downloadFolderCtrl.dispose();
+    ServerManager().clearPendingSelfSigned();
 
     super.dispose();
   }
@@ -686,6 +729,13 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
       return;
     }
+
+    // Trust this host's self-signed cert during the first getServerPaths below
+    // (a brand-new server isn't in serverList yet). Full flavor only.
+    if (!isPlayBuild && _allowSelfSigned) {
+      ServerManager().addPendingSelfSigned(lol.host);
+    }
+
     bool shouldUpdate = false;
     try {
       ServerManager().serverList[editThisServer ?? -1];
@@ -739,6 +789,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       // them directly (callAfterEditServer below persists the change).
       s.localname = folder;
       s.storageMode = _storageMode;
+      s.allowSelfSigned = _allowSelfSigned;
       s.storageBasePath = basePath;
       ServerManager()
           .editServer(editThisServer!, _urlCtrl.text, username, password);
@@ -752,6 +803,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       Server newServer =
           new Server(lol.origin, username, password, jwt, folder);
       newServer.storageMode = _storageMode;
+      newServer.allowSelfSigned = _allowSelfSigned;
       newServer.storageBasePath = basePath;
       await ServerManager().getServerPaths(newServer);
 
@@ -869,10 +921,17 @@ class MyCustomFormState extends State<MyCustomForm> {
   // 'legacyExternal' server displays as App local but keeps its stored
   // mode until the user actively changes it (so its old downloads aren't
   // orphaned just by opening this screen).
-  String get _displayStorageMode =>
-      (_storageMode == 'permanent' || _storageMode == 'sdCard')
-          ? _storageMode
-          : 'appLocal';
+  String get _displayStorageMode {
+    // Map the stored mode to a value the dropdown actually offers, so a hidden
+    // (Play flavor omits permanent/sdCard) or legacy value never breaks the
+    // DropdownButton's value==one-of-items invariant.
+    if (_storageMode == 'appExternal') return 'appExternal';
+    if (!isPlayBuild &&
+        (_storageMode == 'permanent' || _storageMode == 'sdCard')) {
+      return _storageMode;
+    }
+    return 'appLocal';
+  }
 
   Future<void> _onStorageModeChanged(String? v) async {
     if (v == null || v == _storageMode) return;
@@ -1191,6 +1250,23 @@ class MyCustomFormState extends State<MyCustomForm> {
                     : (v) => setState(() => _publicAccess = v),
                 activeThumbColor: VelvetColors.primary,
               ),
+              // Full flavor only: opt into a self-signed / untrusted TLS cert
+              // for this server (API + streaming). Hidden on the Play build.
+              if (!isPlayBuild)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.selfSignedTitle),
+                  subtitle: Text(
+                    l.selfSignedSubtitle,
+                    style: TextStyle(
+                        color: VelvetColors.warning, fontSize: 12),
+                  ),
+                  value: _allowSelfSigned,
+                  onChanged: submitPending
+                      ? null
+                      : (v) => setState(() => _allowSelfSigned = v),
+                  activeThumbColor: VelvetColors.primary,
+                ),
               SizedBox(height: 8),
               // Stacked instead of side-by-side: bigger tap targets
               // and a single-column flow plays nicer with autofill /
@@ -1212,7 +1288,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 16),
               TextFormField(
                 controller: _passwordCtrl,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 autocorrect: false,
                 enableSuggestions: false,
                 enabled: !_publicAccess,
@@ -1220,6 +1296,15 @@ class MyCustomFormState extends State<MyCustomForm> {
                   labelText: l.fieldPassword,
                   hintText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: _publicAccess
+                        ? null
+                        : () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                  ),
                 ),
                 onSaved: (v) => _passwordCtrl.text = v ?? '',
               ),
@@ -1318,8 +1403,18 @@ class MyCustomFormState extends State<MyCustomForm> {
                       DropdownMenuItem(
                           value: 'appLocal', child: Text(l.storageAppLocal)),
                       DropdownMenuItem(
-                          value: 'permanent', child: Text(l.storagePermanent)),
-                      if (_hasSdCard || _storageMode == 'sdCard')
+                          value: 'appExternal',
+                          child: Text(l.storageAppExternal)),
+                      // Permanent / SD card write to a user-chosen shared-storage
+                      // folder, which needs All-files-access — full flavor only.
+                      // The Play build omits the permission from its manifest, so
+                      // these modes aren't offered there.
+                      if (!isPlayBuild)
+                        DropdownMenuItem(
+                            value: 'permanent',
+                            child: Text(l.storagePermanent)),
+                      if (!isPlayBuild &&
+                          (_hasSdCard || _storageMode == 'sdCard'))
                         DropdownMenuItem(
                             value: 'sdCard', child: Text(l.storageSdCard)),
                     ],
