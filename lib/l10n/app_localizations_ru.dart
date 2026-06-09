@@ -193,6 +193,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'На этом сервере транскодирование не включено — его треки воспроизводятся в оригинальном качестве.';
 
   @override
+  String get transcodeReloadQueue => 'Применить к текущей очереди';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'При изменении настроек транскодирования — включено: перезагрузить всю очередь сейчас (текущий трек ненадолго буферизуется); выключено: меняются только следующие треки, текущий доигрывает без изменений.';
+
+  @override
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override

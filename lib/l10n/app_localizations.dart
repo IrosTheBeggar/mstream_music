@@ -432,6 +432,18 @@ abstract class AppLocalizations {
   /// **'This server doesn\'t have transcoding enabled — its tracks stream in original quality.'**
   String get transcodeUnavailable;
 
+  /// No description provided for @transcodeReloadQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply to current queue'**
+  String get transcodeReloadQueue;
+
+  /// No description provided for @transcodeReloadQueueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.'**
+  String get transcodeReloadQueueSubtitle;
+
   /// Tap-behavior picker row label + per-mode subtitles.
   ///
   /// In en, this message translates to:

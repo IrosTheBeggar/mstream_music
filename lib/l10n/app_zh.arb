@@ -53,6 +53,8 @@
   "transcodeBitrate": "比特率",
   "transcodeAuto": "服务器默认",
   "transcodeUnavailable": "此服务器未启用转码，其曲目将以原始质量流式传输。",
+  "transcodeReloadQueue": "应用到当前队列",
+  "transcodeReloadQueueSubtitle": "更改转码设置时 — 勾选：立即重新加载整个队列（正在播放的曲目会短暂缓冲）；取消勾选：仅更改后续曲目，当前曲目保持不变播放完毕。",
   "settingsTapBehavior": "点击歌曲时",
   "tapSubtitleAddToQueue": "点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。",
   "tapSubtitlePlayFromHere": "点击歌曲会用当前视图中的歌曲替换队列，并从所点击的歌曲开始播放。",

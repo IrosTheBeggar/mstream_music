@@ -77,6 +77,8 @@
   "transcodeBitrate": "Taxa de bits",
   "transcodeAuto": "Padrão do servidor",
   "transcodeUnavailable": "Este servidor não tem a transcodificação ativada — as suas faixas são transmitidas na qualidade original.",
+  "transcodeReloadQueue": "Aplicar à fila atual",
+  "transcodeReloadQueueSubtitle": "Ao alterar as definições de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.",
 
   "settingsTapBehavior": "Ao tocar em uma música",
   "tapSubtitleAddToQueue": "Tocar em uma música a adiciona à fila. Se a fila estiver vazia, a reprodução começa automaticamente.",

@@ -193,6 +193,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ten serwer nie ma włączonej transkodyzacji — jego utwory są przesyłane w oryginalnej jakości.';
 
   @override
+  String get transcodeReloadQueue => 'Zastosuj do bieżącej kolejki';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Gdy zmienisz ustawienia transkodyzacji — zaznaczone: przeładuj całą kolejkę teraz (odtwarzany utwór na chwilę się buforuje); odznaczone: zmieniają się tylko kolejne utwory, bieżący kończy się bez zmian.';
+
+  @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override

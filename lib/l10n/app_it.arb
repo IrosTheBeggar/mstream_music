@@ -53,6 +53,8 @@
   "transcodeBitrate": "Bitrate",
   "transcodeAuto": "Predefinito del server",
   "transcodeUnavailable": "Questo server non ha la transcodifica abilitata: i suoi brani vengono trasmessi in qualità originale.",
+  "transcodeReloadQueue": "Applica alla coda attuale",
+  "transcodeReloadQueueSubtitle": "Quando cambi le impostazioni di transcodifica — selezionato: ricarica subito l'intera coda (il brano in riproduzione si ricarica brevemente); deselezionato: cambiano solo i brani successivi, quello attuale termina invariato.",
   "settingsTapBehavior": "Quando tocchi un brano",
   "tapSubtitleAddToQueue": "Toccando un brano lo aggiungi alla coda. Se la coda è vuota, la riproduzione si avvia automaticamente.",
   "tapSubtitlePlayFromHere": "Toccando un brano sostituisci la coda con i brani della vista corrente e la riproduzione inizia dal brano toccato.",

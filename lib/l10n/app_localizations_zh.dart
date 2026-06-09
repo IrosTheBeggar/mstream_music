@@ -184,6 +184,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transcodeUnavailable => '此服务器未启用转码，其曲目将以原始质量流式传输。';
 
   @override
+  String get transcodeReloadQueue => '应用到当前队列';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      '更改转码设置时 — 勾选：立即重新加载整个队列（正在播放的曲目会短暂缓冲）；取消勾选：仅更改后续曲目，当前曲目保持不变播放完毕。';
+
+  @override
   String get settingsTapBehavior => '点击歌曲时';
 
   @override

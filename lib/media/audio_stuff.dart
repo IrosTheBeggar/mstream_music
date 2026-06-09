@@ -19,6 +19,7 @@ import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
+import '../singletons/server_list.dart';
 import '../util/camelot.dart';
 import '../util/stream_url.dart';
 
@@ -519,7 +520,94 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
 
         break;
+      case 'rebuildTranscodeUrls':
+        await _rebuildTranscodeUrls(
+            upcomingOnly: extras?['upcomingOnly'] == true);
+        break;
     }
+  }
+
+  // Resolve a queue item's server from the localname stored in its extras.
+  Server? _serverFor(MediaItem m) {
+    final name = m.extras?['server'] as String?;
+    if (name == null) return null;
+    for (final s in ServerManager().serverList) {
+      if (s.localname == name) return s;
+    }
+    return null;
+  }
+
+  /// Re-derive [m]'s stream URL under the CURRENT transcode settings. Returns
+  /// the same instance when nothing changes, so callers can detect a no-op.
+  /// Downloaded items are left alone — they play from the local copy, so their
+  /// URL is irrelevant.
+  MediaItem _withRebuiltUrl(MediaItem m) {
+    if (m.extras?['localPath'] != null) return m;
+    final path = m.extras?['path'] as String?;
+    final server = _serverFor(m);
+    if (path == null || server == null) return m; // local-only / unknown server
+    final newId = buildServerStreamUrl(server, path);
+    return newId == m.id ? m : m.copyWith(id: newId);
+  }
+
+  /// Rebuild queue stream URLs after a transcode-setting change.
+  ///
+  /// [upcomingOnly] leaves the current track playing and only swaps the
+  /// not-yet-played tracks; otherwise the whole queue reloads at the current
+  /// index/position (the current track briefly re-buffers). No-op when no URL
+  /// actually changes (e.g. nothing to convert, or transcoding unavailable).
+  Future<void> _rebuildTranscodeUrls({required bool upcomingOnly}) async {
+    final q = queue.value;
+    if (q.isEmpty) return;
+    final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
+
+    if (upcomingOnly) {
+      final rebuilt = <MediaItem>[];
+      bool changed = false;
+      for (int i = 0; i < q.length; i++) {
+        if (i <= cur) {
+          rebuilt.add(q[i]);
+        } else {
+          final nm = _withRebuiltUrl(q[i]);
+          if (!identical(nm, q[i])) changed = true;
+          rebuilt.add(nm);
+        }
+      }
+      if (!changed) return;
+      _reordering = true;
+      try {
+        // Swap the upcoming sources without touching the playing one: drop them
+        // from the end, then re-append the rebuilt versions in the same order.
+        for (int i = q.length - 1; i > cur; i--) {
+          await _backend.removeSourceAt(i);
+        }
+        for (int i = cur + 1; i < rebuilt.length; i++) {
+          await _backend.addSource(rebuilt[i]);
+        }
+        queue.add(rebuilt);
+      } finally {
+        _reordering = false;
+      }
+    } else {
+      final rebuilt = q.map(_withRebuiltUrl).toList();
+      bool changed = false;
+      for (int i = 0; i < q.length; i++) {
+        if (rebuilt[i].id != q[i].id) changed = true;
+      }
+      if (!changed) return;
+      final pos = _backend.position;
+      final wasPlaying = _backend.playing;
+      _reordering = true;
+      try {
+        queue.add(rebuilt);
+        await _backend.setSources(rebuilt);
+        await _backend.seek(pos, index: cur, play: wasPlaying);
+      } finally {
+        _reordering = false;
+      }
+    }
+    _emitCurrentMediaItem();
+    _broadcastState();
   }
 
   /// Broadcasts the current state to all clients.

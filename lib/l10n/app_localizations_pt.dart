@@ -191,6 +191,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Este servidor não tem a transcodificação ativada — as suas faixas são transmitidas na qualidade original.';
 
   @override
+  String get transcodeReloadQueue => 'Aplicar à fila atual';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Ao alterar as definições de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.';
+
+  @override
   String get settingsTapBehavior => 'Ao tocar em uma música';
 
   @override

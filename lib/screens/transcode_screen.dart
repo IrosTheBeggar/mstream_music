@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../singletons/transcode.dart';
@@ -46,6 +47,15 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
       _pingOk = false; // unknown — don't claim transcoding is unavailable
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  /// Push the changed transcode settings onto the current queue, per the user's
+  /// "Apply to current queue" preference (whole-queue reload vs upcoming-only).
+  Future<void> _applyToQueue() async {
+    await MediaManager().audioHandler.customAction(
+      'rebuildTranscodeUrls',
+      {'upcomingOnly': !TranscodeManager().rebuildWholeQueue},
+    );
   }
 
   // Codec tokens are lowercase on the wire; show them with conventional casing.
@@ -99,6 +109,7 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
               value: on,
               onChanged: (v) async {
                 await SettingsManager().setTranscode(v);
+                await _applyToQueue();
                 if (mounted) setState(() {});
               },
               activeThumbColor: VelvetColors.primary,
@@ -138,6 +149,7 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
                 onChanged: on
                     ? (v) async {
                         await SettingsManager().setTranscodeCodec(v);
+                        await _applyToQueue();
                         if (mounted) setState(() {});
                       }
                     : null,
@@ -164,6 +176,7 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
                 onChanged: on
                     ? (v) async {
                         await SettingsManager().setTranscodeBitrate(v);
+                        await _applyToQueue();
                         if (mounted) setState(() {});
                       }
                     : null,
@@ -177,6 +190,23 @@ class _TranscodeScreenState extends State<TranscodeScreen> {
               ),
             ),
             Divider(height: 1, color: VelvetColors.border),
+            CheckboxListTile(
+              value: tm.rebuildWholeQueue,
+              onChanged: (v) async {
+                await SettingsManager().setTranscodeRebuildWholeQueue(v ?? true);
+                if (mounted) setState(() {});
+              },
+              title: Text(l.transcodeReloadQueue,
+                  style: TextStyle(color: VelvetColors.textPrimary)),
+              subtitle: Text(
+                l.transcodeReloadQueueSubtitle,
+                style:
+                    TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              activeColor: VelvetColors.primary,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
           ],
         ),
       ),

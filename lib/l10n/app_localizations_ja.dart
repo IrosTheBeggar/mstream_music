@@ -187,6 +187,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'このサーバーではトランスコードが有効になっていません。曲は元の品質でストリーミングされます。';
 
   @override
+  String get transcodeReloadQueue => '現在のキューに適用';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'トランスコード設定を変更したとき — オン：キュー全体を今すぐ再読み込み（再生中の曲は一瞬バッファリングします）。オフ：次以降の曲のみ変更し、再生中の曲はそのまま再生します。';
+
+  @override
   String get settingsTapBehavior => '曲をタップしたとき';
 
   @override

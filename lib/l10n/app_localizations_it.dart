@@ -191,6 +191,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Questo server non ha la transcodifica abilitata: i suoi brani vengono trasmessi in qualità originale.';
 
   @override
+  String get transcodeReloadQueue => 'Applica alla coda attuale';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Quando cambi le impostazioni di transcodifica — selezionato: ricarica subito l\'intera coda (il brano in riproduzione si ricarica brevemente); deselezionato: cambiano solo i brani successivi, quello attuale termina invariato.';
+
+  @override
   String get settingsTapBehavior => 'Quando tocchi un brano';
 
   @override

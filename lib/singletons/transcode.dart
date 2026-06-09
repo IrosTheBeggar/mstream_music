@@ -15,6 +15,11 @@ class TranscodeManager {
   /// Selected bitrate, one of [bitrates], or null = server default.
   String? bitrate;
 
+  /// When a transcode setting changes, whether to rebuild the WHOLE current
+  /// queue immediately (true — the playing track re-buffers) or only the
+  /// not-yet-played tracks (false). Default true.
+  bool rebuildWholeQueue = true;
+
   /// Values the mStream `/transcode` endpoint accepts (codecMap / bitrateSet in
   /// the server's src/api/transcode.js).
   static const List<String> codecs = ['mp3', 'opus', 'aac'];

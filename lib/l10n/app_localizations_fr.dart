@@ -191,6 +191,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce serveur n\'a pas le transcodage activé — ses pistes sont diffusées en qualité d\'origine.';
 
   @override
+  String get transcodeReloadQueue => 'Appliquer à la file d\'attente actuelle';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'Quand vous modifiez les réglages de transcodage — coché : recharger toute la file maintenant (la piste en cours se remet brièvement en mémoire tampon) ; décoché : seules les pistes à venir changent, celle en cours se termine telle quelle.';
+
+  @override
   String get settingsTapBehavior => 'Lorsque vous touchez un morceau';
 
   @override

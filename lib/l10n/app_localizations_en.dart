@@ -191,6 +191,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'This server doesn\'t have transcoding enabled — its tracks stream in original quality.';
 
   @override
+  String get transcodeReloadQueue => 'Apply to current queue';
+
+  @override
+  String get transcodeReloadQueueSubtitle =>
+      'When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.';
+
+  @override
   String get settingsTapBehavior => 'When you tap a song';
 
   @override

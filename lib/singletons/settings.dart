@@ -212,6 +212,8 @@ class SettingsManager {
       TranscodeManager().bitrate = TranscodeManager.bitrates.contains(tcBitrate)
           ? tcBitrate as String
           : null;
+      TranscodeManager().rebuildWholeQueue =
+          m['transcodeRebuildWholeQueue'] ?? true;
       albumGrid = m['albumGrid'] ?? true;
       fileExplorerMetadata = m['fileExplorerMetadata'] ?? true;
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
@@ -330,6 +332,7 @@ class SettingsManager {
       'transcode': TranscodeManager().transcodeOn,
       'transcodeCodec': TranscodeManager().codec,
       'transcodeBitrate': TranscodeManager().bitrate,
+      'transcodeRebuildWholeQueue': TranscodeManager().rebuildWholeQueue,
       'albumGrid': albumGrid,
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
@@ -364,6 +367,11 @@ class SettingsManager {
 
   Future<void> setTranscodeBitrate(String? v) async {
     TranscodeManager().bitrate = v;
+    await _save();
+  }
+
+  Future<void> setTranscodeRebuildWholeQueue(bool v) async {
+    TranscodeManager().rebuildWholeQueue = v;
     await _save();
   }
 
@@ -484,6 +492,7 @@ class SettingsManager {
     TranscodeManager().transcodeOn = false;
     TranscodeManager().codec = null;
     TranscodeManager().bitrate = null;
+    TranscodeManager().rebuildWholeQueue = true;
     albumGrid = true;
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
