@@ -149,9 +149,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // items are matched to a configured server by localname to rebuild their
     // streaming URLs). loadServerList's future completes after the list is
     // populated, so the queue comes back at the spot it was left.
+    // Suppress the home-grid flash when a non-browser startup view is set: the
+    // browser shows a loading state until the chosen section loads. Set before
+    // loadServerList so it's already true before the home grid first renders.
+    BrowserManager().awaitingStartupView =
+        SettingsManager().startupView != StartupView.browser;
     ServerManager().loadServerList().then((_) {
       QueueStore().init();
-      _maybeOpenStartupView();
+      unawaited(_maybeOpenStartupView());
     });
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
@@ -173,36 +178,50 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // browser section on top of the home grid once servers have loaded — firing
   // the same loader the matching home-grid tile does. The section is pushed
   // onto the browser stack, so the system Back button returns to the browser
-  // home. Skipped on first run (no server configured).
-  void _maybeOpenStartupView() {
+  // home. While it loads, BrowserManager.awaitingStartupView (set in initState)
+  // keeps the browser on a spinner instead of the home grid, so the app lands
+  // directly on the section. Skipped on first run (no server configured).
+  Future<void> _maybeOpenStartupView() async {
     final view = SettingsManager().startupView;
-    if (view == StartupView.browser) return;
     final server = ServerManager().currentServer;
-    if (server == null) return;
-    switch (view) {
-      case StartupView.browser:
-        break;
-      case StartupView.fileExplorer:
-        ApiManager().getFileList('~', useThisServer: server);
-        break;
-      case StartupView.playlists:
-        ApiManager().getPlaylists(useThisServer: server);
-        break;
-      case StartupView.albums:
-        ApiManager().getAlbums(useThisServer: server);
-        break;
-      case StartupView.artists:
-        ApiManager().getArtists(useThisServer: server);
-        break;
-      case StartupView.rated:
-        ApiManager().getRated(useThisServer: server);
-        break;
-      case StartupView.recent:
-        ApiManager().getRecentlyAdded(useThisServer: server);
-        break;
-      case StartupView.localFiles:
-        FileExplorer().getPathForServer(server);
-        break;
+    if (view == StartupView.browser || server == null) {
+      BrowserManager().awaitingStartupView = false;
+      return;
+    }
+    try {
+      switch (view) {
+        case StartupView.browser:
+          break;
+        case StartupView.fileExplorer:
+          await ApiManager().getFileList('~', useThisServer: server);
+          break;
+        case StartupView.playlists:
+          await ApiManager().getPlaylists(useThisServer: server);
+          break;
+        case StartupView.albums:
+          await ApiManager().getAlbums(useThisServer: server);
+          break;
+        case StartupView.artists:
+          await ApiManager().getArtists(useThisServer: server);
+          break;
+        case StartupView.rated:
+          await ApiManager().getRated(useThisServer: server);
+          break;
+        case StartupView.recent:
+          await ApiManager().getRecentlyAdded(useThisServer: server);
+          break;
+        case StartupView.localFiles:
+          await FileExplorer().getPathForServer(server);
+          break;
+      }
+    } finally {
+      // Stop suppressing the home grid. On success the section is already
+      // showing; on failure (nothing pushed) re-emit so the home grid renders
+      // instead of a stuck spinner.
+      if (BrowserManager().awaitingStartupView) {
+        BrowserManager().awaitingStartupView = false;
+        BrowserManager().updateStream();
+      }
     }
   }
 

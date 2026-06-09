@@ -24,6 +24,13 @@ class BrowserManager {
 
   final List<DisplayItem> browserList = [];
 
+  // True from launch until a configured non-browser "startup view" finishes
+  // loading. While set, the browser shows a loading spinner instead of the home
+  // grid, so the app lands directly on the chosen section without a home-grid
+  // flash. Set in MStreamApp.initState; cleared once the section loads (or the
+  // load fails). See _maybeOpenStartupView.
+  bool awaitingStartupView = false;
+
   bool get isAlphabetical =>
       alphabeticalCache.isNotEmpty ? alphabeticalCache.last : false;
 
