@@ -167,6 +167,9 @@ struct ParsedShader {
     bool hasCommon = false;
     // [passIdx][channel] = ChannelSource enum int
     int channelSrc[ShaderEngine::PASS_COUNT][4] = {{0}};
+    // Requested render size per pass; 0 = full window resolution.
+    int passW[ShaderEngine::PASS_COUNT] = {0};
+    int passH[ShaderEngine::PASS_COUNT] = {0};
 };
 
 int passIndexFromName(const std::string& nameLower) {
@@ -238,6 +241,11 @@ ParsedShader parseShader(const std::string& source) {
     std::regex passMarker(R"(^\s*//\s*===\s*pass\s*:\s*([a-zA-Z]+)\s*===)");
     std::regex channelMarker(
         R"(^\s*//\s*===\s*channel\s+([a-zA-Z]+)\s*\.\s*(\d+)\s*=\s*([a-zA-Z]+))");
+    // Optional per-pass render size: `// === size bufferc = 1x1`. Lets a
+    // pass that writes a single constant value render at e.g. 1x1 instead
+    // of a full-screen pass. Honored for buffer passes only.
+    std::regex sizeMarker(
+        R"(^\s*//\s*===\s*size\s+([a-zA-Z]+)\s*=\s*(\d+)\s*[xX]\s*(\d+))");
 
     while (std::getline(stream, line)) {
         std::smatch m;
@@ -255,7 +263,7 @@ ParsedShader parseShader(const std::string& source) {
             continue;
         }
         if (curPass == -1) {
-            // Pre-marker zone: look for routing lines
+            // Pre-marker zone: look for routing + size lines
             std::smatch cm;
             if (std::regex_search(line, cm, channelMarker)) {
                 std::string target = lowerAlnum(cm[1].str());
@@ -265,6 +273,14 @@ ParsedShader parseShader(const std::string& source) {
                 int srcEnum = channelSourceFromString(srcName);
                 if (tgtIdx >= 0 && ch >= 0 && ch < 4) {
                     out.channelSrc[tgtIdx][ch] = srcEnum;
+                }
+            } else if (std::regex_search(line, cm, sizeMarker)) {
+                int tgtIdx = passIndexFromName(lowerAlnum(cm[1].str()));
+                int w = std::stoi(cm[2].str());
+                int h = std::stoi(cm[3].str());
+                if (tgtIdx >= 0 && w > 0 && h > 0) {
+                    out.passW[tgtIdx] = w;
+                    out.passH[tgtIdx] = h;
                 }
             }
             // Other pre-marker lines are ignored (comments, etc.)
@@ -412,9 +428,24 @@ void ShaderEngine::teardownOffscreenTargets() {
 
 bool ShaderEngine::ensureBufferTarget(int idx) {
     BufferTarget& bt = bufferTargets_[idx];
-    if (bt.allocated) return true;
+
+    // Render size for this buffer: the pass's declared size (e.g. a 1x1
+    // audio-analysis buffer), or full window resolution by default.
+    int rw = width_, rh = height_;
+    if (currentSet_ && currentSet_->hasPass[idx]) {
+        const Pass& p = currentSet_->passes[idx];
+        if (p.renderW > 0 && p.renderH > 0) { rw = p.renderW; rh = p.renderH; }
+    }
+
+    if (bt.allocated) {
+        if (bt.w == rw && bt.h == rh) return true;
+        // A preset swap re-requested this slot at a different size; free
+        // the old textures and reallocate to match.
+        releaseBufferTarget(idx);
+    }
+
     for (int p = 0; p < 2; ++p) {
-        if (!createColorFbo(width_, height_, &bt.fbo[p], &bt.tex[p])) {
+        if (!createColorFbo(rw, rh, &bt.fbo[p], &bt.tex[p])) {
             // free anything created
             for (int q = 0; q < p; ++q) {
                 glDeleteFramebuffers(1, &bt.fbo[q]);
@@ -429,22 +460,26 @@ bool ShaderEngine::ensureBufferTarget(int idx) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     bt.writeIdx = 0;
+    bt.w = rw; bt.h = rh;
     bt.allocated = true;
     return true;
 }
 
-void ShaderEngine::releaseAllBufferTargets() {
-    for (int i = 0; i < 4; ++i) {
-        BufferTarget& bt = bufferTargets_[i];
-        if (!bt.allocated) continue;
-        for (int p = 0; p < 2; ++p) {
-            if (bt.fbo[p]) glDeleteFramebuffers(1, &bt.fbo[p]);
-            if (bt.tex[p]) glDeleteTextures(1, &bt.tex[p]);
-            bt.fbo[p] = 0; bt.tex[p] = 0;
-        }
-        bt.allocated = false;
-        bt.writeIdx = 0;
+void ShaderEngine::releaseBufferTarget(int idx) {
+    BufferTarget& bt = bufferTargets_[idx];
+    if (!bt.allocated) return;
+    for (int p = 0; p < 2; ++p) {
+        if (bt.fbo[p]) glDeleteFramebuffers(1, &bt.fbo[p]);
+        if (bt.tex[p]) glDeleteTextures(1, &bt.tex[p]);
+        bt.fbo[p] = 0; bt.tex[p] = 0;
     }
+    bt.allocated = false;
+    bt.writeIdx = 0;
+    bt.w = 0; bt.h = 0;
+}
+
+void ShaderEngine::releaseAllBufferTargets() {
+    for (int i = 0; i < 4; ++i) releaseBufferTarget(i);
 }
 
 bool ShaderEngine::setupSharedContext() {
@@ -541,6 +576,12 @@ ShaderEngine::PassSet* ShaderEngine::compilePassSet(const std::string& source) {
         pp.locs = queryUniformLocations(prog);
         for (int c = 0; c < 4; ++c) {
             pp.channelSrc[c] = static_cast<ChannelSource>(parsed.channelSrc[i][c]);
+        }
+        // Image always renders full res (the present pass samples it 1:1);
+        // only buffer passes honor a declared size.
+        if (i != PASS_IMAGE) {
+            pp.renderW = parsed.passW[i];
+            pp.renderH = parsed.passH[i];
         }
         set->hasPass[i] = true;
         ++totalCompiled;
@@ -657,18 +698,19 @@ GLuint ShaderEngine::channelTextureFor(ChannelSource src, int currentPassIdx,
 }
 
 void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
+                                int targetW, int targetH,
                                 float elapsed, float delta, GLuint audioTex) {
     glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
-    glViewport(0, 0, width_, height_);
+    glViewport(0, 0, targetW, targetH);
     glUseProgram(p.program);
 
     if (p.locs.time       >= 0) glUniform1f(p.locs.time, elapsed);
     if (p.locs.timeDelta  >= 0) glUniform1f(p.locs.timeDelta, delta);
     if (p.locs.frame      >= 0) glUniform1i(p.locs.frame, frameCount_);
     if (p.locs.resolution >= 0) glUniform3f(p.locs.resolution,
-        static_cast<float>(width_),
-        static_cast<float>(height_),
-        static_cast<float>(width_) / static_cast<float>(height_));
+        static_cast<float>(targetW),
+        static_cast<float>(targetH),
+        static_cast<float>(targetW) / static_cast<float>(targetH));
     if (p.locs.mouse      >= 0) glUniform4f(p.locs.mouse, 0,0,0,0);
     if (p.locs.date       >= 0) glUniform4f(p.locs.date, 0,0,0,0);
     if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
@@ -728,13 +770,13 @@ void ShaderEngine::renderFrame() {
             BufferTarget& bt = bufferTargets_[i];
             if (!bt.allocated) continue;
             renderPass(i, currentSet_->passes[i], bt.fbo[bt.writeIdx],
-                       elapsed, delta, audioTex);
+                       bt.w, bt.h, elapsed, delta, audioTex);
         }
 
-        // Image pass renders into fboCurrent_.
+        // Image pass renders into fboCurrent_ (always full window res).
         if (currentSet_->hasPass[PASS_IMAGE]) {
             renderPass(PASS_IMAGE, currentSet_->passes[PASS_IMAGE], fboCurrent_,
-                       elapsed, delta, audioTex);
+                       width_, height_, elapsed, delta, audioTex);
         }
 
         // After all passes done this frame, swap each buffer's
