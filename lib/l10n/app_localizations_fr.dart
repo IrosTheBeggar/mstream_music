@@ -201,6 +201,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsTapBehavior => 'Lorsque vous touchez un morceau';
 
   @override
+  String get settingsStartupPage => 'Écran de démarrage';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Ouvrir l’application sur cette vue du navigateur ; Retour revient au navigateur.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Toucher un morceau l\'ajoute à la file. Si la file est vide, la lecture démarre automatiquement.';
 

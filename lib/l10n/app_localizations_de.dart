@@ -202,6 +202,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTapBehavior => 'Beim Antippen eines Songs';
 
   @override
+  String get settingsStartupPage => 'Startbildschirm';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Die App in dieser Browser-Ansicht öffnen; Zurück kehrt zum Browser zurück.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.';
 

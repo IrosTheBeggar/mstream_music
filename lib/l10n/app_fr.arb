@@ -56,6 +56,8 @@
   "transcodeReloadQueue": "Appliquer à la file d'attente actuelle",
   "transcodeReloadQueueSubtitle": "Quand vous modifiez les réglages de transcodage — coché : recharger toute la file maintenant (la piste en cours se remet brièvement en mémoire tampon) ; décoché : seules les pistes à venir changent, celle en cours se termine telle quelle.",
   "settingsTapBehavior": "Lorsque vous touchez un morceau",
+  "settingsStartupPage": "Écran de démarrage",
+  "settingsStartupPageSubtitle": "Ouvrir l’application sur cette vue du navigateur ; Retour revient au navigateur.",
   "tapSubtitleAddToQueue": "Toucher un morceau l'ajoute à la file. Si la file est vide, la lecture démarre automatiquement.",
   "tapSubtitlePlayFromHere": "Toucher un morceau remplace la file par les morceaux de la vue actuelle et démarre la lecture au morceau touché.",
   "tapSubtitleAppendAndJump": "Toucher un morceau l'ajoute à la file et y saute la lecture, interrompant ce qui était en cours.",

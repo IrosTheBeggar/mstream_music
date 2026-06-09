@@ -194,6 +194,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTapBehavior => '点击歌曲时';
 
   @override
+  String get settingsStartupPage => '启动页面';
+
+  @override
+  String get settingsStartupPageSubtitle => '在此浏览器视图打开应用；返回键回到浏览器。';
+
+  @override
   String get tapSubtitleAddToQueue => '点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。';
 
   @override

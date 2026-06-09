@@ -450,6 +450,18 @@ abstract class AppLocalizations {
   /// **'When you tap a song'**
   String get settingsTapBehavior;
 
+  /// No description provided for @settingsStartupPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Startup page'**
+  String get settingsStartupPage;
+
+  /// No description provided for @settingsStartupPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the app to this browser view; Back returns to the browser.'**
+  String get settingsStartupPageSubtitle;
+
   /// No description provided for @tapSubtitleAddToQueue.
   ///
   /// In en, this message translates to:

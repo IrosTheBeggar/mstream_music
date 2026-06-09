@@ -37,6 +37,29 @@ extension TapBehaviorLabel on TapBehavior {
   }
 }
 
+extension StartupViewLabel on StartupView {
+  String label(AppLocalizations l) {
+    switch (this) {
+      case StartupView.browser:
+        return l.tabBrowser;
+      case StartupView.fileExplorer:
+        return l.browserFileExplorer;
+      case StartupView.playlists:
+        return l.browserPlaylists;
+      case StartupView.albums:
+        return l.browserAlbums;
+      case StartupView.artists:
+        return l.browserArtists;
+      case StartupView.rated:
+        return l.browserRated;
+      case StartupView.recent:
+        return l.browserRecent;
+      case StartupView.localFiles:
+        return l.browserLocalFiles;
+    }
+  }
+}
+
 extension VisualizerEngineLabel on VisualizerEngine {
   String label(AppLocalizations l) {
     switch (this) {

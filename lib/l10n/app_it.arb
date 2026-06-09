@@ -56,6 +56,8 @@
   "transcodeReloadQueue": "Applica alla coda attuale",
   "transcodeReloadQueueSubtitle": "Quando cambi le impostazioni di transcodifica — selezionato: ricarica subito l'intera coda (il brano in riproduzione si ricarica brevemente); deselezionato: cambiano solo i brani successivi, quello attuale termina invariato.",
   "settingsTapBehavior": "Quando tocchi un brano",
+  "settingsStartupPage": "Schermata iniziale",
+  "settingsStartupPageSubtitle": "Apri l’app su questa vista del browser; Indietro torna al browser.",
   "tapSubtitleAddToQueue": "Toccando un brano lo aggiungi alla coda. Se la coda è vuota, la riproduzione si avvia automaticamente.",
   "tapSubtitlePlayFromHere": "Toccando un brano sostituisci la coda con i brani della vista corrente e la riproduzione inizia dal brano toccato.",
   "tapSubtitleAppendAndJump": "Toccando un brano lo aggiungi alla coda e la riproduzione passa a esso, interrompendo ciò che era in riproduzione.",

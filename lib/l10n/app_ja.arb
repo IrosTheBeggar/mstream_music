@@ -56,6 +56,8 @@
   "transcodeReloadQueue": "現在のキューに適用",
   "transcodeReloadQueueSubtitle": "トランスコード設定を変更したとき — オン：キュー全体を今すぐ再読み込み（再生中の曲は一瞬バッファリングします）。オフ：次以降の曲のみ変更し、再生中の曲はそのまま再生します。",
   "settingsTapBehavior": "曲をタップしたとき",
+  "settingsStartupPage": "起動画面",
+  "settingsStartupPageSubtitle": "アプリをこのブラウザー画面で開きます。戻ると、ブラウザーに戻ります。",
   "tapSubtitleAddToQueue": "曲をタップするとキューに追加されます。キューが空の場合は自動的に再生が始まります。",
   "tapSubtitlePlayFromHere": "曲をタップすると、現在のビューにある曲でキューを置き換え、タップした曲から再生を開始します。",
   "tapSubtitleAppendAndJump": "曲をタップするとキューに追加し、再生中の曲を中断してその曲へ再生を移します。",

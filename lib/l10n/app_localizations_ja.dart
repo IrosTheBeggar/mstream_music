@@ -197,6 +197,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTapBehavior => '曲をタップしたとき';
 
   @override
+  String get settingsStartupPage => '起動画面';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'アプリをこのブラウザー画面で開きます。戻ると、ブラウザーに戻ります。';
+
+  @override
   String get tapSubtitleAddToQueue =>
       '曲をタップするとキューに追加されます。キューが空の場合は自動的に再生が始まります。';
 

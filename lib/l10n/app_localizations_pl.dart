@@ -203,6 +203,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get settingsTapBehavior => 'Po dotknięciu utworu';
 
   @override
+  String get settingsStartupPage => 'Ekran startowy';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Otwórz aplikację w tym widoku przeglądarki; Wstecz wraca do przeglądarki.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Dotknięcie utworu dodaje go na koniec kolejki. Jeśli kolejka jest pusta, odtwarzanie rozpoczyna się automatycznie.';
 

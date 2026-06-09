@@ -155,6 +155,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          ListTile(
+            title: Text(l.settingsStartupPage),
+            subtitle: Text(
+              l.settingsStartupPageSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: DropdownButton<StartupView>(
+              value: SettingsManager().startupView,
+              underline: SizedBox.shrink(),
+              dropdownColor: VelvetColors.surface,
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              items: StartupView.values
+                  .map((v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(v.label(l)),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                await SettingsManager().setStartupView(v);
+                setState(() {});
+              },
+            ),
+          ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionPlayback),
           SwitchListTile(

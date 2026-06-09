@@ -81,6 +81,8 @@
   "transcodeReloadQueueSubtitle": "Ao alterar as definições de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.",
 
   "settingsTapBehavior": "Ao tocar em uma música",
+  "settingsStartupPage": "Tela inicial",
+  "settingsStartupPageSubtitle": "Abrir o app nesta visualização do navegador; Voltar retorna ao navegador.",
   "tapSubtitleAddToQueue": "Tocar em uma música a adiciona à fila. Se a fila estiver vazia, a reprodução começa automaticamente.",
   "tapSubtitlePlayFromHere": "Tocar em uma música substitui a fila pelas músicas da visualização atual e inicia a reprodução pela música tocada.",
   "tapSubtitleAppendAndJump": "Tocar em uma música a adiciona à fila e pula a reprodução para ela, interrompendo o que estava tocando.",

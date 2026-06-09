@@ -141,6 +141,8 @@
   "@settingsTranscode": { "description": "Transcode toggle row." },
 
   "settingsTapBehavior": "When you tap a song",
+  "settingsStartupPage": "Startup page",
+  "settingsStartupPageSubtitle": "Open the app to this browser view; Back returns to the browser.",
   "tapSubtitleAddToQueue": "Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.",
   "tapSubtitlePlayFromHere": "Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.",
   "tapSubtitleAppendAndJump": "Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.",

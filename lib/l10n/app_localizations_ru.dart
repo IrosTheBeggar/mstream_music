@@ -203,6 +203,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTapBehavior => 'При нажатии на трек';
 
   @override
+  String get settingsStartupPage => 'Стартовый экран';
+
+  @override
+  String get settingsStartupPageSubtitle =>
+      'Открывать приложение в этом разделе браузера; «Назад» возвращает к браузеру.';
+
+  @override
   String get tapSubtitleAddToQueue =>
       'Нажатие на трек добавляет его в очередь. Если очередь пуста, воспроизведение начнётся автоматически.';
 

@@ -16,6 +16,8 @@ import 'screens/about_screen.dart';
 import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
+import 'singletons/api.dart';
+import 'singletons/file_explorer.dart';
 import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
@@ -147,7 +149,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // items are matched to a configured server by localname to rebuild their
     // streaming URLs). loadServerList's future completes after the list is
     // populated, so the queue comes back at the spot it was left.
-    ServerManager().loadServerList().then((_) => QueueStore().init());
+    ServerManager().loadServerList().then((_) {
+      QueueStore().init();
+      _maybeOpenStartupView();
+    });
     DownloadManager().initDownloader();
     // Resume a storage move that was interrupted by an app restart.
     MigrationManager().resumeIfNeeded();
@@ -162,6 +167,43 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     _castErrorSub = CastManager().castErrorStream.listen((msg) {
       rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
     });
+  }
+
+  // Honors the "Startup page" setting: when it's not the browser, open that
+  // browser section on top of the home grid once servers have loaded — firing
+  // the same loader the matching home-grid tile does. The section is pushed
+  // onto the browser stack, so the system Back button returns to the browser
+  // home. Skipped on first run (no server configured).
+  void _maybeOpenStartupView() {
+    final view = SettingsManager().startupView;
+    if (view == StartupView.browser) return;
+    final server = ServerManager().currentServer;
+    if (server == null) return;
+    switch (view) {
+      case StartupView.browser:
+        break;
+      case StartupView.fileExplorer:
+        ApiManager().getFileList('~', useThisServer: server);
+        break;
+      case StartupView.playlists:
+        ApiManager().getPlaylists(useThisServer: server);
+        break;
+      case StartupView.albums:
+        ApiManager().getAlbums(useThisServer: server);
+        break;
+      case StartupView.artists:
+        ApiManager().getArtists(useThisServer: server);
+        break;
+      case StartupView.rated:
+        ApiManager().getRated(useThisServer: server);
+        break;
+      case StartupView.recent:
+        ApiManager().getRecentlyAdded(useThisServer: server);
+        break;
+      case StartupView.localFiles:
+        FileExplorer().getPathForServer(server);
+        break;
+    }
   }
 
   @override

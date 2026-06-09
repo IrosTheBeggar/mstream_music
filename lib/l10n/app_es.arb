@@ -56,6 +56,8 @@
   "transcodeReloadQueue": "Aplicar a la cola actual",
   "transcodeReloadQueueSubtitle": "Al cambiar los ajustes de transcodificación — marcado: recargar toda la cola ahora (la pista en reproducción se almacena en búfer brevemente); sin marcar: solo cambian las pistas siguientes, la actual termina sin cambios.",
   "settingsTapBehavior": "Al tocar una canción",
+  "settingsStartupPage": "Pantalla de inicio",
+  "settingsStartupPageSubtitle": "Abrir la app en esta vista del navegador; Atrás vuelve al navegador.",
   "tapSubtitleAddToQueue": "Al tocar una canción se añade a la cola. Si la cola está vacía, la reproducción comienza automáticamente.",
   "tapSubtitlePlayFromHere": "Al tocar una canción se reemplaza la cola con las canciones de la vista actual y la reproducción comienza en la canción tocada.",
   "tapSubtitleAppendAndJump": "Al tocar una canción se añade a la cola y la reproducción salta a ella, interrumpiendo lo que se estuviera reproduciendo.",
