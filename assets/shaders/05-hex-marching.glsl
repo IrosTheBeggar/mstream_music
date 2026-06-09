@@ -31,6 +31,10 @@
 // === channel bufferb.1 = bufferb
 // === channel bufferc.0 = music
 // === channel bufferc.1 = bufferc
+// bufferc is the bass-onset detector: it writes one value to every pixel and
+// the image pass samples a single texel, so render it at 1x1 rather than a
+// full-screen pass. (bufferA/bufferB are the full-res visual passes.)
+// === size bufferc = 1x1
 //
 // === pass: image ===
 // License CC0: Hex Marching
