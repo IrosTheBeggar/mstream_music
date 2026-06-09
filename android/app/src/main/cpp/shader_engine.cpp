@@ -657,6 +657,9 @@ void ShaderEngine::adoptPendingPassSetIfAny() {
         if (currentSet_->hasPass[i]) ensureBufferTarget(i);
     }
 
+    // Push the per-program constant uniforms once, now, instead of every frame.
+    primeConstantUniforms(currentSet_);
+
     transitionStart_ = std::chrono::steady_clock::now();
     transitioning_ = (fboOld_ != 0);
 
@@ -704,6 +707,10 @@ void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
     glViewport(0, 0, targetW, targetH);
     glUseProgram(p.program);
 
+    // Per-frame uniforms only. iMouse, iDate, iSampleRate, iChannelResolution,
+    // the iChannel sampler-unit bindings, and iParams are constant for the
+    // program's lifetime (or change only on setTuning) and are uploaded once
+    // in primeConstantUniforms()/applyParamsToCurrentSet().
     if (p.locs.time       >= 0) glUniform1f(p.locs.time, elapsed);
     if (p.locs.timeDelta  >= 0) glUniform1f(p.locs.timeDelta, delta);
     if (p.locs.frame      >= 0) glUniform1i(p.locs.frame, frameCount_);
@@ -711,28 +718,16 @@ void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
         static_cast<float>(targetW),
         static_cast<float>(targetH),
         static_cast<float>(targetW) / static_cast<float>(targetH));
-    if (p.locs.mouse      >= 0) glUniform4f(p.locs.mouse, 0,0,0,0);
-    if (p.locs.date       >= 0) glUniform4f(p.locs.date, 0,0,0,0);
-    if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
-    if (p.locs.params     >= 0) glUniform1fv(p.locs.params, NUM_PARAMS, params_);
     if (p.locs.channelTime >= 0) {
         const float t[4] = {elapsed,elapsed,elapsed,elapsed};
         glUniform1fv(p.locs.channelTime, 4, t);
     }
-    if (p.locs.channelResolution >= 0) {
-        const float r[12] = {
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-        };
-        glUniform3fv(p.locs.channelResolution, 4, r);
-    }
 
-    // Bind iChannel0..3 textures + sampler uniforms.
+    // Bind iChannel0..3 textures. The sampler→unit mapping (sampler = unit c)
+    // was set once at prime time, so we only rebind the texture each frame
+    // (it changes as buffers ping-pong).
     for (int c = 0; c < 4; ++c) {
         if (p.locs.channel[c] < 0) continue;
-        // Audio channel resolution differs from buffer; override if needed.
         GLuint tex;
         if (p.channelSrc[c] == CHAN_AUDIO) {
             tex = audioTex;
@@ -741,12 +736,50 @@ void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
         }
         glActiveTexture(GL_TEXTURE0 + c);
         glBindTexture(GL_TEXTURE_2D, tex);
-        glUniform1i(p.locs.channel[c], c);
     }
 
     glBindVertexArray(vao_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
+}
+
+void ShaderEngine::primeConstantUniforms(PassSet* set) {
+    if (!set) return;
+    // All four input channels report the engine's render size, matching the
+    // previous per-frame behavior. (Constant-size analysis buffers don't read
+    // iChannelResolution, so the approximation is harmless.)
+    const float chRes[12] = {
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+    };
+    for (int i = 0; i < PASS_COUNT; ++i) {
+        if (!set->hasPass[i]) continue;
+        const Pass& p = set->passes[i];
+        glUseProgram(p.program);
+        if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
+        if (p.locs.mouse >= 0) glUniform4f(p.locs.mouse, 0, 0, 0, 0);
+        if (p.locs.date  >= 0) glUniform4f(p.locs.date, 0, 0, 0, 0);
+        if (p.locs.channelResolution >= 0)
+            glUniform3fv(p.locs.channelResolution, 4, chRes);
+        for (int c = 0; c < 4; ++c) {
+            if (p.locs.channel[c] >= 0) glUniform1i(p.locs.channel[c], c);
+        }
+        if (p.locs.params >= 0) glUniform1fv(p.locs.params, NUM_PARAMS, params_);
+    }
+    paramsDirty_ = false;
+}
+
+void ShaderEngine::applyParamsToCurrentSet() {
+    if (!currentSet_) return;
+    for (int i = 0; i < PASS_COUNT; ++i) {
+        if (!currentSet_->hasPass[i]) continue;
+        const Pass& p = currentSet_->passes[i];
+        if (p.locs.params < 0) continue;
+        glUseProgram(p.program);
+        glUniform1fv(p.locs.params, NUM_PARAMS, params_);
+    }
 }
 
 void ShaderEngine::renderFrame() {
@@ -762,6 +795,13 @@ void ShaderEngine::renderFrame() {
         glBindFramebuffer(GL_FRAMEBUFFER, fboCurrent_);
         glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
     } else {
+        // Tuning changed since last frame? Re-push iParams to the programs
+        // once, here, rather than re-uploading it in every renderPass.
+        if (paramsDirty_) {
+            applyParamsToCurrentSet();
+            paramsDirty_ = false;
+        }
+
         const GLuint audioTex = audio_.upload();
 
         // Render every buffer pass that exists, in fixed order A..D.
@@ -849,6 +889,9 @@ void ShaderEngine::setTuning(const float* values, std::size_t count) {
         const std::size_t idx = static_cast<std::size_t>(i) + 3;
         params_[i] = (idx < count) ? values[idx] : 0.0f;
     }
+    // Pushed to the programs by the next renderFrame (not here — this may run
+    // before the current set exists, and we want a single GL touch point).
+    paramsDirty_ = true;
 }
 
 void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {
@@ -871,6 +914,7 @@ void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {
         for (int i = 0; i < 4; ++i) {
             if (currentSet_->hasPass[i]) ensureBufferTarget(i);
         }
+        primeConstantUniforms(currentSet_);
         transitionStart_ = std::chrono::steady_clock::now();
         transitioning_ = (fboOld_ != 0);
         return;
