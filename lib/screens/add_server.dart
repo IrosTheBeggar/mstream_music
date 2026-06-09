@@ -174,10 +174,37 @@ class MyCustomFormState extends State<MyCustomForm> {
   // on the same domain don't share one download directory. (Checks the
   // server list, not the filesystem, so re-adding a lost server can still
   // reuse its orphaned folder for recovery.)
+  //
+  // A bare IP host (e.g. a LAN server at 192.168.1.71) makes a poor,
+  // collision-prone folder name, so those become "my-server-N" with the lowest
+  // free N instead — distinct folders for multiple LAN instances.
   String? _computeAutoFolder() {
+    if (_hostIsIp(_urlCtrl.text)) return _nextMyServerName();
     final base = _defaultLocalName(_urlCtrl.text);
     if (base == null) return null;
     return _localNameTaken(base) ? '$base-$_folderSuffix' : base;
+  }
+
+  // True when the server URL's host is a bare IP address (v4 or v6).
+  bool _hostIsIp(String url) {
+    final raw = url.trim();
+    if (raw.isEmpty) return false;
+    try {
+      final host = Uri.parse(raw.contains('://') ? raw : 'https://$raw').host;
+      return host.isNotEmpty && InternetAddress.tryParse(host) != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Lowest free "my-server-N" (N starts at 1) so multiple LAN-IP servers each
+  // get a distinct download folder. Deterministic given the current server
+  // list, so it doesn't churn while the user is still typing the URL.
+  String _nextMyServerName() {
+    for (int n = 1; ; n++) {
+      final candidate = 'my-server-$n';
+      if (!_localNameTaken(candidate)) return candidate;
+    }
   }
 
   // Does any *other* configured server already use this folder name?
