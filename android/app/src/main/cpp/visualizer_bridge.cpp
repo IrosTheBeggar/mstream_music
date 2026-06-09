@@ -220,10 +220,11 @@ Java_com_example_mstream_1music_VisualizerBridge_nativeRenderFrame(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong ctxPtr) {
     auto* ctx = reinterpret_cast<BridgeContext*>(ctxPtr);
     if (!ctx || !ctx->engine) return;
-    // Context should already be current on this thread (set up at
-    // init), but re-make-current cheaply guards against any other
-    // GL caller stealing it.
-    eglMakeCurrent(ctx->display, ctx->surface, ctx->surface, ctx->context);
+    // The context was made current on this dedicated render thread at
+    // nativeInit and nothing else steals it: the shader-compile worker runs
+    // on its own thread with its own context, and loadPreset/dispose run on
+    // this same thread. So no per-frame eglMakeCurrent is needed — the
+    // encoder render path (nativeRenderFrameAt) already relies on this.
     ctx->engine->renderFrame();
     eglSwapBuffers(ctx->display, ctx->surface);
 }
