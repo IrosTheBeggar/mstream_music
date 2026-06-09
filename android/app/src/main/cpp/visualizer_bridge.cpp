@@ -95,6 +95,16 @@ bool setupEgl(BridgeContext* ctx) {
         LOGE("eglMakeCurrent failed: 0x%x", eglGetError());
         return false;
     }
+
+    // Decouple buffer swap from display vsync. The on-screen render thread
+    // already paces itself to ~60fps with Thread.sleep, and the transcode
+    // path paces to the audio clock — so the default swap interval of 1
+    // (which blocks each swap on vsync) double-throttles. Worse, on a
+    // 90/120Hz panel a 60fps sleep target beats against vsync and delivers
+    // uneven frames. Interval 0 makes the manual pacing the single clock.
+    // Best-effort: a driver may clamp/ignore it, in which case the sleep
+    // still caps the rate.
+    eglSwapInterval(ctx->display, 0);
     return true;
 }
 
