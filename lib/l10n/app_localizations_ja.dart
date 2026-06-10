@@ -1269,6 +1269,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsResumeQueueSubtitle => '再生キューと再生位置を保存し、アプリを再び開いたときに復元します。';
 
   @override
+  String get settingsRatingHalf => '半星評価';
+
+  @override
+  String get settingsRatingHalfSubtitle => '曲を半星単位で評価（星を長押し）。';
+
+  @override
+  String get ratingTitle => '評価';
+
+  @override
+  String get ratingFailed => '評価を保存できませんでした';
+
+  @override
   String get diagnosticsTitle => '診断';
 
   @override

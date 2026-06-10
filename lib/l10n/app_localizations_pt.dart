@@ -1324,6 +1324,19 @@ class AppLocalizationsPt extends AppLocalizations {
       'Salva a fila de reprodução e sua posição e as restaura ao reabrir o app.';
 
   @override
+  String get settingsRatingHalf => 'Avaliações de meia estrela';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Avalie músicas em passos de meia estrela (mantenha uma estrela pressionada).';
+
+  @override
+  String get ratingTitle => 'Avaliar';
+
+  @override
+  String get ratingFailed => 'Não foi possível salvar a avaliação';
+
+  @override
   String get diagnosticsTitle => 'Diagnóstico';
 
   @override

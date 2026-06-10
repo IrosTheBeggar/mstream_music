@@ -2298,6 +2298,30 @@ abstract class AppLocalizations {
   /// **'Save the play queue and your place, and restore them when you reopen the app.'**
   String get settingsResumeQueueSubtitle;
 
+  /// No description provided for @settingsRatingHalf.
+  ///
+  /// In en, this message translates to:
+  /// **'Half-star ratings'**
+  String get settingsRatingHalf;
+
+  /// No description provided for @settingsRatingHalfSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate songs in half-star steps (long-press a star).'**
+  String get settingsRatingHalfSubtitle;
+
+  /// No description provided for @ratingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get ratingTitle;
+
+  /// No description provided for @ratingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save rating'**
+  String get ratingFailed;
+
   /// No description provided for @diagnosticsTitle.
   ///
   /// In en, this message translates to:
