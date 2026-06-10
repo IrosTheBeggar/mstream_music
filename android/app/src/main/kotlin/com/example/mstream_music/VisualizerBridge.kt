@@ -32,7 +32,18 @@ private const val TRANSCODE_JOIN_TIMEOUT_MS = 1_000L
 class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     companion object {
-        init { System.loadLibrary("visualizer_bridge") }
+        // The native lib isn't built for every ABI — armeabi-v7a (32-bit ARM)
+        // ships without the visualizer bridge + projectM. Guard the load so a
+        // missing .so degrades to "visualizer unavailable" instead of crashing at
+        // startup (this plugin is registered eagerly in MainActivity, so the
+        // companion initializer runs on launch).
+        private val nativeAvailable: Boolean = try {
+            System.loadLibrary("visualizer_bridge")
+            true
+        } catch (e: Throwable) {
+            Log.w(TAG, "visualizer_bridge native lib unavailable for this ABI", e)
+            false
+        }
     }
 
     // JNI methods — implemented in visualizer_bridge.cpp.
@@ -98,6 +109,14 @@ class VisualizerBridge : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        if (!nativeAvailable) {
+            // No visualizer native lib for this ABI (e.g. 32-bit ARM). Return null
+            // so "create" yields a null texture id → Dart shows the "visualizer
+            // unavailable" state; every other call no-ops, so nothing reaches an
+            // unlinked native symbol.
+            result.success(null)
+            return
+        }
         when (call.method) {
             "create" -> handleCreate(call, result)
             "addPcm" -> handleAddPcm(call, result)
