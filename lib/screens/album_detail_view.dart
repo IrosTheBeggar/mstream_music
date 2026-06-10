@@ -24,6 +24,7 @@ import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../widgets/player_panel.dart';
+import '../widgets/star_rating.dart';
 
 /// Ink on top of the accent-filled Play button: dark espresso on bright accents,
 /// white on a dark custom accent (mirrors player_panel's `_kAmberInk`).
@@ -415,6 +416,22 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     );
   }
 
+  void _rateRow(DisplayItem s) {
+    final server = s.server;
+    final path = s.data;
+    if (server == null || path == null) return;
+    showRatingDialog(
+      context,
+      server: server,
+      filepath: path,
+      current: s.metadata?.rating,
+      onChanged: (r) {
+        s.metadata?.rating = r;
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
   Widget _trackList(List<DisplayItem> songs) {
     return StreamBuilder<({String? path, bool playing})>(
       stream: _nowStream,
@@ -436,6 +453,8 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               onAddNext: () => _rowAddNext(i),
               onPlayNow: () => _rowPlayNow(i),
               onAddToEnd: () => _rowAddToEnd(i),
+              onRate: () => _rateRow(s),
+              rating: s.metadata?.rating,
             );
           },
         );
@@ -458,6 +477,8 @@ class _SongRow extends StatelessWidget {
   final VoidCallback onAddNext;
   final VoidCallback onPlayNow;
   final VoidCallback onAddToEnd;
+  final VoidCallback onRate;
+  final int? rating;
 
   const _SongRow({
     required this.number,
@@ -468,6 +489,8 @@ class _SongRow extends StatelessWidget {
     required this.onAddNext,
     required this.onPlayNow,
     required this.onAddToEnd,
+    required this.onRate,
+    this.rating,
     this.duration,
   });
 
@@ -520,6 +543,10 @@ class _SongRow extends StatelessWidget {
                   ),
                 ),
               ),
+              if (rating != null && rating! > 0) ...[
+                const SizedBox(width: 8),
+                StarRating(rating: rating, size: 11),
+              ],
               if (duration != null) ...[
                 const SizedBox(width: 10),
                 Text(
@@ -555,6 +582,9 @@ class _SongRow extends StatelessWidget {
                     case 'end':
                       onAddToEnd();
                       break;
+                    case 'rate':
+                      onRate();
+                      break;
                   }
                 },
                 itemBuilder: (context) => [
@@ -564,6 +594,7 @@ class _SongRow extends StatelessWidget {
                       TapBehavior.playFromHere)
                     PopupMenuItem(
                         value: 'end', child: Text(l.queueAddToEnd)),
+                  PopupMenuItem(value: 'rate', child: Text(l.ratingTitle)),
                 ],
               ),
             ],

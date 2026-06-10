@@ -200,6 +200,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             activeThumbColor: VelvetColors.primary,
           ),
+          SwitchListTile(
+            title: Text(l.settingsRatingHalf),
+            subtitle: Text(
+              l.settingsRatingHalfSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().ratingAllowHalf,
+            onChanged: (v) async {
+              await SettingsManager().setRatingAllowHalf(v);
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
           ListTile(
             title: Text(l.settingsTapBehavior),
             subtitle: Text(

@@ -1298,6 +1298,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistre la file de lecture et votre position, puis les restaure à la réouverture de l\'application.';
 
   @override
+  String get settingsRatingHalf => 'Notes en demi-étoiles';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Noter les morceaux par demi-étoile (appui long sur une étoile).';
+
+  @override
+  String get ratingTitle => 'Noter';
+
+  @override
+  String get ratingFailed => 'Note non enregistrée';
+
+  @override
   String get diagnosticsTitle => 'Diagnostics';
 
   @override

@@ -1284,6 +1284,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save the play queue and your place, and restore them when you reopen the app.';
 
   @override
+  String get settingsRatingHalf => 'Half-star ratings';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Rate songs in half-star steps (long-press a star).';
+
+  @override
+  String get ratingTitle => 'Rate';
+
+  @override
+  String get ratingFailed => 'Could not save rating';
+
+  @override
   String get diagnosticsTitle => 'Diagnostics';
 
   @override

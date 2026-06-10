@@ -1300,6 +1300,19 @@ class AppLocalizationsIt extends AppLocalizations {
       'Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell\'app.';
 
   @override
+  String get settingsRatingHalf => 'Valutazioni a mezza stella';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Valuta i brani a mezza stella (tieni premuta una stella).';
+
+  @override
+  String get ratingTitle => 'Valuta';
+
+  @override
+  String get ratingFailed => 'Impossibile salvare la valutazione';
+
+  @override
   String get diagnosticsTitle => 'Diagnostica';
 
   @override

@@ -1318,6 +1318,19 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji.';
 
   @override
+  String get settingsRatingHalf => 'Oceny w połówkach gwiazdek';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Oceniaj utwory w krokach co pół gwiazdki (przytrzymaj gwiazdkę).';
+
+  @override
+  String get ratingTitle => 'Oceń';
+
+  @override
+  String get ratingFailed => 'Nie udało się zapisać oceny';
+
+  @override
   String get diagnosticsTitle => 'Diagnostyka';
 
   @override

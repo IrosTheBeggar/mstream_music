@@ -70,6 +70,9 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
       'year': i.metadata?.year,
       'track': i.metadata?.track,
       'disc': i.metadata?.disc,
+      // Song rating (0–10 server scale) so the now-playing screen can show +
+      // edit stars for the current track without a refetch.
+      'rating': i.metadata?.rating,
       'artUrl': artUrl,
       // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing modes.
       'bpm': i.metadata?.bpm,

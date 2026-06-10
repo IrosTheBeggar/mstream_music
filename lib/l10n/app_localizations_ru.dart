@@ -1322,6 +1322,19 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.';
 
   @override
+  String get settingsRatingHalf => 'Оценки с половиной звезды';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Оценивать песни с шагом в ползвезды (долгое нажатие на звезду).';
+
+  @override
+  String get ratingTitle => 'Оценить';
+
+  @override
+  String get ratingFailed => 'Не удалось сохранить оценку';
+
+  @override
   String get diagnosticsTitle => 'Диагностика';
 
   @override

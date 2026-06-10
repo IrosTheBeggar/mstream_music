@@ -112,6 +112,10 @@ class SettingsManager {
   static const _filename = 'settings.json';
 
   bool albumGrid = true;
+
+  /// Rating input granularity: when true the star widget accepts half-star
+  /// input (long-press a star), otherwise whole stars only. Default whole.
+  bool ratingAllowHalf = false;
   bool fileExplorerMetadata = true;
   // The letter-scrub strip hides (and the browser allows long
   // folder/file names to wrap) when a list has fewer than this many
@@ -232,6 +236,7 @@ class SettingsManager {
       TranscodeManager().rebuildWholeQueue =
           m['transcodeRebuildWholeQueue'] ?? true;
       albumGrid = m['albumGrid'] ?? true;
+      ratingAllowHalf = m['ratingAllowHalf'] ?? false;
       fileExplorerMetadata = m['fileExplorerMetadata'] ?? true;
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
@@ -362,6 +367,7 @@ class SettingsManager {
       'transcodeBitrate': TranscodeManager().bitrate,
       'transcodeRebuildWholeQueue': TranscodeManager().rebuildWholeQueue,
       'albumGrid': albumGrid,
+      'ratingAllowHalf': ratingAllowHalf,
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
@@ -407,6 +413,11 @@ class SettingsManager {
   Future<void> setAlbumGrid(bool v) async {
     albumGrid = v;
     _albumGridStream.add(v);
+    await _save();
+  }
+
+  Future<void> setRatingAllowHalf(bool v) async {
+    ratingAllowHalf = v;
     await _save();
   }
 
@@ -528,6 +539,7 @@ class SettingsManager {
     TranscodeManager().bitrate = null;
     TranscodeManager().rebuildWholeQueue = true;
     albumGrid = true;
+    ratingAllowHalf = false;
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;

@@ -1215,6 +1215,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
 
   @override
+  String get settingsRatingHalf => '半星评分';
+
+  @override
+  String get settingsRatingHalfSubtitle => '以半星为单位评分（长按星标）。';
+
+  @override
+  String get ratingTitle => '评分';
+
+  @override
+  String get ratingFailed => '无法保存评分';
+
+  @override
   String get diagnosticsTitle => '诊断';
 
   @override
