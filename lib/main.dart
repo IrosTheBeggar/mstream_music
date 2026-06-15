@@ -348,6 +348,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             // A browse fetch is in flight — Back stops it (and re-enables taps)
             // instead of navigating away.
             BrowserManager().cancelLoading();
+          } else if (BrowserManager().searchFocused) {
+            // The home search field has focus (e.g. Back just dismissed the
+            // keyboard) — drop focus so the search-scope preview slides away,
+            // rather than popping/exiting on the same press.
+            FocusManager.instance.primaryFocus?.unfocus();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {
