@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../util/image_cache.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
 /// backdrop, a hero cover, the title / artist / album·year, a track/disc line,
@@ -88,6 +89,10 @@ class MetadataScreen extends StatelessWidget {
                     art,
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
+                    // Heavily blurred (sigma 48), so a small decode is visually
+                    // indistinguishable from full-res and avoids holding a
+                    // screen-sized bitmap just to smear it.
+                    cacheWidth: 256,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
@@ -138,6 +143,7 @@ class MetadataScreen extends StatelessWidget {
                         ? Image.network(
                             art,
                             fit: BoxFit.cover,
+                            cacheWidth: artCacheSize(224),
                             errorBuilder: (_, _, _) =>
                                 albumArtFallback(iconSize: 60),
                           )

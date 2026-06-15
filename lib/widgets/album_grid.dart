@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
+import '../util/image_cache.dart';
 
 class AlbumGrid extends StatelessWidget {
   final List<DisplayItem> items;
@@ -38,16 +39,20 @@ class AlbumGrid extends StatelessWidget {
   static int columnsFor(double width) =>
       width > 600 ? 4 : (width > 400 ? 3 : 2);
 
-  static double rowHeightFor(double width) {
+  static double itemWidthFor(double width) {
     final cols = columnsFor(width);
-    final itemWidth = (width - padHorizontal * 2 - spacing * (cols - 1)) / cols;
-    return itemWidth / aspectRatio;
+    return (width - padHorizontal * 2 - spacing * (cols - 1)) / cols;
   }
+
+  static double rowHeightFor(double width) => itemWidthFor(width) / aspectRatio;
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final crossAxisCount = columnsFor(width);
+    // Decode cover art at the card's pixel width (computed once for the grid),
+    // not the full source resolution — see artCacheSize.
+    final cacheW = artCacheSize(itemWidthFor(width));
 
     return Container(
       color: VelvetColors.bg,
@@ -66,6 +71,7 @@ class AlbumGrid extends StatelessWidget {
           return _AlbumCard(
             item: item,
             onTap: () => onTap(i),
+            cacheWidth: cacheW,
           );
         },
       ),
@@ -76,8 +82,10 @@ class AlbumGrid extends StatelessWidget {
 class _AlbumCard extends StatelessWidget {
   final DisplayItem item;
   final VoidCallback onTap;
+  final int cacheWidth;
 
-  const _AlbumCard({required this.item, required this.onTap});
+  const _AlbumCard(
+      {required this.item, required this.onTap, required this.cacheWidth});
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +161,7 @@ class _AlbumCard extends StatelessWidget {
       return Image.network(
         url,
         fit: BoxFit.cover,
+        cacheWidth: cacheWidth,
         errorBuilder: (_, _, _) => _NoArtPlaceholder(),
         loadingBuilder: (_, child, prog) => prog == null
             ? child

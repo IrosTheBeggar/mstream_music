@@ -15,6 +15,7 @@ import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
 import '../util/media_format.dart';
+import '../util/image_cache.dart';
 import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'queue_list.dart';
@@ -713,6 +714,7 @@ class _TopSmall extends StatelessWidget {
                         child: url != null
                             ? Image.network(url,
                                 fit: BoxFit.cover,
+                                cacheWidth: artCacheSize(44),
                                 errorBuilder: (_, _, _) => _fallback(20))
                             : _fallback(20)),
                   ),
@@ -1375,7 +1377,9 @@ Widget _albumArt(String? url,
       borderRadius: BorderRadius.circular(radius),
       child: url != null
           ? Image.network(url,
-              fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback())
+              fit: BoxFit.cover,
+              cacheWidth: artCacheSize(size),
+              errorBuilder: (_, _, _) => fallback())
           : fallback(),
     ),
   );
