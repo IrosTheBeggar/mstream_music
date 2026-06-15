@@ -12,6 +12,8 @@ import '../l10n/app_localizations.dart';
 /// Bottom sheet for choosing where audio plays ("This device" or a discovered
 /// renderer). Discovery runs only while the sheet is open (battery-friendly).
 class CastPickerSheet extends StatefulWidget {
+  const CastPickerSheet({super.key});
+
   @override
   State<CastPickerSheet> createState() => _CastPickerSheetState();
 }

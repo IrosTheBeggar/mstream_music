@@ -38,7 +38,7 @@ typedef _Tb = ({
 });
 
 class BrowserToolbar extends StatefulWidget implements PreferredSizeWidget {
-  const BrowserToolbar({Key? key}) : super(key: key);
+  const BrowserToolbar({super.key});
 
   @override
   Size get preferredSize => const Size.fromHeight(50);
@@ -135,10 +135,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             onPressed: () {
               Navigator.of(ctx).pop();
               for (final e in files) {
-                final downloadUrl = e.server!.url +
-                    '/media' +
-                    e.data! +
-                    (e.server!.jwt == null ? '' : '?token=' + e.server!.jwt!);
+                final downloadUrl = '${e.server!.url}/media${e.data!}'
+                    '${e.server!.jwt == null ? '' : '?token=${e.server!.jwt!}'}';
                 DownloadManager().downloadOneFile(
                     downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);

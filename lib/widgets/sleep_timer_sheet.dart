@@ -8,6 +8,8 @@ import '../theme/velvet_theme.dart';
 class SleepTimerSheet extends StatefulWidget {
   static const _presets = <int>[15, 30, 45, 60, 90];
 
+  const SleepTimerSheet({super.key});
+
   @override
   State<SleepTimerSheet> createState() => _SleepTimerSheetState();
 }

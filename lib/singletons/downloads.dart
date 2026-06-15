@@ -108,7 +108,7 @@ class DownloadManager {
     _downloadStream.add(downloadMap);
   }
 
-  disposeDownloader() {}
+  void disposeDownloader() {}
 
   void dispose() {
     _updatesSub?.cancel();
@@ -192,7 +192,7 @@ class DownloadManager {
 
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 
-    if (new File(downloadTo).existsSync() == true) {
+    if (File(downloadTo).existsSync() == true) {
       return; // already cached on disk
     }
     if (_inFlight.contains(downloadDirectory)) {
@@ -203,7 +203,7 @@ class DownloadManager {
     String filename = path.basename(downloadTo);
 
     try {
-      new Directory(targetDir).createSync(recursive: true);
+      Directory(targetDir).createSync(recursive: true);
 
       // The destination is an absolute path (app docs, a permanent shared
       // folder, or the SD card), expressed to background_downloader via
@@ -218,7 +218,7 @@ class DownloadManager {
 
       _inFlight.add(downloadDirectory);
       downloadMap[task.taskId] =
-          new DownloadTracker(downloadUrl, downloadDirectory)
+          DownloadTracker(downloadUrl, downloadDirectory)
             ..referenceDisplayItem = referenceItem;
       _downloadStream.add(downloadMap);
 

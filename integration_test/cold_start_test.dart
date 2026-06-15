@@ -27,7 +27,7 @@ void main() {
   testWidgets(
     'cold start with no server shows welcome screen',
     (WidgetTester tester) async {
-      await app.main();
+      app.main();
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       expect(find.text('Welcome To mStream'), findsOneWidget);

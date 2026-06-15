@@ -20,7 +20,7 @@ import 'sleep_timer_sheet.dart';
 /// sheet's own context is gone once it's popped.
 class MoreActionsSheet extends StatelessWidget {
   final BuildContext parentContext;
-  const MoreActionsSheet({required this.parentContext});
+  const MoreActionsSheet({super.key, required this.parentContext});
 
   void _toggleAutoDJ(BuildContext context, Server? autoDJState) {
     final l = AppLocalizations.of(context);

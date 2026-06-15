@@ -37,6 +37,8 @@ import '../theme/velvet_theme.dart';
 enum _EqError { onlyAndroid, needsPlayback, initFailed, casting }
 
 class EqScreen extends StatefulWidget {
+  const EqScreen({super.key});
+
   @override
   State<EqScreen> createState() => _EqScreenState();
 }

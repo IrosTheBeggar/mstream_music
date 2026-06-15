@@ -46,12 +46,7 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
   final String streamUrl = buildServerStreamUrl(i.server!, i.data!);
 
   final String? artUrl = i.metadata?.albumArt != null
-      ? Uri.parse(i.server!.url.toString())
-          .resolve('/album-art/' +
-              i.metadata!.albumArt! +
-              '?compress=l&token=' +
-              (i.server!.jwt ?? ''))
-          .toString()
+      ? buildAlbumArtUrl(i.server!, i.metadata!.albumArt!, compress: 'l')
       : null;
 
   return MediaItem(

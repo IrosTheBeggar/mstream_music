@@ -16,6 +16,8 @@ import '../theme/velvet_theme.dart';
 /// capture off. Secrets are already redacted in the buffer, so copy/share are
 /// safe to hand to a maintainer.
 class DiagnosticsScreen extends StatefulWidget {
+  const DiagnosticsScreen({super.key});
+
   @override
   State<DiagnosticsScreen> createState() => _DiagnosticsScreenState();
 }

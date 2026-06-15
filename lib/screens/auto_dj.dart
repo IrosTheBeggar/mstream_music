@@ -26,6 +26,8 @@ import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 
 class AutoDJScreen extends StatefulWidget {
+  const AutoDJScreen({super.key});
+
   @override
   State<AutoDJScreen> createState() => _AutoDJScreenState();
 }
@@ -845,7 +847,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
     return ListView.separated(
       controller: controller,
       itemCount: filtered.length,
-      separatorBuilder: (_, __) =>
+      separatorBuilder: (_, _) =>
           Divider(color: VelvetColors.border, height: 1),
       itemBuilder: (context, i) {
         final g = filtered[i];

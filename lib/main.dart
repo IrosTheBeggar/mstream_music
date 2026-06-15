@@ -125,8 +125,10 @@ Future<void> _startApp() async {
 }
 
 class MStreamApp extends StatefulWidget {
+  const MStreamApp({super.key});
+
   @override
-  _MStreamAppState createState() => new _MStreamAppState();
+  _MStreamAppState createState() => _MStreamAppState();
 }
 
 class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {

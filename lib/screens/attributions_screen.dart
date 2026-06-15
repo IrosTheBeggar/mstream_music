@@ -46,6 +46,8 @@ class AttributionsScreen extends StatelessWidget {
         'https://github.com/mborgerding/kissfft'),
   ];
 
+  const AttributionsScreen({super.key});
+
   Future<void> _open(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);

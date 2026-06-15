@@ -22,6 +22,8 @@ import '../theme/velvet_theme.dart';
 import '../util/server_compat.dart';
 
 class AddServerScreen extends StatelessWidget {
+  const AddServerScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,8 +36,7 @@ class AddServerScreen extends StatelessWidget {
 
 class EditServerScreen extends StatelessWidget {
   final int editThisServer;
-  const EditServerScreen({Key? key, required this.editThisServer})
-      : super(key: key);
+  const EditServerScreen({super.key, required this.editThisServer});
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +50,7 @@ class EditServerScreen extends StatelessWidget {
 
 class MyCustomForm extends StatefulWidget {
   final int? editThisServer;
-  const MyCustomForm({Key? key, this.editThisServer}) : super(key: key);
+  const MyCustomForm({super.key, this.editThisServer});
 
   @override
   MyCustomFormState createState() {
@@ -65,9 +66,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Note: This is a GlobalKey<FormState>, not a GlobalKey<MyCustomFormState>!
   final _formKey = GlobalKey<FormState>();
 
-  TextEditingController _urlCtrl = TextEditingController();
-  TextEditingController _usernameCtrl = TextEditingController();
-  TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _urlCtrl = TextEditingController();
+  final TextEditingController _usernameCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
   // Per-server download subfolder (downloads live in media/<this>).
   // Defaults to a generated id; making it editable lets a re-added
   // server reuse its old folder and recover its downloaded songs.
@@ -109,6 +110,7 @@ class MyCustomFormState extends State<MyCustomForm> {
   final int? editThisServer;
   MyCustomFormState({this.editThisServer}) : super();
 
+  @override
   @protected
   @mustCallSuper
   void initState() {
@@ -426,13 +428,13 @@ class MyCustomFormState extends State<MyCustomForm> {
     super.dispose();
   }
 
-  checkServer() async {
+  Future<void> checkServer() async {
     final l = AppLocalizations.of(context);
     setState(() {
       submitPending = true;
     });
-    Uri lol = Uri.parse(this._urlCtrl.text);
-    var response;
+    Uri lol = Uri.parse(_urlCtrl.text);
+    http.Response response;
 
     // Compatibility gate: refuse server builds this client doesn't
     // support, surfacing only a generic failure (no special-casing
@@ -483,8 +485,8 @@ class MyCustomFormState extends State<MyCustomForm> {
     // Try logging in
     try {
       response = await http.post(lol.resolve('/api/v1/auth/login'), body: {
-        "username": this._usernameCtrl.text,
-        "password": this._passwordCtrl.text
+        "username": _usernameCtrl.text,
+        "password": _passwordCtrl.text
       }).timeout(Duration(seconds: 6));
 
       if (response.statusCode != 200) {
@@ -801,7 +803,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       BrowserManager().refreshDownloadStatus(s);
     } else {
       Server newServer =
-          new Server(lol.origin, username, password, jwt, folder);
+          Server(lol.origin, username, password, jwt, folder);
       newServer.storageMode = _storageMode;
       newServer.allowSelfSigned = _allowSelfSigned;
       newServer.storageBasePath = basePath;
@@ -816,12 +818,12 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Map<String, String> parseQrCode(String qrValue) {
     if (qrValue[0] != '|') {
-      throw new Error();
+      throw Error();
     }
 
     List<String> explodeArr = qrValue.split("|");
     if (explodeArr.length < 4) {
-      throw new Error();
+      throw Error();
     }
 
     return {

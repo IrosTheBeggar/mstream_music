@@ -9,6 +9,8 @@ import '../theme/velvet_theme.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
+  const ManageServersScreen({super.key});
+
   void _pushEdit(BuildContext context, int index) {
     Navigator.push(
         context,
@@ -173,6 +175,7 @@ class ManageServersScreen extends StatelessWidget {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
@@ -186,11 +189,11 @@ class ManageServersScreen extends StatelessWidget {
             MaterialPageRoute(builder: (context) => AddServerScreen()),
           );
         },
+        backgroundColor: VelvetColors.primary,
         child: Icon(
           Icons.add,
           color: VelvetColors.onPrimary,
         ),
-        backgroundColor: VelvetColors.primary,
       ),
       body: SafeArea(
         top: false,
@@ -223,7 +226,7 @@ class ManageServersScreen extends StatelessWidget {
 class DeleteServerDialog extends StatefulWidget {
   final Server cServer;
 
-  DeleteServerDialog({required this.cServer});
+  DeleteServerDialog({super.key, required this.cServer});
 
   @override
   _DeleteServerDialogState createState() => _DeleteServerDialogState();

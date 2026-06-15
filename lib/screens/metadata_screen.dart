@@ -14,7 +14,7 @@ import '../util/media_format.dart';
 /// location with a copy button. Reads straight off the [MediaItem], so every
 /// field the queue carries is surfaced — and only when present.
 class MetadataScreen extends StatelessWidget {
-  const MetadataScreen({Key? key, required this.item}) : super(key: key);
+  const MetadataScreen({super.key, required this.item});
 
   final MediaItem item;
 
@@ -88,7 +88,7 @@ class MetadataScreen extends StatelessWidget {
                     art,
                     fit: BoxFit.cover,
                     alignment: Alignment.topCenter,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),
               ),
@@ -138,7 +138,7 @@ class MetadataScreen extends StatelessWidget {
                         ? Image.network(
                             art,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorBuilder: (_, _, _) =>
                                 albumArtFallback(iconSize: 60),
                           )
                         : albumArtFallback(iconSize: 60),

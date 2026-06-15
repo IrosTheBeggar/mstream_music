@@ -453,6 +453,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _backend.removeSourceAt(i);
   }
 
+  @override
   customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'clearPlaylist':
@@ -505,10 +506,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
         customState.add(CustomEvent(autoDJServer));
 
-        if (queue.value.length == 0 ||
+        if (queue.value.isEmpty ||
             queue.value.length == 1 ||
             index == queue.value.length - 1) {
-          if (queue.value.length == 0) {
+          if (queue.value.isEmpty) {
             await autoDJ(autoPlay: true);
             autoDJ();
           } else if (index == queue.value.length - 1 &&
@@ -773,12 +774,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     final mediaUrl = buildServerStreamUrl(autoDJServer!, filepath);
 
     final artUrl = metadata['album-art'] != null
-        ? Uri.parse(autoDJServer!.url)
-            .resolve('/album-art/' +
-                metadata['album-art'] +
-                '?compress=l&token=' +
-                (autoDJServer?.jwt ?? ''))
-            .toString()
+        ? buildAlbumArtUrl(autoDJServer!, metadata['album-art'] as String,
+            compress: 'l')
         : null;
 
     // Parse the raw server map once so the genre / disc / key wire quirks are

@@ -107,7 +107,7 @@ class ApiManager {
       Uri currentUri = Uri.parse(server.url).resolve(location);
 
       final sw = Stopwatch()..start();
-      var response;
+      http.Response response;
       try {
         if (getOrPost == 'GET') {
           response = await client
@@ -163,7 +163,7 @@ class ApiManager {
       // /transcode endpoint + codec/bitrate when transcoding is on).
       final String streamUrl =
           buildServerStreamUrl(useThisServer!, e.toString());
-      MediaItem lol = new MediaItem(
+      MediaItem lol = MediaItem(
           id: streamUrl,
           title: e.split("/").last,
           extras: {'server': useThisServer.localname, 'path': e});
@@ -175,7 +175,7 @@ class ApiManager {
   List<DisplayItem> _playlistItems(dynamic res, Server? server) {
     final List<DisplayItem> newList = [];
     res.forEach((e) {
-      newList.add(new DisplayItem(server, e['name'], 'playlist', e['name'],
+      newList.add(DisplayItem(server, e['name'], 'playlist', e['name'],
           Icon(Icons.queue_music, color: VelvetColors.textSecondary), null));
     });
     return newList;
@@ -257,7 +257,7 @@ class ApiManager {
       BrowserManager().setBrowserLabel('Search');
       List<DisplayItem> newList = [];
       res['artists'].forEach((e) {
-        DisplayItem newItem = new DisplayItem(
+        DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
             'artist',
@@ -269,7 +269,7 @@ class ApiManager {
       });
 
       res['albums'].forEach((e) {
-        DisplayItem newItem = new DisplayItem(
+        DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
             'album',
@@ -281,7 +281,7 @@ class ApiManager {
       });
 
       res['title'].forEach((e) {
-        DisplayItem newItem = new DisplayItem(
+        DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
             'file',
@@ -299,11 +299,11 @@ class ApiManager {
       res['files']?.forEach((e) {
         final String fp = e['filepath'];
         final int slash = fp.lastIndexOf('/');
-        DisplayItem newItem = new DisplayItem(
+        DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
             'file',
-            '/' + fp,
+            '/$fp',
             Icon(Icons.insert_drive_file, color: VelvetColors.accent),
             slash > 0 ? fp.substring(0, slash) : null);
         newItem.altAlbumArt = e['album_art_file'];
@@ -343,7 +343,7 @@ class ApiManager {
         if (artist != null && artist.isNotEmpty) artist,
         if (year != null && year.isNotEmpty) year,
       ].join(' · ');
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['name'],
           'album',
@@ -369,7 +369,7 @@ class ApiManager {
     res.forEach((e) {
       MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['filepath'],
           'file',
@@ -414,7 +414,7 @@ class ApiManager {
     res.forEach((e) {
       MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['filepath'],
           'file',
@@ -445,7 +445,7 @@ class ApiManager {
     res.forEach((e) {
       MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['filepath'],
           'file',
@@ -476,7 +476,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res['artists'].forEach((e) {
-      DisplayItem newItem = new DisplayItem(useThisServer, e, 'artist', e,
+      DisplayItem newItem = DisplayItem(useThisServer, e, 'artist', e,
           Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
       newList.add(newItem);
     });
@@ -499,7 +499,7 @@ class ApiManager {
       String name = e['name'] ?? 'SINGLES';
 
       // TODO: Errors on singles
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           name,
           'album',
@@ -530,7 +530,7 @@ class ApiManager {
     res.forEach((e) {
       MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
 
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['filepath'],
           'file',
@@ -569,7 +569,7 @@ class ApiManager {
 
     List<DisplayItem> newList = [];
     res['directories'].forEach((e) {
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['name'],
           'directory',
@@ -580,7 +580,7 @@ class ApiManager {
     });
 
     res['files'].forEach((e) {
-      DisplayItem newItem = new DisplayItem(
+      DisplayItem newItem = DisplayItem(
           useThisServer,
           e['name'],
           'file',

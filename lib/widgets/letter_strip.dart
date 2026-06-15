@@ -43,10 +43,10 @@ class LetterStrip extends StatefulWidget {
   final void Function(int itemIndex) onJump;
 
   const LetterStrip({
-    Key? key,
+    super.key,
     required this.items,
     required this.onJump,
-  }) : super(key: key);
+  });
 
   @override
   State<LetterStrip> createState() => _LetterStripState();

@@ -11,6 +11,8 @@ import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }

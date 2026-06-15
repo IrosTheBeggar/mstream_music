@@ -1,0 +1,32 @@
+# Static-analysis configuration for mstream_music.
+#
+# Introduced alongside flutter_lints to give the project a real lint baseline.
+# Before this, there was no analysis_options.yaml and no flutter_lints, so the
+# analyzer ran on bare defaults — which let a lot of legacy Flutter-1.x / Dart-2
+# idioms accumulate silently (`new`, missing widget keys, raw `print`, etc.).
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # --- DISABLED: const-constructor family is unsafe for this app's theming ---
+    # Many widgets read the *global* `VelvetColors` palette inside build(); the
+    # active palette is swapped at runtime via `VelvetColors.setActive(...)` on a
+    # theme/accent change. A const-canonicalised widget instance is reused
+    # verbatim across that swap and is never rebuilt, so it keeps STALE colours
+    # until something else dirties it. The author guards against this explicitly
+    # — see the "deliberately NOT const-constructed" note in
+    # widgets/player_panel.dart (_top / _TopLarge / _TopXL / _TopMedium) and the
+    # queue rows. Leaving these lints on would flag those widgets and tempt a
+    # `dart fix` that silently reintroduces the stale-colour bug.
+    #
+    # Re-enable once the theme is delivered through the widget tree
+    # (Theme / InheritedWidget) instead of a mutable global.
+    prefer_const_constructors: false
+    prefer_const_constructors_in_immutables: false
+    prefer_const_literals_to_create_immutables: false
+
+analyzer:
+  exclude:
+    # gen_l10n output (regenerated on every `flutter pub get` / build).
+    # enum_labels.dart in the same dir is hand-written, so it is NOT excluded.
+    - lib/l10n/app_localizations*.dart

@@ -16,11 +16,11 @@ class LocalSearchBar extends StatefulWidget {
   final bool autofocus;
 
   const LocalSearchBar({
-    Key? key,
+    super.key,
     required this.onChanged,
     this.hintText = 'Search this list',
     this.autofocus = true,
-  }) : super(key: key);
+  });
 
   @override
   State<LocalSearchBar> createState() => _LocalSearchBarState();

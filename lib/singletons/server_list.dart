@@ -71,25 +71,25 @@ class ServerManager {
   Future<void> loadServerList() async {
     List serversJson = await readServerManager();
 
-    serversJson.forEach((s) {
+    for (var s in serversJson) {
       try {
         serverList.add(Server.fromJson(s));
       } catch (e) {
         // Skip a corrupt entry instead of failing to load every server
         // that comes after it in the file.
       }
-    });
+    }
 
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
 
-    if (serverList.length > 0) {
+    if (serverList.isNotEmpty) {
       currentServer = serverList[0];
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
-      serverList.forEach((Server s) {
+      for (var s in serverList) {
         getServerPaths(s);
-      });
+      }
       // Probe saved servers in the background; flips the active server
       // away from an unsupported build without blocking startup.
       unawaited(_screenServers());
@@ -140,7 +140,7 @@ class ServerManager {
     if (file != null) {
       try {
         String dir = path.join(file.path, "media/${newServer.localname}");
-        await new Directory(dir).create(recursive: true);
+        await Directory(dir).create(recursive: true);
       } catch (e) {
         // A permanent/SD path can fail to create (unmounted, read-only).
         // Don't let that abort the save below and lose the server entirely.
@@ -192,7 +192,7 @@ class ServerManager {
 
       var res = jsonDecode(response.body);
 
-      Set<String> pathCompare = new Set();
+      Set<String> pathCompare = {};
       for (var i = 0; i < res['vpaths'].length; i++) {
         pathCompare.add(res['vpaths'][i]);
         // add new keys
@@ -251,7 +251,7 @@ class ServerManager {
       }
     } catch (err) {
       if (throwErr) {
-        throw err;
+        rethrow;
       }
     }
   }
@@ -261,7 +261,7 @@ class ServerManager {
     serverList.remove(removeThisServer);
     _serverListStream.sink.add(serverList);
 
-    if (serverList.length == 0) {
+    if (serverList.isEmpty) {
       // force the browser to rerender so it displays
       BrowserManager().noServerScreen();
 
