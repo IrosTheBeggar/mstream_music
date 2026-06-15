@@ -5,7 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:http/http.dart' as http;
+import '../util/http_client.dart';
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
@@ -728,7 +728,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       Map<String, dynamic> decoded;
       try {
-        final res = await http.post(
+        final res = await appHttpClient.post(
           Uri.parse(autoDJServer!.url).resolve('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',

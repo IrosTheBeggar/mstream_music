@@ -13,7 +13,7 @@ import '../util/insecure_tls_channel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:rxdart/rxdart.dart';
-import 'package:http/http.dart' as http;
+import '../util/http_client.dart';
 
 class ServerManager {
   final List<Server> serverList = [];
@@ -180,7 +180,7 @@ class ServerManager {
       return;
     }
     try {
-      var response = await http
+      var response = await appHttpClient
           .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
         'Content-Type': 'application/json',
         'x-access-token': server.jwt ?? ''

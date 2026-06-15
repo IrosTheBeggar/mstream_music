@@ -7,6 +7,7 @@ import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/stream_url.dart';
+import '../util/http_client.dart';
 import '../theme/velvet_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
@@ -39,7 +40,7 @@ class ApiManager {
       body['ignoreVPaths'] = ignoreVPaths;
     }
 
-    final response = await http.post(
+    final response = await appHttpClient.post(
       Uri.parse(server.url).resolve('/api/v1/db/genres'),
       body: jsonEncode(body),
       headers: {
@@ -66,7 +67,7 @@ class ApiManager {
     final body = <String, dynamic>{'playlist': filepaths};
     if (expiresInDays != null) body['time'] = expiresInDays;
 
-    final response = await http.post(
+    final response = await appHttpClient.post(
       uri,
       body: json.encode(body),
       headers: {
