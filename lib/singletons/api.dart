@@ -310,7 +310,9 @@ class ApiManager {
         newList.add(newItem);
       });
 
-      BrowserManager().addListToStack(newList);
+      // Stash the query on the frame so the results view shows a "Results for
+      // …" subheader (and it reverts on back-nav, like the file-explorer path).
+      BrowserManager().addListToStack(newList, searchTerm: search);
     } catch (err) {
       print(err);
     }

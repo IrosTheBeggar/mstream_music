@@ -1524,6 +1524,18 @@ abstract class AppLocalizations {
   /// **'Files'**
   String get searchCategoryFiles;
 
+  /// Thin subheader on the search-results page echoing the submitted query.
+  ///
+  /// In en, this message translates to:
+  /// **'Results for “{term}”'**
+  String searchSubheaderResults(String term);
+
+  /// Thin subheader shown while the server-search field is focused, previewing which categories (e.g. "Artists · Albums") a search will cover.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching {categories}'**
+  String searchSubheaderCategories(String categories);
+
   /// Snackbar after queueing downloads from the browser.
   ///
   /// In en, this message translates to:

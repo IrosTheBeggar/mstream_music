@@ -94,6 +94,9 @@ void main() {
       expect(find.text('Pink Floyd'), findsOneWidget);
       expect(find.text('Wish You Were Here'), findsOneWidget);
       expect(find.text('Have-a-Cigar.mp3'), findsOneWidget);
+
+      // The results page shows a subheader echoing the query that produced it.
+      expect(find.textContaining('Results for'), findsOneWidget);
     },
   );
 }

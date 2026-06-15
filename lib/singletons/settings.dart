@@ -211,6 +211,8 @@ class SettingsManager {
       BehaviorSubject<int?>.seeded(accentColor);
   late final BehaviorSubject<Locale?> _localeStream =
       BehaviorSubject<Locale?>.seeded(localeOverride);
+  late final BehaviorSubject<Set<SearchCategory>> _searchCategoriesStream =
+      BehaviorSubject<Set<SearchCategory>>.seeded(searchCategories);
 
   /// The forced locale, or `null` to follow the device. Fed straight to
   /// `MaterialApp.locale`. Parses BCP-47-ish codes so script- and
@@ -300,6 +302,7 @@ class SettingsManager {
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
+      _searchCategoriesStream.add(searchCategories);
     } catch (_) {
       // Corrupt or missing file: fall back to defaults.
     }
@@ -512,6 +515,7 @@ class SettingsManager {
     final next = applyToggle(searchCategories, c);
     if (identical(next, searchCategories)) return; // unchanged (last one)
     searchCategories = next;
+    _searchCategoriesStream.add(next);
     await _save();
   }
 
@@ -635,6 +639,7 @@ class SettingsManager {
     _themeStream.add(appTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
+    _searchCategoriesStream.add(searchCategories);
     await _save();
   }
 
@@ -644,6 +649,8 @@ class SettingsManager {
   Stream<PlayerLayout> get playerLayoutStream => _playerLayoutStream.stream;
   Stream<int?> get accentColorStream => _accentColorStream.stream;
   Stream<Locale?> get localeStream => _localeStream.stream;
+  Stream<Set<SearchCategory>> get searchCategoriesStream =>
+      _searchCategoriesStream.stream;
 
   void dispose() {
     _albumGridStream.close();
@@ -652,5 +659,6 @@ class SettingsManager {
     _playerLayoutStream.close();
     _accentColorStream.close();
     _localeStream.close();
+    _searchCategoriesStream.close();
   }
 }

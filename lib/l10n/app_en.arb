@@ -474,6 +474,21 @@
   "searchCategorySongs": "Songs",
   "searchCategoryFiles": "Files",
   "@searchCategoriesTooltip": { "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination)." },
+
+  "searchSubheaderResults": "Results for “{term}”",
+  "@searchSubheaderResults": {
+    "description": "Thin subheader on the search-results page echoing the submitted query.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "searchSubheaderCategories": "Searching {categories}",
+  "@searchSubheaderCategories": {
+    "description": "Thin subheader shown while the server-search field is focused, previewing which categories (e.g. \"Artists · Albums\") a search will cover.",
+    "placeholders": {
+      "categories": { "type": "String" }
+    }
+  },
   "browserDownloadsStarted": "{count, plural, =1{1 download started} other{{count} downloads started}}",
   "@browserDownloadsStarted": {
     "description": "Snackbar after queueing downloads from the browser.",

@@ -60,6 +60,25 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         (album: album, search: search, label: label, list: list),
   );
 
+  // The home "search the whole server" field's focus drives the body's
+  // category-preview subheader (so the user sees the current scope before
+  // typing). Owned here so it survives the toolbar's stream-driven rebuilds.
+  final FocusNode _homeSearchFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _homeSearchFocus.addListener(
+        () => BrowserManager().setSearchFocused(_homeSearchFocus.hasFocus));
+  }
+
+  @override
+  void dispose() {
+    BrowserManager().setSearchFocused(false);
+    _homeSearchFocus.dispose();
+    super.dispose();
+  }
+
   // Files in [all] that can be downloaded (server files only), de-noised of
   // playlists. Album songs and browse rows both flow through here.
   List<DisplayItem> _downloadable(List<DisplayItem> all) => all
@@ -281,6 +300,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
+            focusNode: _homeSearchFocus,
             textInputAction: TextInputAction.search,
             onSubmitted: (text) => ApiManager().searchServer(text),
             style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),

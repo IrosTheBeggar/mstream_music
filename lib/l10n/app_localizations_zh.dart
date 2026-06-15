@@ -779,6 +779,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchCategoryFiles => 'Files';
 
   @override
+  String searchSubheaderResults(String term) {
+    return 'Results for “$term”';
+  }
+
+  @override
+  String searchSubheaderCategories(String categories) {
+    return 'Searching $categories';
+  }
+
+  @override
   String browserDownloadsStarted(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

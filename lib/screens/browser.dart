@@ -735,46 +735,91 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
+  // The thin context strip under the toolbar. Shows, in priority order:
+  //   • search field focused on the home menu → which categories a search will
+  //     cover (so stale defaults from a past session are visible up front);
+  //   • a search-results list → the query it was run for;
+  //   • the file explorer → the current directory path.
+  // The term/path are tracked per stack frame (BrowserManager.currentSearchTerm
+  // / currentPath), so each reverts on back-nav. Mutually exclusive in practice:
+  // the focus preview only shows on the home menu, where term and path are null.
+  Widget _browserSubheader(BuildContext context, AppLocalizations l) {
+    return StreamBuilder<bool>(
+      stream: BrowserManager().searchFocusedStream,
+      initialData: BrowserManager().searchFocused,
+      builder: (context, focusSnap) {
+        return StreamBuilder<List<DisplayItem>>(
+          stream: BrowserManager().browserListStream,
+          builder: (context, _) {
+            final term = BrowserManager().currentSearchTerm;
+            final path = BrowserManager().currentPath;
+            if ((focusSnap.data ?? false) && term == null && path == null) {
+              return StreamBuilder<Set<SearchCategory>>(
+                stream: SettingsManager().searchCategoriesStream,
+                initialData: SettingsManager().searchCategories,
+                builder: (context, catSnap) {
+                  final cats =
+                      catSnap.data ?? SettingsManager().searchCategories;
+                  final names = SearchCategory.values
+                      .where(cats.contains)
+                      .map((c) => c.label(l))
+                      .join(' · ');
+                  return _subheaderStrip(
+                      Icons.manage_search, l.searchSubheaderCategories(names));
+                },
+              );
+            }
+            if (term != null) {
+              return _subheaderStrip(
+                  Icons.search, l.searchSubheaderResults(term));
+            }
+            if (path != null) {
+              return _subheaderStrip(
+                  Icons.folder_outlined, path.isEmpty ? '/' : path,
+                  mono: true);
+            }
+            return const SizedBox.shrink();
+          },
+        );
+      },
+    );
+  }
+
+  Widget _subheaderStrip(IconData icon, String text, {bool mono = false}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
+      decoration: BoxDecoration(
+        color: VelvetColors.raised,
+        border: Border(bottom: BorderSide(color: VelvetColors.border)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: VelvetColors.textTertiary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: mono ? 'monospace' : null,
+                fontSize: 11.5,
+                color: VelvetColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Column(children: <Widget>[
-      // Current File Explorer path — a thin strip under the toolbar/back button.
-      // Only shown in the file explorer (BrowserManager.currentPath is null
-      // elsewhere); rebuilds on each navigation via browserListStream.
-      StreamBuilder<List<DisplayItem>>(
-        stream: BrowserManager().browserListStream,
-        builder: (context, _) {
-          final path = BrowserManager().currentPath;
-          if (path == null) return const SizedBox.shrink();
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
-            decoration: BoxDecoration(
-              color: VelvetColors.raised,
-              border: Border(bottom: BorderSide(color: VelvetColors.border)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.folder_outlined,
-                    size: 13, color: VelvetColors.textTertiary),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    path.isEmpty ? '/' : path,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11.5,
-                      color: VelvetColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      // Context strip under the toolbar (search categories / search term /
+      // file path) — see _browserSubheader.
+      _browserSubheader(context, l),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
       // slot — empty when idle — so the list never jumps.
