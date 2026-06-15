@@ -6,6 +6,7 @@ import 'server.dart';
 import 'metadata.dart';
 import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
+import '../util/image_cache.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
@@ -53,6 +54,7 @@ class DisplayItem {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          cacheWidth: artCacheSize(size),
           errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
         ),
       );

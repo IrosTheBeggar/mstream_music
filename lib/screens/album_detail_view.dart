@@ -24,6 +24,7 @@ import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
+import '../util/image_cache.dart';
 import '../widgets/player_panel.dart';
 
 /// Ink on top of the accent-filled Play button: dark espresso on bright accents,
@@ -323,6 +324,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                     child: artUrl != null
                         ? Image.network(artUrl,
                             fit: BoxFit.cover,
+                            cacheWidth: artCacheSize(86),
                             errorBuilder: (_, _, _) =>
                                 albumArtFallback(iconSize: 30))
                         : albumArtFallback(iconSize: 30),

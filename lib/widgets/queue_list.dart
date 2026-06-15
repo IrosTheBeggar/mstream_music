@@ -10,6 +10,7 @@ import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../util/image_cache.dart';
 
 /// Active-row state — which queue slot is playing, and whether it's playing —
 /// pushed down to each row (see [QueueList.build]) so a track advancing rebuilds
@@ -263,6 +264,7 @@ class _QueueRow extends StatelessWidget {
                       child: url != null
                           ? Image.network(url,
                               fit: BoxFit.cover,
+                              cacheWidth: artCacheSize(40),
                               errorBuilder: (_, _, _) => _artFallback())
                           : _artFallback(),
                     ),
