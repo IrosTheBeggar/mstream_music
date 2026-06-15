@@ -13,6 +13,8 @@
 // download / add-all actions operate on the current list — the album's loaded
 // songs when the detail view is up, otherwise the browser list.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -22,6 +24,7 @@ import '../objects/display_item.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
+import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import 'local_search_bar.dart';
@@ -58,6 +61,34 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     (album, search, label, list) =>
         (album: album, search: search, label: label, list: list),
   );
+
+  // The home "search the whole server" field's focus drives the body's
+  // category-preview overlay (so the user sees the current scope before
+  // typing). Owned here so it survives the toolbar's stream-driven rebuilds.
+  final FocusNode _homeSearchFocus = FocusNode();
+  StreamSubscription<List<DisplayItem>>? _navSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeSearchFocus.addListener(
+        () => BrowserManager().setSearchFocused(_homeSearchFocus.hasFocus));
+    // Drop focus the moment we navigate off the home menu. The field otherwise
+    // keeps logical focus through back/keyboard-dismiss and navigation (Flutter
+    // even restores it on return to home), which left the preview stuck on.
+    _navSub = BrowserManager().browserListStream.listen((list) {
+      final isHome = list.isNotEmpty && list[0].type == 'execAction';
+      if (!isHome && _homeSearchFocus.hasFocus) _homeSearchFocus.unfocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _navSub?.cancel();
+    BrowserManager().setSearchFocused(false);
+    _homeSearchFocus.dispose();
+    super.dispose();
+  }
 
   // Files in [all] that can be downloaded (server files only), de-noised of
   // playlists. Album songs and browse rows both flow through here.
@@ -156,6 +187,67 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
+  // Multi-select checkbox dropdown for the home search field: the user ticks
+  // any combination of the four /api/v1/db/search categories. A single
+  // disabled PopupMenuItem hosts a StatefulBuilder so ticking a box updates the
+  // checks AND persists (toggleSearchCategory) WITHOUT closing the menu — the
+  // disabled item swallows no taps of its own, so the inner CheckboxListTiles
+  // keep the route open for picking several. At least one stays checked.
+  Widget _searchCategoryMenu(BuildContext context, AppLocalizations l) {
+    return PopupMenuButton<void>(
+      icon: Icon(Icons.tune, color: VelvetColors.appBarTextSecondary, size: 22),
+      tooltip: l.searchCategoriesTooltip,
+      color: VelvetColors.surface,
+      itemBuilder: (_) => [
+        PopupMenuItem<void>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: StatefulBuilder(
+            builder: (context, setMenuState) {
+              final selected = SettingsManager().searchCategories;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                    child: Text(
+                      l.searchCategoriesHeader,
+                      style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  for (final c in SearchCategory.values)
+                    CheckboxListTile(
+                      value: selected.contains(c),
+                      dense: true,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      activeColor: VelvetColors.primary,
+                      title: Text(
+                        c.label(l),
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 14),
+                      ),
+                      onChanged: (_) {
+                        SettingsManager().toggleSearchCategory(c);
+                        setMenuState(() {});
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -211,13 +303,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ]);
     }
 
-    // Home section list: the "search the whole server" field.
+    // Home section list: the "search the whole server" field, plus a checkbox
+    // dropdown that picks which categories the search queries (persisted).
     final isHome = s.list.isNotEmpty && s.list[0].type == 'execAction';
     if (isHome) {
       return Row(children: [
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
+            focusNode: _homeSearchFocus,
             textInputAction: TextInputAction.search,
             onSubmitted: (text) => ApiManager().searchServer(text),
             style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),
@@ -232,6 +326,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             ),
           ),
         ),
+        _searchCategoryMenu(context, l),
       ]);
     }
 

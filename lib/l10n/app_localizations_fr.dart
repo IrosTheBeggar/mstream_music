@@ -804,6 +804,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get browserSearchHint => 'Rechercher dans la base de données';
 
   @override
+  String get searchCategoriesTooltip => 'What to search';
+
+  @override
+  String get searchCategoriesHeader => 'Search in';
+
+  @override
+  String get searchCategoryArtists => 'Artists';
+
+  @override
+  String get searchCategoryAlbums => 'Albums';
+
+  @override
+  String get searchCategorySongs => 'Songs';
+
+  @override
+  String get searchCategoryFiles => 'Files';
+
+  @override
+  String searchSubheaderResults(String term) {
+    return 'Results for “$term”';
+  }
+
+  @override
+  String searchSubheaderCategories(String categories) {
+    return 'Searching: $categories';
+  }
+
+  @override
   String browserDownloadsStarted(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

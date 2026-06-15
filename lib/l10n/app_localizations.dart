@@ -1488,6 +1488,54 @@ abstract class AppLocalizations {
   /// **'Search Database'**
   String get browserSearchHint;
 
+  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination).
+  ///
+  /// In en, this message translates to:
+  /// **'What to search'**
+  String get searchCategoriesTooltip;
+
+  /// No description provided for @searchCategoriesHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Search in'**
+  String get searchCategoriesHeader;
+
+  /// No description provided for @searchCategoryArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get searchCategoryArtists;
+
+  /// No description provided for @searchCategoryAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get searchCategoryAlbums;
+
+  /// No description provided for @searchCategorySongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get searchCategorySongs;
+
+  /// No description provided for @searchCategoryFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get searchCategoryFiles;
+
+  /// Thin subheader on the search-results page echoing the submitted query.
+  ///
+  /// In en, this message translates to:
+  /// **'Results for “{term}”'**
+  String searchSubheaderResults(String term);
+
+  /// Thin subheader shown while the server-search field is focused, previewing which categories (e.g. "Artists · Albums") a search will cover.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching: {categories}'**
+  String searchSubheaderCategories(String categories);
+
   /// Snackbar after queueing downloads from the browser.
   ///
   /// In en, this message translates to:

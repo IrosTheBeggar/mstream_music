@@ -242,8 +242,17 @@ class ApiManager {
 
   Future<void> searchServer(String search) async {
     try {
-      var res = await makeServerCall(null, '/api/v1/db/search',
-          {'noFiles': true, 'search': search}, 'POST');
+      // The user's ticked search categories map 1:1 onto the endpoint's four
+      // `no*` flags — the server only does the work that's asked. The default
+      // set (artists+albums+songs) reproduces mStream's classic search.
+      final cats = SettingsManager().searchCategories;
+      var res = await makeServerCall(null, '/api/v1/db/search', {
+        'search': search,
+        'noArtists': !cats.contains(SearchCategory.artists),
+        'noAlbums': !cats.contains(SearchCategory.albums),
+        'noTitles': !cats.contains(SearchCategory.songs),
+        'noFiles': !cats.contains(SearchCategory.files),
+      }, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
       List<DisplayItem> newList = [];
@@ -283,7 +292,27 @@ class ApiManager {
         newList.add(newItem);
       });
 
-      BrowserManager().addListToStack(newList);
+      // Files (filepath matches) — only populated when the scope is `files`.
+      // Same shape as titles (name + filepath); guarded with `?.` because
+      // older servers may omit the key entirely. The row renders as a file:
+      // getText shows the filename, so we surface the folder as the subtitle.
+      res['files']?.forEach((e) {
+        final String fp = e['filepath'];
+        final int slash = fp.lastIndexOf('/');
+        DisplayItem newItem = new DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'file',
+            '/' + fp,
+            Icon(Icons.insert_drive_file, color: VelvetColors.accent),
+            slash > 0 ? fp.substring(0, slash) : null);
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      // Stash the query on the frame so the results view shows a "Results for
+      // …" subheader (and it reverts on back-nav, like the file-explorer path).
+      BrowserManager().addListToStack(newList, searchTerm: search);
     } catch (err) {
       print(err);
     }

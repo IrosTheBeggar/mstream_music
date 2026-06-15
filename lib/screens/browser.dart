@@ -735,46 +735,104 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Column(children: <Widget>[
-      // Current File Explorer path — a thin strip under the toolbar/back button.
-      // Only shown in the file explorer (BrowserManager.currentPath is null
-      // elsewhere); rebuilds on each navigation via browserListStream.
-      StreamBuilder<List<DisplayItem>>(
-        stream: BrowserManager().browserListStream,
-        builder: (context, _) {
-          final path = BrowserManager().currentPath;
-          if (path == null) return const SizedBox.shrink();
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
-            decoration: BoxDecoration(
-              color: VelvetColors.raised,
-              border: Border(bottom: BorderSide(color: VelvetColors.border)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.folder_outlined,
-                    size: 13, color: VelvetColors.textTertiary),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    path.isEmpty ? '/' : path,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11.5,
-                      color: VelvetColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
+  // In-flow context strip under the toolbar: the query on a search-results list,
+  // or the current directory in the file explorer. Both are persistent context
+  // for their view (tracked per stack frame, so they revert on back-nav). The
+  // transient search-scope preview is a separate slide-over overlay so it
+  // doesn't shove the list down — see _searchScopePreview.
+  Widget _browserSubheader(BuildContext context, AppLocalizations l) {
+    return StreamBuilder<List<DisplayItem>>(
+      stream: BrowserManager().browserListStream,
+      builder: (context, _) {
+        final term = BrowserManager().currentSearchTerm;
+        if (term != null) {
+          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term));
+        }
+        final path = BrowserManager().currentPath;
+        if (path != null) {
+          return _subheaderStrip(
+              Icons.folder_outlined, path.isEmpty ? '/' : path,
+              mono: true);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  // Transient search-scope preview that SLIDES OVER the list (rather than
+  // pushing it down) while the home search field is focused, so the user can
+  // see — and fix — a stale category selection before typing. Driven by
+  // BrowserManager.searchFocused; wrapped in IgnorePointer so it never blocks
+  // taps on the list beneath it.
+  Widget _searchScopePreview(BuildContext context, AppLocalizations l) {
+    return IgnorePointer(
+      child: StreamBuilder<bool>(
+        stream: BrowserManager().searchFocusedStream,
+        initialData: BrowserManager().searchFocused,
+        builder: (context, focusSnap) {
+          return ClipRect(
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              offset:
+                  (focusSnap.data ?? false) ? Offset.zero : const Offset(0, -1),
+              child: StreamBuilder<Set<SearchCategory>>(
+                stream: SettingsManager().searchCategoriesStream,
+                initialData: SettingsManager().searchCategories,
+                builder: (context, catSnap) {
+                  final cats =
+                      catSnap.data ?? SettingsManager().searchCategories;
+                  final names = SearchCategory.values
+                      .where(cats.contains)
+                      .map((c) => c.label(l))
+                      .join(' · ');
+                  return _subheaderStrip(
+                      Icons.manage_search, l.searchSubheaderCategories(names));
+                },
+              ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _subheaderStrip(IconData icon, String text, {bool mono = false}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
+      decoration: BoxDecoration(
+        color: VelvetColors.raised,
+        border: Border(bottom: BorderSide(color: VelvetColors.border)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: VelvetColors.textTertiary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: mono ? 'monospace' : null,
+                fontSize: 11.5,
+                color: VelvetColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Stack(children: <Widget>[
+      Column(children: <Widget>[
+      // In-flow context strip under the toolbar (search term / file path) —
+      // see _browserSubheader.
+      _browserSubheader(context, l),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
       // slot — empty when idle — so the list never jumps.
@@ -1002,6 +1060,14 @@ class _BrowserState extends State<Browser> {
                       },
                     );
                   })))
+      ]),
+      // Slide-over search-scope preview over the top of the list (focus-driven).
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: _searchScopePreview(context, l),
+      ),
     ]);
   }
 }

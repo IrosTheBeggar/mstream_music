@@ -21,6 +21,10 @@ class BrowserManager {
   // (null for non-file-explorer frames), so the path row shows the right folder
   // and reverts on back-nav. Display-only — no navigation logic reads it.
   final List<String?> pathCache = [];
+  // 1:1 with browserCache. The DB-search query per frame (null for non-search
+  // frames), so the search-results subheader shows the term and reverts on
+  // back-nav, mirroring pathCache. Display-only.
+  final List<String?> searchTermCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -37,6 +41,11 @@ class BrowserManager {
   /// Current File Explorer directory path for the top frame, or null when the
   /// current view isn't the file explorer.
   String? get currentPath => pathCache.isNotEmpty ? pathCache.last : null;
+
+  /// The DB-search query for the top frame, or null when the current view
+  /// isn't a search-results list.
+  String? get currentSearchTerm =>
+      searchTermCache.isNotEmpty ? searchTermCache.last : null;
 
   String listName = 'Welcome';
 
@@ -120,6 +129,13 @@ class BrowserManager {
       BehaviorSubject<({bool open, String query})>.seeded(
           (open: false, query: ''));
 
+  // Whether the home "search the whole server" field is focused. The toolbar
+  // owns the field and reports focus here; the body shows a subheader previewing
+  // which categories a search will cover, so stale defaults are visible before
+  // the user types.
+  late final BehaviorSubject<bool> _searchFocused =
+      BehaviorSubject<bool>.seeded(false);
+
   StreamSubscription<int>? _letterStripSub;
   StreamSubscription<MigrationProgress?>? _migrationSub;
 
@@ -191,10 +207,18 @@ class BrowserManager {
     return true;
   }
 
+  /// Report whether the home server-search field is focused (called by the
+  /// toolbar). Drives the search-category preview subheader in the body.
+  void setSearchFocused(bool focused) {
+    if (_searchFocused.value != focused) _searchFocused.add(focused);
+  }
+
   void clear() {
     List<DisplayItem> hold = browserCache[0];
     bool holdAlpha = alphabeticalCache.isNotEmpty ? alphabeticalCache[0] : false;
     String? holdPath = pathCache.isNotEmpty ? pathCache[0] : null;
+    String? holdTerm =
+        searchTermCache.isNotEmpty ? searchTermCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -208,6 +232,9 @@ class BrowserManager {
     pathCache
       ..clear()
       ..add(holdPath);
+    searchTermCache
+      ..clear()
+      ..add(holdTerm);
   }
 
   void goToNavScreen() {
@@ -219,6 +246,7 @@ class BrowserManager {
     scrollCache.clear();
     alphabeticalCache.clear();
     pathCache.clear();
+    searchTermCache.clear();
 
     if (ServerManager().currentServer == null) {
       return;
@@ -285,6 +313,7 @@ class BrowserManager {
     // Nav screen isn't alphabetical content — just the section list.
     alphabeticalCache.add(false);
     pathCache.add(null); // home nav isn't the file explorer — no path row
+    searchTermCache.add(null); // home nav isn't a search result — no term row
     browserList.add(newItem1);
     browserList.add(newItem2);
     browserList.add(newItem3);
@@ -304,6 +333,7 @@ class BrowserManager {
     scrollCache.clear();
     alphabeticalCache.clear();
     pathCache.clear();
+    searchTermCache.clear();
 
     browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -312,7 +342,7 @@ class BrowserManager {
   }
 
   void addListToStack(List<DisplayItem> newList,
-      {bool alphabetical = false, String? path}) {
+      {bool alphabetical = false, String? path, String? searchTerm}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -325,6 +355,7 @@ class BrowserManager {
     browserCache.add(newList);
     alphabeticalCache.add(alphabetical);
     pathCache.add(path);
+    searchTermCache.add(searchTerm);
 
     browserList.clear();
     newList.forEach((element) {
@@ -391,6 +422,7 @@ class BrowserManager {
     browserCache.removeLast();
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
     if (pathCache.isNotEmpty) pathCache.removeLast();
+    if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
     browserList.clear();
     browserCache[browserCache.length - 1].forEach((el) {
       browserList.add(el);
@@ -440,6 +472,7 @@ class BrowserManager {
     _browserLabel.close();
     _albumDetail.close();
     _search.close();
+    _searchFocused.close();
     _loading.close();
   }
 
@@ -449,4 +482,6 @@ class BrowserManager {
   DisplayItem? get albumDetail => _albumDetail.value;
   Stream<({bool open, String query})> get searchStream => _search.stream;
   ({bool open, String query}) get search => _search.value;
+  Stream<bool> get searchFocusedStream => _searchFocused.stream;
+  bool get searchFocused => _searchFocused.value;
 }
