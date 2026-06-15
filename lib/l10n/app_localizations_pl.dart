@@ -807,6 +807,29 @@ class AppLocalizationsPl extends AppLocalizations {
   String get browserSearchHint => 'Szukaj w bazie danych';
 
   @override
+  String searchScopeHint(String scope) {
+    return 'Search $scope';
+  }
+
+  @override
+  String get searchScopeTooltip => 'What to search';
+
+  @override
+  String get searchScopeEverything => 'Everything';
+
+  @override
+  String get searchScopeArtists => 'Artists';
+
+  @override
+  String get searchScopeAlbums => 'Albums';
+
+  @override
+  String get searchScopeSongs => 'Songs';
+
+  @override
+  String get searchScopeFiles => 'Files';
+
+  @override
   String browserDownloadsStarted(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

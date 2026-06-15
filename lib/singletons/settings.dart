@@ -101,6 +101,32 @@ enum VisualizerAudioSource {
   // lib/l10n/enum_labels.dart.
 }
 
+/// Which categories the whole-server DB search (POST /api/v1/db/search)
+/// queries. That endpoint exposes four independent categories through its
+/// `noArtists` / `noAlbums` / `noTitles` / `noFiles` flags; each scope below
+/// maps to one combination of them. `everything` is the default and
+/// reproduces mStream's classic search (artists + albums + songs, with files
+/// excluded — bare filepath matches are noisy next to song titles). `files`
+/// is the only scope that searches filepaths, so it stands alone. Persisted
+/// as the JSON 'searchScope' key.
+enum SearchScope {
+  everything,
+  artists,
+  albums,
+  songs,
+  files;
+
+  // Localized labels: SearchScopeLabel extension in lib/l10n/enum_labels.dart.
+
+  bool get includeArtists =>
+      this == SearchScope.everything || this == SearchScope.artists;
+  bool get includeAlbums =>
+      this == SearchScope.everything || this == SearchScope.albums;
+  bool get includeSongs =>
+      this == SearchScope.everything || this == SearchScope.songs;
+  bool get includeFiles => this == SearchScope.files;
+}
+
 /// User-tweakable settings persisted to disk as a JSON blob next to
 /// servers.json. Uses path_provider — same dependency the rest of the
 /// app already pulls in — so no SharedPreferences plugin required.
@@ -119,6 +145,10 @@ class SettingsManager {
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
   StartupView startupView = StartupView.browser;
+  // Which categories the whole-server search queries (see SearchScope). The
+  // default `everything` reproduces mStream's classic artists+albums+songs
+  // search; the browser toolbar's search-scope dropdown writes this.
+  SearchScope searchScope = SearchScope.everything;
   AppTheme appTheme = AppTheme.dark;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
@@ -186,6 +216,8 @@ class SettingsManager {
       BehaviorSubject<int?>.seeded(accentColor);
   late final BehaviorSubject<Locale?> _localeStream =
       BehaviorSubject<Locale?>.seeded(localeOverride);
+  late final BehaviorSubject<SearchScope> _searchScopeStream =
+      BehaviorSubject<SearchScope>.seeded(searchScope);
 
   /// The forced locale, or `null` to follow the device. Fed straight to
   /// `MaterialApp.locale`. Parses BCP-47-ish codes so script- and
@@ -236,6 +268,7 @@ class SettingsManager {
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
       startupView = _readStartupView(m);
+      searchScope = _readSearchScope(m);
       appTheme = _readTheme(m);
       playerLayout = _readPlayerLayout(m);
       final accent = m['accentColor'];
@@ -274,6 +307,7 @@ class SettingsManager {
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
+      _searchScopeStream.add(searchScope);
     } catch (_) {
       // Corrupt or missing file: fall back to defaults.
     }
@@ -354,6 +388,16 @@ class SettingsManager {
     return StartupView.browser;
   }
 
+  SearchScope _readSearchScope(Map<String, dynamic> m) {
+    final str = m['searchScope'];
+    if (str is String) {
+      for (final v in SearchScope.values) {
+        if (v.name == str) return v;
+      }
+    }
+    return SearchScope.everything;
+  }
+
   Future<void> _save() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
@@ -366,6 +410,7 @@ class SettingsManager {
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
       'startupView': startupView.name,
+      'searchScope': searchScope.name,
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
@@ -428,6 +473,12 @@ class SettingsManager {
 
   Future<void> setStartupView(StartupView v) async {
     startupView = v;
+    await _save();
+  }
+
+  Future<void> setSearchScope(SearchScope v) async {
+    searchScope = v;
+    _searchScopeStream.add(v);
     await _save();
   }
 
@@ -532,6 +583,7 @@ class SettingsManager {
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;
     startupView = StartupView.browser;
+    searchScope = SearchScope.everything;
     appTheme = AppTheme.dark;
     playerLayout = PlayerLayout.medium;
     accentColor = null;
@@ -550,6 +602,7 @@ class SettingsManager {
     _themeStream.add(appTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
+    _searchScopeStream.add(searchScope);
     await _save();
   }
 
@@ -559,6 +612,7 @@ class SettingsManager {
   Stream<PlayerLayout> get playerLayoutStream => _playerLayoutStream.stream;
   Stream<int?> get accentColorStream => _accentColorStream.stream;
   Stream<Locale?> get localeStream => _localeStream.stream;
+  Stream<SearchScope> get searchScopeStream => _searchScopeStream.stream;
 
   void dispose() {
     _albumGridStream.close();
@@ -567,5 +621,6 @@ class SettingsManager {
     _playerLayoutStream.close();
     _accentColorStream.close();
     _localeStream.close();
+    _searchScopeStream.close();
   }
 }

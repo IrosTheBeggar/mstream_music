@@ -242,8 +242,18 @@ class ApiManager {
 
   Future<void> searchServer(String search) async {
     try {
-      var res = await makeServerCall(null, '/api/v1/db/search',
-          {'noFiles': true, 'search': search}, 'POST');
+      // The user's search-scope setting decides which of the endpoint's four
+      // categories to query. `everything` (the default) reproduces mStream's
+      // classic artists+albums+songs search; a single-category scope sends the
+      // other three `no*` flags so the server only does the work that's asked.
+      final scope = SettingsManager().searchScope;
+      var res = await makeServerCall(null, '/api/v1/db/search', {
+        'search': search,
+        'noArtists': !scope.includeArtists,
+        'noAlbums': !scope.includeAlbums,
+        'noTitles': !scope.includeSongs,
+        'noFiles': !scope.includeFiles,
+      }, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
       List<DisplayItem> newList = [];
@@ -279,6 +289,24 @@ class ApiManager {
             '/' + e['filepath'],
             Icon(Icons.music_note, color: VelvetColors.accent),
             'song');
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      // Files (filepath matches) — only populated when the scope is `files`.
+      // Same shape as titles (name + filepath); guarded with `?.` because
+      // older servers may omit the key entirely. The row renders as a file:
+      // getText shows the filename, so we surface the folder as the subtitle.
+      res['files']?.forEach((e) {
+        final String fp = e['filepath'];
+        final int slash = fp.lastIndexOf('/');
+        DisplayItem newItem = new DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'file',
+            '/' + fp,
+            Icon(Icons.insert_drive_file, color: VelvetColors.accent),
+            slash > 0 ? fp.substring(0, slash) : null);
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
       });

@@ -82,6 +82,23 @@ extension VisualizerAudioSourceLabel on VisualizerAudioSource {
   }
 }
 
+extension SearchScopeLabel on SearchScope {
+  String label(AppLocalizations l) {
+    switch (this) {
+      case SearchScope.everything:
+        return l.searchScopeEverything;
+      case SearchScope.artists:
+        return l.searchScopeArtists;
+      case SearchScope.albums:
+        return l.searchScopeAlbums;
+      case SearchScope.songs:
+        return l.searchScopeSongs;
+      case SearchScope.files:
+        return l.searchScopeFiles;
+    }
+  }
+}
+
 /// Localized label for a built-in browser node, breadcrumb, or tab.
 ///
 /// The browser's section nodes (File Explorer, Albums, …) and the

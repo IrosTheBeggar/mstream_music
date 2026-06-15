@@ -466,6 +466,21 @@
   "browserConfirmDeleteFolder": "Confirm Delete Folder",
   "browserSearchHint": "Search Database",
   "@browserConfirmDeletePlaylist": { "description": "Browser delete-confirmation dialog titles + search hint." },
+
+  "searchScopeHint": "Search {scope}",
+  "@searchScopeHint": {
+    "description": "Database search field hint when a specific (non-default) search scope is active, e.g. \"Search Artists\".",
+    "placeholders": {
+      "scope": { "type": "String" }
+    }
+  },
+  "searchScopeTooltip": "What to search",
+  "searchScopeEverything": "Everything",
+  "searchScopeArtists": "Artists",
+  "searchScopeAlbums": "Albums",
+  "searchScopeSongs": "Songs",
+  "searchScopeFiles": "Files",
+  "@searchScopeTooltip": { "description": "SearchScope dropdown: tooltip on the icon button + the five scope option labels (which categories the DB search queries)." },
   "browserDownloadsStarted": "{count, plural, =1{1 download started} other{{count} downloads started}}",
   "@browserDownloadsStarted": {
     "description": "Snackbar after queueing downloads from the browser.",

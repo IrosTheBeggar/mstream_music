@@ -1488,6 +1488,48 @@ abstract class AppLocalizations {
   /// **'Search Database'**
   String get browserSearchHint;
 
+  /// Database search field hint when a specific (non-default) search scope is active, e.g. "Search Artists".
+  ///
+  /// In en, this message translates to:
+  /// **'Search {scope}'**
+  String searchScopeHint(String scope);
+
+  /// SearchScope dropdown: tooltip on the icon button + the five scope option labels (which categories the DB search queries).
+  ///
+  /// In en, this message translates to:
+  /// **'What to search'**
+  String get searchScopeTooltip;
+
+  /// No description provided for @searchScopeEverything.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything'**
+  String get searchScopeEverything;
+
+  /// No description provided for @searchScopeArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get searchScopeArtists;
+
+  /// No description provided for @searchScopeAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get searchScopeAlbums;
+
+  /// No description provided for @searchScopeSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get searchScopeSongs;
+
+  /// No description provided for @searchScopeFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get searchScopeFiles;
+
   /// Snackbar after queueing downloads from the browser.
   ///
   /// In en, this message translates to:

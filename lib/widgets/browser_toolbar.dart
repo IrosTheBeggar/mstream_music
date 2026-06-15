@@ -22,6 +22,7 @@ import '../objects/display_item.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
+import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import 'local_search_bar.dart';
@@ -156,6 +157,45 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
+  // Scope dropdown for the home search field: a single-select menu that picks
+  // which of /api/v1/db/search's categories the query hits. itemBuilder reads
+  // the current scope on open so the active row is always checked; selecting
+  // one persists it (SettingsManager.setSearchScope → settings.json).
+  Widget _searchScopeMenu(BuildContext context, AppLocalizations l) {
+    return PopupMenuButton<SearchScope>(
+      icon: Icon(Icons.tune, color: VelvetColors.appBarTextSecondary, size: 22),
+      tooltip: l.searchScopeTooltip,
+      color: VelvetColors.surface,
+      onSelected: (v) => SettingsManager().setSearchScope(v),
+      itemBuilder: (_) {
+        final current = SettingsManager().searchScope;
+        return SearchScope.values.map((scope) {
+          final selected = scope == current;
+          return PopupMenuItem<SearchScope>(
+            value: scope,
+            child: Row(children: [
+              SizedBox(
+                width: 26,
+                child: selected
+                    ? Icon(Icons.check,
+                        size: 18, color: VelvetColors.primary)
+                    : null,
+              ),
+              Text(
+                scope.label(l),
+                style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ]),
+          );
+        }).toList();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -211,27 +251,42 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ]);
     }
 
-    // Home section list: the "search the whole server" field.
+    // Home section list: the "search the whole server" field, plus a scope
+    // dropdown that picks which categories the search queries (persisted).
     final isHome = s.list.isNotEmpty && s.list[0].type == 'execAction';
     if (isHome) {
       return Row(children: [
         const SizedBox(width: 8),
         Expanded(
-          child: TextField(
-            textInputAction: TextInputAction.search,
-            onSubmitted: (text) => ApiManager().searchServer(text),
-            style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),
-            cursorColor: VelvetColors.primary,
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              prefixIcon:
-                  Icon(Icons.search, color: VelvetColors.appBarTextSecondary),
-              hintText: l.browserSearchHint,
-              hintStyle: TextStyle(color: VelvetColors.appBarTextSecondary),
-            ),
+          // Rebuild only the field as the scope changes so its hint reflects
+          // the active scope ("Search Artists" etc.). The menu reads the scope
+          // fresh when it opens, so it stays outside this builder.
+          child: StreamBuilder<SearchScope>(
+            stream: SettingsManager().searchScopeStream,
+            initialData: SettingsManager().searchScope,
+            builder: (context, scopeSnap) {
+              final scope = scopeSnap.data ?? SearchScope.everything;
+              return TextField(
+                textInputAction: TextInputAction.search,
+                onSubmitted: (text) => ApiManager().searchServer(text),
+                style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),
+                cursorColor: VelvetColors.primary,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  prefixIcon: Icon(Icons.search,
+                      color: VelvetColors.appBarTextSecondary),
+                  hintText: scope == SearchScope.everything
+                      ? l.browserSearchHint
+                      : l.searchScopeHint(scope.label(l)),
+                  hintStyle:
+                      TextStyle(color: VelvetColors.appBarTextSecondary),
+                ),
+              );
+            },
           ),
         ),
+        _searchScopeMenu(context, l),
       ]);
     }
 
