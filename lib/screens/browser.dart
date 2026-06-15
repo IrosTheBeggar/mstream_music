@@ -735,26 +735,48 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
-  // The thin context strip under the toolbar. Shows, in priority order:
-  //   • search field focused on the home menu → which categories a search will
-  //     cover (so stale defaults from a past session are visible up front);
-  //   • a search-results list → the query it was run for;
-  //   • the file explorer → the current directory path.
-  // The term/path are tracked per stack frame (BrowserManager.currentSearchTerm
-  // / currentPath), so each reverts on back-nav. Mutually exclusive in practice:
-  // the focus preview only shows on the home menu, where term and path are null.
+  // In-flow context strip under the toolbar: the query on a search-results list,
+  // or the current directory in the file explorer. Both are persistent context
+  // for their view (tracked per stack frame, so they revert on back-nav). The
+  // transient search-scope preview is a separate slide-over overlay so it
+  // doesn't shove the list down — see _searchScopePreview.
   Widget _browserSubheader(BuildContext context, AppLocalizations l) {
-    return StreamBuilder<bool>(
-      stream: BrowserManager().searchFocusedStream,
-      initialData: BrowserManager().searchFocused,
-      builder: (context, focusSnap) {
-        return StreamBuilder<List<DisplayItem>>(
-          stream: BrowserManager().browserListStream,
-          builder: (context, _) {
-            final term = BrowserManager().currentSearchTerm;
-            final path = BrowserManager().currentPath;
-            if ((focusSnap.data ?? false) && term == null && path == null) {
-              return StreamBuilder<Set<SearchCategory>>(
+    return StreamBuilder<List<DisplayItem>>(
+      stream: BrowserManager().browserListStream,
+      builder: (context, _) {
+        final term = BrowserManager().currentSearchTerm;
+        if (term != null) {
+          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term));
+        }
+        final path = BrowserManager().currentPath;
+        if (path != null) {
+          return _subheaderStrip(
+              Icons.folder_outlined, path.isEmpty ? '/' : path,
+              mono: true);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  // Transient search-scope preview that SLIDES OVER the list (rather than
+  // pushing it down) while the home search field is focused, so the user can
+  // see — and fix — a stale category selection before typing. Driven by
+  // BrowserManager.searchFocused; wrapped in IgnorePointer so it never blocks
+  // taps on the list beneath it.
+  Widget _searchScopePreview(BuildContext context, AppLocalizations l) {
+    return IgnorePointer(
+      child: StreamBuilder<bool>(
+        stream: BrowserManager().searchFocusedStream,
+        initialData: BrowserManager().searchFocused,
+        builder: (context, focusSnap) {
+          return ClipRect(
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              offset:
+                  (focusSnap.data ?? false) ? Offset.zero : const Offset(0, -1),
+              child: StreamBuilder<Set<SearchCategory>>(
                 stream: SettingsManager().searchCategoriesStream,
                 initialData: SettingsManager().searchCategories,
                 builder: (context, catSnap) {
@@ -767,21 +789,11 @@ class _BrowserState extends State<Browser> {
                   return _subheaderStrip(
                       Icons.manage_search, l.searchSubheaderCategories(names));
                 },
-              );
-            }
-            if (term != null) {
-              return _subheaderStrip(
-                  Icons.search, l.searchSubheaderResults(term));
-            }
-            if (path != null) {
-              return _subheaderStrip(
-                  Icons.folder_outlined, path.isEmpty ? '/' : path,
-                  mono: true);
-            }
-            return const SizedBox.shrink();
-          },
-        );
-      },
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -816,9 +828,10 @@ class _BrowserState extends State<Browser> {
 
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Column(children: <Widget>[
-      // Context strip under the toolbar (search categories / search term /
-      // file path) — see _browserSubheader.
+    return Stack(children: <Widget>[
+      Column(children: <Widget>[
+      // In-flow context strip under the toolbar (search term / file path) —
+      // see _browserSubheader.
       _browserSubheader(context, l),
       // Thin indeterminate bar while any browser server call is in
       // flight (all go through ApiManager.makeServerCall). Fixed 3px
@@ -1047,6 +1060,14 @@ class _BrowserState extends State<Browser> {
                       },
                     );
                   })))
+      ]),
+      // Slide-over search-scope preview over the top of the list (focus-driven).
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: _searchScopePreview(context, l),
+      ),
     ]);
   }
 }

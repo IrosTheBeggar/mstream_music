@@ -13,6 +13,8 @@
 // download / add-all actions operate on the current list — the album's loaded
 // songs when the detail view is up, otherwise the browser list.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -61,19 +63,28 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   );
 
   // The home "search the whole server" field's focus drives the body's
-  // category-preview subheader (so the user sees the current scope before
+  // category-preview overlay (so the user sees the current scope before
   // typing). Owned here so it survives the toolbar's stream-driven rebuilds.
   final FocusNode _homeSearchFocus = FocusNode();
+  StreamSubscription<List<DisplayItem>>? _navSub;
 
   @override
   void initState() {
     super.initState();
     _homeSearchFocus.addListener(
         () => BrowserManager().setSearchFocused(_homeSearchFocus.hasFocus));
+    // Drop focus the moment we navigate off the home menu. The field otherwise
+    // keeps logical focus through back/keyboard-dismiss and navigation (Flutter
+    // even restores it on return to home), which left the preview stuck on.
+    _navSub = BrowserManager().browserListStream.listen((list) {
+      final isHome = list.isNotEmpty && list[0].type == 'execAction';
+      if (!isHome && _homeSearchFocus.hasFocus) _homeSearchFocus.unfocus();
+    });
   }
 
   @override
   void dispose() {
+    _navSub?.cancel();
     BrowserManager().setSearchFocused(false);
     _homeSearchFocus.dispose();
     super.dispose();

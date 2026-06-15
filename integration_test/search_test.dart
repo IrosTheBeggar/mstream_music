@@ -20,6 +20,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/main.dart';
+import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/media.dart';
 
 import 'helpers/test_helpers.dart';
@@ -97,6 +98,11 @@ void main() {
 
       // The results page shows a subheader echoing the query that produced it.
       expect(find.textContaining('Results for'), findsOneWidget);
+
+      // Submitting navigated off the home menu, so the search field's focus
+      // (which drives the scope-preview overlay) must have cleared — guards the
+      // regression where the preview stayed stuck after leaving home.
+      expect(BrowserManager().searchFocused, isFalse);
     },
   );
 }
