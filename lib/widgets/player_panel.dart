@@ -162,6 +162,11 @@ class PlayerPanelState extends State<PlayerPanel>
                           child: Padding(
                             padding: EdgeInsets.only(bottom: pad),
                             child: _MiniPlayer(
+                              // Stable anchor so integration tests can scope
+                              // finders to the collapsed bar — the expanded
+                              // sheet stays in the tree (at opacity 0) when
+                              // collapsed, so both carry a play button + scrubber.
+                              key: const Key('miniPlayer'),
                               onTap: expand,
                               onDragUpdate: _onDragUpdate,
                               onDragEnd: _onDragEnd,
@@ -1151,6 +1156,7 @@ class _MiniPlayer extends StatelessWidget {
   final GestureDragUpdateCallback onDragUpdate;
   final GestureDragEndCallback onDragEnd;
   const _MiniPlayer({
+    super.key,
     required this.onTap,
     required this.onDragUpdate,
     required this.onDragEnd,

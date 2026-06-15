@@ -18,8 +18,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:mstream_music/l10n/app_localizations.dart';
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/media.dart';
 
@@ -72,15 +70,7 @@ void main() {
 
       await seedServer(mockServer!.url);
 
-      // MStreamApp.build calls AppLocalizations.of(context), so the host
-      // MaterialApp must carry the app's localization delegates (mirrors the
-      // real MaterialApp in main.dart). Without them AppLocalizations.of
-      // returns null and the app crashes before the search field renders.
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: MStreamApp(),
-      ));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       // Search TextField is in the top row when on the root browse menu.

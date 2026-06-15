@@ -6,11 +6,9 @@
 // most common modernization regression: server-side API shape drifts
 // that silently break parsing in lib/singletons/api.dart.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
 
 import 'helpers/test_helpers.dart';
@@ -53,7 +51,7 @@ void main() {
 
       await seedServer(mockServer!.url);
 
-      await tester.pumpWidget(MaterialApp(home: MStreamApp()));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       expect(find.text('Albums'), findsOneWidget);

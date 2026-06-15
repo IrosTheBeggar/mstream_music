@@ -1,5 +1,10 @@
 // Shared utilities for integration tests.
 //
+// testApp wraps MStreamApp in a MaterialApp that carries the app's real
+// localization delegates. _MStreamAppState.build calls
+// AppLocalizations.of(context), which returns null under a bare
+// MaterialApp — so the app throws on its first frame without these.
+//
 // resetAppState wipes servers.json from disk and clears the singletons
 // that hold UI state across tests.
 //
@@ -23,10 +28,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:mstream_music/main.dart';
+import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
+
+Widget testApp() => MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: MStreamApp(),
+    );
 
 const _seededLocalname = 'integration-test-server';
 

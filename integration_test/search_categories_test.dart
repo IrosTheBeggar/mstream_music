@@ -17,8 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:mstream_music/l10n/app_localizations.dart';
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
 
 import 'helpers/test_helpers.dart';
@@ -47,13 +45,7 @@ void main() {
       mockServer = await MockServer.start({});
       await seedServer(mockServer!.url);
 
-      // Localization delegates mirror the real MaterialApp in main.dart — see
-      // search_test.dart for why a bare MaterialApp crashes MStreamApp.build.
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: MStreamApp(),
-      ));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       // Touching the search field previews which categories a search will
