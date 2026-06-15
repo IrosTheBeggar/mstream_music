@@ -6,6 +6,8 @@ import '../singletons/playlists.dart';
 import '../theme/velvet_theme.dart';
 
 class PlaylistsScreen extends StatelessWidget {
+  const PlaylistsScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -29,7 +31,7 @@ class PlaylistsScreen extends StatelessWidget {
           return ListView.separated(
             padding: EdgeInsets.fromLTRB(0, 0, 0, 96),
             itemCount: list.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 Divider(height: 1, color: VelvetColors.border),
             itemBuilder: (context, i) {
               final p = list[i];
@@ -184,8 +186,7 @@ class PlaylistsScreen extends StatelessWidget {
 
 class PlaylistDetailScreen extends StatelessWidget {
   final int playlistIndex;
-  const PlaylistDetailScreen({Key? key, required this.playlistIndex})
-      : super(key: key);
+  const PlaylistDetailScreen({super.key, required this.playlistIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +230,7 @@ class PlaylistDetailScreen extends StatelessWidget {
           }
           return ListView.separated(
             itemCount: p.entries.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 Divider(height: 1, color: VelvetColors.border),
             itemBuilder: (context, i) {
               final e = p.entries[i];

@@ -40,7 +40,7 @@ String _fmtDur(Duration? d) =>
 /// purely through `MediaManager().audioHandler`, so it works identically
 /// wherever it's mounted. Swipe a row for download / remove / info.
 class QueueList extends StatelessWidget {
-  const QueueList({Key? key}) : super(key: key);
+  const QueueList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +263,7 @@ class _QueueRow extends StatelessWidget {
                       child: url != null
                           ? Image.network(url,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _artFallback())
+                              errorBuilder: (_, _, _) => _artFallback())
                           : _artFallback(),
                     ),
                     if (active)
@@ -362,8 +362,7 @@ class QueueHeader extends StatelessWidget {
   /// that opens [onOptions]; otherwise it shows the download-all + clear icons.
   final bool showOptions;
   final VoidCallback? onOptions;
-  const QueueHeader({Key? key, this.showOptions = false, this.onOptions})
-      : super(key: key);
+  const QueueHeader({super.key, this.showOptions = false, this.onOptions});
 
   @override
   Widget build(BuildContext context) {

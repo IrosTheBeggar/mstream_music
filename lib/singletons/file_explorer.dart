@@ -28,7 +28,7 @@ class FileExplorer {
           : 'Download location unavailable';
     }
 
-    return new Directory(path.join(woo.path.toString(), 'media/${s.localname}'))
+    return Directory(path.join(woo.path.toString(), 'media/${s.localname}'))
         .path
         .toString();
   }
@@ -50,9 +50,9 @@ class FileExplorer {
         BrowserManager().addListToStack(newList); // show an empty list
         return;
       }
-      file = new Directory(path.join(woo.path.toString(), 'media'));
+      file = Directory(path.join(woo.path.toString(), 'media'));
     } else {
-      file = new Directory(directory);
+      file = Directory(directory);
     }
 
     int stringLength = file.path.toString().length +
@@ -65,16 +65,16 @@ class FileExplorer {
       Icon useIcon;
       String type;
       if (entity is File) {
-        useIcon = new Icon(Icons.music_note, color: VelvetColors.textSecondary);
+        useIcon = Icon(Icons.music_note, color: VelvetColors.textSecondary);
         type = 'localFile';
       } else {
-        useIcon = new Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary);
+        useIcon = Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary);
         type = 'localDirectory';
       }
 
       String thisName = entity.path.substring(stringLength, entity.path.length);
       DisplayItem newItem =
-          new DisplayItem(s, thisName, type, entity.path, useIcon, null);
+          DisplayItem(s, thisName, type, entity.path, useIcon, null);
       newList.add(newItem);
     }).onDone(() {
       BrowserManager().addListToStack(newList);
@@ -85,7 +85,7 @@ class FileExplorer {
     Directory? woo = await getDownloadDir(s.storageMode, s.storageBasePath);
     if (woo != null) {
       Directory file =
-          new Directory(path.join(woo.path.toString(), 'media/${s.localname}'));
+          Directory(path.join(woo.path.toString(), 'media/${s.localname}'));
       getLocalFiles(file.path.toString(), s);
     }
   }

@@ -36,7 +36,7 @@ class AlbumDetailView extends StatefulWidget {
   /// and subtext, from getAlbums().
   final DisplayItem album;
 
-  const AlbumDetailView({Key? key, required this.album}) : super(key: key);
+  const AlbumDetailView({super.key, required this.album});
 
   @override
   State<AlbumDetailView> createState() => _AlbumDetailViewState();
@@ -105,12 +105,8 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     final aa = widget.album.altAlbumArt;
     final server = widget.album.server;
     if (server == null || aa == null) return null;
-    return Uri.encodeFull(server.url +
-        '/album-art/' +
-        aa +
-        '?compress=' +
-        compress +
-        (server.jwt == null ? '' : '&token=' + server.jwt!));
+    return Uri.encodeFull('${server.url}/album-art/$aa?compress=$compress'
+        '${server.jwt == null ? '' : '&token=${server.jwt!}'}');
   }
 
   // ── derived metadata ──
@@ -327,7 +323,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                     child: artUrl != null
                         ? Image.network(artUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorBuilder: (_, _, _) =>
                                 albumArtFallback(iconSize: 30))
                         : albumArtFallback(iconSize: 30),
                   ),

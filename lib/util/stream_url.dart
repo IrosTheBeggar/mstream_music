@@ -21,10 +21,10 @@ String buildServerStreamUrl(Server server, String path) {
   String p = '';
   for (final element in path.split('/')) {
     if (element.isEmpty) continue;
-    p += '/' + Uri.encodeComponent(element);
+    p += '/${Uri.encodeComponent(element)}';
   }
   final tm = TranscodeManager();
-  final String token = server.jwt == null ? '' : '&token=' + server.jwt!;
+  final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
   // Use /transcode only when the user enabled it AND this server isn't known to
   // lack ffmpeg. transcodeAvailable: true = confirmed capable; false = confirmed
   // incapable (stream the original, never 500); null = not pinged yet →
@@ -32,7 +32,7 @@ String buildServerStreamUrl(Server server, String path) {
   // without waiting for the ping. A queue mixing capable + incapable servers
   // resolves to the right endpoint per track once each server is pinged.
   if (tm.transcodeOn != true || server.transcodeAvailable == false) {
-    return server.url + '/media' + p + '?app_uuid=' + Uuid().v4() + token;
+    return '${server.url}/media$p?app_uuid=${Uuid().v4()}$token';
   }
   final sb = StringBuffer(server.url)
     ..write('/transcode')
@@ -40,7 +40,7 @@ String buildServerStreamUrl(Server server, String path) {
     ..write('?app_uuid=')
     ..write(Uuid().v4())
     ..write(token);
-  if (tm.codec != null) sb.write('&codec=' + tm.codec!);
-  if (tm.bitrate != null) sb.write('&bitrate=' + tm.bitrate!);
+  if (tm.codec != null) sb.write('&codec=${tm.codec!}');
+  if (tm.bitrate != null) sb.write('&bitrate=${tm.bitrate!}');
   return sb.toString();
 }

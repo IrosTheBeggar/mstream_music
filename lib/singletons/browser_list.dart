@@ -252,7 +252,7 @@ class BrowserManager {
       return;
     }
 
-    DisplayItem newItem1 = new DisplayItem(
+    DisplayItem newItem1 = DisplayItem(
         ServerManager().currentServer!,
         'File Explorer',
         'execAction',
@@ -260,7 +260,7 @@ class BrowserManager {
         Icon(Icons.folder, color: VelvetColors.warning),
         null);
 
-    DisplayItem newItem2 = new DisplayItem(
+    DisplayItem newItem2 = DisplayItem(
         ServerManager().currentServer!,
         'Playlists',
         'execAction',
@@ -268,7 +268,7 @@ class BrowserManager {
         Icon(Icons.queue_music, color: VelvetColors.textSecondary),
         null);
 
-    DisplayItem newItem3 = new DisplayItem(
+    DisplayItem newItem3 = DisplayItem(
         ServerManager().currentServer!,
         'Albums',
         'execAction',
@@ -276,7 +276,7 @@ class BrowserManager {
         Icon(Icons.album, color: VelvetColors.textSecondary),
         null);
 
-    DisplayItem newItem4 = new DisplayItem(
+    DisplayItem newItem4 = DisplayItem(
         ServerManager().currentServer!,
         'Artists',
         'execAction',
@@ -284,7 +284,7 @@ class BrowserManager {
         Icon(Icons.library_music, color: VelvetColors.textSecondary),
         null);
 
-    DisplayItem newItem5 = new DisplayItem(
+    DisplayItem newItem5 = DisplayItem(
         ServerManager().currentServer!,
         'Rated',
         'execAction',
@@ -292,7 +292,7 @@ class BrowserManager {
         Icon(Icons.star, color: VelvetColors.textSecondary),
         null);
 
-    DisplayItem newItem6 = new DisplayItem(
+    DisplayItem newItem6 = DisplayItem(
         ServerManager().currentServer!,
         'Recent',
         'execAction',
@@ -300,7 +300,7 @@ class BrowserManager {
         Icon(Icons.query_builder, color: VelvetColors.textSecondary),
         null);
 
-    DisplayItem newItem7 = new DisplayItem(
+    DisplayItem newItem7 = DisplayItem(
         ServerManager().currentServer!,
         'Local Files',
         'execAction',
@@ -335,7 +335,7 @@ class BrowserManager {
     pathCache.clear();
     searchTermCache.clear();
 
-    browserList.add(new DisplayItem(null, 'Welcome To mStream', 'addServer', '',
+    browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
 
     _browserStream.sink.add(browserList);
@@ -358,9 +358,9 @@ class BrowserManager {
     searchTermCache.add(searchTerm);
 
     browserList.clear();
-    newList.forEach((element) {
+    for (var element in newList) {
       browserList.add(element);
-    });
+    }
 
     // Reset to top synchronously BEFORE emitting so the upcoming
     // rebuild lays out at offset 0 in a single frame. Doing this
@@ -371,7 +371,7 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
-  updateStream() {
+  void updateStream() {
     _browserStream.sink.add(browserList);
   }
 
@@ -424,9 +424,9 @@ class BrowserManager {
     if (pathCache.isNotEmpty) pathCache.removeLast();
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
     browserList.clear();
-    browserCache[browserCache.length - 1].forEach((el) {
+    for (var el in browserCache[browserCache.length - 1]) {
       browserList.add(el);
-    });
+    }
 
     // Restore scroll BEFORE emitting so the rebuilt ListView lays
     // out at the target offset in its first frame. Going through
@@ -454,10 +454,10 @@ class BrowserManager {
         (e) => e.server == server && e.data == data && e.type == type);
     _browserStream.sink.add(browserList);
 
-    browserCache.forEach((b) {
+    for (var b in browserCache) {
       b.removeWhere(
           (e) => e.server == server && e.data == data && e.type == type);
-    });
+    }
     // Known limitation: removing items shifts subsequent scroll
     // offsets but scrollCache isn't recalculated. On back-nav to a
     // filtered screen the saved offset may be too large — popBrowser

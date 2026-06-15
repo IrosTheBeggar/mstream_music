@@ -20,11 +20,11 @@ class AlbumGrid extends StatelessWidget {
   final ScrollController? controller;
 
   const AlbumGrid({
-    Key? key,
+    super.key,
     required this.items,
     required this.onTap,
     this.controller,
-  }) : super(key: key);
+  });
 
   // Layout constants exposed so the parent can compute the per-row
   // offset for the letter-strip's jumpTo without duplicating the
@@ -148,15 +148,13 @@ class _AlbumCard extends StatelessWidget {
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
-      final url = Uri.encodeFull(item.server!.url +
-          '/album-art/' +
-          aaFile +
-          '?compress=m' +
-          (item.server!.jwt == null ? '' : '&token=' + item.server!.jwt!));
+      final url = Uri.encodeFull('${item.server!.url}/album-art/$aaFile'
+          '?compress=m'
+          '${item.server!.jwt == null ? '' : '&token=${item.server!.jwt!}'}');
       return Image.network(
         url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _NoArtPlaceholder(),
+        errorBuilder: (_, _, _) => _NoArtPlaceholder(),
         loadingBuilder: (_, child, prog) => prog == null
             ? child
             : Container(

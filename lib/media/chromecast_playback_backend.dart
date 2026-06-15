@@ -28,9 +28,7 @@ import 'visualizer_cast_config.dart';
 /// streams (no polling), and loadMedia takes autoPlay + playPosition so
 /// resume-at-position is native.
 class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
-  ChromecastPlaybackBackend({required String deviceId, bool visualizer = false})
-      : _deviceId = deviceId,
-        _visualizer = visualizer;
+  ChromecastPlaybackBackend({required this._deviceId, this._visualizer = false});
 
   final String _deviceId;
   // When true, cast the on-device visualizer transcoded to HLS video instead of

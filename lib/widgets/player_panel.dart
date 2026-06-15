@@ -43,8 +43,7 @@ class PlayerPanel extends StatefulWidget {
   static const double kCollapsedHeight = 104.0;
 
   final double collapsedHeight;
-  const PlayerPanel({Key? key, this.collapsedHeight = kCollapsedHeight})
-      : super(key: key);
+  const PlayerPanel({super.key, this.collapsedHeight = kCollapsedHeight});
 
   @override
   PlayerPanelState createState() => PlayerPanelState();
@@ -714,7 +713,7 @@ class _TopSmall extends StatelessWidget {
                         child: url != null
                             ? Image.network(url,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => _fallback(20))
+                                errorBuilder: (_, _, _) => _fallback(20))
                             : _fallback(20)),
                   ),
                   const SizedBox(width: 11),
@@ -1376,7 +1375,7 @@ Widget _albumArt(String? url,
       borderRadius: BorderRadius.circular(radius),
       child: url != null
           ? Image.network(url,
-              fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback())
+              fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback())
           : fallback(),
     ),
   );

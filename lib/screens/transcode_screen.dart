@@ -15,6 +15,8 @@ import '../theme/velvet_theme.dart';
 /// the actual default (from `/api/v1/ping`) when the active server reports one.
 /// The dropdowns are disabled while transcoding is off.
 class TranscodeScreen extends StatefulWidget {
+  const TranscodeScreen({super.key});
+
   @override
   State<TranscodeScreen> createState() => _TranscodeScreenState();
 }

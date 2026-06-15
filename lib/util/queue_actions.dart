@@ -47,10 +47,7 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
 
   final String? artUrl = i.metadata?.albumArt != null
       ? Uri.parse(i.server!.url.toString())
-          .resolve('/album-art/' +
-              i.metadata!.albumArt! +
-              '?compress=l&token=' +
-              (i.server!.jwt ?? ''))
+          .resolve('/album-art/${i.metadata!.albumArt!}?compress=l&token=${i.server!.jwt ?? ''}')
           .toString()
       : null;
 

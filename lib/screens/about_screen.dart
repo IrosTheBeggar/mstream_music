@@ -38,6 +38,8 @@ class AboutScreen extends StatelessWidget {
     ),
   ];
 
+  const AboutScreen({super.key});
+
   static String _linkSubtitle(AppLocalizations l, _LinkId id) {
     switch (id) {
       case _LinkId.discord:

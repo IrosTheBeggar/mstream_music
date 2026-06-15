@@ -7,6 +7,9 @@ import '../objects/download_tracker.dart';
 import '../theme/velvet_theme.dart';
 
 class DownloadScreen extends StatelessWidget {
+  const DownloadScreen({super.key});
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(

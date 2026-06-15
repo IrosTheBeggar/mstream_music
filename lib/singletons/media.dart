@@ -15,7 +15,7 @@ class MediaManager {
 
   late AudioPlayerHandler audioHandler;
 
-  start() async {
+  Future<void> start() async {
     audioHandler = await AudioService.init<AudioPlayerHandler>(
       builder: () => AudioPlayerHandler(),
       config: AudioServiceConfig(

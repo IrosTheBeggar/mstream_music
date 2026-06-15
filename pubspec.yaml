@@ -47,7 +47,9 @@ dependencies:
   flutter_chrome_cast: ^1.4.6
   # Native share sheet for exporting diagnostic logs (Diagnostics screen).
   share_plus: ^10.1.4
+  meta: any
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   integration_test:

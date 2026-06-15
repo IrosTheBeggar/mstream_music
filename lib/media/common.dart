@@ -3,7 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:rxdart/rxdart.dart';
 
 class LoggingAudioHandler extends CompositeAudioHandler {
-  LoggingAudioHandler(AudioHandler inner) : super(inner) {
+  LoggingAudioHandler(super.inner) {
     playbackState.listen((state) {
       _log('playbackState changed: $state');
     });

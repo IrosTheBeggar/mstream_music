@@ -19,6 +19,8 @@ import '../util/queue_actions.dart';
 import 'add_server.dart';
 
 class Browser extends StatefulWidget {
+  const Browser({super.key});
+
   @override
   State<Browser> createState() => _BrowserState();
 }
@@ -494,7 +496,7 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
-                  leading: b[i].icon ?? null,
+                  leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
@@ -534,7 +536,7 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
-                  leading: b[i].icon ?? null,
+                  leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
@@ -578,7 +580,7 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
-                  leading: b[i].icon ?? null,
+                  leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
                   trailing: IconButton(
@@ -707,7 +709,7 @@ class _BrowserState extends State<Browser> {
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                      Container(
+                      SizedBox(
                         width: 4,
                         child: RotatedBox(
                           quarterTurns: 3,
@@ -826,6 +828,7 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Stack(children: <Widget>[
@@ -978,7 +981,7 @@ class _BrowserState extends State<Browser> {
                                     itemCount: browserList.length,
                                     itemBuilder:
                                         (BuildContext context, int index) {
-                                      if (browserList.length == 0) {
+                                      if (browserList.isEmpty) {
                                         return Container();
                                       }
                                       return makeListItem(

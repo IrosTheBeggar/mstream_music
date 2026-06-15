@@ -32,14 +32,14 @@ class WaveformProgress extends StatelessWidget {
   final Color? unplayedColor;
 
   const WaveformProgress({
-    Key? key,
+    super.key,
     required this.progress,
     this.seed,
     this.onSeek,
     this.height = 32,
     this.barCount = 64,
     this.unplayedColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

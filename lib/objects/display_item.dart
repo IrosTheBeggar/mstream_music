@@ -26,14 +26,12 @@ class DisplayItem {
   int downloadProgress = 0;
 
   Widget? getImage() {
-    String? aaFile = altAlbumArt ?? this.metadata?.albumArt ?? null;
+    String? aaFile = altAlbumArt ?? metadata?.albumArt;
 
-    if (this.server != null && aaFile != null) {
-      String lolUrl = Uri.encodeFull(this.server!.url +
-          '/album-art/' +
-          aaFile +
-          '?compress=s' +
-          (this.server!.jwt == null ? '' : '&token=' + this.server!.jwt!));
+    if (server != null && aaFile != null) {
+      String lolUrl = Uri.encodeFull('${server!.url}/album-art/$aaFile'
+          '?compress=s'
+          '${server!.jwt == null ? '' : '&token=${server!.jwt!}'}');
 
       return Image.network(lolUrl.toString());
     }
@@ -52,11 +50,9 @@ class DisplayItem {
     final BorderRadius radius =
         BorderRadius.circular(VelvetColors.radiusSmall);
     if (server != null && aaFile != null) {
-      final String url = Uri.encodeFull(server!.url +
-          '/album-art/' +
-          aaFile +
-          '?compress=s' +
-          (server!.jwt == null ? '' : '&token=' + server!.jwt!));
+      final String url = Uri.encodeFull('${server!.url}/album-art/$aaFile'
+          '?compress=s'
+          '${server!.jwt == null ? '' : '&token=${server!.jwt!}'}');
       return ClipRRect(
         borderRadius: radius,
         child: Image.network(
@@ -64,7 +60,7 @@ class DisplayItem {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _albumThumbPlaceholder(size, radius),
+          errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
         ),
       );
     }
@@ -107,7 +103,7 @@ class DisplayItem {
     if (metadata?.title != null) {
       return Text(
         (showRating == true && metadata?.rating != null
-                ? '[' + (metadata!.rating! / 2).toString() + '] '
+                ? '[${metadata!.rating! / 2}] '
                 : '') +
             metadata!.title!,
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
@@ -117,25 +113,25 @@ class DisplayItem {
     }
 
     if (type == 'file' || type == 'localFile') {
-      return new Text(
+      return Text(
         (showRating == true && metadata?.rating != null
-                ? '[' + (metadata!.rating! / 2).toString() + '] '
+                ? '[${metadata!.rating! / 2}] '
                 : '') +
-            this.data!.split('/').last,
+            data!.split('/').last,
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
         maxLines: truncate ? 1 : null,
         overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
       );
     }
 
-    return new Text(
+    return Text(
       // Built-in browser nodes (execAction) and the no-server welcome
       // item (addServer) carry fixed English names; localize them.
       // Server folder/file names pass through browserChromeLabel
       // unchanged (default case), so real data is never mistranslated.
       (l != null && (type == 'execAction' || type == 'addServer'))
-          ? browserChromeLabel(l, this.name)
-          : this.name,
+          ? browserChromeLabel(l, name)
+          : name,
       style: TextStyle(
           fontFamily: 'Jura', fontSize: 15, color: VelvetColors.textPrimary),
       maxLines: truncate ? 1 : null,
@@ -154,7 +150,7 @@ class DisplayItem {
     }
 
     if (subtext != null) {
-      return new Text(
+      return Text(
         (l != null && type == 'addServer')
             ? browserChromeLabel(l, subtext!)
             : subtext!,
@@ -186,19 +182,19 @@ class DisplayItem {
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext) {
     // Check if file is saved on device
-    if (this.type == 'file') {
-      String downloadDirectory = this.server!.localname + this.data!;
+    if (type == 'file') {
+      String downloadDirectory = server!.localname + data!;
       FileExplorer()
-          .getDownloadDir(this.server!.storageMode, this.server!.storageBasePath)
+          .getDownloadDir(server!.storageMode, server!.storageBasePath)
           .then((dir) {
         if (dir == null) {
           return;
         }
         String finalString = '${dir.path}/media/$downloadDirectory';
 
-        new File(finalString).exists().then((ex) {
+        File(finalString).exists().then((ex) {
           if (ex == true) {
-            this.downloadProgress = 100;
+            downloadProgress = 100;
             BrowserManager().updateStream();
           }
         });

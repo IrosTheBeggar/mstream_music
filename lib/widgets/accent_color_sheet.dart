@@ -38,7 +38,7 @@ int _argb(Color c) {
 /// theme's built-in primary), which live-rebuilds the whole app via the theme
 /// stream — so picks preview instantly on the real UI behind the sheet.
 class AccentColorSheet extends StatefulWidget {
-  const AccentColorSheet({Key? key}) : super(key: key);
+  const AccentColorSheet({super.key});
 
   @override
   State<AccentColorSheet> createState() => _AccentColorSheetState();
