@@ -482,7 +482,7 @@
       "term": { "type": "String" }
     }
   },
-  "searchSubheaderCategories": "Searching {categories}",
+  "searchSubheaderCategories": "Searching: {categories}",
   "@searchSubheaderCategories": {
     "description": "Thin subheader shown while the server-search field is focused, previewing which categories (e.g. \"Artists · Albums\") a search will cover.",
     "placeholders": {

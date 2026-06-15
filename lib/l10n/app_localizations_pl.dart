@@ -831,7 +831,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching $categories';
+    return 'Searching: $categories';
   }
 
   @override

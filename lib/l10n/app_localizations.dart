@@ -1533,7 +1533,7 @@ abstract class AppLocalizations {
   /// Thin subheader shown while the server-search field is focused, previewing which categories (e.g. "Artists · Albums") a search will cover.
   ///
   /// In en, this message translates to:
-  /// **'Searching {categories}'**
+  /// **'Searching: {categories}'**
   String searchSubheaderCategories(String categories);
 
   /// Snackbar after queueing downloads from the browser.
