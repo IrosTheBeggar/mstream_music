@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'server.dart';
 import 'metadata.dart';
-import '../singletons/browser_list.dart';
-import '../singletons/file_explorer.dart';
 import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
 import '../l10n/app_localizations.dart';
@@ -174,41 +172,31 @@ class DisplayItem {
         hit(data?.split('/').last);
   }
 
+  // Plain data constructor. The on-device "downloaded" badge is no longer
+  // resolved here: this used to fire a per-item getDownloadDir() + File.exists()
+  // straight from the constructor, so building a folder of N file rows kicked
+  // off N disk probes AND up to N full browser re-emits (each present file
+  // called BrowserManager().updateStream()). BrowserManager now resolves the
+  // badge for a whole list in one batched pass — see [recheckDownloadedIn] and
+  // BrowserManager._resolveDownloadBadges.
   DisplayItem(
-      this.server, this.name, this.type, this.data, this.icon, this.subtext) {
-    // Check if file is saved on device
-    if (type == 'file') {
-      String downloadDirectory = server!.localname + data!;
-      FileExplorer()
-          .getDownloadDir(server!.storageMode, server!.storageBasePath)
-          .then((dir) {
-        if (dir == null) {
-          return;
-        }
-        String finalString = '${dir.path}/media/$downloadDirectory';
+      this.server, this.name, this.type, this.data, this.icon, this.subtext);
 
-        File(finalString).exists().then((ex) {
-          if (ex == true) {
-            downloadProgress = 100;
-            BrowserManager().updateStream();
-          }
-        });
-      });
-    }
-  }
-
-  // Re-evaluates whether this file exists at the server's CURRENT storage
-  // location and updates [downloadProgress] (100 = present, 0 = not). Unlike
-  // the constructor's one-shot check (which only ever sets 100), this also
-  // CLEARS a stale badge — so after a server's download location changes, a row
-  // that no longer has a local copy stops claiming it's downloaded. A row
-  // that's mid-download (1–99%) is left alone. The caller refreshes the
-  // browser stream once after a batch.
-  Future<void> recheckDownloaded() async {
+  // Re-evaluates whether this file exists under [dir] — the server's already-
+  // resolved download base, so the full path is <dir>/media/<localname>/... —
+  // and updates [downloadProgress] (100 = present, 0 = not). [dir] null means
+  // the location is currently unavailable (SD card out / folder deleted) and is
+  // treated as "no local copy". Also CLEARS a stale badge, so after a server's
+  // download location changes a row that no longer has a copy stops claiming
+  // one. A row that's mid-download (1–99%) is left alone.
+  //
+  // Takes a pre-resolved [dir] so a caller can resolve getDownloadDir() ONCE
+  // for a whole list (it's a platform-channel / stat call) and refresh the
+  // browser stream once after the batch, instead of paying that cost per row.
+  // See BrowserManager._resolveDownloadBadges.
+  Future<void> recheckDownloadedIn(Directory? dir) async {
     if (type != 'file' || server == null || data == null) return;
     if (downloadProgress > 0 && downloadProgress < 100) return;
-    final dir = await FileExplorer()
-        .getDownloadDir(server!.storageMode, server!.storageBasePath);
     bool present = false;
     if (dir != null) {
       present =
