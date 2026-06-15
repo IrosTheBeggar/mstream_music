@@ -145,6 +145,29 @@ class DownloadManager {
     }
   }
 
+  /// Re-attach in-flight downloads to a freshly-built list of browser rows.
+  ///
+  /// When a directory is re-fetched (e.g. navigating out and back in), its
+  /// DisplayItems are NEW instances starting at 0 progress, while the active
+  /// download still points at the discarded original row — so its inline bar
+  /// vanishes. For each row matching an in-flight tracker (by serverName +
+  /// filepath), seed the row's progress and re-point the tracker at it so
+  /// subsequent ticks drive the row the user is actually looking at. Cheap
+  /// no-op when nothing is downloading. (Same 5% quantization as _onUpdate.)
+  void rebindActiveDownloads(Iterable<DisplayItem> rows) {
+    if (downloadMap.isEmpty) return;
+    final byPath = <String, DownloadTracker>{
+      for (final t in downloadMap.values) t.filePath: t,
+    };
+    for (final r in rows) {
+      if (r.type != 'file' || r.server == null || r.data == null) continue;
+      final t = byPath[r.server!.localname + r.data!];
+      if (t == null) continue;
+      r.downloadProgress = ((t.progress.clamp(0.0, 1.0) * 100).round() ~/ 5) * 5;
+      t.referenceDisplayItem = r;
+    }
+  }
+
   Future<void> downloadOneFile(String downloadUrl, String serverName,
       String filepath,
       {DisplayItem? referenceItem}) async {

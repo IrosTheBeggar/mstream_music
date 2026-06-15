@@ -7,6 +7,7 @@ import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/file_explorer.dart';
+import '../singletons/downloads.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
@@ -362,6 +363,11 @@ class BrowserManager {
       ..clear()
       ..addAll(newList);
 
+    // Re-attach any in-flight download to its new row instance (seed progress +
+    // re-point the tracker) BEFORE emitting, so re-opening a folder mid-download
+    // shows the progress bar immediately instead of a blank row.
+    DownloadManager().rebindActiveDownloads(newList);
+
     // Reset to top synchronously BEFORE emitting so the upcoming
     // rebuild lays out at offset 0 in a single frame. Doing this
     // via addPostFrameCallback paints the new list at the inherited
@@ -391,6 +397,7 @@ class BrowserManager {
     browserList
       ..clear()
       ..addAll(newList);
+    DownloadManager().rebindActiveDownloads(newList);
     _browserStream.sink.add(browserList);
     unawaited(_resolveDownloadBadges(newList));
   }
