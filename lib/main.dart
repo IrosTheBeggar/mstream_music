@@ -450,7 +450,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                                       throwErr: true);
                                   await ServerManager().callAfterEditServer();
                                 } catch (err) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  // Use the app-wide messenger key, not
+                                  // ScaffoldMessenger.of(context): this runs
+                                  // after two awaits, by which point the
+                                  // captured context may be unmounted (the
+                                  // StreamBuilder rebuilt / the menu closed).
+                                  rootMessengerKey.currentState?.showSnackBar(
                                       SnackBar(
                                           content: Text(
                                               l.mainFailedToConnect)));
