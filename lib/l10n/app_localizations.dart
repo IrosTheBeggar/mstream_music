@@ -1488,47 +1488,41 @@ abstract class AppLocalizations {
   /// **'Search Database'**
   String get browserSearchHint;
 
-  /// Database search field hint when a specific (non-default) search scope is active, e.g. "Search Artists".
-  ///
-  /// In en, this message translates to:
-  /// **'Search {scope}'**
-  String searchScopeHint(String scope);
-
-  /// SearchScope dropdown: tooltip on the icon button + the five scope option labels (which categories the DB search queries).
+  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination).
   ///
   /// In en, this message translates to:
   /// **'What to search'**
-  String get searchScopeTooltip;
+  String get searchCategoriesTooltip;
 
-  /// No description provided for @searchScopeEverything.
+  /// No description provided for @searchCategoriesHeader.
   ///
   /// In en, this message translates to:
-  /// **'Everything'**
-  String get searchScopeEverything;
+  /// **'Search in'**
+  String get searchCategoriesHeader;
 
-  /// No description provided for @searchScopeArtists.
+  /// No description provided for @searchCategoryArtists.
   ///
   /// In en, this message translates to:
   /// **'Artists'**
-  String get searchScopeArtists;
+  String get searchCategoryArtists;
 
-  /// No description provided for @searchScopeAlbums.
+  /// No description provided for @searchCategoryAlbums.
   ///
   /// In en, this message translates to:
   /// **'Albums'**
-  String get searchScopeAlbums;
+  String get searchCategoryAlbums;
 
-  /// No description provided for @searchScopeSongs.
+  /// No description provided for @searchCategorySongs.
   ///
   /// In en, this message translates to:
   /// **'Songs'**
-  String get searchScopeSongs;
+  String get searchCategorySongs;
 
-  /// No description provided for @searchScopeFiles.
+  /// No description provided for @searchCategoryFiles.
   ///
   /// In en, this message translates to:
   /// **'Files'**
-  String get searchScopeFiles;
+  String get searchCategoryFiles;
 
   /// Snackbar after queueing downloads from the browser.
   ///

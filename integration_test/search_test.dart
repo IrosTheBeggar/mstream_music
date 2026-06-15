@@ -9,6 +9,10 @@
 // Catches regressions in the most complex parsing path in
 // lib/singletons/api.dart.searchServer — three different DisplayItem
 // shapes share one response.
+//
+// The search-category dropdown beside the field is covered separately in
+// search_categories_test.dart (mounting MStreamApp twice in one process
+// re-subscribes a singleton stream, so each scenario gets its own file).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

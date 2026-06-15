@@ -82,19 +82,17 @@ extension VisualizerAudioSourceLabel on VisualizerAudioSource {
   }
 }
 
-extension SearchScopeLabel on SearchScope {
+extension SearchCategoryLabel on SearchCategory {
   String label(AppLocalizations l) {
     switch (this) {
-      case SearchScope.everything:
-        return l.searchScopeEverything;
-      case SearchScope.artists:
-        return l.searchScopeArtists;
-      case SearchScope.albums:
-        return l.searchScopeAlbums;
-      case SearchScope.songs:
-        return l.searchScopeSongs;
-      case SearchScope.files:
-        return l.searchScopeFiles;
+      case SearchCategory.artists:
+        return l.searchCategoryArtists;
+      case SearchCategory.albums:
+        return l.searchCategoryAlbums;
+      case SearchCategory.songs:
+        return l.searchCategorySongs;
+      case SearchCategory.files:
+        return l.searchCategoryFiles;
     }
   }
 }

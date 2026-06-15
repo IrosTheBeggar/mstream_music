@@ -242,17 +242,16 @@ class ApiManager {
 
   Future<void> searchServer(String search) async {
     try {
-      // The user's search-scope setting decides which of the endpoint's four
-      // categories to query. `everything` (the default) reproduces mStream's
-      // classic artists+albums+songs search; a single-category scope sends the
-      // other three `no*` flags so the server only does the work that's asked.
-      final scope = SettingsManager().searchScope;
+      // The user's ticked search categories map 1:1 onto the endpoint's four
+      // `no*` flags — the server only does the work that's asked. The default
+      // set (artists+albums+songs) reproduces mStream's classic search.
+      final cats = SettingsManager().searchCategories;
       var res = await makeServerCall(null, '/api/v1/db/search', {
         'search': search,
-        'noArtists': !scope.includeArtists,
-        'noAlbums': !scope.includeAlbums,
-        'noTitles': !scope.includeSongs,
-        'noFiles': !scope.includeFiles,
+        'noArtists': !cats.contains(SearchCategory.artists),
+        'noAlbums': !cats.contains(SearchCategory.albums),
+        'noTitles': !cats.contains(SearchCategory.songs),
+        'noFiles': !cats.contains(SearchCategory.files),
       }, 'POST');
 
       BrowserManager().setBrowserLabel('Search');

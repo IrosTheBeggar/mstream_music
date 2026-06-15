@@ -776,27 +776,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserSearchHint => 'データベースを検索';
 
   @override
-  String searchScopeHint(String scope) {
-    return 'Search $scope';
-  }
+  String get searchCategoriesTooltip => 'What to search';
 
   @override
-  String get searchScopeTooltip => 'What to search';
+  String get searchCategoriesHeader => 'Search in';
 
   @override
-  String get searchScopeEverything => 'Everything';
+  String get searchCategoryArtists => 'Artists';
 
   @override
-  String get searchScopeArtists => 'Artists';
+  String get searchCategoryAlbums => 'Albums';
 
   @override
-  String get searchScopeAlbums => 'Albums';
+  String get searchCategorySongs => 'Songs';
 
   @override
-  String get searchScopeSongs => 'Songs';
-
-  @override
-  String get searchScopeFiles => 'Files';
+  String get searchCategoryFiles => 'Files';
 
   @override
   String browserDownloadsStarted(int count) {

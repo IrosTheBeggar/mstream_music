@@ -157,42 +157,64 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         ),
       );
 
-  // Scope dropdown for the home search field: a single-select menu that picks
-  // which of /api/v1/db/search's categories the query hits. itemBuilder reads
-  // the current scope on open so the active row is always checked; selecting
-  // one persists it (SettingsManager.setSearchScope → settings.json).
-  Widget _searchScopeMenu(BuildContext context, AppLocalizations l) {
-    return PopupMenuButton<SearchScope>(
+  // Multi-select checkbox dropdown for the home search field: the user ticks
+  // any combination of the four /api/v1/db/search categories. A single
+  // disabled PopupMenuItem hosts a StatefulBuilder so ticking a box updates the
+  // checks AND persists (toggleSearchCategory) WITHOUT closing the menu — the
+  // disabled item swallows no taps of its own, so the inner CheckboxListTiles
+  // keep the route open for picking several. At least one stays checked.
+  Widget _searchCategoryMenu(BuildContext context, AppLocalizations l) {
+    return PopupMenuButton<void>(
       icon: Icon(Icons.tune, color: VelvetColors.appBarTextSecondary, size: 22),
-      tooltip: l.searchScopeTooltip,
+      tooltip: l.searchCategoriesTooltip,
       color: VelvetColors.surface,
-      onSelected: (v) => SettingsManager().setSearchScope(v),
-      itemBuilder: (_) {
-        final current = SettingsManager().searchScope;
-        return SearchScope.values.map((scope) {
-          final selected = scope == current;
-          return PopupMenuItem<SearchScope>(
-            value: scope,
-            child: Row(children: [
-              SizedBox(
-                width: 26,
-                child: selected
-                    ? Icon(Icons.check,
-                        size: 18, color: VelvetColors.primary)
-                    : null,
-              ),
-              Text(
-                scope.label(l),
-                style: TextStyle(
-                  color: VelvetColors.textPrimary,
-                  fontWeight:
-                      selected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ]),
-          );
-        }).toList();
-      },
+      itemBuilder: (_) => [
+        PopupMenuItem<void>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: StatefulBuilder(
+            builder: (context, setMenuState) {
+              final selected = SettingsManager().searchCategories;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                    child: Text(
+                      l.searchCategoriesHeader,
+                      style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  for (final c in SearchCategory.values)
+                    CheckboxListTile(
+                      value: selected.contains(c),
+                      dense: true,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      activeColor: VelvetColors.primary,
+                      title: Text(
+                        c.label(l),
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 14),
+                      ),
+                      onChanged: (_) {
+                        SettingsManager().toggleSearchCategory(c);
+                        setMenuState(() {});
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -251,42 +273,29 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ]);
     }
 
-    // Home section list: the "search the whole server" field, plus a scope
+    // Home section list: the "search the whole server" field, plus a checkbox
     // dropdown that picks which categories the search queries (persisted).
     final isHome = s.list.isNotEmpty && s.list[0].type == 'execAction';
     if (isHome) {
       return Row(children: [
         const SizedBox(width: 8),
         Expanded(
-          // Rebuild only the field as the scope changes so its hint reflects
-          // the active scope ("Search Artists" etc.). The menu reads the scope
-          // fresh when it opens, so it stays outside this builder.
-          child: StreamBuilder<SearchScope>(
-            stream: SettingsManager().searchScopeStream,
-            initialData: SettingsManager().searchScope,
-            builder: (context, scopeSnap) {
-              final scope = scopeSnap.data ?? SearchScope.everything;
-              return TextField(
-                textInputAction: TextInputAction.search,
-                onSubmitted: (text) => ApiManager().searchServer(text),
-                style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),
-                cursorColor: VelvetColors.primary,
-                decoration: InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search,
-                      color: VelvetColors.appBarTextSecondary),
-                  hintText: scope == SearchScope.everything
-                      ? l.browserSearchHint
-                      : l.searchScopeHint(scope.label(l)),
-                  hintStyle:
-                      TextStyle(color: VelvetColors.appBarTextSecondary),
-                ),
-              );
-            },
+          child: TextField(
+            textInputAction: TextInputAction.search,
+            onSubmitted: (text) => ApiManager().searchServer(text),
+            style: TextStyle(color: VelvetColors.appBarText, fontSize: 15),
+            cursorColor: VelvetColors.primary,
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              prefixIcon:
+                  Icon(Icons.search, color: VelvetColors.appBarTextSecondary),
+              hintText: l.browserSearchHint,
+              hintStyle: TextStyle(color: VelvetColors.appBarTextSecondary),
+            ),
           ),
         ),
-        _searchScopeMenu(context, l),
+        _searchCategoryMenu(context, l),
       ]);
     }
 

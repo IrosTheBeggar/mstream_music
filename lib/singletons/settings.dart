@@ -101,30 +101,18 @@ enum VisualizerAudioSource {
   // lib/l10n/enum_labels.dart.
 }
 
-/// Which categories the whole-server DB search (POST /api/v1/db/search)
-/// queries. That endpoint exposes four independent categories through its
-/// `noArtists` / `noAlbums` / `noTitles` / `noFiles` flags; each scope below
-/// maps to one combination of them. `everything` is the default and
-/// reproduces mStream's classic search (artists + albums + songs, with files
-/// excluded — bare filepath matches are noisy next to song titles). `files`
-/// is the only scope that searches filepaths, so it stands alone. Persisted
-/// as the JSON 'searchScope' key.
-enum SearchScope {
-  everything,
+/// A category the whole-server DB search (POST /api/v1/db/search) can query.
+/// The endpoint exposes these four independently through its `noArtists` /
+/// `noAlbums` / `noTitles` / `noFiles` flags, so the search dropdown lets the
+/// user tick any combination (see [SettingsManager.searchCategories]).
+/// Persisted as a list of names under the JSON 'searchCategories' key.
+enum SearchCategory {
   artists,
   albums,
   songs,
   files;
 
-  // Localized labels: SearchScopeLabel extension in lib/l10n/enum_labels.dart.
-
-  bool get includeArtists =>
-      this == SearchScope.everything || this == SearchScope.artists;
-  bool get includeAlbums =>
-      this == SearchScope.everything || this == SearchScope.albums;
-  bool get includeSongs =>
-      this == SearchScope.everything || this == SearchScope.songs;
-  bool get includeFiles => this == SearchScope.files;
+  // Localized labels: SearchCategoryLabel extension in lib/l10n/enum_labels.dart.
 }
 
 /// User-tweakable settings persisted to disk as a JSON blob next to
@@ -145,10 +133,17 @@ class SettingsManager {
   int letterStripThreshold = 25;
   TapBehavior tapBehavior = TapBehavior.addToQueue;
   StartupView startupView = StartupView.browser;
-  // Which categories the whole-server search queries (see SearchScope). The
-  // default `everything` reproduces mStream's classic artists+albums+songs
-  // search; the browser toolbar's search-scope dropdown writes this.
-  SearchScope searchScope = SearchScope.everything;
+  // Which categories the whole-server search queries. The default
+  // (artists + albums + songs, files off) reproduces mStream's classic search;
+  // files is opt-in because bare filepath matches are noisy next to titles.
+  // The browser toolbar's checkbox dropdown writes this; at least one category
+  // is always kept selected (see [toggleSearchCategory]).
+  static const Set<SearchCategory> defaultSearchCategories = {
+    SearchCategory.artists,
+    SearchCategory.albums,
+    SearchCategory.songs,
+  };
+  Set<SearchCategory> searchCategories = defaultSearchCategories;
   AppTheme appTheme = AppTheme.dark;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
@@ -216,8 +211,6 @@ class SettingsManager {
       BehaviorSubject<int?>.seeded(accentColor);
   late final BehaviorSubject<Locale?> _localeStream =
       BehaviorSubject<Locale?>.seeded(localeOverride);
-  late final BehaviorSubject<SearchScope> _searchScopeStream =
-      BehaviorSubject<SearchScope>.seeded(searchScope);
 
   /// The forced locale, or `null` to follow the device. Fed straight to
   /// `MaterialApp.locale`. Parses BCP-47-ish codes so script- and
@@ -268,7 +261,7 @@ class SettingsManager {
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
       startupView = _readStartupView(m);
-      searchScope = _readSearchScope(m);
+      searchCategories = _readSearchCategories(m);
       appTheme = _readTheme(m);
       playerLayout = _readPlayerLayout(m);
       final accent = m['accentColor'];
@@ -307,7 +300,6 @@ class SettingsManager {
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
-      _searchScopeStream.add(searchScope);
     } catch (_) {
       // Corrupt or missing file: fall back to defaults.
     }
@@ -388,14 +380,52 @@ class SettingsManager {
     return StartupView.browser;
   }
 
-  SearchScope _readSearchScope(Map<String, dynamic> m) {
-    final str = m['searchScope'];
-    if (str is String) {
-      for (final v in SearchScope.values) {
-        if (v.name == str) return v;
+  Set<SearchCategory> _readSearchCategories(Map<String, dynamic> m) {
+    final raw = m['searchCategories'];
+    if (raw is List) {
+      final set = <SearchCategory>{};
+      for (final item in raw) {
+        for (final c in SearchCategory.values) {
+          if (c.name == item) set.add(c);
+        }
       }
+      // Empty/garbage shouldn't leave the user unable to search anything.
+      if (set.isNotEmpty) return set;
     }
-    return SearchScope.everything;
+    // Migrate the pre-multiselect single 'searchScope' enum, if present, so an
+    // existing install keeps a sensible selection after upgrading.
+    final legacy = m['searchScope'];
+    if (legacy is String) return _migrateLegacyScope(legacy);
+    return {...defaultSearchCategories};
+  }
+
+  /// Maps the old single-select scope name to the equivalent category set.
+  static Set<SearchCategory> _migrateLegacyScope(String scope) {
+    switch (scope) {
+      case 'artists':
+        return {SearchCategory.artists};
+      case 'albums':
+        return {SearchCategory.albums};
+      case 'songs':
+        return {SearchCategory.songs};
+      case 'files':
+        return {SearchCategory.files};
+      case 'everything':
+      default:
+        return {...defaultSearchCategories};
+    }
+  }
+
+  /// Pure toggle used by the checkbox dropdown: flips [c] within [current]
+  /// but never empties the set — unchecking the last remaining category is a
+  /// no-op (returns [current] unchanged), so a search always has a target.
+  static Set<SearchCategory> applyToggle(
+      Set<SearchCategory> current, SearchCategory c) {
+    if (current.contains(c)) {
+      if (current.length == 1) return current;
+      return {...current}..remove(c);
+    }
+    return {...current, c};
   }
 
   Future<void> _save() async {
@@ -410,7 +440,7 @@ class SettingsManager {
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
       'startupView': startupView.name,
-      'searchScope': searchScope.name,
+      'searchCategories': searchCategories.map((c) => c.name).toList(),
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
@@ -476,9 +506,12 @@ class SettingsManager {
     await _save();
   }
 
-  Future<void> setSearchScope(SearchScope v) async {
-    searchScope = v;
-    _searchScopeStream.add(v);
+  /// Toggle whether [c] is one of the searched categories. Keeps at least one
+  /// category selected (see [applyToggle]); persists only when it changed.
+  Future<void> toggleSearchCategory(SearchCategory c) async {
+    final next = applyToggle(searchCategories, c);
+    if (identical(next, searchCategories)) return; // unchanged (last one)
+    searchCategories = next;
     await _save();
   }
 
@@ -583,7 +616,7 @@ class SettingsManager {
     letterStripThreshold = 25;
     tapBehavior = TapBehavior.addToQueue;
     startupView = StartupView.browser;
-    searchScope = SearchScope.everything;
+    searchCategories = {...defaultSearchCategories};
     appTheme = AppTheme.dark;
     playerLayout = PlayerLayout.medium;
     accentColor = null;
@@ -602,7 +635,6 @@ class SettingsManager {
     _themeStream.add(appTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
-    _searchScopeStream.add(searchScope);
     await _save();
   }
 
@@ -612,7 +644,6 @@ class SettingsManager {
   Stream<PlayerLayout> get playerLayoutStream => _playerLayoutStream.stream;
   Stream<int?> get accentColorStream => _accentColorStream.stream;
   Stream<Locale?> get localeStream => _localeStream.stream;
-  Stream<SearchScope> get searchScopeStream => _searchScopeStream.stream;
 
   void dispose() {
     _albumGridStream.close();
@@ -621,6 +652,5 @@ class SettingsManager {
     _playerLayoutStream.close();
     _accentColorStream.close();
     _localeStream.close();
-    _searchScopeStream.close();
   }
 }
