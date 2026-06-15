@@ -147,6 +147,7 @@ class PlaylistsScreen extends StatelessWidget {
         ],
       ),
     );
+    controller.dispose();
     if (result != null && result.isNotEmpty) {
       await PlaylistManager().create(result);
     }
@@ -178,6 +179,7 @@ class PlaylistsScreen extends StatelessWidget {
         ],
       ),
     );
+    controller.dispose();
     if (result != null && result.isNotEmpty) {
       await PlaylistManager().rename(index, result);
     }

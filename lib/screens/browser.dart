@@ -350,10 +350,10 @@ class _BrowserState extends State<Browser> {
   // Name-entry dialog shared by create + rename. Returns the trimmed name, or
   // null if cancelled.
   Future<String?> _playlistNameDialog(BuildContext context,
-      {required String title, required String action, String? initial}) {
+      {required String title, required String action, String? initial}) async {
     final l = AppLocalizations.of(context);
     final controller = TextEditingController(text: initial ?? '');
-    return showDialog<String>(
+    final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: VelvetColors.surface,
@@ -378,6 +378,8 @@ class _BrowserState extends State<Browser> {
         ],
       ),
     );
+    controller.dispose();
+    return result;
   }
 
   Future<void> _createPlaylist(BuildContext context) async {
