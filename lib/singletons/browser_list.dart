@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../singletons/migration_manager.dart';
+import '../singletons/file_explorer.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
@@ -368,6 +369,12 @@ class BrowserManager {
     if (sc.hasClients) sc.jumpTo(0);
 
     _browserStream.sink.add(browserList);
+
+    // Resolve the on-device download badges for this list's file rows in one
+    // batched pass (replaces the per-item probe the DisplayItem constructor
+    // used to fire). Fire-and-forget: the list is already on screen and the
+    // badges flip in with a single re-emit once the disk checks finish.
+    unawaited(_resolveDownloadBadges(newList));
   }
 
   void updateStream() {
@@ -385,6 +392,7 @@ class BrowserManager {
       ..clear()
       ..addAll(newList);
     _browserStream.sink.add(browserList);
+    unawaited(_resolveDownloadBadges(newList));
   }
 
   // Re-check the on-device download badge for cached file rows against their
@@ -408,9 +416,39 @@ class BrowserManager {
     for (final item in browserList) {
       if (item.type == 'file' && match(item)) items.add(item);
     }
-    if (items.isEmpty) return;
-    await Future.wait(items.map((i) => i.recheckDownloaded()));
-    updateStream();
+    await _resolveDownloadBadges(items);
+  }
+
+  // Resolve the on-device "downloaded" badge for the file rows in [items],
+  // then re-emit the browser once — but only if a badge actually changed, so a
+  // list with no local copies doesn't trigger a redundant full-list rebuild.
+  //
+  // Groups rows by their server's storage location so getDownloadDir() (a
+  // platform-channel / stat call) runs ONCE per distinct location instead of
+  // once per row — the per-item cost the DisplayItem constructor used to pay.
+  // Within a location the File.exists() probes run in parallel. No-ops when
+  // there are no file rows.
+  Future<void> _resolveDownloadBadges(Iterable<DisplayItem> items) async {
+    final byLocation = <(String, String?), List<DisplayItem>>{};
+    for (final i in items) {
+      if (i.type != 'file' || i.server == null || i.data == null) continue;
+      final key = (i.server!.storageMode, i.server!.storageBasePath);
+      (byLocation[key] ??= <DisplayItem>[]).add(i);
+    }
+    if (byLocation.isEmpty) return;
+
+    var changed = false;
+    for (final entry in byLocation.entries) {
+      final (mode, base) = entry.key;
+      final dir = await FileExplorer().getDownloadDir(mode, base);
+      final rows = entry.value;
+      final before = [for (final i in rows) i.downloadProgress];
+      await Future.wait(rows.map((i) => i.recheckDownloadedIn(dir)));
+      for (var k = 0; k < rows.length; k++) {
+        if (rows[k].downloadProgress != before[k]) changed = true;
+      }
+    }
+    if (changed) updateStream();
   }
 
   void popBrowser() {
