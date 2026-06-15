@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/playlists.dart';
 
@@ -40,7 +39,7 @@ void main() {
     // server-side playlists. Re-enable when feature returns.
     skip: true,
     (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(home: MStreamApp()));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       // Open drawer.

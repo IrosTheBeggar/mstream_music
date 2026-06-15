@@ -1,6 +1,6 @@
 // Settings persistence.
 //
-// Toggles a setting on the SettingsScreen, asserts it lands in
+// Toggles Transcode on the Transcode screen, asserts it lands in
 // settings.json on disk, then reloads SettingsManager from disk and
 // confirms the value sticks across "restart". Catches regressions in
 // the load/save round-trip without needing a full process restart.
@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/singletons/transcode.dart';
@@ -39,22 +38,23 @@ void main() {
   });
 
   testWidgets(
-    'toggling Transcode on Settings persists to disk and survives reload',
+    'toggling Transcode persists to disk and survives reload',
     (WidgetTester tester) async {
-      await tester.pumpWidget(MaterialApp(home: MStreamApp()));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      // Open drawer → Settings.
+      // Transcode has its own screen now, reached from the drawer.
       tester
           .firstState<ScaffoldState>(find.byType(Scaffold))
           .openDrawer();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Settings'));
+      await tester.ensureVisible(find.text('Transcoding'));
+      await tester.tap(find.text('Transcoding'));
       await tester.pumpAndSettle();
 
-      // Toggle the Transcode switch.
+      // The Transcode screen's only Switch is the on/off toggle.
       expect(TranscodeManager().transcodeOn, isFalse);
-      await tester.tap(find.byType(Switch).first);
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       expect(TranscodeManager().transcodeOn, isTrue);
 

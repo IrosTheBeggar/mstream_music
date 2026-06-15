@@ -3,7 +3,7 @@
 // The smallest end-to-end test that exercises the platform-plugin init path:
 // MediaManager().start() (audio_service) and ServerManager().loadServerList()
 // (path_provider). With no servers.json on disk, the app should land on the
-// "Welcome To mStream" no-server screen without crashing.
+// "Welcome to mStream" no-server screen without crashing.
 
 import 'dart:io';
 
@@ -27,11 +27,15 @@ void main() {
   testWidgets(
     'cold start with no server shows welcome screen',
     (WidgetTester tester) async {
+      // main() is void (fire-and-forget); pumpAndSettle waits for the async
+      // startup (_startApp) to load state and mount the first frame.
       app.main();
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      expect(find.text('Welcome To mStream'), findsOneWidget);
-      expect(find.text('Click here to add server'), findsOneWidget);
+      // The welcome row renders localized text (see enum_labels.dart), not the
+      // raw DisplayItem strings.
+      expect(find.text('Welcome to mStream'), findsOneWidget);
+      expect(find.text('Tap here to add a server'), findsOneWidget);
     },
   );
 }

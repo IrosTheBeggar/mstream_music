@@ -5,24 +5,24 @@
 // bar's value advances monotonically and stays in [0, 1] during real
 // playback.
 //
-// Mechanism if you need to debug: the BottomBar's LinearProgressIndicator
-// computes value = position.inSeconds / duration.inSeconds. Position
-// comes from _player.positionStream; duration is propagated to
+// Mechanism if you need to debug: the collapsed mini-player's
+// WaveformProgress shows progress = position / duration. Position comes
+// from _player.positionStream; duration is propagated to
 // audio_service.mediaItem by the durationStream listener in
 // AudioPlayerHandler._init (lib/media/audio_stuff.dart). If duration
 // never reaches mediaItem, the formula falls back to position / 1,
 // which grows unbounded — the bar visually pegs at 100% after one
 // second.
 //
-// NowPlaying queue rows also render LinearProgressIndicators (download
-// progress) and TabBarView keeps both tabs alive, so we must scope
-// finders to BottomAppBar.
+// The expanded now-playing sheet stays in the tree (at opacity 0) while
+// collapsed, so it carries its own play button + scrubber too. Every
+// finder is scoped to the mini-player's Key('miniPlayer') so we read the
+// collapsed bar, not the sheet.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:mstream_music/main.dart';
 import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/widgets/waveform_progress.dart';
 
@@ -45,7 +45,7 @@ void main() {
   });
 
   testWidgets(
-    'BottomBar progress bar advances during playback',
+    'mini-player progress bar advances during playback',
     (WidgetTester tester) async {
       final wavBytes = buildSilentWav(seconds: 5);
 
@@ -85,7 +85,7 @@ void main() {
 
       await seedServer(mockServer!.url);
 
-      await tester.pumpWidget(MaterialApp(home: MStreamApp()));
+      await tester.pumpWidget(testApp());
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       await tester.tap(find.text('Albums'));
@@ -96,12 +96,17 @@ void main() {
       await tester.tap(find.text('Five Seconds of Silence'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
+      // Tapping the first track from a fresh queue auto-plays it (the
+      // addToQueue "first tap also starts playback" convenience in
+      // browser.dart), so the mini-player usually shows pause already.
+      // Press play only if it somehow came up paused.
       final playButton = find.descendant(
-        of: find.byType(BottomAppBar),
+        of: find.byKey(const Key('miniPlayer')),
         matching: find.byIcon(Icons.play_arrow),
       );
-      expect(playButton, findsOneWidget);
-      await tester.tap(playButton);
+      if (playButton.evaluate().isNotEmpty) {
+        await tester.tap(playButton);
+      }
 
       // Real-time pumping so just_audio's positionStream and
       // durationStream actually fire.
@@ -110,7 +115,7 @@ void main() {
       // Sanity: playback is running.
       expect(
         find.descendant(
-          of: find.byType(BottomAppBar),
+          of: find.byKey(const Key('miniPlayer')),
           matching: find.byIcon(Icons.pause),
         ),
         findsOneWidget,
@@ -138,9 +143,9 @@ void main() {
       );
 
       // Sample the bar twice across ~2s of real playback.
-      final v1 = _readBottomBarProgress(tester);
+      final v1 = _readMiniBarProgress(tester);
       await _pumpFor(tester, const Duration(seconds: 2));
-      final v2 = _readBottomBarProgress(tester);
+      final v2 = _readMiniBarProgress(tester);
 
       expect(v2, greaterThan(v1),
           reason: 'progress should advance during playback (v1=$v1, '
@@ -158,10 +163,10 @@ void main() {
   );
 }
 
-double _readBottomBarProgress(WidgetTester tester) {
+double _readMiniBarProgress(WidgetTester tester) {
   final bar = tester.widget<WaveformProgress>(
     find.descendant(
-      of: find.byType(BottomAppBar),
+      of: find.byKey(const Key('miniPlayer')),
       matching: find.byType(WaveformProgress),
     ),
   );
