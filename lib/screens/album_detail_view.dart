@@ -23,6 +23,7 @@ import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
+import '../util/stream_url.dart';
 import '../widgets/player_panel.dart';
 
 /// Ink on top of the accent-filled Play button: dark espresso on bright accents,
@@ -105,8 +106,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     final aa = widget.album.altAlbumArt;
     final server = widget.album.server;
     if (server == null || aa == null) return null;
-    return Uri.encodeFull('${server.url}/album-art/$aa?compress=$compress'
-        '${server.jwt == null ? '' : '&token=${server.jwt!}'}');
+    return buildAlbumArtUrl(server, aa, compress: compress);
   }
 
   // ── derived metadata ──

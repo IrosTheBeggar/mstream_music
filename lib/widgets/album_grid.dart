@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
+import '../util/stream_url.dart';
 
 class AlbumGrid extends StatelessWidget {
   final List<DisplayItem> items;
@@ -148,9 +149,7 @@ class _AlbumCard extends StatelessWidget {
   Widget _buildArt() {
     final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
     if (item.server != null && aaFile != null) {
-      final url = Uri.encodeFull('${item.server!.url}/album-art/$aaFile'
-          '?compress=m'
-          '${item.server!.jwt == null ? '' : '&token=${item.server!.jwt!}'}');
+      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'm');
       return Image.network(
         url,
         fit: BoxFit.cover,

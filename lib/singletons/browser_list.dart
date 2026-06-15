@@ -357,10 +357,9 @@ class BrowserManager {
     pathCache.add(path);
     searchTermCache.add(searchTerm);
 
-    browserList.clear();
-    for (var element in newList) {
-      browserList.add(element);
-    }
+    browserList
+      ..clear()
+      ..addAll(newList);
 
     // Reset to top synchronously BEFORE emitting so the upcoming
     // rebuild lays out at offset 0 in a single frame. Doing this
@@ -423,10 +422,9 @@ class BrowserManager {
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
     if (pathCache.isNotEmpty) pathCache.removeLast();
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
-    browserList.clear();
-    for (var el in browserCache[browserCache.length - 1]) {
-      browserList.add(el);
-    }
+    browserList
+      ..clear()
+      ..addAll(browserCache.last);
 
     // Restore scroll BEFORE emitting so the rebuilt ListView lays
     // out at the target offset in its first frame. Going through

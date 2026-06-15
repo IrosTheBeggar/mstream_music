@@ -44,3 +44,17 @@ String buildServerStreamUrl(Server server, String path) {
   if (tm.bitrate != null) sb.write('&bitrate=${tm.bitrate!}');
   return sb.toString();
 }
+
+/// Single source of truth for a server's album-art URL.
+///
+/// [artFile] is the `album_art_file` / metadata `album-art` value. [compress]
+/// picks the server's render size — 's' for list thumbnails, 'm' for grid
+/// cards, 'l' for full art. The token is appended only when present (omitted
+/// when null, matching [buildServerStreamUrl]) and the whole URL is
+/// percent-encoded. Assumes [Server.url] carries no trailing slash — the app's
+/// stored convention, shared with the stream-URL builder above.
+String buildAlbumArtUrl(Server server, String artFile, {String compress = 's'}) {
+  final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
+  return Uri.encodeFull(
+      '${server.url}/album-art/$artFile?compress=$compress$token');
+}

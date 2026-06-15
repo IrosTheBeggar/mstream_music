@@ -7,6 +7,7 @@ import 'metadata.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/file_explorer.dart';
 import '../theme/velvet_theme.dart';
+import '../util/stream_url.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
@@ -29,11 +30,7 @@ class DisplayItem {
     String? aaFile = altAlbumArt ?? metadata?.albumArt;
 
     if (server != null && aaFile != null) {
-      String lolUrl = Uri.encodeFull('${server!.url}/album-art/$aaFile'
-          '?compress=s'
-          '${server!.jwt == null ? '' : '&token=${server!.jwt!}'}');
-
-      return Image.network(lolUrl.toString());
+      return Image.network(buildAlbumArtUrl(server!, aaFile));
     }
 
     return icon;
@@ -50,9 +47,7 @@ class DisplayItem {
     final BorderRadius radius =
         BorderRadius.circular(VelvetColors.radiusSmall);
     if (server != null && aaFile != null) {
-      final String url = Uri.encodeFull('${server!.url}/album-art/$aaFile'
-          '?compress=s'
-          '${server!.jwt == null ? '' : '&token=${server!.jwt!}'}');
+      final String url = buildAlbumArtUrl(server!, aaFile);
       return ClipRRect(
         borderRadius: radius,
         child: Image.network(
@@ -101,11 +96,11 @@ class DisplayItem {
   // honor, so long folder names get to wrap and show in full).
   Widget getText({bool truncate = true, AppLocalizations? l}) {
     if (metadata?.title != null) {
+      final ratingPrefix = showRating == true && metadata?.rating != null
+          ? '[${metadata!.rating! / 2}] '
+          : '';
       return Text(
-        (showRating == true && metadata?.rating != null
-                ? '[${metadata!.rating! / 2}] '
-                : '') +
-            metadata!.title!,
+        '$ratingPrefix${metadata!.title!}',
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
         maxLines: truncate ? 1 : null,
         overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
@@ -113,11 +108,11 @@ class DisplayItem {
     }
 
     if (type == 'file' || type == 'localFile') {
+      final ratingPrefix = showRating == true && metadata?.rating != null
+          ? '[${metadata!.rating! / 2}] '
+          : '';
       return Text(
-        (showRating == true && metadata?.rating != null
-                ? '[${metadata!.rating! / 2}] '
-                : '') +
-            data!.split('/').last,
+        '$ratingPrefix${data!.split('/').last}',
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
         maxLines: truncate ? 1 : null,
         overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,

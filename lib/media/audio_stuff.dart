@@ -774,10 +774,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     final mediaUrl = buildServerStreamUrl(autoDJServer!, filepath);
 
     final artUrl = metadata['album-art'] != null
-        ? Uri.parse(autoDJServer!.url)
-            .resolve('${'/album-art/' +
-                metadata['album-art']}?compress=l&token=${autoDJServer?.jwt ?? ''}')
-            .toString()
+        ? buildAlbumArtUrl(autoDJServer!, metadata['album-art'] as String,
+            compress: 'l')
         : null;
 
     // Parse the raw server map once so the genre / disc / key wire quirks are
