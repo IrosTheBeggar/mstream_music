@@ -367,6 +367,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             // keyboard) — drop focus so the search-scope preview slides away,
             // rather than popping/exiting on the same press.
             FocusManager.instance.primaryFocus?.unfocus();
+          } else if (BrowserManager().search.open) {
+            // The local (in-list) filter search is open — Back closes it, which
+            // removes the LocalSearchBar (releasing its focus/highlight and the
+            // keyboard), instead of popping the browser behind a still-open
+            // search field.
+            BrowserManager().closeSearch();
           } else if (BrowserManager().browserCache.length > 1) {
             BrowserManager().popBrowser();
           } else {
