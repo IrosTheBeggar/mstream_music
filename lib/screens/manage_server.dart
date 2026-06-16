@@ -7,6 +7,7 @@ import '../objects/server.dart';
 import '../singletons/server_list.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
+import '../admin/admin_launcher.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
@@ -101,6 +102,11 @@ class ManageServersScreen extends StatelessWidget {
           case 'info':
             _showServerInfo(context, index);
             break;
+          case 'admin':
+            final s = ServerManager().serverList[index];
+            openAdminPanel(context,
+                baseUrl: s.url, token: s.jwt, label: s.url);
+            break;
           case 'delete':
             _showDeleteDialog(context, index);
             break;
@@ -112,6 +118,7 @@ class ManageServersScreen extends StatelessWidget {
           _menuItem('default', Icons.arrow_upward_rounded, l.makeDefault),
         _menuItem('info', Icons.info_outline, l.info),
         _menuItem('edit', Icons.edit_outlined, l.edit),
+        _menuItem('admin', Icons.admin_panel_settings_outlined, 'Admin panel'),
         _menuItem('delete', Icons.delete_outline, l.delete,
             color: VelvetColors.error),
       ],
