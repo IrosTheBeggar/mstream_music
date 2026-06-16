@@ -171,3 +171,7 @@ l10n_untranslated.txt
 
 # Design reference bundle (exported from Claude Design) — local reference only.
 /design/
+
+# Hidden root-level dev screenshots: visualizer / UI verification shots get
+# saved as `.<name>.png` during development. Local scratch, not the app.
+/.*.png
