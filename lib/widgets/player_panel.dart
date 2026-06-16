@@ -1416,7 +1416,19 @@ final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
     MediaManager().audioHandler.mediaItem,
     MediaManager().audioHandler.positionStream,
     (item, pos) => _MediaPos(item, pos),
-  ));
+  ).distinct((a, b) =>
+      // positionStream ticks several times a second, but the now-playing
+      // consumers render only whole-second time text and a bar-quantised
+      // waveform (its played/unplayed boundary moves at most once per
+      // duration/64 s), so collapse to ~1 emit/sec. Without this the title
+      // row, both waveforms, and the scrubber rebuild — and each waveform
+      // re-rasters its 64 bars — on every sub-second tick. _MediaPos has no
+      // value equality, so compare the displayed fields explicitly; duration
+      // is included so the ratio refreshes when it lands after the track
+      // first appears.
+      a.item?.id == b.item?.id &&
+      a.item?.duration == b.item?.duration &&
+      a.position.inSeconds == b.position.inSeconds));
 
 String _fmt(Duration d) => formatDuration(d);
 
