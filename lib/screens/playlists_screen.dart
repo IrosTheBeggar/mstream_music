@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../objects/playlist.dart';
 import '../singletons/playlists.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/playlist_name_dialog.dart';
 
 class PlaylistsScreen extends StatelessWidget {
   const PlaylistsScreen({super.key});
@@ -123,31 +124,8 @@ class PlaylistsScreen extends StatelessWidget {
 
   Future<void> _showCreateDialog(BuildContext context) async {
     final l = AppLocalizations.of(context);
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.playlistsNew),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: l.playlistNameHint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(l.create),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
+    final result = await PlaylistNameDialog.show(context,
+        title: l.playlistsNew, action: l.create);
     if (result != null && result.isNotEmpty) {
       await PlaylistManager().create(result);
     }
@@ -156,30 +134,8 @@ class PlaylistsScreen extends StatelessWidget {
   Future<void> _showRenameDialog(
       BuildContext context, int index, String currentName) async {
     final l = AppLocalizations.of(context);
-    final controller = TextEditingController(text: currentName);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.playlistsRename),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(l.rename),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
+    final result = await PlaylistNameDialog.show(context,
+        title: l.playlistsRename, action: l.rename, initial: currentName);
     if (result != null && result.isNotEmpty) {
       await PlaylistManager().rename(index, result);
     }
