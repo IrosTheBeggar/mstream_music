@@ -11,6 +11,7 @@ import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
+import '../widgets/playlist_name_dialog.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
@@ -348,36 +349,12 @@ class _BrowserState extends State<Browser> {
   }
 
   // Name-entry dialog shared by create + rename. Returns the trimmed name, or
-  // null if cancelled.
+  // null if cancelled. The controller lives inside PlaylistNameDialog (a
+  // StatefulWidget) so it's disposed safely after the dialog closes.
   Future<String?> _playlistNameDialog(BuildContext context,
       {required String title, required String action, String? initial}) {
-    final l = AppLocalizations.of(context);
-    final controller = TextEditingController(text: initial ?? '');
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(color: VelvetColors.textPrimary),
-          decoration: InputDecoration(hintText: l.playlistNameHint),
-          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(action),
-          ),
-        ],
-      ),
-    );
+    return PlaylistNameDialog.show(context,
+        title: title, action: action, initial: initial);
   }
 
   Future<void> _createPlaylist(BuildContext context) async {

@@ -45,14 +45,22 @@ class AccentColorSheet extends StatefulWidget {
 }
 
 class _AccentColorSheetState extends State<AccentColorSheet> {
-  late HSVColor _hsv;
+  // The dragged custom colour. A ValueNotifier (not setState) so a drag tick
+  // rebuilds only the preview + sliders subtree below, not the whole sheet.
+  late final ValueNotifier<HSVColor> _hsv;
 
   @override
   void initState() {
     super.initState();
     final current = SettingsManager().accentColor;
-    _hsv = HSVColor.fromColor(
-        current != null ? Color(current) : VelvetColors.primary);
+    _hsv = ValueNotifier(HSVColor.fromColor(
+        current != null ? Color(current) : VelvetColors.primary));
+  }
+
+  @override
+  void dispose() {
+    _hsv.dispose();
+    super.dispose();
   }
 
   void _applyPreset(int? argb) {
@@ -60,15 +68,15 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
     Navigator.of(context).pop();
   }
 
-  // Live preview on the real app, but persist only on release (not per tick).
-  void _previewCustom() => setState(() {});
-  void _commitCustom() => SettingsManager().setAccentColor(_argb(_hsv.toColor()));
+  // Persist the custom colour on release only (not per drag tick) — the live
+  // sheet preview is driven by [_hsv] during the drag.
+  void _commitCustom() =>
+      SettingsManager().setAccentColor(_argb(_hsv.value.toColor()));
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final current = SettingsManager().accentColor;
-    final custom = _hsv.toColor();
     // The current theme's built-in accent (ignoring any override) — shown on
     // the "Theme default" chip so the user sees what reverting looks like.
     final themeDefault = paletteFor(SettingsManager().appTheme).primary;
@@ -132,64 +140,68 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
               ),
             ),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: custom,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: VelvetColors.border),
-                  ),
-                  child: current == _argb(custom)
-                      ? Icon(Icons.check, color: onAccent(custom), size: 22)
-                      : null,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _GradientBar(
-                        colors: _hueTrack,
-                        t: _hsv.hue / 360.0,
-                        onChanged: (v) {
-                          _hsv = _hsv.withHue(v * 360.0);
-                          _previewCustom();
-                        },
-                        onEnd: _commitCustom,
+            // Only the preview swatch + sliders depend on the dragged colour, so
+            // a drag tick rebuilds just this subtree via [_hsv] — not the whole
+            // sheet (handle, title, preset swatches, dividers).
+            ValueListenableBuilder<HSVColor>(
+              valueListenable: _hsv,
+              builder: (context, hsv, _) {
+                final custom = hsv.toColor();
+                return Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: custom,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: VelvetColors.border),
                       ),
-                      const SizedBox(height: 12),
-                      _GradientBar(
-                        colors: [
-                          HSVColor.fromAHSV(1, _hsv.hue, 0, _hsv.value).toColor(),
-                          HSVColor.fromAHSV(1, _hsv.hue, 1, _hsv.value).toColor(),
+                      child: current == _argb(custom)
+                          ? Icon(Icons.check, color: onAccent(custom), size: 22)
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _GradientBar(
+                            colors: _hueTrack,
+                            t: hsv.hue / 360.0,
+                            onChanged: (v) =>
+                                _hsv.value = hsv.withHue(v * 360.0),
+                            onEnd: _commitCustom,
+                          ),
+                          const SizedBox(height: 12),
+                          _GradientBar(
+                            colors: [
+                              HSVColor.fromAHSV(1, hsv.hue, 0, hsv.value)
+                                  .toColor(),
+                              HSVColor.fromAHSV(1, hsv.hue, 1, hsv.value)
+                                  .toColor(),
+                            ],
+                            t: hsv.saturation,
+                            onChanged: (v) =>
+                                _hsv.value = hsv.withSaturation(v),
+                            onEnd: _commitCustom,
+                          ),
+                          const SizedBox(height: 12),
+                          _GradientBar(
+                            colors: [
+                              Colors.black,
+                              HSVColor.fromAHSV(1, hsv.hue, hsv.saturation, 1)
+                                  .toColor(),
+                            ],
+                            t: hsv.value,
+                            onChanged: (v) => _hsv.value = hsv.withValue(v),
+                            onEnd: _commitCustom,
+                          ),
                         ],
-                        t: _hsv.saturation,
-                        onChanged: (v) {
-                          _hsv = _hsv.withSaturation(v);
-                          _previewCustom();
-                        },
-                        onEnd: _commitCustom,
                       ),
-                      const SizedBox(height: 12),
-                      _GradientBar(
-                        colors: [
-                          Colors.black,
-                          HSVColor.fromAHSV(1, _hsv.hue, _hsv.saturation, 1)
-                              .toColor(),
-                        ],
-                        t: _hsv.value,
-                        onChanged: (v) {
-                          _hsv = _hsv.withValue(v);
-                          _previewCustom();
-                        },
-                        onEnd: _commitCustom,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

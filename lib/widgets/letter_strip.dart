@@ -69,8 +69,13 @@ class _LetterStripState extends State<LetterStrip> {
   // for empty ones (e.g. finger on 'Q' in a library with no Q
   // albums → strip shows Q, bubble + scroll go to the nearest
   // present letter).
-  String? _touchedLetter;
-  String? _snappedLetter;
+  // Drives the strip highlight. A ValueNotifier (not setState) so a drag tick
+  // rebuilds only the strip subtree via a ValueListenableBuilder — not the whole
+  // widget (the LayoutBuilder / GestureDetector and all 27 cells from scratch).
+  final ValueNotifier<String?> _touched = ValueNotifier<String?>(null);
+  // Destination letter shown in the floating bubble. Read only by the overlay
+  // (refreshed via markNeedsBuild), so it stays a plain field — no rebuild.
+  String? _snapped;
   Offset _fingerGlobalPos = Offset.zero;
   OverlayEntry? _overlay;
 
@@ -89,6 +94,7 @@ class _LetterStripState extends State<LetterStrip> {
   @override
   void dispose() {
     _hideOverlay();
+    _touched.dispose();
     super.dispose();
   }
 
@@ -179,7 +185,7 @@ class _LetterStripState extends State<LetterStrip> {
           ),
           child: Center(
             child: Text(
-              _snappedLetter ?? '',
+              _snapped ?? '',
               style: TextStyle(
                 fontSize: 36,
                 color: Colors.white,
@@ -207,15 +213,11 @@ class _LetterStripState extends State<LetterStrip> {
     final snapped = _firstLetter(widget.items[itemIndex]);
 
     _fingerGlobalPos = globalPos;
-    final snappedChanged = snapped != _snappedLetter;
-    final touchedChanged = touched != _touchedLetter;
-
-    if (touchedChanged || snappedChanged) {
-      setState(() {
-        _touchedLetter = touched;
-        _snappedLetter = snapped;
-      });
-    }
+    final snappedChanged = snapped != _snapped;
+    // Only [_touched] drives a rebuild (the strip highlight). [_snapped] feeds
+    // the overlay bubble, refreshed below via markNeedsBuild — not setState.
+    if (touched != _touched.value) _touched.value = touched;
+    if (snappedChanged) _snapped = snapped;
 
     // Haptic only when we actually move to a new section — crossing
     // empty letters that snap to the same destination should feel
@@ -234,12 +236,8 @@ class _LetterStripState extends State<LetterStrip> {
   }
 
   void _clearActive() {
-    if (_touchedLetter != null || _snappedLetter != null) {
-      setState(() {
-        _touchedLetter = null;
-        _snappedLetter = null;
-      });
-    }
+    _touched.value = null; // ValueNotifier no-ops if already null
+    _snapped = null;
     _hideOverlay();
   }
 
@@ -252,7 +250,6 @@ class _LetterStripState extends State<LetterStrip> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final h = constraints.maxHeight;
-        final active = _touchedLetter != null;
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (d) =>
@@ -273,36 +270,45 @@ class _LetterStripState extends State<LetterStrip> {
             width: 40,
             child: Align(
               alignment: Alignment.centerRight,
-              child: AnimatedContainer(
-                duration: Duration(milliseconds: 120),
-                width: 24,
-                padding: EdgeInsets.symmetric(vertical: 4, horizontal: 1),
-                decoration: BoxDecoration(
-                  color: active
-                      ? VelvetColors.surface.withValues(alpha: 0.7)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _letters.map((letter) {
-                    final present = _firstIndexByLetter.containsKey(letter);
-                    final isActive = letter == _touchedLetter;
-                    return Text(
-                      letter,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight:
-                            isActive ? FontWeight.w900 : FontWeight.w600,
-                        color: isActive
-                            ? VelvetColors.primary
-                            : (present
-                                ? VelvetColors.textPrimary
-                                : VelvetColors.textTertiary),
-                      ),
-                    );
-                  }).toList(),
-                ),
+              // Rebuild only the strip (tint + active cell) as the finger moves,
+              // via [_touched] — not the enclosing LayoutBuilder/GestureDetector.
+              child: ValueListenableBuilder<String?>(
+                valueListenable: _touched,
+                builder: (context, touched, _) {
+                  final active = touched != null;
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 120),
+                    width: 24,
+                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 1),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? VelvetColors.surface.withValues(alpha: 0.7)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: _letters.map((letter) {
+                        final present =
+                            _firstIndexByLetter.containsKey(letter);
+                        final isActive = letter == touched;
+                        return Text(
+                          letter,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight:
+                                isActive ? FontWeight.w900 : FontWeight.w600,
+                            color: isActive
+                                ? VelvetColors.primary
+                                : (present
+                                    ? VelvetColors.textPrimary
+                                    : VelvetColors.textTertiary),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
               ),
             ),
           ),
