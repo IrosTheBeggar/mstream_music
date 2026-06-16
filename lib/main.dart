@@ -346,8 +346,15 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
+          final scaffold = _outerScaffoldKey.currentState;
           final panel = _panelKey.currentState;
-          if (panel != null && panel.isExpanded) {
+          if (scaffold != null && scaffold.isDrawerOpen) {
+            // The nav drawer is open — Back closes it, instead of popping the
+            // browser / exiting the app behind the open menu. PopScope has
+            // canPop:false, so the drawer's own back-dismissal never fires; we
+            // close it explicitly here.
+            scaffold.closeDrawer();
+          } else if (panel != null && panel.isExpanded) {
             panel.collapse();
           } else if (BrowserManager().albumDetail != null) {
             BrowserManager().closeAlbumDetail();
