@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import './app_messenger.dart';
 import './browser_list.dart';
+import './log_manager.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
@@ -58,26 +59,59 @@ class FileExplorer {
     int stringLength = file.path.toString().length +
         1; // The plug ones covers the extra `/` that will be on the results
 
-    file
-        .list(recursive: false, followLinks: false)
-        .listen((FileSystemEntity entity) {
-      Icon useIcon;
-      String type;
-      if (entity is File) {
-        useIcon = Icon(Icons.music_note, color: VelvetColors.textSecondary);
-        type = 'localFile';
-      } else {
-        useIcon = Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary);
-        type = 'localDirectory';
-      }
+    // Bracket the directory listing in the browser's load token, the same as a
+    // server fetch: it raises the loading bar, engages the tap-guard (tapping
+    // another folder mid-listing is ignored, so it can't start a racing
+    // listing), and lets Back cancel — cancelLoading() fires onCancel (cancels
+    // this subscription) and marks the token dropped, so a late result for a
+    // directory the user already left can't push onto the stack.
+    late final StreamSubscription<FileSystemEntity> sub;
+    final loadToken =
+        BrowserManager().beginLoading(onCancel: () => sub.cancel());
 
-      String thisName = entity.path.substring(stringLength, entity.path.length);
-      DisplayItem newItem =
-          DisplayItem(s, thisName, type, entity.path, useIcon, null);
-      newList.add(newItem);
-    }).onDone(() {
+    // Single finalizer, guarded so done/error can't double-run it and so the
+    // token can never leak (a stuck token would freeze the loading bar +
+    // tap-guard). The Back path cancels the subscription instead, so neither
+    // done nor error fires there — cancelLoading() already cleared the in-flight
+    // set, and the isLoadCancelled check drops any late finalize that still races
+    // through.
+    var settled = false;
+    void settle() {
+      if (settled) return;
+      settled = true;
+      BrowserManager().endLoading(loadToken);
+      if (BrowserManager().isLoadCancelled(loadToken)) return;
       BrowserManager().addListToStack(newList);
-    });
+    }
+
+    sub = file.list(recursive: false, followLinks: false).listen(
+      (FileSystemEntity entity) {
+        Icon useIcon;
+        String type;
+        if (entity is File) {
+          useIcon = Icon(Icons.music_note, color: VelvetColors.textSecondary);
+          type = 'localFile';
+        } else {
+          useIcon = Icon(Icons.folder_open_outlined,
+              color: VelvetColors.textSecondary);
+          type = 'localDirectory';
+        }
+
+        String thisName =
+            entity.path.substring(stringLength, entity.path.length);
+        DisplayItem newItem =
+            DisplayItem(s, thisName, type, entity.path, useIcon, null);
+        newList.add(newItem);
+      },
+      onDone: settle,
+      // Surface whatever was enumerated and, crucially, release the token so a
+      // listing error (e.g. a vanished folder) can't lock the browser.
+      onError: (Object e) {
+        appLog('[fileExplorer] local listing error: $e');
+        settle();
+      },
+      cancelOnError: true,
+    );
   }
 
   Future<void> getPathForServer(Server s) async {
