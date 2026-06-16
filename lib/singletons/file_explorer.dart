@@ -59,6 +59,14 @@ class FileExplorer {
     int stringLength = file.path.toString().length +
         1; // The plug ones covers the extra `/` that will be on the results
 
+    // Relative path within this server's local store (download/media/<localname>)
+    // for the breadcrumb subheader, mirroring the server file explorer. '' at the
+    // root renders as '/'.
+    final marker = '${path.separator}media${path.separator}${s.localname}';
+    final mi = file.path.indexOf(marker);
+    String rel = mi >= 0 ? file.path.substring(mi + marker.length) : '';
+    if (rel.startsWith(path.separator)) rel = rel.substring(1);
+
     // Bracket the directory listing in the browser's load token, the same as a
     // server fetch: it raises the loading bar, engages the tap-guard (tapping
     // another folder mid-listing is ignored, so it can't start a racing
@@ -81,7 +89,7 @@ class FileExplorer {
       settled = true;
       BrowserManager().endLoading(loadToken);
       if (BrowserManager().isLoadCancelled(loadToken)) return;
-      BrowserManager().addListToStack(newList);
+      BrowserManager().addListToStack(newList, path: rel);
     }
 
     sub = file.list(recursive: false, followLinks: false).listen(
