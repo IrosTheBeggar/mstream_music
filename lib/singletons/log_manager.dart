@@ -10,8 +10,10 @@ import 'settings.dart';
 /// path, no double entry. Use for happy-path activity (server calls, playback,
 /// startup) so the Diagnostics screen shows a real trail, not just errors.
 void appLog(String message) {
-  // ignore: avoid_print — deliberate: the print Zone in main() captures this
-  // into the diagnostic buffer; this is the app's info-logging entry point.
+  // The print Zone in main() tees this into the in-app diagnostic buffer
+  // (redacted, gated by the logging toggle) AND forwards it to the console.
+  // This is the app's info-logging entry point — print here is deliberate.
+  // ignore: avoid_print
   print(message);
 }
 

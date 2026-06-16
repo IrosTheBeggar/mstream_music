@@ -67,7 +67,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Server? autoDJServer;
 
-  var jsonAutoDJIgnoreList;
+  dynamic jsonAutoDJIgnoreList;
 
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
@@ -165,7 +165,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         await params.bands[i].setGain(saved[i]);
       }
     } catch (e) {
-      print("EQ apply error: $e");
+      appLog('[eq] apply error: $e');
     }
   }
 
@@ -322,7 +322,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
   }
 
+  // Re-seed the inherited customState with a typed CustomEvent default (it
+  // carries the AutoDJ server). Deliberately shadows BaseAudioHandler.customState.
   @override
+  // ignore: overridden_fields
   BehaviorSubject<dynamic> customState =
       BehaviorSubject<dynamic>.seeded(CustomEvent(null));
 
@@ -366,14 +369,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> addQueueItem(MediaItem item) async {
-    queue.add(queue.value..add(item));
+  Future<void> addQueueItem(MediaItem mediaItem) async {
+    queue.add(queue.value..add(mediaItem));
     // The backend extracts the playable URI (local backend) or builds renderer
     // metadata (cast backend) from the item itself. The offline-file detection
     // (File.existsSync + Uri.file) from the server-download-folder PR now lives
     // in LocalPlaybackBackend._uriFor.
-    await _backend.addSource(item);
-    appLog('[queue] add: ${item.title} (now ${queue.value.length})');
+    await _backend.addSource(mediaItem);
+    appLog('[queue] add: ${mediaItem.title} (now ${queue.value.length})');
   }
 
   @override
@@ -409,7 +412,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> setShuffleMode(AudioServiceShuffleMode doesntMatter) async {
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
     if (_backend.shuffleEnabled == true) {
       await _backend.setShuffleEnabled(false);
       await super.setShuffleMode(AudioServiceShuffleMode.none);
@@ -422,7 +425,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> setRepeatMode(AudioServiceRepeatMode doesntMatter) async {
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     if (_backend.repeatAll == true) {
       await _backend.setRepeatAll(false);
       await super.setRepeatMode(AudioServiceRepeatMode.none);
@@ -435,22 +438,22 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> removeQueueItem(MediaItem i) async {
-    await super.removeQueueItem(i);
+  Future<void> removeQueueItem(MediaItem mediaItem) async {
+    await super.removeQueueItem(mediaItem);
     // TODO: See removeQueueItemAt
   }
 
   @override
-  Future<void> removeQueueItemAt(int i) async {
-    await super.removeQueueItemAt(i);
+  Future<void> removeQueueItemAt(int index) async {
+    await super.removeQueueItemAt(index);
     // Update the queue BEFORE the backend. removeSourceAt makes the backend emit
     // its new currentIndex, and the currentIndexStream listener re-derives the
     // now-playing item as queue.value[index]. If the queue still held the
     // removed item, the wrong row would briefly render as the active/playing row
     // (a flash in the accent colour) before correcting — same root cause as the
     // reorder flash. Reordering keeps the queue and the emitted index in sync.
-    queue.add(queue.value..removeAt(i));
-    await _backend.removeSourceAt(i);
+    queue.add(queue.value..removeAt(index));
+    await _backend.removeSourceAt(index);
   }
 
   @override

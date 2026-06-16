@@ -1,4 +1,6 @@
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: public_member_api_docs, avoid_print
+// Dev-only LoggingAudioHandler decorator (not in the production handler chain);
+// its _log() prints by design.
 import 'package:audio_service/audio_service.dart';
 import 'package:rxdart/rxdart.dart';
 

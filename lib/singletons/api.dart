@@ -148,13 +148,13 @@ class ApiManager {
 
   Future<void> getRecursiveFiles(String directory,
       {Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer,
           '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getRecursiveFiles failed: $err');
       return;
     }
 
@@ -182,13 +182,13 @@ class ApiManager {
   }
 
   Future<void> getPlaylists({Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(
           useThisServer, '/api/v1/playlist/getall', {}, 'GET');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getPlaylists failed: $err');
       return;
     }
 
@@ -200,11 +200,11 @@ class ApiManager {
   /// back-stack frame) — used after a create / rename so the list updates
   /// without pushing a navigation entry.
   Future<void> refreshPlaylists() async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(null, '/api/v1/playlist/getall', {}, 'GET');
     } catch (err) {
-      print(err);
+      appLog('[api] refreshPlaylists failed: $err');
       return;
     }
     BrowserManager()
@@ -233,7 +233,7 @@ class ApiManager {
           {'playlistname': playlistId}, 'POST', cancelable: false);
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] removePlaylist failed: $err');
       return;
     }
 
@@ -285,7 +285,7 @@ class ApiManager {
             ServerManager().currentServer,
             e['name'],
             'file',
-            '/' + e['filepath'],
+            '/${e['filepath']}',
             Icon(Icons.music_note, color: VelvetColors.accent),
             'song');
         newItem.altAlbumArt = e['album_art_file'];
@@ -314,17 +314,17 @@ class ApiManager {
       // …" subheader (and it reverts on back-nav, like the file-explorer path).
       BrowserManager().addListToStack(newList, searchTerm: search);
     } catch (err) {
-      print(err);
+      appLog('[api] searchServer failed: $err');
     }
   }
 
   Future<void> getAlbums({Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getAlbums failed: $err');
       return;
     }
 
@@ -373,7 +373,7 @@ class ApiManager {
           useThisServer,
           e['filepath'],
           'file',
-          '/' + e['filepath'],
+          '/${e['filepath']}',
           Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
@@ -390,7 +390,7 @@ class ApiManager {
       newList = await fetchAlbumSongs(album, useThisServer: useThisServer);
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getAlbumSongs failed: $err');
       return;
     }
 
@@ -398,13 +398,13 @@ class ApiManager {
   }
 
   Future<void> getRecentlyAdded({Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(
           useThisServer, '/api/v1/db/recent/added', {'limit': 100}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getRecentlyAdded failed: $err');
       return;
     }
 
@@ -418,7 +418,7 @@ class ApiManager {
           useThisServer,
           e['filepath'],
           'file',
-          '/' + e['filepath'],
+          '/${e['filepath']}',
           Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
@@ -430,12 +430,12 @@ class ApiManager {
   }
 
   Future<void> getRated({Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getRated failed: $err');
       return;
     }
 
@@ -449,7 +449,7 @@ class ApiManager {
           useThisServer,
           e['filepath'],
           'file',
-          '/' + e['filepath'],
+          '/${e['filepath']}',
           Icon(Icons.music_note, color: VelvetColors.accent),
           m.artist);
 
@@ -462,13 +462,13 @@ class ApiManager {
   }
 
   Future<void> getArtists({Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res =
           await makeServerCall(useThisServer, '/api/v1/db/artists', {}, 'GET');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getArtists failed: $err');
       return;
     }
 
@@ -484,13 +484,13 @@ class ApiManager {
   }
 
   Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer, '/api/v1/db/artists-albums',
           {'artist': artist}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getArtistAlbums failed: $err');
       return;
     }
 
@@ -516,13 +516,13 @@ class ApiManager {
 
   Future<void> getPlaylistContents(String playlistName,
       {Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer, '/api/v1/playlist/load',
           {'playlistname': playlistName}, 'POST');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getPlaylistContents failed: $err');
       return;
     }
 
@@ -534,7 +534,7 @@ class ApiManager {
           useThisServer,
           e['filepath'],
           'file',
-          '/' + e['filepath'],
+          '/${e['filepath']}',
           Icon(Icons.music_note, color: VelvetColors.accent),
           null);
 
@@ -546,7 +546,7 @@ class ApiManager {
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
-    var res;
+    dynamic res;
     try {
       res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
         "directory": directory,
@@ -561,7 +561,7 @@ class ApiManager {
       }, 'POST');
     } catch (err) {
       // TODO: Handle Errors
-      print(err);
+      appLog('[api] getFileList failed: $err');
       return;
     }
 

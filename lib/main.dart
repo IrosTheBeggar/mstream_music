@@ -128,7 +128,7 @@ class MStreamApp extends StatefulWidget {
   const MStreamApp({super.key});
 
   @override
-  _MStreamAppState createState() => _MStreamAppState();
+  State<MStreamApp> createState() => _MStreamAppState();
 }
 
 class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
