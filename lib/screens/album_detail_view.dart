@@ -27,12 +27,6 @@ import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../widgets/player_panel.dart';
 
-/// Ink on top of the accent-filled Play button: dark espresso on bright accents,
-/// white on a dark custom accent (mirrors player_panel's `_kAmberInk`).
-Color get _accentInk => VelvetColors.primary.computeLuminance() > 0.42
-    ? const Color(0xFF1A1206)
-    : Colors.white;
-
 class AlbumDetailView extends StatefulWidget {
   /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`)
   /// and subtext, from getAlbums().
@@ -377,7 +371,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                     IconButton.filled(
                       onPressed: enabled ? () => _playFrom(0) : null,
                       tooltip: l.play,
-                      icon: Icon(Icons.play_arrow, color: _accentInk),
+                      icon: Icon(Icons.play_arrow, color: accentInk),
                       style: IconButton.styleFrom(
                         backgroundColor: VelvetColors.primary,
                         disabledBackgroundColor:

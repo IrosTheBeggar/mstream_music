@@ -21,14 +21,6 @@ import 'more_actions_sheet.dart';
 import 'queue_list.dart';
 import 'waveform_progress.dart';
 
-/// Ink for content on top of the accent-filled play button. The dark espresso
-/// (`#1a1206`, from the design) reads on bright accents (amber/orange/yellow),
-/// but flips to white on a dark custom accent so the play/pause glyph stays
-/// visible whatever accent the user picks.
-Color get _kAmberInk => VelvetColors.primary.computeLuminance() > 0.42
-    ? const Color(0xFF1A1206)
-    : Colors.white;
-
 /// A Spotify/Apple-Music-style player panel pinned to the bottom of the
 /// screen. Collapsed it shows a mini-player (art + title + play/pause).
 /// Dragged up — or tapped — it expands into a full "Now Playing" view whose
@@ -768,7 +760,7 @@ class _TopSmall extends StatelessWidget {
                           iconSize: 22,
                           padding: EdgeInsets.zero,
                           icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                          color: _kAmberInk,
+                          color: accentInk,
                           onPressed: playing ? handler.pause : handler.play,
                         ),
                       );
@@ -852,7 +844,7 @@ class _TransportControls extends StatelessWidget {
                 iconSize: playSize * 0.5,
                 padding: EdgeInsets.zero,
                 icon: Icon(playing ? Icons.pause : Icons.play_arrow),
-                color: _kAmberInk,
+                color: accentInk,
                 onPressed: playing ? handler.pause : handler.play,
               ),
             );

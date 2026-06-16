@@ -141,6 +141,23 @@ class VelvetPalette {
 Color onAccent(Color c) =>
     c.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 
+/// Ink for content on top of the accent-filled play button (e.g. the play/pause
+/// glyph): dark espresso on bright accents, white on a dark custom accent, so it
+/// stays legible whatever accent the user picks. Memoized — `computeLuminance()`
+/// is non-trivial and the accent only changes on a theme/accent switch, not per
+/// player-control rebuild (this is read on the hot player path).
+Color? _accentInkCache;
+Color? _accentInkForPrimary;
+Color get accentInk {
+  final p = VelvetColors.primary;
+  if (p != _accentInkForPrimary) {
+    _accentInkForPrimary = p;
+    _accentInkCache =
+        p.computeLuminance() > 0.42 ? const Color(0xFF1A1206) : Colors.white;
+  }
+  return _accentInkCache!;
+}
+
 // Original Velvet palette — navy bg, purple primary.
 const _velvetPalette = VelvetPalette(
   brightness: Brightness.dark,
