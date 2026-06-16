@@ -92,7 +92,7 @@ class DownloadManager {
       final int pct = ((dt.progress.clamp(0.0, 1.0) * 100).round() ~/ 5) * 5;
       if (row.downloadProgress != pct) {
         row.downloadProgress = pct;
-        BrowserManager().updateStream();
+        BrowserManager().updateStreamCoalesced();
       }
     }
 

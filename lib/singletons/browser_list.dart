@@ -387,6 +387,21 @@ class BrowserManager {
     _browserStream.sink.add(browserList);
   }
 
+  // Coalesced re-emit for the high-frequency download-progress path: a
+  // "Download all" fires progress ticks across many rows (one per 5% bucket per
+  // file), which can land dozens a second. Collapse them to <=1 emit / 100 ms so
+  // the whole list isn't rebuilt on every tick. Interactive callers (live search
+  // filtering, navigation) keep using updateStream() / the direct sink, so they
+  // stay immediate.
+  Timer? _downloadRefreshTimer;
+  void updateStreamCoalesced() {
+    if (_downloadRefreshTimer != null) return; // a flush is already scheduled
+    _downloadRefreshTimer = Timer(const Duration(milliseconds: 100), () {
+      _downloadRefreshTimer = null;
+      _browserStream.sink.add(browserList);
+    });
+  }
+
   /// Replaces the current (top) frame's list in place — no push/pop, so the
   /// back-stack is unchanged. Used to refresh a view (e.g. after a playlist
   /// create/rename) without adding a navigation entry.
@@ -511,6 +526,7 @@ class BrowserManager {
   void dispose() {
     _migrationSub?.cancel();
     _letterStripSub?.cancel();
+    _downloadRefreshTimer?.cancel();
     _browserStream.close();
     _browserLabel.close();
     _albumDetail.close();
