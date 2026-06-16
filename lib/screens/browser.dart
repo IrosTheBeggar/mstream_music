@@ -235,6 +235,20 @@ class _BrowserState extends State<Browser> {
     }
   }
 
+  // Per-row extent for the browser list, shared by the ListView's
+  // itemExtentBuilder AND the letter-strip jump math so a jump lands exactly on
+  // the target row — no estimation, no multi-frame settle on long lists.
+  // 1-line rows (directories / artists) vs 2-line (albums / files with
+  // metadata), mirroring getText/getSubText. max(base, scaled) tracks the text
+  // scaler upward so larger accessibility text never clips, while staying at the
+  // tuned base at the default (and smaller) text scales.
+  static double _rowExtent(DisplayItem it, TextScaler ts) {
+    final base =
+        (it.metadata?.artist != null || it.subtext != null) ? 74.0 : 58.0;
+    final scaled = ts.scale(base);
+    return scaled > base ? scaled : base;
+  }
+
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     return Material(
@@ -910,6 +924,7 @@ class _BrowserState extends State<Browser> {
                       initialData: SettingsManager().albumGrid,
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
+                        final ts = MediaQuery.textScalerOf(context);
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -945,17 +960,20 @@ class _BrowserState extends State<Browser> {
                                         minLeadingWidth: 32,
                                       ),
                                 ),
-                                child: ListView.separated(
+                                child: ListView.builder(
                                     controller: BrowserManager().sc,
                                     physics:
                                         const AlwaysScrollableScrollPhysics(),
-                                    separatorBuilder:
-                                        (BuildContext context, int index) =>
-                                            Divider(
-                                                height: 1,
-                                                color:
-                                                    VelvetColors.border),
                                     itemCount: browserList.length,
+                                    // Known per-row extents give the sliver O(1)
+                                    // seek, so the letter-strip jumpTo lands
+                                    // instantly instead of estimating + settling
+                                    // over frames on long lists (the scrub lag).
+                                    // Rows already draw their own bottom border,
+                                    // so the old Divider separator is dropped.
+                                    // See _rowExtent.
+                                    itemExtentBuilder: (index, _) =>
+                                        _rowExtent(browserList[index], ts),
                                     itemBuilder:
                                         (BuildContext context, int index) {
                                       if (browserList.isEmpty) {
@@ -998,33 +1016,17 @@ class _BrowserState extends State<Browser> {
                                     offset = AlbumGrid.padTop +
                                         row * (rowH + AlbumGrid.spacing);
                                   } else {
-                                    // ListTile heights vary per-row by
-                                    // whether a subtitle is present:
-                                    //   1-line (Artists, dirs): ~56dp
-                                    //     + 1 border + 1 separator = 58
-                                    //   2-line (Albums, files w/ meta):
-                                    //     ~72dp + 1 border + 1 sep = 74
-                                    // File Explorer mixes both inside
-                                    // a single list (directories first,
-                                    // then metadata-bearing files), so
-                                    // we have to walk and SUM rather
-                                    // than multiply by a single height.
-                                    // O(i), microseconds even at 10k+
-                                    // items. Tune these constants if
-                                    // taps land too high or too low.
-                                    const oneLineRow = 58.0;
-                                    const twoLineRow = 74.0;
+                                    // Sum the SAME per-row extents the ListView
+                                    // lays out with (see _rowExtent) so the jump
+                                    // lands exactly on the target row. File
+                                    // Explorer mixes 1- and 2-line rows, hence
+                                    // the walk-and-sum. O(i), microseconds even
+                                    // at 10k+ items.
                                     double sum = 0;
                                     final stop =
                                         i.clamp(0, browserList.length);
                                     for (var k = 0; k < stop; k++) {
-                                      final it = browserList[k];
-                                      final twoLine = it.metadata?.artist !=
-                                              null ||
-                                          it.subtext != null;
-                                      sum += twoLine
-                                          ? twoLineRow
-                                          : oneLineRow;
+                                      sum += _rowExtent(browserList[k], ts);
                                     }
                                     offset = sum;
                                   }
