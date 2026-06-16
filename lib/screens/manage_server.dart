@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
+import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
 import 'add_server.dart';
 
@@ -229,7 +230,7 @@ class DeleteServerDialog extends StatefulWidget {
   DeleteServerDialog({super.key, required this.cServer});
 
   @override
-  _DeleteServerDialogState createState() => _DeleteServerDialogState();
+  State<DeleteServerDialog> createState() => _DeleteServerDialogState();
 }
 
 class _DeleteServerDialogState extends State<DeleteServerDialog> {
@@ -267,7 +268,9 @@ class _DeleteServerDialogState extends State<DeleteServerDialog> {
             try {
               ServerManager().removeServer(
                   widget.cServer, isRemoveFilesOnServerDeleteSelected);
-            } catch (err) {}
+            } catch (err) {
+              appLog('[server] remove failed: $err');
+            }
             Navigator.of(context).pop();
           },
         ),

@@ -61,7 +61,6 @@ class FileExplorer {
     file
         .list(recursive: false, followLinks: false)
         .listen((FileSystemEntity entity) {
-      print(entity.path);
       Icon useIcon;
       String type;
       if (entity is File) {

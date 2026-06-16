@@ -15,6 +15,7 @@ import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
@@ -53,9 +54,7 @@ class MyCustomForm extends StatefulWidget {
   const MyCustomForm({super.key, this.editThisServer});
 
   @override
-  MyCustomFormState createState() {
-    return MyCustomFormState(editThisServer: editThisServer);
-  }
+  MyCustomFormState createState() => MyCustomFormState();
 }
 
 // Create a corresponding State class. This class will hold the data related to
@@ -107,9 +106,6 @@ class MyCustomFormState extends State<MyCustomForm> {
   String? _testResult;
   bool? _testSuccess;
 
-  final int? editThisServer;
-  MyCustomFormState({this.editThisServer}) : super();
-
   @override
   @protected
   @mustCallSuper
@@ -118,7 +114,7 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     bool isEdit = false;
     try {
-      Server s = ServerManager().serverList[editThisServer ?? -1];
+      Server s = ServerManager().serverList[widget.editThisServer ?? -1];
       _urlCtrl.text = s.url;
       _usernameCtrl.text = s.username ?? '';
       _passwordCtrl.text = s.password ?? '';
@@ -132,7 +128,10 @@ class MyCustomFormState extends State<MyCustomForm> {
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
         _publicAccess = true;
       }
-    } catch (err) {}
+    } catch (err) {
+      // No server at that index (e.g. the "add server" flow) — leave the form
+      // blank.
+    }
 
     // Existing server: keep its folder as-is (it maps to already-downloaded
     // files). New server: auto-derive the folder from the URL as the user
@@ -213,7 +212,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool _localNameTaken(String name) {
     final list = ServerManager().serverList;
     for (int i = 0; i < list.length; i++) {
-      if (i == editThisServer) continue; // ignore the server being edited
+      if (i == widget.editThisServer) {
+        continue; // ignore the server being edited
+      }
       if (list[i].localname == name) return true;
     }
     return false;
@@ -465,7 +466,10 @@ class MyCustomFormState extends State<MyCustomForm> {
         saveServer(lol);
         return;
       }
-    } catch (err) {}
+    } catch (err) {
+      // Ping probe failed (unreachable / non-200) — fall through to the login
+      // attempt below.
+    }
 
     // Public access mode: no credentials to try, so surface the
     // failure clearly instead of falling through to a login attempt
@@ -498,12 +502,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       // Save
       saveServer(lol, res['token']);
     } catch (err) {
-      print(err);
+      appLog('[add-server] login failed: $err');
       try {
         setState(() {
           submitPending = false;
         });
-      } catch (e) {}
+      } catch (e) {
+        // Widget already disposed — nothing to update.
+      }
 
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l.failedToLogin)));
@@ -740,9 +746,11 @@ class MyCustomFormState extends State<MyCustomForm> {
 
     bool shouldUpdate = false;
     try {
-      ServerManager().serverList[editThisServer ?? -1];
+      ServerManager().serverList[widget.editThisServer ?? -1];
       shouldUpdate = true;
-    } catch (err) {}
+    } catch (err) {
+      // No existing entry at that index → treat as a new server.
+    }
 
     // Don't persist credentials that the user wasn't allowed to edit:
     // when the public-access toggle is on, the username/password
@@ -764,7 +772,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         : null;
 
     if (shouldUpdate) {
-      final s = ServerManager().serverList[editThisServer!];
+      final s = ServerManager().serverList[widget.editThisServer!];
       // If the storage target is changing, cancel in-flight downloads first so
       // none land at the old location after the switch (they'd be stranded).
       if (s.storageMode != _storageMode ||
@@ -794,7 +802,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       s.allowSelfSigned = _allowSelfSigned;
       s.storageBasePath = basePath;
       ServerManager()
-          .editServer(editThisServer!, _urlCtrl.text, username, password);
+          .editServer(widget.editThisServer!, _urlCtrl.text, username, password);
       await ServerManager().getServerPaths(s);
       await ServerManager().callAfterEditServer();
       // The browser may be showing this server's files with download badges

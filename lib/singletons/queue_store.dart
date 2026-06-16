@@ -10,6 +10,7 @@ import '../objects/server.dart';
 import '../util/stream_url.dart';
 import 'media.dart';
 import 'server_list.dart';
+import 'log_manager.dart';
 import 'settings.dart';
 
 /// Persists the play queue + current track/position so they survive the app
@@ -58,7 +59,7 @@ class QueueStore {
       await _restore();
     } catch (e) {
       // A corrupt / incompatible file must never block startup.
-      print('QueueStore restore failed: $e');
+      appLog('[queue] restore failed: $e');
     }
     _restoring = false;
     _attachListeners();
@@ -158,7 +159,7 @@ class QueueStore {
       };
       await file.writeAsString(jsonEncode(snapshot));
     } catch (e) {
-      print('QueueStore save failed: $e');
+      appLog('[queue] save failed: $e');
     }
   }
 
