@@ -1334,4 +1334,1233 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get importedShadersDownloadsNoPermission =>
       'Storage permission is needed to read Downloads';
+
+  @override
+  String get adminLogOut => '退出登录';
+
+  @override
+  String get adminConfigGroup => '配置';
+
+  @override
+  String get adminDirectories => '目录';
+
+  @override
+  String get adminUsers => '用户';
+
+  @override
+  String get adminDLNA => 'DLNA';
+
+  @override
+  String get adminSubsonicAPI => 'Subsonic API';
+
+  @override
+  String get adminMP3Player => 'MP3 播放器';
+
+  @override
+  String get adminTorrent => 'Torrent';
+
+  @override
+  String get adminFederation => '联邦';
+
+  @override
+  String get adminServerGroup => '服务器';
+
+  @override
+  String get adminAbout => '关于';
+
+  @override
+  String get adminSettings => '设置';
+
+  @override
+  String get adminDatabase => '数据库';
+
+  @override
+  String get adminBackups => '备份';
+
+  @override
+  String get adminTranscoding => '转码';
+
+  @override
+  String get adminLogs => '日志';
+
+  @override
+  String get adminAccess => '管理员访问';
+
+  @override
+  String adminAppBarTitle(String label) {
+    return 'mStream Admin · $label';
+  }
+
+  @override
+  String get adminPanelTitle => 'mStream Admin';
+
+  @override
+  String get adminLoginErrorRequired => '必须填写服务器和用户名';
+
+  @override
+  String get adminLoginServerURL => '服务器 URL';
+
+  @override
+  String get adminLoginUsername => '用户名';
+
+  @override
+  String get adminLoginPassword => '密码';
+
+  @override
+  String get adminLoginSignIn => '登录';
+
+  @override
+  String get adminRetry => '重试';
+
+  @override
+  String get adminSaved => '已保存';
+
+  @override
+  String get adminSave => '保存';
+
+  @override
+  String get adminClose => '关闭';
+
+  @override
+  String get adminPanelMenuItem => '管理面板';
+
+  @override
+  String get adminNoLibrariesYetTitle => '暂无媒体库';
+
+  @override
+  String get adminAddDirectoryHint => '添加一个目录，开始将音乐扫描入库。';
+
+  @override
+  String get adminAddDirectoryButton => '添加目录';
+
+  @override
+  String adminRemoveDirectoryTitle(String name) {
+    return '移除 $name？';
+  }
+
+  @override
+  String get adminRemoveDirectoryWarning =>
+      '此操作会从数据库中移除该媒体库及其已扫描的曲目。磁盘上的文件不受影响。';
+
+  @override
+  String get adminCancel => '取消';
+
+  @override
+  String get adminRemove => '移除';
+
+  @override
+  String get adminLibraryRemovedToast => '已移除媒体库';
+
+  @override
+  String get adminDirectoryPathLabel => '路径';
+
+  @override
+  String get adminDirectoryTypeLabel => '类型';
+
+  @override
+  String get adminFollowSymlinksTitle => '跟随符号链接';
+
+  @override
+  String get adminFollowSymlinksSubtitle => '将在下次扫描时生效';
+
+  @override
+  String get adminPickFolderAndNameError => '请选择文件夹并输入名称';
+
+  @override
+  String get adminDirectoryAddedToast => '已添加目录 — 已开始扫描';
+
+  @override
+  String get adminAddDirectoryDialogTitle => '添加目录';
+
+  @override
+  String get adminChooseFolderButton => '在服务器上选择文件夹…';
+
+  @override
+  String get adminLibraryNameLabel => '媒体库名称（vpath）';
+
+  @override
+  String get adminLibraryNameHelper => '字母、数字和连字符';
+
+  @override
+  String get adminGrantAllUsersAccessTitle => '授予所有用户访问权限';
+
+  @override
+  String get adminAudiobookLibraryTitle => '有声书库';
+
+  @override
+  String get adminAdd => '添加';
+
+  @override
+  String get adminChooseFolderTitle => '选择文件夹';
+
+  @override
+  String get adminSelectFolderButton => '选择此文件夹';
+
+  @override
+  String get adminNoUsersTitle => '暂无用户';
+
+  @override
+  String get adminNoUsersSubtitle => '没有用户时，服务器以开放/公开模式运行。添加用户后即需登录。';
+
+  @override
+  String get adminAddUserButton => '添加用户';
+
+  @override
+  String get adminLibraryAccessDialogTitle => '媒体库访问权限';
+
+  @override
+  String get adminLibraryAccessUpdatedToast => '已更新媒体库访问权限';
+
+  @override
+  String get adminSetSubsonicPasswordTitle => '设置 Subsonic 密码';
+
+  @override
+  String get adminSetPasswordTitle => '设置密码';
+
+  @override
+  String get adminPasswordUpdatedToast => '已更新密码';
+
+  @override
+  String adminDeleteUserTitle(String username) {
+    return '删除 $username？';
+  }
+
+  @override
+  String get adminDeleteUserWarning => '此操作将永久删除该用户账户。';
+
+  @override
+  String get adminDelete => '删除';
+
+  @override
+  String get adminUserDeletedToast => '已删除用户';
+
+  @override
+  String get adminStatusPillLabel => 'admin';
+
+  @override
+  String get adminDeleteUserMenuItem => '删除用户';
+
+  @override
+  String get adminNoLibraryAccessLabel => '无媒体库访问权限';
+
+  @override
+  String get adminLibrariesButton => '媒体库';
+
+  @override
+  String get adminAdminToggleTitle => '管理员';
+
+  @override
+  String get adminMakeDirsToggleTitle => '创建目录';
+
+  @override
+  String get adminUploadToggleTitle => '上传';
+
+  @override
+  String get adminModifyFilesToggleTitle => '修改文件';
+
+  @override
+  String get adminServerAudioToggleTitle => '服务器音频';
+
+  @override
+  String get adminAddUserDialogTitle => '添加用户';
+
+  @override
+  String get adminUsername => '用户名';
+
+  @override
+  String get adminPassword => '密码';
+
+  @override
+  String get adminSubsonicPasswordLabel => 'Subsonic 密码（可选）';
+
+  @override
+  String get adminLibraryAccessHeader => '媒体库访问权限';
+
+  @override
+  String get adminUsernamePasswordRequiredError => '必须填写用户名和密码';
+
+  @override
+  String get adminUserCreatedToast => '已创建用户';
+
+  @override
+  String get adminAdministratorToggleTitle => '管理员';
+
+  @override
+  String get adminAllowMakeDirectoriesTitle => '允许创建目录';
+
+  @override
+  String get adminAllowUploadTitle => '允许上传';
+
+  @override
+  String get adminAllowServerAudioTitle => '允许使用服务器音频';
+
+  @override
+  String get adminCreate => '创建';
+
+  @override
+  String get adminNoLibrariesConfigured => '未配置任何媒体库。';
+
+  @override
+  String get adminNewPasswordLabel => '新密码';
+
+  @override
+  String get adminLibraryTitle => '媒体库';
+
+  @override
+  String get adminTracksInDatabase => '数据库中的曲目数';
+
+  @override
+  String get adminScanAllButton => '全部扫描';
+
+  @override
+  String get adminScanStarted => '已开始扫描';
+
+  @override
+  String get adminForceRescan => '强制重新扫描';
+
+  @override
+  String get adminFullRescanStarted => '已开始完整重新扫描';
+
+  @override
+  String get adminCompressImages => '压缩图像';
+
+  @override
+  String get adminImageCompressionStarted => '已开始压缩图像';
+
+  @override
+  String get adminScanOptions => '扫描选项';
+
+  @override
+  String get adminScanInterval => '扫描间隔（小时，0 = 关闭）';
+
+  @override
+  String get adminBootScanDelay => '启动扫描延迟（秒）';
+
+  @override
+  String get adminScanCommitInterval => '扫描提交间隔（1–1000）';
+
+  @override
+  String get adminScanThreads => '扫描线程数（0 = 自动）';
+
+  @override
+  String get adminSkipImageExtraction => '跳过图像提取';
+
+  @override
+  String get adminCompressEmbeddedImages => '压缩内嵌图像';
+
+  @override
+  String get adminGenerateWaveforms => '扫描后生成波形图';
+
+  @override
+  String get adminAnalyzeBpm => '分析 BPM/调式（已弃用，无操作）';
+
+  @override
+  String get adminAutomaticAlbumArt => '自动专辑封面';
+
+  @override
+  String get adminDownloadMissingAlbumArt => '下载缺失的专辑封面';
+
+  @override
+  String get adminTargetLabel => '目标';
+
+  @override
+  String get adminMissingOnly => '仅缺失项';
+
+  @override
+  String get adminAllAlbums => '所有专辑';
+
+  @override
+  String get adminAlbumsPerRun => '每次运行的专辑数（1–10000）';
+
+  @override
+  String get adminAutoDownloadedArtWriteFolder => '自动下载的封面 → 写入文件夹';
+
+  @override
+  String get adminManualArtWriteFolder => '手动设置的封面 → 写入文件夹';
+
+  @override
+  String get adminManualArtEmbedTag => '手动设置的封面 → 嵌入文件标签';
+
+  @override
+  String get adminArtServices => '封面服务';
+
+  @override
+  String get adminArtServicesUpdated => '已更新封面服务';
+
+  @override
+  String get adminSharedPlaylists => '共享播放列表';
+
+  @override
+  String get adminDeleteExpired => '删除已过期';
+
+  @override
+  String get adminExpiredSharesDeleted => '已删除过期分享';
+
+  @override
+  String get adminDeleteNeverExpiring => '删除永不过期';
+
+  @override
+  String get adminEternalSharesDeleted => '已删除永久分享';
+
+  @override
+  String get adminNoSharedPlaylists => '暂无共享播放列表';
+
+  @override
+  String adminSharedPlaylistSubtitle(String user, int count, String expiry) {
+    return '由 $user 创建 · $count 首曲目 · $expiry 过期';
+  }
+
+  @override
+  String get adminShareDeleted => '已删除分享';
+
+  @override
+  String get adminNetwork => '网络';
+
+  @override
+  String get adminNetworkSubtitle => '更改这些设置会软重启服务器。';
+
+  @override
+  String get adminBindAddress => '绑定地址';
+
+  @override
+  String get adminPort => '端口';
+
+  @override
+  String get adminTrustProxyHeaders => '信任代理标头';
+
+  @override
+  String get adminTrustProxyHeadersSubtitle => '在反向代理后方时启用（X-Forwarded-*）';
+
+  @override
+  String get adminPermissions => '权限';
+
+  @override
+  String get adminAllowUploads => '允许上传';
+
+  @override
+  String get adminAllowMakingDirectories => '允许创建目录';
+
+  @override
+  String get adminAllowModifyingFiles => '允许修改文件';
+
+  @override
+  String get adminMaxRequestSize => '最大请求大小';
+
+  @override
+  String get adminMaxRequestSizeHelper => '例如 50MB 或 512KB';
+
+  @override
+  String get adminHttpUi => 'HTTP 与 UI';
+
+  @override
+  String get adminResponseCompression => '响应压缩';
+
+  @override
+  String get adminCompressionNone => '无';
+
+  @override
+  String get adminCompressionGzip => 'gzip';
+
+  @override
+  String get adminCompressionBrotli => 'brotli';
+
+  @override
+  String get adminWebUi => 'Web UI';
+
+  @override
+  String get adminUiDefault => '默认';
+
+  @override
+  String get adminUiVelvet => 'Velvet';
+
+  @override
+  String get adminUiSubsonic => 'Subsonic';
+
+  @override
+  String get adminDatabaseTuning => '数据库调优';
+
+  @override
+  String get adminSqliteSynchronous => 'SQLite synchronous';
+
+  @override
+  String get adminSyncFull => 'FULL (safest)';
+
+  @override
+  String get adminSyncNormal => 'NORMAL (faster)';
+
+  @override
+  String get adminCacheSize => '缓存大小（MB，1–2048）';
+
+  @override
+  String get adminLogging => '日志记录';
+
+  @override
+  String get adminWriteLogsToDisk => '将日志写入磁盘';
+
+  @override
+  String get adminLogBufferSize => '日志缓冲区大小（0–10000，0 = 禁用）';
+
+  @override
+  String get adminServerAudio => '服务器音频';
+
+  @override
+  String get adminAutoBootServerAudio => '自动启动服务器音频（Rust 播放器）';
+
+  @override
+  String get adminRustPlayerPort => 'Rust 播放器端口';
+
+  @override
+  String get adminActiveBackend => '活动后端';
+
+  @override
+  String get adminPlayer => '播放器';
+
+  @override
+  String get adminDetectedCliPlayers => '检测到的 CLI 播放器';
+
+  @override
+  String get adminNone => '无';
+
+  @override
+  String get adminReDetectPlayers => '重新检测播放器';
+
+  @override
+  String get adminReProbedCliPlayers => '已重新探测 CLI 播放器';
+
+  @override
+  String get adminSslHttps => 'SSL / HTTPS';
+
+  @override
+  String get adminEnabled => '已启用';
+
+  @override
+  String get adminDisabled => '已禁用';
+
+  @override
+  String get adminReplaceCertificate => '替换证书';
+
+  @override
+  String get adminSetCertificate => '设置证书';
+
+  @override
+  String get adminSetSslCertificateDialog => '设置 SSL 证书';
+
+  @override
+  String get adminCertificatePath => '证书路径';
+
+  @override
+  String get adminKeyPath => '密钥路径';
+
+  @override
+  String get adminSslConfigured => '已配置 SSL — 重启后生效';
+
+  @override
+  String get adminRemoveSsl => '移除 SSL';
+
+  @override
+  String get adminSslRemoved => '已移除 SSL';
+
+  @override
+  String get adminSecurity => '安全';
+
+  @override
+  String get adminJwtSecretLast4 => 'JWT 密钥（后 4 位）';
+
+  @override
+  String get adminRegenerateSecret => '重新生成密钥';
+
+  @override
+  String get adminSecretRegenerated => '已重新生成密钥 — 所有会话已失效';
+
+  @override
+  String get adminRegenerateJwtSecretDialog => '重新生成 JWT 密钥？';
+
+  @override
+  String get adminRegenerateJwtSecretDialogBody =>
+      '此操作会使所有现有登录失效（包括当前登录）。所有人需重新登录。';
+
+  @override
+  String get adminRegenerateButton => '重新生成';
+
+  @override
+  String get adminAllNetworks => '所有网络';
+
+  @override
+  String get adminLocalhostOnly => '仅本地主机';
+
+  @override
+  String get adminIpWhitelist => 'IP 白名单';
+
+  @override
+  String get adminNoneLockAdmin => '无（锁定管理员）';
+
+  @override
+  String get adminNetworkAccess => '网络访问';
+
+  @override
+  String get adminNetworkAccessSubtitle => '限制可访问管理员 API 的网络。';
+
+  @override
+  String get adminMode => '模式';
+
+  @override
+  String get adminWhitelistedIps => '已加入白名单的 IP / CIDR';
+
+  @override
+  String get adminNoneYet => '暂无';
+
+  @override
+  String get adminAddIpOrCidr => '添加 IP 或 CIDR';
+
+  @override
+  String get adminCidrExample => '192.168.1.0/24';
+
+  @override
+  String get adminApply => '应用';
+
+  @override
+  String get adminDangerZone => '危险操作区';
+
+  @override
+  String get adminLockAdminApi => '锁定管理员 API';
+
+  @override
+  String get adminLockAdminApiSubtitle => '禁用整个管理员 API。无法在此处撤销。';
+
+  @override
+  String get adminLockButton => '锁定';
+
+  @override
+  String get adminLockAdminApiDialog => '锁定管理员 API？';
+
+  @override
+  String get adminLockAdminApiDialogBody =>
+      '此操作会为所有人禁用整个 /admin API。你无法从此面板撤销 — 需要编辑服务器配置文件并重启。是否继续？';
+
+  @override
+  String get adminAdminApiLocked => '已锁定管理员 API';
+
+  @override
+  String get adminAccessUpdated => '已更新管理员访问设置';
+
+  @override
+  String get adminTranscodingFFmpegTitle => 'FFmpeg';
+
+  @override
+  String get adminFFmpegStatusReady => '就绪';
+
+  @override
+  String get adminFFmpegStatusNotDownloaded => '未下载';
+
+  @override
+  String get adminFFmpegDownloadButton => '下载 / 更新 ffmpeg';
+
+  @override
+  String get adminFFmpegDownloadedToast => '已下载 ffmpeg';
+
+  @override
+  String get adminFFmpegAutoUpdateTitle => '自动更新 ffmpeg';
+
+  @override
+  String get adminFFmpegAutoUpdateSubtitle => '自动保持内置 ffmpeg 为最新版本';
+
+  @override
+  String get adminTranscodingDefaultsTitle => '默认值';
+
+  @override
+  String get adminDefaultCodecLabel => '默认编解码器';
+
+  @override
+  String get adminDefaultBitrateLabel => '默认比特率';
+
+  @override
+  String get adminLogsResumeButton => '恢复';
+
+  @override
+  String get adminLogsPauseButton => '暂停';
+
+  @override
+  String get adminClear => '清除';
+
+  @override
+  String get adminLogsAutoScrollTitle => '自动滚动';
+
+  @override
+  String adminLogsLineCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 行',
+      one: '1 行',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminLogsDownloadZipButton => '下载 zip';
+
+  @override
+  String get adminLogsNoEntriesHint => '暂无日志条目';
+
+  @override
+  String get adminDlnaModeDisabled => '已禁用';
+
+  @override
+  String get adminSamePortAsHttp => '与 HTTP 同端口';
+
+  @override
+  String get adminSeparatePort => '独立端口';
+
+  @override
+  String get adminDlnaBrowseFlat => '平铺（所有曲目）';
+
+  @override
+  String get adminDlnaBrowseDirectories => '目录';
+
+  @override
+  String get adminDlnaBrowseArtist => '按艺术家';
+
+  @override
+  String get adminDlnaBrowseAlbum => '按专辑';
+
+  @override
+  String get adminDlnaBrowseGenre => '按流派';
+
+  @override
+  String get adminDlnaServerTitle => '服务器';
+
+  @override
+  String get adminDlnaIdentityTitle => '标识';
+
+  @override
+  String get adminDlnaFriendlyNameLabel => '友好名称';
+
+  @override
+  String get adminDlnaDeviceUuidLabel => '设备 UUID';
+
+  @override
+  String get adminDlnaDeviceUuidHelper => '规范 GUID';
+
+  @override
+  String get adminDlnaBrowseLayoutTitle => '浏览布局';
+
+  @override
+  String get adminDlnaStructureLabel => '结构';
+
+  @override
+  String get adminMdnsLocalNetworkDiscoveryTitle => '本地网络发现';
+
+  @override
+  String get adminMdnsLocalNetworkDiscoverySubtitle =>
+      '将此服务器作为 _mstream._tcp mDNS 服务进行广播。仅发布元数据 — 不暴露任何媒体库数据或新路由。';
+
+  @override
+  String get adminMdnsEnableAdvertisingTitle => '启用广播';
+
+  @override
+  String get adminMdnsFriendlyNameLabel => '友好名称';
+
+  @override
+  String get adminMdnsFriendlyNameHelper => '留空 = 从主机名派生（最多 63 字节）';
+
+  @override
+  String get adminMdnsInstanceIdLabel => '实例 ID';
+
+  @override
+  String get adminSubsonicApiTitle => 'Subsonic API';
+
+  @override
+  String get adminTestConnection => '测试连接';
+
+  @override
+  String adminSubsonicTestSuccess(String version, String latency) {
+    return '成功 · $version · ${latency}ms';
+  }
+
+  @override
+  String adminSubsonicTestFailed(String reason) {
+    return '失败：$reason';
+  }
+
+  @override
+  String get adminStatus => '状态';
+
+  @override
+  String get adminMethodsImplemented => '已实现的方法';
+
+  @override
+  String get adminFullStub => '完整 / 桩';
+
+  @override
+  String get adminNowPlaying => '正在播放';
+
+  @override
+  String get adminNobody => '无人';
+
+  @override
+  String get adminLyricsLrclib => '歌词（LRCLib）';
+
+  @override
+  String get adminLrclibFallback => 'LRCLib 回退';
+
+  @override
+  String get adminWriteLrcSidecarFiles => '写入 .lrc 附属文件';
+
+  @override
+  String get adminCache => '缓存';
+
+  @override
+  String get adminPurgeCache => '清除缓存';
+
+  @override
+  String get adminLyricsCachePurged => '已清除歌词缓存';
+
+  @override
+  String get adminRetryFailed => '重试失败项';
+
+  @override
+  String get adminTransientLyricsEntriesCleared => '已清除临时歌词条目';
+
+  @override
+  String get adminJukebox => '点唱机';
+
+  @override
+  String get adminAvailable => '可用';
+
+  @override
+  String get adminUnavailable => '不可用';
+
+  @override
+  String get adminState => '状态';
+
+  @override
+  String get adminPlaying => '播放中';
+
+  @override
+  String get adminPaused => '已暂停';
+
+  @override
+  String get adminIdle => '空闲';
+
+  @override
+  String get adminCurrent => '当前';
+
+  @override
+  String get adminQueue => '队列';
+
+  @override
+  String adminQueueTracks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首曲目',
+      one: '1 首曲目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminVolume => '音量';
+
+  @override
+  String adminVolumePercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get adminTokenAuthFailures => '令牌认证失败';
+
+  @override
+  String get adminTokenAuthFailuresSubtitle =>
+      '客户端在未设置 Subsonic 密码的情况下默认使用令牌认证。';
+
+  @override
+  String get adminNoRecentFailures => '近期无失败记录';
+
+  @override
+  String get adminCleared => '已清除';
+
+  @override
+  String get adminMintApiKey => '生成 API 密钥';
+
+  @override
+  String get adminMintApiKeySubtitle => '为用户生成 Subsonic apiKey（仅显示一次）。';
+
+  @override
+  String get adminKeyNameLabel => '密钥名称 / 标签';
+
+  @override
+  String get adminMintKey => '生成密钥';
+
+  @override
+  String get adminUsernameAndNameRequired => '必须填写用户名和名称';
+
+  @override
+  String get adminTorrentClient => '客户端';
+
+  @override
+  String get adminActiveClient => '活动客户端';
+
+  @override
+  String get adminTransmission => 'Transmission';
+
+  @override
+  String get adminQbittorrent => 'qBittorrent';
+
+  @override
+  String get adminDeluge => 'Deluge';
+
+  @override
+  String get adminEnabledFor => '启用对象';
+
+  @override
+  String get adminAllUsers => '所有用户';
+
+  @override
+  String get adminWhitelistedUsers => '白名单用户';
+
+  @override
+  String get adminHost => '主机';
+
+  @override
+  String get adminPasswordUnchangedIfBlank => '留空则不更改';
+
+  @override
+  String get adminRpcPath => 'RPC 路径';
+
+  @override
+  String get adminUseHttps => '使用 HTTPS';
+
+  @override
+  String get adminTest => '测试';
+
+  @override
+  String adminReachable(String version) {
+    return '可连接$version';
+  }
+
+  @override
+  String adminConnectionFailed(String error) {
+    return '失败：$error';
+  }
+
+  @override
+  String get adminConnectAndSave => '连接并保存';
+
+  @override
+  String adminSaveFailed(String error) {
+    return '失败：$error';
+  }
+
+  @override
+  String get adminConnectedAndSaved => '已连接并保存';
+
+  @override
+  String get adminDisconnect => '断开连接';
+
+  @override
+  String get adminDisconnected => '已断开连接';
+
+  @override
+  String get adminConfigured => '已配置';
+
+  @override
+  String get adminNotConfigured => '未配置';
+
+  @override
+  String get adminTorrents => 'Torrent';
+
+  @override
+  String get adminConnected => '已连接';
+
+  @override
+  String get adminNoTorrents => '暂无 torrent';
+
+  @override
+  String get adminMstream => 'mStream';
+
+  @override
+  String get adminTorrentRemoved => '已移除 torrent';
+
+  @override
+  String get adminLibraryDaemonPathMapping => '媒体库 → 守护进程路径映射';
+
+  @override
+  String get adminLibraryDaemonPathMappingSubtitle =>
+      '将每个媒体库映射到 torrent 守护进程所见的路径。';
+
+  @override
+  String get adminAutoDetectAll => '全部自动检测';
+
+  @override
+  String get adminAutoDetectionComplete => '自动检测完成';
+
+  @override
+  String get adminVerified => '已验证';
+
+  @override
+  String get adminUnverified => '未验证';
+
+  @override
+  String get adminSetManually => '手动设置';
+
+  @override
+  String adminDaemonPathFor(String name) {
+    return '“$name”的守护进程路径';
+  }
+
+  @override
+  String get adminPathOnDaemonHost => '守护进程主机上的路径';
+
+  @override
+  String get adminVerifyAndSave => '验证并保存';
+
+  @override
+  String get adminVpathVerified => '已验证';
+
+  @override
+  String get adminVpathSavedUnverified => '已保存（未验证）';
+
+  @override
+  String get adminDownloadPathTemplates => '下载路径模板';
+
+  @override
+  String adminPathTemplateVars(String vars) {
+    return '变量：$vars';
+  }
+
+  @override
+  String get adminNoLibraries => '暂无媒体库';
+
+  @override
+  String adminSuggestedTemplate(String template) {
+    return '建议：$template';
+  }
+
+  @override
+  String get adminTemplateSaved => '已保存模板';
+
+  @override
+  String get adminNoBackupDestinations => '暂无备份目标';
+
+  @override
+  String get adminBackupDestinationInfo => '添加一个目标，将媒体库镜像到其他文件夹。';
+
+  @override
+  String get adminAddDestination => '添加目标';
+
+  @override
+  String get adminAddLibraryFirst => '请先添加媒体库';
+
+  @override
+  String get adminBackupQueue => '备份队列';
+
+  @override
+  String adminTasksQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已排队 $count 个任务',
+      one: '已排队 1 个任务',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminBackingUp(String library) {
+    return '正在备份：$library';
+  }
+
+  @override
+  String get adminRunning => '运行中';
+
+  @override
+  String adminBackupStats(int done, String total, String stats) {
+    return '$done 个文件$total$stats';
+  }
+
+  @override
+  String get adminBackupDisabled => '已禁用';
+
+  @override
+  String get adminDestination => '目标';
+
+  @override
+  String get adminTrigger => '触发条件';
+
+  @override
+  String adminDailyTriggerTime(String trigger, String hour) {
+    return '$trigger @ $hour:00';
+  }
+
+  @override
+  String get adminRetention => '保留策略';
+
+  @override
+  String adminRetentionDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+      one: '1 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminLastRun => '上次运行';
+
+  @override
+  String adminLastRunStatus(String status, int files) {
+    return '$status · 已复制 $files 个';
+  }
+
+  @override
+  String get adminRunNow => '立即运行';
+
+  @override
+  String get adminBackupQueued => '已将备份排队';
+
+  @override
+  String get adminAlreadyRunningSkipped => '已在运行 — 已跳过';
+
+  @override
+  String get adminHistory => '历史记录';
+
+  @override
+  String get adminEdit => '编辑';
+
+  @override
+  String get adminDestinationDeleted => '已删除目标';
+
+  @override
+  String get adminBackupHistory => '备份历史记录';
+
+  @override
+  String get adminNoHistoryYet => '暂无历史记录';
+
+  @override
+  String get adminEditDestination => '编辑目标';
+
+  @override
+  String get adminAddBackupDestination => '添加备份目标';
+
+  @override
+  String get adminDestinationPath => '目标路径';
+
+  @override
+  String get adminBrowseServer => '浏览服务器';
+
+  @override
+  String get adminCheckPath => '检查路径';
+
+  @override
+  String get adminTriggerField => '触发条件';
+
+  @override
+  String get adminAfterEachScan => '每次扫描后';
+
+  @override
+  String get adminDaily => '每天';
+
+  @override
+  String get adminManualOnly => '仅手动';
+
+  @override
+  String get adminRunAtHour => '运行时间（小时）：';
+
+  @override
+  String get adminRetentionFieldLabel => '保留期（天，0 = 全部保留）';
+
+  @override
+  String get adminEnabledToggle => '已启用';
+
+  @override
+  String get adminDestinationUpdated => '已更新目标';
+
+  @override
+  String get adminDestinationCreated => '已创建目标';
+
+  @override
+  String get adminPickLibrary => '请选择媒体库';
+
+  @override
+  String get adminPickDestinationPath => '请选择目标路径';
+
+  @override
+  String adminAboutTitle(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String get adminAboutPort => '端口';
+
+  @override
+  String get adminSSL => 'SSL';
+
+  @override
+  String get adminUI => 'UI';
+
+  @override
+  String get adminCompression => '压缩';
+
+  @override
+  String get adminTrustProxy => '信任代理';
+
+  @override
+  String get adminYes => '是';
+
+  @override
+  String get adminNo => '否';
+
+  @override
+  String get adminSecretLast4 => '密钥（后 4 位）';
+
+  @override
+  String get adminUploads => '上传';
+
+  @override
+  String get adminMakeDirs => '创建目录';
+
+  @override
+  String get adminFileModify => '修改文件';
+
+  @override
+  String get adminSynchronous => 'Synchronous';
+
+  @override
+  String get adminCacheSizeLabel => '缓存大小';
+
+  @override
+  String adminCacheSizeMb(int size) {
+    return '$size MB';
+  }
+
+  @override
+  String get adminFederationUnavailable => '不可用';
+
+  @override
+  String get adminFederationDescription =>
+      '联邦功能正围绕新的本地备份方案进行重建，目前在服务器上不可用。该端点仍保持挂载，以便旧客户端获得明确的状态提示，而非 404 错误。';
+
+  @override
+  String get adminCheckStatus => '检查状态';
+
+  @override
+  String get adminAllowed => '允许';
+
+  @override
+  String get adminBackupEnabled => '已启用';
+
+  @override
+  String get adminNotAvailable => '不可用';
+
+  @override
+  String get adminNotMapped => '未映射';
+
+  @override
+  String get adminExpiryNever => '永不';
+
+  @override
+  String get adminUnknownUser => '未知';
 }

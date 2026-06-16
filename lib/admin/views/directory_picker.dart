@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 
 /// A modal that browses the *server's* filesystem (admin file-explorer can see
@@ -73,8 +74,9 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Choose a folder'),
+      title: Text(l.adminChooseFolderTitle),
       content: SizedBox(
         width: 480,
         height: 440,
@@ -138,10 +140,10 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context), child: Text(l.adminCancel)),
         FilledButton(
           onPressed: _loading ? null : () => Navigator.pop(context, _path),
-          child: const Text('Select this folder'),
+          child: Text(l.adminSelectFolderButton),
         ),
       ],
     );

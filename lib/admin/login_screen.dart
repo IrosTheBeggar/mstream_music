@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'admin_api.dart';
 import 'admin_session.dart';
 
@@ -45,7 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     final baseUrl = _server.text.trim();
     if (baseUrl.isEmpty || _username.text.trim().isEmpty) {
-      setState(() => _error = 'Server and username are required');
+      final l = AppLocalizations.of(context);
+      setState(() => _error = l.adminLoginErrorRequired);
       return;
     }
     setState(() {
@@ -72,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -84,15 +87,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.settings_suggest, size: 48, color: scheme.primary),
                   const SizedBox(height: 8),
-                  Text('mStream Admin',
+                  Text(l.adminPanelTitle,
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 24),
                   if (widget.allowServerEdit) ...[
                     TextField(
                       controller: _server,
-                      decoration: const InputDecoration(
-                        labelText: 'Server URL',
-                        prefixIcon: Icon(Icons.dns),
+                      decoration: InputDecoration(
+                        labelText: l.adminLoginServerURL,
+                        prefixIcon: const Icon(Icons.dns),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -100,9 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _username,
                     autofillHints: const [AutofillHints.username],
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: Icon(Icons.person),
+                    decoration: InputDecoration(
+                      labelText: l.adminLoginUsername,
+                      prefixIcon: const Icon(Icons.person),
                     ),
                     onSubmitted: (_) => _submit(),
                   ),
@@ -111,9 +114,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _password,
                     obscureText: true,
                     autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Icons.lock),
+                    decoration: InputDecoration(
+                      labelText: l.adminLoginPassword,
+                      prefixIcon: const Icon(Icons.lock),
                     ),
                     onSubmitted: (_) => _submit(),
                   ),
@@ -131,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Sign in'),
+                          : Text(l.adminLoginSignIn),
                     ),
                   ),
                 ]),

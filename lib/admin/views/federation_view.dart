@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -13,29 +14,30 @@ class FederationView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AdminViewBody(children: [
       AdminCard(
-        title: 'Federation',
+        title: l.adminFederation,
         icon: Icons.hub_outlined,
         trailing: [
-          const StatusPill(
-              label: 'Unavailable', color: Colors.orange, icon: Icons.build),
+          StatusPill(
+              label: l.adminFederationUnavailable,
+              color: Colors.orange,
+              icon: Icons.build),
         ],
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              'Federation is being rebuilt around the new local-backup story and '
-              'is currently unavailable on the server. The endpoint stays mounted '
-              'so older clients get a clear status instead of a 404.',
+              l.adminFederationDescription,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           ),
           Align(
             alignment: Alignment.centerLeft,
             child: AdminActionButton(
-              label: 'Check status',
+              label: l.adminCheckStatus,
               icon: Icons.refresh,
               tonal: true,
               // Will surface the server's 410 message via the error toast.

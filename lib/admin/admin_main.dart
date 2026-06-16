@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'admin_screen.dart';
 import 'admin_session.dart';
 import 'admin_theme.dart';
@@ -47,6 +48,8 @@ class _AdminWebAppState extends State<AdminWebApp> {
       theme: adminLightTheme,
       darkTheme: adminDarkTheme,
       themeMode: ThemeMode.system,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: _session == null
           ? LoginScreen(
               defaultBaseUrl: _origin,
@@ -57,7 +60,6 @@ class _AdminWebAppState extends State<AdminWebApp> {
             )
           : AdminScreen(
               session: _session!,
-              exitLabel: 'Log out',
               onExit: () => setState(() => _session = null),
             ),
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -17,25 +18,27 @@ class TorrentView extends StatelessWidget {
     return AdminAsync(
       loader: api.getTorrent,
       builder: (context, t, reload) {
+        final l = AppLocalizations.of(context);
         final client = t['client'] ?? 'disabled';
         return AdminViewBody(children: [
           AdminCard(
-            title: 'Client',
+            title: l.adminTorrentClient,
             icon: Icons.download_outlined,
             children: [
               AdminDropdownRow<String>(
-                label: 'Active client',
+                label: l.adminActiveClient,
                 value: ['disabled', 'transmission', 'qbittorrent', 'deluge']
                         .contains(client)
                     ? client
                     : 'disabled',
-                items: const [
-                  DropdownMenuItem(value: 'disabled', child: Text('Disabled')),
+                items: [
                   DropdownMenuItem(
-                      value: 'transmission', child: Text('Transmission')),
+                      value: 'disabled', child: Text(l.adminDisabled)),
                   DropdownMenuItem(
-                      value: 'qbittorrent', child: Text('qBittorrent')),
-                  DropdownMenuItem(value: 'deluge', child: Text('Deluge')),
+                      value: 'transmission', child: Text(l.adminTransmission)),
+                  DropdownMenuItem(
+                      value: 'qbittorrent', child: Text(l.adminQbittorrent)),
+                  DropdownMenuItem(value: 'deluge', child: Text(l.adminDeluge)),
                 ],
                 onChanged: (v) async {
                   await api.setTorrentClient(v);
@@ -43,12 +46,13 @@ class TorrentView extends StatelessWidget {
                 },
               ),
               AdminDropdownRow<String>(
-                label: 'Enabled for',
+                label: l.adminEnabledFor,
                 value: t['enabledFor'] == 'whitelist' ? 'whitelist' : 'all',
-                items: const [
-                  DropdownMenuItem(value: 'all', child: Text('All users')),
+                items: [
+                  DropdownMenuItem(value: 'all', child: Text(l.adminAllUsers)),
                   DropdownMenuItem(
-                      value: 'whitelist', child: Text('Whitelisted users')),
+                      value: 'whitelist',
+                      child: Text(l.adminWhitelistedUsers)),
                 ],
                 onChanged: api.setTorrentEnabledFor,
               ),
@@ -57,7 +61,7 @@ class TorrentView extends StatelessWidget {
           _ConnectionCard(
             api: api,
             client: 'transmission',
-            title: 'Transmission',
+            title: l.adminTransmission,
             creds: Map<String, dynamic>.from(t['transmission'] ?? {}),
             hasUsername: true,
             hasRpcPath: true,
@@ -66,7 +70,7 @@ class TorrentView extends StatelessWidget {
           _ConnectionCard(
             api: api,
             client: 'qbittorrent',
-            title: 'qBittorrent',
+            title: l.adminQbittorrent,
             creds: Map<String, dynamic>.from(t['qbittorrent'] ?? {}),
             hasUsername: true,
             hasRpcPath: false,
@@ -75,7 +79,7 @@ class TorrentView extends StatelessWidget {
           _ConnectionCard(
             api: api,
             client: 'deluge',
-            title: 'Deluge',
+            title: l.adminDeluge,
             creds: Map<String, dynamic>.from(t['deluge'] ?? {}),
             hasUsername: false,
             hasRpcPath: false,
@@ -146,52 +150,54 @@ class _ConnectionCardState extends State<_ConnectionCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final configured = widget.creds['configured'] == true;
     return AdminCard(
       title: widget.title,
       icon: Icons.dns_outlined,
       trailing: [
         StatusPill(
-          label: configured ? 'Configured' : 'Not configured',
+          label: configured ? l.adminConfigured : l.adminNotConfigured,
           color: configured ? Colors.green : Colors.grey,
         ),
       ],
       children: [
         TextField(
             controller: _host,
-            decoration: const InputDecoration(labelText: 'Host')),
+            decoration: InputDecoration(labelText: l.adminHost)),
         const SizedBox(height: 8),
         TextField(
             controller: _port,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Port')),
+            decoration: InputDecoration(labelText: l.adminPort)),
         if (widget.hasUsername) ...[
           const SizedBox(height: 8),
           TextField(
               controller: _user,
-              decoration: const InputDecoration(labelText: 'Username')),
+              decoration: InputDecoration(labelText: l.adminUsername)),
         ],
         const SizedBox(height: 8),
         TextField(
             controller: _pass,
             obscureText: true,
-            decoration: const InputDecoration(
-                labelText: 'Password', hintText: 'unchanged if blank')),
+            decoration: InputDecoration(
+                labelText: l.adminPassword,
+                hintText: l.adminPasswordUnchangedIfBlank)),
         if (widget.hasRpcPath) ...[
           const SizedBox(height: 8),
           TextField(
               controller: _rpcPath,
-              decoration: const InputDecoration(labelText: 'RPC path')),
+              decoration: InputDecoration(labelText: l.adminRpcPath)),
         ],
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use HTTPS'),
+          title: Text(l.adminUseHttps),
           value: _useHttps,
           onChanged: (v) => setState(() => _useHttps = v),
         ),
         Wrap(spacing: 8, children: [
           AdminActionButton(
-            label: 'Test',
+            label: l.adminTest,
             tonal: true,
             onPressed: () async {
               final r = await widget.api.torrentTest(widget.client, _body());
@@ -200,32 +206,37 @@ class _ConnectionCardState extends State<_ConnectionCard> {
               adminToast(
                   context,
                   ok
-                      ? 'Reachable${r['version'] != null ? ' (${r['version']})' : ''}'
-                      : 'Failed: ${r['message'] ?? r['error'] ?? 'unknown'}',
+                      ? l.adminReachable(
+                          r['version'] != null ? ' (${r['version']})' : '')
+                      : l.adminConnectionFailed(
+                          '${r['message'] ?? r['error'] ?? 'unknown'}'),
                   error: !ok);
             },
           ),
           AdminActionButton(
-            label: 'Connect & save',
+            label: l.adminConnectAndSave,
             onPressed: () async {
               final r = await widget.api.torrentConnect(widget.client, _body());
               if (r['ok'] != true) {
                 if (context.mounted) {
                   adminToast(context,
-                      'Failed: ${r['message'] ?? r['error'] ?? 'unknown'}',
+                      l.adminSaveFailed(
+                          '${r['message'] ?? r['error'] ?? 'unknown'}'),
                       error: true);
                 }
                 return;
               }
-              if (context.mounted) adminToast(context, 'Connected & saved');
+              if (context.mounted) {
+                adminToast(context, l.adminConnectedAndSaved);
+              }
               await widget.reload();
             },
           ),
           if (configured)
             AdminActionButton(
-              label: 'Disconnect',
+              label: l.adminDisconnect,
               destructive: true,
-              success: 'Disconnected',
+              success: l.adminDisconnected,
               onPressed: () async {
                 await widget.api.torrentDisconnect(widget.client);
                 await widget.reload();
@@ -281,14 +292,15 @@ class _TorrentListCardState extends State<_TorrentListCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final connected = _status['connected'] == true;
     return AdminCard(
-      title: 'Torrents',
+      title: l.adminTorrents,
       icon: Icons.swap_vert,
       trailing: [
         StatusPill(
-          label: connected ? 'Connected' : 'Disconnected',
+          label: connected ? l.adminConnected : l.adminDisconnected,
           color: connected ? Colors.green : Colors.orange,
           icon: connected ? Icons.link : Icons.link_off,
         ),
@@ -297,7 +309,8 @@ class _TorrentListCardState extends State<_TorrentListCard> {
         if (_error != null && _torrents.isEmpty)
           Text(_error!, style: TextStyle(color: scheme.onSurfaceVariant))
         else if (_torrents.isEmpty)
-          Text('No torrents', style: TextStyle(color: scheme.onSurfaceVariant))
+          Text(l.adminNoTorrents,
+              style: TextStyle(color: scheme.onSurfaceVariant))
         else
           for (final t in _torrents) _torrentRow(context, t),
       ],
@@ -305,6 +318,7 @@ class _TorrentListCardState extends State<_TorrentListCard> {
   }
 
   Widget _torrentRow(BuildContext context, dynamic t) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final progress =
         (t['progress'] is num) ? (t['progress'] as num).toDouble() : 0.0;
@@ -318,21 +332,21 @@ class _TorrentListCardState extends State<_TorrentListCard> {
                 maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
           if (managed)
-            const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: StatusPill(label: 'mStream', color: Colors.blue),
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: StatusPill(label: l.adminMstream, color: Colors.blue),
             ),
           Text('${(progress * 100).toStringAsFixed(0)}%',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
           if (managed)
             IconButton(
-              tooltip: 'Remove',
+              tooltip: l.adminRemove,
               iconSize: 18,
               icon: Icon(Icons.delete_outline, color: scheme.error),
               onPressed: () async {
                 await runAdminAction(
                     context, () => widget.api.removeTorrent('${t['infoHash']}'),
-                    success: 'Torrent removed');
+                    success: l.adminTorrentRemoved);
                 await _poll();
               },
             ),
@@ -358,11 +372,11 @@ class _VpathAccessCard extends StatelessWidget {
     return AdminAsync(
       loader: api.torrentVpathAccess,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final vpaths = (data['vpaths'] as Map?) ?? const {};
         return AdminCard(
-          title: 'Library → daemon path mapping',
-          subtitle:
-              'Maps each library to its path as the torrent daemon sees it.',
+          title: l.adminLibraryDaemonPathMapping,
+          subtitle: l.adminLibraryDaemonPathMappingSubtitle,
           icon: Icons.alt_route,
           trailing: [
             IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
@@ -378,10 +392,10 @@ class _VpathAccessCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: AdminActionButton(
-                label: 'Auto-detect all',
+                label: l.adminAutoDetectAll,
                 icon: Icons.auto_fix_high,
                 tonal: true,
-                success: 'Auto-detection complete',
+                success: l.adminAutoDetectionComplete,
                 onPressed: () async {
                   await api.torrentVpathAutoDetect();
                   await reload();
@@ -396,19 +410,20 @@ class _VpathAccessCard extends StatelessWidget {
 
   Widget _mappingRow(BuildContext context, String name, Map info,
       Future<void> Function() reload) {
+    final l = AppLocalizations.of(context);
     final verified = info['verified'] == true;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
       title: Text(name),
-      subtitle: Text('${info['daemonPath'] ?? 'not mapped'}'),
+      subtitle: Text('${info['daemonPath'] ?? AppLocalizations.of(context).adminNotMapped}'),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         StatusPill(
-          label: verified ? 'verified' : 'unverified',
+          label: verified ? l.adminVerified : l.adminUnverified,
           color: verified ? Colors.green : Colors.orange,
         ),
         IconButton(
-          tooltip: 'Set manually',
+          tooltip: l.adminSetManually,
           icon: const Icon(Icons.edit, size: 18),
           onPressed: () async {
             final ctrl =
@@ -416,19 +431,19 @@ class _VpathAccessCard extends StatelessWidget {
             final ok = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: Text('Daemon path for "$name"'),
+                title: Text(l.adminDaemonPathFor(name)),
                 content: TextField(
                   controller: ctrl,
                   decoration:
-                      const InputDecoration(labelText: 'Path on daemon host'),
+                      InputDecoration(labelText: l.adminPathOnDaemonHost),
                 ),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel')),
+                      child: Text(l.adminCancel)),
                   FilledButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Verify & save')),
+                      child: Text(l.adminVerifyAndSave)),
                 ],
               ),
             );
@@ -436,8 +451,11 @@ class _VpathAccessCard extends StatelessWidget {
               final r =
                   await api.torrentVpathManual(name, ctrl.text.trim());
               if (context.mounted) {
-                adminToast(context,
-                    r['verified'] == true ? 'Verified' : 'Saved (unverified)');
+                adminToast(
+                    context,
+                    r['verified'] == true
+                        ? l.adminVpathVerified
+                        : l.adminVpathSavedUnverified);
               }
               await reload();
             }
@@ -458,27 +476,29 @@ class _PathTemplatesCard extends StatelessWidget {
     return AdminAsync(
       loader: api.torrentPathTemplates,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final vpaths = (data['vpaths'] as Map?) ?? const {};
         final vars = [
           for (final v in (data['supportedVars'] as List?) ?? const []) '$v'
         ];
         return AdminCard(
-          title: 'Download path templates',
-          subtitle: vars.isEmpty ? null : 'Vars: ${vars.join(', ')}',
+          title: l.adminDownloadPathTemplates,
+          subtitle:
+              vars.isEmpty ? null : l.adminPathTemplateVars(vars.join(', ')),
           icon: Icons.account_tree,
           children: [
             if (vpaths.isEmpty)
-              Text('No libraries',
+              Text(l.adminNoLibraries,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant)),
             for (final entry in vpaths.entries)
               AdminSaveField(
                 label: '${entry.key}',
                 helperText: data['suggestedTemplate'] != null
-                    ? 'Suggested: ${data['suggestedTemplate']}'
+                    ? l.adminSuggestedTemplate('${data['suggestedTemplate']}')
                     : null,
                 initialValue: '${(entry.value as Map?)?['template'] ?? ''}',
-                savedMessage: 'Template saved',
+                savedMessage: l.adminTemplateSaved,
                 onSave: (v) async {
                   await api.setTorrentPathTemplate(
                       entry.key, v.isEmpty ? null : v);

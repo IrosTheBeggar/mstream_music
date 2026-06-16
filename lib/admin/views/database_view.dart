@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -24,134 +25,137 @@ class DatabaseView extends StatelessWidget {
     return AdminAsync(
       loader: _load,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final p = data.params;
         return AdminViewBody(children: [
           AdminCard(
-            title: 'Library',
+            title: l.adminLibraryTitle,
             icon: Icons.storage_outlined,
             trailing: [
               IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
             ],
             children: [
-              AdminInfoRow('Tracks in database', '${data.files}'),
+              AdminInfoRow(l.adminTracksInDatabase, '${data.files}'),
               const SizedBox(height: 8),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 AdminActionButton(
-                  label: 'Scan all',
+                  label: l.adminScanAllButton,
                   icon: Icons.search,
-                  success: 'Scan started',
+                  success: l.adminScanStarted,
                   onPressed: api.scanAll,
                 ),
                 AdminActionButton(
-                  label: 'Force rescan',
+                  label: l.adminForceRescan,
                   icon: Icons.refresh,
                   tonal: true,
-                  success: 'Full rescan started',
+                  success: l.adminFullRescanStarted,
                   onPressed: api.forceRescan,
                 ),
                 AdminActionButton(
-                  label: 'Compress images',
+                  label: l.adminCompressImages,
                   icon: Icons.compress,
                   tonal: true,
-                  success: 'Image compression started',
+                  success: l.adminImageCompressionStarted,
                   onPressed: api.forceCompressImages,
                 ),
               ]),
             ],
           ),
           AdminCard(
-            title: 'Scan options',
+            title: l.adminScanOptions,
             icon: Icons.tune,
             children: [
               AdminSaveField(
-                label: 'Scan interval (hours, 0 = off)',
+                label: l.adminScanInterval,
                 number: true,
                 initialValue: '${_int(p['scanInterval'], 24)}',
                 onSave: (v) => api.setScanInterval(_int(v, 24)),
               ),
               AdminSaveField(
-                label: 'Boot scan delay (seconds)',
+                label: l.adminBootScanDelay,
                 number: true,
                 initialValue: '${_int(p['bootScanDelay'], 3)}',
                 onSave: (v) => api.setBootScanDelay(_int(v, 3)),
               ),
               AdminSaveField(
-                label: 'Scan commit interval (1–1000)',
+                label: l.adminScanCommitInterval,
                 number: true,
                 initialValue: '${_int(p['scanCommitInterval'], 25)}',
                 onSave: (v) => api.setScanCommitInterval(_int(v, 25)),
               ),
               AdminSaveField(
-                label: 'Scan threads (0 = auto)',
+                label: l.adminScanThreads,
                 number: true,
                 initialValue: '${_int(p['scanThreads'], 0)}',
                 onSave: (v) => api.setScanThreads(_int(v, 0)),
               ),
               const Divider(height: 16),
               AdminAsyncSwitch(
-                title: 'Skip image extraction',
+                title: l.adminSkipImageExtraction,
                 value: p['skipImg'] == true,
                 onChanged: api.setSkipImg,
               ),
               AdminAsyncSwitch(
-                title: 'Compress embedded images',
+                title: l.adminCompressEmbeddedImages,
                 value: p['compressImage'] == true,
                 onChanged: api.setCompressImage,
               ),
               AdminAsyncSwitch(
-                title: 'Generate waveforms after scan',
+                title: l.adminGenerateWaveforms,
                 value: p['generateWaveforms'] == true,
                 onChanged: api.setGenerateWaveforms,
               ),
               AdminAsyncSwitch(
-                title: 'Analyze BPM/key (deprecated, no-op)',
+                title: l.adminAnalyzeBpm,
                 value: p['analyzeBpm'] == true,
                 onChanged: api.setAnalyzeBpm,
               ),
             ],
           ),
           AdminCard(
-            title: 'Automatic album art',
+            title: l.adminAutomaticAlbumArt,
             icon: Icons.image_outlined,
             children: [
               AdminAsyncSwitch(
-                title: 'Download missing album art',
+                title: l.adminDownloadMissingAlbumArt,
                 value: p['autoAlbumArt'] == true,
                 onChanged: api.setAutoAlbumArt,
               ),
               AdminDropdownRow<String>(
-                label: 'Target',
+                label: l.adminTargetLabel,
                 value: p['autoAlbumArtMode'] == 'all' ? 'all' : 'missing',
-                items: const [
-                  DropdownMenuItem(value: 'missing', child: Text('Missing only')),
-                  DropdownMenuItem(value: 'all', child: Text('All albums')),
+                items: [
+                  DropdownMenuItem(
+                      value: 'missing', child: Text(l.adminMissingOnly)),
+                  DropdownMenuItem(value: 'all', child: Text(l.adminAllAlbums)),
                 ],
                 onChanged: api.setAutoAlbumArtMode,
               ),
               AdminSaveField(
-                label: 'Albums per run (1–10000)',
+                label: l.adminAlbumsPerRun,
                 number: true,
                 initialValue: '${_int(p['autoAlbumArtPerRun'], 100)}',
                 onSave: (v) => api.setAutoAlbumArtPerRun(_int(v, 100)),
               ),
               AdminAsyncSwitch(
-                title: 'Auto-downloaded art → write into folder',
+                title: l.adminAutoDownloadedArtWriteFolder,
                 value: p['autoAlbumArtWriteToFolder'] == true,
                 onChanged: api.setAutoAlbumArtWriteToFolder,
               ),
               AdminAsyncSwitch(
-                title: 'Manual set-art → write into folder',
+                title: l.adminManualArtWriteFolder,
                 value: p['albumArtWriteToFolder'] == true,
                 onChanged: api.setAlbumArtWriteToFolder,
               ),
               AdminAsyncSwitch(
-                title: 'Manual set-art → embed into file tag',
+                title: l.adminManualArtEmbedTag,
                 value: p['albumArtWriteToFile'] == true,
                 onChanged: api.setAlbumArtWriteToFile,
               ),
               const SizedBox(height: 8),
-              const Align(
-                  alignment: Alignment.centerLeft, child: Text('Art services')),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(l.adminArtServices)),
               _AlbumArtServices(
                 api: api,
                 selected: [
@@ -183,6 +187,7 @@ class _AlbumArtServicesState extends State<_AlbumArtServices> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Wrap(spacing: 8, children: [
       for (final s in _all)
         FilterChip(
@@ -193,7 +198,7 @@ class _AlbumArtServicesState extends State<_AlbumArtServices> {
             setState(() => v ? _sel.add(s) : _sel.remove(s));
             final ok = await runAdminAction(
                 context, () => widget.api.setAlbumArtServices(_sel.toList()),
-                success: 'Art services updated');
+                success: l.adminArtServicesUpdated);
             if (!ok && mounted) {
               setState(() => _sel
                 ..clear()
@@ -212,8 +217,8 @@ class _SharedPlaylistsCard extends StatelessWidget {
   const _SharedPlaylistsCard(
       {required this.api, required this.shares, required this.reload});
 
-  String _expiry(dynamic expires) {
-    if (expires == null) return 'never';
+  String _expiry(AppLocalizations l, dynamic expires) {
+    if (expires == null) return l.adminExpiryNever;
     final secs = expires is num ? expires.toInt() : int.tryParse('$expires');
     if (secs == null) return '$expires';
     return DateTime.fromMillisecondsSinceEpoch(secs * 1000)
@@ -225,9 +230,10 @@ class _SharedPlaylistsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AdminCard(
-      title: 'Shared playlists',
+      title: l.adminSharedPlaylists,
       icon: Icons.share_outlined,
       trailing: [
         IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
@@ -235,18 +241,18 @@ class _SharedPlaylistsCard extends StatelessWidget {
       children: [
         Wrap(spacing: 8, children: [
           AdminActionButton(
-            label: 'Delete expired',
+            label: l.adminDeleteExpired,
             tonal: true,
-            success: 'Expired shares deleted',
+            success: l.adminExpiredSharesDeleted,
             onPressed: () async {
               await api.deleteExpiredShares();
               await reload();
             },
           ),
           AdminActionButton(
-            label: 'Delete never-expiring',
+            label: l.adminDeleteNeverExpiring,
             destructive: true,
-            success: 'Eternal shares deleted',
+            success: l.adminEternalSharesDeleted,
             onPressed: () async {
               await api.deleteEternalShares();
               await reload();
@@ -255,7 +261,7 @@ class _SharedPlaylistsCard extends StatelessWidget {
         ]),
         const Divider(height: 20),
         if (shares.isEmpty)
-          Text('No shared playlists',
+          Text(l.adminNoSharedPlaylists,
               style: TextStyle(color: scheme.onSurfaceVariant))
         else
           for (final s in shares)
@@ -264,16 +270,17 @@ class _SharedPlaylistsCard extends StatelessWidget {
               dense: true,
               leading: const Icon(Icons.link),
               title: Text('${s['playlistId']}'),
-              subtitle: Text(
-                  'by ${s['user'] ?? 'unknown'} · '
-                  '${(s['playlist'] as List?)?.length ?? 0} tracks · '
-                  'expires ${_expiry(s['expires'])}'),
+              subtitle: Text(l.adminSharedPlaylistSubtitle(
+                '${s['user'] ?? l.adminUnknownUser}',
+                (s['playlist'] as List?)?.length ?? 0,
+                _expiry(l, s['expires']),
+              )),
               trailing: IconButton(
                 icon: Icon(Icons.delete_outline, color: scheme.error),
                 onPressed: () async {
                   await runAdminAction(context,
                       () => api.deleteSharedPlaylist('${s['playlistId']}'),
-                      success: 'Share deleted');
+                      success: l.adminShareDeleted);
                   await reload();
                 },
               ),

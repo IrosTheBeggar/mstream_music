@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 import 'directory_picker.dart';
@@ -14,15 +15,16 @@ class DirectoriesView extends StatelessWidget {
     return AdminAsync(
       loader: api.getDirectories,
       builder: (context, dirs, reload) {
+        final l = AppLocalizations.of(context);
         final names = dirs.keys.toList()..sort();
         return Stack(children: [
           AdminViewBody(children: [
             if (names.isEmpty)
-              const AdminCard(
-                title: 'No libraries yet',
+              AdminCard(
+                title: l.adminNoLibrariesYetTitle,
                 icon: Icons.folder_off_outlined,
                 children: [
-                  Text('Add a directory to start scanning music into the library.'),
+                  Text(l.adminAddDirectoryHint),
                 ],
               ),
             for (final name in names)
@@ -39,7 +41,7 @@ class DirectoriesView extends StatelessWidget {
             bottom: 16,
             child: FloatingActionButton.extended(
               icon: const Icon(Icons.create_new_folder),
-              label: const Text('Add directory'),
+              label: Text(l.adminAddDirectoryButton),
               onPressed: () async {
                 final added = await showDialog<bool>(
                   context: context,
@@ -67,52 +69,52 @@ class _LibraryCard extends StatelessWidget {
       required this.reload});
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove "$name"?'),
-        content: const Text(
-            'This removes the library and its scanned tracks from the database. '
-            'Files on disk are left untouched.'),
+        title: Text(l.adminRemoveDirectoryTitle(name)),
+        content: Text(l.adminRemoveDirectoryWarning),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(l.adminCancel)),
           FilledButton(
             style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove'),
+            child: Text(l.adminRemove),
           ),
         ],
       ),
     );
     if (ok == true && context.mounted) {
       await runAdminAction(context, () => api.removeDirectory(name),
-          success: 'Library removed');
+          success: l.adminLibraryRemovedToast);
       await reload();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminCard(
       title: name,
       icon: info['type'] == 'audiobook' ? Icons.menu_book : Icons.library_music,
       trailing: [
         IconButton(
-          tooltip: 'Remove',
+          tooltip: l.adminRemove,
           icon: Icon(Icons.delete_outline,
               color: Theme.of(context).colorScheme.error),
           onPressed: () => _confirmDelete(context),
         ),
       ],
       children: [
-        AdminInfoRow('Path', '${info['root'] ?? ''}'),
-        AdminInfoRow('Type', '${info['type'] ?? 'music'}'),
+        AdminInfoRow(l.adminDirectoryPathLabel, '${info['root'] ?? ''}'),
+        AdminInfoRow(l.adminDirectoryTypeLabel, '${info['type'] ?? 'music'}'),
         AdminAsyncSwitch(
-          title: 'Follow symlinks',
-          subtitle: 'Takes effect on the next scan',
+          title: l.adminFollowSymlinksTitle,
+          subtitle: l.adminFollowSymlinksSubtitle,
           value: info['followSymlinks'] == true,
           onChanged: (v) => api.setFollowSymlinks(name, v),
         ),
@@ -143,9 +145,10 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     final vpath = _vpath.text.trim();
     if (_directory == null || vpath.isEmpty) {
-      adminToast(context, 'Pick a folder and enter a name', error: true);
+      adminToast(context, l.adminPickFolderAndNameError, error: true);
       return;
     }
     setState(() => _busy = true);
@@ -153,7 +156,7 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
       context,
       () => widget.api.addDirectory(_directory!, vpath,
           autoAccess: _autoAccess, isAudioBooks: _isAudioBooks),
-      success: 'Directory added — scanning started',
+      success: l.adminDirectoryAddedToast,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -162,15 +165,16 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('Add directory'),
+      title: Text(l.adminAddDirectoryDialogTitle),
       content: SizedBox(
         width: 460,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           OutlinedButton.icon(
             icon: const Icon(Icons.folder_open),
-            label: Text(_directory ?? 'Choose folder on server…',
+            label: Text(_directory ?? l.adminChooseFolderButton,
                 overflow: TextOverflow.ellipsis),
             onPressed: () async {
               final picked =
@@ -190,21 +194,21 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
           const SizedBox(height: 12),
           TextField(
             controller: _vpath,
-            decoration: const InputDecoration(
-              labelText: 'Library name (vpath)',
-              helperText: 'Letters, numbers and dashes',
+            decoration: InputDecoration(
+              labelText: l.adminLibraryNameLabel,
+              helperText: l.adminLibraryNameHelper,
             ),
           ),
           const SizedBox(height: 8),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Grant all users access'),
+            title: Text(l.adminGrantAllUsersAccessTitle),
             value: _autoAccess,
             onChanged: (v) => setState(() => _autoAccess = v ?? false),
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Audiobook library'),
+            title: Text(l.adminAudiobookLibraryTitle),
             value: _isAudioBooks,
             onChanged: (v) => setState(() => _isAudioBooks = v ?? false),
           ),
@@ -213,7 +217,7 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
       actions: [
         TextButton(
             onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(l.adminCancel)),
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
@@ -221,7 +225,7 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Add'),
+              : Text(l.adminAdd),
         ),
       ],
     );

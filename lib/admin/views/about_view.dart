@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -20,42 +21,44 @@ class AboutView extends StatelessWidget {
     return AdminAsync(
       loader: _load,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final c = data.config;
-        String b(dynamic v) => v == true ? 'Yes' : 'No';
+        String b(dynamic v) => v == true ? l.adminYes : l.adminNo;
         return AdminViewBody(children: [
           AdminCard(
-            title: 'mStream v${data.version}',
+            title: l.adminAboutTitle(data.version),
             icon: Icons.info_outline,
             trailing: [
               IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
             ],
             children: [
-              AdminInfoRow('Bind address', '${c['address']}'),
-              AdminInfoRow('Port', '${c['port']}'),
-              AdminInfoRow('SSL', (c['ssl']?['cert'] != null) ? 'Enabled' : 'Disabled'),
-              AdminInfoRow('UI', '${c['ui'] ?? 'default'}'),
-              AdminInfoRow('Compression', '${c['compression'] ?? 'none'}'),
-              AdminInfoRow('Trust proxy', b(c['trustProxy'])),
-              AdminInfoRow('Secret (last 4)', '…${c['secret'] ?? ''}'),
+              AdminInfoRow(l.adminBindAddress, '${c['address']}'),
+              AdminInfoRow(l.adminAboutPort, '${c['port']}'),
+              AdminInfoRow(l.adminSSL, (c['ssl']?['cert'] != null) ? l.adminEnabled : l.adminDisabled),
+              AdminInfoRow(l.adminUI, '${c['ui'] ?? 'default'}'),
+              AdminInfoRow(l.adminCompression, '${c['compression'] ?? 'none'}'),
+              AdminInfoRow(l.adminTrustProxy, b(c['trustProxy'])),
+              AdminInfoRow(l.adminSecretLast4, '…${c['secret'] ?? ''}'),
             ],
           ),
           AdminCard(
-            title: 'Permissions',
+            title: l.adminPermissions,
             icon: Icons.lock_outline,
             children: [
-              AdminInfoRow('Uploads', c['noUpload'] == true ? 'Disabled' : 'Allowed'),
-              AdminInfoRow('Make dirs', c['noMkdir'] == true ? 'Disabled' : 'Allowed'),
+              AdminInfoRow(l.adminUploads, c['noUpload'] == true ? l.adminDisabled : l.adminAllowed),
+              AdminInfoRow(l.adminMakeDirs, c['noMkdir'] == true ? l.adminDisabled : l.adminAllowed),
               AdminInfoRow(
-                  'File modify', c['noFileModify'] == true ? 'Disabled' : 'Allowed'),
-              AdminInfoRow('Max request size', '${c['maxRequestSize'] ?? '—'}'),
+                  l.adminFileModify, c['noFileModify'] == true ? l.adminDisabled : l.adminAllowed),
+              AdminInfoRow(l.adminMaxRequestSize, '${c['maxRequestSize'] ?? '—'}'),
             ],
           ),
           AdminCard(
-            title: 'Database tuning',
+            title: l.adminDatabaseTuning,
             icon: Icons.tune,
             children: [
-              AdminInfoRow('Synchronous', '${c['dbSynchronous'] ?? 'FULL'}'),
-              AdminInfoRow('Cache size', '${c['dbCacheSizeMb'] ?? 64} MB'),
+              AdminInfoRow(l.adminSynchronous, '${c['dbSynchronous'] ?? 'FULL'}'),
+              AdminInfoRow(l.adminCacheSizeLabel,
+                  l.adminCacheSizeMb((c['dbCacheSizeMb'] as num?)?.toInt() ?? 64)),
             ],
           ),
         ]);

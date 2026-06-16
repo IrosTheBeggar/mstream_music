@@ -2471,6 +2471,2310 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Storage permission is needed to read Downloads'**
   String get importedShadersDownloadsNoPermission;
+
+  /// Log out action in the admin panel (drawer and web app bar).
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get adminLogOut;
+
+  /// Navigation group header for configuration sections in the admin drawer.
+  ///
+  /// In en, this message translates to:
+  /// **'Config'**
+  String get adminConfigGroup;
+
+  /// Nav label and DLNA dropdown item for the Directories / library directories section.
+  ///
+  /// In en, this message translates to:
+  /// **'Directories'**
+  String get adminDirectories;
+
+  /// Navigation label for the Users management section.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get adminUsers;
+
+  /// Navigation label for the DLNA section (protocol acronym, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'DLNA'**
+  String get adminDLNA;
+
+  /// Navigation label and card title for the Subsonic API section.
+  ///
+  /// In en, this message translates to:
+  /// **'Subsonic API'**
+  String get adminSubsonicAPI;
+
+  /// Navigation label for the MP3 Player (server audio) section.
+  ///
+  /// In en, this message translates to:
+  /// **'MP3 Player'**
+  String get adminMP3Player;
+
+  /// Navigation label and per-user permission toggle for the Torrent feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent'**
+  String get adminTorrent;
+
+  /// Navigation label and card title for the Federation section.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation'**
+  String get adminFederation;
+
+  /// Navigation group header for server sections in the admin drawer.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get adminServerGroup;
+
+  /// Navigation label for the About section.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get adminAbout;
+
+  /// Navigation label for the Settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get adminSettings;
+
+  /// Navigation label for the Database section.
+  ///
+  /// In en, this message translates to:
+  /// **'Database'**
+  String get adminDatabase;
+
+  /// Navigation label for the Backups section.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups'**
+  String get adminBackups;
+
+  /// Navigation label for the Transcoding section.
+  ///
+  /// In en, this message translates to:
+  /// **'Transcoding'**
+  String get adminTranscoding;
+
+  /// Navigation label for the Logs section.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs'**
+  String get adminLogs;
+
+  /// Navigation label for the Admin Access (network access control) section.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Access'**
+  String get adminAccess;
+
+  /// Admin app bar title combining the brand with the active section label.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream Admin · {label}'**
+  String adminAppBarTitle(String label);
+
+  /// Brand title shown on admin panel card, login card, and web app bar.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream Admin'**
+  String get adminPanelTitle;
+
+  /// Login validation error when server URL or username is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Server and username are required'**
+  String get adminLoginErrorRequired;
+
+  /// Login form field label for the server URL.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL'**
+  String get adminLoginServerURL;
+
+  /// Login form field label for the username.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get adminLoginUsername;
+
+  /// Login form field label for the password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get adminLoginPassword;
+
+  /// Login submit button.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get adminLoginSignIn;
+
+  /// Retry button shown on error states to re-attempt loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get adminRetry;
+
+  /// Inline confirmation shown after a setting is saved (text fields and dropdowns).
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get adminSaved;
+
+  /// Generic Save button used across dialogs and forms.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get adminSave;
+
+  /// Close button/action for dialogs and the embedded admin launcher.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get adminClose;
+
+  /// Overflow menu item in Manage Server that opens the admin panel.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin panel'**
+  String get adminPanelMenuItem;
+
+  /// Empty-state title on the Directories view when no libraries exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries yet'**
+  String get adminNoLibrariesYetTitle;
+
+  /// Empty-state hint on the Directories view.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a directory to start scanning music into the library.'**
+  String get adminAddDirectoryHint;
+
+  /// Button to add a new library directory (also used as the add-directory dialog button).
+  ///
+  /// In en, this message translates to:
+  /// **'Add directory'**
+  String get adminAddDirectoryButton;
+
+  /// Confirmation dialog title when removing a library directory; {name} is the library name.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String adminRemoveDirectoryTitle(String name);
+
+  /// Warning body in the remove-directory confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the library and its scanned tracks from the database. Files on disk are left untouched.'**
+  String get adminRemoveDirectoryWarning;
+
+  /// Generic Cancel button used across dialogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get adminCancel;
+
+  /// Generic Remove button/tooltip used to remove an item (library, torrent, etc.).
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get adminRemove;
+
+  /// Toast confirming a library was removed.
+  ///
+  /// In en, this message translates to:
+  /// **'Library removed'**
+  String get adminLibraryRemovedToast;
+
+  /// Info row label showing a directory's filesystem path.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get adminDirectoryPathLabel;
+
+  /// Info row label showing a directory's library type.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get adminDirectoryTypeLabel;
+
+  /// Toggle title for following symlinks when scanning a directory.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow symlinks'**
+  String get adminFollowSymlinksTitle;
+
+  /// Toggle subtitle clarifying when the follow-symlinks setting applies.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes effect on the next scan'**
+  String get adminFollowSymlinksSubtitle;
+
+  /// Validation toast when adding a directory without a folder or name.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a folder and enter a name'**
+  String get adminPickFolderAndNameError;
+
+  /// Toast confirming a directory was added and scanning began.
+  ///
+  /// In en, this message translates to:
+  /// **'Directory added — scanning started'**
+  String get adminDirectoryAddedToast;
+
+  /// Title of the add-directory dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add directory'**
+  String get adminAddDirectoryDialogTitle;
+
+  /// Button opening the server folder picker in the add-directory dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folder on server…'**
+  String get adminChooseFolderButton;
+
+  /// Field label for the library name (virtual path) when adding a directory.
+  ///
+  /// In en, this message translates to:
+  /// **'Library name (vpath)'**
+  String get adminLibraryNameLabel;
+
+  /// Helper text describing allowed characters for the library name.
+  ///
+  /// In en, this message translates to:
+  /// **'Letters, numbers and dashes'**
+  String get adminLibraryNameHelper;
+
+  /// Toggle title to give every user access to the new library.
+  ///
+  /// In en, this message translates to:
+  /// **'Grant all users access'**
+  String get adminGrantAllUsersAccessTitle;
+
+  /// Toggle title marking the library as an audiobook library.
+  ///
+  /// In en, this message translates to:
+  /// **'Audiobook library'**
+  String get adminAudiobookLibraryTitle;
+
+  /// Add button confirming the add-directory dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get adminAdd;
+
+  /// Title of the server directory picker dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a folder'**
+  String get adminChooseFolderTitle;
+
+  /// Button confirming the currently browsed folder in the directory picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Select this folder'**
+  String get adminSelectFolderButton;
+
+  /// Empty-state title on the Users view when no users exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No users'**
+  String get adminNoUsersTitle;
+
+  /// Empty-state subtitle on the Users view.
+  ///
+  /// In en, this message translates to:
+  /// **'With no users the server runs in open/public mode. Add one to require login.'**
+  String get adminNoUsersSubtitle;
+
+  /// Button to add a new user.
+  ///
+  /// In en, this message translates to:
+  /// **'Add user'**
+  String get adminAddUserButton;
+
+  /// Dialog title for editing a user's per-library access.
+  ///
+  /// In en, this message translates to:
+  /// **'Library access'**
+  String get adminLibraryAccessDialogTitle;
+
+  /// Toast confirming a user's library access was saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Library access updated'**
+  String get adminLibraryAccessUpdatedToast;
+
+  /// Dialog title and menu item for setting a user's Subsonic password.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Subsonic password'**
+  String get adminSetSubsonicPasswordTitle;
+
+  /// Dialog title and menu item for setting a user's password.
+  ///
+  /// In en, this message translates to:
+  /// **'Set password'**
+  String get adminSetPasswordTitle;
+
+  /// Toast confirming a user's password was updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated'**
+  String get adminPasswordUpdatedToast;
+
+  /// Confirmation dialog title when deleting a user; {username} is the account name.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {username}?'**
+  String adminDeleteUserTitle(String username);
+
+  /// Warning body in the delete-user confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently removes the user account.'**
+  String get adminDeleteUserWarning;
+
+  /// Generic Delete button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get adminDelete;
+
+  /// Toast confirming a user was deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'User deleted'**
+  String get adminUserDeletedToast;
+
+  /// Status pill on a user row marking an administrator (lowercase token).
+  ///
+  /// In en, this message translates to:
+  /// **'admin'**
+  String get adminStatusPillLabel;
+
+  /// Overflow menu item to delete a user.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete user'**
+  String get adminDeleteUserMenuItem;
+
+  /// Info row shown when a user has access to no libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'No library access'**
+  String get adminNoLibraryAccessLabel;
+
+  /// Button on a user row opening the per-library access editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Libraries'**
+  String get adminLibrariesButton;
+
+  /// Compact permission toggle title marking a user as admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get adminAdminToggleTitle;
+
+  /// Compact permission toggle: allow user to create directories.
+  ///
+  /// In en, this message translates to:
+  /// **'Make dirs'**
+  String get adminMakeDirsToggleTitle;
+
+  /// Compact permission toggle: allow user to upload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get adminUploadToggleTitle;
+
+  /// Compact permission toggle: allow user to modify files.
+  ///
+  /// In en, this message translates to:
+  /// **'Modify files'**
+  String get adminModifyFilesToggleTitle;
+
+  /// Compact permission toggle: allow user to use server audio.
+  ///
+  /// In en, this message translates to:
+  /// **'Server audio'**
+  String get adminServerAudioToggleTitle;
+
+  /// Title of the add-user dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add user'**
+  String get adminAddUserDialogTitle;
+
+  /// Field label for a username (add-user dialog and Subsonic mint-key form).
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get adminUsername;
+
+  /// Field label for a password (add-user dialog and torrent client form).
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get adminPassword;
+
+  /// Field label for the optional Subsonic password in the add-user dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Subsonic password (optional)'**
+  String get adminSubsonicPasswordLabel;
+
+  /// Group header in the add-user dialog for per-library access toggles.
+  ///
+  /// In en, this message translates to:
+  /// **'Library access'**
+  String get adminLibraryAccessHeader;
+
+  /// Validation toast when creating a user without username or password.
+  ///
+  /// In en, this message translates to:
+  /// **'Username and password are required'**
+  String get adminUsernamePasswordRequiredError;
+
+  /// Toast confirming a new user was created.
+  ///
+  /// In en, this message translates to:
+  /// **'User created'**
+  String get adminUserCreatedToast;
+
+  /// Full-width permission toggle marking a user as administrator (add-user dialog).
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator'**
+  String get adminAdministratorToggleTitle;
+
+  /// Permission toggle: allow user to create directories (add-user dialog).
+  ///
+  /// In en, this message translates to:
+  /// **'Allow make directories'**
+  String get adminAllowMakeDirectoriesTitle;
+
+  /// Permission toggle: allow user to upload (add-user dialog).
+  ///
+  /// In en, this message translates to:
+  /// **'Allow upload'**
+  String get adminAllowUploadTitle;
+
+  /// Permission toggle: allow user to use server audio (add-user dialog).
+  ///
+  /// In en, this message translates to:
+  /// **'Allow server audio'**
+  String get adminAllowServerAudioTitle;
+
+  /// Create button confirming creation dialogs (user, backup destination).
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get adminCreate;
+
+  /// Message shown in the library-access editor when no libraries exist.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries configured.'**
+  String get adminNoLibrariesConfigured;
+
+  /// Field label for entering a new password in the set-password dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get adminNewPasswordLabel;
+
+  /// Card title and field label for a library (Database view, backup destination dialog).
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get adminLibraryTitle;
+
+  /// Info row label showing the number of tracks stored in the database.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks in database'**
+  String get adminTracksInDatabase;
+
+  /// Button to start scanning all libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan all'**
+  String get adminScanAllButton;
+
+  /// Toast confirming a library scan has started.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan started'**
+  String get adminScanStarted;
+
+  /// Button to force a full rescan of all libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Force rescan'**
+  String get adminForceRescan;
+
+  /// Toast confirming a forced full rescan has started.
+  ///
+  /// In en, this message translates to:
+  /// **'Full rescan started'**
+  String get adminFullRescanStarted;
+
+  /// Button to start compressing stored images.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress images'**
+  String get adminCompressImages;
+
+  /// Toast confirming image compression has started.
+  ///
+  /// In en, this message translates to:
+  /// **'Image compression started'**
+  String get adminImageCompressionStarted;
+
+  /// Card title for the scan options section.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan options'**
+  String get adminScanOptions;
+
+  /// Field label for the automatic scan interval in hours.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan interval (hours, 0 = off)'**
+  String get adminScanInterval;
+
+  /// Field label for the delay before the boot-time scan.
+  ///
+  /// In en, this message translates to:
+  /// **'Boot scan delay (seconds)'**
+  String get adminBootScanDelay;
+
+  /// Field label for how often the scanner commits to the database.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan commit interval (1–1000)'**
+  String get adminScanCommitInterval;
+
+  /// Field label for the number of scanner threads.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan threads (0 = auto)'**
+  String get adminScanThreads;
+
+  /// Toggle title to skip extracting embedded images during scan.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip image extraction'**
+  String get adminSkipImageExtraction;
+
+  /// Toggle title to compress embedded images during scan.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress embedded images'**
+  String get adminCompressEmbeddedImages;
+
+  /// Toggle title to generate waveforms after a scan completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate waveforms after scan'**
+  String get adminGenerateWaveforms;
+
+  /// Toggle title for deprecated BPM/key analysis (currently does nothing).
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze BPM/key (deprecated, no-op)'**
+  String get adminAnalyzeBpm;
+
+  /// Card title for the automatic album art section.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic album art'**
+  String get adminAutomaticAlbumArt;
+
+  /// Toggle title to auto-download missing album art.
+  ///
+  /// In en, this message translates to:
+  /// **'Download missing album art'**
+  String get adminDownloadMissingAlbumArt;
+
+  /// Field label for the album-art download target scope.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get adminTargetLabel;
+
+  /// Dropdown option to fetch art only for albums missing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing only'**
+  String get adminMissingOnly;
+
+  /// Dropdown option to fetch art for all albums.
+  ///
+  /// In en, this message translates to:
+  /// **'All albums'**
+  String get adminAllAlbums;
+
+  /// Field label for how many albums to process per art-download run.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums per run (1–10000)'**
+  String get adminAlbumsPerRun;
+
+  /// Toggle title to write auto-downloaded art into the album folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-downloaded art → write into folder'**
+  String get adminAutoDownloadedArtWriteFolder;
+
+  /// Toggle title to write manually set art into the album folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual set-art → write into folder'**
+  String get adminManualArtWriteFolder;
+
+  /// Toggle title to embed manually set art into the file's tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual set-art → embed into file tag'**
+  String get adminManualArtEmbedTag;
+
+  /// Section label for configuring album-art lookup services.
+  ///
+  /// In en, this message translates to:
+  /// **'Art services'**
+  String get adminArtServices;
+
+  /// Toast confirming art-service settings were saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Art services updated'**
+  String get adminArtServicesUpdated;
+
+  /// Card title for the shared playlists management section.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared playlists'**
+  String get adminSharedPlaylists;
+
+  /// Button to delete expired shared playlists.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete expired'**
+  String get adminDeleteExpired;
+
+  /// Toast confirming expired shared playlists were deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired shares deleted'**
+  String get adminExpiredSharesDeleted;
+
+  /// Button to delete shared playlists that never expire.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete never-expiring'**
+  String get adminDeleteNeverExpiring;
+
+  /// Toast confirming never-expiring shared playlists were deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Eternal shares deleted'**
+  String get adminEternalSharesDeleted;
+
+  /// Empty-state message when there are no shared playlists.
+  ///
+  /// In en, this message translates to:
+  /// **'No shared playlists'**
+  String get adminNoSharedPlaylists;
+
+  /// Subtitle for a shared playlist row: owner, track count, and expiry.
+  ///
+  /// In en, this message translates to:
+  /// **'by {user} · {count} tracks · expires {expiry}'**
+  String adminSharedPlaylistSubtitle(String user, int count, String expiry);
+
+  /// Toast confirming a single shared playlist was deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Share deleted'**
+  String get adminShareDeleted;
+
+  /// Card title for the network settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get adminNetwork;
+
+  /// Subtitle warning that network setting changes restart the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing these soft-reboots the server.'**
+  String get adminNetworkSubtitle;
+
+  /// Field/info label for the server bind address.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind address'**
+  String get adminBindAddress;
+
+  /// Field label for a network port (settings, DLNA, Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get adminPort;
+
+  /// Toggle title to trust X-Forwarded-* proxy headers.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust proxy headers'**
+  String get adminTrustProxyHeaders;
+
+  /// Subtitle explaining when to enable trusting proxy headers.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable when behind a reverse proxy (X-Forwarded-*)'**
+  String get adminTrustProxyHeadersSubtitle;
+
+  /// Card title for the permissions section.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions'**
+  String get adminPermissions;
+
+  /// Toggle title for the server-wide allow-uploads permission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow uploads'**
+  String get adminAllowUploads;
+
+  /// Toggle title for the server-wide allow-make-directories permission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow making directories'**
+  String get adminAllowMakingDirectories;
+
+  /// Toggle title for the server-wide allow-modify-files permission.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow modifying files'**
+  String get adminAllowModifyingFiles;
+
+  /// Field/info label for the maximum request body size.
+  ///
+  /// In en, this message translates to:
+  /// **'Max request size'**
+  String get adminMaxRequestSize;
+
+  /// Helper text giving examples of max request size values.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 50MB or 512KB'**
+  String get adminMaxRequestSizeHelper;
+
+  /// Card title for the HTTP and UI settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP & UI'**
+  String get adminHttpUi;
+
+  /// Field label for the HTTP response compression mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Response compression'**
+  String get adminResponseCompression;
+
+  /// Dropdown option: no response compression.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get adminCompressionNone;
+
+  /// Dropdown option for gzip compression (codec token, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'gzip'**
+  String get adminCompressionGzip;
+
+  /// Dropdown option for brotli compression (codec token, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'brotli'**
+  String get adminCompressionBrotli;
+
+  /// Field label for selecting the served web UI.
+  ///
+  /// In en, this message translates to:
+  /// **'Web UI'**
+  String get adminWebUi;
+
+  /// Dropdown option for the default web UI.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get adminUiDefault;
+
+  /// Dropdown option for the Velvet web UI (brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Velvet'**
+  String get adminUiVelvet;
+
+  /// Dropdown option for the Subsonic web UI (brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Subsonic'**
+  String get adminUiSubsonic;
+
+  /// Card title for the database tuning section.
+  ///
+  /// In en, this message translates to:
+  /// **'Database tuning'**
+  String get adminDatabaseTuning;
+
+  /// Field label for the SQLite synchronous pragma setting.
+  ///
+  /// In en, this message translates to:
+  /// **'SQLite synchronous'**
+  String get adminSqliteSynchronous;
+
+  /// Dropdown option: SQLite synchronous=FULL (safest). FULL is a SQLite token; surrounding text is translatable.
+  ///
+  /// In en, this message translates to:
+  /// **'FULL (safest)'**
+  String get adminSyncFull;
+
+  /// Dropdown option: SQLite synchronous=NORMAL (faster). NORMAL is a SQLite token; surrounding text is translatable.
+  ///
+  /// In en, this message translates to:
+  /// **'NORMAL (faster)'**
+  String get adminSyncNormal;
+
+  /// Field label for the SQLite cache size in megabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache size (MB, 1–2048)'**
+  String get adminCacheSize;
+
+  /// Card title for the logging settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Logging'**
+  String get adminLogging;
+
+  /// Toggle title to persist logs to disk.
+  ///
+  /// In en, this message translates to:
+  /// **'Write logs to disk'**
+  String get adminWriteLogsToDisk;
+
+  /// Field label for the in-memory log buffer size.
+  ///
+  /// In en, this message translates to:
+  /// **'Log buffer size (0–10000, 0 = disabled)'**
+  String get adminLogBufferSize;
+
+  /// Card title for the server audio (Rust player) section.
+  ///
+  /// In en, this message translates to:
+  /// **'Server audio'**
+  String get adminServerAudio;
+
+  /// Toggle title to auto-start the Rust server-audio player.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-boot server audio (Rust player)'**
+  String get adminAutoBootServerAudio;
+
+  /// Field label for the Rust player's network port.
+  ///
+  /// In en, this message translates to:
+  /// **'Rust player port'**
+  String get adminRustPlayerPort;
+
+  /// Info row label showing the active server-audio backend.
+  ///
+  /// In en, this message translates to:
+  /// **'Active backend'**
+  String get adminActiveBackend;
+
+  /// Info row label showing the active player.
+  ///
+  /// In en, this message translates to:
+  /// **'Player'**
+  String get adminPlayer;
+
+  /// Info row label listing detected command-line players.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected CLI players'**
+  String get adminDetectedCliPlayers;
+
+  /// Lowercase placeholder shown when no CLI players are detected.
+  ///
+  /// In en, this message translates to:
+  /// **'none'**
+  String get adminNone;
+
+  /// Button to re-probe for available CLI players.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-detect players'**
+  String get adminReDetectPlayers;
+
+  /// Toast confirming CLI players were re-probed.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-probed CLI players'**
+  String get adminReProbedCliPlayers;
+
+  /// Card title for the SSL/HTTPS settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL / HTTPS'**
+  String get adminSslHttps;
+
+  /// Status pill/value indicating a feature is enabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get adminEnabled;
+
+  /// Status pill/value indicating a feature is disabled; also a dropdown option (SSL, Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get adminDisabled;
+
+  /// Button to replace the existing SSL certificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace certificate'**
+  String get adminReplaceCertificate;
+
+  /// Button to set an SSL certificate when none exists.
+  ///
+  /// In en, this message translates to:
+  /// **'Set certificate'**
+  String get adminSetCertificate;
+
+  /// Title of the set-SSL-certificate dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Set SSL certificate'**
+  String get adminSetSslCertificateDialog;
+
+  /// Field label for the SSL certificate file path.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate path'**
+  String get adminCertificatePath;
+
+  /// Field label for the SSL private key file path.
+  ///
+  /// In en, this message translates to:
+  /// **'Key path'**
+  String get adminKeyPath;
+
+  /// Toast confirming SSL was configured and a reboot is needed.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL configured — reboot to apply'**
+  String get adminSslConfigured;
+
+  /// Button to remove the configured SSL certificate.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove SSL'**
+  String get adminRemoveSsl;
+
+  /// Toast confirming SSL configuration was removed.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL removed'**
+  String get adminSslRemoved;
+
+  /// Card title for the security settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get adminSecurity;
+
+  /// Info row label showing the last 4 characters of the JWT secret.
+  ///
+  /// In en, this message translates to:
+  /// **'JWT secret (last 4)'**
+  String get adminJwtSecretLast4;
+
+  /// Button to regenerate the JWT signing secret.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate secret'**
+  String get adminRegenerateSecret;
+
+  /// Toast confirming the JWT secret was regenerated and sessions invalidated.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret regenerated — all sessions invalidated'**
+  String get adminSecretRegenerated;
+
+  /// Confirmation dialog title for regenerating the JWT secret.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate JWT secret?'**
+  String get adminRegenerateJwtSecretDialog;
+
+  /// Warning body in the regenerate-JWT-secret confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This invalidates every existing login (including this one). Everyone must sign in again.'**
+  String get adminRegenerateJwtSecretDialogBody;
+
+  /// Confirm button in the regenerate-JWT-secret dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get adminRegenerateButton;
+
+  /// Dropdown option: admin API reachable from all networks.
+  ///
+  /// In en, this message translates to:
+  /// **'All networks'**
+  String get adminAllNetworks;
+
+  /// Dropdown option: admin API reachable from localhost only.
+  ///
+  /// In en, this message translates to:
+  /// **'Localhost only'**
+  String get adminLocalhostOnly;
+
+  /// Dropdown option: admin API restricted to a whitelist of IPs.
+  ///
+  /// In en, this message translates to:
+  /// **'IP whitelist'**
+  String get adminIpWhitelist;
+
+  /// Dropdown option: lock the admin API entirely.
+  ///
+  /// In en, this message translates to:
+  /// **'None (lock admin)'**
+  String get adminNoneLockAdmin;
+
+  /// Card title for the admin network access section.
+  ///
+  /// In en, this message translates to:
+  /// **'Network access'**
+  String get adminNetworkAccess;
+
+  /// Subtitle for the admin network access section.
+  ///
+  /// In en, this message translates to:
+  /// **'Restrict which networks may reach the admin API.'**
+  String get adminNetworkAccessSubtitle;
+
+  /// Field label for selecting an access/operation mode (admin access, DLNA, Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get adminMode;
+
+  /// Section label for the list of whitelisted IP addresses and CIDR ranges.
+  ///
+  /// In en, this message translates to:
+  /// **'Whitelisted IPs / CIDRs'**
+  String get adminWhitelistedIps;
+
+  /// Empty-state text when no IPs/CIDRs have been whitelisted.
+  ///
+  /// In en, this message translates to:
+  /// **'None yet'**
+  String get adminNoneYet;
+
+  /// Field label for adding an IP address or CIDR range to the whitelist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add IP or CIDR'**
+  String get adminAddIpOrCidr;
+
+  /// Example CIDR hint text in the add-IP field (literal example, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'192.168.1.0/24'**
+  String get adminCidrExample;
+
+  /// Button to apply whitelist changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get adminApply;
+
+  /// Card title for destructive admin-access actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger zone'**
+  String get adminDangerZone;
+
+  /// Action title to disable the entire admin API.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock admin API'**
+  String get adminLockAdminApi;
+
+  /// Subtitle warning about locking the admin API.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable the entire admin API. Cannot be undone from here.'**
+  String get adminLockAdminApiSubtitle;
+
+  /// Button to confirm locking the admin API.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock'**
+  String get adminLockButton;
+
+  /// Confirmation dialog title for locking the admin API.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock the admin API?'**
+  String get adminLockAdminApiDialog;
+
+  /// Warning body in the lock-admin-API confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This disables the entire /admin API for everyone. You will not be able to undo it from this panel — it requires editing the server config file and restarting. Continue?'**
+  String get adminLockAdminApiDialogBody;
+
+  /// Toast confirming the admin API was locked.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin API locked'**
+  String get adminAdminApiLocked;
+
+  /// Toast confirming admin network-access settings were saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin access updated'**
+  String get adminAccessUpdated;
+
+  /// Card title for the FFmpeg transcoding section.
+  ///
+  /// In en, this message translates to:
+  /// **'FFmpeg'**
+  String get adminTranscodingFFmpegTitle;
+
+  /// Status pill indicating ffmpeg is downloaded and ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get adminFFmpegStatusReady;
+
+  /// Status pill indicating ffmpeg has not been downloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded'**
+  String get adminFFmpegStatusNotDownloaded;
+
+  /// Button to download or update the bundled ffmpeg binary.
+  ///
+  /// In en, this message translates to:
+  /// **'Download / update ffmpeg'**
+  String get adminFFmpegDownloadButton;
+
+  /// Toast confirming ffmpeg was downloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'ffmpeg downloaded'**
+  String get adminFFmpegDownloadedToast;
+
+  /// Toggle title to keep ffmpeg updated automatically.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-update ffmpeg'**
+  String get adminFFmpegAutoUpdateTitle;
+
+  /// Subtitle for the ffmpeg auto-update toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the bundled ffmpeg up to date automatically'**
+  String get adminFFmpegAutoUpdateSubtitle;
+
+  /// Card title for the default transcoding settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults'**
+  String get adminTranscodingDefaultsTitle;
+
+  /// Field label for the default transcoding codec.
+  ///
+  /// In en, this message translates to:
+  /// **'Default codec'**
+  String get adminDefaultCodecLabel;
+
+  /// Field label for the default transcoding bitrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Default bitrate'**
+  String get adminDefaultBitrateLabel;
+
+  /// Button to resume the live log stream.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get adminLogsResumeButton;
+
+  /// Button to pause the live log stream.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get adminLogsPauseButton;
+
+  /// Button to clear a list (log entries, token-auth failures).
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get adminClear;
+
+  /// Toggle title for auto-scrolling the log view.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-scroll'**
+  String get adminLogsAutoScrollTitle;
+
+  /// Count of log lines currently shown.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 line} other{{count} lines}}'**
+  String adminLogsLineCount(int count);
+
+  /// Button to download logs as a zip file.
+  ///
+  /// In en, this message translates to:
+  /// **'Download zip'**
+  String get adminLogsDownloadZipButton;
+
+  /// Empty-state hint when the log view has no entries.
+  ///
+  /// In en, this message translates to:
+  /// **'No log entries yet'**
+  String get adminLogsNoEntriesHint;
+
+  /// DLNA mode dropdown option: DLNA disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get adminDlnaModeDisabled;
+
+  /// Mode dropdown option: serve on the same port as HTTP (DLNA, Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Same port as HTTP'**
+  String get adminSamePortAsHttp;
+
+  /// Mode dropdown option: serve on a separate port (DLNA, Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Separate port'**
+  String get adminSeparatePort;
+
+  /// DLNA browse layout option: flat list of all tracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat (all tracks)'**
+  String get adminDlnaBrowseFlat;
+
+  /// DLNA browse layout option: browse by directory structure.
+  ///
+  /// In en, this message translates to:
+  /// **'Directories'**
+  String get adminDlnaBrowseDirectories;
+
+  /// DLNA browse layout option: browse by artist.
+  ///
+  /// In en, this message translates to:
+  /// **'By artist'**
+  String get adminDlnaBrowseArtist;
+
+  /// DLNA browse layout option: browse by album.
+  ///
+  /// In en, this message translates to:
+  /// **'By album'**
+  String get adminDlnaBrowseAlbum;
+
+  /// DLNA browse layout option: browse by genre.
+  ///
+  /// In en, this message translates to:
+  /// **'By genre'**
+  String get adminDlnaBrowseGenre;
+
+  /// Card title for the DLNA server settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get adminDlnaServerTitle;
+
+  /// Card title for the DLNA device identity settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity'**
+  String get adminDlnaIdentityTitle;
+
+  /// Field label for the DLNA device friendly name.
+  ///
+  /// In en, this message translates to:
+  /// **'Friendly name'**
+  String get adminDlnaFriendlyNameLabel;
+
+  /// Field label for the DLNA device UUID.
+  ///
+  /// In en, this message translates to:
+  /// **'Device UUID'**
+  String get adminDlnaDeviceUuidLabel;
+
+  /// Helper text describing the DLNA device UUID format.
+  ///
+  /// In en, this message translates to:
+  /// **'Canonical GUID'**
+  String get adminDlnaDeviceUuidHelper;
+
+  /// Card title for the DLNA browse layout settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse layout'**
+  String get adminDlnaBrowseLayoutTitle;
+
+  /// Field label for the DLNA browse structure.
+  ///
+  /// In en, this message translates to:
+  /// **'Structure'**
+  String get adminDlnaStructureLabel;
+
+  /// Card title for the mDNS local network discovery section.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network discovery'**
+  String get adminMdnsLocalNetworkDiscoveryTitle;
+
+  /// Subtitle explaining what mDNS advertising does.
+  ///
+  /// In en, this message translates to:
+  /// **'Advertises this server as an _mstream._tcp mDNS service. Publishes metadata only — exposes no library data or new routes.'**
+  String get adminMdnsLocalNetworkDiscoverySubtitle;
+
+  /// Toggle title to enable mDNS advertising.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable advertising'**
+  String get adminMdnsEnableAdvertisingTitle;
+
+  /// Field label for the mDNS friendly name.
+  ///
+  /// In en, this message translates to:
+  /// **'Friendly name'**
+  String get adminMdnsFriendlyNameLabel;
+
+  /// Helper text for the mDNS friendly name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty = derive from hostname (max 63 bytes)'**
+  String get adminMdnsFriendlyNameHelper;
+
+  /// Info row label showing the mDNS instance ID.
+  ///
+  /// In en, this message translates to:
+  /// **'Instance ID'**
+  String get adminMdnsInstanceIdLabel;
+
+  /// Card title for the Subsonic API settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Subsonic API'**
+  String get adminSubsonicApiTitle;
+
+  /// Button to test the Subsonic API connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test connection'**
+  String get adminTestConnection;
+
+  /// Toast on successful Subsonic connection test: version and latency.
+  ///
+  /// In en, this message translates to:
+  /// **'OK · {version} · {latency}ms'**
+  String adminSubsonicTestSuccess(String version, String latency);
+
+  /// Toast when the Subsonic connection test fails; {reason} is the failure reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {reason}'**
+  String adminSubsonicTestFailed(String reason);
+
+  /// Card title for a status section (Subsonic).
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get adminStatus;
+
+  /// Info row label for the count of implemented Subsonic API methods.
+  ///
+  /// In en, this message translates to:
+  /// **'Methods implemented'**
+  String get adminMethodsImplemented;
+
+  /// Info row label distinguishing fully-implemented vs stubbed methods.
+  ///
+  /// In en, this message translates to:
+  /// **'Full / stub'**
+  String get adminFullStub;
+
+  /// Group header for the Subsonic now-playing list.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing'**
+  String get adminNowPlaying;
+
+  /// Placeholder shown when no one is currently playing.
+  ///
+  /// In en, this message translates to:
+  /// **'nobody'**
+  String get adminNobody;
+
+  /// Group header for the LRCLib lyrics settings (LRCLib is a service name).
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics (LRCLib)'**
+  String get adminLyricsLrclib;
+
+  /// Toggle title to use LRCLib as a lyrics fallback.
+  ///
+  /// In en, this message translates to:
+  /// **'LRCLib fallback'**
+  String get adminLrclibFallback;
+
+  /// Toggle title to write .lrc sidecar lyric files.
+  ///
+  /// In en, this message translates to:
+  /// **'Write .lrc sidecar files'**
+  String get adminWriteLrcSidecarFiles;
+
+  /// Info row label for the lyrics cache.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache'**
+  String get adminCache;
+
+  /// Button to purge the lyrics cache.
+  ///
+  /// In en, this message translates to:
+  /// **'Purge cache'**
+  String get adminPurgeCache;
+
+  /// Toast confirming the lyrics cache was purged.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics cache purged'**
+  String get adminLyricsCachePurged;
+
+  /// Button to retry failed lyrics lookups.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry failed'**
+  String get adminRetryFailed;
+
+  /// Toast confirming transient lyrics cache entries were cleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Transient lyrics entries cleared'**
+  String get adminTransientLyricsEntriesCleared;
+
+  /// Card title for the Subsonic jukebox section.
+  ///
+  /// In en, this message translates to:
+  /// **'Jukebox'**
+  String get adminJukebox;
+
+  /// Status pill indicating the jukebox is available.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get adminAvailable;
+
+  /// Status pill indicating the jukebox is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get adminUnavailable;
+
+  /// Info row label for the jukebox playback state.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get adminState;
+
+  /// Jukebox state value: playing.
+  ///
+  /// In en, this message translates to:
+  /// **'playing'**
+  String get adminPlaying;
+
+  /// Jukebox state value: paused.
+  ///
+  /// In en, this message translates to:
+  /// **'paused'**
+  String get adminPaused;
+
+  /// Jukebox state value: idle.
+  ///
+  /// In en, this message translates to:
+  /// **'idle'**
+  String get adminIdle;
+
+  /// Info row label for the jukebox current track.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get adminCurrent;
+
+  /// Info row label for the jukebox queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get adminQueue;
+
+  /// Number of tracks in the jukebox queue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
+  String adminQueueTracks(int count);
+
+  /// Info row label for the jukebox volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get adminVolume;
+
+  /// Jukebox volume shown as a percentage.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String adminVolumePercent(int percent);
+
+  /// Card title for the Subsonic token-auth failures section.
+  ///
+  /// In en, this message translates to:
+  /// **'Token-auth failures'**
+  String get adminTokenAuthFailures;
+
+  /// Subtitle explaining the token-auth failures list.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients defaulting to token auth without a Subsonic password.'**
+  String get adminTokenAuthFailuresSubtitle;
+
+  /// Empty-state text when there are no recent token-auth failures.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent failures'**
+  String get adminNoRecentFailures;
+
+  /// Toast confirming the token-auth failures list was cleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get adminCleared;
+
+  /// Card title for minting a Subsonic API key.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint API key'**
+  String get adminMintApiKey;
+
+  /// Subtitle for the mint-API-key section.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a Subsonic apiKey for a user (shown once).'**
+  String get adminMintApiKeySubtitle;
+
+  /// Field label for the name/label of a minted API key.
+  ///
+  /// In en, this message translates to:
+  /// **'Key name / label'**
+  String get adminKeyNameLabel;
+
+  /// Button to mint a new Subsonic API key.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint key'**
+  String get adminMintKey;
+
+  /// Validation toast when minting a key without a username or key name.
+  ///
+  /// In en, this message translates to:
+  /// **'Username and name required'**
+  String get adminUsernameAndNameRequired;
+
+  /// Card title for the torrent client configuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get adminTorrentClient;
+
+  /// Field label for selecting the active torrent client.
+  ///
+  /// In en, this message translates to:
+  /// **'Active client'**
+  String get adminActiveClient;
+
+  /// Torrent client dropdown option (product name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Transmission'**
+  String get adminTransmission;
+
+  /// Torrent client dropdown option (product name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'qBittorrent'**
+  String get adminQbittorrent;
+
+  /// Torrent client dropdown option (product name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'Deluge'**
+  String get adminDeluge;
+
+  /// Field label for which users the torrent feature is enabled for.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled for'**
+  String get adminEnabledFor;
+
+  /// Dropdown option: torrent feature enabled for all users.
+  ///
+  /// In en, this message translates to:
+  /// **'All users'**
+  String get adminAllUsers;
+
+  /// Dropdown option: torrent feature enabled for whitelisted users only.
+  ///
+  /// In en, this message translates to:
+  /// **'Whitelisted users'**
+  String get adminWhitelistedUsers;
+
+  /// Field label for the torrent daemon host.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get adminHost;
+
+  /// Helper text indicating a blank password field keeps the existing value.
+  ///
+  /// In en, this message translates to:
+  /// **'unchanged if blank'**
+  String get adminPasswordUnchangedIfBlank;
+
+  /// Field label for the torrent daemon RPC path.
+  ///
+  /// In en, this message translates to:
+  /// **'RPC path'**
+  String get adminRpcPath;
+
+  /// Toggle title to use HTTPS for the torrent daemon connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Use HTTPS'**
+  String get adminUseHttps;
+
+  /// Button to test the torrent daemon connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get adminTest;
+
+  /// Toast when the torrent daemon is reachable; {version} is an optional version suffix already including parentheses/space.
+  ///
+  /// In en, this message translates to:
+  /// **'Reachable{version}'**
+  String adminReachable(String version);
+
+  /// Toast when a torrent daemon connection test fails; {error} is the error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {error}'**
+  String adminConnectionFailed(String error);
+
+  /// Button to connect to the torrent daemon and save the configuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect & save'**
+  String get adminConnectAndSave;
+
+  /// Toast when saving the torrent configuration fails; {error} is the error message.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {error}'**
+  String adminSaveFailed(String error);
+
+  /// Toast confirming the torrent daemon connected and config was saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected & saved'**
+  String get adminConnectedAndSaved;
+
+  /// Button to disconnect from the torrent daemon.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get adminDisconnect;
+
+  /// Toast confirming disconnect, and status pill indicating disconnected state.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected'**
+  String get adminDisconnected;
+
+  /// Status pill indicating the torrent client is configured.
+  ///
+  /// In en, this message translates to:
+  /// **'Configured'**
+  String get adminConfigured;
+
+  /// Status pill indicating the torrent client is not configured.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get adminNotConfigured;
+
+  /// Card title for the list of active torrents.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrents'**
+  String get adminTorrents;
+
+  /// Status pill indicating the torrent client is connected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get adminConnected;
+
+  /// Empty-state text when there are no active torrents.
+  ///
+  /// In en, this message translates to:
+  /// **'No torrents'**
+  String get adminNoTorrents;
+
+  /// Status pill marking a torrent as managed by mStream (brand name, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'mStream'**
+  String get adminMstream;
+
+  /// Toast confirming a torrent was removed.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent removed'**
+  String get adminTorrentRemoved;
+
+  /// Card title for mapping library paths to torrent daemon paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Library → daemon path mapping'**
+  String get adminLibraryDaemonPathMapping;
+
+  /// Subtitle explaining the library-to-daemon path mapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Maps each library to its path as the torrent daemon sees it.'**
+  String get adminLibraryDaemonPathMappingSubtitle;
+
+  /// Button to auto-detect daemon paths for all libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-detect all'**
+  String get adminAutoDetectAll;
+
+  /// Toast confirming daemon path auto-detection finished.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-detection complete'**
+  String get adminAutoDetectionComplete;
+
+  /// Status pill indicating a daemon path mapping is verified.
+  ///
+  /// In en, this message translates to:
+  /// **'verified'**
+  String get adminVerified;
+
+  /// Status pill indicating a daemon path mapping is unverified.
+  ///
+  /// In en, this message translates to:
+  /// **'unverified'**
+  String get adminUnverified;
+
+  /// Button to set a daemon path mapping manually.
+  ///
+  /// In en, this message translates to:
+  /// **'Set manually'**
+  String get adminSetManually;
+
+  /// Dialog title for entering the daemon path of a specific library; {name} is the library name.
+  ///
+  /// In en, this message translates to:
+  /// **'Daemon path for \"{name}\"'**
+  String adminDaemonPathFor(String name);
+
+  /// Field label for the library path as seen on the torrent daemon host.
+  ///
+  /// In en, this message translates to:
+  /// **'Path on daemon host'**
+  String get adminPathOnDaemonHost;
+
+  /// Button to verify and save a daemon path mapping.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify & save'**
+  String get adminVerifyAndSave;
+
+  /// Toast confirming a daemon path mapping was verified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get adminVpathVerified;
+
+  /// Toast confirming a daemon path mapping was saved without verification.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved (unverified)'**
+  String get adminVpathSavedUnverified;
+
+  /// Card title for torrent download path templates.
+  ///
+  /// In en, this message translates to:
+  /// **'Download path templates'**
+  String get adminDownloadPathTemplates;
+
+  /// Subtitle listing the variables available in download path templates.
+  ///
+  /// In en, this message translates to:
+  /// **'Vars: {vars}'**
+  String adminPathTemplateVars(String vars);
+
+  /// Empty-state text when there are no libraries to configure path templates for.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries'**
+  String get adminNoLibraries;
+
+  /// Helper text suggesting a download path template; {template} is the suggested value.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested: {template}'**
+  String adminSuggestedTemplate(String template);
+
+  /// Toast confirming a download path template was saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Template saved'**
+  String get adminTemplateSaved;
+
+  /// Empty-state title when no backup destinations are configured.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup destinations'**
+  String get adminNoBackupDestinations;
+
+  /// Empty-state hint for backup destinations.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a destination to mirror a library to another folder.'**
+  String get adminBackupDestinationInfo;
+
+  /// Button to add a backup destination.
+  ///
+  /// In en, this message translates to:
+  /// **'Add destination'**
+  String get adminAddDestination;
+
+  /// Toast shown when trying to add a backup destination with no libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a library first'**
+  String get adminAddLibraryFirst;
+
+  /// Card title for the backup task queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup queue'**
+  String get adminBackupQueue;
+
+  /// Number of backup tasks currently queued.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task queued} other{{count} tasks queued}}'**
+  String adminTasksQueued(int count);
+
+  /// Card title shown while a backup is running; {library} is the library name.
+  ///
+  /// In en, this message translates to:
+  /// **'Backing up: {library}'**
+  String adminBackingUp(String library);
+
+  /// Status pill indicating a backup is currently running.
+  ///
+  /// In en, this message translates to:
+  /// **'running'**
+  String get adminRunning;
+
+  /// Progress line for a running backup: files done, optional total suffix, and optional stats suffix.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} files{total}{stats}'**
+  String adminBackupStats(int done, String total, String stats);
+
+  /// Status pill indicating a backup destination is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'disabled'**
+  String get adminBackupDisabled;
+
+  /// Info row label for a backup destination path.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get adminDestination;
+
+  /// Info row label for a backup destination's trigger.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger'**
+  String get adminTrigger;
+
+  /// Display of a daily backup trigger and its hour; {trigger} is the trigger type, {hour} the hour.
+  ///
+  /// In en, this message translates to:
+  /// **'{trigger} @ {hour}:00'**
+  String adminDailyTriggerTime(String trigger, String hour);
+
+  /// Info row label for a backup destination's retention policy.
+  ///
+  /// In en, this message translates to:
+  /// **'Retention'**
+  String get adminRetention;
+
+  /// Backup retention period in days.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String adminRetentionDays(int count);
+
+  /// Info row label for a backup destination's last run.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run'**
+  String get adminLastRun;
+
+  /// Summary of a backup's last run: status and number of files copied.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} · {files} copied'**
+  String adminLastRunStatus(String status, int files);
+
+  /// Button to run a backup destination immediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Run now'**
+  String get adminRunNow;
+
+  /// Toast confirming a backup was queued.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup queued'**
+  String get adminBackupQueued;
+
+  /// Toast shown when a backup is already running and the request was skipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Already running — skipped'**
+  String get adminAlreadyRunningSkipped;
+
+  /// Button to view a backup destination's run history.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get adminHistory;
+
+  /// Button to edit a backup destination.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get adminEdit;
+
+  /// Toast confirming a backup destination was deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination deleted'**
+  String get adminDestinationDeleted;
+
+  /// Dialog title showing a backup destination's run history.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup history'**
+  String get adminBackupHistory;
+
+  /// Empty-state text when a backup destination has no run history.
+  ///
+  /// In en, this message translates to:
+  /// **'No history yet'**
+  String get adminNoHistoryYet;
+
+  /// Title of the edit-backup-destination dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit destination'**
+  String get adminEditDestination;
+
+  /// Title of the add-backup-destination dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Add backup destination'**
+  String get adminAddBackupDestination;
+
+  /// Field label for the backup destination folder path.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination path'**
+  String get adminDestinationPath;
+
+  /// Button to browse the server filesystem for a backup destination.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse server'**
+  String get adminBrowseServer;
+
+  /// Button to validate the entered backup destination path.
+  ///
+  /// In en, this message translates to:
+  /// **'Check path'**
+  String get adminCheckPath;
+
+  /// Field label for selecting a backup trigger type in the destination dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger'**
+  String get adminTriggerField;
+
+  /// Backup trigger dropdown option: run after each scan.
+  ///
+  /// In en, this message translates to:
+  /// **'After each scan'**
+  String get adminAfterEachScan;
+
+  /// Backup trigger dropdown option: run daily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get adminDaily;
+
+  /// Backup trigger dropdown option: run only when triggered manually.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual only'**
+  String get adminManualOnly;
+
+  /// Label preceding the hour selector for daily backups.
+  ///
+  /// In en, this message translates to:
+  /// **'Run at hour: '**
+  String get adminRunAtHour;
+
+  /// Field label for the backup retention period in days.
+  ///
+  /// In en, this message translates to:
+  /// **'Retention (days, 0 = keep all)'**
+  String get adminRetentionFieldLabel;
+
+  /// Toggle title to enable a backup destination.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get adminEnabledToggle;
+
+  /// Toast confirming a backup destination was updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination updated'**
+  String get adminDestinationUpdated;
+
+  /// Toast confirming a backup destination was created.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination created'**
+  String get adminDestinationCreated;
+
+  /// Validation toast when saving a backup destination without choosing a library.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a library'**
+  String get adminPickLibrary;
+
+  /// Validation toast when saving a backup destination without a path.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a destination path'**
+  String get adminPickDestinationPath;
+
+  /// About card title showing the mStream server version (brand + version, not translated).
+  ///
+  /// In en, this message translates to:
+  /// **'mStream v{version}'**
+  String adminAboutTitle(String version);
+
+  /// Info row label for the server port on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get adminAboutPort;
+
+  /// Info row label for SSL status on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL'**
+  String get adminSSL;
+
+  /// Info row label for the active web UI on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'UI'**
+  String get adminUI;
+
+  /// Info row label for the response compression mode on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression'**
+  String get adminCompression;
+
+  /// Info row label for the trust-proxy setting on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Trust proxy'**
+  String get adminTrustProxy;
+
+  /// Generic affirmative value used in info rows.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get adminYes;
+
+  /// Generic negative value used in info rows.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get adminNo;
+
+  /// Info row label showing the last 4 characters of the JWT secret on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Secret (last 4)'**
+  String get adminSecretLast4;
+
+  /// Info row label for the uploads permission on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploads'**
+  String get adminUploads;
+
+  /// Info row label for the make-directories permission on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Make dirs'**
+  String get adminMakeDirs;
+
+  /// Info row label for the file-modify permission on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'File modify'**
+  String get adminFileModify;
+
+  /// Info row label for the SQLite synchronous setting on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Synchronous'**
+  String get adminSynchronous;
+
+  /// Info row label for the database cache size on the About view.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache size'**
+  String get adminCacheSizeLabel;
+
+  /// Database cache size shown in megabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} MB'**
+  String adminCacheSizeMb(int size);
+
+  /// Status pill indicating federation is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get adminFederationUnavailable;
+
+  /// Explanatory body text on the Federation view.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation is being rebuilt around the new local-backup story and is currently unavailable on the server. The endpoint stays mounted so older clients get a clear status instead of a 404.'**
+  String get adminFederationDescription;
+
+  /// Button to re-check federation status.
+  ///
+  /// In en, this message translates to:
+  /// **'Check status'**
+  String get adminCheckStatus;
+
+  /// Permission value (About view): action is allowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed'**
+  String get adminAllowed;
+
+  /// Backup destination status pill: enabled (lowercase).
+  ///
+  /// In en, this message translates to:
+  /// **'enabled'**
+  String get adminBackupEnabled;
+
+  /// Fallback when a jukebox/feature status is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available'**
+  String get adminNotAvailable;
+
+  /// Torrent library→daemon path mapping: no path mapped yet.
+  ///
+  /// In en, this message translates to:
+  /// **'not mapped'**
+  String get adminNotMapped;
+
+  /// Shared-playlist expiry value: never expires.
+  ///
+  /// In en, this message translates to:
+  /// **'never'**
+  String get adminExpiryNever;
+
+  /// Fallback for an unknown shared-playlist owner.
+  ///
+  /// In en, this message translates to:
+  /// **'unknown'**
+  String get adminUnknownUser;
 }
 
 class _AppLocalizationsDelegate

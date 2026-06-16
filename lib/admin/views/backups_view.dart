@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 import 'directory_picker.dart';
@@ -30,15 +31,16 @@ class BackupsView extends StatelessWidget {
     return AdminAsync(
       loader: _load,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         return Stack(children: [
           AdminViewBody(children: [
             _StatusBanner(api: api),
             if (data.dests.isEmpty)
-              const AdminCard(
-                title: 'No backup destinations',
+              AdminCard(
+                title: l.adminNoBackupDestinations,
                 icon: Icons.backup_outlined,
                 children: [
-                  Text('Add a destination to mirror a library to another folder.'),
+                  Text(l.adminBackupDestinationInfo),
                 ],
               ),
             for (final d in data.dests)
@@ -51,9 +53,9 @@ class BackupsView extends StatelessWidget {
             bottom: 16,
             child: FloatingActionButton.extended(
               icon: const Icon(Icons.add),
-              label: const Text('Add destination'),
+              label: Text(l.adminAddDestination),
               onPressed: data.libs.isEmpty
-                  ? () => adminToast(context, 'Add a library first', error: true)
+                  ? () => adminToast(context, l.adminAddLibraryFirst, error: true)
                   : () async {
                       final added = await showDialog<bool>(
                         context: context,
@@ -104,6 +106,7 @@ class _StatusBannerState extends State<_StatusBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final active = _status['active'];
     final queue = (_status['queueLength'] is num)
         ? (_status['queueLength'] as num).toInt()
@@ -111,9 +114,9 @@ class _StatusBannerState extends State<_StatusBanner> {
     if (active == null) {
       if (queue == 0) return const SizedBox.shrink();
       return AdminCard(
-        title: 'Backup queue',
+        title: l.adminBackupQueue,
         icon: Icons.schedule,
-        children: [Text('$queue task(s) queued')],
+        children: [Text(l.adminTasksQueued(queue))],
       );
     }
     final a = Map<String, dynamic>.from(active);
@@ -124,15 +127,16 @@ class _StatusBannerState extends State<_StatusBanner> {
     final expected = a['expectedFiles'];
     final value = (expected is num && expected > 0) ? (done / expected).clamp(0, 1).toDouble() : null;
     return AdminCard(
-      title: 'Backing up: ${a['libraryName'] ?? ''}',
+      title: l.adminBackingUp('${a['libraryName'] ?? ''}'),
       icon: Icons.sync,
-      trailing: const [StatusPill(label: 'running', color: Colors.blue)],
+      trailing: [StatusPill(label: l.adminRunning, color: Colors.blue)],
       children: [
         LinearProgressIndicator(value: value),
         const SizedBox(height: 6),
-        Text(
-            '$done files${expected is num ? ' / $expected' : ''} · '
-            '$copied copied, $unchanged unchanged, $trashed trashed'),
+        Text(l.adminBackupStats(
+            done.toInt(),
+            expected is num ? ' / $expected' : '',
+            ' · $copied copied, $unchanged unchanged, $trashed trashed')),
       ],
     );
   }
@@ -149,6 +153,7 @@ class _DestinationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final enabled = dest['enabled'] == true;
     final last = dest['lastRun'];
@@ -157,33 +162,40 @@ class _DestinationCard extends StatelessWidget {
       icon: Icons.backup_outlined,
       trailing: [
         StatusPill(
-          label: enabled ? 'enabled' : 'disabled',
+          label: enabled ? l.adminBackupEnabled : l.adminBackupDisabled,
           color: enabled ? Colors.green : Colors.grey,
         ),
       ],
       children: [
-        AdminInfoRow('Destination', '${dest['dest_path'] ?? ''}'),
-        AdminInfoRow('Trigger', '${dest['trigger_type'] ?? ''}'
-            '${dest['trigger_type'] == 'daily' ? ' @ ${dest['daily_at_hour']}:00' : ''}'),
-        AdminInfoRow('Retention', '${dest['retention_days'] ?? 0} days'),
+        AdminInfoRow(l.adminDestination, '${dest['dest_path'] ?? ''}'),
+        AdminInfoRow(
+            l.adminTrigger,
+            dest['trigger_type'] == 'daily'
+                ? l.adminDailyTriggerTime(
+                    '${dest['trigger_type']}', '${dest['daily_at_hour']}')
+                : '${dest['trigger_type'] ?? ''}'),
+        AdminInfoRow(l.adminRetention,
+            l.adminRetentionDays(((dest['retention_days'] ?? 0) as num).toInt())),
         if (last is Map)
-          AdminInfoRow('Last run',
-              '${last['status'] ?? '?'} · ${last['files_copied'] ?? 0} copied'),
+          AdminInfoRow(
+              l.adminLastRun,
+              l.adminLastRunStatus('${last['status'] ?? '?'}',
+                  ((last['files_copied'] ?? 0) as num).toInt())),
         const SizedBox(height: 8),
         Wrap(spacing: 8, children: [
           AdminActionButton(
-            label: 'Run now',
+            label: l.adminRunNow,
             icon: Icons.play_arrow,
-            success: 'Backup queued',
+            success: l.adminBackupQueued,
             onPressed: () async {
               final r = await api.runBackup(_id);
               if (context.mounted && r['status'] == 'skipped') {
-                adminToast(context, 'Already running — skipped');
+                adminToast(context, l.adminAlreadyRunningSkipped);
               }
             },
           ),
           AdminActionButton(
-            label: 'History',
+            label: l.adminHistory,
             tonal: true,
             onPressed: () async {
               final history = await api.backupHistory(_id);
@@ -195,7 +207,7 @@ class _DestinationCard extends StatelessWidget {
             },
           ),
           AdminActionButton(
-            label: 'Edit',
+            label: l.adminEdit,
             icon: Icons.edit,
             tonal: true,
             onPressed: () async {
@@ -211,10 +223,10 @@ class _DestinationCard extends StatelessWidget {
             style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
             onPressed: () async {
               await runAdminAction(context, () => api.deleteBackupDestination(_id),
-                  success: 'Destination deleted');
+                  success: l.adminDestinationDeleted);
               await reload();
             },
-            child: const Text('Delete'),
+            child: Text(l.adminDelete),
           ),
         ]),
       ],
@@ -228,13 +240,14 @@ class _HistoryDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Backup history'),
+      title: Text(l.adminBackupHistory),
       content: SizedBox(
         width: 460,
         height: 360,
         child: history.isEmpty
-            ? const Center(child: Text('No history yet'))
+            ? Center(child: Text(l.adminNoHistoryYet))
             : ListView(children: [
                 for (final h in history)
                   ListTile(
@@ -252,7 +265,7 @@ class _HistoryDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('Close')),
+            onPressed: () => Navigator.pop(context), child: Text(l.adminClose)),
       ],
     );
   }
@@ -322,12 +335,13 @@ class _DestinationDialogState extends State<_DestinationDialog> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     if (!_isEdit && _libraryId == null) {
-      adminToast(context, 'Pick a library', error: true);
+      adminToast(context, l.adminPickLibrary, error: true);
       return;
     }
     if (_destPath.text.trim().isEmpty) {
-      adminToast(context, 'Pick a destination path', error: true);
+      adminToast(context, l.adminPickDestinationPath, error: true);
       return;
     }
     setState(() => _busy = true);
@@ -344,7 +358,7 @@ class _DestinationDialogState extends State<_DestinationDialog> {
           ? widget.api
               .updateBackupDestination((widget.existing!['id'] as num).toInt(), body)
           : widget.api.createBackupDestination({...body, 'libraryId': _libraryId}),
-      success: _isEdit ? 'Destination updated' : 'Destination created',
+      success: _isEdit ? l.adminDestinationUpdated : l.adminDestinationCreated,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -353,8 +367,9 @@ class _DestinationDialogState extends State<_DestinationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: Text(_isEdit ? 'Edit destination' : 'Add backup destination'),
+      title: Text(_isEdit ? l.adminEditDestination : l.adminAddBackupDestination),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -362,7 +377,7 @@ class _DestinationDialogState extends State<_DestinationDialog> {
             if (!_isEdit)
               DropdownButtonFormField<int>(
                 initialValue: _libraryId,
-                decoration: const InputDecoration(labelText: 'Library'),
+                decoration: InputDecoration(labelText: l.adminLibraryTitle),
                 items: [
                   for (final e in widget.libs.entries)
                     DropdownMenuItem(value: e.value, child: Text(e.key)),
@@ -375,11 +390,11 @@ class _DestinationDialogState extends State<_DestinationDialog> {
                 child: TextField(
                   controller: _destPath,
                   decoration:
-                      const InputDecoration(labelText: 'Destination path'),
+                      InputDecoration(labelText: l.adminDestinationPath),
                 ),
               ),
               IconButton(
-                tooltip: 'Browse server',
+                tooltip: l.adminBrowseServer,
                 icon: const Icon(Icons.folder_open),
                 onPressed: () async {
                   final picked =
@@ -396,15 +411,16 @@ class _DestinationDialogState extends State<_DestinationDialog> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
-                  onPressed: _check, child: const Text('Check path')),
+                  onPressed: _check, child: Text(l.adminCheckPath)),
             ),
             DropdownButtonFormField<String>(
               initialValue: _trigger,
-              decoration: const InputDecoration(labelText: 'Trigger'),
-              items: const [
-                DropdownMenuItem(value: 'after-scan', child: Text('After each scan')),
-                DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                DropdownMenuItem(value: 'manual', child: Text('Manual only')),
+              decoration: InputDecoration(labelText: l.adminTriggerField),
+              items: [
+                DropdownMenuItem(
+                    value: 'after-scan', child: Text(l.adminAfterEachScan)),
+                DropdownMenuItem(value: 'daily', child: Text(l.adminDaily)),
+                DropdownMenuItem(value: 'manual', child: Text(l.adminManualOnly)),
               ],
               onChanged: (v) => setState(() => _trigger = v ?? 'after-scan'),
             ),
@@ -412,7 +428,7 @@ class _DestinationDialogState extends State<_DestinationDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(children: [
-                  const Text('Run at hour: '),
+                  Text(l.adminRunAtHour),
                   DropdownButton<int>(
                     value: _dailyHour,
                     items: [
@@ -430,11 +446,11 @@ class _DestinationDialogState extends State<_DestinationDialog> {
               controller: _retention,
               keyboardType: TextInputType.number,
               decoration:
-                  const InputDecoration(labelText: 'Retention (days, 0 = keep all)'),
+                  InputDecoration(labelText: l.adminRetentionFieldLabel),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Enabled'),
+              title: Text(l.adminEnabledToggle),
               value: _enabled,
               onChanged: (v) => setState(() => _enabled = v),
             ),
@@ -444,7 +460,7 @@ class _DestinationDialogState extends State<_DestinationDialog> {
       actions: [
         TextButton(
             onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(l.adminCancel)),
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
@@ -452,7 +468,7 @@ class _DestinationDialogState extends State<_DestinationDialog> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
-              : Text(_isEdit ? 'Save' : 'Create'),
+              : Text(_isEdit ? l.adminSave : l.adminCreate),
         ),
       ],
     );

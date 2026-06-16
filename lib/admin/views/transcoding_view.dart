@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -16,14 +17,17 @@ class TranscodingView extends StatelessWidget {
     return AdminAsync(
       loader: api.getTranscode,
       builder: (context, t, reload) {
+        final l = AppLocalizations.of(context);
         final downloaded = t['downloaded'] == true;
         return AdminViewBody(children: [
           AdminCard(
-            title: 'FFmpeg',
+            title: l.adminTranscodingFFmpegTitle,
             icon: Icons.transform,
             trailing: [
               StatusPill(
-                label: downloaded ? 'Ready' : 'Not downloaded',
+                label: downloaded
+                    ? l.adminFFmpegStatusReady
+                    : l.adminFFmpegStatusNotDownloaded,
                 color: downloaded ? Colors.green : Colors.orange,
                 icon: downloaded ? Icons.check_circle : Icons.download,
               ),
@@ -33,10 +37,10 @@ class TranscodingView extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: AdminActionButton(
-                  label: 'Download / update ffmpeg',
+                  label: l.adminFFmpegDownloadButton,
                   icon: Icons.download,
                   tonal: true,
-                  success: 'ffmpeg downloaded',
+                  success: l.adminFFmpegDownloadedToast,
                   onPressed: () async {
                     await api.downloadFfmpeg();
                     await reload();
@@ -45,19 +49,19 @@ class TranscodingView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               AdminAsyncSwitch(
-                title: 'Auto-update ffmpeg',
-                subtitle: 'Keep the bundled ffmpeg up to date automatically',
+                title: l.adminFFmpegAutoUpdateTitle,
+                subtitle: l.adminFFmpegAutoUpdateSubtitle,
                 value: t['autoUpdate'] == true,
                 onChanged: api.setTranscodeAutoUpdate,
               ),
             ],
           ),
           AdminCard(
-            title: 'Defaults',
+            title: l.adminTranscodingDefaultsTitle,
             icon: Icons.tune,
             children: [
               AdminDropdownRow<String>(
-                label: 'Default codec',
+                label: l.adminDefaultCodecLabel,
                 value: _codecs.contains(t['defaultCodec'])
                     ? t['defaultCodec']
                     : 'mp3',
@@ -68,7 +72,7 @@ class TranscodingView extends StatelessWidget {
                 onChanged: api.setDefaultCodec,
               ),
               AdminDropdownRow<String>(
-                label: 'Default bitrate',
+                label: l.adminDefaultBitrateLabel,
                 value: _bitrates.contains(t['defaultBitrate'])
                     ? t['defaultBitrate']
                     : '128k',

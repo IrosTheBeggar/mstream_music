@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -14,16 +15,15 @@ class MdnsView extends StatelessWidget {
     return AdminAsync(
       loader: api.getMdns,
       builder: (context, m, reload) {
+        final l = AppLocalizations.of(context);
         return AdminViewBody(children: [
           AdminCard(
-            title: 'Local network discovery',
-            subtitle:
-                'Advertises this server as an _mstream._tcp mDNS service. '
-                'Publishes metadata only — exposes no library data or new routes.',
+            title: l.adminMdnsLocalNetworkDiscoveryTitle,
+            subtitle: l.adminMdnsLocalNetworkDiscoverySubtitle,
             icon: Icons.travel_explore,
             children: [
               AdminAsyncSwitch(
-                title: 'Enable advertising',
+                title: l.adminMdnsEnableAdvertisingTitle,
                 value: m['enabled'] == true,
                 onChanged: (v) async {
                   await api.setMdnsEnabled(v);
@@ -31,13 +31,13 @@ class MdnsView extends StatelessWidget {
               ),
               const Divider(height: 24),
               AdminSaveField(
-                label: 'Friendly name',
-                helperText: 'Empty = derive from hostname (max 63 bytes)',
+                label: l.adminMdnsFriendlyNameLabel,
+                helperText: l.adminMdnsFriendlyNameHelper,
                 initialValue: '${m['name'] ?? ''}',
                 onSave: api.setMdnsName,
               ),
               const SizedBox(height: 8),
-              AdminInfoRow('Instance ID', '${m['instanceId'] ?? '—'}'),
+              AdminInfoRow(l.adminMdnsInstanceIdLabel, '${m['instanceId'] ?? '—'}'),
             ],
           ),
         ]);

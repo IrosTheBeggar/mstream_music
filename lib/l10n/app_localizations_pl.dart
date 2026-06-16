@@ -1442,4 +1442,1275 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get importedShadersDownloadsNoPermission =>
       'Storage permission is needed to read Downloads';
+
+  @override
+  String get adminLogOut => 'Wyloguj';
+
+  @override
+  String get adminConfigGroup => 'Konfiguracja';
+
+  @override
+  String get adminDirectories => 'Katalogi';
+
+  @override
+  String get adminUsers => 'Użytkownicy';
+
+  @override
+  String get adminDLNA => 'DLNA';
+
+  @override
+  String get adminSubsonicAPI => 'API Subsonic';
+
+  @override
+  String get adminMP3Player => 'Odtwarzacz MP3';
+
+  @override
+  String get adminTorrent => 'Torrent';
+
+  @override
+  String get adminFederation => 'Federacja';
+
+  @override
+  String get adminServerGroup => 'Serwer';
+
+  @override
+  String get adminAbout => 'Informacje';
+
+  @override
+  String get adminSettings => 'Ustawienia';
+
+  @override
+  String get adminDatabase => 'Baza danych';
+
+  @override
+  String get adminBackups => 'Kopie zapasowe';
+
+  @override
+  String get adminTranscoding => 'Transkodowanie';
+
+  @override
+  String get adminLogs => 'Dzienniki';
+
+  @override
+  String get adminAccess => 'Dostęp administratora';
+
+  @override
+  String adminAppBarTitle(String label) {
+    return 'mStream Admin · $label';
+  }
+
+  @override
+  String get adminPanelTitle => 'mStream Admin';
+
+  @override
+  String get adminLoginErrorRequired =>
+      'Serwer i nazwa użytkownika są wymagane';
+
+  @override
+  String get adminLoginServerURL => 'Adres URL serwera';
+
+  @override
+  String get adminLoginUsername => 'Nazwa użytkownika';
+
+  @override
+  String get adminLoginPassword => 'Hasło';
+
+  @override
+  String get adminLoginSignIn => 'Zaloguj się';
+
+  @override
+  String get adminRetry => 'Ponów';
+
+  @override
+  String get adminSaved => 'Zapisano';
+
+  @override
+  String get adminSave => 'Zapisz';
+
+  @override
+  String get adminClose => 'Zamknij';
+
+  @override
+  String get adminPanelMenuItem => 'Panel administratora';
+
+  @override
+  String get adminNoLibrariesYetTitle => 'Brak bibliotek';
+
+  @override
+  String get adminAddDirectoryHint =>
+      'Dodaj katalog, aby rozpocząć skanowanie muzyki do biblioteki.';
+
+  @override
+  String get adminAddDirectoryButton => 'Dodaj katalog';
+
+  @override
+  String adminRemoveDirectoryTitle(String name) {
+    return 'Usunąć $name?';
+  }
+
+  @override
+  String get adminRemoveDirectoryWarning =>
+      'Spowoduje to usunięcie biblioteki i jej zeskanowanych utworów z bazy danych. Pliki na dysku pozostaną nienaruszone.';
+
+  @override
+  String get adminCancel => 'Anuluj';
+
+  @override
+  String get adminRemove => 'Usuń';
+
+  @override
+  String get adminLibraryRemovedToast => 'Biblioteka usunięta';
+
+  @override
+  String get adminDirectoryPathLabel => 'Ścieżka';
+
+  @override
+  String get adminDirectoryTypeLabel => 'Typ';
+
+  @override
+  String get adminFollowSymlinksTitle =>
+      'Podążaj za dowiązaniami symbolicznymi';
+
+  @override
+  String get adminFollowSymlinksSubtitle =>
+      'Zacznie obowiązywać przy następnym skanowaniu';
+
+  @override
+  String get adminPickFolderAndNameError => 'Wybierz folder i wprowadź nazwę';
+
+  @override
+  String get adminDirectoryAddedToast =>
+      'Katalog dodany — rozpoczęto skanowanie';
+
+  @override
+  String get adminAddDirectoryDialogTitle => 'Dodaj katalog';
+
+  @override
+  String get adminChooseFolderButton => 'Wybierz folder na serwerze…';
+
+  @override
+  String get adminLibraryNameLabel => 'Nazwa biblioteki (vpath)';
+
+  @override
+  String get adminLibraryNameHelper => 'Litery, cyfry i myślniki';
+
+  @override
+  String get adminGrantAllUsersAccessTitle =>
+      'Przyznaj dostęp wszystkim użytkownikom';
+
+  @override
+  String get adminAudiobookLibraryTitle => 'Biblioteka audiobooków';
+
+  @override
+  String get adminAdd => 'Dodaj';
+
+  @override
+  String get adminChooseFolderTitle => 'Wybierz folder';
+
+  @override
+  String get adminSelectFolderButton => 'Wybierz ten folder';
+
+  @override
+  String get adminNoUsersTitle => 'Brak użytkowników';
+
+  @override
+  String get adminNoUsersSubtitle =>
+      'Bez użytkowników serwer działa w trybie otwartym/publicznym. Dodaj jednego, aby wymagać logowania.';
+
+  @override
+  String get adminAddUserButton => 'Dodaj użytkownika';
+
+  @override
+  String get adminLibraryAccessDialogTitle => 'Dostęp do bibliotek';
+
+  @override
+  String get adminLibraryAccessUpdatedToast =>
+      'Zaktualizowano dostęp do bibliotek';
+
+  @override
+  String get adminSetSubsonicPasswordTitle => 'Ustaw hasło Subsonic';
+
+  @override
+  String get adminSetPasswordTitle => 'Ustaw hasło';
+
+  @override
+  String get adminPasswordUpdatedToast => 'Hasło zaktualizowane';
+
+  @override
+  String adminDeleteUserTitle(String username) {
+    return 'Usunąć $username?';
+  }
+
+  @override
+  String get adminDeleteUserWarning =>
+      'Spowoduje to trwałe usunięcie konta użytkownika.';
+
+  @override
+  String get adminDelete => 'Usuń';
+
+  @override
+  String get adminUserDeletedToast => 'Użytkownik usunięty';
+
+  @override
+  String get adminStatusPillLabel => 'admin';
+
+  @override
+  String get adminDeleteUserMenuItem => 'Usuń użytkownika';
+
+  @override
+  String get adminNoLibraryAccessLabel => 'Brak dostępu do bibliotek';
+
+  @override
+  String get adminLibrariesButton => 'Biblioteki';
+
+  @override
+  String get adminAdminToggleTitle => 'Administrator';
+
+  @override
+  String get adminMakeDirsToggleTitle => 'Tworzenie katalogów';
+
+  @override
+  String get adminUploadToggleTitle => 'Przesyłanie';
+
+  @override
+  String get adminModifyFilesToggleTitle => 'Modyfikacja plików';
+
+  @override
+  String get adminServerAudioToggleTitle => 'Dźwięk serwera';
+
+  @override
+  String get adminAddUserDialogTitle => 'Dodaj użytkownika';
+
+  @override
+  String get adminUsername => 'Nazwa użytkownika';
+
+  @override
+  String get adminPassword => 'Hasło';
+
+  @override
+  String get adminSubsonicPasswordLabel => 'Hasło Subsonic (opcjonalne)';
+
+  @override
+  String get adminLibraryAccessHeader => 'Dostęp do bibliotek';
+
+  @override
+  String get adminUsernamePasswordRequiredError =>
+      'Nazwa użytkownika i hasło są wymagane';
+
+  @override
+  String get adminUserCreatedToast => 'Użytkownik utworzony';
+
+  @override
+  String get adminAdministratorToggleTitle => 'Administrator';
+
+  @override
+  String get adminAllowMakeDirectoriesTitle => 'Zezwól na tworzenie katalogów';
+
+  @override
+  String get adminAllowUploadTitle => 'Zezwól na przesyłanie';
+
+  @override
+  String get adminAllowServerAudioTitle => 'Zezwól na dźwięk serwera';
+
+  @override
+  String get adminCreate => 'Utwórz';
+
+  @override
+  String get adminNoLibrariesConfigured => 'Brak skonfigurowanych bibliotek.';
+
+  @override
+  String get adminNewPasswordLabel => 'Nowe hasło';
+
+  @override
+  String get adminLibraryTitle => 'Biblioteka';
+
+  @override
+  String get adminTracksInDatabase => 'Utwory w bazie danych';
+
+  @override
+  String get adminScanAllButton => 'Skanuj wszystko';
+
+  @override
+  String get adminScanStarted => 'Rozpoczęto skanowanie';
+
+  @override
+  String get adminForceRescan => 'Wymuś ponowne skanowanie';
+
+  @override
+  String get adminFullRescanStarted => 'Rozpoczęto pełne skanowanie';
+
+  @override
+  String get adminCompressImages => 'Kompresuj obrazy';
+
+  @override
+  String get adminImageCompressionStarted => 'Rozpoczęto kompresję obrazów';
+
+  @override
+  String get adminScanOptions => 'Opcje skanowania';
+
+  @override
+  String get adminScanInterval => 'Interwał skanowania (godziny, 0 = wył.)';
+
+  @override
+  String get adminBootScanDelay =>
+      'Opóźnienie skanowania przy starcie (sekundy)';
+
+  @override
+  String get adminScanCommitInterval => 'Interwał zapisu skanowania (1–1000)';
+
+  @override
+  String get adminScanThreads => 'Wątki skanowania (0 = auto)';
+
+  @override
+  String get adminSkipImageExtraction => 'Pomiń wyodrębnianie obrazów';
+
+  @override
+  String get adminCompressEmbeddedImages => 'Kompresuj osadzone obrazy';
+
+  @override
+  String get adminGenerateWaveforms => 'Generuj przebiegi po skanowaniu';
+
+  @override
+  String get adminAnalyzeBpm =>
+      'Analiza BPM/tonacji (przestarzałe, brak działania)';
+
+  @override
+  String get adminAutomaticAlbumArt => 'Automatyczne okładki albumów';
+
+  @override
+  String get adminDownloadMissingAlbumArt =>
+      'Pobierz brakujące okładki albumów';
+
+  @override
+  String get adminTargetLabel => 'Cel';
+
+  @override
+  String get adminMissingOnly => 'Tylko brakujące';
+
+  @override
+  String get adminAllAlbums => 'Wszystkie albumy';
+
+  @override
+  String get adminAlbumsPerRun => 'Albumy na przebieg (1–10000)';
+
+  @override
+  String get adminAutoDownloadedArtWriteFolder =>
+      'Auto. pobrana okładka → zapisz do folderu';
+
+  @override
+  String get adminManualArtWriteFolder =>
+      'Ręcznie ustawiona okładka → zapisz do folderu';
+
+  @override
+  String get adminManualArtEmbedTag =>
+      'Ręcznie ustawiona okładka → osadź w tagu pliku';
+
+  @override
+  String get adminArtServices => 'Usługi okładek';
+
+  @override
+  String get adminArtServicesUpdated => 'Zaktualizowano usługi okładek';
+
+  @override
+  String get adminSharedPlaylists => 'Udostępnione playlisty';
+
+  @override
+  String get adminDeleteExpired => 'Usuń wygasłe';
+
+  @override
+  String get adminExpiredSharesDeleted => 'Usunięto wygasłe udostępnienia';
+
+  @override
+  String get adminDeleteNeverExpiring => 'Usuń niewygasające';
+
+  @override
+  String get adminEternalSharesDeleted =>
+      'Usunięto niewygasające udostępnienia';
+
+  @override
+  String get adminNoSharedPlaylists => 'Brak udostępnionych playlist';
+
+  @override
+  String adminSharedPlaylistSubtitle(String user, int count, String expiry) {
+    return 'przez $user · $count utworów · wygasa $expiry';
+  }
+
+  @override
+  String get adminShareDeleted => 'Udostępnienie usunięte';
+
+  @override
+  String get adminNetwork => 'Sieć';
+
+  @override
+  String get adminNetworkSubtitle =>
+      'Ich zmiana powoduje miękki restart serwera.';
+
+  @override
+  String get adminBindAddress => 'Adres nasłuchu';
+
+  @override
+  String get adminPort => 'Port';
+
+  @override
+  String get adminTrustProxyHeaders => 'Ufaj nagłówkom proxy';
+
+  @override
+  String get adminTrustProxyHeadersSubtitle =>
+      'Włącz przy korzystaniu z reverse proxy (X-Forwarded-*)';
+
+  @override
+  String get adminPermissions => 'Uprawnienia';
+
+  @override
+  String get adminAllowUploads => 'Zezwól na przesyłanie';
+
+  @override
+  String get adminAllowMakingDirectories => 'Zezwól na tworzenie katalogów';
+
+  @override
+  String get adminAllowModifyingFiles => 'Zezwól na modyfikację plików';
+
+  @override
+  String get adminMaxRequestSize => 'Maks. rozmiar żądania';
+
+  @override
+  String get adminMaxRequestSizeHelper => 'np. 50MB lub 512KB';
+
+  @override
+  String get adminHttpUi => 'HTTP i interfejs';
+
+  @override
+  String get adminResponseCompression => 'Kompresja odpowiedzi';
+
+  @override
+  String get adminCompressionNone => 'Brak';
+
+  @override
+  String get adminCompressionGzip => 'gzip';
+
+  @override
+  String get adminCompressionBrotli => 'brotli';
+
+  @override
+  String get adminWebUi => 'Interfejs WWW';
+
+  @override
+  String get adminUiDefault => 'Domyślny';
+
+  @override
+  String get adminUiVelvet => 'Velvet';
+
+  @override
+  String get adminUiSubsonic => 'Subsonic';
+
+  @override
+  String get adminDatabaseTuning => 'Strojenie bazy danych';
+
+  @override
+  String get adminSqliteSynchronous => 'SQLite synchronous';
+
+  @override
+  String get adminSyncFull => 'FULL (safest)';
+
+  @override
+  String get adminSyncNormal => 'NORMAL (faster)';
+
+  @override
+  String get adminCacheSize => 'Rozmiar pamięci podręcznej (MB, 1–2048)';
+
+  @override
+  String get adminLogging => 'Rejestrowanie';
+
+  @override
+  String get adminWriteLogsToDisk => 'Zapisuj dzienniki na dysk';
+
+  @override
+  String get adminLogBufferSize =>
+      'Rozmiar bufora dziennika (0–10000, 0 = wył.)';
+
+  @override
+  String get adminServerAudio => 'Dźwięk serwera';
+
+  @override
+  String get adminAutoBootServerAudio =>
+      'Auto. start dźwięku serwera (odtwarzacz Rust)';
+
+  @override
+  String get adminRustPlayerPort => 'Port odtwarzacza Rust';
+
+  @override
+  String get adminActiveBackend => 'Aktywny backend';
+
+  @override
+  String get adminPlayer => 'Odtwarzacz';
+
+  @override
+  String get adminDetectedCliPlayers => 'Wykryte odtwarzacze CLI';
+
+  @override
+  String get adminNone => 'brak';
+
+  @override
+  String get adminReDetectPlayers => 'Wykryj ponownie odtwarzacze';
+
+  @override
+  String get adminReProbedCliPlayers => 'Ponownie wykryto odtwarzacze CLI';
+
+  @override
+  String get adminSslHttps => 'SSL / HTTPS';
+
+  @override
+  String get adminEnabled => 'Włączone';
+
+  @override
+  String get adminDisabled => 'Wyłączone';
+
+  @override
+  String get adminReplaceCertificate => 'Zastąp certyfikat';
+
+  @override
+  String get adminSetCertificate => 'Ustaw certyfikat';
+
+  @override
+  String get adminSetSslCertificateDialog => 'Ustaw certyfikat SSL';
+
+  @override
+  String get adminCertificatePath => 'Ścieżka certyfikatu';
+
+  @override
+  String get adminKeyPath => 'Ścieżka klucza';
+
+  @override
+  String get adminSslConfigured =>
+      'Skonfigurowano SSL — uruchom ponownie, aby zastosować';
+
+  @override
+  String get adminRemoveSsl => 'Usuń SSL';
+
+  @override
+  String get adminSslRemoved => 'Usunięto SSL';
+
+  @override
+  String get adminSecurity => 'Bezpieczeństwo';
+
+  @override
+  String get adminJwtSecretLast4 => 'Sekret JWT (ostatnie 4)';
+
+  @override
+  String get adminRegenerateSecret => 'Wygeneruj nowy sekret';
+
+  @override
+  String get adminSecretRegenerated =>
+      'Wygenerowano nowy sekret — wszystkie sesje unieważnione';
+
+  @override
+  String get adminRegenerateJwtSecretDialog => 'Wygenerować nowy sekret JWT?';
+
+  @override
+  String get adminRegenerateJwtSecretDialogBody =>
+      'Unieważni to każde istniejące logowanie (w tym bieżące). Wszyscy będą musieli zalogować się ponownie.';
+
+  @override
+  String get adminRegenerateButton => 'Wygeneruj ponownie';
+
+  @override
+  String get adminAllNetworks => 'Wszystkie sieci';
+
+  @override
+  String get adminLocalhostOnly => 'Tylko localhost';
+
+  @override
+  String get adminIpWhitelist => 'Biała lista IP';
+
+  @override
+  String get adminNoneLockAdmin => 'Brak (zablokuj administratora)';
+
+  @override
+  String get adminNetworkAccess => 'Dostęp sieciowy';
+
+  @override
+  String get adminNetworkAccessSubtitle =>
+      'Ogranicz, z których sieci można korzystać z API administratora.';
+
+  @override
+  String get adminMode => 'Tryb';
+
+  @override
+  String get adminWhitelistedIps => 'Dozwolone IP / CIDR';
+
+  @override
+  String get adminNoneYet => 'Jeszcze brak';
+
+  @override
+  String get adminAddIpOrCidr => 'Dodaj IP lub CIDR';
+
+  @override
+  String get adminCidrExample => '192.168.1.0/24';
+
+  @override
+  String get adminApply => 'Zastosuj';
+
+  @override
+  String get adminDangerZone => 'Strefa zagrożenia';
+
+  @override
+  String get adminLockAdminApi => 'Zablokuj API administratora';
+
+  @override
+  String get adminLockAdminApiSubtitle =>
+      'Wyłącz całe API administratora. Nie można tego cofnąć z tego miejsca.';
+
+  @override
+  String get adminLockButton => 'Zablokuj';
+
+  @override
+  String get adminLockAdminApiDialog => 'Zablokować API administratora?';
+
+  @override
+  String get adminLockAdminApiDialogBody =>
+      'Wyłączy to całe API /admin dla wszystkich. Nie będzie można tego cofnąć z tego panelu — wymaga to edycji pliku konfiguracyjnego serwera i ponownego uruchomienia. Kontynuować?';
+
+  @override
+  String get adminAdminApiLocked => 'API administratora zablokowane';
+
+  @override
+  String get adminAccessUpdated => 'Zaktualizowano dostęp administratora';
+
+  @override
+  String get adminTranscodingFFmpegTitle => 'FFmpeg';
+
+  @override
+  String get adminFFmpegStatusReady => 'Gotowy';
+
+  @override
+  String get adminFFmpegStatusNotDownloaded => 'Nie pobrano';
+
+  @override
+  String get adminFFmpegDownloadButton => 'Pobierz / zaktualizuj ffmpeg';
+
+  @override
+  String get adminFFmpegDownloadedToast => 'Pobrano ffmpeg';
+
+  @override
+  String get adminFFmpegAutoUpdateTitle => 'Auto. aktualizacja ffmpeg';
+
+  @override
+  String get adminFFmpegAutoUpdateSubtitle =>
+      'Automatycznie aktualizuj dołączony ffmpeg';
+
+  @override
+  String get adminTranscodingDefaultsTitle => 'Domyślne';
+
+  @override
+  String get adminDefaultCodecLabel => 'Domyślny kodek';
+
+  @override
+  String get adminDefaultBitrateLabel => 'Domyślny bitrate';
+
+  @override
+  String get adminLogsResumeButton => 'Wznów';
+
+  @override
+  String get adminLogsPauseButton => 'Wstrzymaj';
+
+  @override
+  String get adminClear => 'Wyczyść';
+
+  @override
+  String get adminLogsAutoScrollTitle => 'Auto. przewijanie';
+
+  @override
+  String adminLogsLineCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count wiersza',
+      many: '$count wierszy',
+      few: '$count wiersze',
+      one: '1 wiersz',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminLogsDownloadZipButton => 'Pobierz zip';
+
+  @override
+  String get adminLogsNoEntriesHint => 'Brak wpisów w dzienniku';
+
+  @override
+  String get adminDlnaModeDisabled => 'Wyłączone';
+
+  @override
+  String get adminSamePortAsHttp => 'Ten sam port co HTTP';
+
+  @override
+  String get adminSeparatePort => 'Osobny port';
+
+  @override
+  String get adminDlnaBrowseFlat => 'Płaska (wszystkie utwory)';
+
+  @override
+  String get adminDlnaBrowseDirectories => 'Katalogi';
+
+  @override
+  String get adminDlnaBrowseArtist => 'Według wykonawcy';
+
+  @override
+  String get adminDlnaBrowseAlbum => 'Według albumu';
+
+  @override
+  String get adminDlnaBrowseGenre => 'Według gatunku';
+
+  @override
+  String get adminDlnaServerTitle => 'Serwer';
+
+  @override
+  String get adminDlnaIdentityTitle => 'Tożsamość';
+
+  @override
+  String get adminDlnaFriendlyNameLabel => 'Przyjazna nazwa';
+
+  @override
+  String get adminDlnaDeviceUuidLabel => 'UUID urządzenia';
+
+  @override
+  String get adminDlnaDeviceUuidHelper => 'Kanoniczny GUID';
+
+  @override
+  String get adminDlnaBrowseLayoutTitle => 'Układ przeglądania';
+
+  @override
+  String get adminDlnaStructureLabel => 'Struktura';
+
+  @override
+  String get adminMdnsLocalNetworkDiscoveryTitle =>
+      'Wykrywanie w sieci lokalnej';
+
+  @override
+  String get adminMdnsLocalNetworkDiscoverySubtitle =>
+      'Rozgłasza ten serwer jako usługę mDNS _mstream._tcp. Publikuje tylko metadane — nie udostępnia danych biblioteki ani nowych tras.';
+
+  @override
+  String get adminMdnsEnableAdvertisingTitle => 'Włącz rozgłaszanie';
+
+  @override
+  String get adminMdnsFriendlyNameLabel => 'Przyjazna nazwa';
+
+  @override
+  String get adminMdnsFriendlyNameHelper =>
+      'Puste = utworzona z nazwy hosta (maks. 63 bajty)';
+
+  @override
+  String get adminMdnsInstanceIdLabel => 'ID instancji';
+
+  @override
+  String get adminSubsonicApiTitle => 'API Subsonic';
+
+  @override
+  String get adminTestConnection => 'Testuj połączenie';
+
+  @override
+  String adminSubsonicTestSuccess(String version, String latency) {
+    return 'OK · $version · ${latency}ms';
+  }
+
+  @override
+  String adminSubsonicTestFailed(String reason) {
+    return 'Niepowodzenie: $reason';
+  }
+
+  @override
+  String get adminStatus => 'Stan';
+
+  @override
+  String get adminMethodsImplemented => 'Zaimplementowane metody';
+
+  @override
+  String get adminFullStub => 'Pełne / zaślepki';
+
+  @override
+  String get adminNowPlaying => 'Teraz odtwarzane';
+
+  @override
+  String get adminNobody => 'nikt';
+
+  @override
+  String get adminLyricsLrclib => 'Tekst utworu (LRCLib)';
+
+  @override
+  String get adminLrclibFallback => 'Zapasowo LRCLib';
+
+  @override
+  String get adminWriteLrcSidecarFiles => 'Zapisuj pliki .lrc obok utworów';
+
+  @override
+  String get adminCache => 'Pamięć podręczna';
+
+  @override
+  String get adminPurgeCache => 'Wyczyść pamięć podręczną';
+
+  @override
+  String get adminLyricsCachePurged => 'Wyczyszczono pamięć podręczną tekstów';
+
+  @override
+  String get adminRetryFailed => 'Ponów nieudane';
+
+  @override
+  String get adminTransientLyricsEntriesCleared =>
+      'Wyczyszczono tymczasowe wpisy tekstów';
+
+  @override
+  String get adminJukebox => 'Szafa grająca';
+
+  @override
+  String get adminAvailable => 'Dostępna';
+
+  @override
+  String get adminUnavailable => 'Niedostępna';
+
+  @override
+  String get adminState => 'Stan';
+
+  @override
+  String get adminPlaying => 'odtwarzanie';
+
+  @override
+  String get adminPaused => 'wstrzymano';
+
+  @override
+  String get adminIdle => 'bezczynna';
+
+  @override
+  String get adminCurrent => 'Bieżący';
+
+  @override
+  String get adminQueue => 'Kolejka';
+
+  @override
+  String adminQueueTracks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count utworu',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminVolume => 'Głośność';
+
+  @override
+  String adminVolumePercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get adminTokenAuthFailures => 'Błędy uwierzytelniania tokenem';
+
+  @override
+  String get adminTokenAuthFailuresSubtitle =>
+      'Klienci domyślnie używający uwierzytelniania tokenem bez hasła Subsonic.';
+
+  @override
+  String get adminNoRecentFailures => 'Brak ostatnich błędów';
+
+  @override
+  String get adminCleared => 'Wyczyszczono';
+
+  @override
+  String get adminMintApiKey => 'Wygeneruj klucz API';
+
+  @override
+  String get adminMintApiKeySubtitle =>
+      'Wygeneruj klucz apiKey Subsonic dla użytkownika (pokazywany raz).';
+
+  @override
+  String get adminKeyNameLabel => 'Nazwa / etykieta klucza';
+
+  @override
+  String get adminMintKey => 'Wygeneruj klucz';
+
+  @override
+  String get adminUsernameAndNameRequired =>
+      'Nazwa użytkownika i nazwa są wymagane';
+
+  @override
+  String get adminTorrentClient => 'Klient';
+
+  @override
+  String get adminActiveClient => 'Aktywny klient';
+
+  @override
+  String get adminTransmission => 'Transmission';
+
+  @override
+  String get adminQbittorrent => 'qBittorrent';
+
+  @override
+  String get adminDeluge => 'Deluge';
+
+  @override
+  String get adminEnabledFor => 'Włączone dla';
+
+  @override
+  String get adminAllUsers => 'Wszyscy użytkownicy';
+
+  @override
+  String get adminWhitelistedUsers => 'Użytkownicy z białej listy';
+
+  @override
+  String get adminHost => 'Host';
+
+  @override
+  String get adminPasswordUnchangedIfBlank => 'bez zmian, jeśli puste';
+
+  @override
+  String get adminRpcPath => 'Ścieżka RPC';
+
+  @override
+  String get adminUseHttps => 'Użyj HTTPS';
+
+  @override
+  String get adminTest => 'Testuj';
+
+  @override
+  String adminReachable(String version) {
+    return 'Osiągalny$version';
+  }
+
+  @override
+  String adminConnectionFailed(String error) {
+    return 'Niepowodzenie: $error';
+  }
+
+  @override
+  String get adminConnectAndSave => 'Połącz i zapisz';
+
+  @override
+  String adminSaveFailed(String error) {
+    return 'Niepowodzenie: $error';
+  }
+
+  @override
+  String get adminConnectedAndSaved => 'Połączono i zapisano';
+
+  @override
+  String get adminDisconnect => 'Rozłącz';
+
+  @override
+  String get adminDisconnected => 'Rozłączono';
+
+  @override
+  String get adminConfigured => 'Skonfigurowano';
+
+  @override
+  String get adminNotConfigured => 'Nie skonfigurowano';
+
+  @override
+  String get adminTorrents => 'Torrenty';
+
+  @override
+  String get adminConnected => 'Połączono';
+
+  @override
+  String get adminNoTorrents => 'Brak torrentów';
+
+  @override
+  String get adminMstream => 'mStream';
+
+  @override
+  String get adminTorrentRemoved => 'Torrent usunięty';
+
+  @override
+  String get adminLibraryDaemonPathMapping =>
+      'Mapowanie ścieżki biblioteka → demon';
+
+  @override
+  String get adminLibraryDaemonPathMappingSubtitle =>
+      'Mapuje każdą bibliotekę na jej ścieżkę widzianą przez demona torrent.';
+
+  @override
+  String get adminAutoDetectAll => 'Wykryj wszystkie automatycznie';
+
+  @override
+  String get adminAutoDetectionComplete => 'Automatyczne wykrywanie zakończone';
+
+  @override
+  String get adminVerified => 'zweryfikowano';
+
+  @override
+  String get adminUnverified => 'niezweryfikowano';
+
+  @override
+  String get adminSetManually => 'Ustaw ręcznie';
+
+  @override
+  String adminDaemonPathFor(String name) {
+    return 'Ścieżka demona dla \"$name\"';
+  }
+
+  @override
+  String get adminPathOnDaemonHost => 'Ścieżka na hoście demona';
+
+  @override
+  String get adminVerifyAndSave => 'Zweryfikuj i zapisz';
+
+  @override
+  String get adminVpathVerified => 'Zweryfikowano';
+
+  @override
+  String get adminVpathSavedUnverified => 'Zapisano (niezweryfikowano)';
+
+  @override
+  String get adminDownloadPathTemplates => 'Szablony ścieżek pobierania';
+
+  @override
+  String adminPathTemplateVars(String vars) {
+    return 'Zmienne: $vars';
+  }
+
+  @override
+  String get adminNoLibraries => 'Brak bibliotek';
+
+  @override
+  String adminSuggestedTemplate(String template) {
+    return 'Sugerowany: $template';
+  }
+
+  @override
+  String get adminTemplateSaved => 'Szablon zapisany';
+
+  @override
+  String get adminNoBackupDestinations => 'Brak miejsc docelowych kopii';
+
+  @override
+  String get adminBackupDestinationInfo =>
+      'Dodaj miejsce docelowe, aby kopiować bibliotekę do innego folderu.';
+
+  @override
+  String get adminAddDestination => 'Dodaj miejsce docelowe';
+
+  @override
+  String get adminAddLibraryFirst => 'Najpierw dodaj bibliotekę';
+
+  @override
+  String get adminBackupQueue => 'Kolejka kopii zapasowych';
+
+  @override
+  String adminTasksQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zadania w kolejce',
+      many: '$count zadań w kolejce',
+      few: '$count zadania w kolejce',
+      one: '1 zadanie w kolejce',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String adminBackingUp(String library) {
+    return 'Tworzenie kopii: $library';
+  }
+
+  @override
+  String get adminRunning => 'w toku';
+
+  @override
+  String adminBackupStats(int done, String total, String stats) {
+    return '$done plików$total$stats';
+  }
+
+  @override
+  String get adminBackupDisabled => 'wyłączone';
+
+  @override
+  String get adminDestination => 'Miejsce docelowe';
+
+  @override
+  String get adminTrigger => 'Wyzwalacz';
+
+  @override
+  String adminDailyTriggerTime(String trigger, String hour) {
+    return '$trigger o $hour:00';
+  }
+
+  @override
+  String get adminRetention => 'Przechowywanie';
+
+  @override
+  String adminRetentionDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dnia',
+      many: '$count dni',
+      few: '$count dni',
+      one: '1 dzień',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminLastRun => 'Ostatnie uruchomienie';
+
+  @override
+  String adminLastRunStatus(String status, int files) {
+    return '$status · skopiowano $files';
+  }
+
+  @override
+  String get adminRunNow => 'Uruchom teraz';
+
+  @override
+  String get adminBackupQueued => 'Kopia dodana do kolejki';
+
+  @override
+  String get adminAlreadyRunningSkipped => 'Już w toku — pominięto';
+
+  @override
+  String get adminHistory => 'Historia';
+
+  @override
+  String get adminEdit => 'Edytuj';
+
+  @override
+  String get adminDestinationDeleted => 'Miejsce docelowe usunięte';
+
+  @override
+  String get adminBackupHistory => 'Historia kopii zapasowych';
+
+  @override
+  String get adminNoHistoryYet => 'Brak historii';
+
+  @override
+  String get adminEditDestination => 'Edytuj miejsce docelowe';
+
+  @override
+  String get adminAddBackupDestination => 'Dodaj miejsce docelowe kopii';
+
+  @override
+  String get adminDestinationPath => 'Ścieżka docelowa';
+
+  @override
+  String get adminBrowseServer => 'Przeglądaj serwer';
+
+  @override
+  String get adminCheckPath => 'Sprawdź ścieżkę';
+
+  @override
+  String get adminTriggerField => 'Wyzwalacz';
+
+  @override
+  String get adminAfterEachScan => 'Po każdym skanowaniu';
+
+  @override
+  String get adminDaily => 'Codziennie';
+
+  @override
+  String get adminManualOnly => 'Tylko ręcznie';
+
+  @override
+  String get adminRunAtHour => 'Uruchom o godzinie: ';
+
+  @override
+  String get adminRetentionFieldLabel =>
+      'Przechowywanie (dni, 0 = zachowaj wszystko)';
+
+  @override
+  String get adminEnabledToggle => 'Włączone';
+
+  @override
+  String get adminDestinationUpdated => 'Miejsce docelowe zaktualizowane';
+
+  @override
+  String get adminDestinationCreated => 'Miejsce docelowe utworzone';
+
+  @override
+  String get adminPickLibrary => 'Wybierz bibliotekę';
+
+  @override
+  String get adminPickDestinationPath => 'Wybierz ścieżkę docelową';
+
+  @override
+  String adminAboutTitle(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String get adminAboutPort => 'Port';
+
+  @override
+  String get adminSSL => 'SSL';
+
+  @override
+  String get adminUI => 'Interfejs';
+
+  @override
+  String get adminCompression => 'Kompresja';
+
+  @override
+  String get adminTrustProxy => 'Ufaj proxy';
+
+  @override
+  String get adminYes => 'Tak';
+
+  @override
+  String get adminNo => 'Nie';
+
+  @override
+  String get adminSecretLast4 => 'Sekret (ostatnie 4)';
+
+  @override
+  String get adminUploads => 'Przesyłanie';
+
+  @override
+  String get adminMakeDirs => 'Tworzenie katalogów';
+
+  @override
+  String get adminFileModify => 'Modyfikacja plików';
+
+  @override
+  String get adminSynchronous => 'Synchronous';
+
+  @override
+  String get adminCacheSizeLabel => 'Rozmiar pamięci podręcznej';
+
+  @override
+  String adminCacheSizeMb(int size) {
+    return '$size MB';
+  }
+
+  @override
+  String get adminFederationUnavailable => 'Niedostępna';
+
+  @override
+  String get adminFederationDescription =>
+      'Federacja jest przebudowywana wokół nowego mechanizmu lokalnych kopii zapasowych i obecnie jest niedostępna na serwerze. Punkt końcowy pozostaje aktywny, aby starsi klienci otrzymywali jasny status zamiast błędu 404.';
+
+  @override
+  String get adminCheckStatus => 'Sprawdź status';
+
+  @override
+  String get adminAllowed => 'Dozwolone';
+
+  @override
+  String get adminBackupEnabled => 'włączone';
+
+  @override
+  String get adminNotAvailable => 'Niedostępne';
+
+  @override
+  String get adminNotMapped => 'niezmapowane';
+
+  @override
+  String get adminExpiryNever => 'nigdy';
+
+  @override
+  String get adminUnknownUser => 'nieznany';
 }

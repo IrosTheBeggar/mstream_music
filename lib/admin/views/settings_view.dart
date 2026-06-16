@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -27,105 +28,113 @@ class SettingsView extends StatelessWidget {
     return AdminAsync(
       loader: _load,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final c = data.config;
         final sslOn = c['ssl']?['cert'] != null;
         return AdminViewBody(children: [
           AdminCard(
-            title: 'Network',
-            subtitle: 'Changing these soft-reboots the server.',
+            title: l.adminNetwork,
+            subtitle: l.adminNetworkSubtitle,
             icon: Icons.lan_outlined,
             children: [
               AdminSaveField(
-                label: 'Bind address',
+                label: l.adminBindAddress,
                 initialValue: '${c['address'] ?? '0.0.0.0'}',
                 onSave: api.setAddress,
               ),
               AdminSaveField(
-                label: 'Port',
+                label: l.adminPort,
                 number: true,
                 initialValue: '${_int(c['port'], 3000)}',
                 onSave: (v) => api.setPort(_int(v, 3000)),
               ),
               AdminAsyncSwitch(
-                title: 'Trust proxy headers',
-                subtitle: 'Enable when behind a reverse proxy (X-Forwarded-*)',
+                title: l.adminTrustProxyHeaders,
+                subtitle: l.adminTrustProxyHeadersSubtitle,
                 value: c['trustProxy'] == true,
                 onChanged: api.setTrustProxy,
               ),
             ],
           ),
           AdminCard(
-            title: 'Permissions',
+            title: l.adminPermissions,
             icon: Icons.lock_outline,
             children: [
               AdminAsyncSwitch(
-                title: 'Allow uploads',
+                title: l.adminAllowUploads,
                 value: c['noUpload'] != true,
                 onChanged: (v) => api.setNoUpload(!v),
               ),
               AdminAsyncSwitch(
-                title: 'Allow making directories',
+                title: l.adminAllowMakingDirectories,
                 value: c['noMkdir'] != true,
                 onChanged: (v) => api.setNoMkdir(!v),
               ),
               AdminAsyncSwitch(
-                title: 'Allow modifying files',
+                title: l.adminAllowModifyingFiles,
                 value: c['noFileModify'] != true,
                 onChanged: (v) => api.setNoFileModify(!v),
               ),
               AdminSaveField(
-                label: 'Max request size',
-                helperText: 'e.g. 50MB or 512KB',
+                label: l.adminMaxRequestSize,
+                helperText: l.adminMaxRequestSizeHelper,
                 initialValue: '${c['maxRequestSize'] ?? '50MB'}',
                 onSave: api.setMaxRequestSize,
               ),
             ],
           ),
           AdminCard(
-            title: 'HTTP & UI',
+            title: l.adminHttpUi,
             icon: Icons.web,
             children: [
               AdminDropdownRow<String>(
-                label: 'Response compression',
+                label: l.adminResponseCompression,
                 value: ['none', 'gzip', 'brotli'].contains(c['compression'])
                     ? c['compression']
                     : 'none',
-                items: const [
-                  DropdownMenuItem(value: 'none', child: Text('None')),
-                  DropdownMenuItem(value: 'gzip', child: Text('gzip')),
-                  DropdownMenuItem(value: 'brotli', child: Text('brotli')),
+                items: [
+                  DropdownMenuItem(
+                      value: 'none', child: Text(l.adminCompressionNone)),
+                  DropdownMenuItem(
+                      value: 'gzip', child: Text(l.adminCompressionGzip)),
+                  DropdownMenuItem(
+                      value: 'brotli', child: Text(l.adminCompressionBrotli)),
                 ],
                 onChanged: api.setCompression,
               ),
               AdminDropdownRow<String>(
-                label: 'Web UI',
+                label: l.adminWebUi,
                 value: ['default', 'velvet', 'subsonic'].contains(c['ui'])
                     ? c['ui']
                     : 'default',
-                items: const [
-                  DropdownMenuItem(value: 'default', child: Text('Default')),
-                  DropdownMenuItem(value: 'velvet', child: Text('Velvet')),
-                  DropdownMenuItem(value: 'subsonic', child: Text('Subsonic')),
+                items: [
+                  DropdownMenuItem(
+                      value: 'default', child: Text(l.adminUiDefault)),
+                  DropdownMenuItem(
+                      value: 'velvet', child: Text(l.adminUiVelvet)),
+                  DropdownMenuItem(
+                      value: 'subsonic', child: Text(l.adminUiSubsonic)),
                 ],
                 onChanged: api.setUi,
               ),
             ],
           ),
           AdminCard(
-            title: 'Database tuning',
+            title: l.adminDatabaseTuning,
             icon: Icons.tune,
             children: [
               AdminDropdownRow<String>(
-                label: 'SQLite synchronous',
+                label: l.adminSqliteSynchronous,
                 value: c['dbSynchronous'] == 'NORMAL' ? 'NORMAL' : 'FULL',
-                items: const [
-                  DropdownMenuItem(value: 'FULL', child: Text('FULL (safest)')),
-                  DropdownMenuItem(value: 'NORMAL', child: Text('NORMAL (faster)')),
+                items: [
+                  DropdownMenuItem(value: 'FULL', child: Text(l.adminSyncFull)),
+                  DropdownMenuItem(
+                      value: 'NORMAL', child: Text(l.adminSyncNormal)),
                 ],
                 onChanged: api.setDbSynchronous,
               ),
               AdminSaveField(
-                label: 'Cache size (MB, 1–2048)',
+                label: l.adminCacheSize,
                 number: true,
                 initialValue: '${_int(c['dbCacheSizeMb'], 64)}',
                 onSave: (v) => api.setDbCacheSize(_int(v, 64)),
@@ -133,16 +142,16 @@ class SettingsView extends StatelessWidget {
             ],
           ),
           AdminCard(
-            title: 'Logging',
+            title: l.adminLogging,
             icon: Icons.article_outlined,
             children: [
               AdminAsyncSwitch(
-                title: 'Write logs to disk',
+                title: l.adminWriteLogsToDisk,
                 value: c['writeLogs'] == true,
                 onChanged: api.setWriteLogs,
               ),
               AdminSaveField(
-                label: 'Log buffer size (0–10000, 0 = disabled)',
+                label: l.adminLogBufferSize,
                 number: true,
                 initialValue: '${_int(c['logBufferSize'], 0)}',
                 onSave: (v) => api.setLogBufferSize(_int(v, 0)),
@@ -153,33 +162,31 @@ class SettingsView extends StatelessWidget {
               api: api, config: c, audio: data.audio, reload: reload),
           _SslCard(api: api, sslOn: sslOn, reload: reload),
           AdminCard(
-            title: 'Security',
+            title: l.adminSecurity,
             icon: Icons.key,
             children: [
-              AdminInfoRow('JWT secret (last 4)', '…${c['secret'] ?? ''}'),
+              AdminInfoRow(l.adminJwtSecretLast4, '…${c['secret'] ?? ''}'),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
                 child: AdminActionButton(
-                  label: 'Regenerate secret',
+                  label: l.adminRegenerateSecret,
                   icon: Icons.autorenew,
                   destructive: true,
-                  success: 'Secret regenerated — all sessions invalidated',
+                  success: l.adminSecretRegenerated,
                   onPressed: () async {
                     final ok = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Regenerate JWT secret?'),
-                        content: const Text(
-                            'This invalidates every existing login (including '
-                            'this one). Everyone must sign in again.'),
+                        title: Text(l.adminRegenerateJwtSecretDialog),
+                        content: Text(l.adminRegenerateJwtSecretDialogBody),
                         actions: [
                           TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel')),
+                              child: Text(l.adminCancel)),
                           FilledButton(
                               onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Regenerate')),
+                              child: Text(l.adminRegenerateButton)),
                         ],
                       ),
                     );
@@ -211,36 +218,37 @@ class _ServerAudioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final detected =
         [for (final p in (audio['detectedCliPlayers'] as List?) ?? const []) '$p'];
     return AdminCard(
-      title: 'Server audio',
+      title: l.adminServerAudio,
       icon: Icons.speaker,
       children: [
         AdminAsyncSwitch(
-          title: 'Auto-boot server audio (Rust player)',
+          title: l.adminAutoBootServerAudio,
           value: config['autoBootServerAudio'] == true,
           onChanged: api.setAutoBootServerAudio,
         ),
         AdminSaveField(
-          label: 'Rust player port',
+          label: l.adminRustPlayerPort,
           number: true,
           initialValue: '${_int(config['rustPlayerPort'], 3055)}',
           onSave: (v) => api.setRustPlayerPort(_int(v, 3055)),
         ),
         const Divider(height: 16),
-        AdminInfoRow('Active backend', '${audio['backend'] ?? '—'}'),
-        AdminInfoRow('Player', '${audio['player'] ?? '—'}'),
-        AdminInfoRow(
-            'Detected CLI players', detected.isEmpty ? 'none' : detected.join(', ')),
+        AdminInfoRow(l.adminActiveBackend, '${audio['backend'] ?? '—'}'),
+        AdminInfoRow(l.adminPlayer, '${audio['player'] ?? '—'}'),
+        AdminInfoRow(l.adminDetectedCliPlayers,
+            detected.isEmpty ? l.adminNone : detected.join(', ')),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
           child: AdminActionButton(
-            label: 'Re-detect players',
+            label: l.adminReDetectPlayers,
             icon: Icons.search,
             tonal: true,
-            success: 'Re-probed CLI players',
+            success: l.adminReProbedCliPlayers,
             onPressed: () async {
               await api.detectServerAudio();
               await reload();
@@ -261,19 +269,20 @@ class _SslCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminCard(
-      title: 'SSL / HTTPS',
+      title: l.adminSslHttps,
       icon: Icons.https,
       trailing: [
         StatusPill(
-          label: sslOn ? 'Enabled' : 'Disabled',
+          label: sslOn ? l.adminEnabled : l.adminDisabled,
           color: sslOn ? Colors.green : Colors.grey,
         ),
       ],
       children: [
         Wrap(spacing: 8, children: [
           AdminActionButton(
-            label: sslOn ? 'Replace certificate' : 'Set certificate',
+            label: sslOn ? l.adminReplaceCertificate : l.adminSetCertificate,
             icon: Icons.upload_file,
             tonal: true,
             onPressed: () async {
@@ -282,25 +291,25 @@ class _SslCard extends StatelessWidget {
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Set SSL certificate'),
+                  title: Text(l.adminSetSslCertificateDialog),
                   content: Column(mainAxisSize: MainAxisSize.min, children: [
                     TextField(
                         controller: certCtrl,
-                        decoration:
-                            const InputDecoration(labelText: 'Certificate path')),
+                        decoration: InputDecoration(
+                            labelText: l.adminCertificatePath)),
                     const SizedBox(height: 8),
                     TextField(
                         controller: keyCtrl,
                         decoration:
-                            const InputDecoration(labelText: 'Key path')),
+                            InputDecoration(labelText: l.adminKeyPath)),
                   ]),
                   actions: [
                     TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancel')),
+                        child: Text(l.adminCancel)),
                     FilledButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Save')),
+                        child: Text(l.adminSave)),
                   ],
                 ),
               );
@@ -308,7 +317,7 @@ class _SslCard extends StatelessWidget {
                 await runAdminAction(
                     context,
                     () => api.setSsl(certCtrl.text.trim(), keyCtrl.text.trim()),
-                    success: 'SSL configured — reboot to apply');
+                    success: l.adminSslConfigured);
                 await reload();
               }
               certCtrl.dispose();
@@ -317,9 +326,9 @@ class _SslCard extends StatelessWidget {
           ),
           if (sslOn)
             AdminActionButton(
-              label: 'Remove SSL',
+              label: l.adminRemoveSsl,
               destructive: true,
-              success: 'SSL removed',
+              success: l.adminSslRemoved,
               onPressed: () async {
                 await api.removeSsl();
                 await reload();

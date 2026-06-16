@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'admin_screen.dart';
 import 'admin_session.dart';
 import 'admin_theme.dart';
@@ -23,7 +24,7 @@ Future<void> openAdminPanel(
         child: Builder(
           builder: (themedContext) => AdminScreen(
             session: AdminSession(baseUrl: baseUrl, token: token, label: label),
-            exitLabel: 'Close',
+            exitLabel: AppLocalizations.of(themedContext).adminClose,
             onExit: () => Navigator.of(themedContext).maybePop(),
           ),
         ),

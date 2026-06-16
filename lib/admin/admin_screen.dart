@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_api.dart';
 import 'admin_session.dart';
+import '../l10n/app_localizations.dart';
 import 'views/about_view.dart';
 import 'views/admin_access_view.dart';
 import 'views/backups_view.dart';
@@ -20,13 +21,13 @@ import 'views/users_view.dart';
 /// A navigable destination in the admin sidebar.
 class _NavItem {
   final IconData icon;
-  final String label;
+  final String Function(AppLocalizations) label;
   final Widget Function(AdminApi) build;
   const _NavItem(this.icon, this.label, this.build);
 }
 
 class _NavGroup {
-  final String title;
+  final String Function(AppLocalizations) title;
   final List<_NavItem> items;
   const _NavGroup(this.title, this.items);
 }
@@ -42,13 +43,15 @@ class AdminScreen extends StatefulWidget {
   /// session and returns to the login screen; embedded it pops the route. Null
   /// hides the action entirely.
   final VoidCallback? onExit;
-  final String exitLabel;
+
+  /// Override for the exit action's label. Null → localized "Log out".
+  final String? exitLabel;
 
   const AdminScreen({
     super.key,
     required this.session,
     this.onExit,
-    this.exitLabel = 'Log out',
+    this.exitLabel,
   });
 
   @override
@@ -60,23 +63,23 @@ class _AdminScreenState extends State<AdminScreen> {
   int _selected = 0;
 
   late final List<_NavGroup> _groups = [
-    _NavGroup('Config', [
-      _NavItem(Icons.folder_outlined, 'Directories', (a) => DirectoriesView(api: a)),
-      _NavItem(Icons.people_outline, 'Users', (a) => UsersView(api: a)),
-      _NavItem(Icons.wifi_tethering, 'DLNA', (a) => DlnaView(api: a)),
-      _NavItem(Icons.play_circle_outline, 'Subsonic API', (a) => SubsonicView(api: a)),
-      _NavItem(Icons.travel_explore, 'MP3 Player', (a) => MdnsView(api: a)),
-      _NavItem(Icons.download_outlined, 'Torrent', (a) => TorrentView(api: a)),
-      _NavItem(Icons.hub_outlined, 'Federation', (a) => FederationView(api: a)),
+    _NavGroup((l) => l.adminConfigGroup, [
+      _NavItem(Icons.folder_outlined, (l) => l.adminDirectories, (a) => DirectoriesView(api: a)),
+      _NavItem(Icons.people_outline, (l) => l.adminUsers, (a) => UsersView(api: a)),
+      _NavItem(Icons.wifi_tethering, (l) => l.adminDLNA, (a) => DlnaView(api: a)),
+      _NavItem(Icons.play_circle_outline, (l) => l.adminSubsonicAPI, (a) => SubsonicView(api: a)),
+      _NavItem(Icons.travel_explore, (l) => l.adminMP3Player, (a) => MdnsView(api: a)),
+      _NavItem(Icons.download_outlined, (l) => l.adminTorrent, (a) => TorrentView(api: a)),
+      _NavItem(Icons.hub_outlined, (l) => l.adminFederation, (a) => FederationView(api: a)),
     ]),
-    _NavGroup('Server', [
-      _NavItem(Icons.info_outline, 'About', (a) => AboutView(api: a)),
-      _NavItem(Icons.settings_outlined, 'Settings', (a) => SettingsView(api: a)),
-      _NavItem(Icons.storage_outlined, 'Database', (a) => DatabaseView(api: a)),
-      _NavItem(Icons.backup_outlined, 'Backups', (a) => BackupsView(api: a)),
-      _NavItem(Icons.transform, 'Transcoding', (a) => TranscodingView(api: a)),
-      _NavItem(Icons.article_outlined, 'Logs', (a) => LogsView(api: a)),
-      _NavItem(Icons.security_outlined, 'Admin Access', (a) => AdminAccessView(api: a)),
+    _NavGroup((l) => l.adminServerGroup, [
+      _NavItem(Icons.info_outline, (l) => l.adminAbout, (a) => AboutView(api: a)),
+      _NavItem(Icons.settings_outlined, (l) => l.adminSettings, (a) => SettingsView(api: a)),
+      _NavItem(Icons.storage_outlined, (l) => l.adminDatabase, (a) => DatabaseView(api: a)),
+      _NavItem(Icons.backup_outlined, (l) => l.adminBackups, (a) => BackupsView(api: a)),
+      _NavItem(Icons.transform, (l) => l.adminTranscoding, (a) => TranscodingView(api: a)),
+      _NavItem(Icons.article_outlined, (l) => l.adminLogs, (a) => LogsView(api: a)),
+      _NavItem(Icons.security_outlined, (l) => l.adminAccess, (a) => AdminAccessView(api: a)),
     ]),
   ];
 
@@ -95,13 +98,13 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final active = _flat[_selected];
     return LayoutBuilder(builder: (context, constraints) {
       final wide = constraints.maxWidth >= 900;
       final content = Scaffold(
         appBar: AppBar(
-          title: Text('mStream Admin · ${active.label}'),
-          leading: wide ? null : null, // Drawer button auto-added when drawer set
+          title: Text(l.adminAppBarTitle(active.label(l))),
         ),
         drawer: wide ? null : Drawer(child: _sidebar(scrollable: true)),
         body: Row(children: [
@@ -127,6 +130,7 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _sidebar({required bool scrollable}) {
+    final l = AppLocalizations.of(context);
     int runningIndex = 0;
     final children = <Widget>[
       _Header(label: widget.session.label),
@@ -134,7 +138,7 @@ class _AdminScreenState extends State<AdminScreen> {
     for (final group in _groups) {
       children.add(Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-        child: Text(group.title.toUpperCase(),
+        child: Text(group.title(l).toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   letterSpacing: 1.2,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -149,7 +153,7 @@ class _AdminScreenState extends State<AdminScreen> {
           selectedTileColor:
               Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
           leading: Icon(item.icon),
-          title: Text(item.label),
+          title: Text(item.label(l)),
           onTap: () => _select(index),
         ));
       }
@@ -159,7 +163,7 @@ class _AdminScreenState extends State<AdminScreen> {
       children.add(ListTile(
         dense: true,
         leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-        title: Text(widget.exitLabel,
+        title: Text(widget.exitLabel ?? l.adminLogOut,
             style: TextStyle(color: Theme.of(context).colorScheme.error)),
         onTap: widget.onExit,
       ));
@@ -177,6 +181,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Row(children: [
@@ -184,7 +189,7 @@ class _Header extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('mStream Admin',
+            Text(l.adminPanelTitle,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium

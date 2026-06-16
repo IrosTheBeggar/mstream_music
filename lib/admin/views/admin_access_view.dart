@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -33,14 +34,23 @@ class _AdminAccessEditor extends StatefulWidget {
 }
 
 class _AdminAccessEditorState extends State<_AdminAccessEditor> {
-  static const _modes = {
-    'all': 'All networks',
-    'localhost': 'Localhost only',
-    'whitelist': 'IP whitelist',
-    'none': 'None (lock admin)',
-  };
+  static const _modeKeys = ['all', 'localhost', 'whitelist', 'none'];
 
-  late String _mode = _modes.containsKey(widget.access['mode'])
+  String _modeLabel(AppLocalizations l, String key) {
+    switch (key) {
+      case 'localhost':
+        return l.adminLocalhostOnly;
+      case 'whitelist':
+        return l.adminIpWhitelist;
+      case 'none':
+        return l.adminNoneLockAdmin;
+      case 'all':
+      default:
+        return l.adminAllNetworks;
+    }
+  }
+
+  late String _mode = _modeKeys.contains(widget.access['mode'])
       ? widget.access['mode']
       : 'all';
   late final List<String> _whitelist = [
@@ -55,58 +65,61 @@ class _AdminAccessEditorState extends State<_AdminAccessEditor> {
   }
 
   Future<void> _apply() async {
+    final l = AppLocalizations.of(context);
     await runAdminAction(
       context,
       () => widget.api.setAdminAccess(_mode,
           whitelist: _mode == 'whitelist' ? _whitelist : null),
-      success: 'Admin access updated',
+      success: l.adminAccessUpdated,
     );
     await widget.reload();
   }
 
   Future<void> _confirmLock() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Lock the admin API?'),
-        content: const Text(
-            'This disables the entire /admin API for everyone. You will not be '
-            'able to undo it from this panel — it requires editing the server '
-            'config file and restarting. Continue?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Lock'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l.adminLockAdminApiDialog),
+          content: Text(l.adminLockAdminApiDialogBody),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.adminCancel)),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.adminLockButton),
+            ),
+          ],
+        );
+      },
     );
     if (ok == true && mounted) {
       await runAdminAction(context, () => widget.api.lockAdminApi(true),
-          success: 'Admin API locked');
+          success: l.adminAdminApiLocked);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AdminViewBody(children: [
       AdminCard(
-        title: 'Network access',
-        subtitle: 'Restrict which networks may reach the admin API.',
+        title: l.adminNetworkAccess,
+        subtitle: l.adminNetworkAccessSubtitle,
         icon: Icons.security_outlined,
         children: [
           AdminDropdownRow<String>(
-            label: 'Mode',
+            label: l.adminMode,
             value: _mode,
             items: [
-              for (final e in _modes.entries)
-                DropdownMenuItem(value: e.key, child: Text(e.value)),
+              for (final e in _modeKeys)
+                DropdownMenuItem(value: e, child: Text(_modeLabel(l, e))),
             ],
             // Local change only — applied with the button so the whitelist can
             // be edited first.
@@ -114,13 +127,13 @@ class _AdminAccessEditorState extends State<_AdminAccessEditor> {
           ),
           if (_mode == 'whitelist') ...[
             const Divider(height: 24),
-            Text('Whitelisted IPs / CIDRs',
+            Text(l.adminWhitelistedIps,
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 4),
             if (_whitelist.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('None yet',
+                child: Text(l.adminNoneYet,
                     style: TextStyle(color: scheme.onSurfaceVariant)),
               ),
             Wrap(
@@ -139,9 +152,9 @@ class _AdminAccessEditorState extends State<_AdminAccessEditor> {
               Expanded(
                 child: TextField(
                   controller: _newIp,
-                  decoration: const InputDecoration(
-                    labelText: 'Add IP or CIDR',
-                    hintText: '192.168.1.0/24',
+                  decoration: InputDecoration(
+                    labelText: l.adminAddIpOrCidr,
+                    hintText: l.adminCidrExample,
                   ),
                   onSubmitted: (_) => _addIp(),
                 ),
@@ -154,23 +167,22 @@ class _AdminAccessEditorState extends State<_AdminAccessEditor> {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: AdminActionButton(label: 'Apply', onPressed: _apply),
+            child: AdminActionButton(label: l.adminApply, onPressed: _apply),
           ),
         ],
       ),
       AdminCard(
-        title: 'Danger zone',
+        title: l.adminDangerZone,
         icon: Icons.warning_amber,
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Lock admin API'),
-            subtitle: const Text(
-                'Disable the entire admin API. Cannot be undone from here.'),
+            title: Text(l.adminLockAdminApi),
+            subtitle: Text(l.adminLockAdminApiSubtitle),
             trailing: OutlinedButton(
               style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
               onPressed: _confirmLock,
-              child: const Text('Lock'),
+              child: Text(l.adminLockButton),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -19,17 +20,16 @@ class UsersView extends StatelessWidget {
     return AdminAsync(
       loader: _load,
       builder: (context, data, reload) {
+        final l = AppLocalizations.of(context);
         final names = data.users.keys.toList()..sort();
         return Stack(children: [
           AdminViewBody(children: [
             if (names.isEmpty)
-              const AdminCard(
-                title: 'No users',
-                subtitle:
-                    'With no users the server runs in open/public mode. Add one '
-                    'to require login.',
+              AdminCard(
+                title: l.adminNoUsersTitle,
+                subtitle: l.adminNoUsersSubtitle,
                 icon: Icons.person_off_outlined,
-                children: [],
+                children: const [],
               ),
             for (final name in names)
               _UserCard(
@@ -46,7 +46,7 @@ class UsersView extends StatelessWidget {
             bottom: 16,
             child: FloatingActionButton.extended(
               icon: const Icon(Icons.person_add),
-              label: const Text('Add user'),
+              label: Text(l.adminAddUserButton),
               onPressed: () async {
                 final added = await showDialog<bool>(
                   context: context,
@@ -118,10 +118,11 @@ class _UserCardState extends State<_UserCard> {
   }
 
   Future<void> _editVpaths() async {
+    final l = AppLocalizations.of(context);
     final result = await showDialog<List<String>>(
       context: context,
       builder: (_) => _MultiSelectDialog(
-        title: 'Library access',
+        title: l.adminLibraryAccessDialogTitle,
         all: widget.allLibs,
         selected: _vpaths,
       ),
@@ -130,70 +131,78 @@ class _UserCardState extends State<_UserCard> {
       setState(() => _vpaths = result);
       await runAdminAction(
           context, () => widget.api.setUserVPaths(widget.username, result),
-          success: 'Library access updated');
+          success: l.adminLibraryAccessUpdatedToast);
     }
   }
 
   Future<void> _changePassword({bool subsonic = false}) async {
+    final l = AppLocalizations.of(context);
     final pw = await _promptPassword(context,
-        title: subsonic ? 'Set Subsonic password' : 'Set password');
+        title: subsonic
+            ? l.adminSetSubsonicPasswordTitle
+            : l.adminSetPasswordTitle);
     if (pw == null || !mounted) return;
     await runAdminAction(
       context,
       () => subsonic
           ? widget.api.setUserSubsonicPassword(widget.username, pw)
           : widget.api.setUserPassword(widget.username, pw),
-      success: 'Password updated',
+      success: l.adminPasswordUpdatedToast,
     );
   }
 
   Future<void> _confirmDelete() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete "${widget.username}"?'),
-        content: const Text('This permanently removes the user account.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l.adminDeleteUserTitle(widget.username)),
+          content: Text(l.adminDeleteUserWarning),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l.adminCancel)),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l.adminDelete),
+            ),
+          ],
+        );
+      },
     );
     if (ok == true && mounted) {
       await runAdminAction(
           context, () => widget.api.deleteUser(widget.username),
-          success: 'User deleted');
+          success: l.adminUserDeletedToast);
       await widget.reload();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AdminCard(
       title: widget.username,
       icon: Icons.person,
       trailing: [
         if (_admin)
-          const Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: StatusPill(label: 'admin', color: Colors.indigo),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: StatusPill(label: l.adminStatusPillLabel, color: Colors.indigo),
           ),
         PopupMenuButton<String>(
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'pw', child: Text('Set password')),
-            const PopupMenuItem(
-                value: 'spw', child: Text('Set Subsonic password')),
+            PopupMenuItem(value: 'pw', child: Text(l.adminSetPasswordTitle)),
+            PopupMenuItem(
+                value: 'spw', child: Text(l.adminSetSubsonicPasswordTitle)),
             PopupMenuItem(
                 value: 'del',
-                child: Text('Delete user',
+                child: Text(l.adminDeleteUserMenuItem,
                     style: TextStyle(color: scheme.error))),
           ],
           onSelected: (v) {
@@ -212,30 +221,30 @@ class _UserCardState extends State<_UserCard> {
         Row(children: [
           Expanded(
             child: Text(
-              _vpaths.isEmpty ? 'No library access' : _vpaths.join(', '),
+              _vpaths.isEmpty ? l.adminNoLibraryAccessLabel : _vpaths.join(', '),
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           ),
           TextButton.icon(
             icon: const Icon(Icons.edit, size: 16),
-            label: const Text('Libraries'),
+            label: Text(l.adminLibrariesButton),
             onPressed: _editVpaths,
           ),
         ]),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 4, children: [
-          _flag('Admin', _admin,
+          _flag(l.adminAdminToggleTitle, _admin,
               (v) => _setAccess(() => _admin = v, () => _admin = !v)),
-          _flag('Make dirs', _mkdir,
+          _flag(l.adminMakeDirsToggleTitle, _mkdir,
               (v) => _setAccess(() => _mkdir = v, () => _mkdir = !v)),
-          _flag('Upload', _upload,
+          _flag(l.adminUploadToggleTitle, _upload,
               (v) => _setAccess(() => _upload = v, () => _upload = !v)),
-          _flag('Modify files', _fileModify,
+          _flag(l.adminModifyFilesToggleTitle, _fileModify,
               (v) => _setAccess(() => _fileModify = v, () => _fileModify = !v)),
-          _flag('Server audio', _serverAudio,
+          _flag(l.adminServerAudioToggleTitle, _serverAudio,
               (v) => _setAccess(() => _serverAudio = v, () => _serverAudio = !v)),
           FilterChip(
-            label: const Text('Torrent'),
+            label: Text(l.adminTorrent),
             selected: _torrent,
             onSelected: (v) async {
               setState(() => _torrent = v);
@@ -279,8 +288,9 @@ class _AddUserDialogState extends State<_AddUserDialog> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     if (_username.text.trim().isEmpty || _password.text.isEmpty) {
-      adminToast(context, 'Username and password are required', error: true);
+      adminToast(context, l.adminUsernamePasswordRequiredError, error: true);
       return;
     }
     setState(() => _busy = true);
@@ -297,7 +307,7 @@ class _AddUserDialogState extends State<_AddUserDialog> {
         subsonicPassword:
             _subsonic.text.isEmpty ? null : _subsonic.text,
       ),
-      success: 'User created',
+      success: l.adminUserCreatedToast,
     );
     if (!mounted) return;
     setState(() => _busy = false);
@@ -306,31 +316,32 @@ class _AddUserDialogState extends State<_AddUserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Add user'),
+      title: Text(l.adminAddUserDialogTitle),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
                 controller: _username,
-                decoration: const InputDecoration(labelText: 'Username')),
+                decoration: InputDecoration(labelText: l.adminUsername)),
             const SizedBox(height: 8),
             TextField(
                 controller: _password,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password')),
+                decoration: InputDecoration(labelText: l.adminPassword)),
             const SizedBox(height: 8),
             TextField(
                 controller: _subsonic,
                 obscureText: true,
-                decoration: const InputDecoration(
-                    labelText: 'Subsonic password (optional)')),
+                decoration: InputDecoration(
+                    labelText: l.adminSubsonicPasswordLabel)),
             const SizedBox(height: 12),
             if (widget.allLibs.isNotEmpty) ...[
-              const Align(
+              Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Library access')),
+                  child: Text(l.adminLibraryAccessHeader)),
               Wrap(
                 spacing: 8,
                 children: [
@@ -347,25 +358,25 @@ class _AddUserDialogState extends State<_AddUserDialog> {
             ],
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Administrator'),
+              title: Text(l.adminAdministratorToggleTitle),
               value: _admin,
               onChanged: (v) => setState(() => _admin = v ?? false),
             ),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Allow make directories'),
+              title: Text(l.adminAllowMakeDirectoriesTitle),
               value: _mkdir,
               onChanged: (v) => setState(() => _mkdir = v ?? true),
             ),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Allow upload'),
+              title: Text(l.adminAllowUploadTitle),
               value: _upload,
               onChanged: (v) => setState(() => _upload = v ?? true),
             ),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Allow server audio'),
+              title: Text(l.adminAllowServerAudioTitle),
               value: _serverAudio,
               onChanged: (v) => setState(() => _serverAudio = v ?? false),
             ),
@@ -375,7 +386,7 @@ class _AddUserDialogState extends State<_AddUserDialog> {
       actions: [
         TextButton(
             onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(l.adminCancel)),
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
@@ -383,7 +394,7 @@ class _AddUserDialogState extends State<_AddUserDialog> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Create'),
+              : Text(l.adminCreate),
         ),
       ],
     );
@@ -406,12 +417,13 @@ class _MultiSelectDialogState extends State<_MultiSelectDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
         width: 360,
         child: widget.all.isEmpty
-            ? const Text('No libraries configured.')
+            ? Text(l.adminNoLibrariesConfigured)
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -428,10 +440,10 @@ class _MultiSelectDialogState extends State<_MultiSelectDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context), child: Text(l.adminCancel)),
         FilledButton(
             onPressed: () => Navigator.pop(context, _sel.toList()),
-            child: const Text('Save')),
+            child: Text(l.adminSave)),
       ],
     );
   }
@@ -442,23 +454,27 @@ Future<String?> _promptPassword(BuildContext context,
   final ctrl = TextEditingController();
   final result = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: ctrl,
-        obscureText: true,
-        autofocus: true,
-        decoration: const InputDecoration(labelText: 'New password'),
-        onSubmitted: (v) => Navigator.pop(context, v),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-            onPressed: () => Navigator.pop(context, ctrl.text),
-            child: const Text('Save')),
-      ],
-    ),
+    builder: (context) {
+      final l = AppLocalizations.of(context);
+      return AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l.adminNewPasswordLabel),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l.adminCancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, ctrl.text),
+              child: Text(l.adminSave)),
+        ],
+      );
+    },
   );
   ctrl.dispose();
   return (result == null || result.isEmpty) ? null : result;

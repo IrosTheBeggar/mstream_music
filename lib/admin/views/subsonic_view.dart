@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -9,30 +10,38 @@ class SubsonicView extends StatelessWidget {
   final AdminApi api;
   const SubsonicView({super.key, required this.api});
 
-  static const _modes = {
-    'disabled': 'Disabled',
-    'same-port': 'Same port as HTTP',
-    'separate-port': 'Separate port',
-  };
+  static const _modeTokens = ['disabled', 'same-port', 'separate-port'];
+
+  static String _modeLabel(AppLocalizations l, String token) {
+    switch (token) {
+      case 'same-port':
+        return l.adminSamePortAsHttp;
+      case 'separate-port':
+        return l.adminSeparatePort;
+      default:
+        return l.adminDisabled;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminAsync(
       loader: api.getSubsonic,
       builder: (context, s, reload) {
-        final mode = _modes.containsKey(s['mode']) ? s['mode'] : 'disabled';
+        final mode = _modeTokens.contains(s['mode']) ? s['mode'] : 'disabled';
         final port = (s['port'] is num) ? (s['port'] as num).toInt() : 4040;
         return AdminViewBody(children: [
           AdminCard(
-            title: 'Subsonic API',
+            title: l.adminSubsonicApiTitle,
             icon: Icons.play_circle_outline,
             children: [
               AdminDropdownRow<String>(
-                label: 'Mode',
+                label: l.adminMode,
                 value: mode,
                 items: [
-                  for (final e in _modes.entries)
-                    DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  for (final t in _modeTokens)
+                    DropdownMenuItem(value: t, child: Text(_modeLabel(l, t))),
                 ],
                 onChanged: (v) async {
                   await api.setSubsonicMode(v,
@@ -42,7 +51,7 @@ class SubsonicView extends StatelessWidget {
               ),
               if (mode == 'separate-port')
                 AdminSaveField(
-                  label: 'Port',
+                  label: l.adminPort,
                   number: true,
                   initialValue: '$port',
                   onSave: (v) => api.setSubsonicMode('separate-port',
@@ -52,7 +61,7 @@ class SubsonicView extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: AdminActionButton(
-                  label: 'Test connection',
+                  label: l.adminTestConnection,
                   icon: Icons.network_check,
                   tonal: true,
                   onPressed: () async {
@@ -62,8 +71,9 @@ class SubsonicView extends StatelessWidget {
                     adminToast(
                       context,
                       ok
-                          ? 'OK · ${r['version'] ?? ''} · ${r['latencyMs'] ?? '?'}ms'
-                          : 'Failed: ${r['reason'] ?? 'unknown'}',
+                          ? l.adminSubsonicTestSuccess(
+                              '${r['version'] ?? ''}', '${r['latencyMs'] ?? '?'}')
+                          : l.adminSubsonicTestFailed('${r['reason'] ?? 'unknown'}'),
                       error: !ok,
                     );
                   },
@@ -87,6 +97,7 @@ class _StatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminAsync(
       loader: api.subsonicStats,
       builder: (context, stats, reload) {
@@ -94,20 +105,20 @@ class _StatsCard extends StatelessWidget {
         final cache = (lyrics['cache'] as Map?) ?? const {};
         final nowPlaying = (stats['nowPlaying'] as List?) ?? const [];
         return AdminCard(
-          title: 'Status',
+          title: l.adminStatus,
           icon: Icons.insights,
           trailing: [
             IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
           ],
           children: [
-            AdminInfoRow('Methods implemented', '${stats['methodsImplemented'] ?? 0}'),
-            AdminInfoRow('Full / stub',
+            AdminInfoRow(l.adminMethodsImplemented, '${stats['methodsImplemented'] ?? 0}'),
+            AdminInfoRow(l.adminFullStub,
                 '${stats['fullCount'] ?? 0} full · ${stats['stubCount'] ?? 0} stub'),
             const Divider(height: 16),
-            Text('Now playing',
+            Text(l.adminNowPlaying,
                 style: Theme.of(context).textTheme.bodyMedium),
             if (nowPlaying.isEmpty)
-              Text('nobody',
+              Text(l.adminNobody,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant))
             else
@@ -121,40 +132,40 @@ class _StatsCard extends StatelessWidget {
                       '${np['artist'] ?? ''} — ${np['title'] ?? np['trackId']}'),
                 ),
             const Divider(height: 16),
-            Text('Lyrics (LRCLib)',
+            Text(l.adminLyricsLrclib,
                 style: Theme.of(context).textTheme.bodyMedium),
             AdminAsyncSwitch(
-              title: 'LRCLib fallback',
+              title: l.adminLrclibFallback,
               value: lyrics['lrclibEnabled'] == true,
               onChanged: (v) async {
                 await api.setLyricsCacheEnabled(v);
               },
             ),
             AdminAsyncSwitch(
-              title: 'Write .lrc sidecar files',
+              title: l.adminWriteLrcSidecarFiles,
               value: lyrics['writeSidecarEnabled'] == true,
               onChanged: (v) async {
                 await api.setLyricsWriteSidecar(v);
               },
             ),
             if (cache.isNotEmpty)
-              AdminInfoRow('Cache',
+              AdminInfoRow(l.adminCache,
                   cache.entries.map((e) => '${e.key}: ${e.value}').join(' · ')),
             const SizedBox(height: 8),
             Wrap(spacing: 8, children: [
               AdminActionButton(
-                label: 'Purge cache',
+                label: l.adminPurgeCache,
                 tonal: true,
-                success: 'Lyrics cache purged',
+                success: l.adminLyricsCachePurged,
                 onPressed: () async {
                   await api.purgeLyricsCache(mode: 'full');
                   await reload();
                 },
               ),
               AdminActionButton(
-                label: 'Retry failed',
+                label: l.adminRetryFailed,
                 tonal: true,
-                success: 'Transient lyrics entries cleared',
+                success: l.adminTransientLyricsEntriesCleared,
                 onPressed: () async {
                   await api.purgeLyricsCache(mode: 'retry');
                   await reload();
@@ -174,32 +185,34 @@ class _JukeboxCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminAsync(
       loader: api.subsonicJukebox,
       builder: (context, j, reload) {
         final available = j['available'] == true;
         return AdminCard(
-          title: 'Jukebox',
+          title: l.adminJukebox,
           icon: Icons.queue_music,
           trailing: [
             StatusPill(
-              label: available ? 'Available' : 'Unavailable',
+              label: available ? l.adminAvailable : l.adminUnavailable,
               color: available ? Colors.green : Colors.grey,
             ),
             IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
           ],
           children: [
             if (!available)
-              Text('${j['reason'] ?? 'Not available'}',
+              Text('${j['reason'] ?? l.adminNotAvailable}',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant))
             else ...[
-              AdminInfoRow('State',
-                  j['playing'] == true ? 'playing' : (j['paused'] == true ? 'paused' : 'idle')),
-              AdminInfoRow('Current', '${j['currentFile'] ?? '—'}'),
-              AdminInfoRow('Queue', '${j['queueLength'] ?? 0} tracks'),
-              AdminInfoRow('Volume',
-                  '${((j['volume'] is num ? j['volume'] : 1.0) * 100).round()}%'),
+              AdminInfoRow(l.adminState,
+                  j['playing'] == true ? l.adminPlaying : (j['paused'] == true ? l.adminPaused : l.adminIdle)),
+              AdminInfoRow(l.adminCurrent, '${j['currentFile'] ?? '—'}'),
+              AdminInfoRow(l.adminQueue,
+                  l.adminQueueTracks((j['queueLength'] is num ? (j['queueLength'] as num).toInt() : 0))),
+              AdminInfoRow(l.adminVolume,
+                  l.adminVolumePercent(((j['volume'] is num ? j['volume'] : 1.0) * 100).round())),
             ],
           ],
         );
@@ -214,20 +227,20 @@ class _TokenAuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminAsync(
       loader: api.subsonicTokenAuthAttempts,
       builder: (context, attempts, reload) {
         return AdminCard(
-          title: 'Token-auth failures',
-          subtitle:
-              'Clients defaulting to token auth without a Subsonic password.',
+          title: l.adminTokenAuthFailures,
+          subtitle: l.adminTokenAuthFailuresSubtitle,
           icon: Icons.warning_amber,
           trailing: [
             IconButton(onPressed: reload, icon: const Icon(Icons.refresh)),
           ],
           children: [
             if (attempts.isEmpty)
-              Text('No recent failures',
+              Text(l.adminNoRecentFailures,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant))
             else
@@ -243,9 +256,9 @@ class _TokenAuthCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: AdminActionButton(
-                  label: 'Clear',
+                  label: l.adminClear,
                   tonal: true,
-                  success: 'Cleared',
+                  success: l.adminCleared,
                   onPressed: () async {
                     await api.clearSubsonicTokenAuthAttempts();
                     await reload();
@@ -281,27 +294,28 @@ class _MintKeyCardState extends State<_MintKeyCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return AdminCard(
-      title: 'Mint API key',
-      subtitle: 'Generate a Subsonic apiKey for a user (shown once).',
+      title: l.adminMintApiKey,
+      subtitle: l.adminMintApiKeySubtitle,
       icon: Icons.vpn_key,
       children: [
         TextField(
             controller: _user,
-            decoration: const InputDecoration(labelText: 'Username')),
+            decoration: InputDecoration(labelText: l.adminUsername)),
         const SizedBox(height: 8),
         TextField(
             controller: _name,
-            decoration: const InputDecoration(labelText: 'Key name / label')),
+            decoration: InputDecoration(labelText: l.adminKeyNameLabel)),
         const SizedBox(height: 8),
         Align(
           alignment: Alignment.centerLeft,
           child: AdminActionButton(
-            label: 'Mint key',
+            label: l.adminMintKey,
             icon: Icons.add,
             onPressed: () async {
               if (_user.text.trim().isEmpty || _name.text.trim().isEmpty) {
-                adminToast(context, 'Username and name required', error: true);
+                adminToast(context, l.adminUsernameAndNameRequired, error: true);
                 return;
               }
               final r = await widget.api

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
 import '../admin_widgets.dart';
 
@@ -89,6 +90,7 @@ class _LogsViewState extends State<LogsView> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Column(children: [
       Material(
@@ -97,12 +99,12 @@ class _LogsViewState extends State<LogsView> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(children: [
             IconButton(
-              tooltip: _paused ? 'Resume' : 'Pause',
+              tooltip: _paused ? l.adminLogsResumeButton : l.adminLogsPauseButton,
               icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
               onPressed: () => setState(() => _paused = !_paused),
             ),
             IconButton(
-              tooltip: 'Clear',
+              tooltip: l.adminClear,
               icon: const Icon(Icons.clear_all),
               onPressed: () => setState(_entries.clear),
             ),
@@ -111,7 +113,7 @@ class _LogsViewState extends State<LogsView> {
                 value: _autoscroll,
                 onChanged: (v) => setState(() => _autoscroll = v ?? true),
               ),
-              const Text('Auto-scroll'),
+              Text(l.adminLogsAutoScrollTitle),
             ]),
             const Spacer(),
             if (_error != null)
@@ -120,18 +122,18 @@ class _LogsViewState extends State<LogsView> {
                 child: Text(_error!,
                     style: TextStyle(color: scheme.error, fontSize: 12)),
               ),
-            Text('${_entries.length} lines',
+            Text(l.adminLogsLineCount(_entries.length),
                 style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
             const SizedBox(width: 12),
             FilledButton.tonalIcon(
               icon: const Icon(Icons.download, size: 18),
-              label: const Text('Download zip'),
+              label: Text(l.adminLogsDownloadZipButton),
               onPressed: () async {
                 final uri = widget.api.logsDownloadUrl();
                 if (!await launchUrl(uri,
                     mode: LaunchMode.externalApplication)) {
                   if (context.mounted) {
-                    adminToast(context, 'Could not open $uri', error: true);
+                    adminToast(context, l.couldNotOpen('$uri'), error: true);
                   }
                 }
               },
@@ -145,7 +147,7 @@ class _LogsViewState extends State<LogsView> {
           color: scheme.surface,
           child: _entries.isEmpty
               ? Center(
-                  child: Text('No log entries yet',
+                  child: Text(l.adminLogsNoEntriesHint,
                       style: TextStyle(color: scheme.onSurfaceVariant)))
               : ListView.builder(
                   controller: _scroll,

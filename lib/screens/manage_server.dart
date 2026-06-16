@@ -118,7 +118,7 @@ class ManageServersScreen extends StatelessWidget {
           _menuItem('default', Icons.arrow_upward_rounded, l.makeDefault),
         _menuItem('info', Icons.info_outline, l.info),
         _menuItem('edit', Icons.edit_outlined, l.edit),
-        _menuItem('admin', Icons.admin_panel_settings_outlined, 'Admin panel'),
+        _menuItem('admin', Icons.admin_panel_settings_outlined, l.adminPanelMenuItem),
         _menuItem('delete', Icons.delete_outline, l.delete,
             color: VelvetColors.error),
       ],

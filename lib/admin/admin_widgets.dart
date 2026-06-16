@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import 'admin_api.dart';
 
 /// Shared building blocks for the admin views. Keeping the common patterns
@@ -102,7 +103,7 @@ class AdminErrorRetry extends StatelessWidget {
           FilledButton.tonalIcon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context).adminRetry),
           ),
         ]),
       ),
@@ -231,7 +232,9 @@ class AdminSaveField extends StatefulWidget {
   final bool number;
   final bool obscure;
   final Future<void> Function(String) onSave;
-  final String savedMessage;
+
+  /// Toast shown on a successful save. Null → localized "Saved".
+  final String? savedMessage;
   const AdminSaveField({
     super.key,
     required this.label,
@@ -240,7 +243,7 @@ class AdminSaveField extends StatefulWidget {
     this.helperText,
     this.number = false,
     this.obscure = false,
-    this.savedMessage = 'Saved',
+    this.savedMessage,
   });
 
   @override
@@ -269,7 +272,7 @@ class _AdminSaveFieldState extends State<AdminSaveField> {
   Future<void> _save() async {
     setState(() => _busy = true);
     await runAdminAction(context, () => widget.onSave(_ctrl.text.trim()),
-        success: widget.savedMessage);
+        success: widget.savedMessage ?? AppLocalizations.of(context).adminSaved);
     if (mounted) setState(() => _busy = false);
   }
 
@@ -300,7 +303,7 @@ class _AdminSaveFieldState extends State<AdminSaveField> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save'),
+                : Text(AppLocalizations.of(context).adminSave),
           ),
         ),
       ]),
@@ -362,7 +365,7 @@ class _AdminDropdownRowState<T> extends State<AdminDropdownRow<T>> {
                   });
                   final ok = await runAdminAction(
                       context, () => widget.onChanged(v),
-                      success: 'Saved');
+                      success: AppLocalizations.of(context).adminSaved);
                   if (!mounted) return;
                   setState(() {
                     if (!ok) _value = prev;
