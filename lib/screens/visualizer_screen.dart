@@ -470,33 +470,50 @@ class _VisualizerScreenState extends State<VisualizerScreen>
 
   Widget _globalSlider(int i) {
     final range = _globalRanges[i];
-    final v = _globalValues[i].clamp(range[0], range[1]).toDouble();
-    return _sliderRow(
-      label: _globalLabels[i],
-      value: v,
-      min: range[0],
-      max: range[1],
-      onChanged: (nv) {
-        setState(() => _globalValues[i] = nv);
-        _pushTuning();
+    // Each slider drives a local StatefulBuilder so a drag rebuilds only its own
+    // row — not the whole screen subtree (which hosts the Texture widget and the
+    // full slider list). The drag mutates the shared model in place; _pushTuning()
+    // pushes it to the renderer and _persistGlobal() saves it on release.
+    return StatefulBuilder(
+      builder: (context, setLocal) {
+        final v = _globalValues[i].clamp(range[0], range[1]).toDouble();
+        return _sliderRow(
+          label: _globalLabels[i],
+          value: v,
+          min: range[0],
+          max: range[1],
+          onChanged: (nv) {
+            _globalValues[i] = nv;
+            setLocal(() {});
+            _pushTuning();
+          },
+          onChangeEnd: (_) => _persistGlobal(),
+        );
       },
-      onChangeEnd: (_) => _persistGlobal(),
     );
   }
 
   Widget _shaderSlider(int i) {
     final p = _shaderParams[i];
-    final v = _paramValues[i].clamp(p.min, p.max).toDouble();
-    return _sliderRow(
-      label: p.name,
-      value: v,
-      min: p.min,
-      max: p.max,
-      onChanged: (nv) {
-        setState(() => _paramValues[i] = nv);
-        _pushTuning();
+    // Local StatefulBuilder: dragging rebuilds only this row, not the Texture +
+    // whole slider list. Mutates the shared model in place; _pushTuning() pushes
+    // it to the renderer and _persistShader() saves it on release.
+    return StatefulBuilder(
+      builder: (context, setLocal) {
+        final v = _paramValues[i].clamp(p.min, p.max).toDouble();
+        return _sliderRow(
+          label: p.name,
+          value: v,
+          min: p.min,
+          max: p.max,
+          onChanged: (nv) {
+            _paramValues[i] = nv;
+            setLocal(() {});
+            _pushTuning();
+          },
+          onChangeEnd: (_) => _persistShader(),
+        );
       },
-      onChangeEnd: (_) => _persistShader(),
     );
   }
 
