@@ -21,8 +21,16 @@ class MusicMetadata {
   // FLAC · kbps · kHz readout. durationSeconds is exposed as a [Duration] via
   // the [duration] getter.
   double? durationSeconds;
-  int? bitrate; // kbps
+  int? bitrate; // bits/second (server sends raw bps; divide by 1000 for kbps)
   int? sampleRate; // Hz
+  // Container/codec label (server `format`, e.g. "FLAC"); total track/disc
+  // counts (`track-total`/`disc-total`, V45) so the UI can show "track N of M";
+  // and this user's per-track play count (`play-count`, joined server-side on
+  // every track query). All null/absent on older API builds → treat as optional.
+  String? format;
+  int? trackTotal;
+  int? discTotal;
+  int? playCount;
   // Genre names for this track. Velvet servers emit `metadata.genres` as a
   // string list (many-to-many via track_genres); empty when untagged or on
   // servers that don't surface genres.
@@ -35,7 +43,11 @@ class MusicMetadata {
       this.genres = const [],
       this.durationSeconds,
       this.bitrate,
-      this.sampleRate});
+      this.sampleRate,
+      this.format,
+      this.trackTotal,
+      this.discTotal,
+      this.playCount});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
       : artist = json['artist'],
@@ -52,6 +64,10 @@ class MusicMetadata {
         durationSeconds = (json['durationSeconds'] as num?)?.toDouble(),
         bitrate = json['bitrate'],
         sampleRate = json['sampleRate'],
+        format = json['format'],
+        trackTotal = json['trackTotal'],
+        discTotal = json['discTotal'],
+        playCount = json['playCount'],
         genres = parseGenres(json['genres']);
 
   Map<String, dynamic> toJson() => {
@@ -69,6 +85,10 @@ class MusicMetadata {
         'durationSeconds': durationSeconds,
         'bitrate': bitrate,
         'sampleRate': sampleRate,
+        'format': format,
+        'trackTotal': trackTotal,
+        'discTotal': discTotal,
+        'playCount': playCount,
         'genres': genres,
       };
 
@@ -97,6 +117,10 @@ class MusicMetadata {
             m['sampleRate'] ??
             m['samplerate'] ??
             m['sample_rate']),
+        format: _asString(m['format']),
+        trackTotal: _asInt(m['track-total'] ?? m['trackTotal']),
+        discTotal: _asInt(m['disc-total'] ?? m['discTotal']),
+        playCount: _asInt(m['play-count'] ?? m['playCount']),
       );
 
   /// Parses the server's `genres` value (normally a string list) into a
@@ -134,6 +158,15 @@ class MusicMetadata {
     if (v is int) return v;
     if (v is num) return v.toInt();
     if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  /// Trims a string value; null for null / empty / non-string.
+  static String? _asString(dynamic v) {
+    if (v is String) {
+      final t = v.trim();
+      return t.isEmpty ? null : t;
+    }
     return null;
   }
 }

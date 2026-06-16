@@ -173,13 +173,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     return null;
   }
 
-  // 44100 → "44.1 kHz", 48000 → "48 kHz".
-  String _khzLabel(int hz) {
-    final k = hz / 1000.0;
-    final s = k == k.roundToDouble() ? k.toStringAsFixed(0) : k.toStringAsFixed(1);
-    return '$s kHz';
-  }
-
   // ── actions ──
   void _playFrom(int index, {bool shuffle = false}) {
     final songs = _songs;
@@ -295,9 +288,9 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
       final fmt = _formatLabel(songs);
       if (fmt != null) metaParts.add(fmt);
       final br = _bitrate(songs);
-      if (br != null) metaParts.add('$br kbps');
+      if (br != null) metaParts.add(formatBitrate(br));
       final sr = _sampleRate(songs);
-      if (sr != null) metaParts.add(_khzLabel(sr));
+      if (sr != null) metaParts.add(formatSampleRate(sr));
     }
 
     return Container(

@@ -18,6 +18,19 @@ String formatDuration(Duration d, {bool padMinutes = true}) {
   return '${padMinutes ? m.toString().padLeft(2, '0') : m}:$s';
 }
 
+/// Formats an audio bitrate as `"320 kbps"`. The mStream server reports bitrate
+/// in bits/second (raw `format.bitrate`), so divide by 1000 — rendering the raw
+/// value straight would read as e.g. "320000 kbps".
+String formatBitrate(int bitsPerSecond) => '${(bitsPerSecond / 1000).round()} kbps';
+
+/// Formats a sample rate in Hz as `"44.1 kHz"` / `"48 kHz"` (drops the decimal
+/// when it's a whole number of kHz).
+String formatSampleRate(int hz) {
+  final k = hz / 1000.0;
+  final s = k == k.roundToDouble() ? k.toStringAsFixed(0) : k.toStringAsFixed(1);
+  return '$s kHz';
+}
+
 /// The shared album-art placeholder (a raised tile + music-note glyph) shown
 /// while artwork loads, on a decode error, or when a track has no art.
 /// [iconSize] scales the glyph to the tile it fills.

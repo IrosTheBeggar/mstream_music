@@ -69,6 +69,13 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
       // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing modes.
       'bpm': i.metadata?.bpm,
       'musicalKey': i.metadata?.musicalKey,
+      // Fidelity + counts for the Song Info screen (it reads only from extras).
+      'bitrate': i.metadata?.bitrate,
+      'sampleRate': i.metadata?.sampleRate,
+      'format': i.metadata?.format,
+      'trackTotal': i.metadata?.trackTotal,
+      'discTotal': i.metadata?.discTotal,
+      'playCount': i.metadata?.playCount,
     },
   );
 }

@@ -36,23 +36,41 @@ class MetadataScreen extends StatelessWidget {
       if (year != null && '$year'.isNotEmpty && '$year' != '0') '$year',
     ].join('   ·   ');
 
-    // Track / disc as a plain line under the album.
+    // Track / disc as a plain line under the album — "track N of M" when the
+    // server reports the totals (track-total / disc-total).
     final trackDisc = <String>[
-      if (extras['track'] != null) 'track: ${_v(extras['track'])}',
-      if (extras['disc'] != null) 'disc: ${_v(extras['disc'])}',
+      if (extras['track'] != null)
+        _numOf('track', extras['track'], extras['trackTotal']),
+      if (extras['disc'] != null)
+        _numOf('disc', extras['disc'], extras['discTotal']),
     ].join(', ');
+
+    // Fidelity readout — "FLAC · 320 kbps · 44.1 kHz" — from the format / bitrate
+    // / sampleRate the queue now carries (server emits bitrate in bits/second,
+    // hence formatBitrate divides by 1000).
+    final fmt = extras['format'];
+    final bitrate = extras['bitrate'];
+    final sampleRate = extras['sampleRate'];
+    final fidelity = <String>[
+      if (fmt is String && fmt.trim().isNotEmpty) fmt.trim().toUpperCase(),
+      if (bitrate is num && bitrate > 0) formatBitrate(bitrate.toInt()),
+      if (sampleRate is num && sampleRate > 0) formatSampleRate(sampleRate.toInt()),
+    ].join('  ·  ');
 
     // Self-labelling chips (icon + value) — no extra translated strings, shown
     // only when the field is present.
     final chips = <Widget>[
       if (item.duration != null)
         _chip(Icons.schedule_rounded, formatDuration(item.duration!)),
+      if (fidelity.isNotEmpty) _chip(Icons.high_quality_rounded, fidelity),
       if (extras['bpm'] != null)
         _chip(Icons.speed_rounded, '${_v(extras['bpm'])} BPM'),
       if (key != null && key.trim().isNotEmpty)
         _chip(Icons.music_note_rounded, key.trim()),
       if (genre != null && genre.trim().isNotEmpty)
         _chip(Icons.category_rounded, genre.trim()),
+      if (extras['playCount'] is num && (extras['playCount'] as num) > 0)
+        _chip(Icons.repeat_rounded, '${_v(extras['playCount'])} plays'),
     ];
 
     return Scaffold(
@@ -221,6 +239,10 @@ class MetadataScreen extends StatelessWidget {
   // double); pass strings through unchanged.
   static String _v(dynamic value) =>
       value is num ? value.round().toString() : '$value';
+
+  // "track: 4 of 12" when a total is present, else "track: 4".
+  static String _numOf(String label, dynamic n, dynamic total) =>
+      total != null ? '$label: ${_v(n)} of ${_v(total)}' : '$label: ${_v(n)}';
 
   Widget _chip(IconData icon, String text) {
     return Container(
