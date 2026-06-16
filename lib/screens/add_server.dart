@@ -16,6 +16,7 @@ import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
 import '../singletons/log_manager.dart';
+import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
@@ -458,11 +459,10 @@ class MyCustomFormState extends State<MyCustomForm> {
           .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        // setState(() {
-        //   submitPending = false;
-        // });
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l.connectionSuccessful)));
+        // App-wide messenger (not ScaffoldMessenger.of(context)): this runs
+        // after an await and saveServer pops the form, so a context-bound
+        // SnackBar would be lost / unsafe.
+        showGlobalSnack(l.connectionSuccessful);
         saveServer(lol);
         return;
       }
@@ -511,8 +511,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         // Widget already disposed — nothing to update.
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.failedToLogin)));
+      showGlobalSnack(l.failedToLogin);
       return;
     }
   }

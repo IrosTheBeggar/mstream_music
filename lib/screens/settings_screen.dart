@@ -6,6 +6,7 @@ import '../l10n/enum_labels.dart';
 import '../objects/player_layout.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
+import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
@@ -430,12 +431,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onTap: () async {
               await SettingsManager().resetAll();
-              setState(() {});
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.settingsResetDone)),
-                );
-              }
+              if (mounted) setState(() {});
+              // App-wide messenger so the toast doesn't depend on this screen's
+              // context surviving the await.
+              showGlobalSnack(l.settingsResetDone);
             },
           ),
         ],

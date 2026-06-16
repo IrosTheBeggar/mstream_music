@@ -192,7 +192,7 @@ class DownloadManager {
       // Storage location unavailable (e.g. SD card removed / chosen folder
       // deleted). Tell the user instead of silently doing nothing.
       final ctx = rootMessengerKey.currentContext;
-      showGlobalSnack(ctx != null
+      showGlobalSnack(ctx != null && ctx.mounted
           ? AppLocalizations.of(ctx).dlStorageUnavailable
           : 'Storage location unavailable — reconnect the SD card or change '
               "this server's storage location in Edit Server.");
@@ -250,7 +250,7 @@ class DownloadManager {
       // The volume could vanish between the null-check and the write.
       _inFlight.remove(downloadDirectory);
       final ctx = rootMessengerKey.currentContext;
-      showGlobalSnack(ctx != null
+      showGlobalSnack(ctx != null && ctx.mounted
           ? AppLocalizations.of(ctx).dlCouldNotStart
           : 'Could not start download — storage unavailable.');
     }
