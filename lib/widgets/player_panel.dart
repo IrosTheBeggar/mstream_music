@@ -1416,7 +1416,17 @@ final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
     MediaManager().audioHandler.mediaItem,
     MediaManager().audioHandler.positionStream,
     (item, pos) => _MediaPos(item, pos),
-  ));
+  ).distinct((a, b) =>
+      // positionStream ticks several times a second; collapse it to ~2 emits/
+      // sec (500 ms buckets) so the title row, both waveforms, and the scrubber
+      // stop rebuilding — and the waveforms stop re-rastering their 64 bars — on
+      // every sub-frame tick, while the seek-bar fill / elapsed time stay
+      // visibly smooth. _MediaPos has no value equality, so compare the
+      // displayed fields explicitly; duration is included so the ratio
+      // refreshes when it lands after the track first appears.
+      a.item?.id == b.item?.id &&
+      a.item?.duration == b.item?.duration &&
+      a.position.inMilliseconds ~/ 500 == b.position.inMilliseconds ~/ 500));
 
 String _fmt(Duration d) => formatDuration(d);
 
