@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
+import '../singletons/app_messenger.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/media.dart';
@@ -226,11 +227,7 @@ class _ShareDialogState extends State<_ShareDialog> {
         TextButton(
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: _shareUrl!));
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l.copiedToClipboard)),
-              );
-            }
+            showGlobalSnack(l.copiedToClipboard);
           },
           child: Text(l.copy),
         ),

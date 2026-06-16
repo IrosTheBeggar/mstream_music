@@ -23,7 +23,7 @@ class FileExplorer {
     Directory? woo = await getDownloadDir(s.storageMode, s.storageBasePath);
     if (woo == null) {
       final ctx = rootMessengerKey.currentContext;
-      return ctx != null
+      return ctx != null && ctx.mounted
           ? AppLocalizations.of(ctx).dlLocationUnavailable
           : 'Download location unavailable';
     }
@@ -44,7 +44,7 @@ class FileExplorer {
       if (woo == null) {
         // permanent/sdCard location is gone (card removed / folder deleted).
         final ctx = rootMessengerKey.currentContext;
-        showGlobalSnack(ctx != null
+        showGlobalSnack(ctx != null && ctx.mounted
             ? AppLocalizations.of(ctx).dlLocationUnavailableServer
             : 'Download location unavailable for this server.');
         BrowserManager().addListToStack(newList); // show an empty list
