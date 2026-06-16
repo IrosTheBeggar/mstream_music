@@ -248,7 +248,6 @@
   "addedToPlaylist": "Añadido a {name}",
   "testConnectedSignedIn": "Conectado — sesión iniciada correctamente.",
   "testSignInFailed": "Se contactó con el servidor, pero el inicio de sesión falló — comprueba tu usuario y contraseña.",
-
   "browserFileExplorer": "Explorador de archivos",
   "browserLocalFiles": "Archivos locales",
   "browserPlaylists": "Listas de reproducción",
@@ -259,12 +258,10 @@
   "browserSearch": "Buscar",
   "browserWelcomeTitle": "Bienvenido a mStream",
   "browserWelcomeSubtitle": "Toca aquí para añadir un servidor",
-
   "settingsVisualizerKnobs": "Controles de ajuste del visualizador",
   "settingsVisualizerKnobsSubtitle": "Muestra controles deslizantes sobre el visualizador para ajustar la reactividad de audio de cada shader. Solo con el motor de shaders.",
   "visualizerTuningTitle": "Ajuste",
   "close": "Cerrar",
-
   "migMoveStopped": "Traslado detenido — no hay espacio suficiente o la ubicación no está disponible.",
   "migMoveComplete": "Traslado completado",
   "migMoveCompleteSkipped": "{count, plural, =1{Traslado completado — 1 archivo omitido (no compatible en el destino)} other{Traslado completado — {count} archivos omitidos (no compatibles en el destino)}}",
@@ -273,7 +270,6 @@
   "queueDownloadAll": "Descargar todo",
   "queueDownloadAllBody": "{count, plural, =1{Se descargará 1 pista para reproducción sin conexión.} other{Se descargarán {count} pistas para reproducción sin conexión.}}",
   "mainMore": "Más",
-
   "commonOn": "Activado",
   "commonOff": "Desactivado",
   "settingsCastQuality": "Calidad del visualizador en Cast",
@@ -281,7 +277,6 @@
   "settingsCastQualitySubtitle1080": "Resolución a la que el visualizador se transmite a una TV. 1080p — nítida en cualquier Chromecast (predeterminada).",
   "settingsCastQualitySubtitle4k": "Resolución a la que el visualizador se transmite a una TV. 4K — necesita un Chromecast 4K; mucha más carga para el teléfono.",
   "eqCasting": "El ecualizador ajusta el audio en este dispositivo, así que no está disponible mientras se transmite. Desconecta para usarlo.",
-
   "browserNothingToDownload": "No hay nada que descargar en esta lista",
   "browserDownloadAllTitle": "Descargar todo",
   "browserDownloadAllConfirm": "{count, plural, =1{Se descargará 1 archivo.} other{Se descargarán {count} archivos.}}",
@@ -297,7 +292,6 @@
   "dlServerGone": "Ese servidor ya no está configurado.",
   "dlStorageUnavailable": "Ubicación de almacenamiento no disponible — vuelve a conectar la tarjeta SD o cambia la ubicación de almacenamiento de este servidor en Editar servidor.",
   "dlCouldNotStart": "No se pudo iniciar la descarga — almacenamiento no disponible.",
-
   "storageLocationLabel": "Ubicación de almacenamiento",
   "storageAppLocal": "Local de la app",
   "storagePermanent": "Permanente",
@@ -338,7 +332,6 @@
   "storageMovingBackground": "Trasladando tus descargas en segundo plano — mantén la aplicación abierta.",
   "storageChooseFolderFirst": "Primero elige una carpeta de descargas.",
   "storageChooseSdFolderFirst": "Primero elige una carpeta en la tarjeta SD. Si se rechazan todas las carpetas, puede que tu dispositivo no permita que las apps escriban en la tarjeta — usa Permanente o Local de la app en su lugar.",
-
   "castPlayOn": "Reproducir en",
   "castPlayOnTooltip": "Reproducir en…",
   "castSearching": "Buscando dispositivos de Cast…",
@@ -373,5 +366,15 @@
   "diagnosticsEmpty": "Aún no hay registros",
   "storageAppExternal": "App externa",
   "selfSignedTitle": "Permitir certificado autofirmado",
-  "selfSignedSubtitle": "Omite la validación TLS de este servidor. Actívalo solo en una red de confianza."
+  "selfSignedSubtitle": "Omite la validación TLS de este servidor. Actívalo solo en una red de confianza.",
+  "importedShadersTitle": "Shaders importados",
+  "importedShadersSettingsSubtitle": "Añade tus propios archivos .glsl a la rotación del motor Shader.",
+  "importedShadersRescan": "Volver a escanear la carpeta",
+  "importedShadersDropHint": "Coloca archivos .glsl en esta carpeta y luego pulsa Volver a escanear:",
+  "importedShadersCopyPath": "Copiar ruta",
+  "importedShadersReachableHint": "Accesible por USB o un gestor de archivos (en Android/data). Los shaders importados se unen a la rotación cuando el motor Shader está activo.",
+  "importedShadersRemove": "Quitar",
+  "importedShadersEmptyTitle": "Aún no hay shaders en la carpeta",
+  "importedShadersEmptyBody": "Copia archivos .glsl al estilo Shadertoy en la carpeta de arriba y luego toca Volver a escanear.",
+  "importedShadersInvalid": "Puede que no sea un shader válido — sin punto de entrada mainImage/main."
 }

@@ -366,5 +366,15 @@
   "diagnosticsEmpty": "暂无日志",
   "storageAppExternal": "应用外部",
   "selfSignedTitle": "允许自签名证书",
-  "selfSignedSubtitle": "跳过此服务器的 TLS 验证。仅在可信网络中启用。"
+  "selfSignedSubtitle": "跳过此服务器的 TLS 验证。仅在可信网络中启用。",
+  "importedShadersTitle": "导入的着色器",
+  "importedShadersSettingsSubtitle": "将你自己的 .glsl 文件加入 Shader 引擎的轮换。",
+  "importedShadersRescan": "重新扫描文件夹",
+  "importedShadersDropHint": "将 .glsl 文件放入此文件夹，然后重新扫描：",
+  "importedShadersCopyPath": "复制路径",
+  "importedShadersReachableHint": "可通过 USB 或文件管理器访问（位于 Android/data 下）。Shader 引擎处于活动状态时，导入的着色器会加入轮换。",
+  "importedShadersRemove": "移除",
+  "importedShadersEmptyTitle": "文件夹中还没有着色器",
+  "importedShadersEmptyBody": "将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。",
+  "importedShadersInvalid": "可能不是有效的着色器 — 没有 mainImage/main 入口点。"
 }

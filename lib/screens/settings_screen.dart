@@ -10,6 +10,7 @@ import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
+import 'imported_shaders_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -304,6 +305,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {});
             },
             activeThumbColor: VelvetColors.primary,
+          ),
+          ListTile(
+            leading:
+                Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
+            title: Text(l.importedShadersTitle),
+            subtitle: Text(
+              l.importedShadersSettingsSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ImportedShadersScreen()),
+              );
+            },
           ),
           ListTile(
             title: Text(l.settingsCastQuality),

@@ -2363,6 +2363,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip TLS validation for this server. Only enable on a network you trust.'**
   String get selfSignedSubtitle;
+
+  /// Title of the Imported Shaders screen and its Settings entry.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported shaders'**
+  String get importedShadersTitle;
+
+  /// Subtitle under the Imported shaders entry in Settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your own .glsl files to the Shader engine rotation.'**
+  String get importedShadersSettingsSubtitle;
+
+  /// Tooltip for the button that re-scans the shader folder for new files.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan folder'**
+  String get importedShadersRescan;
+
+  /// Instruction shown above the shader folder path.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop .glsl files in this folder, then Rescan:'**
+  String get importedShadersDropHint;
+
+  /// Tooltip for the button that copies the shader folder path to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy path'**
+  String get importedShadersCopyPath;
+
+  /// Help text explaining where the shader folder is and when imported shaders are used.
+  ///
+  /// In en, this message translates to:
+  /// **'Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.'**
+  String get importedShadersReachableHint;
+
+  /// Tooltip for the button that deletes an imported shader file.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get importedShadersRemove;
+
+  /// Empty-state title when the shader folder has no files.
+  ///
+  /// In en, this message translates to:
+  /// **'No shaders in the folder yet'**
+  String get importedShadersEmptyTitle;
+
+  /// Empty-state body when the shader folder has no files.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Shadertoy-style .glsl files into the folder above, then tap Rescan.'**
+  String get importedShadersEmptyBody;
+
+  /// Warning subtitle when an imported file does not look like a fragment shader.
+  ///
+  /// In en, this message translates to:
+  /// **'May not be a valid shader — no mainImage/main entry point.'**
+  String get importedShadersInvalid;
 }
 
 class _AppLocalizationsDelegate

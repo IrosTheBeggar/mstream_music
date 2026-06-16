@@ -2,133 +2,163 @@
   "mainRemove": "Remove",
   "@@locale": "en",
   "playlistActionFailed": "Couldn't save the playlist — the name may already be in use.",
-  "@playlistActionFailed": { "description": "Toast shown when creating or renaming a playlist fails (often a duplicate name)." },
+  "@playlistActionFailed": {
+    "description": "Toast shown when creating or renaming a playlist fails (often a duplicate name)."
+  },
   "queueAddNext": "Add next",
-  "@queueAddNext": { "description": "Track row menu: insert after the current track." },
+  "@queueAddNext": {
+    "description": "Track row menu: insert after the current track."
+  },
   "queuePlayNow": "Play now",
-  "@queuePlayNow": { "description": "Track row menu: play this track immediately." },
+  "@queuePlayNow": {
+    "description": "Track row menu: play this track immediately."
+  },
   "queueAddToEnd": "Add to end of queue",
-  "@queueAddToEnd": { "description": "Track row menu: append to the end of the queue." },
+  "@queueAddToEnd": {
+    "description": "Track row menu: append to the end of the queue."
+  },
   "shuffle": "Shuffle",
-  "@shuffle": { "description": "Shuffle-play button on the album detail screen." },
+  "@shuffle": {
+    "description": "Shuffle-play button on the album detail screen."
+  },
   "variousArtists": "Various Artists",
-  "@variousArtists": { "description": "Shown as the album artist when an album's tracks span multiple artists." },
-
+  "@variousArtists": {
+    "description": "Shown as the album artist when an album's tracks span multiple artists."
+  },
   "appTitle": "mStream Music",
   "@appTitle": {
     "description": "Application title (brand name; not translated)."
   },
-
   "settingsLanguage": "Language",
   "@settingsLanguage": {
     "description": "Settings row label for the language picker."
   },
-
   "languageSystemDefault": "System default",
   "@languageSystemDefault": {
     "description": "First entry in the language picker: follow the OS locale."
   },
-
   "settingsLanguageSubtitle": "The app's display language. \"System default\" follows your device.",
   "@settingsLanguageSubtitle": {
     "description": "Subtitle under the language picker row in Settings."
   },
-
   "couldNotOpen": "Could not open {url}",
   "@couldNotOpen": {
     "description": "Snackbar when a URL fails to launch.",
     "placeholders": {
-      "url": { "type": "String" }
+      "url": {
+        "type": "String"
+      }
     }
   },
-
   "trackCount": "{count, plural, =0{No tracks} =1{1 track} other{{count} tracks}}",
   "@trackCount": {
     "description": "Subtitle showing how many tracks a playlist has.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "reset": "Reset",
-  "@reset": { "description": "Generic Reset button label." },
-
+  "@reset": {
+    "description": "Generic Reset button label."
+  },
   "themeVelvet": "Velvet",
   "themeDark": "Dark",
   "themeLight": "Light",
-  "@themeVelvet": { "description": "AppTheme option label." },
-
+  "@themeVelvet": {
+    "description": "AppTheme option label."
+  },
   "tapAddToQueue": "Add to queue",
   "tapPlayFromHere": "Play from here",
   "tapAppendAndJump": "Add and play",
-  "@tapAddToQueue": { "description": "TapBehavior option: append to queue." },
-
+  "@tapAddToQueue": {
+    "description": "TapBehavior option: append to queue."
+  },
   "visualizerEngineMilkdrop": "Milkdrop",
   "visualizerEngineShaders": "Shaders",
-  "@visualizerEngineMilkdrop": { "description": "VisualizerEngine option label." },
-
+  "@visualizerEngineMilkdrop": {
+    "description": "VisualizerEngine option label."
+  },
   "visualizerSourceSynthesized": "Synthesized",
   "visualizerSourceReal": "Real audio",
-  "@visualizerSourceSynthesized": { "description": "VisualizerAudioSource option label." },
-
+  "@visualizerSourceSynthesized": {
+    "description": "VisualizerAudioSource option label."
+  },
   "downloadsTitle": "Downloads",
-  "@downloadsTitle": { "description": "Downloads screen app bar title." },
-
+  "@downloadsTitle": {
+    "description": "Downloads screen app bar title."
+  },
   "downloadProgress": "progress: {progress}%",
   "@downloadProgress": {
     "description": "Per-file download progress subtitle.",
     "placeholders": {
-      "progress": { "type": "String" }
+      "progress": {
+        "type": "String"
+      }
     }
   },
-
   "songInfoTitle": "Song Info",
-  "@songInfoTitle": { "description": "Metadata screen app bar title." },
-
+  "@songInfoTitle": {
+    "description": "Metadata screen app bar title."
+  },
   "eqTitle": "Equalizer",
-  "@eqTitle": { "description": "Equalizer screen title / switch label." },
-
+  "@eqTitle": {
+    "description": "Equalizer screen title / switch label."
+  },
   "eqOnlyAndroid": "Equalizer is only available on Android.",
-  "@eqOnlyAndroid": { "description": "Shown when the EQ is opened on a non-Android platform." },
-
+  "@eqOnlyAndroid": {
+    "description": "Shown when the EQ is opened on a non-Android platform."
+  },
   "eqNeedsPlayback": "Start a song to configure the EQ.\n\nAndroid's native equalizer initializes with the audio session, so we need playback to be active before we can read the band layout.",
-  "@eqNeedsPlayback": { "description": "Shown when the EQ band layout can't be read because nothing is playing." },
-
+  "@eqNeedsPlayback": {
+    "description": "Shown when the EQ band layout can't be read because nothing is playing."
+  },
   "eqInitFailed": "Could not initialize equalizer:\n{error}",
   "@eqInitFailed": {
     "description": "Shown when the native equalizer throws while initializing.",
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "eqNoBands": "No EQ bands reported by this device's audio driver.",
-  "@eqNoBands": { "description": "Shown when the device reports zero EQ bands." },
-
+  "@eqNoBands": {
+    "description": "Shown when the device reports zero EQ bands."
+  },
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",
-  "@eqEnabledOn": { "description": "EQ enable switch subtitle when on." },
-
+  "@eqEnabledOn": {
+    "description": "EQ enable switch subtitle when on."
+  },
   "cancel": "Cancel",
-  "@cancel": { "description": "Generic Cancel button." },
+  "@cancel": {
+    "description": "Generic Cancel button."
+  },
   "continueLabel": "Continue",
-  "@continueLabel": { "description": "Generic Continue button." },
+  "@continueLabel": {
+    "description": "Generic Continue button."
+  },
   "openSettings": "Open settings",
-  "@openSettings": { "description": "Snackbar action to open the OS app settings." },
-
+  "@openSettings": {
+    "description": "Snackbar action to open the OS app settings."
+  },
   "settingsTitle": "Settings",
   "settingsSectionAppearance": "Appearance",
   "settingsSectionPlayback": "Playback",
   "settingsSectionBrowse": "Browse",
   "settingsSectionAbout": "About",
-  "@settingsTitle": { "description": "Settings screen app bar title and section headers." },
-
+  "@settingsTitle": {
+    "description": "Settings screen app bar title and section headers."
+  },
   "settingsTheme": "Theme",
   "themeSubtitleVelvet": "Navy and purple — the signature dark theme.",
   "themeSubtitleDark": "Neutral dark with amber accents.",
   "themeSubtitleLight": "Light body with a dark app bar and amber accents — matches the older shipped theme.",
-  "@settingsTheme": { "description": "Theme picker row label + per-theme subtitles." },
-
+  "@settingsTheme": {
+    "description": "Theme picker row label + per-theme subtitles."
+  },
   "settingsTranscode": "Transcode audio",
   "settingsTranscodeSubtitle": "Stream a transcoded copy from the server (smaller files, slightly slower start). Off plays original files.",
   "transcodeTitle": "Transcoding",
@@ -138,88 +168,114 @@
   "transcodeUnavailable": "This server doesn't have transcoding enabled — its tracks stream in original quality.",
   "transcodeReloadQueue": "Apply to current queue",
   "transcodeReloadQueueSubtitle": "When you change transcoding settings — checked: reload the whole queue now (the playing track briefly re-buffers); unchecked: only upcoming tracks change, the current one finishes as-is.",
-  "@settingsTranscode": { "description": "Transcode toggle row." },
-
+  "@settingsTranscode": {
+    "description": "Transcode toggle row."
+  },
   "settingsTapBehavior": "When you tap a song",
   "settingsStartupPage": "Startup page",
   "settingsStartupPageSubtitle": "Open the app to this browser view; Back returns to the browser.",
   "tapSubtitleAddToQueue": "Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.",
   "tapSubtitlePlayFromHere": "Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.",
   "tapSubtitleAppendAndJump": "Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.",
-  "@settingsTapBehavior": { "description": "Tap-behavior picker row label + per-mode subtitles." },
-
+  "@settingsTapBehavior": {
+    "description": "Tap-behavior picker row label + per-mode subtitles."
+  },
   "settingsEqSubtitle": "Tune bass, mids, and treble. Android only.",
-  "@settingsEqSubtitle": { "description": "Subtitle on the Equalizer row in Settings." },
-
+  "@settingsEqSubtitle": {
+    "description": "Subtitle on the Equalizer row in Settings."
+  },
   "settingsVisualizerEngine": "Visualizer engine",
   "visualizerEngineSubtitleMilkdrop": "Milkdrop presets via projectM (default). Richer effects, heavier on the GPU.",
   "visualizerEngineSubtitleShaders": "Shadertoy-style fragment shaders. Lighter, modular — drop .glsl files in assets/shaders/ to extend the catalog.",
-  "@settingsVisualizerEngine": { "description": "Visualizer-engine picker row label + per-engine subtitles." },
-
+  "@settingsVisualizerEngine": {
+    "description": "Visualizer-engine picker row label + per-engine subtitles."
+  },
   "settingsVisualizerSource": "Visualizer audio source",
   "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
   "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",
-  "@settingsVisualizerSource": { "description": "Visualizer audio-source picker row label + per-source subtitles." },
-
+  "@settingsVisualizerSource": {
+    "description": "Visualizer audio-source picker row label + per-source subtitles."
+  },
   "settingsAlbumGrid": "Album grid view",
   "settingsAlbumGridSubtitle": "Show albums as a grid of cards with cover art instead of a plain list.",
-  "@settingsAlbumGrid": { "description": "Album-grid toggle row." },
-
+  "@settingsAlbumGrid": {
+    "description": "Album-grid toggle row."
+  },
   "settingsFileMetadata": "Read song metadata in file explorer",
   "settingsFileMetadataSubtitle": "Fetch title, artist, and album art for each song when browsing server files. Off shows raw filenames (faster for huge folders).",
-  "@settingsFileMetadata": { "description": "File-explorer metadata toggle row." },
-
+  "@settingsFileMetadata": {
+    "description": "File-explorer metadata toggle row."
+  },
   "settingsLetterStrip": "Letter scrubber threshold",
   "settingsLetterStripSubtitle": "Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.",
-  "@settingsLetterStrip": { "description": "Letter-scrubber threshold slider row." },
-
+  "@settingsLetterStrip": {
+    "description": "Letter-scrubber threshold slider row."
+  },
   "settingsReset": "Reset to defaults",
   "settingsResetSubtitle": "Restore all settings on this screen to their default values. Servers and downloads are not affected.",
   "settingsResetDone": "Settings restored to defaults",
-  "@settingsReset": { "description": "Reset-to-defaults row + confirmation snackbar." },
-
+  "@settingsReset": {
+    "description": "Reset-to-defaults row + confirmation snackbar."
+  },
   "realAudioDialogTitle": "Use real audio?",
   "realAudioDialogBody": "Real audio mode reads the waveform of music your phone is playing so the visualizer can react to it. Android requires the RECORD_AUDIO permission for this — the app does not record or send any audio anywhere. You can switch back to synthesized at any time.",
   "realAudioPermPermanentlyDenied": "Permission permanently denied. Enable it in system settings to use real audio.",
   "realAudioPermDenied": "Permission denied. Staying on synthesized audio.",
-  "@realAudioDialogTitle": { "description": "RECORD_AUDIO consent dialog + denial snackbars." },
-
+  "@realAudioDialogTitle": {
+    "description": "RECORD_AUDIO consent dialog + denial snackbars."
+  },
   "visualizerTapHint": "Tap = next preset · back arrow (top-left) or long-press to exit",
-  "@visualizerTapHint": { "description": "Overlay hint while the visualizer is rendering." },
+  "@visualizerTapHint": {
+    "description": "Overlay hint while the visualizer is rendering."
+  },
   "visualizerFailed": "Visualizer failed to start",
   "visualizerBringingUp": "Bringing up renderer…",
   "visualizerReady": "Visualizer ready",
   "visualizerBridgeFailed": "Bridge failed to start",
-  "@visualizerFailed": { "description": "Visualizer status placeholder headings." },
+  "@visualizerFailed": {
+    "description": "Visualizer status placeholder headings."
+  },
   "visualizerAudioSourceLine": "Audio source: {source}",
   "@visualizerAudioSourceLine": {
     "description": "Status line showing the active visualizer audio source (already-lowercased).",
     "placeholders": {
-      "source": { "type": "String" }
+      "source": {
+        "type": "String"
+      }
     }
   },
   "visualizerTapToClose": "Tap anywhere to close",
-  "@visualizerTapToClose": { "description": "Hint on the visualizer status placeholder." },
+  "@visualizerTapToClose": {
+    "description": "Hint on the visualizer status placeholder."
+  },
   "visualizerUnsupported": "Visualizer is currently only supported on Android.",
-  "@visualizerUnsupported": { "description": "Shown when the visualizer runs on a non-Android platform." },
-
+  "@visualizerUnsupported": {
+    "description": "Shown when the visualizer runs on a non-Android platform."
+  },
   "aboutTitle": "About",
-  "@aboutTitle": { "description": "About screen app bar title." },
+  "@aboutTitle": {
+    "description": "About screen app bar title."
+  },
   "aboutBuiltBy": "Built by {name}",
   "@aboutBuiltBy": {
     "description": "Author attribution on the About screen.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "linkDiscordSubtitle": "Community chat",
   "linkGithubSubtitle": "mStream server source",
   "linkHomepageSubtitle": "Project homepage",
-  "@linkDiscordSubtitle": { "description": "Subtitles for the external links on the About screen." },
+  "@linkDiscordSubtitle": {
+    "description": "Subtitles for the external links on the About screen."
+  },
   "aboutAttributions": "Attributions",
   "aboutAttributionsSubtitle": "License, shader credits, and open-source notices.",
-  "@aboutAttributions": { "description": "Attributions row on the About screen." },
-
+  "@aboutAttributions": {
+    "description": "Attributions row on the About screen."
+  },
   "ok": "OK",
   "delete": "Delete",
   "edit": "Edit",
@@ -233,8 +289,9 @@
   "copy": "Copy",
   "done": "Done",
   "copiedToClipboard": "Copied to clipboard",
-  "@ok": { "description": "Generic action labels reused across dialogs/menus." },
-
+  "@ok": {
+    "description": "Generic action labels reused across dialogs/menus."
+  },
   "attributionsTitle": "Attributions",
   "attributionsSectionLicense": "License",
   "attributionsSectionShaders": "Visualizer shaders",
@@ -243,8 +300,9 @@
   "attributionsLicenseBody": "Free software under the GNU General Public License v3.0. You may use, study, share, and modify it under those terms.",
   "attributionsPackages": "Open-source package licenses",
   "attributionsPackagesSubtitle": "Full license texts for all bundled Flutter/Dart packages.",
-  "@attributionsTitle": { "description": "Attributions screen labels (credit data itself stays English)." },
-
+  "@attributionsTitle": {
+    "description": "Attributions screen labels (credit data itself stays English)."
+  },
   "manageServersTitle": "Manage Servers",
   "manageServerInfo": "Server Info",
   "manageServerDownloadFolder": "Download Folder:",
@@ -252,8 +310,9 @@
   "manageServerPathCopied": "Path Copied to Clipboard",
   "confirmRemoveServerTitle": "Confirm Remove Server",
   "removeSyncedFiles": "Remove synced files from device?",
-  "@manageServersTitle": { "description": "Manage Servers screen + server info/remove dialogs." },
-
+  "@manageServersTitle": {
+    "description": "Manage Servers screen + server info/remove dialogs."
+  },
   "playlistsTitle": "Playlists",
   "playlistsNew": "New playlist",
   "playlistsEmptyTitle": "No playlists yet",
@@ -262,8 +321,9 @@
   "playlistsRename": "Rename playlist",
   "playlistFallbackTitle": "Playlist",
   "playlistEmptyDetail": "Playlist is empty.\nAdd tracks via the queue.",
-  "@playlistsTitle": { "description": "Playlists list + detail screens." },
-
+  "@playlistsTitle": {
+    "description": "Playlists list + detail screens."
+  },
   "shareEmptyTitle": "Empty queue",
   "shareEmptyBody": "Add songs to the queue before sharing.",
   "shareBlockedTitle": "Can't share this queue",
@@ -272,15 +332,21 @@
   "@shareMultiServerBody": {
     "description": "Blocker shown when the queue spans multiple servers.",
     "placeholders": {
-      "count": { "type": "int" },
-      "names": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
     }
   },
   "shareServerGoneBody": "The server \"{name}\" is no longer in your server list. Re-add it to share its queue.",
   "@shareServerGoneBody": {
     "description": "Blocker shown when the queue's server was removed.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "shareTitle": "Share Playlist",
@@ -288,8 +354,12 @@
   "@shareSongCount": {
     "description": "Header in the share dialog: how many songs and which server.",
     "placeholders": {
-      "count": { "type": "int" },
-      "url": { "type": "String" }
+      "count": {
+        "type": "int"
+      },
+      "url": {
+        "type": "String"
+      }
     }
   },
   "shareLinkExpires": "Link expires",
@@ -300,12 +370,14 @@
   "shareAction": "Share",
   "shareDoneTitle": "Playlist shared",
   "shareDoneBody": "Anyone with this link can play the queue:",
-  "@shareTitle": { "description": "Share Playlist dialog labels." },
-
+  "@shareTitle": {
+    "description": "Share Playlist dialog labels."
+  },
   "save": "Save",
   "start": "Start",
-  "@save": { "description": "Generic Save / Start button labels." },
-
+  "@save": {
+    "description": "Generic Save / Start button labels."
+  },
   "addServerTitle": "Add Server",
   "editServerTitle": "Edit Server",
   "fieldServerUrl": "Server URL",
@@ -328,103 +400,126 @@
   "connectionSuccessful": "Connection Successful!",
   "couldNotReachServer": "Could not reach server. If it requires login, turn off \"Public access\" and add credentials.",
   "failedToLogin": "Failed to Login",
-  "@addServerTitle": { "description": "Add/Edit Server form labels, validators, and connection-test messages." },
+  "@addServerTitle": {
+    "description": "Add/Edit Server form labels, validators, and connection-test messages."
+  },
   "testConnected": "Connected — mStream v{version}",
   "@testConnected": {
     "description": "Test-connection success banner with the detected server version.",
     "placeholders": {
-      "version": { "type": "String" }
+      "version": {
+        "type": "String"
+      }
     }
   },
   "testConnectFailed": "Could not connect: {error}",
   "@testConnectFailed": {
     "description": "Test-connection failure banner with the raw error.",
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "sleepTimerTitle": "Sleep timer",
   "sleepTimerHint": "Pick a duration to pause playback after.",
   "sleepTimerCustom": "Custom",
   "sleepTimerCustomHint": "minutes (1–600)",
   "sleepTimerCancel": "Cancel timer",
   "sleepTimerInvalid": "Enter a number between 1 and 600 minutes",
-  "@sleepTimerTitle": { "description": "Sleep-timer bottom sheet labels." },
+  "@sleepTimerTitle": {
+    "description": "Sleep-timer bottom sheet labels."
+  },
   "sleepTimerPausesIn": "Pauses in {time}",
   "@sleepTimerPausesIn": {
     "description": "Countdown line in the sleep-timer sheet.",
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "sleepTimerMinutes": "{minutes} min",
   "@sleepTimerMinutes": {
     "description": "Preset chip label, e.g. '30 min'.",
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
   "sleepTimerSet": "{minutes, plural, =1{Sleep timer set for 1 minute} other{Sleep timer set for {minutes} minutes}}",
   "@sleepTimerSet": {
     "description": "Confirmation snackbar after starting the sleep timer.",
     "placeholders": {
-      "minutes": { "type": "int" }
+      "minutes": {
+        "type": "int"
+      }
     }
   },
-
   "add": "Add",
-  "@add": { "description": "Generic Add button label." },
-
+  "@add": {
+    "description": "Generic Add button label."
+  },
   "autoDjTitle": "Auto DJ",
   "autoDjAddServerFirst": "Add a server first.",
   "autoDjSectionServer": "Server",
   "autoDjSectionSources": "Sources",
   "autoDjSectionContinuity": "Continuity",
   "autoDjSectionFilters": "Filters",
-  "@autoDjTitle": { "description": "Auto DJ screen title + section headers." },
-
+  "@autoDjTitle": {
+    "description": "Auto DJ screen title + section headers."
+  },
   "autoDjBpmTitle": "BPM continuity",
   "autoDjBpmSubtitle": "Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.",
   "autoDjTolerance": "Tolerance",
-  "@autoDjBpmTitle": { "description": "BPM continuity row." },
+  "@autoDjBpmTitle": {
+    "description": "BPM continuity row."
+  },
   "autoDjBpmTolerance": "± {bpm} BPM",
   "@autoDjBpmTolerance": {
     "description": "BPM tolerance readout.",
     "placeholders": {
-      "bpm": { "type": "int" }
+      "bpm": {
+        "type": "int"
+      }
     }
   },
-
   "autoDjHarmonicTitle": "Harmonic mixing",
   "autoDjHarmonicSubtitle": "Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).",
-  "@autoDjHarmonicTitle": { "description": "Harmonic mixing row." },
-
+  "@autoDjHarmonicTitle": {
+    "description": "Harmonic mixing row."
+  },
   "autoDjStatusOn": "Auto DJ is on",
   "autoDjStatusOff": "Auto DJ is off",
   "autoDjStatusOffDetail": "Tap below to start. The current server's library will be used.",
   "autoDjStart": "Start Auto DJ",
   "autoDjStop": "Stop Auto DJ",
-  "@autoDjStatusOn": { "description": "Auto DJ status block + enable button." },
+  "@autoDjStatusOn": {
+    "description": "Auto DJ status block + enable button."
+  },
   "autoDjStatusOnDetail": "Songs are picked from {url} when the queue runs low.",
   "@autoDjStatusOnDetail": {
     "description": "Auto DJ on-state detail line.",
     "placeholders": {
-      "url": { "type": "String" }
+      "url": {
+        "type": "String"
+      }
     }
   },
-
   "autoDjActiveSource": "Active source",
   "autoDjActiveSourceTap": "Active source — tap to switch",
   "autoDjSwitch": "Switch",
   "autoDjOneSourceRequired": "At least one source is required.",
-  "@autoDjActiveSource": { "description": "Server-picker + sources section." },
-
+  "@autoDjActiveSource": {
+    "description": "Server-picker + sources section."
+  },
   "autoDjMinRating": "Minimum rating",
   "autoDjMinRatingSubtitle": "Only pick songs at or above this rating.",
   "autoDjRatingAny": "Any",
-  "@autoDjMinRating": { "description": "Minimum-rating filter row ('Any' = no minimum)." },
-
+  "@autoDjMinRating": {
+    "description": "Minimum-rating filter row ('Any' = no minimum)."
+  },
   "autoDjGenreTitle": "Genre filter",
   "autoDjGenreSubtitle": "Whitelist plays only matching tracks; blacklist skips them.",
   "autoDjWhitelist": "Whitelist",
@@ -432,78 +527,95 @@
   "autoDjNoGenres": "No genres selected. Tap \"Pick genres\" to choose.",
   "autoDjPickGenres": "Pick genres",
   "autoDjGenreLoadError": "Could not load genres",
-  "@autoDjGenreTitle": { "description": "Genre filter section." },
-
+  "@autoDjGenreTitle": {
+    "description": "Genre filter section."
+  },
   "autoDjKeywordTitle": "Keyword filter",
   "autoDjKeywordSubtitle": "Skip picks whose title, artist, album, or filepath contains any of these words.",
   "autoDjNoKeywords": "No keywords. Add words below to start filtering.",
   "autoDjKeywordHint": "e.g. \"live\" or \"remix\"",
-  "@autoDjKeywordTitle": { "description": "Keyword filter section." },
-
+  "@autoDjKeywordTitle": {
+    "description": "Keyword filter section."
+  },
   "autoDjSearchGenres": "Search genres…",
   "autoDjNoGenresOnServer": "No genres found on this server.",
-  "@autoDjSearchGenres": { "description": "Genre picker sheet." },
+  "@autoDjSearchGenres": {
+    "description": "Genre picker sheet."
+  },
   "autoDjSelectedCount": "{count} selected",
   "@autoDjSelectedCount": {
     "description": "Count of selected genres in the picker header.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "autoDjNoGenresMatch": "No genres match \"{query}\".",
   "@autoDjNoGenresMatch": {
     "description": "Empty-search state in the genre picker.",
     "placeholders": {
-      "query": { "type": "String" }
+      "query": {
+        "type": "String"
+      }
     }
   },
-
   "download": "Download",
   "addAll": "Add All",
-  "@download": { "description": "Generic Download / Add All action labels (browser toolbar + swipe actions)." },
-
+  "@download": {
+    "description": "Generic Download / Add All action labels (browser toolbar + swipe actions)."
+  },
   "browserConfirmDeletePlaylist": "Confirm Delete Playlist",
   "browserConfirmDeleteFolder": "Confirm Delete Folder",
   "browserSearchHint": "Search Database",
-  "@browserConfirmDeletePlaylist": { "description": "Browser delete-confirmation dialog titles + search hint." },
-
+  "@browserConfirmDeletePlaylist": {
+    "description": "Browser delete-confirmation dialog titles + search hint."
+  },
   "searchCategoriesTooltip": "What to search",
   "searchCategoriesHeader": "Search in",
   "searchCategoryArtists": "Artists",
   "searchCategoryAlbums": "Albums",
   "searchCategorySongs": "Songs",
   "searchCategoryFiles": "Files",
-  "@searchCategoriesTooltip": { "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination)." },
-
+  "@searchCategoriesTooltip": {
+    "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination)."
+  },
   "searchSubheaderResults": "Results for “{term}”",
   "@searchSubheaderResults": {
     "description": "Thin subheader on the search-results page echoing the submitted query.",
     "placeholders": {
-      "term": { "type": "String" }
+      "term": {
+        "type": "String"
+      }
     }
   },
   "searchSubheaderCategories": "Searching: {categories}",
   "@searchSubheaderCategories": {
     "description": "Thin subheader shown while the server-search field is focused, previewing which categories (e.g. \"Artists · Albums\") a search will cover.",
     "placeholders": {
-      "categories": { "type": "String" }
+      "categories": {
+        "type": "String"
+      }
     }
   },
   "browserDownloadsStarted": "{count, plural, =1{1 download started} other{{count} downloads started}}",
   "@browserDownloadsStarted": {
     "description": "Snackbar after queueing downloads from the browser.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "browserSongsAdded": "{count, plural, =1{1 song added to queue} other{{count} songs added to queue}}",
   "@browserSongsAdded": {
     "description": "Snackbar after Add-All from the browser.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "tabBrowser": "Browser",
   "tabQueue": "Queue",
   "drawerTagline": "Personal music streaming",
@@ -512,41 +624,51 @@
   "visualizerTitle": "Visualizer",
   "mainClearQueue": "Clear queue",
   "mainSync": "Sync",
-  "@tabBrowser": { "description": "Main scaffold: tabs, drawer header, queue header, toolbar." },
+  "@tabBrowser": {
+    "description": "Main scaffold: tabs, drawer header, queue header, toolbar."
+  },
   "mainQueueCount": "{count, plural, =1{1 track in queue} other{{count} tracks in queue}}",
   "@mainQueueCount": {
     "description": "Queue tab header count.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "autoDjEnabled": "Auto DJ Enabled",
   "autoDjDisabled": "Auto DJ Disabled",
-  "@autoDjEnabled": { "description": "Bottom-bar Auto DJ toggle snackbars." },
+  "@autoDjEnabled": {
+    "description": "Bottom-bar Auto DJ toggle snackbars."
+  },
   "autoDjEnabledFor": "Auto DJ Enabled For {url}",
   "@autoDjEnabledFor": {
     "description": "Bottom-bar Auto DJ enable snackbar naming the server.",
     "placeholders": {
-      "url": { "type": "String" }
+      "url": {
+        "type": "String"
+      }
     }
   },
-
   "addToPlaylistTitle": "Add to playlist",
   "addToPlaylistEmpty": "No playlists yet — tap + to create one.",
-  "@addToPlaylistTitle": { "description": "Add-to-playlist bottom sheet." },
+  "@addToPlaylistTitle": {
+    "description": "Add-to-playlist bottom sheet."
+  },
   "addedToPlaylist": "Added to {name}",
   "@addedToPlaylist": {
     "description": "Snackbar after adding a track to a playlist.",
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "testConnectedSignedIn": "Connected — signed in successfully.",
   "testSignInFailed": "Server reached, but sign-in failed — check your username and password.",
-  "@testConnectedSignedIn": { "description": "Test-connection results after a credentialed login attempt." },
-
+  "@testConnectedSignedIn": {
+    "description": "Test-connection results after a credentialed login attempt."
+  },
   "browserFileExplorer": "File Explorer",
   "browserLocalFiles": "Local Files",
   "browserPlaylists": "Playlists",
@@ -557,26 +679,48 @@
   "browserSearch": "Search",
   "browserWelcomeTitle": "Welcome to mStream",
   "browserWelcomeSubtitle": "Tap here to add a server",
-  "@browserFileExplorer": { "description": "Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated." },
-
+  "@browserFileExplorer": {
+    "description": "Built-in browser node names + tab/breadcrumb labels. Server folder names are NOT translated."
+  },
   "settingsVisualizerKnobs": "Visualizer tuning knobs",
   "settingsVisualizerKnobsSubtitle": "Show live sliders over the visualizer to tweak each shader's audio reactivity. Shader engine only.",
   "visualizerTuningTitle": "Tuning",
   "close": "Close",
-  "@settingsVisualizerKnobs": { "description": "Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English)." },
-
+  "@settingsVisualizerKnobs": {
+    "description": "Visualizer tuning-knobs toggle + overlay chrome (DSP param labels stay English)."
+  },
   "migMoveStopped": "Move stopped — not enough space, or the location is unavailable.",
   "migMoveComplete": "Move complete",
   "migMoveCompleteSkipped": "{count, plural, =1{Move complete — 1 file skipped (unsupported on the destination)} other{Move complete — {count} files skipped (unsupported on the destination)}}",
-  "@migMoveCompleteSkipped": { "description": "Migration banner: move finished, N files skipped.", "placeholders": { "count": { "type": "int" } } },
+  "@migMoveCompleteSkipped": {
+    "description": "Migration banner: move finished, N files skipped.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "migMoving": "Moving downloads… {progress} — keep the app open",
-  "@migMoving": { "description": "Migration banner while a move runs; {progress} is a percent or M/T string.", "placeholders": { "progress": { "type": "String" } } },
+  "@migMoving": {
+    "description": "Migration banner while a move runs; {progress} is a percent or M/T string.",
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
   "migRetry": "Retry",
   "queueDownloadAll": "Download all",
   "queueDownloadAllBody": "{count, plural, =1{1 track will be downloaded for offline playback.} other{{count} tracks will be downloaded for offline playback.}}",
-  "@queueDownloadAllBody": { "description": "Queue download-all confirm dialog body.", "placeholders": { "count": { "type": "int" } } },
+  "@queueDownloadAllBody": {
+    "description": "Queue download-all confirm dialog body.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "mainMore": "More",
-
   "commonOn": "On",
   "commonOff": "Off",
   "settingsCastQuality": "Cast visualizer quality",
@@ -584,16 +728,29 @@
   "settingsCastQualitySubtitle1080": "Resolution the visualizer streams to a TV at. 1080p — sharp on any Chromecast (default).",
   "settingsCastQualitySubtitle4k": "Resolution the visualizer streams to a TV at. 4K — needs a 4K Chromecast; much heavier on the phone.",
   "eqCasting": "The equalizer adjusts audio on this device, so it’s unavailable while casting. Disconnect to use it.",
-
   "browserNothingToDownload": "Nothing to download in this list",
   "browserDownloadAllTitle": "Download all",
   "browserDownloadAllConfirm": "{count, plural, =1{1 file will be downloaded.} other{{count} files will be downloaded.}}",
-  "@browserDownloadAllConfirm": { "description": "Browser download-all confirm dialog body.", "placeholders": { "count": { "type": "int" } } },
+  "@browserDownloadAllConfirm": {
+    "description": "Browser download-all confirm dialog body.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "browserCloseSearch": "Close search",
   "browserSearchThisList": "Search this list",
   "browserSearchList": "Search list",
   "browserNoMatches": "No matches for \"{query}\"",
-  "@browserNoMatches": { "description": "Browser local-search empty state.", "placeholders": { "query": { "type": "String" } } },
+  "@browserNoMatches": {
+    "description": "Browser local-search empty state.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "clear": "Clear",
   "dlLocationUnavailable": "Download location unavailable",
   "dlLocationUnavailableServer": "Download location unavailable for this server.",
@@ -602,7 +759,6 @@
   "dlServerGone": "That server is no longer configured.",
   "dlStorageUnavailable": "Storage location unavailable — reconnect the SD card or change this server's storage location in Edit Server.",
   "dlCouldNotStart": "Could not start download — storage unavailable.",
-
   "storageLocationLabel": "Storage location",
   "storageAppLocal": "App local",
   "storagePermanent": "Permanent",
@@ -620,7 +776,14 @@
   "storageNoDownloadFolders": "No existing download folders found",
   "storageExistingFolders": "Existing download folders",
   "storageItemCount": "{count, plural, =1{1 item} other{{count} items}}",
-  "@storageItemCount": { "description": "Existing-folders list: item count for a folder.", "placeholders": { "count": { "type": "int" } } },
+  "@storageItemCount": {
+    "description": "Existing-folders list: item count for a folder.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "storageAllFilesAccess": "Grant \"All files access\" to store downloads permanently, then pick the mode again.",
   "storageSettings": "Settings",
   "storageNoVolume": "Could not locate a storage volume",
@@ -634,9 +797,26 @@
   "storageMoveAlreadyRunning": "A move is already running — let it finish first.",
   "storageMigrateTitle": "Different storage volume",
   "storageMigrateBody": "{count, plural, =1{This server’s 1 downloaded file ({size}) is on a different storage volume from the new location. Choose what to do:} other{This server’s {count} downloaded files ({size}) are on a different storage volume from the new location. Choose what to do:}}",
-  "@storageMigrateBody": { "description": "Cross-volume migration dialog body.", "placeholders": { "count": { "type": "int" }, "size": { "type": "String" } } },
+  "@storageMigrateBody": {
+    "description": "Cross-volume migration dialog body.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "storageMigrateNoSpace": "Not enough free space at the destination ({free} free). A move may fail partway — free up space first.",
-  "@storageMigrateNoSpace": { "description": "Migration dialog low-space warning.", "placeholders": { "free": { "type": "String" } } },
+  "@storageMigrateNoSpace": {
+    "description": "Migration dialog low-space warning.",
+    "placeholders": {
+      "free": {
+        "type": "String"
+      }
+    }
+  },
   "storageMigrateMove": "Move them",
   "storageMigrateMoveBody": "Copy to the new location in the background, deleting each old copy as it goes. Keep the app open until it finishes.",
   "storageMigrateLeave": "Leave them",
@@ -646,7 +826,6 @@
   "storageMovingBackground": "Moving your downloads in the background — keep the app open.",
   "storageChooseFolderFirst": "Choose a download folder first.",
   "storageChooseSdFolderFirst": "Choose a folder on the SD card first. If every folder is rejected, your device may not let apps write to the card — use Permanent or App local instead.",
-
   "castPlayOn": "Play on",
   "castPlayOnTooltip": "Play on…",
   "castSearching": "Searching for cast devices…",
@@ -681,5 +860,45 @@
   "diagnosticsEmpty": "No logs yet",
   "storageAppExternal": "App external",
   "selfSignedTitle": "Allow self-signed certificate",
-  "selfSignedSubtitle": "Skip TLS validation for this server. Only enable on a network you trust."
+  "selfSignedSubtitle": "Skip TLS validation for this server. Only enable on a network you trust.",
+  "importedShadersTitle": "Imported shaders",
+  "@importedShadersTitle": {
+    "description": "Title of the Imported Shaders screen and its Settings entry."
+  },
+  "importedShadersSettingsSubtitle": "Add your own .glsl files to the Shader engine rotation.",
+  "@importedShadersSettingsSubtitle": {
+    "description": "Subtitle under the Imported shaders entry in Settings."
+  },
+  "importedShadersRescan": "Rescan folder",
+  "@importedShadersRescan": {
+    "description": "Tooltip for the button that re-scans the shader folder for new files."
+  },
+  "importedShadersDropHint": "Drop .glsl files in this folder, then Rescan:",
+  "@importedShadersDropHint": {
+    "description": "Instruction shown above the shader folder path."
+  },
+  "importedShadersCopyPath": "Copy path",
+  "@importedShadersCopyPath": {
+    "description": "Tooltip for the button that copies the shader folder path to the clipboard."
+  },
+  "importedShadersReachableHint": "Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.",
+  "@importedShadersReachableHint": {
+    "description": "Help text explaining where the shader folder is and when imported shaders are used."
+  },
+  "importedShadersRemove": "Remove",
+  "@importedShadersRemove": {
+    "description": "Tooltip for the button that deletes an imported shader file."
+  },
+  "importedShadersEmptyTitle": "No shaders in the folder yet",
+  "@importedShadersEmptyTitle": {
+    "description": "Empty-state title when the shader folder has no files."
+  },
+  "importedShadersEmptyBody": "Copy Shadertoy-style .glsl files into the folder above, then tap Rescan.",
+  "@importedShadersEmptyBody": {
+    "description": "Empty-state body when the shader folder has no files."
+  },
+  "importedShadersInvalid": "May not be a valid shader — no mainImage/main entry point.",
+  "@importedShadersInvalid": {
+    "description": "Warning subtitle when an imported file does not look like a fragment shader."
+  }
 }
