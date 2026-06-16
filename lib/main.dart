@@ -80,8 +80,12 @@ Future<void> _startApp() async {
   // AndroidEqualizer to the player.
   await SettingsManager().load();
   await MediaManager().start();
-  await PlaylistManager().load();
-  await AutoDJManager().load();
+  // Saved playlists + AutoDJ config aren't needed for the first frame, and both
+  // are independent pure-disk reads — start them off the critical path so two
+  // sequential disk round-trips don't delay first paint. Both are stream-backed,
+  // so the Playlists / AutoDJ screens populate when the reads land.
+  unawaited(PlaylistManager().load());
+  unawaited(AutoDJManager().load());
   appLog('[app] mStream $kAppVersion started');
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
