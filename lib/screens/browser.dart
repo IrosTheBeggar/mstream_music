@@ -937,29 +937,25 @@ class _BrowserState extends State<Browser> {
                                 onTap: (i) =>
                                     handleTap(browserList, i, context),
                               )
-                            // Theme override so the browser's rows
+                            // ListTileTheme override so the browser's rows
                             // are denser than the global ListTile
                             // default — gains ~26px of horizontal
                             // space for the title (less truncation)
                             // without affecting Settings/About/etc.
+                            // (.merge, not a full Theme copyWith, so a
+                            // list rebuild doesn't allocate a whole
+                            // ThemeData — see the download-tick rebuilds.)
                             //   contentPadding: 16 -> 10 (saves 12)
                             //   horizontalTitleGap: 16 -> 10 (saves 6)
                             //   minLeadingWidth: 40 -> 32 (saves 8)
                             // Heights are unchanged by these knobs,
                             // so the letter-scrub cumulative math
                             // stays correct.
-                            : Theme(
-                                data: Theme.of(context).copyWith(
-                                  listTileTheme: Theme.of(context)
-                                      .listTileTheme
-                                      .copyWith(
-                                        contentPadding:
-                                            EdgeInsets.symmetric(
-                                                horizontal: 10),
-                                        horizontalTitleGap: 10,
-                                        minLeadingWidth: 32,
-                                      ),
-                                ),
+                            : ListTileTheme.merge(
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
+                                horizontalTitleGap: 10,
+                                minLeadingWidth: 32,
                                 child: ListView.builder(
                                     controller: BrowserManager().sc,
                                     physics:
