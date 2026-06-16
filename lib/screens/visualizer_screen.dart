@@ -95,7 +95,15 @@ class _VisualizerScreenState extends State<VisualizerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Restore the app chrome before the parent route reappears.
+    // Restore the app chrome before the parent route reappears. initState used
+    // immersiveSticky, which HIDES the status + navigation bars; edgeToEdge only
+    // sets the edge-to-edge *layout* — it does not re-show bars that were
+    // explicitly hidden, so on its own the nav bar stays gone after leaving the
+    // visualizer (the app shows it everywhere else). Force the overlays back on
+    // first (manual + all overlays = show), then return to the app-wide
+    // edge-to-edge layout.
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+        overlays: SystemUiOverlay.values);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
