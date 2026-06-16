@@ -1307,4 +1307,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importedShadersInvalid => '可能不是有效的着色器 — 没有 mainImage/main 入口点。';
+
+  @override
+  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+
+  @override
+  String importedShadersDownloadsImported(int count) {
+    return 'Imported $count shader(s) from Downloads';
+  }
+
+  @override
+  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+
+  @override
+  String get importedShadersDownloadsNoPermission =>
+      'Storage permission is needed to read Downloads';
 }

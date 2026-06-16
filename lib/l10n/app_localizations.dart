@@ -2423,6 +2423,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'May not be a valid shader — no mainImage/main entry point.'**
   String get importedShadersInvalid;
+
+  /// Button that copies .glsl shaders found in the device Downloads folder into the shader folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Import .glsl from Downloads'**
+  String get importedShadersImportDownloads;
+
+  /// Snackbar after copying shaders in from the Downloads folder.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {count} shader(s) from Downloads'**
+  String importedShadersDownloadsImported(int count);
+
+  /// Snackbar when the Downloads folder has no new shaders to import.
+  ///
+  /// In en, this message translates to:
+  /// **'No new .glsl files in Downloads'**
+  String get importedShadersDownloadsNone;
+
+  /// Snackbar when all-files access is denied, so Downloads can't be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage permission is needed to read Downloads'**
+  String get importedShadersDownloadsNoPermission;
 }
 
 class _AppLocalizationsDelegate

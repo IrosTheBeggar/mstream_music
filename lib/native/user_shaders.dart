@@ -113,4 +113,55 @@ class UserShaders {
       return false;
     }
   }
+
+  /// The device's public Downloads folder, derived from the app's external
+  /// storage path (`…/Android/data/<pkg>/files` → the shared-storage root +
+  /// `/Download`). Reading it on Android 11+ needs all-files access; null off
+  /// Android or when the root can't be derived.
+  Future<Directory?> downloadsDir() async {
+    if (!Platform.isAndroid) return null;
+    final ext = await getExternalStorageDirectory();
+    if (ext == null) return null;
+    final marker = '${p.separator}Android${p.separator}';
+    final i = ext.path.indexOf(marker);
+    final root = i >= 0 ? ext.path.substring(0, i) : ext.path;
+    return Directory(p.join(root, 'Download'));
+  }
+
+  /// `.glsl` files sitting in the device Downloads folder (non-recursive),
+  /// sorted. Empty if Downloads is absent/unreadable (no all-files permission,
+  /// or nothing there).
+  Future<List<String>> listDownloads() async {
+    try {
+      final dir = await downloadsDir();
+      if (dir == null || !await dir.exists()) return const [];
+      return <String>[
+        await for (final e in dir.list())
+          if (e is File && e.path.toLowerCase().endsWith(_ext)) e.path,
+      ]..sort();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Copies every `.glsl` from Downloads into the shader folder, skipping any
+  /// whose file name already exists there (no clobber). Returns the number
+  /// copied. Non-destructive: the Downloads originals are left in place.
+  Future<int> importFromDownloads() async {
+    final sources = await listDownloads();
+    if (sources.isEmpty) return 0;
+    final dir = await _dir();
+    var copied = 0;
+    for (final src in sources) {
+      final dest = p.join(dir.path, p.basename(src));
+      if (await File(dest).exists()) continue;
+      try {
+        await File(src).copy(dest);
+        copied++;
+      } catch (_) {
+        // unreadable / locked source → skip it, keep going.
+      }
+    }
+    return copied;
+  }
 }

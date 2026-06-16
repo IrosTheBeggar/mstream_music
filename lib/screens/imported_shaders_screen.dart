@@ -3,9 +3,12 @@
 // then Rescan. Files are read straight off disk and compiled at runtime
 // by the native engine, so no rebuild/reinstall is needed.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native/user_shaders.dart';
@@ -71,6 +74,35 @@ class _ImportedShadersScreenState extends State<ImportedShadersScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
     );
+  }
+
+  /// Scans the device Downloads folder for `.glsl` files and copies them into
+  /// the shader folder (so the user doesn't have to reach the awkward
+  /// Android/data path with a file manager). Reading Downloads needs all-files
+  /// access on Android 11+ (the `full` flavor's MANAGE_EXTERNAL_STORAGE), so
+  /// request it the same way Add Server's storage picker does.
+  Future<void> _importFromDownloads() async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (Platform.isAndroid) {
+      var status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        status = await Permission.manageExternalStorage.request();
+      }
+      if (!status.isGranted) {
+        messenger.showSnackBar(SnackBar(
+            content: Text(l.importedShadersDownloadsNoPermission)));
+        return;
+      }
+    }
+    setState(() => _loading = true);
+    final copied = await UserShaders().importFromDownloads();
+    await _refresh();
+    messenger.showSnackBar(SnackBar(
+      content: Text(copied > 0
+          ? l.importedShadersDownloadsImported(copied)
+          : l.importedShadersDownloadsNone),
+    ));
   }
 
   @override
@@ -188,6 +220,21 @@ class _ImportedShadersScreenState extends State<ImportedShadersScreen> {
           Text(
             l.importedShadersReachableHint,
             style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+          ),
+          const SizedBox(height: 12),
+          // Convenience: pull any .glsl the user downloaded straight into the
+          // shader folder, so they never have to navigate the Android/data path.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: _loading ? null : _importFromDownloads,
+              icon: const Icon(Icons.move_to_inbox, size: 18),
+              label: Text(l.importedShadersImportDownloads),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: VelvetColors.primary,
+                side: BorderSide(color: VelvetColors.border),
+              ),
+            ),
           ),
         ],
       ),

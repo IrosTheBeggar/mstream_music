@@ -1393,4 +1393,19 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get importedShadersInvalid =>
       'Pode não ser um shader válido — sem ponto de entrada mainImage/main.';
+
+  @override
+  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+
+  @override
+  String importedShadersDownloadsImported(int count) {
+    return 'Imported $count shader(s) from Downloads';
+  }
+
+  @override
+  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+
+  @override
+  String get importedShadersDownloadsNoPermission =>
+      'Storage permission is needed to read Downloads';
 }
