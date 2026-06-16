@@ -133,9 +133,11 @@ class MStreamApp extends StatefulWidget {
 
 class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<PlayerPanelState> _panelKey = GlobalKey<PlayerPanelState>();
-  // The full-screen player overlay sits above the Scaffold, so it would also
-  // paint over an open drawer; hide it while the drawer is open.
-  final ValueNotifier<bool> _drawerOpen = ValueNotifier<bool>(false);
+  // The drawer is hosted on an OUTER Scaffold that wraps the player overlay (see
+  // build), so the drawer + scrim paint OVER the player — it dims with the rest
+  // of the content instead of floating above an open menu, and no longer needs
+  // to be hidden. This key lets the app-bar hamburger open that outer drawer.
+  final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
 
   @override
@@ -249,7 +251,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
-    _drawerOpen.dispose();
     DownloadManager().dispose();
     super.dispose();
   }
@@ -361,341 +362,358 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             SystemNavigator.pop();
           }
         },
-        child: Stack(children: [
-          Scaffold(
-            // The only text input over this Scaffold is the search field in the
-            // toolbar (always at the top, never under the keyboard), so don't
-            // resize the body when the keyboard opens. Resizing shrank the body
-            // and turned the reserved mini-player strip into a grey band above
-            // the keyboard — and squeezed the 27-letter scrubber into a RenderFlex
-            // overflow. Leaving the body full-height keeps the list under the
-            // keyboard (scrollable) with no grey gap.
-            resizeToAvoidBottomInset: false,
-            onDrawerChanged: (open) => _drawerOpen.value = open,
-            appBar: AppBar(
-              title: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: 'm',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w300,
-                              color: VelvetColors.appBarTextSecondary)),
-                      TextSpan(
-                          text: 'Stream',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: VelvetColors.appBarText)),
-                    ]),
-                    style: TextStyle(fontSize: 18, letterSpacing: -0.3),
-                  ),
-                  StreamBuilder<Server?>(
-                      stream: ServerManager().currentServerStream,
-                      builder: (context, snapshot) {
-                        final Server? cServer = snapshot.data;
-                        return Visibility(
-                          visible: cServer != null,
-                          child: Text(
-                            cServer == null ? '' : cServer.url,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: VelvetColors.appBarTextSecondary,
-                                fontWeight: FontWeight.normal),
-                          ),
-                        );
-                      }),
-                ],
-              ),
-              actions: <Widget>[
-                StreamBuilder<CastTarget>(
-                    stream: CastManager().activeTargetStream,
-                    initialData: CastManager().activeTarget,
-                    builder: (context, snapshot) {
-                      final casting =
-                          !(snapshot.data ?? CastTarget.local).isLocal;
-                      return IconButton(
-                        icon:
-                            Icon(casting ? Icons.cast_connected : Icons.cast),
-                        tooltip: AppLocalizations.of(context).castPlayOnTooltip,
-                        color: casting ? VelvetColors.primary : null,
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: VelvetColors.surface,
-                            isScrollControlled: true,
-                            builder: (_) => CastPickerSheet(),
+        // The drawer lives on this OUTER Scaffold so its scrim + panel paint
+        // OVER the player overlay below — the mini-player dims with the rest of
+        // the content as the drawer slides in, instead of blinking out (it used
+        // to be Offstage'd) or floating on top of the open menu.
+        child: Scaffold(
+          key: _outerScaffoldKey,
+          // Keep the body full-height when the keyboard opens (see _homeScaffold).
+          resizeToAvoidBottomInset: false,
+          drawer: _appDrawer(context, l),
+          body: Stack(children: [
+            _homeScaffold(context, l),
+            // Full-screen player overlay — collapsed it's the bottom mini-player;
+            // expanded it rises over the app bar into the full Now Playing view.
+            // RepaintBoundary isolates the playing scrubber/waveform's per-frame
+            // repaints so they don't redraw the browser list painted behind it.
+            Positioned.fill(
+              child: RepaintBoundary(child: PlayerPanel(key: _panelKey)),
+            ),
+          ]),
+        ));
+  }
+
+  // The home scaffold: app bar (logo · server picker · cast · browser toolbar)
+  // over the browser ↔ album-detail body. It sits BELOW the player overlay and
+  // the outer Scaffold's drawer in build()'s Stack, so an open drawer dims it
+  // like any other content.
+  Widget _homeScaffold(BuildContext context, AppLocalizations l) {
+    return Scaffold(
+      // The only text input over this Scaffold is the search field in the
+      // toolbar (always at the top, never under the keyboard), so don't
+      // resize the body when the keyboard opens. Resizing shrank the body
+      // and turned the reserved mini-player strip into a grey band above
+      // the keyboard — and squeezed the 27-letter scrubber into a RenderFlex
+      // overflow. Leaving the body full-height keeps the list under the
+      // keyboard (scrollable) with no grey gap.
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        // Opens the drawer on the OUTER Scaffold (this one has none), so the
+        // drawer paints over the player overlay rather than under it.
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+          onPressed: () => _outerScaffoldKey.currentState?.openDrawer(),
+        ),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: 'm',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w300,
+                        color: VelvetColors.appBarTextSecondary)),
+                TextSpan(
+                    text: 'Stream',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: VelvetColors.appBarText)),
+              ]),
+              style: TextStyle(fontSize: 18, letterSpacing: -0.3),
+            ),
+            StreamBuilder<Server?>(
+                stream: ServerManager().currentServerStream,
+                builder: (context, snapshot) {
+                  final Server? cServer = snapshot.data;
+                  return Visibility(
+                    visible: cServer != null,
+                    child: Text(
+                      cServer == null ? '' : cServer.url,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: VelvetColors.appBarTextSecondary,
+                          fontWeight: FontWeight.normal),
+                    ),
+                  );
+                }),
+          ],
+        ),
+        actions: <Widget>[
+          StreamBuilder<CastTarget>(
+              stream: CastManager().activeTargetStream,
+              initialData: CastManager().activeTarget,
+              builder: (context, snapshot) {
+                final casting = !(snapshot.data ?? CastTarget.local).isLocal;
+                return IconButton(
+                  icon: Icon(casting ? Icons.cast_connected : Icons.cast),
+                  tooltip: AppLocalizations.of(context).castPlayOnTooltip,
+                  color: casting ? VelvetColors.primary : null,
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: VelvetColors.surface,
+                      isScrollControlled: true,
+                      builder: (_) => CastPickerSheet(),
+                    );
+                  },
+                );
+              }),
+          StreamBuilder<List<Server>>(
+              stream: ServerManager().serverListStream,
+              builder: (context, snapshot) {
+                final isVisible = snapshot.hasData && snapshot.data!.length > 1;
+                return Visibility(
+                  visible: isVisible,
+                  child: PopupMenuButton(
+                      onSelected: (int selectedServerIndex) async {
+                        if (selectedServerIndex > -1) {
+                          ServerManager()
+                              .changeCurrentServer(selectedServerIndex);
+
+                          try {
+                            await ServerManager().getServerPaths(
+                                ServerManager().currentServer!,
+                                throwErr: true);
+                            await ServerManager().callAfterEditServer();
+                          } catch (err) {
+                            // Use the app-wide messenger key, not
+                            // ScaffoldMessenger.of(context): this runs
+                            // after two awaits, by which point the
+                            // captured context may be unmounted (the
+                            // StreamBuilder rebuilt / the menu closed).
+                            rootMessengerKey.currentState?.showSnackBar(
+                                SnackBar(content: Text(l.mainFailedToConnect)));
+                          }
+                        } else if (selectedServerIndex == -1) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => AddServerScreen()));
+                        }
+                      },
+                      icon: Icon(Icons.cloud),
+                      itemBuilder: (BuildContext context) {
+                        List<PopupMenuEntry<int>> popUpWidgetList =
+                            ServerManager().serverList.map((server) {
+                          return PopupMenuItem(
+                            value: ServerManager().serverList.indexOf(server),
+                            child: Text(server.url,
+                                style: TextStyle(
+                                    color: server ==
+                                            ServerManager().currentServer
+                                        ? VelvetColors.primary
+                                        : VelvetColors.textPrimary)),
                           );
-                        },
-                      );
-                    }),
-                StreamBuilder<List<Server>>(
-                    stream: ServerManager().serverListStream,
-                    builder: (context, snapshot) {
-                      final isVisible =
-                          snapshot.hasData && snapshot.data!.length > 1;
-                      return Visibility(
-                        visible: isVisible,
-                        child: PopupMenuButton(
-                            onSelected: (int selectedServerIndex) async {
-                              if (selectedServerIndex > -1) {
-                                ServerManager()
-                                    .changeCurrentServer(selectedServerIndex);
+                        }).toList();
 
-                                try {
-                                  await ServerManager().getServerPaths(
-                                      ServerManager().currentServer!,
-                                      throwErr: true);
-                                  await ServerManager().callAfterEditServer();
-                                } catch (err) {
-                                  // Use the app-wide messenger key, not
-                                  // ScaffoldMessenger.of(context): this runs
-                                  // after two awaits, by which point the
-                                  // captured context may be unmounted (the
-                                  // StreamBuilder rebuilt / the menu closed).
-                                  rootMessengerKey.currentState?.showSnackBar(
-                                      SnackBar(
-                                          content: Text(
-                                              l.mainFailedToConnect)));
-                                }
-                              } else if (selectedServerIndex == -1) {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            AddServerScreen()));
-                              }
-                            },
-                            icon: Icon(Icons.cloud),
-                            itemBuilder: (BuildContext context) {
-                              List<PopupMenuEntry<int>> popUpWidgetList =
-                                  ServerManager().serverList.map((server) {
-                                return PopupMenuItem(
-                                  value: ServerManager()
-                                      .serverList
-                                      .indexOf(server),
-                                  child: Text(server.url,
-                                      style: TextStyle(
-                                          color: server ==
-                                                  ServerManager().currentServer
-                                              ? VelvetColors.primary
-                                              : VelvetColors.textPrimary)),
-                                );
-                              }).toList();
-
-                              return popUpWidgetList;
-                            }),
-                      );
-                    }),
-              ],
-              // Consolidated browser chrome (back · label/album · search ·
-              // download · add-all) — replaces both the old label-only strip and
-              // the Browser's in-body header row. See widgets/browser_toolbar.dart.
-              bottom: const BrowserToolbar(),
-            ),
-            drawer: Drawer(
-                child: ListView(padding: EdgeInsets.zero, children: <Widget>[
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      VelvetColors.raised,
-                      VelvetColors.surface,
-                    ],
-                  ),
-                ),
-                margin: EdgeInsets.zero,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                        return popUpWidgetList;
+                      }),
+                );
+              }),
+        ],
+        // Consolidated browser chrome (back · label/album · search ·
+        // download · add-all) — replaces both the old label-only strip and
+        // the Browser's in-body header row. See widgets/browser_toolbar.dart.
+        bottom: const BrowserToolbar(),
+      ),
+      body: Column(children: [
+        _migrationBanner(),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+                bottom: PlayerPanel.kCollapsedHeight +
+                    MediaQuery.viewPaddingOf(context).bottom),
+            child: StreamBuilder<DisplayItem?>(
+              stream: BrowserManager().albumDetailStream,
+              initialData: BrowserManager().albumDetail,
+              builder: (context, snap) {
+                final album = snap.data;
+                // Album detail renders over the browser, which stays alive
+                // in the IndexedStack so its scroll/search survive. Same
+                // browser model (no route), so the mini-player overlay —
+                // which sits above this Scaffold — stays visible.
+                return IndexedStack(
+                  index: album == null ? 0 : 1,
+                  sizing: StackFit.expand,
                   children: [
-                    Row(children: [
-                      Icon(Icons.graphic_eq,
-                          color: VelvetColors.primary, size: 32),
-                      SizedBox(width: 10),
-                      Text.rich(
-                        TextSpan(children: [
-                          TextSpan(
-                              text: 'm',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w300,
-                                  color: VelvetColors.textSecondary)),
-                          TextSpan(
-                              text: 'Stream',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: VelvetColors.textPrimary)),
-                        ]),
-                        style: TextStyle(
-                            fontSize: 22, letterSpacing: -0.3),
-                      ),
-                    ]),
-                    SizedBox(height: 4),
-                    Text(l.drawerTagline,
-                        style: TextStyle(
-                            color: VelvetColors.textSecondary, fontSize: 12)),
+                    Browser(),
+                    album == null
+                        ? const SizedBox.shrink()
+                        : AlbumDetailView(key: ValueKey(album), album: album),
                   ],
-                ),
-              ),
-              ListTile(
-                leading: Icon(Icons.router),
-                title: Text(l.manageServersTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ManageServersScreen()),
-                  );
-                },
-              ),
-              // Downloads drawer entry hidden — per-file download progress
-              // now shows inline on each browser row (the green left-edge
-              // bar), so the dedicated Downloads page is redundant for
-              // monitoring. Uncomment this and the screens/downloads.dart
-              // import to restore; DownloadScreen and the DownloadManager
-              // stream are both still in the tree.
-              // ListTile(
-              //   leading: Icon(Icons.download),
-              //   title: Text('Downloads'),
-              //   onTap: () {
-              //     Navigator.of(context).pop();
-              //     Navigator.push(
-              //       context,
-              //       MaterialPageRoute(builder: (context) => DownloadScreen()),
-              //     );
-              //   },
-              // ),
-              ListTile(
-                leading: Icon(Icons.album),
-                title: Text(l.autoDjTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AutoDJScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.share),
-                title: Text(l.shareTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  showSharePlaylistDialog(context);
-                },
-              ),
-              // Local playlists drawer entry hidden — having both this and
-              // the server-side "Playlists" browser node was confusing.
-              // Uncomment to restore; the PlaylistsScreen / PlaylistManager
-              // code is still in the tree and PlaylistManager().load() still
-              // runs at startup so saved playlists survive.
-              // ListTile(
-              //   leading: Icon(Icons.queue_music),
-              //   title: Text('Playlists'),
-              //   onTap: () {
-              //     Navigator.of(context).pop();
-              //     Navigator.push(
-              //       context,
-              //       MaterialPageRoute(builder: (context) => PlaylistsScreen()),
-              //     );
-              //   },
-              // ),
-              Divider(color: VelvetColors.border),
-              ListTile(
-                leading: Icon(Icons.settings),
-                title: Text(l.settingsTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SettingsScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.transform),
-                title: Text(l.transcodeTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => TranscodeScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.bug_report_outlined),
-                title: Text(l.diagnosticsTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => DiagnosticsScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text(l.aboutTitle),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AboutScreen()),
-                  );
-                },
-              ),
-            ])),
-            body: Column(children: [
-              _migrationBanner(),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                      bottom: PlayerPanel.kCollapsedHeight +
-                          MediaQuery.of(context).viewPadding.bottom),
-                  child: StreamBuilder<DisplayItem?>(
-                    stream: BrowserManager().albumDetailStream,
-                    initialData: BrowserManager().albumDetail,
-                    builder: (context, snap) {
-                      final album = snap.data;
-                      // Album detail renders over the browser, which stays alive
-                      // in the IndexedStack so its scroll/search survive. Same
-                      // browser model (no route), so the mini-player overlay —
-                      // which sits above this Scaffold — stays visible.
-                      return IndexedStack(
-                        index: album == null ? 0 : 1,
-                        sizing: StackFit.expand,
-                        children: [
-                          Browser(),
-                          album == null
-                              ? const SizedBox.shrink()
-                              : AlbumDetailView(
-                                  key: ValueKey(album), album: album),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ]),
-          ),
-          // Full-screen player overlay — collapsed it's the bottom mini-player;
-          // expanded it rises over the app bar into a full Now Playing screen.
-          Positioned.fill(
-            child: ValueListenableBuilder<bool>(
-              valueListenable: _drawerOpen,
-              builder: (_, open, child) =>
-                  Offstage(offstage: open, child: child),
-              child: PlayerPanel(key: _panelKey),
+                );
+              },
             ),
           ),
-        ]));
+        ),
+      ]),
+    );
+  }
+
+  // The navigation drawer, hosted on the OUTER Scaffold (see build) so its
+  // scrim paints over the player overlay. `context` is build()'s, so a
+  // ListTile's Navigator.pop() still closes the drawer (it removes the
+  // drawer's local-history entry on the home route).
+  Widget _appDrawer(BuildContext context, AppLocalizations l) {
+    return Drawer(
+      child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+        DrawerHeader(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                VelvetColors.raised,
+                VelvetColors.surface,
+              ],
+            ),
+          ),
+          margin: EdgeInsets.zero,
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.graphic_eq, color: VelvetColors.primary, size: 32),
+                SizedBox(width: 10),
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: 'm',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w300,
+                            color: VelvetColors.textSecondary)),
+                    TextSpan(
+                        text: 'Stream',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: VelvetColors.textPrimary)),
+                  ]),
+                  style: TextStyle(fontSize: 22, letterSpacing: -0.3),
+                ),
+              ]),
+              SizedBox(height: 4),
+              Text(l.drawerTagline,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12)),
+            ],
+          ),
+        ),
+        ListTile(
+          leading: Icon(Icons.router),
+          title: Text(l.manageServersTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ManageServersScreen()),
+            );
+          },
+        ),
+        // Downloads drawer entry hidden — per-file download progress
+        // now shows inline on each browser row (the green left-edge
+        // bar), so the dedicated Downloads page is redundant for
+        // monitoring. Uncomment this and the screens/downloads.dart
+        // import to restore; DownloadScreen and the DownloadManager
+        // stream are both still in the tree.
+        // ListTile(
+        //   leading: Icon(Icons.download),
+        //   title: Text('Downloads'),
+        //   onTap: () {
+        //     Navigator.of(context).pop();
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (context) => DownloadScreen()),
+        //     );
+        //   },
+        // ),
+        ListTile(
+          leading: Icon(Icons.album),
+          title: Text(l.autoDjTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AutoDJScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.share),
+          title: Text(l.shareTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            showSharePlaylistDialog(context);
+          },
+        ),
+        // Local playlists drawer entry hidden — having both this and
+        // the server-side "Playlists" browser node was confusing.
+        // Uncomment to restore; the PlaylistsScreen / PlaylistManager
+        // code is still in the tree and PlaylistManager().load() still
+        // runs at startup so saved playlists survive.
+        // ListTile(
+        //   leading: Icon(Icons.queue_music),
+        //   title: Text('Playlists'),
+        //   onTap: () {
+        //     Navigator.of(context).pop();
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (context) => PlaylistsScreen()),
+        //     );
+        //   },
+        // ),
+        Divider(color: VelvetColors.border),
+        ListTile(
+          leading: Icon(Icons.settings),
+          title: Text(l.settingsTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.transform),
+          title: Text(l.transcodeTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TranscodeScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.bug_report_outlined),
+          title: Text(l.diagnosticsTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DiagnosticsScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.info_outline),
+          title: Text(l.aboutTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AboutScreen()),
+            );
+          },
+        ),
+      ]),
+    );
   }
 }
 

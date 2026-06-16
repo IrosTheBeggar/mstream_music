@@ -88,12 +88,13 @@ class PlayerPanelState extends State<PlayerPanel>
         // Bottom system inset (gesture/3-button nav bar). On Android 15 the app
         // is forced edge-to-edge, so we reserve this space ourselves now that
         // the panel replaced the Scaffold's bottomNavigationBar slot.
-        final pad = MediaQuery.of(context).viewPadding.bottom;
-        final topPad = MediaQuery.of(context).viewPadding.top;
+        final viewPadding = MediaQuery.viewPaddingOf(context);
+        final pad = viewPadding.bottom;
+        final topPad = viewPadding.top;
         // Soft keyboard up (e.g. browser search): hide the collapsed mini-player
         // rather than leave it half-covered — it's an overlay the Scaffold can't
         // lift above the keyboard the way a bottomNavigationBar would be.
-        final keyboardUp = MediaQuery.of(context).viewInsets.bottom > 0;
+        final keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
         final maxH = constraints.maxHeight;
         final minH = widget.collapsedHeight + pad;
         _dragExtent = (maxH - minH).clamp(1.0, double.infinity);
