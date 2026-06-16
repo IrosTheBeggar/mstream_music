@@ -126,6 +126,16 @@ class PlayerPanelState extends State<PlayerPanel>
                   child: Material(
                     color: VelvetColors.surface,
                     elevation: 12,
+                    // Rounded top corners so the sheet reads as a page rising
+                    // over the browser as it's dragged up, instead of a flat
+                    // seam. Clip so the ambient wash + content stay inside the
+                    // corners (the bottom runs off-screen, so only the top
+                    // rounds visibly).
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
                     child: Opacity(
                       // Fade the sheet in just after the mini-player lifts away
                       // (fade-through). The opaque Material stays put so the
