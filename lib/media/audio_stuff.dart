@@ -459,6 +459,18 @@ class AudioPlayerHandler extends BaseAudioHandler
       AutoBrowse.play(mediaId);
 
   @override
+  Future<List<MediaItem>> search(String query,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.search(query);
+
+  // Google Assistant "play <X> on mStream" — advertised to the system via
+  // MediaAction.playFromSearch in _broadcastState's systemActions.
+  @override
+  Future<void> playFromSearch(String query,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.playFromSearch(query);
+
+  @override
   Future<void> removeQueueItem(MediaItem mediaItem) async {
     await super.removeQueueItem(mediaItem);
     // TODO: See removeQueueItemAt
@@ -695,6 +707,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        // Lets Google Assistant route "play <X> on mStream" to playFromSearch.
+        MediaAction.playFromSearch,
       },
       shuffleMode: shuffle,
       repeatMode: repeat,

@@ -182,6 +182,9 @@ class AutoBrowse {
         case 'recent':
           rows = await AutoApi.recent(srv);
           break;
+        case 'search':
+          rows = (await AutoApi.search(srv, qp['cv'] ?? '')).titles;
+          break;
         default:
           return;
       }
@@ -198,6 +201,96 @@ class AutoBrowse {
     } catch (e) {
       appLog('[auto] play($mediaId) failed: $e');
     }
+  }
+
+  /// search(query): Android Auto's in-car search results — playable song hits
+  /// first, then browsable albums and artists (tapping those navigates via
+  /// getChildren). Never throws.
+  static Future<List<MediaItem>> search(String query) async {
+    try {
+      await ServerManager().ensureLoaded();
+      final Server? server = ServerManager().currentServer;
+      if (server == null) {
+        return [
+          _notice('Open mStream on your phone',
+              'Add a server there to search it here'),
+        ];
+      }
+      final q = query.trim();
+      if (q.isEmpty) return const [];
+      final r = await AutoApi.search(server, q);
+      final out = <MediaItem>[
+        ..._trackNodes(r.titles, server, 'search', q),
+        ..._albumNodes(r.albums, server),
+        ..._artistNodes(r.artists, server),
+      ];
+      if (out.length > _maxChildren) {
+        appLog('[auto] search("$q"): ${out.length} results, showing first '
+            '$_maxChildren');
+        return out.sublist(0, _maxChildren);
+      }
+      return out;
+    } catch (e) {
+      appLog('[auto] search("$query") failed: $e');
+      return [
+        _notice('Couldn\'t search', 'Check your connection and try again'),
+      ];
+    }
+  }
+
+  /// playFromSearch(query): Google Assistant voice. Precedence: a matching song
+  /// (starting on the exact-title hit when present, since the server's title
+  /// results aren't relevance-ranked), else the first named album, else the
+  /// first named artist's first named album. Never throws.
+  static Future<void> playFromSearch(String query) async {
+    try {
+      await ServerManager().ensureLoaded();
+      final Server? server = ServerManager().currentServer;
+      final q = query.trim();
+      if (server == null || q.isEmpty) return;
+      final r = await AutoApi.search(server, q);
+
+      if (r.titles.isNotEmpty) {
+        // Start on the exact title match if there is one; queue the rest behind.
+        final i =
+            r.titles.indexWhere((t) => t.name.toLowerCase() == q.toLowerCase());
+        await playFromHere(r.titles, i < 0 ? 0 : i);
+        return;
+      }
+      // Skip null-named ('Singles') buckets — the server can't load album:null.
+      final album = _firstNamed(r.albums);
+      if (album != null) {
+        final songs = await AutoApi.albumSongs(server, album);
+        if (songs.isNotEmpty) {
+          await playFromHere(songs, 0);
+          return;
+        }
+      }
+      final artist = _firstNamed(r.artists);
+      if (artist != null) {
+        final albumOf = _firstNamed(await AutoApi.artistAlbums(server, artist));
+        if (albumOf != null) {
+          final songs = await AutoApi.albumSongs(server, albumOf);
+          if (songs.isNotEmpty) {
+            await playFromHere(songs, 0);
+            return;
+          }
+        }
+      }
+      appLog('[auto] playFromSearch("$q"): no playable match');
+    } catch (e) {
+      appLog('[auto] playFromSearch("$query") failed: $e');
+    }
+  }
+
+  /// The [DisplayItem.data] of the first item with a non-null name (server
+  /// list/album endpoints use a null name for the "Singles" bucket, which the
+  /// album/artist-albums endpoints can't be asked to load).
+  static String? _firstNamed(List<DisplayItem> items) {
+    for (final i in items) {
+      if (i.data != null) return i.data;
+    }
+    return null;
   }
 
   // ── tree nodes ──
@@ -404,6 +497,49 @@ class AutoApi {
   static Future<List<DisplayItem>> recent(Server s) async {
     final res = await _call(s, '/api/v1/db/recent/added', body: {'limit': 100});
     return _fileItems(res, s);
+  }
+
+  /// Library search (artists + albums + song titles; raw files excluded).
+  /// Returns the three result groups as DisplayItems. Title hits carry a
+  /// synthesised MusicMetadata (title + art) — the search endpoint returns only
+  /// name/filepath/art per hit, not the full metadata block — so they play with
+  /// a proper label and cover rather than a bare filename.
+  static Future<
+      ({
+        List<DisplayItem> artists,
+        List<DisplayItem> albums,
+        List<DisplayItem> titles,
+      })> search(Server s, String query) async {
+    final res = await _call(s, '/api/v1/db/search', body: {
+      'search': query,
+      'noArtists': false,
+      'noAlbums': false,
+      'noTitles': false,
+      'noFiles': true,
+    });
+    final artists = <DisplayItem>[];
+    for (final e in (res['artists'] as List? ?? const [])) {
+      final di = DisplayItem(s, e['name'], 'artist', e['name'], null, null);
+      di.altAlbumArt = e['album_art_file'];
+      artists.add(di);
+    }
+    final albums = <DisplayItem>[];
+    for (final e in (res['albums'] as List? ?? const [])) {
+      final di = DisplayItem(s, e['name'], 'album', e['name'], null, null);
+      di.altAlbumArt = e['album_art_file'];
+      albums.add(di);
+    }
+    final titles = <DisplayItem>[];
+    for (final e in (res['title'] as List? ?? const [])) {
+      final di =
+          DisplayItem(s, e['name'], 'file', '/${e['filepath']}', null, null);
+      di.metadata = MusicMetadata.fromServerMap({
+        'title': e['name'],
+        'album-art': e['album_art_file'],
+      });
+      titles.add(di);
+    }
+    return (artists: artists, albums: albums, titles: titles);
   }
 
   /// Shared parser for the `[{ filepath, metadata }]` track-list responses
