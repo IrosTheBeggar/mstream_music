@@ -506,10 +506,15 @@ class AudioPlayerHandler extends BaseAudioHandler
           // server-side write is the rateSong POST; this only keeps the
           // in-memory queue / item in sync.
           final fp = extras?['filepath'] as String?;
+          final srv = extras?['server'] as String?;
           if (fp != null) {
             final target = fp.startsWith('/') ? fp.substring(1) : fp;
-            final newRating = extras?['rating'] as int?;
+            final newRating = (extras?['rating'] as num?)?.toInt();
+            // Match the source server too (when supplied): a mixed-server queue
+            // can carry the same path on two servers, and only the one that was
+            // actually rated should change.
             bool hit(MediaItem m) {
+              if (srv != null && m.extras?['server'] != srv) return false;
               final p = m.extras?['path'] as String?;
               return p != null &&
                   (p.startsWith('/') ? p.substring(1) : p) == target;
@@ -829,6 +834,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         // detection recognises AutoDJ-added songs as shareable.
         'server': autoDJServer!.localname,
         'path': filepath,
+        // Server-side per-user rating, so an AutoDJ-added track shows + persists
+        // its rating the same as a browse-added one.
+        'rating': meta.rating,
         'year': meta.year,
         'track': meta.track,
         'disc': meta.disc,

@@ -104,7 +104,9 @@ class MusicMetadata {
         m['disk'] ?? m['disc'],
         m['year'],
         m['hash'] ?? '',
-        m['rating'],
+        // Coerce like the other wire numerics below: a server that sends rating
+        // as a REAL or quoted value would otherwise throw on the int? field.
+        _asInt(m['rating']),
         m['album-art'],
         bpm: m['bpm'],
         musicalKey: m['musical-key'],

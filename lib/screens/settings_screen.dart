@@ -213,6 +213,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             value: SettingsManager().ratingAllowHalf,
             onChanged: (v) async {
+              // setState first so the switch flips immediately (the manager
+              // updates its in-memory value synchronously; the await only
+              // persists). Mirrors the Resume-queue toggle above.
+              setState(() {});
               await SettingsManager().setRatingAllowHalf(v);
               setState(() {});
             },

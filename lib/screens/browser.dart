@@ -725,10 +725,13 @@ class _BrowserState extends State<Browser> {
                               subtitle: b[i].getSubText(),
                               // Server songs get a tappable rating star at the
                               // end (same pattern as the album rows). Local files
-                              // have no server-side rating, so no star.
+                              // have no server-side rating, so no star. Needs a
+                              // metadata object too — without one the rate has
+                              // nowhere to write back to (onChanged below).
                               trailing: (b[i].type == 'file' &&
                                       b[i].server != null &&
-                                      b[i].data != null)
+                                      b[i].data != null &&
+                                      b[i].metadata != null)
                                   ? RatingControl(
                                       rating: b[i].metadata?.rating,
                                       server: b[i].server!,

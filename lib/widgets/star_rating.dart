@@ -82,42 +82,61 @@ Future<void> showRatingDialog(
   required ValueChanged<int?> onChanged,
 }) {
   int? value = current;
+  // Monotonic token: each tap claims the next number. On a failed POST we revert
+  // only if our tap is still the latest — a tap that lands while we were waiting
+  // wins, so rapid taps never clobber each other with a stale revert.
+  int seq = 0;
   return showDialog<void>(
     context: context,
     builder: (dctx) => StatefulBuilder(
       builder: (dctx, setLocal) {
         final l = AppLocalizations.of(dctx);
+        // Optimistically apply [v] to the UI, queue and server; on a server
+        // rejection revert to the pre-tap value, but only when no newer tap has
+        // since superseded this one.
+        Future<void> apply(int? v) async {
+          final mySeq = ++seq;
+          final prev = value;
+          setLocal(() => value = v);
+          onChanged(v);
+          // Keep the queue + now-playing item's extras in sync, so Song Info and
+          // a restart both reflect the rating (rateSong is the server-side
+          // write). Pass the server so a mixed-server queue patches only this
+          // track, never a same-path track on a different server.
+          MediaManager().audioHandler.customAction('updateRating',
+              {'filepath': filepath, 'rating': v, 'server': server.localname});
+          try {
+            await ApiManager().rateSong(server, filepath, v);
+          } catch (_) {
+            if (mySeq != seq) return; // a newer tap won — don't revert to stale
+            onChanged(prev);
+            MediaManager().audioHandler.customAction('updateRating', {
+              'filepath': filepath,
+              'rating': prev,
+              'server': server.localname,
+            });
+            if (dctx.mounted) {
+              setLocal(() => value = prev);
+              ScaffoldMessenger.of(dctx).showSnackBar(
+                  SnackBar(content: Text(l.ratingFailed)));
+            }
+          }
+        }
+
         return AlertDialog(
           backgroundColor: VelvetColors.surface,
           title: Text(l.ratingTitle,
               style: TextStyle(color: VelvetColors.textPrimary)),
-          content: StarRating(
-            rating: value,
-            size: 38,
-            onRate: (v) async {
-              final prev = value;
-              setLocal(() => value = v);
-              onChanged(v);
-              // Keep the queue + now-playing item's extras in sync, so Song Info
-              // and a restart both reflect the rating (rateSong is the
-              // server-side write).
-              MediaManager().audioHandler.customAction(
-                  'updateRating', {'filepath': filepath, 'rating': v});
-              try {
-                await ApiManager().rateSong(server, filepath, v);
-              } catch (_) {
-                setLocal(() => value = prev);
-                onChanged(prev);
-                MediaManager().audioHandler.customAction(
-                    'updateRating', {'filepath': filepath, 'rating': prev});
-                if (dctx.mounted) {
-                  ScaffoldMessenger.of(dctx).showSnackBar(
-                      SnackBar(content: Text(l.ratingFailed)));
-                }
-              }
-            },
-          ),
+          content: StarRating(rating: value, size: 38, onRate: apply),
           actions: [
+            // Whole-star input can't clear an odd (half) rating by tapping — no
+            // whole star equals it — so a dedicated Clear is the only way out of
+            // one. Shown whenever a rating is set.
+            if (value != null && value! > 0)
+              TextButton(
+                onPressed: () => apply(null),
+                child: Text(l.clear),
+              ),
             TextButton(
               onPressed: () => Navigator.of(dctx).pop(),
               child: Text(MaterialLocalizations.of(dctx).closeButtonLabel),
@@ -158,7 +177,8 @@ class RatingControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final v = rating ?? 0;
+    // Clamp to the 0–10 wire range so out-of-range data can't render "5.5".
+    final v = (rating ?? 0).clamp(0, 10);
     final rated = v > 0;
     return InkWell(
       onTap: () => showRatingDialog(context,
@@ -204,6 +224,14 @@ class MediaItemRating extends StatefulWidget {
   final MediaItem item;
   final double size;
   const MediaItemRating({super.key, required this.item, this.size = 14});
+
+  /// Whether [item] can be rated — it carries a resolvable source server and a
+  /// file path (false for a local file). Lets a host drop the widget entirely
+  /// instead of laying out an invisible [SizedBox]; [build] applies the same
+  /// test and renders nothing when it fails.
+  static bool canRate(MediaItem item) =>
+      ServerManager().byLocalname(item.extras?['server'] as String?) != null &&
+      item.extras?['path'] != null;
 
   @override
   State<MediaItemRating> createState() => _MediaItemRatingState();

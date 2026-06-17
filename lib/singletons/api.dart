@@ -163,6 +163,9 @@ class ApiManager {
       // /transcode endpoint + codec/bitrate when transcoding is on).
       final String streamUrl =
           buildServerStreamUrl(useThisServer!, e.toString());
+      // The recursive endpoint returns bare paths (no metadata), so these items
+      // carry only server + path — no rating / fidelity / tags. They populate
+      // if the same track is later reached via a metadata-bearing browse.
       MediaItem lol = MediaItem(
           id: streamUrl,
           title: e.split("/").last,
