@@ -68,6 +68,13 @@ class ServerManager {
     }
   }
 
+  // Memoizes loadServerList so it runs exactly once across the UI startup path
+  // (MStreamApp.initState) and the headless Android Auto browser (AutoBrowse) —
+  // loadServerList appends without clearing, so a second concurrent call would
+  // duplicate every server.
+  Future<void>? _loadOnce;
+  Future<void> ensureLoaded() => _loadOnce ??= loadServerList();
+
   Future<void> loadServerList() async {
     List serversJson = await readServerManager();
 

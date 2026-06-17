@@ -162,7 +162,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // loadServerList so it's already true before the home grid first renders.
     BrowserManager().awaitingStartupView =
         SettingsManager().startupView != StartupView.browser;
-    ServerManager().loadServerList().then((_) {
+    ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
     });

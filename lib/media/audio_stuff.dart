@@ -11,6 +11,7 @@ import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
 import 'local_media_server.dart';
+import 'auto_browse.dart';
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
@@ -75,6 +76,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   // the session musically coherent rather than drifting). Reset on
   // setAutoDJ off or server switch.
   String? _camelotAnchor;
+
+  // The repeat mode requested by the UI / Android Auto. The backend only models
+  // repeat-all vs off (no single-track loop), and _broadcastState would
+  // otherwise derive the emitted mode from that bool — collapsing 'one' to
+  // 'all' and stranding any client that cycles none→all→one→none (it could
+  // never get back to none). Storing the requested mode keeps all three states
+  // distinct in the published PlaybackState. 'one' currently loops the whole
+  // list like 'all' (true single-track repeat is a backend follow-up).
+  AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
 
   AudioPlayerHandler() {
     _init();
@@ -362,6 +372,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     final int i = index.clamp(0, items.length - 1);
     // play: false → load paused at the saved spot (don't blast audio on open).
     await _backend.seek(position, index: i, play: false);
+    _repeatMode =
+        repeat ? AudioServiceRepeatMode.all : AudioServiceRepeatMode.none;
     if (repeat) await _backend.setRepeatAll(true);
     if (shuffle) await _backend.setShuffleEnabled(true);
     _emitCurrentMediaItem();
@@ -411,31 +423,40 @@ class AudioPlayerHandler extends BaseAudioHandler
     await super.stop();
   }
 
+  // Honor the requested mode: Android Auto and the lock screen send an absolute
+  // target (not a toggle), and the in-app buttons already pass the desired mode.
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
-    if (_backend.shuffleEnabled == true) {
-      await _backend.setShuffleEnabled(false);
-      await super.setShuffleMode(AudioServiceShuffleMode.none);
-    } else {
-      await _backend.setShuffleEnabled(true);
-      await super.setShuffleMode(AudioServiceShuffleMode.all);
-    }
-
+    await _backend.setShuffleEnabled(shuffleMode == AudioServiceShuffleMode.all);
     _broadcastState();
   }
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
-    if (_backend.repeatAll == true) {
-      await _backend.setRepeatAll(false);
-      await super.setRepeatMode(AudioServiceRepeatMode.none);
-    } else {
-      await _backend.setRepeatAll(true);
-      await super.setRepeatMode(AudioServiceRepeatMode.all);
-    }
-
+    _repeatMode = repeatMode;
+    // Backend loops the whole list or nothing; 'one' loops the list too (see
+    // _repeatMode) but stays distinct in the published state.
+    await _backend.setRepeatAll(repeatMode != AudioServiceRepeatMode.none);
     _broadcastState();
   }
+
+  // ── Android Auto browsing (delegated to AutoBrowse). The native AudioService
+  // IS the MediaBrowserService that Auto binds; these answer its browse/play
+  // calls. They run headless (no UI), so AutoBrowse must self-bootstrap and
+  // never throw — see auto_browse.dart.
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId,
+          [Map<String, dynamic>? options]) =>
+      AutoBrowse.children(parentMediaId);
+
+  @override
+  Future<MediaItem?> getMediaItem(String mediaId) =>
+      AutoBrowse.mediaItem(mediaId);
+
+  @override
+  Future<void> playFromMediaId(String mediaId,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.play(mediaId);
 
   @override
   Future<void> removeQueueItem(MediaItem mediaItem) async {
@@ -659,9 +680,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         ? AudioServiceShuffleMode.all
         : AudioServiceShuffleMode.none;
 
-    final AudioServiceRepeatMode repeat = _backend.repeatAll == true
-        ? AudioServiceRepeatMode.all
-        : AudioServiceRepeatMode.none;
+    // Emit the requested repeat mode (not _backend.repeatAll, which can't
+    // represent 'one') so none/all/one stay distinct for clients that cycle.
+    final AudioServiceRepeatMode repeat = _repeatMode;
 
     playbackState.add(playbackState.value.copyWith(
       controls: [
