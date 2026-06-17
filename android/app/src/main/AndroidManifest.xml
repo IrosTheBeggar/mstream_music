@@ -109,6 +109,15 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.felnanuke.google_cast.GoogleCastOptionsProvider" />
+
+        <!-- Android Auto: opt in as a media app so Auto lists mStream and binds
+             the audio_service MediaBrowserService declared below. Lives in the
+             base (src/main) manifest so BOTH the `play` and `full` flavors
+             inherit it (the play flavor ships no flavor manifest). The browsable
+             tree is served from Dart (AudioPlayerHandler.getChildren). -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
             
         <service android:name="com.ryanheise.audioservice.AudioService" android:exported="true" android:foregroundServiceType="mediaPlayback">
           <intent-filter>

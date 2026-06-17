@@ -829,6 +829,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       album: meta.album,
       artist: meta.artist,
       genre: meta.genreLabel,
+      // Artwork for the notification / lock screen / Android Auto (see
+      // buildServerFileMediaItem — artUri mirrors extras['artUrl']).
+      artUri: artUrl == null ? null : Uri.parse(artUrl),
       extras: {
         // Tag with the source server so Share Playlist's multi-server
         // detection recognises AutoDJ-added songs as shareable.

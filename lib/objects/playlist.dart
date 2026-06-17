@@ -80,6 +80,11 @@ class PlaylistEntry {
         title: title,
         artist: artist,
         album: album,
+        // Artwork for the lock screen / Android Auto, from the stored
+        // /album-art URL captured in extras when the entry was created.
+        artUri: extras['artUrl'] is String
+            ? Uri.tryParse(extras['artUrl'] as String)
+            : null,
         duration:
             durationMs == null ? null : Duration(milliseconds: durationMs!),
         extras: Map<String, dynamic>.from(extras),
