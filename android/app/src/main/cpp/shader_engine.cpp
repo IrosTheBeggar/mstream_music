@@ -276,8 +276,20 @@ ParsedShader parseShader(const std::string& source) {
                 }
             } else if (std::regex_search(line, cm, sizeMarker)) {
                 int tgtIdx = passIndexFromName(lowerAlnum(cm[1].str()));
-                int w = std::stoi(cm[2].str());
-                int h = std::stoi(cm[3].str());
+                // Imported shaders are user-supplied, so parse defensively:
+                // std::stoi throws on an overlong digit run (which would crash
+                // the compile-worker thread), and an unbounded size would
+                // allocate a huge ping-pong pair. Clamp to a sane max; anything
+                // unparseable leaves the pass at its full-window default.
+                int w = 0, h = 0;
+                try {
+                    constexpr long kMaxPassDim = 8192;
+                    long pw = std::stol(cm[2].str()), ph = std::stol(cm[3].str());
+                    w = static_cast<int>(pw < 1 ? 0 : (pw > kMaxPassDim ? kMaxPassDim : pw));
+                    h = static_cast<int>(ph < 1 ? 0 : (ph > kMaxPassDim ? kMaxPassDim : ph));
+                } catch (...) {
+                    w = h = 0;  // overflow / out of range → treat as unset
+                }
                 if (tgtIdx >= 0 && w > 0 && h > 0) {
                     out.passW[tgtIdx] = w;
                     out.passH[tgtIdx] = h;

@@ -6,8 +6,9 @@
 //   0 → ProjectMEngine (Milkdrop, default)
 //   1 → ShaderEngine   (Shadertoy fragment shaders)
 //
-// All native methods run on the Kotlin RenderThread; the EGL context
-// is made current at init and again defensively in each JNI call.
+// All native methods run on the Kotlin RenderThread, which owns the EGL
+// context for its whole lifetime: it's made current once at init and stays
+// current (the per-frame render path relies on this — see nativeRenderFrame).
 //
 // JNI naming convention: function names mirror the Kotlin class
 // 'com.example.mstream_music.VisualizerBridge'. Underscore in the
