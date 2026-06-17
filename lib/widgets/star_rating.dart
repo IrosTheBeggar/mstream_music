@@ -142,9 +142,16 @@ class RatingControl extends StatelessWidget {
     this.size = 12,
   });
 
+  // 0–10 server scale → a compact 0–5 label: "5", "3.5", "3".
+  static String _half(int v) {
+    final s = v / 2.0;
+    return s == s.roundToDouble() ? s.toStringAsFixed(0) : s.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final rated = rating != null && rating! > 0;
+    final v = rating ?? 0;
+    final rated = v > 0;
     return InkWell(
       onTap: () => showRatingDialog(context,
           server: server,
@@ -154,10 +161,25 @@ class RatingControl extends StatelessWidget {
       borderRadius: BorderRadius.circular(4),
       child: Padding(
         padding: const EdgeInsets.all(2),
-        // Read-only stars when rated; a single placeholder star otherwise. The
-        // tap target is this InkWell, so the inner StarRating stays read-only.
+        // Compact readout to save horizontal room: the value out of 5 + a star
+        // ("3.5★") when rated, a single outline star otherwise (still a
+        // tap-to-rate affordance). The full 5-star input lives in the dialog.
         child: rated
-            ? StarRating(rating: rating, size: size)
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _half(v),
+                    style: TextStyle(
+                      fontSize: size + 1,
+                      height: 1,
+                      fontWeight: FontWeight.w600,
+                      color: VelvetColors.primary,
+                    ),
+                  ),
+                  Icon(Icons.star, size: size + 1, color: VelvetColors.primary),
+                ],
+              )
             : Icon(Icons.star_border,
                 size: size + 4, color: VelvetColors.textTertiary),
       ),
