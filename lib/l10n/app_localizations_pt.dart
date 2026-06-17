@@ -1358,4 +1358,54 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get selfSignedSubtitle =>
       'Ignora a validação TLS deste servidor. Ative apenas em uma rede confiável.';
+
+  @override
+  String get importedShadersTitle => 'Shaders importados';
+
+  @override
+  String get importedShadersSettingsSubtitle =>
+      'Adicione os seus próprios arquivos .glsl à rotação do motor Shader.';
+
+  @override
+  String get importedShadersRescan => 'Reanalisar pasta';
+
+  @override
+  String get importedShadersDropHint =>
+      'Coloque arquivos .glsl nesta pasta e depois Reanalisar:';
+
+  @override
+  String get importedShadersCopyPath => 'Copiar caminho';
+
+  @override
+  String get importedShadersReachableHint =>
+      'Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor Shader está ativo.';
+
+  @override
+  String get importedShadersRemove => 'Remover';
+
+  @override
+  String get importedShadersEmptyTitle => 'Nenhum shader na pasta ainda';
+
+  @override
+  String get importedShadersEmptyBody =>
+      'Copie arquivos .glsl no estilo Shadertoy para a pasta acima e depois toque em Reanalisar.';
+
+  @override
+  String get importedShadersInvalid =>
+      'Pode não ser um shader válido — sem ponto de entrada mainImage/main.';
+
+  @override
+  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+
+  @override
+  String importedShadersDownloadsImported(int count) {
+    return 'Imported $count shader(s) from Downloads';
+  }
+
+  @override
+  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+
+  @override
+  String get importedShadersDownloadsNoPermission =>
+      'Storage permission is needed to read Downloads';
 }

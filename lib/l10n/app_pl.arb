@@ -366,5 +366,15 @@
   "diagnosticsEmpty": "Brak dzienników",
   "storageAppExternal": "Aplikacja (zewn.)",
   "selfSignedTitle": "Zezwól na certyfikat samopodpisany",
-  "selfSignedSubtitle": "Pomija weryfikację TLS dla tego serwera. Włączaj tylko w zaufanej sieci."
+  "selfSignedSubtitle": "Pomija weryfikację TLS dla tego serwera. Włączaj tylko w zaufanej sieci.",
+  "importedShadersTitle": "Zaimportowane shadery",
+  "importedShadersSettingsSubtitle": "Dodaj własne pliki .glsl do rotacji silnika Shader.",
+  "importedShadersRescan": "Przeskanuj folder ponownie",
+  "importedShadersDropHint": "Umieść pliki .glsl w tym folderze, a następnie przeskanuj ponownie:",
+  "importedShadersCopyPath": "Kopiuj ścieżkę",
+  "importedShadersReachableHint": "Dostępny przez USB lub menedżer plików (w Android/data). Zaimportowane shadery dołączają do rotacji, gdy aktywny jest silnik Shader.",
+  "importedShadersRemove": "Usuń",
+  "importedShadersEmptyTitle": "Brak shaderów w folderze",
+  "importedShadersEmptyBody": "Skopiuj pliki .glsl w stylu Shadertoy do powyższego folderu, a następnie dotknij Przeskanuj ponownie.",
+  "importedShadersInvalid": "Może nie być prawidłowym shaderem — brak punktu wejścia mainImage/main."
 }

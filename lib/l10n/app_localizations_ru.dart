@@ -1383,4 +1383,54 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get selfSignedSubtitle =>
       'Пропускать проверку TLS для этого сервера. Включайте только в доверенной сети.';
+
+  @override
+  String get importedShadersTitle => 'Импортированные шейдеры';
+
+  @override
+  String get importedShadersSettingsSubtitle =>
+      'Добавьте свои файлы .glsl в ротацию движка Shader.';
+
+  @override
+  String get importedShadersRescan => 'Пересканировать папку';
+
+  @override
+  String get importedShadersDropHint =>
+      'Поместите файлы .glsl в эту папку, затем нажмите «Пересканировать»:';
+
+  @override
+  String get importedShadersCopyPath => 'Копировать путь';
+
+  @override
+  String get importedShadersReachableHint =>
+      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок Shader.';
+
+  @override
+  String get importedShadersRemove => 'Удалить';
+
+  @override
+  String get importedShadersEmptyTitle => 'В папке пока нет шейдеров';
+
+  @override
+  String get importedShadersEmptyBody =>
+      'Скопируйте файлы .glsl в стиле Shadertoy в папку выше, затем нажмите «Пересканировать».';
+
+  @override
+  String get importedShadersInvalid =>
+      'Возможно, это недопустимый шейдер — нет точки входа mainImage/main.';
+
+  @override
+  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+
+  @override
+  String importedShadersDownloadsImported(int count) {
+    return 'Imported $count shader(s) from Downloads';
+  }
+
+  @override
+  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+
+  @override
+  String get importedShadersDownloadsNoPermission =>
+      'Storage permission is needed to read Downloads';
 }

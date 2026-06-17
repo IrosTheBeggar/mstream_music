@@ -366,5 +366,15 @@
   "diagnosticsEmpty": "Журналов пока нет",
   "storageAppExternal": "Внешнее (приложение)",
   "selfSignedTitle": "Разрешить самоподписанный сертификат",
-  "selfSignedSubtitle": "Пропускать проверку TLS для этого сервера. Включайте только в доверенной сети."
+  "selfSignedSubtitle": "Пропускать проверку TLS для этого сервера. Включайте только в доверенной сети.",
+  "importedShadersTitle": "Импортированные шейдеры",
+  "importedShadersSettingsSubtitle": "Добавьте свои файлы .glsl в ротацию движка Shader.",
+  "importedShadersRescan": "Пересканировать папку",
+  "importedShadersDropHint": "Поместите файлы .glsl в эту папку, затем нажмите «Пересканировать»:",
+  "importedShadersCopyPath": "Копировать путь",
+  "importedShadersReachableHint": "Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок Shader.",
+  "importedShadersRemove": "Удалить",
+  "importedShadersEmptyTitle": "В папке пока нет шейдеров",
+  "importedShadersEmptyBody": "Скопируйте файлы .glsl в стиле Shadertoy в папку выше, затем нажмите «Пересканировать».",
+  "importedShadersInvalid": "Возможно, это недопустимый шейдер — нет точки входа mainImage/main."
 }

@@ -1345,4 +1345,54 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get selfSignedSubtitle =>
       'Skip TLS validation for this server. Only enable on a network you trust.';
+
+  @override
+  String get importedShadersTitle => 'Imported shaders';
+
+  @override
+  String get importedShadersSettingsSubtitle =>
+      'Add your own .glsl files to the Shader engine rotation.';
+
+  @override
+  String get importedShadersRescan => 'Rescan folder';
+
+  @override
+  String get importedShadersDropHint =>
+      'Drop .glsl files in this folder, then Rescan:';
+
+  @override
+  String get importedShadersCopyPath => 'Copy path';
+
+  @override
+  String get importedShadersReachableHint =>
+      'Reachable over USB or a file manager (under Android/data). Imported shaders join the rotation when the Shader engine is active.';
+
+  @override
+  String get importedShadersRemove => 'Remove';
+
+  @override
+  String get importedShadersEmptyTitle => 'No shaders in the folder yet';
+
+  @override
+  String get importedShadersEmptyBody =>
+      'Copy Shadertoy-style .glsl files into the folder above, then tap Rescan.';
+
+  @override
+  String get importedShadersInvalid =>
+      'May not be a valid shader — no mainImage/main entry point.';
+
+  @override
+  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+
+  @override
+  String importedShadersDownloadsImported(int count) {
+    return 'Imported $count shader(s) from Downloads';
+  }
+
+  @override
+  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+
+  @override
+  String get importedShadersDownloadsNoPermission =>
+      'Storage permission is needed to read Downloads';
 }

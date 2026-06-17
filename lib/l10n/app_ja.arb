@@ -366,5 +366,15 @@
   "diagnosticsEmpty": "まだログがありません",
   "storageAppExternal": "アプリ外部",
   "selfSignedTitle": "自己署名証明書を許可",
-  "selfSignedSubtitle": "このサーバーの TLS 検証をスキップします。信頼できるネットワークでのみ有効にしてください。"
+  "selfSignedSubtitle": "このサーバーの TLS 検証をスキップします。信頼できるネットワークでのみ有効にしてください。",
+  "importedShadersTitle": "インポートしたシェーダー",
+  "importedShadersSettingsSubtitle": "独自の .glsl ファイルを Shader エンジンのローテーションに追加します。",
+  "importedShadersRescan": "フォルダを再スキャン",
+  "importedShadersDropHint": "このフォルダに .glsl ファイルを置き、再スキャンしてください:",
+  "importedShadersCopyPath": "パスをコピー",
+  "importedShadersReachableHint": "USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーは Shader エンジンが有効なときにローテーションに加わります。",
+  "importedShadersRemove": "削除",
+  "importedShadersEmptyTitle": "フォルダにはまだシェーダーがありません",
+  "importedShadersEmptyBody": "Shadertoy スタイルの .glsl ファイルを上のフォルダにコピーし、再スキャンをタップしてください。",
+  "importedShadersInvalid": "有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。"
 }

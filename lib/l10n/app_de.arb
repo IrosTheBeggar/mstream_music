@@ -7,69 +7,45 @@
   "queueAddToEnd": "Ans Ende der Warteschlange",
   "shuffle": "Zufallswiedergabe",
   "variousArtists": "Verschiedene Interpreten",
-
   "appTitle": "mStream Music",
-
   "settingsLanguage": "Sprache",
-
   "languageSystemDefault": "Systemstandard",
-
   "settingsLanguageSubtitle": "Die Anzeigesprache der App. \"Systemstandard\" folgt deinem Gerät.",
-
   "couldNotOpen": "{url} konnte nicht geöffnet werden",
-
   "trackCount": "{count, plural, =0{Keine Titel} =1{1 Titel} other{{count} Titel}}",
-
   "reset": "Zurücksetzen",
-
   "themeVelvet": "Velvet",
   "themeDark": "Dunkel",
   "themeLight": "Hell",
-
   "tapAddToQueue": "Zur Warteschlange hinzufügen",
   "tapPlayFromHere": "Ab hier abspielen",
   "tapAppendAndJump": "Hinzufügen und abspielen",
-
   "visualizerEngineMilkdrop": "Milkdrop",
   "visualizerEngineShaders": "Shaders",
-
   "visualizerSourceSynthesized": "Synthetisiert",
   "visualizerSourceReal": "Echtes Audio",
-
   "downloadsTitle": "Downloads",
-
   "downloadProgress": "Fortschritt: {progress}%",
-
   "songInfoTitle": "Songinfo",
-
   "eqTitle": "Equalizer",
-
   "eqOnlyAndroid": "Der Equalizer ist nur unter Android verfügbar.",
-
   "eqNeedsPlayback": "Starte einen Song, um den Equalizer einzurichten.\n\nAndroids nativer Equalizer wird mit der Audiositzung initialisiert, daher muss die Wiedergabe aktiv sein, bevor wir das Band-Layout auslesen können.",
-
   "eqInitFailed": "Equalizer konnte nicht initialisiert werden:\n{error}",
-
   "eqNoBands": "Der Audiotreiber dieses Geräts meldet keine Equalizer-Bänder.",
-
   "eqEnabledOn": "Ein – Verstärkung auf Wiedergabe angewendet",
   "eqEnabledOff": "Aus – Bypass-Modus",
-
   "cancel": "Abbrechen",
   "continueLabel": "Weiter",
   "openSettings": "Einstellungen öffnen",
-
   "settingsTitle": "Einstellungen",
   "settingsSectionAppearance": "Darstellung",
   "settingsSectionPlayback": "Wiedergabe",
   "settingsSectionBrowse": "Durchsuchen",
   "settingsSectionAbout": "Über",
-
   "settingsTheme": "Design",
   "themeSubtitleVelvet": "Marineblau und Violett – das charakteristische dunkle Design.",
   "themeSubtitleDark": "Neutrales Dunkel mit bernsteinfarbenen Akzenten.",
   "themeSubtitleLight": "Heller Hintergrund mit dunkler App-Leiste und bernsteinfarbenen Akzenten – passt zum älteren mitgelieferten Design.",
-
   "settingsTranscode": "Audio transkodieren",
   "settingsTranscodeSubtitle": "Streame eine transkodierte Kopie vom Server (kleinere Dateien, etwas langsamerer Start). Aus spielt Originaldateien ab.",
   "transcodeTitle": "Transkodierung",
@@ -79,42 +55,32 @@
   "transcodeUnavailable": "Auf diesem Server ist Transkodierung nicht aktiviert – seine Titel werden in Originalqualität gestreamt.",
   "transcodeReloadQueue": "Auf aktuelle Warteschlange anwenden",
   "transcodeReloadQueueSubtitle": "Wenn du Transkodierungseinstellungen änderst – aktiviert: die ganze Warteschlange jetzt neu laden (der laufende Titel puffert kurz neu); deaktiviert: nur kommende Titel ändern sich, der aktuelle wird unverändert zu Ende gespielt.",
-
   "settingsTapBehavior": "Beim Antippen eines Songs",
   "settingsStartupPage": "Startbildschirm",
   "settingsStartupPageSubtitle": "Die App in dieser Browser-Ansicht öffnen; Zurück kehrt zum Browser zurück.",
   "tapSubtitleAddToQueue": "Beim Antippen wird der Song an die Warteschlange angehängt. Ist die Warteschlange leer, startet die Wiedergabe automatisch.",
   "tapSubtitlePlayFromHere": "Beim Antippen wird die Warteschlange durch die Songs der aktuellen Ansicht ersetzt und die Wiedergabe beim angetippten Song gestartet.",
   "tapSubtitleAppendAndJump": "Beim Antippen wird der Song an die Warteschlange angehängt und die Wiedergabe springt dorthin, was gerade läuft, wird unterbrochen.",
-
   "settingsEqSubtitle": "Bass, Mitten und Höhen anpassen. Nur Android.",
-
   "settingsVisualizerEngine": "Visualizer-Engine",
   "visualizerEngineSubtitleMilkdrop": "Milkdrop-Presets über projectM (Standard). Reichhaltigere Effekte, höhere GPU-Last.",
   "visualizerEngineSubtitleShaders": "Fragment-Shader im Shadertoy-Stil. Leichter, modular – lege .glsl-Dateien in assets/shaders/ ab, um den Katalog zu erweitern.",
-
   "settingsVisualizerSource": "Visualizer-Audioquelle",
   "visualizerSourceSubtitleSynthesized": "Standard. Der Visualizer reagiert nur auf das Wiedergabe-Timing – keine Mikrofonberechtigung erforderlich.",
   "visualizerSourceSubtitleReal": "Der Visualizer reagiert auf die tatsächliche Audioausgabe. Erfordert die RECORD_AUDIO-Berechtigung unter Android.",
-
   "settingsAlbumGrid": "Album-Rasteransicht",
   "settingsAlbumGridSubtitle": "Alben als Raster von Karten mit Cover-Art statt als einfache Liste anzeigen.",
-
   "settingsFileMetadata": "Song-Metadaten im Datei-Explorer lesen",
   "settingsFileMetadataSubtitle": "Titel, Interpret und Album-Art für jeden Song beim Durchsuchen von Serverdateien abrufen. Aus zeigt rohe Dateinamen (schneller bei großen Ordnern).",
-
   "settingsLetterStrip": "Schwellenwert für Buchstaben-Scrubber",
   "settingsLetterStripSubtitle": "Den A-Z-Schnellscrubber anzeigen, wenn eine Liste mindestens so viele Einträge hat. Darunter wird der Streifen ausgeblendet und lange Ordner-/Dateinamen werden auf mehrere Zeilen umgebrochen statt abgeschnitten. Auf 0 setzen, um den Streifen immer anzuzeigen.",
-
   "settingsReset": "Auf Standard zurücksetzen",
   "settingsResetSubtitle": "Alle Einstellungen auf diesem Bildschirm auf die Standardwerte zurücksetzen. Server und Downloads sind nicht betroffen.",
   "settingsResetDone": "Einstellungen auf Standard zurückgesetzt",
-
   "realAudioDialogTitle": "Echtes Audio verwenden?",
   "realAudioDialogBody": "Der Echtaudio-Modus liest die Wellenform der Musik, die dein Telefon abspielt, damit der Visualizer darauf reagieren kann. Android erfordert dafür die RECORD_AUDIO-Berechtigung – die App nimmt kein Audio auf und sendet es nirgendwohin. Du kannst jederzeit zu synthetisiert zurückwechseln.",
   "realAudioPermPermanentlyDenied": "Berechtigung dauerhaft verweigert. Aktiviere sie in den Systemeinstellungen, um echtes Audio zu verwenden.",
   "realAudioPermDenied": "Berechtigung verweigert. Es wird bei synthetisiertem Audio geblieben.",
-
   "visualizerTapHint": "Tippen = nächstes Preset · lange drücken zum Schließen",
   "visualizerFailed": "Visualizer konnte nicht gestartet werden",
   "visualizerBringingUp": "Renderer wird gestartet…",
@@ -123,7 +89,6 @@
   "visualizerAudioSourceLine": "Audioquelle: {source}",
   "visualizerTapToClose": "Zum Schließen irgendwo tippen",
   "visualizerUnsupported": "Der Visualizer wird derzeit nur unter Android unterstützt.",
-
   "aboutTitle": "Über",
   "aboutBuiltBy": "Entwickelt von {name}",
   "linkDiscordSubtitle": "Community-Chat",
@@ -131,7 +96,6 @@
   "linkHomepageSubtitle": "Projekt-Homepage",
   "aboutAttributions": "Danksagungen",
   "aboutAttributionsSubtitle": "Lizenz, Shader-Credits und Open-Source-Hinweise.",
-
   "ok": "OK",
   "delete": "Löschen",
   "edit": "Bearbeiten",
@@ -145,7 +109,6 @@
   "copy": "Kopieren",
   "done": "Fertig",
   "copiedToClipboard": "In Zwischenablage kopiert",
-
   "attributionsTitle": "Danksagungen",
   "attributionsSectionLicense": "Lizenz",
   "attributionsSectionShaders": "Visualizer-Shader",
@@ -154,7 +117,6 @@
   "attributionsLicenseBody": "Freie Software unter der GNU General Public License v3.0. Du darfst sie unter diesen Bedingungen nutzen, studieren, teilen und verändern.",
   "attributionsPackages": "Open-Source-Paketlizenzen",
   "attributionsPackagesSubtitle": "Vollständige Lizenztexte für alle gebündelten Flutter/Dart-Pakete.",
-
   "manageServersTitle": "Server verwalten",
   "manageServerInfo": "Serverinfo",
   "manageServerDownloadFolder": "Download-Ordner:",
@@ -162,7 +124,6 @@
   "manageServerPathCopied": "Pfad in Zwischenablage kopiert",
   "confirmRemoveServerTitle": "Serverentfernung bestätigen",
   "removeSyncedFiles": "Synchronisierte Dateien vom Gerät entfernen?",
-
   "playlistsTitle": "Playlists",
   "playlistsNew": "Neue Playlist",
   "playlistsEmptyTitle": "Noch keine Playlists",
@@ -171,7 +132,6 @@
   "playlistsRename": "Playlist umbenennen",
   "playlistFallbackTitle": "Playlist",
   "playlistEmptyDetail": "Playlist ist leer.\nFüge Titel über die Warteschlange hinzu.",
-
   "shareEmptyTitle": "Leere Warteschlange",
   "shareEmptyBody": "Füge Songs zur Warteschlange hinzu, bevor du teilst.",
   "shareBlockedTitle": "Diese Warteschlange kann nicht geteilt werden",
@@ -188,10 +148,8 @@
   "shareAction": "Teilen",
   "shareDoneTitle": "Playlist geteilt",
   "shareDoneBody": "Jeder mit diesem Link kann die Warteschlange abspielen:",
-
   "save": "Speichern",
   "start": "Start",
-
   "addServerTitle": "Server hinzufügen",
   "editServerTitle": "Server bearbeiten",
   "fieldServerUrl": "Server-URL",
@@ -216,7 +174,6 @@
   "failedToLogin": "Anmeldung fehlgeschlagen",
   "testConnected": "Verbunden – mStream v{version}",
   "testConnectFailed": "Verbindung fehlgeschlagen: {error}",
-
   "sleepTimerTitle": "Sleep-Timer",
   "sleepTimerHint": "Wähle eine Dauer, nach der die Wiedergabe pausiert wird.",
   "sleepTimerCustom": "Benutzerdefiniert",
@@ -226,40 +183,32 @@
   "sleepTimerPausesIn": "Pausiert in {time}",
   "sleepTimerMinutes": "{minutes} Min.",
   "sleepTimerSet": "{minutes, plural, =1{Sleep-Timer auf 1 Minute gesetzt} other{Sleep-Timer auf {minutes} Minuten gesetzt}}",
-
   "add": "Hinzufügen",
-
   "autoDjTitle": "Auto DJ",
   "autoDjAddServerFirst": "Füge zuerst einen Server hinzu.",
   "autoDjSectionServer": "Server",
   "autoDjSectionSources": "Quellen",
   "autoDjSectionContinuity": "Kontinuität",
   "autoDjSectionFilters": "Filter",
-
   "autoDjBpmTitle": "BPM-Kontinuität",
   "autoDjBpmSubtitle": "Bevorzugt Titel innerhalb eines Tempofensters des aktuellen Songs. Berücksichtigt Halb-/Doppeltempo-Äquivalenz.",
   "autoDjTolerance": "Toleranz",
   "autoDjBpmTolerance": "± {bpm} BPM",
-
   "autoDjHarmonicTitle": "Harmonisches Mixen",
   "autoDjHarmonicSubtitle": "Bevorzugt Titel in Tonarten, die gut zum gesperrten Song passen (Camelot-Rad-Nachbarn).",
-
   "autoDjStatusOn": "Auto DJ ist an",
   "autoDjStatusOff": "Auto DJ ist aus",
   "autoDjStatusOffDetail": "Tippe unten zum Starten. Die Bibliothek des aktuellen Servers wird verwendet.",
   "autoDjStart": "Auto DJ starten",
   "autoDjStop": "Auto DJ stoppen",
   "autoDjStatusOnDetail": "Songs werden aus {url} ausgewählt, wenn die Warteschlange zur Neige geht.",
-
   "autoDjActiveSource": "Aktive Quelle",
   "autoDjActiveSourceTap": "Aktive Quelle – zum Wechseln tippen",
   "autoDjSwitch": "Wechseln",
   "autoDjOneSourceRequired": "Mindestens eine Quelle ist erforderlich.",
-
   "autoDjMinRating": "Mindestbewertung",
   "autoDjMinRatingSubtitle": "Nur Songs mit dieser Bewertung oder höher auswählen.",
   "autoDjRatingAny": "Beliebig",
-
   "autoDjGenreTitle": "Genre-Filter",
   "autoDjGenreSubtitle": "Whitelist spielt nur passende Titel; Blacklist überspringt sie.",
   "autoDjWhitelist": "Whitelist",
@@ -267,26 +216,21 @@
   "autoDjNoGenres": "Keine Genres ausgewählt. Tippe auf \"Genres auswählen\".",
   "autoDjPickGenres": "Genres auswählen",
   "autoDjGenreLoadError": "Genres konnten nicht geladen werden",
-
   "autoDjKeywordTitle": "Stichwort-Filter",
   "autoDjKeywordSubtitle": "Überspringt Titel, deren Name, Interpret, Album oder Dateipfad eines dieser Wörter enthält.",
   "autoDjNoKeywords": "Keine Stichwörter. Füge unten Wörter hinzu, um zu filtern.",
   "autoDjKeywordHint": "z. B. \"live\" oder \"remix\"",
-
   "autoDjSearchGenres": "Genres suchen…",
   "autoDjNoGenresOnServer": "Keine Genres auf diesem Server gefunden.",
   "autoDjSelectedCount": "{count} ausgewählt",
   "autoDjNoGenresMatch": "Keine Genres passen zu \"{query}\".",
-
   "download": "Herunterladen",
   "addAll": "Alle hinzufügen",
-
   "browserConfirmDeletePlaylist": "Playlist-Löschung bestätigen",
   "browserConfirmDeleteFolder": "Ordner-Löschung bestätigen",
   "browserSearchHint": "Datenbank durchsuchen",
   "browserDownloadsStarted": "{count, plural, =1{1 Download gestartet} other{{count} Downloads gestartet}}",
   "browserSongsAdded": "{count, plural, =1{1 Song zur Warteschlange hinzugefügt} other{{count} Songs zur Warteschlange hinzugefügt}}",
-
   "tabBrowser": "Mediathek",
   "tabQueue": "Warteschlange",
   "drawerTagline": "Persönliches Musikstreaming",
@@ -296,17 +240,14 @@
   "mainClearQueue": "Warteschlange leeren",
   "mainSync": "Synchronisieren",
   "mainQueueCount": "{count, plural, =1{1 Titel in der Warteschlange} other{{count} Titel in der Warteschlange}}",
-
   "autoDjEnabled": "Auto DJ aktiviert",
   "autoDjDisabled": "Auto DJ deaktiviert",
   "autoDjEnabledFor": "Auto DJ aktiviert für {url}",
-
   "addToPlaylistTitle": "Zur Playlist hinzufügen",
   "addToPlaylistEmpty": "Noch keine Playlists – tippe auf +, um eine zu erstellen.",
   "addedToPlaylist": "Zu {name} hinzugefügt",
   "testConnectedSignedIn": "Verbunden — erfolgreich angemeldet.",
   "testSignInFailed": "Server erreicht, aber die Anmeldung ist fehlgeschlagen — überprüfe Benutzername und Passwort.",
-
   "browserFileExplorer": "Datei-Explorer",
   "browserLocalFiles": "Lokale Dateien",
   "browserPlaylists": "Playlists",
@@ -317,12 +258,10 @@
   "browserSearch": "Suchen",
   "browserWelcomeTitle": "Willkommen bei mStream",
   "browserWelcomeSubtitle": "Hier tippen, um einen Server hinzuzufügen",
-
   "settingsVisualizerKnobs": "Visualizer-Regler",
   "settingsVisualizerKnobsSubtitle": "Zeigt Live-Regler über dem Visualizer, um die Audio-Reaktivität jedes Shaders anzupassen. Nur Shader-Engine.",
   "visualizerTuningTitle": "Abstimmung",
   "close": "Schließen",
-
   "migMoveStopped": "Verschieben gestoppt – nicht genug Speicherplatz oder der Speicherort ist nicht verfügbar.",
   "migMoveComplete": "Verschieben abgeschlossen",
   "migMoveCompleteSkipped": "{count, plural, =1{Verschieben abgeschlossen – 1 Datei übersprungen (am Zielort nicht unterstützt)} other{Verschieben abgeschlossen – {count} Dateien übersprungen (am Zielort nicht unterstützt)}}",
@@ -331,7 +270,6 @@
   "queueDownloadAll": "Alle herunterladen",
   "queueDownloadAllBody": "{count, plural, =1{1 Titel wird für die Offline-Wiedergabe heruntergeladen.} other{{count} Titel werden für die Offline-Wiedergabe heruntergeladen.}}",
   "mainMore": "Mehr",
-
   "commonOn": "Ein",
   "commonOff": "Aus",
   "settingsCastQuality": "Cast-Visualizer-Qualität",
@@ -339,7 +277,6 @@
   "settingsCastQualitySubtitle1080": "Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 1080p – scharf auf jedem Chromecast (Standard).",
   "settingsCastQualitySubtitle4k": "Auflösung, mit der der Visualizer auf einen Fernseher gestreamt wird. 4K – benötigt einen 4K-Chromecast; deutlich höhere Last für das Telefon.",
   "eqCasting": "Der Equalizer passt das Audio auf diesem Gerät an, daher ist er beim Streamen nicht verfügbar. Trenne die Verbindung, um ihn zu verwenden.",
-
   "browserNothingToDownload": "In dieser Liste gibt es nichts zum Herunterladen",
   "browserDownloadAllTitle": "Alle herunterladen",
   "browserDownloadAllConfirm": "{count, plural, =1{1 Datei wird heruntergeladen.} other{{count} Dateien werden heruntergeladen.}}",
@@ -355,7 +292,6 @@
   "dlServerGone": "Dieser Server ist nicht mehr konfiguriert.",
   "dlStorageUnavailable": "Speicherort nicht verfügbar – verbinde die SD-Karte erneut oder ändere den Speicherort dieses Servers unter \"Server bearbeiten\".",
   "dlCouldNotStart": "Download konnte nicht gestartet werden – Speicher nicht verfügbar.",
-
   "storageLocationLabel": "Speicherort",
   "storageAppLocal": "App-intern",
   "storagePermanent": "Dauerhaft",
@@ -396,7 +332,6 @@
   "storageMovingBackground": "Deine Downloads werden im Hintergrund verschoben – lass die App geöffnet.",
   "storageChooseFolderFirst": "Wähle zuerst einen Download-Ordner.",
   "storageChooseSdFolderFirst": "Wähle zuerst einen Ordner auf der SD-Karte. Falls jeder Ordner abgelehnt wird, lässt dein Gerät Apps möglicherweise nicht auf die Karte schreiben – verwende stattdessen Dauerhaft oder App-intern.",
-
   "castPlayOn": "Abspielen auf",
   "castPlayOnTooltip": "Abspielen auf…",
   "castSearching": "Suche nach Cast-Geräten…",
@@ -431,5 +366,15 @@
   "diagnosticsEmpty": "Noch keine Protokolle",
   "storageAppExternal": "App extern",
   "selfSignedTitle": "Selbstsigniertes Zertifikat zulassen",
-  "selfSignedSubtitle": "Überspringt die TLS-Prüfung für diesen Server. Nur in einem vertrauenswürdigen Netzwerk aktivieren."
+  "selfSignedSubtitle": "Überspringt die TLS-Prüfung für diesen Server. Nur in einem vertrauenswürdigen Netzwerk aktivieren.",
+  "importedShadersTitle": "Importierte Shader",
+  "importedShadersSettingsSubtitle": "Füge deine eigenen .glsl-Dateien zur Rotation der Shader-Engine hinzu.",
+  "importedShadersRescan": "Ordner neu scannen",
+  "importedShadersDropHint": "Lege .glsl-Dateien in diesen Ordner und scanne dann neu:",
+  "importedShadersCopyPath": "Pfad kopieren",
+  "importedShadersReachableHint": "Über USB oder einen Dateimanager erreichbar (unter Android/data). Importierte Shader werden Teil der Rotation, wenn die Shader-Engine aktiv ist.",
+  "importedShadersRemove": "Entfernen",
+  "importedShadersEmptyTitle": "Noch keine Shader im Ordner",
+  "importedShadersEmptyBody": "Kopiere .glsl-Dateien im Shadertoy-Stil in den Ordner oben und tippe dann auf Neu scannen.",
+  "importedShadersInvalid": "Ist möglicherweise kein gültiger Shader — kein mainImage/main-Einstiegspunkt."
 }

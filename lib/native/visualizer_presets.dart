@@ -11,10 +11,12 @@
 // file starts with metadata comments (// title:, // author:, //
 // license:) so we can surface attribution in the UI later.
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
 
+import 'user_shaders.dart';
 import 'visualizer_bridge.dart';
 
 /// Which preset library a [VisualizerPresets] call targets. Mirrors the
@@ -61,29 +63,50 @@ class VisualizerPresets {
     }
   }
 
-  /// Asset paths bundled for [kind]. Cached after first read.
+  /// Preset paths for [kind]: bundled assets first, then user-imported
+  /// shaders (Shader engine only). Cached after first read — call
+  /// [invalidateCache] after an import/delete so the change is picked up.
   Future<List<String>> _list(VisualizerPresetKind kind) async {
     final cached = _paths[kind];
     if (cached != null) return cached;
+
+    // Bundled presets shipped inside the APK.
+    List<String> assets;
     try {
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
       final dir = _directoryFor(kind);
       final ext = _extensionFor(kind);
-      final found = manifest
+      assets = manifest
           .listAssets()
           .where((k) => k.startsWith(dir) && k.endsWith(ext))
           .toList()
         ..sort();
-      _paths[kind] = found;
-      // ignore: avoid_print
-      print('VisualizerPresets[${kind.name}]: found ${found.length}');
-      return found;
     } catch (e) {
       // ignore: avoid_print
       print('VisualizerPresets[${kind.name}]: manifest read failed: $e');
-      _paths[kind] = const [];
-      return const [];
+      assets = const [];
     }
+
+    // User-imported shaders live in app storage as absolute paths. Only
+    // the Shader engine compiles `.glsl`; Milkdrop has no import path yet.
+    final user = kind == VisualizerPresetKind.shader
+        ? await UserShaders().list()
+        : const <String>[];
+
+    final all = [...assets, ...user];
+    _paths[kind] = all;
+    // ignore: avoid_print
+    print('VisualizerPresets[${kind.name}]: '
+        '${assets.length} bundled + ${user.length} imported');
+    return all;
+  }
+
+  /// Drop the cached catalog (and reset cursors) so the next load
+  /// re-scans both bundled assets and the user-import directory. Call
+  /// after importing or deleting a shader.
+  void invalidateCache() {
+    _paths.clear();
+    _cursors.clear();
   }
 
   /// Load a random preset of the given kind into the running engine.
@@ -119,12 +142,21 @@ class VisualizerPresets {
   Future<String?> randomData(VisualizerPresetKind kind) async {
     final paths = await _list(kind);
     if (paths.isEmpty) return null;
-    return rootBundle.loadString(paths[_rng.nextInt(paths.length)]);
+    final pick = paths[_rng.nextInt(paths.length)];
+    // Bundled presets are asset-bundle keys; imported shaders are absolute
+    // filesystem paths read straight off disk (mirrors _loadByPath).
+    return pick.startsWith('assets/')
+        ? await rootBundle.loadString(pick)
+        : await File(pick).readAsString();
   }
 
-  Future<void> _loadByPath(String assetPath, {required bool smooth}) async {
-    final data = await rootBundle.loadString(assetPath);
-    _currentPath = assetPath;
+  Future<void> _loadByPath(String path, {required bool smooth}) async {
+    // Bundled presets are asset-bundle keys (`assets/...`); imported
+    // shaders are absolute filesystem paths read straight off disk.
+    final data = path.startsWith('assets/')
+        ? await rootBundle.loadString(path)
+        : await File(path).readAsString();
+    _currentPath = path;
     _currentSource = data;
     await VisualizerBridge.loadPreset(data, smooth: smooth);
   }
