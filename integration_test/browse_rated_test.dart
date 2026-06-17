@@ -1,8 +1,8 @@
 // Browse-rated flow.
 //
 // Verifies the GET /api/v1/db/rated parsing path. Same shape as
-// recent/added, but DisplayItem.showRating is set to true, so the row
-// title is prefixed with `[rating/2] `. Rating 8 → "[4.0] Title".
+// recent/added: each row renders its plain title plus a compact trailing
+// rating readout ("N★", rating/2) from RatingControl. Rating 8 → "4".
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -28,7 +28,7 @@ void main() {
   });
 
   testWidgets(
-    'tapping Rated renders titles prefixed with rating/2',
+    'tapping Rated renders rated songs with their rating',
     (WidgetTester tester) async {
       mockServer = await MockServer.start({
         '/api/v1/db/rated': (_) => [
@@ -71,11 +71,12 @@ void main() {
       await tester.tap(find.text('Rated'));
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      // DisplayItem prefixes the title with `[rating/2] ` when
-      // showRating is true. Both ratings are even ints so the format
-      // is `[N.0] Title`.
-      expect(find.text('[4.0] Have a Cigar'), findsOneWidget);
-      expect(find.text('[5.0] Wish You Were Here'), findsOneWidget);
+      // Titles render plainly (no rating prefix); each rating shows as the
+      // compact trailing "N★" readout — 8 → "4", 10 → "5".
+      expect(find.text('Have a Cigar'), findsOneWidget);
+      expect(find.text('Wish You Were Here'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
     },
   );
 }

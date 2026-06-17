@@ -1329,6 +1329,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Speichert die Wiedergabeliste und deine Position und stellt sie beim erneuten Öffnen der App wieder her.';
 
   @override
+  String get settingsRatingHalf => 'Halbe-Sterne-Bewertungen';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Songs in Halbstern-Schritten bewerten (Stern lange drücken).';
+
+  @override
+  String get ratingTitle => 'Bewerten';
+
+  @override
+  String get ratingFailed => 'Bewertung konnte nicht gespeichert werden';
+
+  @override
   String get diagnosticsTitle => 'Diagnose';
 
   @override

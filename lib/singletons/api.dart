@@ -163,6 +163,9 @@ class ApiManager {
       // /transcode endpoint + codec/bitrate when transcoding is on).
       final String streamUrl =
           buildServerStreamUrl(useThisServer!, e.toString());
+      // The recursive endpoint returns bare paths (no metadata), so these items
+      // carry only server + path — no rating / fidelity / tags. They populate
+      // if the same track is later reached via a metadata-bearing browse.
       MediaItem lol = MediaItem(
           id: streamUrl,
           title: e.split("/").last,
@@ -454,11 +457,31 @@ class ApiManager {
           m.artist);
 
       newItem.metadata = m;
-      newItem.showRating = true;
 
       newList.add(newItem);
     });
     BrowserManager().addListToStack(newList);
+  }
+
+  /// POST /api/v1/db/rate-song — set [rating] (0–10 server scale, or null to
+  /// clear) for the track at [filepath] on [server]. Per-user and server-side;
+  /// [server] is explicit so a mixed-server queue rates each track on its own
+  /// server. The endpoint resolves the track by its vpath-relative filepath, so
+  /// strip the client's leading slash (DisplayItem.data / MediaItem 'path' carry
+  /// a leading "/").
+  Future<void> rateSong(Server server, String filepath, int? rating) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    final response = await http.post(
+      Uri.parse(server.url).resolve('/api/v1/db/rate-song'),
+      body: jsonEncode({'filepath': fp, 'rating': rating}),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.jwt ?? '',
+      },
+    );
+    if (response.statusCode > 299) {
+      throw Exception('Rating failed (HTTP ${response.statusCode})');
+    }
   }
 
   Future<void> getArtists({Server? useThisServer}) async {

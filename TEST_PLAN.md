@@ -113,7 +113,7 @@ then have `ApiManager` call them. This is a cheap refactor (move code, no behavi
 - [x] **Browse albums** — `integration_test/browse_albums_test.dart`. Catches `/api/v1/db/albums` parsing regressions.
 - [x] **Browse artists with drill-down** — `integration_test/browse_artists_test.dart`. Tests `/api/v1/db/artists` then `/api/v1/db/artists-albums`.
 - [x] **Browse recently added** — `integration_test/browse_recent_test.dart`. Tests the metadata-bearing `/api/v1/db/recent/added` shape.
-- [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts the `[rating/2] Title` prefix that DisplayItem applies when `showRating` is set.
+- [x] **Browse rated** — `integration_test/browse_rated_test.dart`. Asserts each rated row renders its plain title plus the compact trailing rating readout (`rating/2`, e.g. 8 → "4").
 - [x] **Search** — `integration_test/search_test.dart`. Covers the three parallel arrays (artists/albums/title) returned by `/api/v1/db/search`.
 - [x] **Browse album songs (drill-down)** — `integration_test/browse_album_songs_test.dart`. Albums → tap an album → POST `/api/v1/db/album-songs` returns metadata-bearing items.
 - [x] **Playback progress bar** — `integration_test/playback_progress_test.dart`. Mocks `/media/*` with an in-memory silent WAV (`buildSilentWav` helper), navigates Albums → album → song → play, samples the BottomBar's `WaveformProgress.progress` across 2s of real playback, asserts monotonic advance and value in [0, 1]. *Originally failed* — caught the `mediaItem.duration` propagation bug in `audio_stuff.dart`; fixed in commit 8741f1d (see "Bugs caught and fixed").

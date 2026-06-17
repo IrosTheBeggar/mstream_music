@@ -15,8 +15,6 @@ class DisplayItem {
   final String type;
   final String? data;
 
-  bool showRating = false;
-
   Icon? icon;
   String name;
   MusicMetadata? metadata;
@@ -96,11 +94,8 @@ class DisplayItem {
   // honor, so long folder names get to wrap and show in full).
   Widget getText({bool truncate = true, AppLocalizations? l}) {
     if (metadata?.title != null) {
-      final ratingPrefix = showRating == true && metadata?.rating != null
-          ? '[${metadata!.rating! / 2}] '
-          : '';
       return Text(
-        '$ratingPrefix${metadata!.title!}',
+        metadata!.title!,
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
         maxLines: truncate ? 1 : null,
         overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
@@ -108,11 +103,8 @@ class DisplayItem {
     }
 
     if (type == 'file' || type == 'localFile') {
-      final ratingPrefix = showRating == true && metadata?.rating != null
-          ? '[${metadata!.rating! / 2}] '
-          : '';
       return Text(
-        '$ratingPrefix${data!.split('/').last}',
+        data!.split('/').last,
         style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
         maxLines: truncate ? 1 : null,
         overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,

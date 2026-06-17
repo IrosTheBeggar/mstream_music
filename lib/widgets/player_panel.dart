@@ -19,6 +19,7 @@ import '../util/image_cache.dart';
 import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'queue_list.dart';
+import 'star_rating.dart';
 import 'waveform_progress.dart';
 
 /// A Spotify/Apple-Music-style player panel pinned to the bottom of the
@@ -475,6 +476,11 @@ class _TopMedium extends StatelessWidget {
                                       fontSize: 10,
                                       letterSpacing: 0.3,
                                       color: VelvetColors.textTertiary)),
+                            if (item != null) ...[
+                              if (year != null && year.isNotEmpty)
+                                const SizedBox(width: 10),
+                              MediaItemRating(item: item, size: 13),
+                            ],
                             const Spacer(),
                             const _DiscoveryButtons(),
                           ],
@@ -573,6 +579,11 @@ class _TopLarge extends StatelessWidget {
                                 fontSize: 10,
                                 letterSpacing: 0.3,
                                 color: VelvetColors.textTertiary)),
+                      if (item != null) ...[
+                        if (year != null && year.isNotEmpty)
+                          const SizedBox(width: 10),
+                        MediaItemRating(item: item, size: 13),
+                      ],
                       const Spacer(),
                       const _DiscoveryButtons(),
                     ],
@@ -663,6 +674,11 @@ class _TopXL extends StatelessWidget {
                                 fontSize: 10.5,
                                 letterSpacing: 0.3,
                                 color: VelvetColors.textTertiary)),
+                      if (item != null) ...[
+                        if (year != null && year.isNotEmpty)
+                          const SizedBox(width: 10),
+                        MediaItemRating(item: item, size: 13),
+                      ],
                       const Spacer(),
                       const _DiscoveryButtons(),
                     ],

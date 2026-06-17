@@ -12,6 +12,7 @@ import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
+import '../widgets/star_rating.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
@@ -722,6 +723,26 @@ class _BrowserState extends State<Browser> {
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
+                              // Server songs get a tappable rating star at the
+                              // end (same pattern as the album rows). Local files
+                              // have no server-side rating, so no star. Needs a
+                              // metadata object too — without one the rate has
+                              // nowhere to write back to (onChanged below).
+                              trailing: (b[i].type == 'file' &&
+                                      b[i].server != null &&
+                                      b[i].data != null &&
+                                      b[i].metadata != null)
+                                  ? RatingControl(
+                                      rating: b[i].metadata?.rating,
+                                      server: b[i].server!,
+                                      filepath: b[i].data!,
+                                      size: 11,
+                                      onChanged: (r) {
+                                        b[i].metadata?.rating = r;
+                                        BrowserManager().updateStream();
+                                      },
+                                    )
+                                  : null,
                               onTap: () {
                                 handleTap(b, i, c);
                               }))

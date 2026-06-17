@@ -26,6 +26,7 @@ import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../widgets/player_panel.dart';
+import '../widgets/star_rating.dart';
 
 class AlbumDetailView extends StatefulWidget {
   /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`)
@@ -400,6 +401,26 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     );
   }
 
+  // Tappable rating for a track row: small stars when rated, a single outline
+  // star otherwise; opens the rating form on tap and refreshes the list on
+  // change. Empty placeholder if the row has no server/path (shouldn't happen
+  // for album songs).
+  Widget _ratingControl(DisplayItem s) {
+    final server = s.server;
+    final path = s.data;
+    if (server == null || path == null) return const SizedBox.shrink();
+    return RatingControl(
+      rating: s.metadata?.rating,
+      server: server,
+      filepath: path,
+      size: 11,
+      onChanged: (r) {
+        s.metadata?.rating = r;
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
   Widget _trackList(List<DisplayItem> songs) {
     return StreamBuilder<({String? path, bool playing})>(
       stream: _nowStream,
@@ -421,6 +442,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               onAddNext: () => _rowAddNext(i),
               onPlayNow: () => _rowPlayNow(i),
               onAddToEnd: () => _rowAddToEnd(i),
+              ratingControl: _ratingControl(s),
             );
           },
         );
@@ -443,6 +465,7 @@ class _SongRow extends StatelessWidget {
   final VoidCallback onAddNext;
   final VoidCallback onPlayNow;
   final VoidCallback onAddToEnd;
+  final Widget ratingControl;
 
   const _SongRow({
     required this.number,
@@ -453,6 +476,7 @@ class _SongRow extends StatelessWidget {
     required this.onAddNext,
     required this.onPlayNow,
     required this.onAddToEnd,
+    required this.ratingControl,
     this.duration,
   });
 
@@ -505,27 +529,36 @@ class _SongRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (duration != null) ...[
-                const SizedBox(width: 10),
-                Text(
-                  formatDuration(duration!, padMinutes: false),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: VelvetColors.textTertiary,
-                  ),
-                ),
-              ],
+              const SizedBox(width: 10),
+              // Duration on top with the tappable rating star(s) directly under
+              // it — vertical stacking keeps the row compact, and the star shows
+              // even when unrated so it's one tap from the rating form.
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (duration != null)
+                    Text(
+                      formatDuration(duration!, padMinutes: false),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: VelvetColors.textTertiary,
+                      ),
+                    ),
+                  if (duration != null) const SizedBox(height: 1),
+                  ratingControl,
+                ],
+              ),
               const SizedBox(width: 4),
-              // Play-options menu: Add next / Play now (+ Add to end of queue
-              // when the row tap is play-from-here, so every queue action stays
-              // reachable).
+              // Queue-options dropdown: Add next / Play now (+ Add to end of
+              // queue when the row tap is play-from-here). Rating moved out to
+              // the always-visible star above.
               PopupMenuButton<String>(
-                icon: Icon(Icons.play_arrow_rounded,
+                icon: Icon(Icons.arrow_drop_down,
                     color: VelvetColors.textSecondary),
                 iconSize: 24,
                 color: VelvetColors.surface,
-                tooltip: l.play,
                 padding: EdgeInsets.zero,
                 constraints:
                     const BoxConstraints(minWidth: 40, minHeight: 40),

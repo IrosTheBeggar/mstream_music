@@ -1328,6 +1328,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.';
 
   @override
+  String get settingsRatingHalf => 'Valoraciones de media estrella';
+
+  @override
+  String get settingsRatingHalfSubtitle =>
+      'Valora canciones en pasos de media estrella (mantén pulsada una estrella).';
+
+  @override
+  String get ratingTitle => 'Valorar';
+
+  @override
+  String get ratingFailed => 'No se pudo guardar la valoración';
+
+  @override
   String get diagnosticsTitle => 'Diagnóstico';
 
   @override

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
+import '../widgets/star_rating.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
 /// backdrop, a hero cover, the title / artist / album·year, a track/disc line,
@@ -60,6 +61,11 @@ class MetadataScreen extends StatelessWidget {
     // Self-labelling chips (icon + value) — no extra translated strings, shown
     // only when the field is present.
     final chips = <Widget>[
+      // Tappable rating (stars when rated, a single star otherwise) — opens the
+      // rating form and updates live without leaving the screen. Shown only for
+      // a rateable track: a local file has no server-side rating, and adding it
+      // unconditionally would force an empty chip row to render for one.
+      if (MediaItemRating.canRate(item)) MediaItemRating(item: item, size: 18),
       if (item.duration != null)
         _chip(Icons.schedule_rounded, formatDuration(item.duration!)),
       if (fidelity.isNotEmpty) _chip(Icons.high_quality_rounded, fidelity),
