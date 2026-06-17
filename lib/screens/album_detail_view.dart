@@ -401,15 +401,19 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     );
   }
 
-  void _rateRow(DisplayItem s) {
+  // Tappable rating for a track row: small stars when rated, a single outline
+  // star otherwise; opens the rating form on tap and refreshes the list on
+  // change. Empty placeholder if the row has no server/path (shouldn't happen
+  // for album songs).
+  Widget _ratingControl(DisplayItem s) {
     final server = s.server;
     final path = s.data;
-    if (server == null || path == null) return;
-    showRatingDialog(
-      context,
+    if (server == null || path == null) return const SizedBox.shrink();
+    return RatingControl(
+      rating: s.metadata?.rating,
       server: server,
       filepath: path,
-      current: s.metadata?.rating,
+      size: 11,
       onChanged: (r) {
         s.metadata?.rating = r;
         if (mounted) setState(() {});
@@ -438,8 +442,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               onAddNext: () => _rowAddNext(i),
               onPlayNow: () => _rowPlayNow(i),
               onAddToEnd: () => _rowAddToEnd(i),
-              onRate: () => _rateRow(s),
-              rating: s.metadata?.rating,
+              ratingControl: _ratingControl(s),
             );
           },
         );
@@ -462,8 +465,7 @@ class _SongRow extends StatelessWidget {
   final VoidCallback onAddNext;
   final VoidCallback onPlayNow;
   final VoidCallback onAddToEnd;
-  final VoidCallback onRate;
-  final int? rating;
+  final Widget ratingControl;
 
   const _SongRow({
     required this.number,
@@ -474,8 +476,7 @@ class _SongRow extends StatelessWidget {
     required this.onAddNext,
     required this.onPlayNow,
     required this.onAddToEnd,
-    required this.onRate,
-    this.rating,
+    required this.ratingControl,
     this.duration,
   });
 
@@ -528,31 +529,36 @@ class _SongRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (rating != null && rating! > 0) ...[
-                const SizedBox(width: 8),
-                StarRating(rating: rating, size: 11),
-              ],
-              if (duration != null) ...[
-                const SizedBox(width: 10),
-                Text(
-                  formatDuration(duration!, padMinutes: false),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: VelvetColors.textTertiary,
-                  ),
-                ),
-              ],
+              const SizedBox(width: 10),
+              // Duration on top with the tappable rating star(s) directly under
+              // it — vertical stacking keeps the row compact, and the star shows
+              // even when unrated so it's one tap from the rating form.
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (duration != null)
+                    Text(
+                      formatDuration(duration!, padMinutes: false),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: VelvetColors.textTertiary,
+                      ),
+                    ),
+                  if (duration != null) const SizedBox(height: 1),
+                  ratingControl,
+                ],
+              ),
               const SizedBox(width: 4),
-              // Play-options menu: Add next / Play now (+ Add to end of queue
-              // when the row tap is play-from-here, so every queue action stays
-              // reachable).
+              // Queue-options dropdown: Add next / Play now (+ Add to end of
+              // queue when the row tap is play-from-here). Rating moved out to
+              // the always-visible star above.
               PopupMenuButton<String>(
-                icon: Icon(Icons.play_arrow_rounded,
+                icon: Icon(Icons.arrow_drop_down,
                     color: VelvetColors.textSecondary),
                 iconSize: 24,
                 color: VelvetColors.surface,
-                tooltip: l.play,
                 padding: EdgeInsets.zero,
                 constraints:
                     const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -567,9 +573,6 @@ class _SongRow extends StatelessWidget {
                     case 'end':
                       onAddToEnd();
                       break;
-                    case 'rate':
-                      onRate();
-                      break;
                   }
                 },
                 itemBuilder: (context) => [
@@ -579,7 +582,6 @@ class _SongRow extends StatelessWidget {
                       TapBehavior.playFromHere)
                     PopupMenuItem(
                         value: 'end', child: Text(l.queueAddToEnd)),
-                  PopupMenuItem(value: 'rate', child: Text(l.ratingTitle)),
                 ],
               ),
             ],

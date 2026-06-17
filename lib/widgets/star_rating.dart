@@ -1,8 +1,10 @@
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
+import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 
@@ -117,4 +119,97 @@ Future<void> showRatingDialog(
       },
     ),
   );
+}
+
+/// Compact, tappable rating indicator used inline wherever a track can be rated:
+/// small stars when rated, a single outline star when not — always shown, so an
+/// unrated track is one tap from the rating form (opened via [showRatingDialog]).
+/// Pure UI: the host supplies the track's [server] + [filepath] and an
+/// [onChanged] to persist the new value and refresh its own view.
+class RatingControl extends StatelessWidget {
+  final int? rating;
+  final Server server;
+  final String filepath;
+  final ValueChanged<int?> onChanged;
+  final double size;
+
+  const RatingControl({
+    super.key,
+    required this.rating,
+    required this.server,
+    required this.filepath,
+    required this.onChanged,
+    this.size = 12,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rated = rating != null && rating! > 0;
+    return InkWell(
+      onTap: () => showRatingDialog(context,
+          server: server,
+          filepath: filepath,
+          current: rating,
+          onChanged: onChanged),
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        // Read-only stars when rated; a single placeholder star otherwise. The
+        // tap target is this InkWell, so the inner StarRating stays read-only.
+        child: rated
+            ? StarRating(rating: rating, size: size)
+            : Icon(Icons.star_border,
+                size: size + 4, color: VelvetColors.textTertiary),
+      ),
+    );
+  }
+}
+
+/// [RatingControl] for a now-playing / Song-Info [MediaItem]: seeds the rating
+/// from `extras['rating']`, updates it locally on a rate (so the star reflects
+/// immediately without re-enqueuing the track), resets when the track changes,
+/// and resolves the track's server from `extras['server']`. Renders nothing for
+/// an item with no resolvable server/path (e.g. a local file).
+class MediaItemRating extends StatefulWidget {
+  final MediaItem item;
+  final double size;
+  const MediaItemRating({super.key, required this.item, this.size = 14});
+
+  @override
+  State<MediaItemRating> createState() => _MediaItemRatingState();
+}
+
+class _MediaItemRatingState extends State<MediaItemRating> {
+  int? _rating;
+
+  @override
+  void initState() {
+    super.initState();
+    _rating = (widget.item.extras?['rating'] as num?)?.toInt();
+  }
+
+  @override
+  void didUpdateWidget(MediaItemRating old) {
+    super.didUpdateWidget(old);
+    if (old.item.id != widget.item.id) {
+      _rating = (widget.item.extras?['rating'] as num?)?.toInt();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final server =
+        ServerManager().byLocalname(widget.item.extras?['server'] as String?);
+    final path = widget.item.extras?['path'] as String?;
+    if (server == null || path == null) return const SizedBox.shrink();
+    return RatingControl(
+      rating: _rating,
+      server: server,
+      filepath: path,
+      size: widget.size,
+      onChanged: (r) {
+        if (mounted) setState(() => _rating = r);
+      },
+    );
+  }
 }
