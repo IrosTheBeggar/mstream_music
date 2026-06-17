@@ -454,7 +454,6 @@ class ApiManager {
           m.artist);
 
       newItem.metadata = m;
-      newItem.showRating = true;
 
       newList.add(newItem);
     });
