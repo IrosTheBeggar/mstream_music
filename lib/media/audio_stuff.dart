@@ -497,6 +497,39 @@ class AudioPlayerHandler extends BaseAudioHandler
           }
         }
         break;
+      case 'updateRating':
+        {
+          // A track was (un)rated in the UI. Patch the new rating into the
+          // matching queue items' extras and the now-playing item, so every
+          // view that reads extras['rating'] (Song Info, the player readout)
+          // reflects it and the persisted queue keeps it across a restart. The
+          // server-side write is the rateSong POST; this only keeps the
+          // in-memory queue / item in sync.
+          final fp = extras?['filepath'] as String?;
+          if (fp != null) {
+            final target = fp.startsWith('/') ? fp.substring(1) : fp;
+            final newRating = extras?['rating'] as int?;
+            bool hit(MediaItem m) {
+              final p = m.extras?['path'] as String?;
+              return p != null &&
+                  (p.startsWith('/') ? p.substring(1) : p) == target;
+            }
+            MediaItem patched(MediaItem m) =>
+                m.copyWith(extras: {...?m.extras, 'rating': newRating});
+            var changed = false;
+            final nq = queue.value.map((m) {
+              if (hit(m)) {
+                changed = true;
+                return patched(m);
+              }
+              return m;
+            }).toList();
+            if (changed) queue.add(nq);
+            final cur = mediaItem.value;
+            if (cur != null && hit(cur)) mediaItem.add(patched(cur));
+          }
+        }
+        break;
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;

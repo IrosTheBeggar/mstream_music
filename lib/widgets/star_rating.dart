@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
+import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -97,11 +98,18 @@ Future<void> showRatingDialog(
               final prev = value;
               setLocal(() => value = v);
               onChanged(v);
+              // Keep the queue + now-playing item's extras in sync, so Song Info
+              // and a restart both reflect the rating (rateSong is the
+              // server-side write).
+              MediaManager().audioHandler.customAction(
+                  'updateRating', {'filepath': filepath, 'rating': v});
               try {
                 await ApiManager().rateSong(server, filepath, v);
               } catch (_) {
                 setLocal(() => value = prev);
                 onChanged(prev);
+                MediaManager().audioHandler.customAction(
+                    'updateRating', {'filepath': filepath, 'rating': prev});
                 if (dctx.mounted) {
                   ScaffoldMessenger.of(dctx).showSnackBar(
                       SnackBar(content: Text(l.ratingFailed)));
@@ -213,8 +221,13 @@ class _MediaItemRatingState extends State<MediaItemRating> {
   @override
   void didUpdateWidget(MediaItemRating old) {
     super.didUpdateWidget(old);
-    if (old.item.id != widget.item.id) {
-      _rating = (widget.item.extras?['rating'] as num?)?.toInt();
+    // Re-seed when the track changes OR its rating did — e.g. it was rated from
+    // the album/browser while playing, and updateRating re-emitted the item
+    // with new extras under the same id.
+    final newRating = (widget.item.extras?['rating'] as num?)?.toInt();
+    if (old.item.id != widget.item.id ||
+        (old.item.extras?['rating'] as num?)?.toInt() != newRating) {
+      _rating = newRating;
     }
   }
 
