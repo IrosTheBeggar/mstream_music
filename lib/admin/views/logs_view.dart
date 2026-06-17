@@ -30,12 +30,20 @@ class _LogsViewState extends State<LogsView> {
   Timer? _timer;
 
   @override
-  void initState() {
-    super.initState();
-    _poll();
-    _timer = Timer.periodic(_pollInterval, (_) {
-      if (!_paused) _poll();
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Poll only while this panel is the visible one; the shell keeps views
+    // mounted but flips AdminViewActive off when they're offscreen.
+    final active = AdminViewActive.of(context);
+    if (active && _timer == null) {
+      _poll();
+      _timer = Timer.periodic(_pollInterval, (_) {
+        if (!_paused) _poll();
+      });
+    } else if (!active && _timer != null) {
+      _timer!.cancel();
+      _timer = null;
+    }
   }
 
   @override

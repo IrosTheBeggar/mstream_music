@@ -11,8 +11,7 @@ class AboutView extends StatelessWidget {
   const AboutView({super.key, required this.api});
 
   Future<({String version, Map<String, dynamic> config})> _load() async {
-    final info = await api.serverInfo();
-    final config = await api.getConfig();
+    final (info, config) = await (api.serverInfo(), api.getConfig()).wait;
     return (version: '${info['server'] ?? '?'}', config: config);
   }
 

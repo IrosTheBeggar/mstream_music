@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_api.dart';
 import 'admin_session.dart';
+import 'admin_widgets.dart';
 import '../l10n/app_localizations.dart';
 import 'views/about_view.dart';
 import 'views/admin_access_view.dart';
@@ -99,7 +100,8 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final active = _flat[_selected];
+    final flat = _flat;
+    final active = flat[_selected];
     return LayoutBuilder(builder: (context, constraints) {
       final wide = constraints.maxWidth >= 900;
       final content = Scaffold(
@@ -117,10 +119,20 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
           Expanded(
-            // Fresh view on each selection (ValueKey) → only one poller at a time.
-            child: KeyedSubtree(
-              key: ValueKey(_selected),
-              child: active.build(_api),
+            // Build every view up front and keep them all mounted: each view's
+            // loader fires immediately, prefetching its data in the background
+            // so the first (and every) switch is instant. Only the active
+            // view's AdminViewActive is true, so polling views stay paused while
+            // offscreen — preserving "one poller at a time".
+            child: IndexedStack(
+              index: _selected,
+              children: [
+                for (int i = 0; i < flat.length; i++)
+                  AdminViewActive(
+                    active: i == _selected,
+                    child: flat[i].build(_api),
+                  ),
+              ],
             ),
           ),
         ]),

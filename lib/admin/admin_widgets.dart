@@ -3,6 +3,23 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'admin_api.dart';
 
+/// Tells descendant polling views whether their panel is the visible one in the
+/// shell's keep-alive IndexedStack, so they can pause their timers while mounted
+/// but offscreen. Defaults to true when absent (e.g. an embedded host).
+class AdminViewActive extends InheritedWidget {
+  final bool active;
+  const AdminViewActive(
+      {super.key, required this.active, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AdminViewActive>()?.active ??
+      true;
+
+  @override
+  bool updateShouldNotify(AdminViewActive oldWidget) =>
+      oldWidget.active != active;
+}
+
 /// Shared building blocks for the admin views. Keeping the common patterns
 /// (load-with-retry, async toggle, labelled save-field, section card) here is
 /// what lets each of the ~14 views stay short and declarative.

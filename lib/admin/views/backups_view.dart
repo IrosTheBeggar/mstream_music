@@ -14,8 +14,8 @@ class BackupsView extends StatelessWidget {
   const BackupsView({super.key, required this.api});
 
   Future<({List<dynamic> dests, Map<String, int> libs})> _load() async {
-    final dests = await api.backupDestinations();
-    final dirs = await api.getDirectories();
+    final (dests, dirs) =
+        await (api.backupDestinations(), api.getDirectories()).wait;
     final libs = <String, int>{};
     dirs.forEach((name, info) {
       final id = (info is Map && info['id'] is num)
@@ -85,10 +85,16 @@ class _StatusBannerState extends State<_StatusBanner> {
   Timer? _timer;
 
   @override
-  void initState() {
-    super.initState();
-    _poll();
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = AdminViewActive.of(context);
+    if (active && _timer == null) {
+      _poll();
+      _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+    } else if (!active && _timer != null) {
+      _timer!.cancel();
+      _timer = null;
+    }
   }
 
   @override

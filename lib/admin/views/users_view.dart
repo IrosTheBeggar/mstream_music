@@ -10,8 +10,7 @@ class UsersView extends StatelessWidget {
   const UsersView({super.key, required this.api});
 
   Future<({Map<String, dynamic> users, List<String> libs})> _load() async {
-    final users = await api.getUsers();
-    final dirs = await api.getDirectories();
+    final (users, dirs) = await (api.getUsers(), api.getDirectories()).wait;
     return (users: users, libs: dirs.keys.toList()..sort());
   }
 

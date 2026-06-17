@@ -124,6 +124,25 @@ class AdminApi {
     }
   }
 
+  /// Probes whether the admin API is reachable WITHOUT authentication — true in
+  /// the server's public/no-user mode (or when a same-origin session cookie is
+  /// already present on web). Lets the standalone web app skip the login screen
+  /// when no login is required or even possible (public mode has no users to
+  /// authenticate against). Any non-200 (401 auth-required, 403 network gate,
+  /// 405 admin-locked, network error) → false → show login.
+  static Future<bool> isOpenAdmin(String baseUrl, {http.Client? client}) async {
+    final c = client ?? http.Client();
+    try {
+      final res =
+          await c.get(Uri.parse(baseUrl).resolve('/api/v1/admin/config'));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    } finally {
+      if (client == null) c.close();
+    }
+  }
+
   /// `GET /api` — public server descriptor `{server: <version>, ...}`.
   Future<Map<String, dynamic>> serverInfo() async =>
       Map<String, dynamic>.from(await _get('/api'));

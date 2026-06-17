@@ -12,11 +12,12 @@ class SettingsView extends StatelessWidget {
 
   Future<({Map<String, dynamic> config, Map<String, dynamic> audio})>
       _load() async {
-    final config = await api.getConfig();
-    Map<String, dynamic> audio = {};
-    try {
-      audio = await api.serverAudioInfo();
-    } catch (_) {/* server audio may be unavailable */}
+    // Both run concurrently; server audio may be unavailable, so tolerate its
+    // failure (→ empty map) without blocking the rest of the page.
+    final (config, audio) = await (
+      api.getConfig(),
+      api.serverAudioInfo().catchError((_) => <String, dynamic>{}),
+    ).wait;
     return (config: config, audio: audio);
   }
 

@@ -11,9 +11,11 @@ class DatabaseView extends StatelessWidget {
 
   Future<({Map<String, dynamic> params, int files, List<dynamic> shares})>
       _load() async {
-    final params = await api.getScanParams();
-    final files = await api.scanStats();
-    final shares = await api.getSharedPlaylists();
+    final (params, files, shares) = await (
+      api.getScanParams(),
+      api.scanStats(),
+      api.getSharedPlaylists(),
+    ).wait;
     return (params: params, files: files, shares: shares);
   }
 

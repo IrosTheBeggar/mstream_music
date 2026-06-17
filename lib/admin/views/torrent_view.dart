@@ -263,10 +263,16 @@ class _TorrentListCardState extends State<_TorrentListCard> {
   Timer? _timer;
 
   @override
-  void initState() {
-    super.initState();
-    _poll();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = AdminViewActive.of(context);
+    if (active && _timer == null) {
+      _poll();
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) => _poll());
+    } else if (!active && _timer != null) {
+      _timer!.cancel();
+      _timer = null;
+    }
   }
 
   @override
@@ -277,8 +283,8 @@ class _TorrentListCardState extends State<_TorrentListCard> {
 
   Future<void> _poll() async {
     try {
-      final status = await widget.api.torrentStatus();
-      final list = await widget.api.torrentList();
+      final (status, list) =
+          await (widget.api.torrentStatus(), widget.api.torrentList()).wait;
       if (!mounted) return;
       setState(() {
         _status = status;
