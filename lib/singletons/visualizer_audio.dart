@@ -39,6 +39,7 @@ class VisualizerAudio {
     if (_active) return;
     _active = true;
     _frame = 0;
+    _phaseBass = _phaseMid = _phaseTreble = 0.0;
 
     final initial = MediaManager().audioHandler.playbackState.value;
     _playing = initial.playing;
@@ -107,28 +108,47 @@ class VisualizerAudio {
   // into its platform-channel message synchronously — before its first await —
   // so the bytes are copied out before the next tick can overwrite this.
   late final Float32List _scratch = Float32List(_samplesPerTick * 2);
+  // Running phase of each carrier, advanced sample-by-sample. Persisting it
+  // across ticks keeps the oscillators continuous even though their centre
+  // frequencies are refreshed only once per tick (see below).
+  double _phaseBass = 0.0;
+  double _phaseMid = 0.0;
+  double _phaseTreble = 0.0;
+
   Float32List _generate() {
     final amp = _playing ? 0.65 : 0.18;
     final out = _scratch;
     const beatHz = 2.0;
 
+    // The sweep LFOs are all < 1 Hz, so their value barely moves across one
+    // ~12 ms tick. Evaluate them once per tick (at the tick midpoint) instead
+    // of per sample — that drops three sin() calls per sample to three per
+    // tick. The carriers then advance by a fixed phase step for the tick,
+    // accumulated into _phase* so they stay continuous tick-to-tick.
+    //   bass:   60–120 Hz, sweeping at 0.31 Hz
+    //   mid:   440–970 Hz, sweeping at 0.47 Hz
+    //   treble: 2 kHz–5 kHz, sweeping at 0.71 Hz
+    final tMid = (_frame * _samplesPerTick + _samplesPerTick / 2) / _sampleRate;
+    final bassF   =   60 +   60 * (0.5 + 0.5 * sin(2 * pi * 0.31 * tMid));
+    final midF    =  440 +  530 * (0.5 + 0.5 * sin(2 * pi * 0.47 * tMid));
+    final trebleF = 2000 + 3000 * (0.5 + 0.5 * sin(2 * pi * 0.71 * tMid));
+    final dBass   = 2 * pi * bassF   / _sampleRate;
+    final dMid    = 2 * pi * midF    / _sampleRate;
+    final dTreble = 2 * pi * trebleF / _sampleRate;
+
     for (var i = 0; i < _samplesPerTick; i++) {
       final t = (_frame * _samplesPerTick + i) / _sampleRate;
 
-      // Beat envelope — same shape as a low-frequency tremolo.
+      // Beat envelope — fixed 2 Hz, so a plain sin on absolute time is
+      // already continuous tick-to-tick.
       final beat = 0.5 + 0.5 * sin(2 * pi * beatHz * t);
 
-      // Three slow LFO-modulated sweeps spanning the spectrum:
-      //   bass:   60–180 Hz, sweeping at 0.31 Hz
-      //   mid:   440–1500 Hz, sweeping at 0.47 Hz
-      //   treble: 2 kHz–8 kHz, sweeping at 0.71 Hz
-      final bassF   =   60 +   60 * (0.5 + 0.5 * sin(2 * pi * 0.31 * t));
-      final midF    =  440 +  530 * (0.5 + 0.5 * sin(2 * pi * 0.47 * t));
-      final trebleF = 2000 + 3000 * (0.5 + 0.5 * sin(2 * pi * 0.71 * t));
-
-      final bass   = sin(2 * pi * bassF   * t) * 0.55;
-      final mid    = sin(2 * pi * midF    * t) * 0.30;
-      final treble = sin(2 * pi * trebleF * t) * 0.18;
+      _phaseBass += dBass;
+      _phaseMid += dMid;
+      _phaseTreble += dTreble;
+      final bass   = sin(_phaseBass)   * 0.55;
+      final mid    = sin(_phaseMid)    * 0.30;
+      final treble = sin(_phaseTreble) * 0.18;
 
       // Light broadband noise so every FFT bin gets some energy —
       // otherwise the spectrum-bar shader looks too quantised.
@@ -146,6 +166,10 @@ class VisualizerAudio {
       out[2 * i] = sample;
       out[2 * i + 1] = r;
     }
+    // Wrap phases so they don't lose float precision over a long session.
+    _phaseBass %= 2 * pi;
+    _phaseMid %= 2 * pi;
+    _phaseTreble %= 2 * pi;
     _frame++;
     return out;
   }

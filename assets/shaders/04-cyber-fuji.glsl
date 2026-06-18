@@ -63,6 +63,10 @@
 // === channel image.1 = buffera
 // === channel buffera.0 = music
 // === channel buffera.1 = buffera
+// buffera writes one constant vec4 (the 4 band amplitudes) to every pixel
+// and the image pass samples a single texel, so render it at 1x1 instead of
+// paying a full-screen pass with 24 texture fetches per pixel.
+// === size buffera = 1x1
 
 // === pass: image ===
 

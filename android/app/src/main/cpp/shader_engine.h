@@ -112,6 +112,14 @@ private:
         UniformLocs locs{};
         // Source for each of the 4 iChannel uniforms in this pass.
         ChannelSource channelSrc[4] = {CHAN_NONE, CHAN_NONE, CHAN_NONE, CHAN_NONE};
+        // Requested render size for this pass's target, 0 = full window res.
+        // Only honored for buffer passes (A..D); the image pass always
+        // renders at full res so the present pass can sample it 1:1. Lets a
+        // shader declare e.g. an audio-analysis buffer that writes one
+        // constant value as `1x1`, instead of paying a full-screen pass to
+        // produce a single texel. See the `// === size <pass> = WxH` marker.
+        int renderW = 0;
+        int renderH = 0;
     };
 
     // A complete set of compiled passes for one shader preset.
@@ -126,17 +134,32 @@ private:
         GLuint tex[2] = {0, 0};
         int writeIdx = 0;
         bool allocated = false;
+        // Size the textures were allocated at, so a preset swap that
+        // re-requests this buffer slot at a different size reallocates.
+        int w = 0;
+        int h = 0;
     };
 
     // === Render-thread methods ===
     void adoptPendingPassSetIfAny();
     void renderPass(int idx, const Pass& p, GLuint targetFbo,
+                     int targetW, int targetH,
                      float elapsed, float delta, GLuint audioTex);
     GLuint channelTextureFor(ChannelSource src, int currentPassIdx,
                               GLuint audioTex) const;
     bool ensureBufferTarget(int idx);
+    void releaseBufferTarget(int idx);
     void releaseAllBufferTargets();
     void clearCurrentSet();
+    // Upload the uniforms that are constant for a program's lifetime (or
+    // change only on setTuning): iChannelResolution, iSampleRate, iMouse,
+    // iDate, the iChannel sampler-unit bindings, and iParams. Called once
+    // when a PassSet is adopted, instead of re-uploading them every frame in
+    // renderPass. Uniform values live in the program object, so they persist
+    // across the glUseProgram switches between passes.
+    void primeConstantUniforms(PassSet* set);
+    // Re-upload just iParams to the current set's programs (after setTuning).
+    void applyParamsToCurrentSet();
 
     // === Worker-thread methods ===
     void workerLoop();
@@ -197,6 +220,10 @@ private:
     // declared defaults on load, so shaders that read iParams[i] always
     // see a sensible value.
     float params_[NUM_PARAMS] = {0.0f};
+    // Set by setTuning(), cleared once the new params_ have been pushed to the
+    // current set's programs. Lets renderFrame skip the per-frame iParams
+    // re-upload when tuning hasn't changed.
+    bool paramsDirty_ = false;
 
     // --- Worker thread state ---
     std::thread worker_;

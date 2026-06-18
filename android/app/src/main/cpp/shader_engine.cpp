@@ -167,6 +167,9 @@ struct ParsedShader {
     bool hasCommon = false;
     // [passIdx][channel] = ChannelSource enum int
     int channelSrc[ShaderEngine::PASS_COUNT][4] = {{0}};
+    // Requested render size per pass; 0 = full window resolution.
+    int passW[ShaderEngine::PASS_COUNT] = {0};
+    int passH[ShaderEngine::PASS_COUNT] = {0};
 };
 
 int passIndexFromName(const std::string& nameLower) {
@@ -238,6 +241,11 @@ ParsedShader parseShader(const std::string& source) {
     std::regex passMarker(R"(^\s*//\s*===\s*pass\s*:\s*([a-zA-Z]+)\s*===)");
     std::regex channelMarker(
         R"(^\s*//\s*===\s*channel\s+([a-zA-Z]+)\s*\.\s*(\d+)\s*=\s*([a-zA-Z]+))");
+    // Optional per-pass render size: `// === size bufferc = 1x1`. Lets a
+    // pass that writes a single constant value render at e.g. 1x1 instead
+    // of a full-screen pass. Honored for buffer passes only.
+    std::regex sizeMarker(
+        R"(^\s*//\s*===\s*size\s+([a-zA-Z]+)\s*=\s*(\d+)\s*[xX]\s*(\d+))");
 
     while (std::getline(stream, line)) {
         std::smatch m;
@@ -255,7 +263,7 @@ ParsedShader parseShader(const std::string& source) {
             continue;
         }
         if (curPass == -1) {
-            // Pre-marker zone: look for routing lines
+            // Pre-marker zone: look for routing + size lines
             std::smatch cm;
             if (std::regex_search(line, cm, channelMarker)) {
                 std::string target = lowerAlnum(cm[1].str());
@@ -265,6 +273,26 @@ ParsedShader parseShader(const std::string& source) {
                 int srcEnum = channelSourceFromString(srcName);
                 if (tgtIdx >= 0 && ch >= 0 && ch < 4) {
                     out.channelSrc[tgtIdx][ch] = srcEnum;
+                }
+            } else if (std::regex_search(line, cm, sizeMarker)) {
+                int tgtIdx = passIndexFromName(lowerAlnum(cm[1].str()));
+                // Imported shaders are user-supplied, so parse defensively:
+                // std::stoi throws on an overlong digit run (which would crash
+                // the compile-worker thread), and an unbounded size would
+                // allocate a huge ping-pong pair. Clamp to a sane max; anything
+                // unparseable leaves the pass at its full-window default.
+                int w = 0, h = 0;
+                try {
+                    constexpr long kMaxPassDim = 8192;
+                    long pw = std::stol(cm[2].str()), ph = std::stol(cm[3].str());
+                    w = static_cast<int>(pw < 1 ? 0 : (pw > kMaxPassDim ? kMaxPassDim : pw));
+                    h = static_cast<int>(ph < 1 ? 0 : (ph > kMaxPassDim ? kMaxPassDim : ph));
+                } catch (...) {
+                    w = h = 0;  // overflow / out of range → treat as unset
+                }
+                if (tgtIdx >= 0 && w > 0 && h > 0) {
+                    out.passW[tgtIdx] = w;
+                    out.passH[tgtIdx] = h;
                 }
             }
             // Other pre-marker lines are ignored (comments, etc.)
@@ -412,9 +440,24 @@ void ShaderEngine::teardownOffscreenTargets() {
 
 bool ShaderEngine::ensureBufferTarget(int idx) {
     BufferTarget& bt = bufferTargets_[idx];
-    if (bt.allocated) return true;
+
+    // Render size for this buffer: the pass's declared size (e.g. a 1x1
+    // audio-analysis buffer), or full window resolution by default.
+    int rw = width_, rh = height_;
+    if (currentSet_ && currentSet_->hasPass[idx]) {
+        const Pass& p = currentSet_->passes[idx];
+        if (p.renderW > 0 && p.renderH > 0) { rw = p.renderW; rh = p.renderH; }
+    }
+
+    if (bt.allocated) {
+        if (bt.w == rw && bt.h == rh) return true;
+        // A preset swap re-requested this slot at a different size; free
+        // the old textures and reallocate to match.
+        releaseBufferTarget(idx);
+    }
+
     for (int p = 0; p < 2; ++p) {
-        if (!createColorFbo(width_, height_, &bt.fbo[p], &bt.tex[p])) {
+        if (!createColorFbo(rw, rh, &bt.fbo[p], &bt.tex[p])) {
             // free anything created
             for (int q = 0; q < p; ++q) {
                 glDeleteFramebuffers(1, &bt.fbo[q]);
@@ -429,22 +472,26 @@ bool ShaderEngine::ensureBufferTarget(int idx) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     bt.writeIdx = 0;
+    bt.w = rw; bt.h = rh;
     bt.allocated = true;
     return true;
 }
 
-void ShaderEngine::releaseAllBufferTargets() {
-    for (int i = 0; i < 4; ++i) {
-        BufferTarget& bt = bufferTargets_[i];
-        if (!bt.allocated) continue;
-        for (int p = 0; p < 2; ++p) {
-            if (bt.fbo[p]) glDeleteFramebuffers(1, &bt.fbo[p]);
-            if (bt.tex[p]) glDeleteTextures(1, &bt.tex[p]);
-            bt.fbo[p] = 0; bt.tex[p] = 0;
-        }
-        bt.allocated = false;
-        bt.writeIdx = 0;
+void ShaderEngine::releaseBufferTarget(int idx) {
+    BufferTarget& bt = bufferTargets_[idx];
+    if (!bt.allocated) return;
+    for (int p = 0; p < 2; ++p) {
+        if (bt.fbo[p]) glDeleteFramebuffers(1, &bt.fbo[p]);
+        if (bt.tex[p]) glDeleteTextures(1, &bt.tex[p]);
+        bt.fbo[p] = 0; bt.tex[p] = 0;
     }
+    bt.allocated = false;
+    bt.writeIdx = 0;
+    bt.w = 0; bt.h = 0;
+}
+
+void ShaderEngine::releaseAllBufferTargets() {
+    for (int i = 0; i < 4; ++i) releaseBufferTarget(i);
 }
 
 bool ShaderEngine::setupSharedContext() {
@@ -542,6 +589,12 @@ ShaderEngine::PassSet* ShaderEngine::compilePassSet(const std::string& source) {
         for (int c = 0; c < 4; ++c) {
             pp.channelSrc[c] = static_cast<ChannelSource>(parsed.channelSrc[i][c]);
         }
+        // Image always renders full res (the present pass samples it 1:1);
+        // only buffer passes honor a declared size.
+        if (i != PASS_IMAGE) {
+            pp.renderW = parsed.passW[i];
+            pp.renderH = parsed.passH[i];
+        }
         set->hasPass[i] = true;
         ++totalCompiled;
     }
@@ -616,6 +669,9 @@ void ShaderEngine::adoptPendingPassSetIfAny() {
         if (currentSet_->hasPass[i]) ensureBufferTarget(i);
     }
 
+    // Push the per-program constant uniforms once, now, instead of every frame.
+    primeConstantUniforms(currentSet_);
+
     transitionStart_ = std::chrono::steady_clock::now();
     transitioning_ = (fboOld_ != 0);
 
@@ -657,40 +713,33 @@ GLuint ShaderEngine::channelTextureFor(ChannelSource src, int currentPassIdx,
 }
 
 void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
+                                int targetW, int targetH,
                                 float elapsed, float delta, GLuint audioTex) {
     glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
-    glViewport(0, 0, width_, height_);
+    glViewport(0, 0, targetW, targetH);
     glUseProgram(p.program);
 
+    // Per-frame uniforms only. iMouse, iDate, iSampleRate, iChannelResolution,
+    // the iChannel sampler-unit bindings, and iParams are constant for the
+    // program's lifetime (or change only on setTuning) and are uploaded once
+    // in primeConstantUniforms()/applyParamsToCurrentSet().
     if (p.locs.time       >= 0) glUniform1f(p.locs.time, elapsed);
     if (p.locs.timeDelta  >= 0) glUniform1f(p.locs.timeDelta, delta);
     if (p.locs.frame      >= 0) glUniform1i(p.locs.frame, frameCount_);
     if (p.locs.resolution >= 0) glUniform3f(p.locs.resolution,
-        static_cast<float>(width_),
-        static_cast<float>(height_),
-        static_cast<float>(width_) / static_cast<float>(height_));
-    if (p.locs.mouse      >= 0) glUniform4f(p.locs.mouse, 0,0,0,0);
-    if (p.locs.date       >= 0) glUniform4f(p.locs.date, 0,0,0,0);
-    if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
-    if (p.locs.params     >= 0) glUniform1fv(p.locs.params, NUM_PARAMS, params_);
+        static_cast<float>(targetW),
+        static_cast<float>(targetH),
+        static_cast<float>(targetW) / static_cast<float>(targetH));
     if (p.locs.channelTime >= 0) {
         const float t[4] = {elapsed,elapsed,elapsed,elapsed};
         glUniform1fv(p.locs.channelTime, 4, t);
     }
-    if (p.locs.channelResolution >= 0) {
-        const float r[12] = {
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-            static_cast<float>(width_), static_cast<float>(height_), 1,
-        };
-        glUniform3fv(p.locs.channelResolution, 4, r);
-    }
 
-    // Bind iChannel0..3 textures + sampler uniforms.
+    // Bind iChannel0..3 textures. The sampler→unit mapping (sampler = unit c)
+    // was set once at prime time, so we only rebind the texture each frame
+    // (it changes as buffers ping-pong).
     for (int c = 0; c < 4; ++c) {
         if (p.locs.channel[c] < 0) continue;
-        // Audio channel resolution differs from buffer; override if needed.
         GLuint tex;
         if (p.channelSrc[c] == CHAN_AUDIO) {
             tex = audioTex;
@@ -699,12 +748,50 @@ void ShaderEngine::renderPass(int idx, const Pass& p, GLuint targetFbo,
         }
         glActiveTexture(GL_TEXTURE0 + c);
         glBindTexture(GL_TEXTURE_2D, tex);
-        glUniform1i(p.locs.channel[c], c);
     }
 
     glBindVertexArray(vao_);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
+}
+
+void ShaderEngine::primeConstantUniforms(PassSet* set) {
+    if (!set) return;
+    // All four input channels report the engine's render size, matching the
+    // previous per-frame behavior. (Constant-size analysis buffers don't read
+    // iChannelResolution, so the approximation is harmless.)
+    const float chRes[12] = {
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+        static_cast<float>(width_), static_cast<float>(height_), 1,
+    };
+    for (int i = 0; i < PASS_COUNT; ++i) {
+        if (!set->hasPass[i]) continue;
+        const Pass& p = set->passes[i];
+        glUseProgram(p.program);
+        if (p.locs.sampleRate >= 0) glUniform1f(p.locs.sampleRate, 44100.0f);
+        if (p.locs.mouse >= 0) glUniform4f(p.locs.mouse, 0, 0, 0, 0);
+        if (p.locs.date  >= 0) glUniform4f(p.locs.date, 0, 0, 0, 0);
+        if (p.locs.channelResolution >= 0)
+            glUniform3fv(p.locs.channelResolution, 4, chRes);
+        for (int c = 0; c < 4; ++c) {
+            if (p.locs.channel[c] >= 0) glUniform1i(p.locs.channel[c], c);
+        }
+        if (p.locs.params >= 0) glUniform1fv(p.locs.params, NUM_PARAMS, params_);
+    }
+    paramsDirty_ = false;
+}
+
+void ShaderEngine::applyParamsToCurrentSet() {
+    if (!currentSet_) return;
+    for (int i = 0; i < PASS_COUNT; ++i) {
+        if (!currentSet_->hasPass[i]) continue;
+        const Pass& p = currentSet_->passes[i];
+        if (p.locs.params < 0) continue;
+        glUseProgram(p.program);
+        glUniform1fv(p.locs.params, NUM_PARAMS, params_);
+    }
 }
 
 void ShaderEngine::renderFrame() {
@@ -720,6 +807,13 @@ void ShaderEngine::renderFrame() {
         glBindFramebuffer(GL_FRAMEBUFFER, fboCurrent_);
         glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
     } else {
+        // Tuning changed since last frame? Re-push iParams to the programs
+        // once, here, rather than re-uploading it in every renderPass.
+        if (paramsDirty_) {
+            applyParamsToCurrentSet();
+            paramsDirty_ = false;
+        }
+
         const GLuint audioTex = audio_.upload();
 
         // Render every buffer pass that exists, in fixed order A..D.
@@ -728,13 +822,13 @@ void ShaderEngine::renderFrame() {
             BufferTarget& bt = bufferTargets_[i];
             if (!bt.allocated) continue;
             renderPass(i, currentSet_->passes[i], bt.fbo[bt.writeIdx],
-                       elapsed, delta, audioTex);
+                       bt.w, bt.h, elapsed, delta, audioTex);
         }
 
-        // Image pass renders into fboCurrent_.
+        // Image pass renders into fboCurrent_ (always full window res).
         if (currentSet_->hasPass[PASS_IMAGE]) {
             renderPass(PASS_IMAGE, currentSet_->passes[PASS_IMAGE], fboCurrent_,
-                       elapsed, delta, audioTex);
+                       width_, height_, elapsed, delta, audioTex);
         }
 
         // After all passes done this frame, swap each buffer's
@@ -747,7 +841,7 @@ void ShaderEngine::renderFrame() {
         }
     }
 
-    // === Present pass: fboCurrent_ (with optional crossfade) → window ===
+    // === Present: fboCurrent_ → window, with optional crossfade ===
     float mixT = 1.0f;
     if (transitioning_) {
         const float t = std::chrono::duration<float>(now - transitionStart_).count()
@@ -755,23 +849,40 @@ void ShaderEngine::renderFrame() {
         if (t >= 1.0f) { transitioning_ = false; mixT = 1.0f; }
         else mixT = t * t * (3.0f - 2.0f * t);
     }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, width_, height_);
-    glUseProgram(presentProgram_);
-    if (locPresentCurrent_ >= 0) {
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texCurrent_);
-        glUniform1i(locPresentCurrent_, 0);
+
+    if (!transitioning_) {
+        // Common case (no crossfade in flight): fboCurrent_ and the window
+        // are the same size, so a straight blit copies it to the screen.
+        // Cheaper than binding the present program + samplers and drawing a
+        // textured triangle just to sample one texture 1:1 every frame —
+        // and the old path bound *both* present textures + set uniforms even
+        // though the shader only sampled `current` when not transitioning.
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fboCurrent_);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBlitFramebuffer(0, 0, width_, height_, 0, 0, width_, height_,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    } else {
+        // Crossfade in progress: blend the held previous frame (texOld_)
+        // with the new shader's current frame (texCurrent_).
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, width_, height_);
+        glUseProgram(presentProgram_);
+        if (locPresentCurrent_ >= 0) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texCurrent_);
+            glUniform1i(locPresentCurrent_, 0);
+        }
+        if (locPresentOld_ >= 0) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, texOld_);
+            glUniform1i(locPresentOld_, 1);
+        }
+        if (locPresentMixT_ >= 0) glUniform1f(locPresentMixT_, mixT);
+        glBindVertexArray(vao_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
     }
-    if (locPresentOld_ >= 0) {
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texOld_);
-        glUniform1i(locPresentOld_, 1);
-    }
-    if (locPresentMixT_ >= 0) glUniform1f(locPresentMixT_, mixT);
-    glBindVertexArray(vao_);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glBindVertexArray(0);
 
     ++frameCount_;
 }
@@ -790,6 +901,9 @@ void ShaderEngine::setTuning(const float* values, std::size_t count) {
         const std::size_t idx = static_cast<std::size_t>(i) + 3;
         params_[i] = (idx < count) ? values[idx] : 0.0f;
     }
+    // Pushed to the programs by the next renderFrame (not here — this may run
+    // before the current set exists, and we want a single GL touch point).
+    paramsDirty_ = true;
 }
 
 void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {
@@ -812,6 +926,7 @@ void ShaderEngine::loadPreset(const char* data, bool /*smoothTransition*/) {
         for (int i = 0; i < 4; ++i) {
             if (currentSet_->hasPass[i]) ensureBufferTarget(i);
         }
+        primeConstantUniforms(currentSet_);
         transitionStart_ = std::chrono::steady_clock::now();
         transitioning_ = (fboOld_ != 0);
         return;
