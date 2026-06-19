@@ -23,6 +23,7 @@ import 'dart:convert';
 import 'package:audio_service/audio_service.dart';
 import 'package:http/http.dart' as http;
 
+import 'auto_buckets.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import '../objects/server.dart';
@@ -74,6 +75,22 @@ String _id(String type, Map<String, String?> params) {
 
 /// Android Auto browse + playback for the active mStream server.
 class AutoBrowse {
+  // Short-lived per-server cache of the full albums/artists lists, so A–Z
+  // bucket drill-ins reuse the parent tab's fetch instead of re-GETting the
+  // whole library on every letter tap.
+  static final Map<String, ({DateTime at, List<DisplayItem> rows})> _listCache =
+      {};
+  static Future<List<DisplayItem>> _list(
+      String key, Future<List<DisplayItem>> Function() fetch) async {
+    final hit = _listCache[key];
+    if (hit != null && DateTime.now().difference(hit.at).inSeconds < 30) {
+      return hit.rows;
+    }
+    final rows = await fetch();
+    _listCache[key] = (at: DateTime.now(), rows: rows);
+    return rows;
+  }
+
   /// getChildren(parentMediaId): the tree Auto renders. Never throws — on no
   /// server / network failure it returns a single non-playable notice row.
   static Future<List<MediaItem>> children(String parentMediaId) async {
@@ -107,9 +124,21 @@ class AutoBrowse {
               return _trackNodes(
                   await AutoApi.recent(srv), srv, 'recent', null);
             case 'albums':
-              return _maybeBucket(await AutoApi.albums(srv), 'albums', srv);
+              {
+                final rows = await _list(
+                    'albums:${srv.localname}', () => AutoApi.albums(srv));
+                return rows.length > _maxChildren
+                    ? _bucketView(rows, '', 'albums', srv)
+                    : _albumNodes(rows, srv);
+              }
             case 'artists':
-              return _maybeBucket(await AutoApi.artists(srv), 'artists', srv);
+              {
+                final rows = await _list(
+                    'artists:${srv.localname}', () => AutoApi.artists(srv));
+                return rows.length > _maxChildren
+                    ? _bucketView(rows, '', 'artists', srv)
+                    : _artistNodes(rows, srv);
+              }
             case 'playlists':
               return _playlistNodes(await AutoApi.playlists(srv), srv);
           }
@@ -124,17 +153,15 @@ class AutoBrowse {
               'playlist', qp['v']);
         case 'bucket':
           {
-            // A–Z drill-in: re-fetch the full albums/artists list and keep only
-            // the items in this letter bucket.
-            final all = qp['k'] == 'artists'
-                ? await AutoApi.artists(srv)
-                : await AutoApi.albums(srv);
-            final picked = all
-                .where((r) => _bucketOf(r.name) == (qp['b'] ?? '#'))
-                .toList();
-            return qp['k'] == 'artists'
-                ? _artistNodes(picked, srv)
-                : _albumNodes(picked, srv);
+            // A–Z(+deeper) drill-in: reuse the cached library list and keep
+            // only the items under this prefix (sub-bucketing again if the
+            // prefix itself still overflows — see _bucketView).
+            final kind = qp['k'] == 'artists' ? 'artists' : 'albums';
+            final all = await _list('$kind:${srv.localname}',
+                () => kind == 'artists'
+                    ? AutoApi.artists(srv)
+                    : AutoApi.albums(srv));
+            return _bucketView(all, qp['b'] ?? '', kind, srv);
           }
       }
       return const [];
@@ -327,38 +354,45 @@ class AutoBrowse {
     ];
   }
 
-  /// Flat list when small; A–Z (+ '#') buckets when large, so a multi-thousand
-  /// album/artist library stays fully reachable on a head unit (which caps and
-  /// truncates long lists). [kind] is 'albums' or 'artists'.
-  static List<MediaItem> _maybeBucket(
-      List<DisplayItem> rows, String kind, Server srv) {
-    if (rows.length <= _maxChildren) {
-      return kind == 'artists'
-          ? _artistNodes(rows, srv)
-          : _albumNodes(rows, srv);
-    }
-    final present = <String>{for (final r in rows) _bucketOf(r.name)};
-    final letters = present.where((l) => l != '#').toList()..sort();
-    if (present.contains('#')) letters.add('#'); // non-letters last
-    // The bucket's children get the leaf style for [kind]; the buckets
-    // themselves render under the tab's own hint (set in _rootTabs).
+  /// Decides a browse node's children: a flat leaf list when the items fit, or
+  /// letter sub-bucket nodes when they overflow, so a multi-thousand-item
+  /// library stays reachable on a head unit (which truncates long lists).
+  /// [prefix] is '' at the tab root and the accumulated letters on drill-in. An
+  /// overflowing bucket sub-buckets by one more character (capped depth — see
+  /// autoBucketPrefixes), and bucketing is by the real first character(s), so
+  /// non-Latin names get their own buckets instead of collapsing together.
+  static List<MediaItem> _bucketView(
+      List<DisplayItem> all, String prefix, String kind, Server srv) {
+    final matched = prefix.isEmpty
+        ? all
+        : [
+            for (final r in all)
+              if (autoBucketKey(r.name).startsWith(prefix)) r
+          ];
+    final subs = autoBucketPrefixes(
+        matched.map((r) => autoBucketKey(r.name)), prefix, _maxChildren);
+    // Fits, or hit the depth cap: render the matched items as leaves.
+    if (subs.isEmpty) return _leafNodes(matched, kind, srv);
     final childStyle = kind == 'albums' ? _gridChildren : _listChildren;
-    appLog('[auto] $kind: ${rows.length} items → ${letters.length} A–Z buckets');
+    // Items whose key doesn't extend past the prefix (a name equal to it) can't
+    // go in a deeper sub-bucket — render them as leaves alongside.
+    final exact = [
+      for (final r in matched)
+        if (autoBucketKey(r.name).length <= prefix.length) r
+    ];
+    appLog('[auto] $kind "${prefix.isEmpty ? '*' : prefix}": '
+        '${matched.length} items → ${subs.length} buckets');
     return [
-      for (final l in letters)
-        _browse(_id('bucket', {'s': srv.localname, 'k': kind, 'b': l}), l,
+      for (final p in subs)
+        _browse(_id('bucket', {'s': srv.localname, 'k': kind, 'b': p}), p,
             styleExtras: childStyle),
+      ..._leafNodes(exact, kind, srv),
     ];
   }
 
-  /// First-letter bucket key for [name]: 'A'–'Z', or '#' for anything else
-  /// (digits, symbols, non-Latin, empty).
-  static String _bucketOf(String name) {
-    final t = name.trim();
-    if (t.isEmpty) return '#';
-    final c = t[0].toUpperCase();
-    return (c.compareTo('A') >= 0 && c.compareTo('Z') <= 0) ? c : '#';
-  }
+  static List<MediaItem> _leafNodes(
+          List<DisplayItem> rows, String kind, Server srv) =>
+      kind == 'artists' ? _artistNodes(rows, srv) : _albumNodes(rows, srv);
 
   static List<MediaItem> _albumNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
