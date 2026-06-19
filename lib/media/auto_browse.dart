@@ -107,9 +107,9 @@ class AutoBrowse {
               return _trackNodes(
                   await AutoApi.recent(srv), srv, 'recent', null);
             case 'albums':
-              return _albumNodes(await AutoApi.albums(srv), srv);
+              return _maybeBucket(await AutoApi.albums(srv), 'albums', srv);
             case 'artists':
-              return _artistNodes(await AutoApi.artists(srv), srv);
+              return _maybeBucket(await AutoApi.artists(srv), 'artists', srv);
             case 'playlists':
               return _playlistNodes(await AutoApi.playlists(srv), srv);
           }
@@ -122,6 +122,20 @@ class AutoBrowse {
         case 'playlist':
           return _trackNodes(await AutoApi.playlistSongs(srv, qp['v']), srv,
               'playlist', qp['v']);
+        case 'bucket':
+          {
+            // A–Z drill-in: re-fetch the full albums/artists list and keep only
+            // the items in this letter bucket.
+            final all = qp['k'] == 'artists'
+                ? await AutoApi.artists(srv)
+                : await AutoApi.albums(srv);
+            final picked = all
+                .where((r) => _bucketOf(r.name) == (qp['b'] ?? '#'))
+                .toList();
+            return qp['k'] == 'artists'
+                ? _artistNodes(picked, srv)
+                : _albumNodes(picked, srv);
+          }
       }
       return const [];
     } catch (e) {
@@ -149,6 +163,8 @@ class AutoBrowse {
       case 'artist':
       case 'playlist':
         return MediaItem(id: mediaId, title: qp['v'] ?? '', playable: false);
+      case 'bucket':
+        return MediaItem(id: mediaId, title: qp['b'] ?? '', playable: false);
       case 'cat':
         return MediaItem(id: mediaId, title: qp['k'] ?? '', playable: false);
     }
@@ -309,6 +325,39 @@ class AutoBrowse {
       _browse(_id('cat', {'s': s, 'k': 'artists'}), 'Artists',
           styleExtras: _listChildren),
     ];
+  }
+
+  /// Flat list when small; A–Z (+ '#') buckets when large, so a multi-thousand
+  /// album/artist library stays fully reachable on a head unit (which caps and
+  /// truncates long lists). [kind] is 'albums' or 'artists'.
+  static List<MediaItem> _maybeBucket(
+      List<DisplayItem> rows, String kind, Server srv) {
+    if (rows.length <= _maxChildren) {
+      return kind == 'artists'
+          ? _artistNodes(rows, srv)
+          : _albumNodes(rows, srv);
+    }
+    final present = <String>{for (final r in rows) _bucketOf(r.name)};
+    final letters = present.where((l) => l != '#').toList()..sort();
+    if (present.contains('#')) letters.add('#'); // non-letters last
+    // The bucket's children get the leaf style for [kind]; the buckets
+    // themselves render under the tab's own hint (set in _rootTabs).
+    final childStyle = kind == 'albums' ? _gridChildren : _listChildren;
+    appLog('[auto] $kind: ${rows.length} items → ${letters.length} A–Z buckets');
+    return [
+      for (final l in letters)
+        _browse(_id('bucket', {'s': srv.localname, 'k': kind, 'b': l}), l,
+            styleExtras: childStyle),
+    ];
+  }
+
+  /// First-letter bucket key for [name]: 'A'–'Z', or '#' for anything else
+  /// (digits, symbols, non-Latin, empty).
+  static String _bucketOf(String name) {
+    final t = name.trim();
+    if (t.isEmpty) return '#';
+    final c = t[0].toUpperCase();
+    return (c.compareTo('A') >= 0 && c.compareTo('Z') <= 0) ? c : '#';
   }
 
   static List<MediaItem> _albumNodes(List<DisplayItem> rows, Server srv) {
