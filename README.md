@@ -8,11 +8,6 @@ This is the official mStream Android App
 | :---: | :---: | :---: |
 | ![Now playing queue](docs/assets/402.jpg) | ![Album track list](docs/assets/400.jpg) | ![Albums grid](docs/assets/406.jpg) |
 
-| File Explorer | Add Server | About |
-| :---: | :---: | :---: |
-| ![File explorer](docs/assets/408.jpg) | ![Add server](docs/assets/404.jpg) | ![About](docs/assets/410.jpg) |
-
-
 ## Features
 
 * Chromecast
