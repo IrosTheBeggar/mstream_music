@@ -31,6 +31,7 @@ import '../singletons/log_manager.dart';
 import '../singletons/server_list.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
+import '../build_variant.dart';
 
 /// Android Auto trims long browsable lists, and a whole-library response is a
 /// big background payload. Cap each node and log the drop (A–Z bucketing of
@@ -77,6 +78,22 @@ String _id(String type, Map<String, String?> params) {
     scheme: _scheme,
     host: type,
     queryParameters: qp.isEmpty ? null : qp,
+  ).toString();
+}
+
+/// Wraps a remote album-art URL as a content:// URI served by the native
+/// ArtContentProvider. Android Auto rejects a remote https artUri for browse
+/// items ("Invalid album art uri") but loads a local content:// one — the
+/// provider downloads + caches the bytes. The authority is flavor-scoped to
+/// match the gradle applicationId (mstream.music[.plus]).
+String _artContentUri(String remoteUrl) {
+  final authority =
+      '${isPlayBuild ? 'mstream.music' : 'mstream.music.plus'}.art';
+  return Uri(
+    scheme: 'content',
+    host: authority,
+    path: '/art',
+    queryParameters: {'u': remoteUrl},
   ).toString();
 }
 
@@ -458,7 +475,7 @@ class AutoBrowse {
         _id('album', {'s': srv.localname, 'v': r.data}),
         r.name,
         subtitle: r.subtext,
-        artUri: art,
+        artUri: art == null ? null : _artContentUri(art),
       ));
     }
     return out;
@@ -507,7 +524,7 @@ class AutoBrowse {
         artist: m?.artist,
         album: m?.album,
         duration: m?.duration,
-        artUri: art == null ? null : Uri.parse(art),
+        artUri: art == null ? null : Uri.parse(_artContentUri(art)),
         playable: true,
       ));
     }
