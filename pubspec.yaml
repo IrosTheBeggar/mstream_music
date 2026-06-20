@@ -48,6 +48,9 @@ dependencies:
   # Native share sheet for exporting diagnostic logs (Diagnostics screen).
   share_plus: ^10.1.4
   meta: any
+  # Package name (applicationId) lookup so the album-art ContentProvider
+  # authority always matches the manifest, regardless of --dart-define flags.
+  package_info_plus: ^8.0.0
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

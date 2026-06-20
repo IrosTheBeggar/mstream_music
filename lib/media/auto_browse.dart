@@ -23,6 +23,7 @@ import 'dart:convert';
 import 'package:audio_service/audio_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'auto_buckets.dart';
 import '../objects/display_item.dart';
@@ -83,13 +84,31 @@ String _id(String type, Map<String, String?> params) {
   ).toString();
 }
 
+// The album-art ContentProvider authority, resolved at startup from the real
+// package name (== the gradle applicationId), so content:// URIs always match
+// the manifest's ${applicationId}.art — even when the play flavor is built
+// without --dart-define=VARIANT=play. Null until initAutoArt() runs; the
+// fallback inference below is then used (correct for CI builds, where VARIANT
+// matches the flavor).
+String? _artAuthority;
+
+/// Resolve the art ContentProvider authority from the real package name. Call
+/// once at startup (main). Best-effort — on failure the fallback inference is
+/// used.
+Future<void> initAutoArt() async {
+  try {
+    final info = await PackageInfo.fromPlatform();
+    if (info.packageName.isNotEmpty) _artAuthority = '${info.packageName}.art';
+  } catch (_) {}
+  appLog('[auto] art authority: ${_artAuthority ?? '(fallback inference)'}');
+}
+
 /// Wraps a remote album-art URL as a content:// URI served by the native
 /// ArtContentProvider. Android Auto rejects a remote https artUri for browse
 /// items ("Invalid album art uri") but loads a local content:// one — the
-/// provider downloads + caches the bytes. The authority is flavor-scoped to
-/// match the gradle applicationId (mstream.music[.plus]).
+/// provider downloads + caches the bytes.
 String _artContentUri(String remoteUrl) {
-  final authority =
+  final authority = _artAuthority ??
       '${isPlayBuild ? 'mstream.music' : 'mstream.music.plus'}.art';
   return Uri(
     scheme: 'content',
