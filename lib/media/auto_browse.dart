@@ -246,7 +246,7 @@ class AutoBrowse {
       // ensureLoaded() too, so the no-throw contract is local to this file
       // (not dependent on loadServerList staying throw-free elsewhere).
       appLog('[auto] getChildren($parentMediaId) failed: $e');
-      return [_notice('Couldn\'t load', 'Check your connection and try again')];
+      return [_errorNotice(e)];
     }
   }
 
@@ -404,9 +404,7 @@ class AutoBrowse {
       return out;
     } catch (e) {
       appLog('[auto] search("$query") failed: $e');
-      return [
-        _notice('Couldn\'t search', 'Check your connection and try again'),
-      ];
+      return [_errorNotice(e, generic: 'Couldn\'t search')];
     }
   }
 
@@ -690,11 +688,45 @@ class AutoBrowse {
           ? ServerManager().currentServer
           : ServerManager().byLocalname(localname);
 
+  /// Map a browse / search failure to a user-facing notice that distinguishes a
+  /// server we couldn't REACH (check the connection) from one that answered with
+  /// an error (reopen mStream on the phone). NOTE on mStream: a missing/empty
+  /// token returns 401, but an expired/invalid token comes back as 500 (the JWT
+  /// verify throws and isn't mapped to 401), so a 5xx is shown as a server-side
+  /// problem the user resolves on the phone — where an expired session is
+  /// visible — rather than a connection error.
+  static MediaItem _errorNotice(Object e, {String generic = 'Couldn\'t load'}) {
+    if (e is AutoHttpException) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        return _notice('Sign in again', 'Open mStream on your phone');
+      }
+      if (e.statusCode >= 500) {
+        return _notice('Server error', 'Open mStream on your phone');
+      }
+      // Another 4xx: the server answered but refused — not a connection issue.
+      return _notice(generic, 'Open mStream on your phone');
+    }
+    // No usable HTTP response (timeout / offline / unparseable body).
+    return _notice(generic, 'Check your connection and try again');
+  }
+
   static Iterable<DisplayItem> _capped(List<DisplayItem> rows, String label) {
     if (rows.length <= _maxChildren) return rows;
     appLog('[auto] $label: ${rows.length} items, showing first $_maxChildren');
     return rows.take(_maxChildren);
   }
+}
+
+/// Thrown by [AutoApi._call] on a non-2xx response so the browse / search catch
+/// can tell an HTTP error (the server was reached) from a transport failure
+/// (offline / timeout) and branch the user notice on the status. (mStream: 401 =
+/// missing token, 500 = a token that failed to verify, e.g. expired.)
+class AutoHttpException implements Exception {
+  final int statusCode;
+  final String location;
+  AutoHttpException(this.statusCode, this.location);
+  @override
+  String toString() => 'HTTP $statusCode for $location';
 }
 
 /// Headless, BrowserManager-free reads of the mStream library. Mirrors the
@@ -716,7 +748,7 @@ class AutoApi {
           .timeout(_fetchTimeout);
     }
     if (resp.statusCode > 299) {
-      throw Exception('HTTP ${resp.statusCode} for $location');
+      throw AutoHttpException(resp.statusCode, location);
     }
     return jsonDecode(resp.body);
   }
