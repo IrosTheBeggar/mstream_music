@@ -24,9 +24,11 @@ import org.json.JSONArray
 // the Auto process (gearhead, a separate uid) opens via ContentResolver. The
 // provider is exported so that cross-process open is allowed — the
 // MediaBrowserService framework does NOT auto-grant browse-item icon URI
-// permission — and openFile is scheme-guarded to http(s) so an exported,
-// arbitrary-URL fetcher can't be abused. Mirrors Google's UAMP
-// AlbumArtContentProvider (which embeds the URL the same way).
+// permission. openFile only fetches the http(s) /album-art/ endpoint of a host
+// the user has actually configured (checked against servers.json), so the
+// exported provider can't be turned into an arbitrary-URL fetch / SSRF gadget.
+// Mirrors Google's UAMP AlbumArtContentProvider (which embeds the URL the same
+// way).
 //
 // Self-signed-cert servers (full flavor) are supported: download() trusts a
 // single art connection when its host is a server the user marked "allow
@@ -51,8 +53,15 @@ class ArtContentProvider : ContentProvider() {
         }
         val cacheFile = cacheFileFor(remote)
         if (!cacheFile.exists() || cacheFile.length() == 0L) {
+            // The provider is exported, so only ever fetch a host the user has
+            // actually configured — refuse an arbitrary attacker-chosen host
+            // (defense-in-depth: a legit art URL's host always equals one of the
+            // user's server origins). A non-configured host is never downloaded
+            // and so can never be cached; a cache hit below was already allowed.
+            val match = lookupArtHost(r.host)
+            if (!match.configured) return null
             try {
-                download(remote, cacheFile)
+                download(remote, cacheFile, match.selfSigned)
             } catch (e: Exception) {
                 // Leave the file absent; a missing art uri is handled by Auto.
             }
@@ -73,7 +82,7 @@ class ArtContentProvider : ContentProvider() {
         return File(dir, md5(key) + ".img")
     }
 
-    private fun download(remote: String, dest: File) {
+    private fun download(remote: String, dest: File, selfSigned: Boolean) {
         val conn = (URL(remote).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15000
             readTimeout = 15000
@@ -86,11 +95,10 @@ class ArtContentProvider : ContentProvider() {
         // Self-signed servers (full flavor): the headless Auto provider has no
         // access to the app's global trust-all swap (MainActivity never ran on a
         // cold service bind), so trust this ONE connection — but only when the
-        // host is a server the user marked "allow self-signed", so a valid-cert
-        // server's art (and the token in its URL) keeps a validated connection.
-        // No-op in the play flavor.
-        if (conn is HttpsURLConnection &&
-            isSelfSignedArtHost(Uri.parse(remote).host)) {
+        // host is a server the user marked "allow self-signed" (selfSigned), so a
+        // valid-cert server's art (and the token in its URL) keeps a validated
+        // connection. No-op in the play flavor.
+        if (conn is HttpsURLConnection && selfSigned) {
             InsecureTls.applyArtTls(conn)
         }
         try {
@@ -110,26 +118,35 @@ class ArtContentProvider : ContentProvider() {
         }
     }
 
-    // True when the art URL's host belongs to a configured server the user
-    // marked "allow self-signed". Read from the app's persisted servers.json
-    // (app_flutter == context.getDir("flutter")) so the headless provider gates
-    // the per-connection trust-all to exactly the opted-in hosts. Best-effort:
-    // any read/parse error → false (validate).
-    private fun isSelfSignedArtHost(host: String?): Boolean {
-        if (host.isNullOrEmpty()) return false
+    // Whether [host] belongs to a configured mStream server, and if so whether
+    // the user marked any server on that host "allow self-signed". Read once from
+    // the app's persisted servers.json (app_flutter == context.getDir("flutter")).
+    // `configured` gates the exported provider to the user's own server origins;
+    // `selfSigned` gates the per-connection trust-all to opted-in hosts. Host-only
+    // match (port-blind), matching the app's self-signed model. Best-effort: a
+    // read/parse error → (false, false), i.e. refuse + validate (fail closed).
+    private data class ArtHost(val configured: Boolean, val selfSigned: Boolean)
+
+    private fun lookupArtHost(host: String?): ArtHost {
+        if (host.isNullOrEmpty()) return ArtHost(false, false)
         return try {
             val dir = context!!.getDir("flutter", Context.MODE_PRIVATE)
             val file = File(dir, "servers.json")
-            if (!file.exists()) return false
+            if (!file.exists()) return ArtHost(false, false)
             val servers = JSONArray(file.readText())
-            (0 until servers.length()).any { i ->
-                val s = servers.optJSONObject(i)
-                s != null && s.optBoolean("allowSelfSigned", false) &&
-                    Uri.parse(s.optString("url", "")).host
-                        .equals(host, ignoreCase = true)
+            var configured = false
+            var selfSigned = false
+            for (i in 0 until servers.length()) {
+                val s = servers.optJSONObject(i) ?: continue
+                if (Uri.parse(s.optString("url", "")).host
+                        .equals(host, ignoreCase = true)) {
+                    configured = true
+                    if (s.optBoolean("allowSelfSigned", false)) selfSigned = true
+                }
             }
+            ArtHost(configured, selfSigned)
         } catch (e: Exception) {
-            false
+            ArtHost(false, false)
         }
     }
 
