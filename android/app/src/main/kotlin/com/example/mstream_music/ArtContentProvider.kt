@@ -72,7 +72,11 @@ class ArtContentProvider : ContentProvider() {
         val conn = (URL(remote).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15000
             readTimeout = 15000
-            instanceFollowRedirects = true
+            // No redirects: the mStream /album-art endpoint serves the image
+            // directly, and following a redirect on this exported, URL-driven
+            // fetch would let a chosen endpoint bounce the request onward. A 3xx
+            // then falls through the responseCode check below as "no art".
+            instanceFollowRedirects = false
         }
         try {
             if (conn.responseCode !in 200..299) return
