@@ -1,16 +1,64 @@
-# mstream_music
+# mStream Music
 
-A new Flutter project.
+This is the official mStream Android App
 
-## Getting Started
+## Screenshots
 
-This project is a starting point for a Flutter application.
+| Now Playing | Album & Player | Albums |
+| :---: | :---: | :---: |
+| ![Now playing queue](docs/assets/402.jpg) | ![Album track list](docs/assets/400.jpg) | ![Albums grid](docs/assets/406.jpg) |
 
-A few resources to get you started if this is your first Flutter project:
+| File Explorer | Add Server | About |
+| :---: | :---: | :---: |
+| ![File explorer](docs/assets/408.jpg) | ![Add server](docs/assets/404.jpg) | ![About](docs/assets/410.jpg) |
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Features
+
+* Chromecast
+* Android Auto
+* Transcoding
+* Modern UI built with Flutter
+* Two visualizer engines
+  * Project M
+  * Shader Toy
+
+## Releases
+
+**Google Play**
+
+We have an official release on Google Play
+
+https://play.google.com/store/apps/details?id=mstream.music
+
+**APK File**
+
+We also have an apk file. This will show up as 'mStream Plus' and can be installed alongside the google play build.
+
+This build has two additional features:
+
+* Allows self-signed SSL certificates
+* Allows files to be downloaded to anywhere on the device
+
+Downloads are available here: https://github.com/IrosTheBeggar/mstream_music/releases
+
+## Languages
+
+mStream has been machine translated to the following languages:
+
+* English
+* Chinese
+* French
+* German
+* Italian
+* Japanese
+* Polish
+* Portuguese
+* Russian
+* Spanish
+
+## Links
+
+* [mStream Server (GitHub)](https://github.com/IrosTheBeggar/mStream)
+* [Discord](https://discord.gg/AM896Rr)
+* [Demo Site](https://demo.mstream.io)
