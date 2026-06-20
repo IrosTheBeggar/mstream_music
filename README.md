@@ -1,6 +1,4 @@
-# mStream Music
-
-This is the official mStream Android App
+# mStream Android App
 
 ## Screenshots
 
@@ -20,22 +18,16 @@ This is the official mStream Android App
 
 ## Releases
 
-**Google Play**
+[**Google Play**](https://play.google.com/store/apps/details?id=mstream.music)
 
-We have an official release on Google Play
+[**APK File**](https://github.com/IrosTheBeggar/mstream_music/releases)
 
-https://play.google.com/store/apps/details?id=mstream.music
+The apk builds will show up as 'mStream Plus' and can be installed alongside the google play builds.
 
-**APK File**
-
-We also have an apk file. This will show up as 'mStream Plus' and can be installed alongside the google play build.
-
-This build has two additional features:
+This mStream Plus build has two additional features not available on google play:
 
 * Allows self-signed SSL certificates
 * Allows files to be downloaded to anywhere on the device
-
-Downloads are available here: https://github.com/IrosTheBeggar/mstream_music/releases
 
 ## Languages
 
