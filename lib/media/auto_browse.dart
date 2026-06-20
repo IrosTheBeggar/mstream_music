@@ -180,44 +180,47 @@ class AutoBrowse {
         case 'cat':
           switch (qp['k']) {
             case 'recent':
-              return _trackNodes(
-                  await AutoApi.recent(srv), srv, 'recent', null);
+              return _orEmptyNotice(
+                  _trackNodes(await AutoApi.recent(srv), srv, 'recent', null));
             case 'albums':
               {
                 final rows = await _list(
                     'albums:${srv.localname}', () => AutoApi.albums(srv));
-                return rows.length > _maxChildren
+                return _orEmptyNotice(rows.length > _maxChildren
                     ? _bucketView(rows, '', 'albums', srv)
-                    : _albumNodes(rows, srv);
+                    : _albumNodes(rows, srv));
               }
             case 'artists':
               {
                 final rows = await _list(
                     'artists:${srv.localname}', () => AutoApi.artists(srv));
-                return rows.length > _maxChildren
+                return _orEmptyNotice(rows.length > _maxChildren
                     ? _bucketView(rows, '', 'artists', srv)
-                    : _artistNodes(rows, srv);
+                    : _artistNodes(rows, srv));
               }
             case 'playlists':
-              return _playlistNodes(await AutoApi.playlists(srv), srv);
+              return _orEmptyNotice(
+                  _playlistNodes(await AutoApi.playlists(srv), srv));
           }
           return const [];
         case 'artist':
-          return _albumNodes(await AutoApi.artistAlbums(srv, qp['v']), srv);
+          return _orEmptyNotice(
+              _albumNodes(await AutoApi.artistAlbums(srv, qp['v']), srv));
         case 'album':
-          return _trackNodes(
-              await AutoApi.albumSongs(srv, qp['v']), srv, 'album', qp['v']);
+          return _orEmptyNotice(_trackNodes(
+              await AutoApi.albumSongs(srv, qp['v']), srv, 'album', qp['v']));
         case 'playlist':
-          return _trackNodes(await AutoApi.playlistSongs(srv, qp['v']), srv,
-              'playlist', qp['v']);
+          return _orEmptyNotice(_trackNodes(
+              await AutoApi.playlistSongs(srv, qp['v']), srv, 'playlist',
+              qp['v']));
         case 'dir':
           {
             // A folder: its subfolders (browsable) then its tracks (playable).
             final fl = await AutoApi.fileList(srv, qp['p'] ?? '~');
-            return [
+            return _orEmptyNotice([
               ..._dirNodes(fl.dirs, srv),
               ..._trackNodes(fl.files, srv, 'dir', qp['p']),
-            ];
+            ]);
           }
         case 'bucket':
           {
@@ -229,7 +232,7 @@ class AutoBrowse {
                 () => kind == 'artists'
                     ? AutoApi.artists(srv)
                     : AutoApi.albums(srv));
-            return _bucketView(all, qp['b'] ?? '', kind, srv);
+            return _orEmptyNotice(_bucketView(all, qp['b'] ?? '', kind, srv));
           }
       }
       return const [];
@@ -368,6 +371,7 @@ class AutoBrowse {
         ..._albumNodes(r.albums, server),
         ..._artistNodes(r.artists, server),
       ];
+      if (out.isEmpty) return [_notice('No results', 'Try a different search')];
       if (out.length > _maxChildren) {
         appLog('[auto] search("$q"): ${out.length} results, showing first '
             '$_maxChildren');
@@ -645,6 +649,13 @@ class AutoBrowse {
         artist: subtitle,
         playable: false,
       );
+
+  /// A user-navigated list (an album's tracks, a folder, a playlist, the recent
+  /// list, etc.) that comes back empty shows a "nothing here" notice row instead
+  /// of a blank Android Auto screen — matching the no-server / error paths.
+  /// Unknown / intermediate nodes stay silently empty (not routed through here).
+  static List<MediaItem> _orEmptyNotice(List<MediaItem> items) =>
+      items.isEmpty ? [_notice('Nothing here', 'This list is empty')] : items;
 
   static Iterable<DisplayItem> _capped(List<DisplayItem> rows, String label) {
     if (rows.length <= _maxChildren) return rows;

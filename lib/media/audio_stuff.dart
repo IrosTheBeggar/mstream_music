@@ -804,6 +804,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       Map<String, dynamic> decoded;
       try {
+        // Bounded like every other headless fetch so a black-hole server (e.g.
+        // a Shuffle All started from Android Auto, which awaits this) can't hang
+        // forever; the catch below treats the TimeoutException as a network
+        // error and bails silently.
         final res = await http.post(
           Uri.parse(autoDJServer!.url).resolve('/api/v1/db/random-songs'),
           headers: {
@@ -811,7 +815,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             'x-access-token': autoDJServer?.jwt ?? '',
           },
           body: jsonEncode(payload),
-        );
+        ).timeout(const Duration(seconds: 15));
         if (res.statusCode > 299) return; // server error → bail silently
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
       } catch (_) {
