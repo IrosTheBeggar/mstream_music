@@ -185,8 +185,9 @@ class AutoBrowse {
         case 'cat':
           switch (qp['k']) {
             case 'recent':
-              return _orEmptyNotice(
-                  _trackNodes(await AutoApi.recent(srv), srv, 'recent', null));
+              return _orEmptyNotice(_paginate(
+                  _trackNodes(await AutoApi.recent(srv), srv, 'recent', null),
+                  u));
             case 'albums':
               {
                 final rows = await _list(
@@ -204,28 +205,32 @@ class AutoBrowse {
                     : _artistNodes(rows, srv));
               }
             case 'playlists':
-              return _orEmptyNotice(
-                  _playlistNodes(await AutoApi.playlists(srv), srv));
+              return _orEmptyNotice(_paginate(
+                  _playlistNodes(await AutoApi.playlists(srv), srv), u));
           }
           return const [];
         case 'artist':
-          return _orEmptyNotice(
-              _albumNodes(await AutoApi.artistAlbums(srv, qp['v']), srv));
+          return _orEmptyNotice(_paginate(
+              _albumNodes(await AutoApi.artistAlbums(srv, qp['v']), srv), u,
+              moreStyle: _gridChildren));
         case 'album':
-          return _orEmptyNotice(_trackNodes(
-              await AutoApi.albumSongs(srv, qp['v']), srv, 'album', qp['v']));
+          return _orEmptyNotice(_paginate(
+              _trackNodes(await AutoApi.albumSongs(srv, qp['v']), srv, 'album',
+                  qp['v']),
+              u));
         case 'playlist':
-          return _orEmptyNotice(_trackNodes(
-              await AutoApi.playlistSongs(srv, qp['v']), srv, 'playlist',
-              qp['v']));
+          return _orEmptyNotice(_paginate(
+              _trackNodes(await AutoApi.playlistSongs(srv, qp['v']), srv,
+                  'playlist', qp['v']),
+              u));
         case 'dir':
           {
             // A folder: its subfolders (browsable) then its tracks (playable).
             final fl = await AutoApi.fileList(srv, qp['p'] ?? '~');
-            return _orEmptyNotice([
+            return _orEmptyNotice(_paginate([
               ..._dirNodes(fl.dirs, srv),
               ..._trackNodes(fl.files, srv, 'dir', qp['p']),
-            ]);
+            ], u));
           }
         case 'bucket':
           {
@@ -237,7 +242,9 @@ class AutoBrowse {
                 () => kind == 'artists'
                     ? AutoApi.artists(srv)
                     : AutoApi.albums(srv));
-            return _orEmptyNotice(_bucketView(all, qp['b'] ?? '', kind, srv));
+            return _orEmptyNotice(_paginate(
+                _bucketView(all, qp['b'] ?? '', kind, srv), u,
+                moreStyle: kind == 'albums' ? _gridChildren : _listChildren));
           }
       }
       return const [];
@@ -576,7 +583,7 @@ class AutoBrowse {
 
   static List<MediaItem> _albumNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
-    for (final r in _capped(rows, 'albums')) {
+    for (final r in rows) {
       if (r.type != 'album') continue;
       final art = r.altAlbumArt != null
           ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'm')
@@ -593,7 +600,7 @@ class AutoBrowse {
 
   static List<MediaItem> _artistNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
-    for (final r in _capped(rows, 'artists')) {
+    for (final r in rows) {
       if (r.type != 'artist') continue;
       // Grid hint so this artist's albums (its browsable children) show as an
       // art grid instead of inheriting the 'list' hint from the Artists tab.
@@ -605,7 +612,7 @@ class AutoBrowse {
 
   static List<MediaItem> _playlistNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
-    for (final r in _capped(rows, 'playlists')) {
+    for (final r in rows) {
       if (r.type != 'playlist') continue;
       out.add(
           _browse(_id('playlist', {'s': srv.localname, 'v': r.data}), r.name));
@@ -615,7 +622,7 @@ class AutoBrowse {
 
   static List<MediaItem> _dirNodes(List<DisplayItem> dirs, Server srv) {
     final out = <MediaItem>[];
-    for (final r in _capped(dirs, 'files')) {
+    for (final r in dirs) {
       if (r.type != 'directory' || r.data == null) continue;
       out.add(_browse(_id('dir', {'s': srv.localname, 'p': r.data}), r.name,
           styleExtras: _listChildren));
@@ -627,7 +634,7 @@ class AutoBrowse {
       List<DisplayItem> rows, Server srv, String containerType,
       String? containerValue) {
     final out = <MediaItem>[];
-    for (final r in _capped(rows, containerType)) {
+    for (final r in rows) {
       if (r.type != 'file' || r.data == null) continue;
       final m = r.metadata;
       final artFile = r.altAlbumArt ?? m?.albumArt;
@@ -679,6 +686,33 @@ class AutoBrowse {
   static List<MediaItem> _orEmptyNotice(List<MediaItem> items) =>
       items.isEmpty ? [_notice('Nothing here', 'This list is empty')] : items;
 
+  /// One [_maxChildren]-sized page of [all], with a browsable "Show more" node
+  /// appended (re-entering [id] at the next page via a `pg` query param) when
+  /// more remain — so a leaf list longer than the cap stays fully reachable
+  /// while no single node ever approaches the Binder transaction limit (~1 MB;
+  /// a 200-item page measures well under it). A no-op for lists within the cap.
+  static List<MediaItem> _paginate(List<MediaItem> all, Uri id,
+      {Map<String, dynamic>? moreStyle}) {
+    if (all.length <= _maxChildren) return all;
+    final page = int.tryParse(id.queryParameters['pg'] ?? '') ?? 0;
+    final start = page * _maxChildren;
+    // page < 0 only via a hand-tampered id (we mint pg=1,2,3…); guard the
+    // negative-range sublist rather than rely on children()'s catch.
+    if (page < 0 || start >= all.length) return const [];
+    final end =
+        start + _maxChildren < all.length ? start + _maxChildren : all.length;
+    final window = all.sublist(start, end); // a new growable list
+    if (end < all.length) {
+      final qp = Map<String, String>.from(id.queryParameters)
+        ..['pg'] = '${page + 1}';
+      // List style by default; album-grid callers pass _gridChildren so the
+      // continuation keeps page 0's grid layout instead of inheriting a list.
+      window.add(_browse(id.replace(queryParameters: qp).toString(), 'Show more',
+          styleExtras: moreStyle ?? _listChildren));
+    }
+    return window;
+  }
+
   /// Resolve the server an id was minted on. A present-but-unknown localname
   /// (the server was removed / renamed since this id was built) returns null so
   /// callers no-op rather than silently acting on a DIFFERENT server; an
@@ -708,12 +742,6 @@ class AutoBrowse {
     }
     // No usable HTTP response (timeout / offline / unparseable body).
     return _notice(generic, 'Check your connection and try again');
-  }
-
-  static Iterable<DisplayItem> _capped(List<DisplayItem> rows, String label) {
-    if (rows.length <= _maxChildren) return rows;
-    appLog('[auto] $label: ${rows.length} items, showing first $_maxChildren');
-    return rows.take(_maxChildren);
   }
 }
 
