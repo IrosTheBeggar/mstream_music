@@ -270,7 +270,7 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
     // Without these guards a just-loaded track skips after a few seconds.
     if (_advancing || !_confirmedPlaying || !_reachedNearEnd) return;
     _advancing = true;
-    final n = nextIndex();
+    final n = nextIndex(onComplete: true);
     if (n != null) {
       await loadIndex(n, play: true); // _advancing cleared when poll sees PLAYING
     } else {

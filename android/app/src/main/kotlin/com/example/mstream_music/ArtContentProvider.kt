@@ -2,6 +2,7 @@ package com.example.mstream_music
 
 import android.content.ContentProvider
 import android.content.ContentValues
+import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -10,6 +11,8 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import javax.net.ssl.HttpsURLConnection
+import org.json.JSONArray
 
 // Serves remote album art to Android Auto as a content:// URI.
 //
@@ -25,9 +28,11 @@ import java.security.MessageDigest
 // arbitrary-URL fetcher can't be abused. Mirrors Google's UAMP
 // AlbumArtContentProvider (which embeds the URL the same way).
 //
-// Self-signed-cert servers (full flavor) won't load here — the download uses a
-// validating HttpURLConnection — but those items simply stay art-less (they
-// already had no browse art), so it's no regression. Valid-cert servers get art.
+// Self-signed-cert servers (full flavor) are supported: download() trusts a
+// single art connection when its host is a server the user marked "allow
+// self-signed" (read from servers.json), so a valid-cert server's art — and the
+// session token in its URL — still goes over a validated connection. The play
+// flavor always validates (InsecureTls.applyArtTls is a no-op there).
 class ArtContentProvider : ContentProvider() {
 
     override fun onCreate(): Boolean = true
@@ -78,6 +83,16 @@ class ArtContentProvider : ContentProvider() {
             // then falls through the responseCode check below as "no art".
             instanceFollowRedirects = false
         }
+        // Self-signed servers (full flavor): the headless Auto provider has no
+        // access to the app's global trust-all swap (MainActivity never ran on a
+        // cold service bind), so trust this ONE connection — but only when the
+        // host is a server the user marked "allow self-signed", so a valid-cert
+        // server's art (and the token in its URL) keeps a validated connection.
+        // No-op in the play flavor.
+        if (conn is HttpsURLConnection &&
+            isSelfSignedArtHost(Uri.parse(remote).host)) {
+            InsecureTls.applyArtTls(conn)
+        }
         try {
             if (conn.responseCode !in 200..299) return
             val tmp = File.createTempFile("art", ".tmp", dest.parentFile)
@@ -92,6 +107,29 @@ class ArtContentProvider : ContentProvider() {
             }
         } finally {
             conn.disconnect()
+        }
+    }
+
+    // True when the art URL's host belongs to a configured server the user
+    // marked "allow self-signed". Read from the app's persisted servers.json
+    // (app_flutter == context.getDir("flutter")) so the headless provider gates
+    // the per-connection trust-all to exactly the opted-in hosts. Best-effort:
+    // any read/parse error → false (validate).
+    private fun isSelfSignedArtHost(host: String?): Boolean {
+        if (host.isNullOrEmpty()) return false
+        return try {
+            val dir = context!!.getDir("flutter", Context.MODE_PRIVATE)
+            val file = File(dir, "servers.json")
+            if (!file.exists()) return false
+            val servers = JSONArray(file.readText())
+            (0 until servers.length()).any { i ->
+                val s = servers.optJSONObject(i)
+                s != null && s.optBoolean("allowSelfSigned", false) &&
+                    Uri.parse(s.optString("url", "")).host
+                        .equals(host, ignoreCase = true)
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 

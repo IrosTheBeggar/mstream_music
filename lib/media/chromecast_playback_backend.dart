@@ -129,7 +129,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> _onTrackEnded() async {
     if (_advancing) return;
     _advancing = true;
-    final n = nextIndex();
+    final n = nextIndex(onComplete: true);
     if (n != null) {
       await loadIndex(n, play: true);
     } else {

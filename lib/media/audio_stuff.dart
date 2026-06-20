@@ -77,13 +77,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   // setAutoDJ off or server switch.
   String? _camelotAnchor;
 
-  // The repeat mode requested by the UI / Android Auto. The backend only models
-  // repeat-all vs off (no single-track loop), and _broadcastState would
-  // otherwise derive the emitted mode from that bool — collapsing 'one' to
-  // 'all' and stranding any client that cycles none→all→one→none (it could
-  // never get back to none). Storing the requested mode keeps all three states
-  // distinct in the published PlaybackState. 'one' currently loops the whole
-  // list like 'all' (true single-track repeat is a backend follow-up).
+  // The repeat mode requested by the UI / Android Auto, and the source of truth
+  // for the published PlaybackState: it preserves all of none/all/one (and
+  // 'group', which the backend collapses to 'all'), so a client that cycles
+  // none→all→one→none can always get back to none. The backend honours the
+  // mapped BackendRepeat — including a true single-track loop for 'one'.
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
 
   AudioPlayerHandler() {
@@ -231,7 +229,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await prev.pause();
 
     await next.setShuffleEnabled(prev.shuffleEnabled);
-    await next.setRepeatAll(prev.repeatAll);
+    await next.setRepeat(prev.repeat);
     await next.setSources(queue.value);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
@@ -365,16 +363,16 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// shuffle/repeat. Used by QueueStore.init() so the app reopens exactly where
   /// it left off. No-op for an empty list.
   Future<void> restoreQueue(List<MediaItem> items, int index, Duration position,
-      {bool shuffle = false, bool repeat = false}) async {
+      {bool shuffle = false,
+      AudioServiceRepeatMode repeat = AudioServiceRepeatMode.none}) async {
     if (items.isEmpty) return;
     queue.add(items.toList());
     await _backend.setSources(items);
     final int i = index.clamp(0, items.length - 1);
     // play: false → load paused at the saved spot (don't blast audio on open).
     await _backend.seek(position, index: i, play: false);
-    _repeatMode =
-        repeat ? AudioServiceRepeatMode.all : AudioServiceRepeatMode.none;
-    if (repeat) await _backend.setRepeatAll(true);
+    _repeatMode = repeat;
+    await _backend.setRepeat(_backendRepeat(repeat));
     if (shuffle) await _backend.setShuffleEnabled(true);
     _emitCurrentMediaItem();
     _broadcastState();
@@ -434,10 +432,22 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     _repeatMode = repeatMode;
-    // Backend loops the whole list or nothing; 'one' loops the list too (see
-    // _repeatMode) but stays distinct in the published state.
-    await _backend.setRepeatAll(repeatMode != AudioServiceRepeatMode.none);
+    await _backend.setRepeat(_backendRepeat(repeatMode));
     _broadcastState();
+  }
+
+  // Map the audio_service repeat mode to what the backend models. 'group' has
+  // no queue-group concept here, so it behaves as 'all'.
+  static BackendRepeat _backendRepeat(AudioServiceRepeatMode mode) {
+    switch (mode) {
+      case AudioServiceRepeatMode.one:
+        return BackendRepeat.one;
+      case AudioServiceRepeatMode.none:
+        return BackendRepeat.off;
+      case AudioServiceRepeatMode.all:
+      case AudioServiceRepeatMode.group:
+        return BackendRepeat.all;
+    }
   }
 
   // ── Android Auto browsing (delegated to AutoBrowse). The native AudioService
@@ -667,7 +677,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       final pos = _backend.position;
       final wasPlaying = _backend.playing;
       final wasShuffle = _backend.shuffleEnabled;
-      final wasRepeat = _backend.repeatAll;
+      final wasRepeat = _backend.repeat;
       _reordering = true;
       try {
         queue.add(rebuilt);
@@ -676,7 +686,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // setSources rebuilds the playlist; re-apply shuffle/repeat so a
         // transcode change doesn't silently drop them (mirrors restoreQueue).
         await _backend.setShuffleEnabled(wasShuffle);
-        await _backend.setRepeatAll(wasRepeat);
+        await _backend.setRepeat(wasRepeat);
       } finally {
         _reordering = false;
       }
@@ -692,8 +702,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         ? AudioServiceShuffleMode.all
         : AudioServiceShuffleMode.none;
 
-    // Emit the requested repeat mode (not _backend.repeatAll, which can't
-    // represent 'one') so none/all/one stay distinct for clients that cycle.
+    // Emit the exact requested mode (_repeatMode); the backend's BackendRepeat
+    // collapses 'group' to 'all', so reading it back would lose information.
+    // This keeps none/all/one distinct for clients that cycle through them.
     final AudioServiceRepeatMode repeat = _repeatMode;
 
     playbackState.add(playbackState.value.copyWith(

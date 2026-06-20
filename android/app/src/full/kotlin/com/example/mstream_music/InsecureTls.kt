@@ -65,4 +65,29 @@ object InsecureTls {
         }
         enabled = on
     }
+
+    // ── Album-art ContentProvider TLS ──
+    // The art provider runs headless on the Android Auto cold-bind, where
+    // MainActivity never installed the global trust-all swap above, so it can't
+    // rely on it. applyArtTls trusts a SINGLE provider connection so a
+    // self-signed server's browse art loads; the provider calls it only for
+    // hosts the user marked "allow self-signed", so valid-cert servers (and the
+    // token in their art URL) keep a validated connection. All the permissive
+    // TLS lives here in the full source set (the play stub is a no-op), so the
+    // play binary stays clean for Google Play's unsafe-TLS scan.
+    private val artFactory: SSLSocketFactory by lazy {
+        val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
+            override fun checkClientTrusted(c: Array<X509Certificate>?, a: String?) {}
+            override fun checkServerTrusted(c: Array<X509Certificate>?, a: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        })
+        val ctx = SSLContext.getInstance("TLS")
+        ctx.init(null, trustAll, SecureRandom())
+        ctx.socketFactory
+    }
+
+    fun applyArtTls(conn: HttpsURLConnection) {
+        conn.sslSocketFactory = artFactory
+        conn.hostnameVerifier = HostnameVerifier { _, _ -> true }
+    }
 }

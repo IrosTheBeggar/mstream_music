@@ -37,7 +37,7 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   int _index = -1; // logical current index into _items
   int _loadedIndex = -1; // index actually pushed to the renderer
   bool _shuffle = false;
-  bool _repeatAll = false;
+  BackendRepeat _repeat = BackendRepeat.off;
   bool _playing = false;
   Duration _position = Duration.zero;
   Duration? _duration;
@@ -221,11 +221,15 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
 
   // ── Shuffle / repeat + next-track selection ──
   /// The index to advance to after the current track, honouring shuffle and
-  /// repeat-all. Null means "nothing more to play" (end of a non-repeating
-  /// list). Used by each backend's auto-advance and seekToNext.
+  /// repeat. Null means "nothing more to play" (end of a non-repeating list).
+  /// Used by each backend's auto-advance ([onComplete] true) and seekToNext
+  /// ([onComplete] false).
   @protected
-  int? nextIndex() {
+  int? nextIndex({bool onComplete = false}) {
     if (_items.isEmpty) return null;
+    // Repeat-one: a track that finished on its own replays; an explicit skip
+    // (onComplete == false) still advances to the next track.
+    if (onComplete && _repeat == BackendRepeat.one) return _index;
     if (_shuffle && _items.length > 1) {
       int n;
       do {
@@ -234,7 +238,7 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
       return n;
     }
     if (_index + 1 < _items.length) return _index + 1;
-    if (_repeatAll) return 0;
+    if (_repeat == BackendRepeat.all) return 0;
     return null;
   }
 
@@ -245,8 +249,8 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   }
 
   @override
-  Future<void> setRepeatAll(bool enabled) async {
-    _repeatAll = enabled;
+  Future<void> setRepeat(BackendRepeat mode) async {
+    _repeat = mode;
     change();
   }
 
@@ -258,7 +262,7 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   @override
   bool get shuffleEnabled => _shuffle;
   @override
-  bool get repeatAll => _repeatAll;
+  BackendRepeat get repeat => _repeat;
   @override
   Duration get position => _position;
   @protected

@@ -6,6 +6,11 @@ import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 /// backends can report the same lifecycle without depending on just_audio.
 enum BackendProcessingState { idle, loading, buffering, ready, completed }
 
+/// Repeat mode the handler asks the backend to honour. [one] repeats the
+/// current track on natural completion (an explicit skip still advances);
+/// [all] loops the whole list; [off] stops at the end.
+enum BackendRepeat { off, all, one }
+
 /// Abstraction over "what actually plays the audio".
 ///
 /// [AudioPlayerHandler] owns the queue, current index, shuffle/repeat and
@@ -51,7 +56,7 @@ abstract class PlaybackBackend {
   Future<void> seekToNext();
   Future<void> seekToPrevious();
   Future<void> setShuffleEnabled(bool enabled);
-  Future<void> setRepeatAll(bool enabled);
+  Future<void> setRepeat(BackendRepeat mode);
 
   /// Output volume, 0.0–1.0. (Unused by the handler today; here for the cast
   /// backends + future ReplayGain/volume-normalization work.)
@@ -60,7 +65,7 @@ abstract class PlaybackBackend {
   // ── Synchronous state (read by AudioPlayerHandler._broadcastState) ──
   bool get playing;
   bool get shuffleEnabled;
-  bool get repeatAll;
+  BackendRepeat get repeat;
   Duration get position;
   Duration get bufferedPosition;
   double get speed;
