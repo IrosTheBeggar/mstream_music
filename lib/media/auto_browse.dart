@@ -60,6 +60,13 @@ const Map<String, dynamic> _gridChildren = {
 const Map<String, dynamic> _listChildren = {
   AndroidContentStyle.browsableHintKey: AndroidContentStyle.listItemHintValue,
 };
+// For A–Z / # index nodes: a list of text rows with a tintable category icon
+// (these have no artwork — the category style is what stops Android Auto from
+// rendering them as broken art tiles).
+const Map<String, dynamic> _categoryListChildren = {
+  AndroidContentStyle.browsableHintKey:
+      AndroidContentStyle.categoryListItemHintValue,
+};
 
 String _id(String type, Map<String, String?> params) {
   final qp = <String, String>{};
@@ -340,17 +347,18 @@ class AutoBrowse {
 
   static List<MediaItem> _rootTabs(Server server) {
     final String s = server.localname;
-    // Per-node content style: albums render as an art grid; artists & playlists
-    // are text lists (no art). Recent's children are playable tracks (list by
-    // default). Set explicitly rather than relying on the inherited default.
+    // Albums/Artists open onto an A–Z letter index (category list), or — for a
+    // small library — straight to album/artist rows. The album-art grid is
+    // applied one level down on the album leaves (see _bucketView childStyle).
+    // Recent's children are playable tracks.
     return [
       _browse(_id('cat', {'s': s, 'k': 'recent'}), 'Recently Added'),
       _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',
           styleExtras: _listChildren),
       _browse(_id('cat', {'s': s, 'k': 'albums'}), 'Albums',
-          styleExtras: _gridChildren),
+          styleExtras: _categoryListChildren),
       _browse(_id('cat', {'s': s, 'k': 'artists'}), 'Artists',
-          styleExtras: _listChildren),
+          styleExtras: _categoryListChildren),
     ];
   }
 
@@ -363,31 +371,76 @@ class AutoBrowse {
   /// non-Latin names get their own buckets instead of collapsing together.
   static List<MediaItem> _bucketView(
       List<DisplayItem> all, String prefix, String kind, Server srv) {
-    final matched = prefix.isEmpty
-        ? all
-        : [
-            for (final r in all)
-              if (autoBucketKey(r.name).startsWith(prefix)) r
-          ];
+    // '#' is the synthetic non-letter top bucket — its items render as leaves.
+    if (prefix == '#') {
+      final matched = [for (final r in all) if (autoTopBucket(r.name) == '#') r];
+      return _leafNodes(matched, kind, srv);
+    }
+
+    // Top level: one bucket per first letter, '#' (digits/symbols) last.
+    if (prefix.isEmpty) {
+      final counts = <String, int>{};
+      for (final r in all) {
+        counts.update(autoTopBucket(r.name), (n) => n + 1, ifAbsent: () => 1);
+      }
+      final labels = autoTopBuckets(all.map((r) => r.name));
+      appLog('[auto] $kind "*": ${all.length} items → ${labels.length} buckets');
+      return _bucketNodes(labels, counts, kind, srv);
+    }
+
+    // Drill into a letter prefix; sub-bucket again if it still overflows.
+    final matched = [
+      for (final r in all)
+        if (autoBucketKey(r.name).startsWith(prefix)) r
+    ];
     final subs = autoBucketPrefixes(
         matched.map((r) => autoBucketKey(r.name)), prefix, _maxChildren);
-    // Fits, or hit the depth cap: render the matched items as leaves.
     if (subs.isEmpty) return _leafNodes(matched, kind, srv);
-    final childStyle = kind == 'albums' ? _gridChildren : _listChildren;
-    // Items whose key doesn't extend past the prefix (a name equal to it) can't
-    // go in a deeper sub-bucket — render them as leaves alongside.
+    final counts = <String, int>{};
+    for (final r in matched) {
+      final k = autoBucketKey(r.name);
+      if (k.length > prefix.length) {
+        counts.update(
+            k.substring(0, prefix.length + 1), (n) => n + 1, ifAbsent: () => 1);
+      }
+    }
+    // Names equal to the prefix can't extend — render them as leaves alongside.
     final exact = [
       for (final r in matched)
         if (autoBucketKey(r.name).length <= prefix.length) r
     ];
-    appLog('[auto] $kind "${prefix.isEmpty ? '*' : prefix}": '
+    appLog('[auto] $kind "$prefix": '
         '${matched.length} items → ${subs.length} buckets');
     return [
-      for (final p in subs)
-        _browse(_id('bucket', {'s': srv.localname, 'k': kind, 'b': p}), p,
-            styleExtras: childStyle),
+      ..._bucketNodes(subs, counts, kind, srv),
       ..._leafNodes(exact, kind, srv),
     ];
+  }
+
+  /// Builds bucket browse nodes for [labels] (with per-label membership
+  /// [counts]). A bucket's content style depends on what drilling into it
+  /// shows: album leaves want an art grid, but a bucket that itself sub-buckets
+  /// (an album letter over the cap, below the depth limit) shows letter
+  /// sub-buckets, which want a list — otherwise they'd render as art-less grid
+  /// tiles. Artist buckets are always a list.
+  static List<MediaItem> _bucketNodes(
+      List<String> labels, Map<String, int> counts, String kind, Server srv) {
+    return [
+      for (final b in labels)
+        _browse(_id('bucket', {'s': srv.localname, 'k': kind, 'b': b}), b,
+            styleExtras: _bucketChildStyle(kind, b, counts[b] ?? 0)),
+    ];
+  }
+
+  static Map<String, dynamic> _bucketChildStyle(
+      String kind, String label, int count) {
+    final willSubBucket = label != '#' &&
+        count > _maxChildren &&
+        label.length < autoBucketMaxDepth;
+    // A bucket that sub-buckets shows a letter index → category list. Otherwise
+    // it shows leaves: album covers in a grid, artists in a plain list.
+    if (willSubBucket) return _categoryListChildren;
+    return kind == 'albums' ? _gridChildren : _listChildren;
   }
 
   static List<MediaItem> _leafNodes(
