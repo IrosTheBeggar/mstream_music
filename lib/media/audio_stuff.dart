@@ -425,14 +425,26 @@ class AudioPlayerHandler extends BaseAudioHandler
   // target (not a toggle), and the in-app buttons already pass the desired mode.
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
-    await _backend.setShuffleEnabled(shuffleMode == AudioServiceShuffleMode.all);
+    // A transport toggle from Android Auto / the lock screen must never throw
+    // out of the handler if the backend rejects the call (e.g. nothing loaded
+    // yet on a cold headless bind); still re-broadcast the (unchanged) state.
+    try {
+      await _backend
+          .setShuffleEnabled(shuffleMode == AudioServiceShuffleMode.all);
+    } catch (e) {
+      appLog('[audio] setShuffleMode failed: $e');
+    }
     _broadcastState();
   }
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     _repeatMode = repeatMode;
-    await _backend.setRepeat(_backendRepeat(repeatMode));
+    try {
+      await _backend.setRepeat(_backendRepeat(repeatMode));
+    } catch (e) {
+      appLog('[audio] setRepeatMode failed: $e');
+    }
     _broadcastState();
   }
 
@@ -858,7 +870,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool autoPlay = false, bool incrementIndex = false}) {
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
-    final filepath = song['filepath'] as String;
+    final filepath = song['filepath'] as String?;
+    if (filepath == null) return; // skip a degenerate random-songs row
 
     // Transcode-aware stream URL (honors the /transcode endpoint + codec/bitrate
     // when transcoding is on), shared with browse / queue-restore / recursive.

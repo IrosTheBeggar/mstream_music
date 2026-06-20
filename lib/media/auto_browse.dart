@@ -174,7 +174,12 @@ class AutoBrowse {
       final Uri? u = Uri.tryParse(parentMediaId);
       if (u == null || u.scheme != _scheme) return const [];
       final qp = u.queryParameters;
-      final Server srv = ServerManager().byLocalname(qp['s']) ?? server;
+      // A node carries the server it was built on; if that server is gone, don't
+      // silently re-fetch it from a different one — show the load notice.
+      final Server? srv = _serverForId(qp['s']);
+      if (srv == null) {
+        return [_notice('Couldn\'t load', 'Check your connection and try again')];
+      }
 
       switch (u.host) {
         case 'cat':
@@ -249,6 +254,17 @@ class AutoBrowse {
   /// the id alone (no network). Auto mostly relies on getChildren; this is a
   /// best-effort fallback.
   static Future<MediaItem?> mediaItem(String mediaId) async {
+    // Never throw to Android Auto. The synthesis below is throw-free today; this
+    // guard hardens it against future edits, matching the other browse callbacks.
+    try {
+      return _mediaItem(mediaId);
+    } catch (e) {
+      appLog('[auto] getMediaItem($mediaId) failed: $e');
+      return null;
+    }
+  }
+
+  static MediaItem? _mediaItem(String mediaId) {
     final Uri? u = Uri.tryParse(mediaId);
     if (u == null || u.scheme != _scheme) return null;
     final qp = u.queryParameters;
@@ -299,9 +315,17 @@ class AutoBrowse {
         return;
       }
 
-      final Server? srv = ServerManager().byLocalname(qp['s']) ??
-          ServerManager().currentServer;
-      if (srv == null) return;
+      // A track/album/etc. id carries the server it was minted on. If that
+      // server is gone (removed / renamed since the browse), treat the id as
+      // stale and no-op rather than playing from a different same-named server.
+      final Server? srv = _serverForId(qp['s']);
+      if (srv == null) {
+        final s = qp['s'];
+        if (s != null && s.isNotEmpty) {
+          appLog('[auto] play: server "$s" no longer configured — stale id');
+        }
+        return;
+      }
 
       // Shuffle All: hand the library to the app's Auto-DJ from a clean queue —
       // infinite random play, reusing its working random-songs payload + top-up.
@@ -657,6 +681,15 @@ class AutoBrowse {
   static List<MediaItem> _orEmptyNotice(List<MediaItem> items) =>
       items.isEmpty ? [_notice('Nothing here', 'This list is empty')] : items;
 
+  /// Resolve the server an id was minted on. A present-but-unknown localname
+  /// (the server was removed / renamed since this id was built) returns null so
+  /// callers no-op rather than silently acting on a DIFFERENT server; an
+  /// absent / empty localname falls back to the current server.
+  static Server? _serverForId(String? localname) =>
+      (localname == null || localname.isEmpty)
+          ? ServerManager().currentServer
+          : ServerManager().byLocalname(localname);
+
   static Iterable<DisplayItem> _capped(List<DisplayItem> rows, String label) {
     if (rows.length <= _maxChildren) return rows;
     appLog('[auto] $label: ${rows.length} items, showing first $_maxChildren');
@@ -741,7 +774,9 @@ class AutoApi {
     final res = await _call(s, '/api/v1/playlist/getall');
     final out = <DisplayItem>[];
     for (final e in (res as List? ?? const [])) {
-      out.add(DisplayItem(s, e['name'], 'playlist', e['name'], null, null));
+      final name = e['name']?.toString();
+      if (name == null || name.isEmpty) continue; // skip a malformed row
+      out.add(DisplayItem(s, name, 'playlist', name, null, null));
     }
     return out;
   }
@@ -806,22 +841,28 @@ class AutoApi {
     });
     final artists = <DisplayItem>[];
     for (final e in (res['artists'] as List? ?? const [])) {
-      final di = DisplayItem(s, e['name'], 'artist', e['name'], null, null);
+      final name = e['name']?.toString();
+      if (name == null || name.isEmpty) continue;
+      final di = DisplayItem(s, name, 'artist', name, null, null);
       di.altAlbumArt = e['album_art_file'];
       artists.add(di);
     }
     final albums = <DisplayItem>[];
     for (final e in (res['albums'] as List? ?? const [])) {
-      final di = DisplayItem(s, e['name'], 'album', e['name'], null, null);
+      final name = e['name']?.toString();
+      if (name == null || name.isEmpty) continue;
+      final di = DisplayItem(s, name, 'album', name, null, null);
       di.altAlbumArt = e['album_art_file'];
       albums.add(di);
     }
     final titles = <DisplayItem>[];
     for (final e in (res['title'] as List? ?? const [])) {
-      final di =
-          DisplayItem(s, e['name'], 'file', '/${e['filepath']}', null, null);
+      final fp = e['filepath']?.toString();
+      if (fp == null || fp.isEmpty) continue; // skip a hit with no play target
+      final title = e['name']?.toString() ?? fp;
+      final di = DisplayItem(s, title, 'file', '/$fp', null, null);
       di.metadata = MusicMetadata.fromServerMap({
-        'title': e['name'],
+        'title': title,
         'album-art': e['album_art_file'],
       });
       titles.add(di);
@@ -835,14 +876,16 @@ class AutoApi {
   static List<DisplayItem> _fileItems(dynamic res, Server s) {
     final out = <DisplayItem>[];
     for (final e in (res as List? ?? const [])) {
-      final di = DisplayItem(
-          s, e['filepath'], 'file', '/${e['filepath']}', null, null);
-      // Guard the metadata parse so one unscanned / metadata-less track
-      // degrades to a filename-titled row instead of failing the whole
-      // album/playlist (mirrors getFileList's `inner is Map` guard);
-      // _trackNodes already tolerates null metadata.
-      final md = e['metadata'];
-      if (md is Map) di.metadata = MusicMetadata.fromServerMap(md);
+      final fp = e['filepath']?.toString();
+      if (fp == null || fp.isEmpty) continue; // skip a row with no play target
+      final di = DisplayItem(s, fp, 'file', '/$fp', null, null);
+      // Tolerate one malformed / typed row: a bad metadata block (or any parse
+      // slip) drops just that track instead of failing the whole album/playlist
+      // (mirrors getFileList's per-row guard; _trackNodes tolerates null meta).
+      try {
+        final md = e['metadata'];
+        if (md is Map) di.metadata = MusicMetadata.fromServerMap(md);
+      } catch (_) {/* keep the filename-titled row */}
       out.add(di);
     }
     return out;
