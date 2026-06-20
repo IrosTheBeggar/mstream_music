@@ -1,0 +1,10 @@
+# Rust build output (rebuilt via cargo / cargo-ndk)
+/target
+
+# Interop test harness deps (reinstalled via `npm install`)
+/interop/node_modules
+/interop/package-lock.json
+
+# Re-include Cargo.lock (repo root .gitignore has *.lock); commit it for
+# reproducible builds of this application/cdylib crate.
+!Cargo.lock
