@@ -22,12 +22,14 @@ import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import 'auto_buckets.dart';
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
 import '../objects/server.dart';
 import '../singletons/log_manager.dart';
+import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
@@ -128,9 +130,23 @@ class AutoBrowse {
         ];
       }
 
-      // Android 11 playback resumption requests the 'recent' root. Surfacing a
-      // resume entry is a later enhancement; an empty list is valid.
-      if (parentMediaId == AudioService.recentRootId) return const [];
+      // Android 11 playback resumption requests the 'recent' root: surface the
+      // now-playing item (when the queue is warm) as a playable 'resume' entry.
+      if (parentMediaId == AudioService.recentRootId) {
+        final cur = MediaManager().audioHandler.mediaItem.value;
+        if (cur == null) return const [];
+        final art = cur.extras?['artUrl'];
+        return [
+          MediaItem(
+            id: _id('resume', const {}),
+            title: cur.title,
+            artist: cur.artist,
+            album: cur.album,
+            artUri: art is String ? Uri.parse(_artContentUri(art)) : null,
+            playable: true,
+          ),
+        ];
+      }
 
       if (parentMediaId == AudioService.browsableRootId) {
         return _rootTabs(server);
@@ -175,6 +191,15 @@ class AutoBrowse {
         case 'playlist':
           return _trackNodes(await AutoApi.playlistSongs(srv, qp['v']), srv,
               'playlist', qp['v']);
+        case 'dir':
+          {
+            // A folder: its subfolders (browsable) then its tracks (playable).
+            final fl = await AutoApi.fileList(srv, qp['p'] ?? '~');
+            return [
+              ..._dirNodes(fl.dirs, srv),
+              ..._trackNodes(fl.files, srv, 'dir', qp['p']),
+            ];
+          }
         case 'bucket':
           {
             // A–Z(+deeper) drill-in: reuse the cached library list and keep
@@ -214,10 +239,21 @@ class AutoBrowse {
       case 'artist':
       case 'playlist':
         return MediaItem(id: mediaId, title: qp['v'] ?? '', playable: false);
+      case 'dir':
+        return MediaItem(
+            id: mediaId,
+            title: (qp['p'] == null || qp['p'] == '~')
+                ? 'Files'
+                : p.basename(qp['p']!),
+            playable: false);
       case 'bucket':
         return MediaItem(id: mediaId, title: qp['b'] ?? '', playable: false);
       case 'cat':
         return MediaItem(id: mediaId, title: qp['k'] ?? '', playable: false);
+      case 'shuffle':
+        return MediaItem(id: mediaId, title: 'Shuffle All', playable: true);
+      case 'resume':
+        return MediaItem(id: mediaId, title: 'Resume', playable: true);
     }
     return null;
   }
@@ -231,12 +267,31 @@ class AutoBrowse {
     try {
       await ServerManager().ensureLoaded();
       final Uri? u = Uri.tryParse(mediaId);
-      if (u == null || u.scheme != _scheme || u.host != 'track') return;
+      if (u == null || u.scheme != _scheme) return;
       final qp = u.queryParameters;
+      final handler = MediaManager().audioHandler;
+
+      // Resume the restored queue (no-op if there's nothing to resume).
+      if (u.host == 'resume') {
+        if (handler.queue.value.isNotEmpty) await handler.play();
+        return;
+      }
+
       final Server? srv = ServerManager().byLocalname(qp['s']) ??
           ServerManager().currentServer;
+      if (srv == null) return;
+
+      // Shuffle All: hand the library to the app's Auto-DJ from a clean queue —
+      // infinite random play, reusing its working random-songs payload + top-up.
+      if (u.host == 'shuffle') {
+        await handler.customAction('clearPlaylist');
+        await handler.customAction('setAutoDJ', {'autoDJServer': srv});
+        return;
+      }
+
+      if (u.host != 'track') return;
       final String? path = qp['p'];
-      if (srv == null || path == null) return;
+      if (path == null) return;
 
       final List<DisplayItem> rows;
       switch (qp['ct']) {
@@ -251,6 +306,9 @@ class AutoBrowse {
           break;
         case 'search':
           rows = (await AutoApi.search(srv, qp['cv'] ?? '')).titles;
+          break;
+        case 'dir':
+          rows = (await AutoApi.fileList(srv, qp['cv'] ?? '~')).files;
           break;
         default:
           return;
@@ -369,6 +427,10 @@ class AutoBrowse {
     // applied one level down on the album leaves (see _bucketView childStyle).
     // Recent's children are playable tracks.
     return [
+      // A playable quick-action: hand the whole library to Auto-DJ (infinite
+      // shuffle). First, so it's the obvious "just play something" option.
+      MediaItem(
+          id: _id('shuffle', {'s': s}), title: 'Shuffle All', playable: true),
       _browse(_id('cat', {'s': s, 'k': 'recent'}), 'Recently Added'),
       _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',
           styleExtras: _listChildren),
@@ -376,6 +438,9 @@ class AutoBrowse {
           styleExtras: _categoryListChildren),
       _browse(_id('cat', {'s': s, 'k': 'artists'}), 'Artists',
           styleExtras: _categoryListChildren),
+      // The server's folder tree, starting at its '~' root.
+      _browse(_id('dir', {'s': s, 'p': '~'}), 'Files',
+          styleExtras: _listChildren),
     ];
   }
 
@@ -499,6 +564,16 @@ class AutoBrowse {
       if (r.type != 'playlist') continue;
       out.add(
           _browse(_id('playlist', {'s': srv.localname, 'v': r.data}), r.name));
+    }
+    return out;
+  }
+
+  static List<MediaItem> _dirNodes(List<DisplayItem> dirs, Server srv) {
+    final out = <MediaItem>[];
+    for (final r in _capped(dirs, 'files')) {
+      if (r.type != 'directory' || r.data == null) continue;
+      out.add(_browse(_id('dir', {'s': srv.localname, 'p': r.data}), r.name,
+          styleExtras: _listChildren));
     }
     return out;
   }
@@ -650,6 +725,35 @@ class AutoApi {
   static Future<List<DisplayItem>> recent(Server s) async {
     final res = await _call(s, '/api/v1/db/recent/added', body: {'limit': 100});
     return _fileItems(res, s);
+  }
+
+  /// Lists a server [directory] ('~' is the root). Returns its subfolders and
+  /// playable files as DisplayItems, with file paths joined the same way the
+  /// in-app file browser does so playback (buildServerFileMediaItem) is
+  /// identical. pullMetadata is on so tracks show real titles + art in the car.
+  static Future<({List<DisplayItem> dirs, List<DisplayItem> files})> fileList(
+      Server s, String directory) async {
+    final res = await _call(s, '/api/v1/file-explorer',
+        body: {'directory': directory, 'pullMetadata': true});
+    final base = res['path'] as String? ?? '';
+    final dirs = <DisplayItem>[];
+    for (final e in (res['directories'] as List? ?? const [])) {
+      final name = e['name'] as String?;
+      if (name == null) continue;
+      dirs.add(
+          DisplayItem(s, name, 'directory', p.join(base, name), null, null));
+    }
+    final files = <DisplayItem>[];
+    for (final e in (res['files'] as List? ?? const [])) {
+      final name = e['name'] as String?;
+      if (name == null) continue;
+      final di = DisplayItem(s, name, 'file', p.join(base, name), null, null);
+      // The server wraps each file's metadata as { metadata: {…} }; drill in.
+      final inner = e['metadata'] is Map ? e['metadata']['metadata'] : null;
+      if (inner is Map) di.metadata = MusicMetadata.fromServerMap(inner);
+      files.add(di);
+    }
+    return (dirs: dirs, files: files);
   }
 
   /// Library search (artists + albums + song titles; raw files excluded).
