@@ -41,6 +41,8 @@ import 'media/auto_browse.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'native/iroh_tunnel.dart';
+import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
@@ -278,6 +280,76 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     _connectivitySub?.cancel();
     DownloadManager().dispose();
     super.dispose();
+  }
+
+  // Banner for iroh tunnel trouble on the active server: reconnecting (transient),
+  // re-pair needed (rotated secret), or disconnected (hard-down). Hidden when
+  // connected or the active server isn't iroh. Strings are plain English for now.
+  Widget _tunnelBanner() {
+    return StreamBuilder<IrohTunnelStatus>(
+      stream: ServerManager().tunnelStatusStream,
+      initialData: ServerManager().tunnelStatus,
+      builder: (context, snap) {
+        final st = snap.data ?? IrohTunnelStatus.down;
+        final isIroh = ServerManager().currentServer?.isIroh == true;
+        if (!isIroh || st == IrohTunnelStatus.connected) {
+          return const SizedBox.shrink();
+        }
+        IconData icon;
+        Color color;
+        String text;
+        Widget action;
+        switch (st) {
+          case IrohTunnelStatus.rejected:
+            icon = Icons.link_off;
+            color = VelvetColors.error;
+            text = 'Server pairing changed — re-pair to reconnect.';
+            action = TextButton(
+              onPressed: () => showIrohRepairSheet(context),
+              child:
+                  Text('Re-pair', style: TextStyle(color: VelvetColors.primary)),
+            );
+            break;
+          case IrohTunnelStatus.down:
+            icon = Icons.cloud_off;
+            color = VelvetColors.warning;
+            text = 'Disconnected from server.';
+            action = TextButton(
+              onPressed: () =>
+                  unawaited(ServerManager().handleNetworkChange()),
+              child:
+                  Text('Retry', style: TextStyle(color: VelvetColors.primary)),
+            );
+            break;
+          default: // connecting / reconnecting
+            icon = Icons.sync_problem;
+            color = VelvetColors.warning;
+            text = 'Reconnecting to server…';
+            action = SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, valueColor: AlwaysStoppedAnimation(color)),
+            );
+        }
+        return Material(
+          color: VelvetColors.surface,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Row(children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary, fontSize: 13)),
+              ),
+              action,
+            ]),
+          ),
+        );
+      },
+    );
   }
 
   // Thin banner above the tabs showing a background storage move's progress
@@ -560,6 +632,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       ),
       body: Column(children: [
         _migrationBanner(),
+        _tunnelBanner(),
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(

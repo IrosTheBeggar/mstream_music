@@ -135,7 +135,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Propagate backend state changes to AudioService clients.
     _backendSubject
         .switchMap((b) => b.changeStream)
-        .listen((_) => _broadcastState());
+        .listen((_) => _broadcastState(), onError: _onPlaybackError);
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();
@@ -328,6 +328,37 @@ class AudioPlayerHandler extends BaseAudioHandler
     }).catchError((Object e) {
       castLog('Renderer-lost fallback failed', error: e);
     });
+  }
+
+  // just_audio surfaced a playback error. On an iroh server a mid-stream tunnel
+  // drop lands here; the supervisor reconnects on the SAME loopback port, so once
+  // it's back we re-seed the current source and resume at its position. Debounced
+  // (and guarded) so a persistently-failing source can't spin.
+  bool _recoveringPlayback = false;
+  DateTime? _lastPlaybackRecovery;
+  void _onPlaybackError(Object error) {
+    if (_recoveringPlayback) return;
+    if (!identical(_backend, _localBackend)) return; // on-device stream path only
+    final server = ServerManager().currentServer;
+    if (server == null || !server.isIroh) return;
+    final now = DateTime.now();
+    if (_lastPlaybackRecovery != null &&
+        now.difference(_lastPlaybackRecovery!) < const Duration(seconds: 10)) {
+      return;
+    }
+    _recoveringPlayback = true;
+    _lastPlaybackRecovery = now;
+    _switchChain = _switchChain.then((_) async {
+      if (queue.value.isEmpty) return;
+      final pos = _localBackend.position;
+      final idx = _localBackend.currentIndex ?? 0;
+      final ready = await ServerManager().awaitTunnelReady();
+      if (!ready) return; // tunnel didn't recover; the banner shows why
+      await _localBackend.setSources(queue.value);
+      await _localBackend.seek(pos, index: idx, play: true);
+    }).catchError((Object e) {
+      castLog('iroh playback recovery failed', error: e);
+    }).whenComplete(() => _recoveringPlayback = false);
   }
 
   // Re-seed the inherited customState with a typed CustomEvent default (it

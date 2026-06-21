@@ -319,6 +319,7 @@ class ServerManager {
       if (CastManager().isCasting) {
         unawaited(CastManager().selectTarget(CastTarget.local));
       }
+      _startStatusPolling();
       if (_activeTunnelCode == s.irohPairingCode && s.tunnelPort != null) {
         // Already wired up. The supervisor handles transient drops itself; only
         // rebuild on a verify when it's fully down (a reconnecting/rejected
@@ -342,9 +343,13 @@ class ServerManager {
         _activeTunnelCode = null;
         // Leave it down; requests fail fast via effectiveBaseUrl until retried.
       }
+      _refreshTunnelStatus();
     } else if (_activeTunnelCode != null) {
       IrohTunnel.instance.stop();
       _activeTunnelCode = null;
+      _stopStatusPolling();
+    } else {
+      _stopStatusPolling();
     }
   }
 
@@ -356,6 +361,72 @@ class ServerManager {
     if (!IrohTunnel.isSupported || s == null || !s.isIroh) return;
     IrohTunnel.instance.networkChanged();
     await ensureActiveTunnel(verify: true);
+  }
+
+  // ── iroh tunnel status (drives the reconnecting / re-pair banner) ──
+  // The native status is a poll (no push from the Rust supervisor), so we sample
+  // it on a light timer while an iroh server is active and emit only on change.
+  final BehaviorSubject<IrohTunnelStatus> _tunnelStatus =
+      BehaviorSubject.seeded(IrohTunnelStatus.down);
+  Stream<IrohTunnelStatus> get tunnelStatusStream => _tunnelStatus.stream;
+  IrohTunnelStatus get tunnelStatus => _tunnelStatus.value;
+  Timer? _statusPoll;
+
+  void _refreshTunnelStatus() {
+    final st = (IrohTunnel.isSupported && currentServer?.isIroh == true)
+        ? IrohTunnel.instance.status
+        : IrohTunnelStatus.down;
+    if (st != _tunnelStatus.value) _tunnelStatus.add(st);
+  }
+
+  void _startStatusPolling() {
+    _statusPoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
+      _refreshTunnelStatus();
+      if (currentServer?.isIroh != true) _stopStatusPolling();
+    });
+    _refreshTunnelStatus();
+  }
+
+  void _stopStatusPolling() {
+    _statusPoll?.cancel();
+    _statusPoll = null;
+    if (_tunnelStatus.value != IrohTunnelStatus.down) {
+      _tunnelStatus.add(IrohTunnelStatus.down);
+    }
+  }
+
+  /// Wait (bounded) for the active iroh tunnel to report CONNECTED, kicking a
+  /// verify-rebuild in case it's hard-down. Returns true once connected; false on
+  /// a rejected (re-pair) state or timeout. Non-iroh servers are ready immediately.
+  Future<bool> awaitTunnelReady(
+      {Duration timeout = const Duration(seconds: 12)}) async {
+    final s = currentServer;
+    if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
+    unawaited(ensureActiveTunnel(verify: true));
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final st = IrohTunnel.instance.status;
+      if (st == IrohTunnelStatus.connected) return true;
+      if (st == IrohTunnelStatus.rejected) return false;
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    return IrohTunnel.instance.status == IrohTunnelStatus.connected;
+  }
+
+  /// Re-pair the active iroh server with a fresh pairing code (after a rotated
+  /// secret) and restart the tunnel with it. The caller should have validated the
+  /// code first (a successful test connection). Persists the new code.
+  Future<void> repairIrohPairingCode(String newCode) async {
+    final s = currentServer;
+    if (s == null || !s.isIroh) return;
+    s.irohPairingCode = newCode;
+    // Drop the rejected tunnel so ensureActiveTunnel re-dials with the new code.
+    IrohTunnel.instance.stop();
+    _activeTunnelCode = null;
+    s.tunnelPort = null;
+    await writeServerFile();
+    await ensureActiveTunnel(verify: true);
+    _refreshTunnelStatus();
   }
 
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active
@@ -476,6 +547,8 @@ class ServerManager {
   void dispose() {
     _serverListStream.close();
     _currentServerStream.close();
+    _statusPoll?.cancel();
+    _tunnelStatus.close();
   } //initializes the subject with element already;
 
   Stream<Server?> get currentServerStream => _currentServerStream.stream;

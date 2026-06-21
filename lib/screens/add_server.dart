@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter/services.dart';
+import '../widgets/iroh_scanner.dart';
 import '../build_variant.dart';
 import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
@@ -1338,7 +1338,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
     if (!mounted) return;
     final code = await Navigator.of(context).push<String>(
-        MaterialPageRoute(builder: (_) => const _IrohScannerPage()));
+        MaterialPageRoute(builder: (_) => const IrohScannerPage()));
     if (code != null && code.trim().isNotEmpty && mounted) {
       if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
       setState(() {
@@ -1975,40 +1975,5 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 }
 
-// Full-screen QR scanner for the iroh pairing code. Pops with the first decoded
-// string (mobile_scanner: CameraX/ML Kit on Android).
-class _IrohScannerPage extends StatefulWidget {
-  const _IrohScannerPage();
-
-  @override
-  State<_IrohScannerPage> createState() => _IrohScannerPageState();
-}
-
-class _IrohScannerPageState extends State<_IrohScannerPage> {
-  final MobileScannerController _controller = MobileScannerController();
-  bool _handled = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onDetect(BarcodeCapture capture) {
-    if (_handled) return;
-    final raw =
-        capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
-    if (raw != null && raw.isNotEmpty) {
-      _handled = true;
-      Navigator.of(context).pop(raw);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Scan pairing QR')),
-      body: MobileScanner(controller: _controller, onDetect: _onDetect),
-    );
-  }
-}
+// The QR scanner page moved to lib/widgets/iroh_scanner.dart (IrohScannerPage),
+// shared with the re-pair sheet.

@@ -107,23 +107,36 @@ class ApiManager {
       Uri currentUri = Uri.parse(server.effectiveBaseUrl).resolve(location);
 
       final sw = Stopwatch()..start();
+      Future<http.Response> send() => getOrPost == 'GET'
+          ? client.get(currentUri, headers: {'x-access-token': server.jwt ?? ''})
+          : client.post(currentUri, body: json.encode(payload), headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? ''
+            });
       http.Response response;
+      final bool isIroh = server.isIroh;
       try {
-        if (getOrPost == 'GET') {
-          response = await client
-              .get(currentUri, headers: {'x-access-token': server.jwt ?? ''});
-        } else {
-          response = await client.post(currentUri,
-              body: json.encode(payload),
-              headers: {
-                'Content-Type': 'application/json',
-                'x-access-token': server.jwt ?? ''
-              });
-        }
+        // For iroh, bound the request so a wedged tunnel fails fast instead of
+        // hanging the global loading bar.
+        response =
+            isIroh ? await send().timeout(const Duration(seconds: 20)) : await send();
       } catch (e) {
-        appLog('[api] $getOrPost $location → error: $e '
-            '(${sw.elapsedMilliseconds}ms)');
-        rethrow;
+        // An iroh connection error usually means the tunnel is mid-drop; give the
+        // self-healing tunnel a moment to recover, then retry once. (Skip on a
+        // user cancel — closing the client throws too.)
+        if (isIroh && !BrowserManager().isLoadCancelled(loadToken)) {
+          final ready = await ServerManager().awaitTunnelReady();
+          if (!ready) {
+            appLog('[api] iroh tunnel down; $getOrPost $location failed: $e');
+            rethrow;
+          }
+          currentUri = Uri.parse(server.effectiveBaseUrl).resolve(location);
+          response = await send().timeout(const Duration(seconds: 20));
+        } else {
+          appLog('[api] $getOrPost $location → error: $e '
+              '(${sw.elapsedMilliseconds}ms)');
+          rethrow;
+        }
       }
       appLog('[api] $getOrPost $location → ${response.statusCode} '
           '(${sw.elapsedMilliseconds}ms)');
