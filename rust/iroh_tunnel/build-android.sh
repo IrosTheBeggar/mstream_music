@@ -2,6 +2,12 @@
 # Build libiroh_tunnel.so for the app's ABIs and stage it into the Flutter app's
 # jniLibs so `flutter build apk --flavor <full|play>` packages it.
 #
+# The staged .so is COMMITTED to git (android/app/src/main/jniLibs/<abi>/), same as
+# libprojectM-4.so — the release CI (ubuntu-latest) has no Rust/NDK toolchain, so it
+# ships the committed binary. RULE: after changing anything under rust/iroh_tunnel/,
+# re-run this script and commit the updated .so. (release.yml fails the build if the
+# .so is missing from the artifacts, but it can't detect a stale one.)
+#
 # Prereqs (one-time):
 #   rustup target add aarch64-linux-android x86_64-linux-android
 #   cargo install cargo-ndk
@@ -30,3 +36,4 @@ done
 
 echo "staged:"
 ls -lh "$JNILIBS"/*/libiroh_tunnel.so
+echo "remember: commit the updated .so — release builds ship the committed binary."

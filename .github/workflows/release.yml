@@ -97,6 +97,25 @@ jobs:
           flutter build apk --release --flavor full
           flutter build appbundle --release --flavor play --dart-define=VARIANT=play
 
+      - name: Verify iroh tunnel .so is bundled
+        # The iroh remote-access transport ships as a prebuilt JNI lib committed under
+        # android/app/src/main/jniLibs/<abi>/libiroh_tunnel.so (same model as
+        # libprojectM — this runner has no Rust/NDK toolchain). Fail loudly if it is
+        # missing from the built artifacts, so a dropped/forgotten .so can't silently
+        # ship a release with no remote access. Rebuild + recommit via
+        # rust/iroh_tunnel/build-android.sh when the Rust shim changes.
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-full-release.apk
+          aab=build/app/outputs/bundle/playRelease/app-play-release.aab
+          for abi in arm64-v8a x86_64; do
+            unzip -l "$apk" | grep -q "lib/$abi/libiroh_tunnel.so" \
+              || { echo "::error::libiroh_tunnel.so missing from full APK ($abi)"; exit 1; }
+          done
+          unzip -l "$aab" | grep -q "lib/arm64-v8a/libiroh_tunnel.so" \
+            || { echo "::error::libiroh_tunnel.so missing from play AAB (arm64-v8a)"; exit 1; }
+          echo "OK: libiroh_tunnel.so bundled (APK arm64-v8a+x86_64, AAB arm64-v8a)"
+
       - name: Rename artifacts to include tag
         # Flutter names flavored outputs app-<flavor>-<buildtype>.{apk,aab}.
         # Rename so multiple releases disambiguate locally.
