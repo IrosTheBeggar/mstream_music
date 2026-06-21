@@ -135,7 +135,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Propagate backend state changes to AudioService clients.
     _backendSubject
         .switchMap((b) => b.changeStream)
-        .listen((_) => _broadcastState(), onError: _onPlaybackError);
+        .listen((_) => _broadcastState());
+    // On-device playback errors arrive on the backend's dedicated errorStream
+    // (just_audio's error channel), NOT as errors on changeStream — recover the
+    // iroh mid-stream-drop case from here.
+    _backendSubject.switchMap((b) => b.errorStream).listen(_onPlaybackError);
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();

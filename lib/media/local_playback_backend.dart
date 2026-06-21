@@ -156,6 +156,12 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   Stream<String> get rendererLostStream => const Stream<String>.empty();
 
+  // just_audio routes playback failures (a source dying mid-stream) to its
+  // dedicated errorStream as PlayerException values — NOT as errors on
+  // playbackEventStream — so this is the channel the handler must watch.
+  @override
+  Stream<Object> get errorStream => _player.errorStream;
+
   // ── Local-only capabilities ──
   @override
   bool get supportsEqualizer => _equalizer != null;

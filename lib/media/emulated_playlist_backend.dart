@@ -294,6 +294,10 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   Stream<void> get changeStream => _changeController.stream;
   @override
   Stream<String> get rendererLostStream => _rendererLost.stream;
+  // Cast backends report failures via rendererLostStream, not a local-player
+  // error, so nothing emits here.
+  @override
+  Stream<Object> get errorStream => const Stream<Object>.empty();
 
   // ── Local-only capabilities (N/A while casting) ──
   @override
