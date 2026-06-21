@@ -296,7 +296,21 @@ class ServerManager {
   /// iroh [currentServer] (recording the live port on the server), restart it
   /// when switching to a different iroh server, or tear it down when the active
   /// server is HTTP/none. Idempotent; await before anything uses the server.
-  Future<void> ensureActiveTunnel() async {
+  // Serializes tunnel (re)starts so app-resume / connectivity / server-switch
+  // can't race the single tunnel's start/stop (mirrors the cast _switchChain).
+  Future<void> _tunnelChain = Future.value();
+
+  /// Bring the single iroh tunnel in line with the active server. With [verify],
+  /// also force a rebuild when the native tunnel is fully *down* despite our
+  /// bookkeeping (the shim's supervisor self-heals transient drops, so this only
+  /// fires for a hard-down tunnel). Serialized against concurrent callers.
+  Future<void> ensureActiveTunnel({bool verify = false}) {
+    final next = _tunnelChain.then((_) => _ensureActiveTunnel(verify));
+    _tunnelChain = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _ensureActiveTunnel(bool verify) async {
     if (!IrohTunnel.isSupported) return;
     final s = currentServer;
     if (s != null && s.isIroh && s.irohPairingCode != null) {
@@ -306,10 +320,15 @@ class ServerManager {
         unawaited(CastManager().selectTarget(CastTarget.local));
       }
       if (_activeTunnelCode == s.irohPairingCode && s.tunnelPort != null) {
-        return; // already up for this server
+        // Already wired up. The supervisor handles transient drops itself; only
+        // rebuild on a verify when it's fully down (a reconnecting/rejected
+        // tunnel is left alone — restarting wouldn't help).
+        if (!verify || IrohTunnel.instance.status != IrohTunnelStatus.down) {
+          return;
+        }
       }
-      // The shim holds one tunnel; switching servers requires dropping the old
-      // one first (start() would otherwise return the stale tunnel's port).
+      // The shim holds one tunnel; switching servers (or rebuilding a dead one)
+      // requires dropping the old one first (start() returns the stale port otherwise).
       if (_activeTunnelCode != null) {
         IrohTunnel.instance.stop();
         _activeTunnelCode = null;
@@ -327,6 +346,16 @@ class ServerManager {
       IrohTunnel.instance.stop();
       _activeTunnelCode = null;
     }
+  }
+
+  /// React to a device network change / app resume: nudge iroh to re-probe paths
+  /// (it can't self-detect on Android) and rebuild the tunnel if it's hard-down.
+  /// Cheap and safe when the active server isn't iroh.
+  Future<void> handleNetworkChange() async {
+    final s = currentServer;
+    if (!IrohTunnel.isSupported || s == null || !s.isIroh) return;
+    IrohTunnel.instance.networkChanged();
+    await ensureActiveTunnel(verify: true);
   }
 
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active

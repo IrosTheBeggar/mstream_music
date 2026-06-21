@@ -40,6 +40,7 @@ import 'media/cast_target.dart';
 import 'media/auto_browse.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
@@ -147,6 +148,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // to be hidden. This key lets the app-bar hamburger open that outer drawer.
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void initState() {
@@ -183,6 +185,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // toast; the handler has already fallen back to local playback.
     _castErrorSub = CastManager().castErrorStream.listen((msg) {
       rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
+    });
+    // An iroh tunnel is a long-lived QUIC connection; unlike fresh per-request
+    // HTTP sockets it needs an explicit kick when the device network changes.
+    // Nudge it on every connectivity transition that has a usable network.
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (results.any((r) => r != ConnectivityResult.none)) {
+        unawaited(ServerManager().handleNetworkChange());
+      }
     });
   }
 
@@ -246,6 +256,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         (ModalRoute.of(context)?.isCurrent ?? true)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
+    // A tunnel can die while backgrounded (idle drop / process pressure); on
+    // resume, nudge iroh + rebuild it if it's hard-down. Fire-and-forget — the
+    // native start can block for tens of seconds.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(ServerManager().handleNetworkChange());
+    }
     // Flush the queue/position to disk when leaving the foreground, so a
     // backgrounded app that's later killed by the OS still reopens in place.
     if (state == AppLifecycleState.paused ||
@@ -259,6 +275,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
+    _connectivitySub?.cancel();
     DownloadManager().dispose();
     super.dispose();
   }

@@ -92,9 +92,17 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 - `Server.irohPairingCode` + a connection-type marker + `servers.json` migration; **`effectiveBaseUrl` routing** so the whole API + streaming go through the tunnel; **save** the iroh server; start the tunnel when it becomes the active server. *(this slice)*
 - **Accept:** add an iroh server (scan → test → sign in → save), browse the library, and **play + seek a track** end-to-end; no code path reads `server.url` directly on the iroh route.
 
-### M3 — Hardening
-- Rotation/staleness handling (re-pair prompt), reconnect, relay vs direct status, background-playback survival, battery (keepalives), graceful fallback to HTTP if iroh fails.
-- **Accept:** true **cross-network NAT** test (two networks); rotate the server secret and confirm a clean re-pair prompt; playback survives backgrounding + a network blip.
+### M3 — Hardening (tiered)
+**Tier 1 — self-healing tunnel ✅ (built; desktop-verified, device check pending):**
+- Shim reconnects itself: a supervisor watches the live `Connection` and, on death, re-dials on the SAME endpoint (`online`→`connect`→re-handshake) with capped backoff, swapping the connection in place — the loopback port stays stable, so queue URLs survive. Bridges retry `open_bi` briefly so an in-flight request rides the reconnect. Interop forced-reconnect test passes.
+- Honest health: `is_active`/`status` now reflect the real `Connection` state (`connecting|connected|reconnecting|rejected|down`), exposed over the C ABI + `IrohTunnelStatus` in Dart.
+- Android network nudge: `mstream_iroh_network_changed()` → `Endpoint::network_change()` (iroh can't self-detect on Android), driven by `connectivity_plus` + the app-resume hook; `ServerManager.handleNetworkChange()`. `ensureActiveTunnel({verify})` consults real health + an in-flight guard.
+
+**Tier 2 — recovery UX:** status banner ("Reconnecting…"), reconnect-then-retry in `makeServerCall`, just_audio error-stream recovery, and an in-app **re-pair** prompt on a rotated secret (`STATUS_REJECTED`) incl. an "Update pairing code" action for an existing iroh server.
+
+**Tier 3 — polish & validation:** direct-vs-relay indicator (`Connection::path_events`), keepalive/battery policy doc, server-switch teardown drain, and the true **cross-network NAT** test (phone on cellular, server elsewhere).
+
+- **Accept:** rotate the server secret → clean re-pair prompt; playback survives backgrounding + a network blip; cross-network NAT works.
 
 ### M4 — Build/CI, flavors, release
 - CI cross-compiles both ABIs; both `full`/`play` flavors build within an agreed size budget; camera-permission rationale; Play **data-safety** note (relay routing); user docs (enable on server → scan QR).

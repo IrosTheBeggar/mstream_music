@@ -96,6 +96,7 @@ async function main() {
   await Promise.race([endpoint.online().catch(() => {}), delay(8000)]);
   console.log(`[server] endpointId=${endpoint.id().toString()}`);
 
+  const serverConns = []; // captured so the reconnect test can kill them
   (async () => {
     for (;;) {
       let incoming;
@@ -104,6 +105,7 @@ async function main() {
       (async () => {
         const accepting = await incoming.accept();
         const conn = await accepting.connect();
+        serverConns.push(conn);
         const authBi = await conn.acceptBi();
         const sent = Buffer.from(await authBi.recv.readToEnd(HANDSHAKE_LIMIT));
         const ok = sent.length === connectSecret.length && crypto.timingSafeEqual(sent, connectSecret);
@@ -163,6 +165,26 @@ async function main() {
   const conc = await Promise.all(Array.from({ length: 6 }, (_, i) => fetch(`${base}/c/${i}`).then((r) => r.status)));
   check('6 concurrent requests all 200 (multiplexing)', conc.every((s) => s === 200), conc.join(','));
 
+  // 6) RECONNECT: kill the server-side connection(s); the client's supervisor
+  //    should re-dial automatically — same loopback port, no re-pair.
+  console.log('\n=== RECONNECT TEST ===');
+  const connsBefore = serverConns.length;
+  for (const c of serverConns) {
+    try { c.close(0n, Array.from(Buffer.from('drop'))); } catch { /* noop */ }
+  }
+  let recovered = false;
+  for (let i = 0; i < 20 && !recovered; i++) {
+    await delay(1000);
+    try {
+      const r = await fetch(`${base}/probe/after-reconnect`, { signal: AbortSignal.timeout(2500) });
+      if (r.status === 200) recovered = true;
+    } catch { /* still reconnecting */ }
+  }
+  check('tunnel auto-reconnects after the connection drops', recovered,
+      recovered ? 'recovered' : 'no recovery within 20s');
+  check('server accepted a NEW connection (re-dial)', serverConns.length > connsBefore,
+      `${connsBefore} -> ${serverConns.length}`);
+
   console.log(`\n=== RESULT: ${failures === 0 ? 'ALL PASS' : failures + ' FAILURE(S)'} ===`);
 
   child.kill();
@@ -172,6 +194,6 @@ async function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-const guard = setTimeout(() => { console.error('[harness] TIMEOUT 90s'); process.exit(2); }, 90000);
+const guard = setTimeout(() => { console.error('[harness] TIMEOUT 120s'); process.exit(2); }, 120000);
 guard.unref();
 main().catch((e) => { console.error('[harness] ERROR', e); process.exit(3); });

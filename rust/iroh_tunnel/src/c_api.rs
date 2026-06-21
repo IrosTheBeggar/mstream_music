@@ -18,7 +18,9 @@ use std::ffi::{c_char, CStr, CString};
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
 
-use crate::ffi::{tunnel_is_active, tunnel_start, tunnel_stop};
+use crate::ffi::{
+    tunnel_is_active, tunnel_network_changed, tunnel_start, tunnel_status, tunnel_stop,
+};
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
 static LAST_PANIC: Mutex<Option<String>> = Mutex::new(None);
@@ -101,10 +103,25 @@ pub extern "C" fn mstream_iroh_stop() {
     guard((), tunnel_stop);
 }
 
-/// Whether a tunnel is currently active.
+/// Whether the tunnel is currently CONNECTED.
 #[no_mangle]
 pub extern "C" fn mstream_iroh_is_active() -> bool {
     guard(false, tunnel_is_active)
+}
+
+/// Current status: one of the STATUS_* codes (0=connecting, 1=connected,
+/// 2=reconnecting, 3=rejected/re-pair, 4=down). Mirrors lib.rs STATUS_* and the
+/// Dart `IrohTunnelStatus` enum.
+#[no_mangle]
+pub extern "C" fn mstream_iroh_status() -> i32 {
+    guard(crate::STATUS_DOWN as i32, || tunnel_status() as i32)
+}
+
+/// Tell the tunnel the device network changed (call on connectivity transitions
+/// — iroh can't self-detect them on Android).
+#[no_mangle]
+pub extern "C" fn mstream_iroh_network_changed() {
+    guard((), tunnel_network_changed);
 }
 
 /// The last error message as a heap-allocated NUL-terminated C string, or null if

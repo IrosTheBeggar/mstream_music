@@ -11,7 +11,7 @@
 
 use std::sync::{Mutex, OnceLock};
 
-use crate::{connect_tunnel, Tunnel};
+use crate::{connect_tunnel, Tunnel, STATUS_CONNECTED, STATUS_DOWN};
 
 static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static TUNNEL: Mutex<Option<Tunnel>> = Mutex::new(None);
@@ -50,7 +50,27 @@ pub fn tunnel_stop() {
     }
 }
 
-/// Whether a tunnel is currently active.
+/// Current tunnel status (one of the `STATUS_*` codes); `STATUS_DOWN` when none.
+pub fn tunnel_status() -> u8 {
+    TUNNEL
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|t| t.status())
+        .unwrap_or(STATUS_DOWN)
+}
+
+/// Whether the tunnel is currently CONNECTED — a real health check, not mere
+/// presence (a reconnecting/rejected/dead tunnel reports false).
 pub fn tunnel_is_active() -> bool {
-    TUNNEL.lock().unwrap().is_some()
+    tunnel_status() == STATUS_CONNECTED
+}
+
+/// Nudge iroh that the network may have changed (Android can't self-detect), so
+/// it re-homes the relay and re-probes paths promptly. No-op when not running.
+pub fn tunnel_network_changed() {
+    let guard = TUNNEL.lock().unwrap();
+    if let Some(t) = guard.as_ref() {
+        rt().block_on(t.network_changed());
+    }
 }

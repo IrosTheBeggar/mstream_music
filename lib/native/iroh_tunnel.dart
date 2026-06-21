@@ -26,6 +26,8 @@ typedef _VoidNative = Void Function();
 typedef _VoidDart = void Function();
 typedef _BoolNative = Bool Function();
 typedef _BoolDart = bool Function();
+typedef _Int32Native = Int32 Function();
+typedef _Int32Dart = int Function();
 typedef _LastErrNative = Pointer<Utf8> Function();
 typedef _FreeNative = Void Function(Pointer<Utf8>);
 typedef _FreeDart = void Function(Pointer<Utf8>);
@@ -43,6 +45,8 @@ class _Bindings {
   final _StartDart start;
   final _VoidDart stop;
   final _BoolDart isActive;
+  final _Int32Dart statusCode;
+  final _VoidDart networkChanged;
   final _LastErrNative lastError;
   final _FreeDart stringFree;
 
@@ -53,12 +57,15 @@ class _Bindings {
       lib.lookupFunction<_StartNative, _StartDart>('mstream_iroh_start'),
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_stop'),
       lib.lookupFunction<_BoolNative, _BoolDart>('mstream_iroh_is_active'),
+      lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_status'),
+      lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_network_changed'),
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_last_error'),
       lib.lookupFunction<_FreeNative, _FreeDart>('mstream_iroh_string_free'),
     );
   }
 
-  _Bindings._(this.start, this.stop, this.isActive, this.lastError, this.stringFree);
+  _Bindings._(this.start, this.stop, this.isActive, this.statusCode,
+      this.networkChanged, this.lastError, this.stringFree);
 
   String? takeLastError() {
     final p = lastError();
@@ -99,9 +106,32 @@ class IrohTunnel {
     if (isSupported) _b.stop();
   }
 
-  /// Whether a tunnel is currently active.
+  /// Whether the tunnel is currently CONNECTED (honest health check — a
+  /// reconnecting/rejected/dead tunnel reports false).
   bool get isActive => isSupported && _b.isActive();
+
+  /// Current connection status. [IrohTunnelStatus.down] when unsupported or no
+  /// tunnel is running.
+  IrohTunnelStatus get status {
+    if (!isSupported) return IrohTunnelStatus.down;
+    final code = _b.statusCode();
+    if (code < 0 || code >= IrohTunnelStatus.values.length) {
+      return IrohTunnelStatus.down;
+    }
+    return IrohTunnelStatus.values[code];
+  }
+
+  /// Notify the native tunnel that the device network changed, so iroh re-homes
+  /// the relay and re-probes paths promptly (it can't self-detect this on
+  /// Android). Cheap; safe to call when nothing is running.
+  void networkChanged() {
+    if (isSupported) _b.networkChanged();
+  }
 }
+
+/// Tunnel connection status — mirrors the STATUS_* codes in
+/// rust/iroh_tunnel/src/lib.rs (index == code).
+enum IrohTunnelStatus { connecting, connected, reconnecting, rejected, down }
 
 // Top-level so it can run in a background isolate (no captured `this`). The .so
 // is process-global, so opening the bindings here and starting the tunnel leaves
