@@ -71,6 +71,13 @@ pub fn tunnel_stop() {
     }
 }
 
+/// The running tunnel's loopback auth token (`__lt=<token>`), or None when nothing
+/// is running. The app appends it to every loopback URL so other apps on the device
+/// can't use the proxy.
+pub fn tunnel_local_token() -> Option<String> {
+    TUNNEL.lock().unwrap().as_ref().map(|t| t.local_token())
+}
+
 /// Current selected-path kind (one of the `PATH_*` codes); `PATH_UNKNOWN` when
 /// nothing is running or no path is selected yet.
 pub fn tunnel_path_kind() -> u8 {

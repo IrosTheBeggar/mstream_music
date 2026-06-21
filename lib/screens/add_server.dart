@@ -1377,8 +1377,9 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
     try {
       final port = await IrohTunnel.instance.start(code);
+      final lt = IrohTunnel.instance.localToken ?? '';
       final resp = await http
-          .get(Uri.parse('http://127.0.0.1:$port/api/'))
+          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
           .timeout(Duration(seconds: 10));
       String? version;
       if (resp.statusCode == 200) {
@@ -1447,7 +1448,8 @@ class MyCustomFormState extends State<MyCustomForm> {
     try {
       if (!_irohPublic) {
         final login = await http.post(
-          Uri.parse('http://127.0.0.1:$port/api/v1/auth/login'),
+          Uri.parse(
+              'http://127.0.0.1:$port/api/v1/auth/login?__lt=${IrohTunnel.instance.localToken ?? ''}'),
           body: {
             'username': _irohUserCtrl.text,
             'password': _irohPassCtrl.text,

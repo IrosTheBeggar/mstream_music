@@ -9,7 +9,7 @@
 //! Prints `LOCAL_PORT=<n>` on stdout (for the interop harness), then blocks until
 //! killed.
 
-use iroh_tunnel::ffi::{tunnel_start, tunnel_stop};
+use iroh_tunnel::ffi::{tunnel_local_token, tunnel_start, tunnel_stop};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -33,6 +33,9 @@ fn main() {
     match tunnel_start(code, local_port) {
         Ok(port) => {
             println!("LOCAL_PORT={port}");
+            if let Some(t) = tunnel_local_token() {
+                println!("LOCAL_TOKEN={t}");
+            }
             println!("mStream reachable at http://127.0.0.1:{port}/api/");
             eprintln!("[client] connected ✅  (Ctrl-C to quit)");
         }

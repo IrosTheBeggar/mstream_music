@@ -50,6 +50,7 @@ class _Bindings {
   final _VoidDart networkChanged;
   final _LastErrNative lastError;
   final _FreeDart stringFree;
+  final _LastErrNative localTokenPtr;
 
   factory _Bindings.open() {
     // jniLibs places the .so on the loader path under its SONAME on Android.
@@ -63,14 +64,26 @@ class _Bindings {
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_network_changed'),
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_last_error'),
       lib.lookupFunction<_FreeNative, _FreeDart>('mstream_iroh_string_free'),
+      lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_local_token'),
     );
   }
 
   _Bindings._(this.start, this.stop, this.isActive, this.statusCode,
-      this.pathKindCode, this.networkChanged, this.lastError, this.stringFree);
+      this.pathKindCode, this.networkChanged, this.lastError, this.stringFree,
+      this.localTokenPtr);
 
   String? takeLastError() {
     final p = lastError();
+    if (p == nullptr) return null;
+    try {
+      return p.toDartString();
+    } finally {
+      stringFree(p);
+    }
+  }
+
+  String? takeLocalToken() {
+    final p = localTokenPtr();
     if (p == nullptr) return null;
     try {
       return p.toDartString();
@@ -134,6 +147,11 @@ class IrohTunnel {
     }
     return IrohPathKind.values[code];
   }
+
+  /// The active tunnel's loopback auth token (appended to loopback URLs as
+  /// `__lt=<token>`), or null when unsupported or nothing is running. Other apps
+  /// on the device can't use the proxy without it.
+  String? get localToken => isSupported ? _b.takeLocalToken() : null;
 
   /// Notify the native tunnel that the device network changed, so iroh re-homes
   /// the relay and re-probes paths promptly (it can't self-detect this on

@@ -132,28 +132,39 @@ async function main() {
   const child = spawn(exe, [code], { stdio: ['ignore', 'pipe', 'pipe'] });
   child.stderr.on('data', (d) => process.stdout.write(`    [rust] ${d}`));
 
-  const localPort = await new Promise((resolve, reject) => {
+  const { localPort, localToken } = await new Promise((resolve, reject) => {
     let buf = '';
-    const to = setTimeout(() => reject(new Error('client did not report LOCAL_PORT within 45s')), 45000);
+    const to = setTimeout(() => reject(new Error('client did not report LOCAL_PORT/TOKEN within 45s')), 45000);
     child.stdout.on('data', (d) => {
       buf += d.toString();
-      const m = /LOCAL_PORT=(\d+)/.exec(buf);
-      if (m) { clearTimeout(to); resolve(Number(m[1])); }
+      const mp = /LOCAL_PORT=(\d+)/.exec(buf);
+      const mt = /LOCAL_TOKEN=([0-9a-f]+)/.exec(buf);
+      if (mp && mt) { clearTimeout(to); resolve({ localPort: Number(mp[1]), localToken: mt[1] }); }
     });
     child.once('exit', (c) => { clearTimeout(to); reject(new Error(`client exited early (code ${c})`)); });
   });
   const base = `http://127.0.0.1:${localPort}`;
+  // The shim authenticates the loopback hop: every request must carry __lt=<token>.
+  const lurl = (p) => `${base}${p}${p.includes('?') ? '&' : '?'}__lt=${localToken}`;
   console.log(`[client] tunnel entrance: ${base}`);
 
   // 5) Drive HTTP through the Rust tunnel.
   console.log('\n=== INTEROP TESTS (Rust client ⇆ JS server) ===');
-  const r1 = await fetch(`${base}/probe?x=1`);
+  const r1 = await fetch(lurl('/probe?x=1'));
   const j1 = await r1.json();
   check('JSON request tunnels (200)', r1.status === 200, `status ${r1.status}`);
-  check('request path preserved through tunnel', j1.path === '/probe?x=1', j1.path);
+  check('request path preserved through tunnel', j1.path.startsWith('/probe?x=1'), j1.path);
+
+  // Loopback auth: a request WITHOUT the token must be dropped by the shim.
+  let untokenedRejected = false;
+  try {
+    await fetch(`${base}/probe?x=1`, { signal: AbortSignal.timeout(4000) });
+  } catch { untokenedRejected = true; }
+  check('un-tokened local request is rejected', untokenedRejected,
+      untokenedRejected ? 'dropped' : 'NOT rejected — open proxy!');
 
   const start = 1048576, end = 1049599;
-  const r2 = await fetch(`${base}/media/test.bin`, { headers: { Range: `bytes=${start}-${end}` } });
+  const r2 = await fetch(lurl('/media/test.bin'), { headers: { Range: `bytes=${start}-${end}` } });
   const body = Buffer.from(await r2.arrayBuffer());
   check('Range request → 206 (audio seek path)', r2.status === 206, `status ${r2.status}`);
   check('Content-Range forwarded', r2.headers.get('content-range') === `bytes ${start}-${end}/${MEDIA.length}`, r2.headers.get('content-range') ?? 'missing');
@@ -162,7 +173,7 @@ async function main() {
   for (let k = 0; k < body.length && bytesOk; k++) if (body[k] !== (k & 0xff)) bytesOk = false;
   check('partial bytes correct (seek fidelity)', bytesOk);
 
-  const conc = await Promise.all(Array.from({ length: 6 }, (_, i) => fetch(`${base}/c/${i}`).then((r) => r.status)));
+  const conc = await Promise.all(Array.from({ length: 6 }, (_, i) => fetch(lurl(`/c/${i}`)).then((r) => r.status)));
   check('6 concurrent requests all 200 (multiplexing)', conc.every((s) => s === 200), conc.join(','));
 
   // 6) RECONNECT: kill the server-side connection(s); the client's supervisor
@@ -176,7 +187,7 @@ async function main() {
   for (let i = 0; i < 20 && !recovered; i++) {
     await delay(1000);
     try {
-      const r = await fetch(`${base}/probe/after-reconnect`, { signal: AbortSignal.timeout(2500) });
+      const r = await fetch(lurl('/probe/after-reconnect'), { signal: AbortSignal.timeout(2500) });
       if (r.status === 200) recovered = true;
     } catch { /* still reconnecting */ }
   }

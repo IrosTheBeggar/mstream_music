@@ -29,6 +29,12 @@ class Server {
   // starts; consumed by [effectiveBaseUrl].
   int? tunnelPort;
 
+  // Runtime-only (never persisted): the iroh tunnel's loopback auth token while
+  // this server is active. The local proxy requires it as `__lt=<token>` so other
+  // apps on the device can't use it; appended to every loopback URL. Set alongside
+  // [tunnelPort] by ServerManager.
+  String? tunnelToken;
+
   // The server's transcoding capability from /api/v1/ping, refreshed on each
   // ping (getServerPaths) and PERSISTED so it's known at launch — before the
   // queue is restored, which would otherwise race the ping and bake in /media
@@ -75,6 +81,23 @@ class Server {
   /// origin, so a stray request fails fast instead of hitting the placeholder url.
   String get effectiveBaseUrl =>
       isIroh ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
+
+  /// Query suffix authenticating a loopback request to the iroh tunnel
+  /// (`&__lt=<token>`); empty for HTTP servers or before the token is known. For
+  /// URLs built as strings that ALREADY carry a `?` (stream / art / download).
+  String get localTokenQuery =>
+      (isIroh && tunnelToken != null) ? '&__lt=$tunnelToken' : '';
+
+  /// Resolve [location] against [effectiveBaseUrl], adding the loopback token for
+  /// an iroh server so the shim accepts the request. Use for all API calls.
+  Uri apiUri(String location) {
+    final u = Uri.parse(effectiveBaseUrl).resolve(location);
+    if (!isIroh || tunnelToken == null) return u;
+    return u.replace(queryParameters: {
+      ...u.queryParameters,
+      '__lt': tunnelToken!,
+    });
+  }
 
   Server.fromJson(Map<String, dynamic> json)
       : url = json['url'],

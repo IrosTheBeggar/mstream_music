@@ -21,6 +21,9 @@ tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time"
 serde_json = "1"
 base64 = "0.22"
 anyhow = "1"
+# Random 128-bit loopback token that authenticates the localhost hop, so other
+# apps on the device can't use the tunnel as an open proxy. 0.2 is already in tree.
+getrandom = "0.2"
 
 # Android only: register the JavaVM + app Context with ndk_context (iroh's
 # network monitoring needs it). Versions match what iroh already pulls in.

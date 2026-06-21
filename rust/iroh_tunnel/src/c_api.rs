@@ -19,8 +19,8 @@ use std::panic::{self, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
 
 use crate::ffi::{
-    tunnel_is_active, tunnel_network_changed, tunnel_path_kind, tunnel_start, tunnel_status,
-    tunnel_stop,
+    tunnel_is_active, tunnel_local_token, tunnel_network_changed, tunnel_path_kind, tunnel_start,
+    tunnel_status, tunnel_stop,
 };
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
@@ -130,6 +130,19 @@ pub extern "C" fn mstream_iroh_network_changed() {
 #[no_mangle]
 pub extern "C" fn mstream_iroh_path_kind() -> i32 {
     guard(crate::PATH_UNKNOWN as i32, || tunnel_path_kind() as i32)
+}
+
+/// The running tunnel's loopback auth token as a heap NUL-terminated C string the
+/// caller must free with [`mstream_iroh_string_free`], or null if no tunnel is
+/// running. The app appends it to loopback URLs as `__lt=<token>`.
+#[no_mangle]
+pub extern "C" fn mstream_iroh_local_token() -> *mut c_char {
+    guard(std::ptr::null_mut(), || match tunnel_local_token() {
+        Some(t) => CString::new(t)
+            .map(|c| c.into_raw())
+            .unwrap_or(std::ptr::null_mut()),
+        None => std::ptr::null_mut(),
+    })
 }
 
 /// The last error message as a heap-allocated NUL-terminated C string, or null if

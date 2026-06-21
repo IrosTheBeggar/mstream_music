@@ -65,6 +65,13 @@ const RECONNECT_BACKOFF_MAX: Duration = Duration::from_secs(30);
 const DRAIN_TIMEOUT: Duration = Duration::from_secs(3);
 const DRAIN_POLL: Duration = Duration::from_millis(50);
 
+// Loopback hop auth: every local TCP client must present `__lt=<local_token>` in
+// the first HTTP request line (the app appends it to loopback URLs). The shim
+// PEEKs (does not consume) the request line and drops connections without the
+// token, so other apps on the device can't use 127.0.0.1:<port> as a proxy.
+const LOCAL_TOKEN_PEEK_MAX: usize = 8 * 1024;
+const LOCAL_TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
 /// Tunnel status, shared with the C ABI / Dart (keep values in sync with
 /// `lib/native/iroh_tunnel.dart`).
 pub const STATUS_CONNECTING: u8 = 0;
@@ -89,6 +96,9 @@ struct Shared {
     status: AtomicU8,
     /// In-flight TCP⇆bi-stream bridges, so teardown can drain them gracefully.
     active_bridges: AtomicUsize,
+    /// Random per-tunnel token the local HTTP client must echo as `__lt=<token>`,
+    /// so only this app (not other apps on the device) can use the loopback proxy.
+    local_token: String,
 }
 
 impl Shared {
@@ -168,6 +178,11 @@ impl Tunnel {
     /// Current selected-path kind (one of the `PATH_*` constants).
     pub fn path_kind(&self) -> u8 {
         self.shared.path_kind()
+    }
+
+    /// The loopback auth token the local HTTP client must present (`__lt=<token>`).
+    pub fn local_token(&self) -> String {
+        self.shared.local_token.clone()
     }
 
     /// Fire-and-forget network nudge: tell iroh the network may have changed (Android
@@ -389,6 +404,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         conn: Mutex::new(conn),
         status: AtomicU8::new(STATUS_CONNECTED),
         active_bridges: AtomicUsize::new(0),
+        local_token: gen_local_token()?,
     });
 
     let accept_shared = shared.clone();
@@ -415,6 +431,39 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
     })
 }
 
+/// Generate a random 128-bit loopback token, hex-encoded (32 chars).
+fn gen_local_token() -> Result<String> {
+    let mut b = [0u8; 16];
+    getrandom::getrandom(&mut b).map_err(|e| anyhow!("rng failure: {e}"))?;
+    Ok(b.iter().map(|x| format!("{x:02x}")).collect())
+}
+
+/// Authenticate the LOCAL hop: peek (WITHOUT consuming) the first HTTP request
+/// line and require `__lt=<local_token>` in it. Returns false (→ drop the socket)
+/// for any client that doesn't present the token — i.e. another app on the device.
+/// Peeking (not reading) means the request bytes are still delivered to the server
+/// untouched, and validating once per connection is keep-alive-safe.
+async fn local_token_ok(sock: &TcpStream, token: &str) -> bool {
+    let needle = format!("__lt={token}");
+    let needle = needle.as_bytes();
+    let mut buf = vec![0u8; LOCAL_TOKEN_PEEK_MAX];
+    let deadline = tokio::time::Instant::now() + LOCAL_TOKEN_TIMEOUT;
+    loop {
+        let n = match tokio::time::timeout_at(deadline, sock.peek(&mut buf)).await {
+            Ok(Ok(n)) if n > 0 => n,
+            _ => return false,
+        };
+        let head = &buf[..n];
+        if let Some(pos) = head.windows(2).position(|w| w == b"\r\n") {
+            return head[..pos].windows(needle.len()).any(|w| w == needle);
+        }
+        if n >= LOCAL_TOKEN_PEEK_MAX {
+            return false; // request line too long / not HTTP
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
 /// One inbound TCP connection ⇆ one fresh iroh bi-stream (full duplex).
 ///
 /// Mirrors the reference `bridge()`/`dispose()`: each direction ends cleanly on
@@ -424,6 +473,11 @@ async fn bridge_socket(sock: TcpStream, shared: Arc<Shared>) {
     // Count this bridge as in-flight for its whole lifetime (drops on every exit
     // path), so a graceful teardown can wait for it before closing the connection.
     let _bridge = BridgeGuard::new(&shared);
+    // Authenticate the local hop first: only our app knows the token, so other apps
+    // on the device that connect to 127.0.0.1:<port> are dropped before any bi-stream.
+    if !local_token_ok(&sock, &shared.local_token).await {
+        return;
+    }
     // Open a bi-stream on the CURRENT connection, retrying briefly so a request
     // mid-reconnect can ride the swapped-in connection instead of hard-failing.
     let mut attempt = 0u32;

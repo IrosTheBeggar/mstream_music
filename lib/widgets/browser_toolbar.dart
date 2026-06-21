@@ -136,7 +136,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
               Navigator.of(ctx).pop();
               for (final e in files) {
                 final downloadUrl = '${e.server!.effectiveBaseUrl}/media${e.data!}'
-                    '${e.server!.jwt == null ? '' : '?token=${e.server!.jwt!}'}';
+                    '${e.server!.jwt == null ? '' : '?token=${e.server!.jwt!}'}'
+                    '${e.server!.localTokenQuery}';
                 DownloadManager().downloadOneFile(
                     downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);

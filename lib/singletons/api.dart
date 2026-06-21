@@ -40,7 +40,7 @@ class ApiManager {
     }
 
     final response = await http.post(
-      Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/db/genres'),
+      server.apiUri('/api/v1/db/genres'),
       body: jsonEncode(body),
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ class ApiManager {
     required List<String> filepaths,
     int? expiresInDays,
   }) async {
-    final uri = Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/share');
+    final uri = server.apiUri('/api/v1/share');
     final body = <String, dynamic>{'playlist': filepaths};
     if (expiresInDays != null) body['time'] = expiresInDays;
 
@@ -104,7 +104,7 @@ class ApiManager {
         throw Exception('Server Call Failed');
       }
 
-      Uri currentUri = Uri.parse(server.effectiveBaseUrl).resolve(location);
+      Uri currentUri = server.apiUri(location);
 
       final sw = Stopwatch()..start();
       Future<http.Response> send() => getOrPost == 'GET'
@@ -130,7 +130,7 @@ class ApiManager {
             appLog('[api] iroh tunnel down; $getOrPost $location failed: $e');
             rethrow;
           }
-          currentUri = Uri.parse(server.effectiveBaseUrl).resolve(location);
+          currentUri = server.apiUri(location);
           response = await send().timeout(const Duration(seconds: 20));
         } else {
           appLog('[api] $getOrPost $location → error: $e '
@@ -485,7 +485,7 @@ class ApiManager {
   Future<void> rateSong(Server server, String filepath, int? rating) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
     final response = await http.post(
-      Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/db/rate-song'),
+      server.apiUri('/api/v1/db/rate-song'),
       body: jsonEncode({'filepath': fp, 'rating': rating}),
       headers: {
         'Content-Type': 'application/json',

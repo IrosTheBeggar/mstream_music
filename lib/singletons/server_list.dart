@@ -220,7 +220,7 @@ class ServerManager {
     }
     try {
       var response = await http
-          .get(Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/ping'),
+          .get(server.apiUri('/api/v1/ping'),
               headers: {
         'Content-Type': 'application/json',
         'x-access-token': server.jwt ?? ''
@@ -343,9 +343,11 @@ class ServerManager {
       try {
         final port = await IrohTunnel.instance.start(s.irohPairingCode!);
         s.tunnelPort = port;
+        s.tunnelToken = IrohTunnel.instance.localToken;
         _activeTunnelCode = s.irohPairingCode;
       } catch (e) {
         s.tunnelPort = null;
+        s.tunnelToken = null;
         _activeTunnelCode = null;
         // Leave it down; requests fail fast via effectiveBaseUrl until retried.
         appLog('[iroh] tunnel start failed: $e');
@@ -463,6 +465,7 @@ class ServerManager {
   /// one, so [ensureActiveTunnel] won't needlessly restart it.
   void registerActiveTunnel(Server s, int port) {
     s.tunnelPort = port;
+    s.tunnelToken = IrohTunnel.instance.localToken;
     _activeTunnelCode = s.irohPairingCode;
   }
 

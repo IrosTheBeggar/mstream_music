@@ -1603,6 +1603,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "getrandom 0.2.17",
  "iroh",
  "iroh-tickets",
  "jni 0.21.1",
