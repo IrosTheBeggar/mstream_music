@@ -1605,6 +1605,8 @@ dependencies = [
  "base64",
  "iroh",
  "iroh-tickets",
+ "jni 0.21.1",
+ "ndk-context",
  "serde_json",
  "tokio",
 ]

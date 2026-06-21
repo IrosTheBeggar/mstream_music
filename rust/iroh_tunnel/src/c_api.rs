@@ -3,23 +3,68 @@
 //! The tunnel's surface is tiny (start / stop / is-active / last-error), so a
 //! hand-written C ABI consumed via `dart:ffi` is simpler and lighter than a
 //! flutter_rust_bridge codegen step — no generator in the build, just one `.so`
-//! and a small Dart wrapper. (frb remains an option if a richer/async surface is
-//! ever needed.) These `#[no_mangle]` exports are also what make the cdylib retain
-//! the iroh code at link time.
+//! and a small Dart wrapper.
+//!
+//! Every entry point is **panic-guarded**: a panic in the tunnel/iroh code is
+//! captured (message + location) into the last-error slot and returned as an
+//! error, instead of unwinding across the `extern "C"` boundary and aborting the
+//! whole app. On Android the message is also written to logcat (tag
+//! `iroh_tunnel`).
 //!
 //! Threading: `mstream_iroh_start` blocks (relay warmup + dial, up to ~30s), so
-//! Dart must call it off the UI isolate (e.g. `Isolate.run`). The accept loop then
-//! runs on the tunnel's owned runtime; later calls return immediately.
+//! Dart must call it off the UI isolate (e.g. `Isolate.run`).
 
 use std::ffi::{c_char, CStr, CString};
-use std::sync::Mutex;
+use std::panic::{self, AssertUnwindSafe};
+use std::sync::{Mutex, OnceLock};
 
 use crate::ffi::{tunnel_is_active, tunnel_start, tunnel_stop};
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
+static LAST_PANIC: Mutex<Option<String>> = Mutex::new(None);
+static PANIC_HOOK: OnceLock<()> = OnceLock::new();
 
 fn set_last_error(msg: String) {
+    log_android(&msg);
     *LAST_ERROR.lock().unwrap() = CString::new(msg).ok();
+}
+
+// Capture the panic message + location so `guard` can report it.
+fn install_panic_hook() {
+    PANIC_HOOK.get_or_init(|| {
+        panic::set_hook(Box::new(|info| {
+            let loc = info
+                .location()
+                .map(|l| format!("{}:{}", l.file(), l.line()))
+                .unwrap_or_else(|| "?".into());
+            let msg = info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "panic".into());
+            let full = format!("panic at {loc}: {msg}");
+            log_android(&full);
+            *LAST_PANIC.lock().unwrap() = Some(full);
+        }));
+    });
+}
+
+// Run an FFI body, turning a panic into a captured error + the `default` return.
+fn guard<T>(default: T, body: impl FnOnce() -> T) -> T {
+    install_panic_hook();
+    match panic::catch_unwind(AssertUnwindSafe(body)) {
+        Ok(v) => v,
+        Err(_) => {
+            let msg = LAST_PANIC
+                .lock()
+                .unwrap()
+                .take()
+                .unwrap_or_else(|| "panic in iroh tunnel".into());
+            set_last_error(msg);
+            default
+        }
+    }
 }
 
 /// Start the tunnel from a NUL-terminated UTF-8 composite pairing code.
@@ -41,25 +86,25 @@ pub unsafe extern "C" fn mstream_iroh_start(pairing_code: *const c_char, local_p
             return -1;
         }
     };
-    match tunnel_start(code, local_port) {
+    guard(-1, move || match tunnel_start(code, local_port) {
         Ok(port) => port as i32,
         Err(e) => {
             set_last_error(e);
             -1
         }
-    }
+    })
 }
 
 /// Stop the tunnel (graceful). Safe to call when nothing is running.
 #[no_mangle]
 pub extern "C" fn mstream_iroh_stop() {
-    tunnel_stop();
+    guard((), tunnel_stop);
 }
 
 /// Whether a tunnel is currently active.
 #[no_mangle]
 pub extern "C" fn mstream_iroh_is_active() -> bool {
-    tunnel_is_active()
+    guard(false, tunnel_is_active)
 }
 
 /// The last error message as a heap-allocated NUL-terminated C string, or null if
@@ -83,3 +128,18 @@ pub unsafe extern "C" fn mstream_iroh_string_free(p: *mut c_char) {
         let _ = CString::from_raw(p);
     }
 }
+
+// Mirror panics/errors to logcat (`adb logcat -s iroh_tunnel`) on Android.
+#[cfg(target_os = "android")]
+fn log_android(msg: &str) {
+    #[link(name = "log")]
+    extern "C" {
+        fn __android_log_write(prio: i32, tag: *const c_char, text: *const c_char) -> i32;
+    }
+    if let (Ok(tag), Ok(text)) = (CString::new("iroh_tunnel"), CString::new(msg)) {
+        // 6 == ANDROID_LOG_ERROR
+        unsafe { __android_log_write(6, tag.as_ptr(), text.as_ptr()) };
+    }
+}
+#[cfg(not(target_os = "android"))]
+fn log_android(_msg: &str) {}

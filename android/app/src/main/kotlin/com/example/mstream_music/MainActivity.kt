@@ -16,6 +16,16 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Register the app Context with the iroh native lib (ndk_context) before
+        // any tunnel call. Guarded so a missing/unloadable .so never blocks boot
+        // (the feature just stays unavailable).
+        try {
+            IrohNative.ensureInit(this)
+        } catch (e: Throwable) {
+            android.util.Log.w("IrohNative", "iroh native init failed: ${e.message}")
+        }
+
         flutterEngine.plugins.add(VisualizerBridge())
 
         // Flavor-specific: full installs the self-signed/insecure-TLS bridge for

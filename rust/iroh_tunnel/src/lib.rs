@@ -20,6 +20,11 @@
 pub mod c_api;
 pub mod ffi;
 
+// Android-only JNI entry point that registers the app Context with ndk_context
+// (iroh needs it for network monitoring; without it the first call panics).
+#[cfg(target_os = "android")]
+mod android_init;
+
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
