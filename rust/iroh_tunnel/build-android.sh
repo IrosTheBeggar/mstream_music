@@ -16,8 +16,17 @@ cd "$(dirname "$0")"
 JNILIBS="../../android/app/src/main/jniLibs"
 
 # --platform 26 matches the app's minSdk. The flag is --platform (NOT -p, which
-# cargo passes through to cargo as --package). -o stages into <JNILIBS>/<abi>/.
-cargo ndk -t arm64-v8a -t x86_64 -o "$JNILIBS" --platform 26 build --release --lib
+# cargo passes through to cargo as --package).
+cargo ndk -t arm64-v8a -t x86_64 --platform 26 build --release --lib
+
+# Stage ONLY our cdylib. cargo-ndk's -o would also copy spurious dependency
+# dylibs (libiroh-<hash>.so / libiroh_relay-<hash>.so) that libiroh_tunnel.so
+# already statically links — dead weight in the APK.
+for pair in "arm64-v8a:aarch64-linux-android" "x86_64:x86_64-linux-android"; do
+  abi="${pair%%:*}"; triple="${pair##*:}"
+  mkdir -p "$JNILIBS/$abi"
+  cp "target/$triple/release/libiroh_tunnel.so" "$JNILIBS/$abi/libiroh_tunnel.so"
+done
 
 echo "staged:"
 ls -lh "$JNILIBS"/*/libiroh_tunnel.so
