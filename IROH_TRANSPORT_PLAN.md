@@ -67,12 +67,12 @@ Build for **arm64-v8a + x86_64** with `cargo-ndk --platform 26`; package `.so` i
 - `lib/objects/server.dart`: add an optional `irohPairingCode` field (stores the whole composite code — it's a **credential**, treat like `jwt`/`password`); migrate `servers.json`.
 - One `effectiveBaseUrl` accessor: iroh server → `http://127.0.0.1:<localPort>` from the shim; else `server.url`. **Everything else reads this and is unchanged.** (Audit `api.dart` / `lib/util/stream_url.dart` for direct `server.url` reads and route them through it.)
 
-### 4.3 Pairing UX — scan the QR (with paste fallback)
-The server shows a **QR** in its admin "Remote Access" panel; the phone is the natural scanner. In `lib/screens/add_server.dart` add a "Connect via iroh (peer-to-peer)" mode:
-- **Scan QR** (camera) — needs a Flutter QR package (e.g. `mobile_scanner`) + `CAMERA` permission, in **both** `full`/`play` flavors.
-- **Paste code** fallback (admin "Copy code").
-- "Test connection" runs `start()` and reports handshake result. Skip the self-signed-TLS controls here.
-- On handshake-reject / timeout, tell the user the code may be **rotated/stale → re-pair**.
+### 4.3 Pairing + sign-in UX (add-server "iroh" tab)
+The server shows a **QR** in its admin "Remote Access" panel; the phone is the natural scanner. The iroh tab in `lib/screens/add_server.dart` flows:
+1. **Scan QR** (`mobile_scanner`, camera-permission gated) or **Paste code**.
+2. **Test connection** — `IrohTunnel.start(code)` opens the tunnel and fetches `/api/` through it (proves the tunnel + shows the server version). On handshake-reject/timeout, tell the user the code may be **rotated/stale → re-pair**.
+3. **Sign in** *(revealed once the test passes)* — username/password, plus a public-access toggle for unauthenticated servers, mirroring the standard tab. Authenticate by POSTing `/api/v1/auth/login` **through the tunnel** (`http://127.0.0.1:<port>/…`) to get the JWT. Skip the self-signed-TLS controls (not needed on iroh).
+4. **Save** — persist a `Server` carrying the `irohPairingCode` + JWT (and storage/download settings, like the standard tab). The saved server has no fixed remote URL; its base URL is resolved at runtime via `effectiveBaseUrl` (§4.2) once the tunnel starts.
 
 ### 4.4 Lifecycle
 Keep the endpoint + proxy alive during background playback via the existing `audio_service` foreground service. Tear down on disconnect; reconnect on resume.
@@ -85,11 +85,13 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 - ✅ `iroh` core-only Rust crate implementing the full §2 contract (incl. handshake) — `rust/iroh_tunnel/`.
 - ✅ **Interop proven on desktop:** the Rust client tunnels JSON + a Range/seek (206) request + concurrency against a faithful replica of the PR #643 server (`rust/iroh_tunnel/interop/harness.mjs`).
 - ✅ C ABI (`src/c_api.rs`) + Dart FFI binding (`lib/native/iroh_tunnel.dart`); cross-compiles for both ABIs (`build-android.sh`).
-- ⏳ **Pending (device loop):** stage `.so` into `jniLibs`, build the APK, and confirm on a physical device `start(code)` completes the handshake and a plain `http` GET to `127.0.0.1:<port>/api/` returns 200 against a real mStream running PR #643 (`iroh.enabled`, code from the admin panel). Confirm per-ABI `.so` size in the assembled APK.
+- ✅ **Device-verified (2026-06-21, Galaxy S25):** scanning the server's QR + Test connection completed the handshake and returned the server version through the tunnel. Also fixed an Android-only crash — iroh needs the app `Context` via `ndk_context` (now registered from `IrohNative`/`MainActivity` at startup) and the C ABI is panic-guarded (`catch_unwind`).
 
-### M2 — Connection model + QR pairing UI + playback
-- `Server.irohPairingCode` + migration; `effectiveBaseUrl` routing; QR-scan + paste add-server flow; status indicator.
-- **Accept:** scan the admin QR, browse the library, and **play + seek a track** end-to-end; no code path reads `server.url` directly on the iroh route.
+### M2 — Connection model + QR pairing UI + sign-in + playback
+- ✅ QR-scan + paste + **Test connection** (shows the server version through the tunnel).
+- **Sign-in form** revealed after a passing test → login (username/password or public-access) **through the tunnel** → JWT. *(this slice)*
+- `Server.irohPairingCode` + a connection-type marker + `servers.json` migration; **`effectiveBaseUrl` routing** so the whole API + streaming go through the tunnel; **save** the iroh server; start the tunnel when it becomes the active server. *(this slice)*
+- **Accept:** add an iroh server (scan → test → sign in → save), browse the library, and **play + seek a track** end-to-end; no code path reads `server.url` directly on the iroh route.
 
 ### M3 — Hardening
 - Rotation/staleness handling (re-pair prompt), reconnect, relay vs direct status, background-playback survival, battery (keepalives), graceful fallback to HTTP if iroh fails.

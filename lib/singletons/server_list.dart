@@ -9,6 +9,7 @@ import './app_messenger.dart';
 import './browser_list.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
+import '../native/iroh_tunnel.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -18,6 +19,11 @@ import 'package:http/http.dart' as http;
 class ServerManager {
   final List<Server> serverList = [];
   Server? currentServer;
+
+  // The pairing code of the server the (single) iroh tunnel is currently up for,
+  // or null when no tunnel is running. Drives (re)start decisions in
+  // [ensureActiveTunnel]; the shim holds one tunnel at a time, for the active server.
+  String? _activeTunnelCode;
 
   // streams
   late final BehaviorSubject<List<Server>> _serverListStream =
@@ -92,6 +98,10 @@ class ServerManager {
 
     if (serverList.isNotEmpty) {
       currentServer = serverList[0];
+      // Bring up the tunnel for an iroh default server BEFORE the browser queries
+      // it and before the queue is restored (main.dart gates QueueStore.init on
+      // loadServerList completing).
+      await ensureActiveTunnel();
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
       for (var s in serverList) {
@@ -111,6 +121,12 @@ class ServerManager {
   // back to the first supported one, or the no-server screen if none.
   Future<void> _screenServers() async {
     await Future.wait(serverList.map((Server s) async {
+      // iroh servers speak the same API through the tunnel; the build-compat
+      // probe needs a live tunnel, so treat them as supported (skip the probe).
+      if (s.isIroh) {
+        s.unsupported = false;
+        return;
+      }
       s.unsupported = !await isServerSupported(s.url);
     }));
 
@@ -175,10 +191,14 @@ class ServerManager {
     await callAfterEditServer();
   }
 
-  void changeCurrentServer(int currentServerIndex) {
+  Future<void> changeCurrentServer(int currentServerIndex) async {
     currentServer = serverList[currentServerIndex];
     _currentServerStream.sink.add(currentServer);
+    // Bring the tunnel up for the newly-active iroh server (or tear it down when
+    // switching to HTTP) before the browser queries it.
+    await ensureActiveTunnel();
     BrowserManager().goToNavScreen();
+    unawaited(getServerPaths(currentServer!));
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
@@ -186,9 +206,16 @@ class ServerManager {
       if (throwErr) throw Exception('Failed to connect to server');
       return;
     }
+    // An iroh server can only be pinged through its live tunnel; skip when the
+    // tunnel isn't up (e.g. a non-active iroh server at startup).
+    if (server.isIroh && server.tunnelPort == null) {
+      if (throwErr) throw Exception('iroh tunnel not connected');
+      return;
+    }
     try {
       var response = await http
-          .get(Uri.parse(server.url).resolve('/api/v1/ping'), headers: {
+          .get(Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/ping'),
+              headers: {
         'Content-Type': 'application/json',
         'x-access-token': server.jwt ?? ''
       }).timeout(Duration(seconds: 5));
@@ -263,6 +290,45 @@ class ServerManager {
     }
   }
 
+  /// Bring the single iroh tunnel in line with the active server: start it for an
+  /// iroh [currentServer] (recording the live port on the server), restart it
+  /// when switching to a different iroh server, or tear it down when the active
+  /// server is HTTP/none. Idempotent; await before anything uses the server.
+  Future<void> ensureActiveTunnel() async {
+    if (!IrohTunnel.isSupported) return;
+    final s = currentServer;
+    if (s != null && s.isIroh && s.irohPairingCode != null) {
+      if (_activeTunnelCode == s.irohPairingCode && s.tunnelPort != null) {
+        return; // already up for this server
+      }
+      // The shim holds one tunnel; switching servers requires dropping the old
+      // one first (start() would otherwise return the stale tunnel's port).
+      if (_activeTunnelCode != null) {
+        IrohTunnel.instance.stop();
+        _activeTunnelCode = null;
+      }
+      try {
+        final port = await IrohTunnel.instance.start(s.irohPairingCode!);
+        s.tunnelPort = port;
+        _activeTunnelCode = s.irohPairingCode;
+      } catch (_) {
+        s.tunnelPort = null;
+        _activeTunnelCode = null;
+        // Leave it down; requests fail fast via effectiveBaseUrl until retried.
+      }
+    } else if (_activeTunnelCode != null) {
+      IrohTunnel.instance.stop();
+      _activeTunnelCode = null;
+    }
+  }
+
+  /// Adopt a tunnel already started elsewhere (the add-server test) as the active
+  /// one, so [ensureActiveTunnel] won't needlessly restart it.
+  void registerActiveTunnel(Server s, int port) {
+    s.tunnelPort = port;
+    _activeTunnelCode = s.irohPairingCode;
+  }
+
   Future<void> removeServer(
       Server removeThisServer, bool removeSyncedFiles) async {
     serverList.remove(removeThisServer);
@@ -281,6 +347,8 @@ class ServerManager {
       _currentServerStream.sink.add(currentServer);
     }
 
+    // Start/stop the tunnel to match the (possibly changed) active server.
+    await ensureActiveTunnel();
     await writeServerFile();
     syncInsecureTls();
   }
@@ -303,6 +371,7 @@ class ServerManager {
     // changeCurrentServer().
     currentServer = s;
     _currentServerStream.sink.add(currentServer);
+    await ensureActiveTunnel();
     BrowserManager().goToNavScreen();
 
     // Persist the new order so serverList[0] — the default loaded on the

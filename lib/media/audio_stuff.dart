@@ -832,7 +832,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // forever; the catch below treats the TimeoutException as a network
         // error and bails silently.
         final res = await http.post(
-          Uri.parse(autoDJServer!.url).resolve('/api/v1/db/random-songs'),
+          Uri.parse(autoDJServer!.effectiveBaseUrl).resolve('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
             'x-access-token': autoDJServer?.jwt ?? '',

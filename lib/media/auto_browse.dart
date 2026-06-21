@@ -767,7 +767,7 @@ class AutoHttpException implements Exception {
 class AutoApi {
   static Future<dynamic> _call(Server server, String location,
       {Map<String, dynamic>? body}) async {
-    final uri = Uri.parse(server.url).resolve(location);
+    final uri = Uri.parse(server.effectiveBaseUrl).resolve(location);
     final headers = <String, String>{'x-access-token': server.jwt ?? ''};
     late http.Response resp;
     if (body == null) {

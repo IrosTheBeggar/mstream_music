@@ -111,9 +111,19 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   // --- iroh pairing tab state ---
   final TextEditingController _irohCodeCtrl = TextEditingController();
+  final TextEditingController _irohUserCtrl = TextEditingController();
+  final TextEditingController _irohPassCtrl = TextEditingController();
   bool _irohTesting = false;
   String? _irohTestResult;
   bool? _irohTestSuccess;
+  // Live tunnel port after a passing test (null = no tunnel up).
+  int? _irohPort;
+  // Test passed → reveal the sign-in form.
+  bool _irohSignedInReady = false;
+  bool _irohPublic = false;
+  bool _irohSaving = false;
+  // Set once the server is saved, so dispose() won't stop the now-active tunnel.
+  bool _irohSaved = false;
 
   @override
   @protected
@@ -434,6 +444,10 @@ class MyCustomFormState extends State<MyCustomForm> {
     _passwordCtrl.dispose();
     _downloadFolderCtrl.dispose();
     _irohCodeCtrl.dispose();
+    _irohUserCtrl.dispose();
+    _irohPassCtrl.dispose();
+    // A tunnel left running from a test that was never saved is torn down here.
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
     ServerManager().clearPendingSelfSigned();
 
     super.dispose();
@@ -1279,23 +1293,32 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Strings are intentionally plain English for this first slice; localize via
   // the .arb files once the flow is confirmed end to end.
 
+  // Editing/replacing the code invalidates a prior test: drop the (now stale)
+  // tunnel and hide the sign-in form.
   void _clearIrohTestResult() {
-    if (_irohTestResult != null) {
-      setState(() {
-        _irohTestResult = null;
-        _irohTestSuccess = null;
-      });
+    if (_irohTestResult == null && !_irohSignedInReady && _irohPort == null) {
+      return;
     }
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    setState(() {
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+      _irohSignedInReady = false;
+      _irohPort = null;
+    });
   }
 
   Future<void> _pasteIrohCode() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (text != null && text.isNotEmpty && mounted) {
+      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
       setState(() {
         _irohCodeCtrl.text = text;
         _irohTestResult = null;
         _irohTestSuccess = null;
+        _irohSignedInReady = false;
+        _irohPort = null;
       });
     }
   }
@@ -1317,17 +1340,20 @@ class MyCustomFormState extends State<MyCustomForm> {
     final code = await Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const _IrohScannerPage()));
     if (code != null && code.trim().isNotEmpty && mounted) {
+      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
       setState(() {
         _irohCodeCtrl.text = code.trim();
         _irohTestResult = null;
         _irohTestSuccess = null;
+        _irohSignedInReady = false;
+        _irohPort = null;
       });
     }
   }
 
-  // Proves the tunnel end to end: start it from the pairing code, fetch the
-  // server's public /api/ through the local proxy, then tear it down (this is
-  // only a connectivity check; saving an iroh server comes later).
+  // Opens the tunnel from the pairing code and fetches the server's public /api/
+  // through it. On success the tunnel is LEFT RUNNING and the sign-in form is
+  // revealed (sign-in + save reuse it); a failed test tears the tunnel down.
   Future<void> _testIrohConnection() async {
     final code = _irohCodeCtrl.text.trim();
     if (code.isEmpty) {
@@ -1338,39 +1364,51 @@ class MyCustomFormState extends State<MyCustomForm> {
       _showIrohResult(false, 'iroh is only supported on Android.');
       return;
     }
+    // Re-test: drop any tunnel left from a previous test (the code may differ).
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
     setState(() {
       _irohTesting = true;
       _irohTestResult = null;
       _irohTestSuccess = null;
+      _irohSignedInReady = false;
+      _irohPort = null;
     });
     try {
       final port = await IrohTunnel.instance.start(code);
       final resp = await http
           .get(Uri.parse('http://127.0.0.1:$port/api/'))
           .timeout(Duration(seconds: 10));
+      String suffix = '';
       if (resp.statusCode == 200) {
-        String suffix = '';
         try {
           final v = (jsonDecode(resp.body) as Map<String, dynamic>)['server']
               ?.toString();
           if (v != null && v.isNotEmpty) suffix = ' — mStream v$v';
         } catch (_) {}
-        _showIrohResult(true, 'Connected through the iroh tunnel$suffix');
-      } else {
-        // Any response at all proves the tunnel carried HTTP to the server.
-        _showIrohResult(true,
-            'Tunnel works — server responded (HTTP ${resp.statusCode}).');
       }
+      if (!mounted) {
+        IrohTunnel.instance.stop();
+        return;
+      }
+      // Any response proves the tunnel carried HTTP to the server → keep it up
+      // for sign-in + save.
+      setState(() {
+        _irohTesting = false;
+        _irohTestSuccess = true;
+        _irohTestResult = 'Connected through the iroh tunnel$suffix';
+        _irohPort = port;
+        _irohSignedInReady = true;
+      });
     } on IrohTunnelException catch (e) {
+      IrohTunnel.instance.stop();
       _showIrohResult(false, e.message);
     } on TimeoutException {
+      IrohTunnel.instance.stop();
       _showIrohResult(
           false, 'Tunnel opened but the server did not respond in time.');
     } catch (e) {
-      _showIrohResult(false, 'Tunnel test failed: $e');
-    } finally {
-      // Connectivity check only — don't leave the tunnel running.
       IrohTunnel.instance.stop();
+      _showIrohResult(false, 'Tunnel test failed: $e');
     }
   }
 
@@ -1381,6 +1419,67 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohTestSuccess = success;
       _irohTestResult = message;
     });
+  }
+
+  // Authenticate THROUGH the live tunnel (mirrors the standard login), then save
+  // the iroh server, adopting the test tunnel as the active connection.
+  Future<void> _signInAndSaveIroh() async {
+    final code = _irohCodeCtrl.text.trim();
+    final port = _irohPort;
+    if (port == null) {
+      _showIrohResult(false, 'Test the connection first.');
+      return;
+    }
+    setState(() => _irohSaving = true);
+    String jwt = '';
+    try {
+      if (!_irohPublic) {
+        final login = await http.post(
+          Uri.parse('http://127.0.0.1:$port/api/v1/auth/login'),
+          body: {
+            'username': _irohUserCtrl.text,
+            'password': _irohPassCtrl.text,
+          },
+        ).timeout(Duration(seconds: 8));
+        if (login.statusCode != 200) {
+          if (mounted) setState(() => _irohSaving = false);
+          _showIrohResult(false,
+              'Sign-in failed (HTTP ${login.statusCode}). Check your username and password.');
+          return;
+        }
+        jwt = (jsonDecode(login.body)['token'] ?? '').toString();
+      }
+      await _saveIrohServer(code: code, port: port, jwt: jwt);
+    } on TimeoutException {
+      if (mounted) setState(() => _irohSaving = false);
+      _showIrohResult(false, 'Sign-in timed out.');
+    } catch (e) {
+      if (mounted) setState(() => _irohSaving = false);
+      _showIrohResult(false, 'Sign-in failed: $e');
+    }
+  }
+
+  // Persist an iroh server keyed by its pairing code (its durable identity), with
+  // the live tunnel adopted as the active connection, then switch to it.
+  Future<void> _saveIrohServer(
+      {required String code, required int port, required String jwt}) async {
+    final id = code.hashCode.toUnsigned(32).toRadixString(16);
+    final username = _irohPublic ? '' : _irohUserCtrl.text;
+    final password = _irohPublic ? '' : _irohPassCtrl.text;
+    final server = Server('iroh://$id', username, password, jwt, 'iroh-$id')
+      ..connectionType = 'iroh'
+      ..irohPairingCode = code
+      ..tunnelPort = port
+      ..storageMode = 'appLocal';
+    // Ping through the live tunnel to populate vpaths / transcode caps.
+    await ServerManager().getServerPaths(server);
+    await ServerManager().addServer(server);
+    // Adopt the test tunnel as the active one, then make this the current server.
+    ServerManager().registerActiveTunnel(server, port);
+    _irohSaved = true; // dispose() must not stop the now-active tunnel
+    final idx = ServerManager().serverList.indexOf(server);
+    if (idx >= 0) await ServerManager().changeCurrentServer(idx);
+    if (mounted) Navigator.pop(context);
   }
 
   Widget _buildIrohTab(BuildContext context) {
@@ -1483,11 +1582,76 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 12),
               _statusBanner(_irohTestResult!, _irohTestSuccess ?? false),
             ],
-            SizedBox(height: 16),
-            Text(
-              'Once the test passes, saving an iroh server is the next step.',
-              style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
-            ),
+            if (_irohSignedInReady) ...[
+              SizedBox(height: 20),
+              Divider(color: VelvetColors.border2),
+              SizedBox(height: 12),
+              Text('Sign in',
+                  style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Public server (no login)',
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary, fontSize: 14)),
+                value: _irohPublic,
+                onChanged:
+                    _irohSaving ? null : (v) => setState(() => _irohPublic = v),
+                activeThumbColor: VelvetColors.primary,
+              ),
+              TextField(
+                controller: _irohUserCtrl,
+                enabled: !_irohPublic && !_irohSaving,
+                autocorrect: false,
+                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(color: VelvetColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: _irohPassCtrl,
+                enabled: !_irohPublic && !_irohSaving,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                style: TextStyle(color: VelvetColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: VelvetColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(VelvetColors.radiusSmall),
+                  ),
+                  textStyle:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                icon: _irohSaving
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : Icon(Icons.login),
+                label: Text(_irohSaving ? 'Signing in…' : 'Sign in & save'),
+                onPressed: _irohSaving ? null : _signInAndSaveIroh,
+              ),
+            ],
           ],
         ),
       ),

@@ -24,6 +24,11 @@ class Server {
   // true, calls against this server short-circuit to a generic failure.
   bool unsupported = false;
 
+  // Runtime-only (never persisted): the live loopback port of this server's iroh
+  // tunnel while it is the active server. Set by ServerManager when the tunnel
+  // starts; consumed by [effectiveBaseUrl].
+  int? tunnelPort;
+
   // The server's transcoding capability from /api/v1/ping, refreshed on each
   // ping (getServerPaths) and PERSISTED so it's known at launch — before the
   // queue is restored, which would otherwise race the ping and bake in /media
@@ -40,6 +45,14 @@ class Server {
   String? password;
   String? jwt;
 
+  // Transport for this server: 'http' (default) or 'iroh' (peer-to-peer tunnel).
+  // For an iroh server [url] is only a placeholder/identity — the real base URL
+  // is the live local proxy, resolved at runtime via [effectiveBaseUrl].
+  String connectionType = 'http';
+  // The iroh composite pairing code (durable identity + credential for an iroh
+  // server, the role [url] plays for an HTTP server). Null for HTTP servers.
+  String? irohPairingCode;
+
   // Full-flavor only: accept a self-signed / untrusted TLS cert for this server
   // — API calls (via Dart HttpOverrides) and streaming (via the native
   // insecure-TLS bridge for ExoPlayer). Off by default; the Play build never
@@ -52,6 +65,16 @@ class Server {
   List<String> playlists = [];
 
   Server(this.url, this.username, this.password, this.jwt, this.localname);
+
+  bool get isIroh => connectionType == 'iroh';
+
+  /// The base origin to use for requests/streams right now. For an iroh server
+  /// this is the live local tunnel (`http://127.0.0.1:<tunnelPort>`, set by
+  /// ServerManager when the server is active); for HTTP it's [url]. When an iroh
+  /// tunnel isn't up yet [tunnelPort] is null and this returns an unroutable
+  /// origin, so a stray request fails fast instead of hitting the placeholder url.
+  String get effectiveBaseUrl =>
+      isIroh ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
 
   Server.fromJson(Map<String, dynamic> json)
       : url = json['url'],
@@ -74,7 +97,9 @@ class Server {
         transcodeAvailable =
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
-        transcodeDefaultBitrate = json['transcodeDefaultBitrate'] as String?;
+        transcodeDefaultBitrate = json['transcodeDefaultBitrate'] as String?,
+        connectionType = json['connectionType'] as String? ?? 'http',
+        irohPairingCode = json['irohPairingCode'] as String?;
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -90,6 +115,8 @@ class Server {
         'storageBasePath': storageBasePath,
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
-        'transcodeDefaultBitrate': transcodeDefaultBitrate
+        'transcodeDefaultBitrate': transcodeDefaultBitrate,
+        'connectionType': connectionType,
+        'irohPairingCode': irohPairingCode
       };
 }

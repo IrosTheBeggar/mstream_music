@@ -40,7 +40,7 @@ class ApiManager {
     }
 
     final response = await http.post(
-      Uri.parse(server.url).resolve('/api/v1/db/genres'),
+      Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/db/genres'),
       body: jsonEncode(body),
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ class ApiManager {
     required List<String> filepaths,
     int? expiresInDays,
   }) async {
-    final uri = Uri.parse(server.url).resolve('/api/v1/share');
+    final uri = Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/share');
     final body = <String, dynamic>{'playlist': filepaths};
     if (expiresInDays != null) body['time'] = expiresInDays;
 
@@ -104,7 +104,7 @@ class ApiManager {
         throw Exception('Server Call Failed');
       }
 
-      Uri currentUri = Uri.parse(server.url).resolve(location);
+      Uri currentUri = Uri.parse(server.effectiveBaseUrl).resolve(location);
 
       final sw = Stopwatch()..start();
       http.Response response;
@@ -472,7 +472,7 @@ class ApiManager {
   Future<void> rateSong(Server server, String filepath, int? rating) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
     final response = await http.post(
-      Uri.parse(server.url).resolve('/api/v1/db/rate-song'),
+      Uri.parse(server.effectiveBaseUrl).resolve('/api/v1/db/rate-song'),
       body: jsonEncode({'filepath': fp, 'rating': rating}),
       headers: {
         'Content-Type': 'application/json',

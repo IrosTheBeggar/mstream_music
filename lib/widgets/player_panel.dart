@@ -1462,7 +1462,7 @@ String _fmt(Duration d) => formatDuration(d);
 bool _isTranscoding(MediaItem? item) {
   if (item == null || item.extras?['localPath'] != null) return false;
   final s = ServerManager().byLocalname(item.extras?['server'] as String?);
-  return s != null && item.id.startsWith('${s.url}/transcode');
+  return s != null && item.id.startsWith('${s.effectiveBaseUrl}/transcode');
 }
 
 /// Small transcoding glyph that sits just left of a time readout in the player;
