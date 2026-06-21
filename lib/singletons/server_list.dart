@@ -143,6 +143,9 @@ class ServerManager {
     }
     currentServer = next;
     _currentServerStream.sink.add(currentServer);
+    // Re-emit the list so list-bound UIs (e.g. the manage-servers iroh path chip,
+    // which keys off the active server) re-evaluate against the new currentServer.
+    _serverListStream.sink.add(serverList);
     if (next != null) {
       BrowserManager().goToNavScreen();
     } else {
@@ -370,13 +373,19 @@ class ServerManager {
       BehaviorSubject.seeded(IrohTunnelStatus.down);
   Stream<IrohTunnelStatus> get tunnelStatusStream => _tunnelStatus.stream;
   IrohTunnelStatus get tunnelStatus => _tunnelStatus.value;
+  // Direct-vs-relay path of the active iroh tunnel, sampled on the same poll.
+  final BehaviorSubject<IrohPathKind> _pathKind =
+      BehaviorSubject.seeded(IrohPathKind.unknown);
+  Stream<IrohPathKind> get pathKindStream => _pathKind.stream;
+  IrohPathKind get pathKind => _pathKind.value;
   Timer? _statusPoll;
 
   void _refreshTunnelStatus() {
-    final st = (IrohTunnel.isSupported && currentServer?.isIroh == true)
-        ? IrohTunnel.instance.status
-        : IrohTunnelStatus.down;
+    final isIroh = IrohTunnel.isSupported && currentServer?.isIroh == true;
+    final st = isIroh ? IrohTunnel.instance.status : IrohTunnelStatus.down;
     if (st != _tunnelStatus.value) _tunnelStatus.add(st);
+    final pk = isIroh ? IrohTunnel.instance.pathKind : IrohPathKind.unknown;
+    if (pk != _pathKind.value) _pathKind.add(pk);
   }
 
   void _startStatusPolling() {
@@ -392,6 +401,9 @@ class ServerManager {
     _statusPoll = null;
     if (_tunnelStatus.value != IrohTunnelStatus.down) {
       _tunnelStatus.add(IrohTunnelStatus.down);
+    }
+    if (_pathKind.value != IrohPathKind.unknown) {
+      _pathKind.add(IrohPathKind.unknown);
     }
   }
 
@@ -549,6 +561,7 @@ class ServerManager {
     _currentServerStream.close();
     _statusPoll?.cancel();
     _tunnelStatus.close();
+    _pathKind.close();
   } //initializes the subject with element already;
 
   Stream<Server?> get currentServerStream => _currentServerStream.stream;

@@ -1392,10 +1392,17 @@ class MyCustomFormState extends State<MyCustomForm> {
       }
       // Any response proves the tunnel carried HTTP to the server → keep it up
       // for sign-in + save.
+      // Report the path the handshake landed on (it may upgrade direct↔relay
+      // shortly after; this is the snapshot at test time).
+      final pathSuffix = switch (IrohTunnel.instance.pathKind) {
+        IrohPathKind.direct => ' · direct',
+        IrohPathKind.relay => ' · via relay',
+        IrohPathKind.unknown => '',
+      };
       setState(() {
         _irohTesting = false;
         _irohTestSuccess = true;
-        _irohTestResult = 'Connected through the iroh tunnel$suffix';
+        _irohTestResult = 'Connected through the iroh tunnel$suffix$pathSuffix';
         _irohPort = port;
         _irohSignedInReady = true;
       });

@@ -11,7 +11,7 @@
 
 use std::sync::{Mutex, OnceLock};
 
-use crate::{connect_tunnel, Tunnel, STATUS_CONNECTED, STATUS_DOWN};
+use crate::{connect_tunnel, Tunnel, PATH_UNKNOWN, STATUS_CONNECTED, STATUS_DOWN};
 
 static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
 static TUNNEL: Mutex<Option<Tunnel>> = Mutex::new(None);
@@ -43,11 +43,26 @@ pub fn tunnel_start(pairing_code: String, local_port: u16) -> Result<u16, String
 }
 
 /// Stop the tunnel (graceful). Safe to call when nothing is running.
+///
+/// The app's `stop()` is synchronous on the UI isolate, so this must NOT block:
+/// [`Tunnel::begin_shutdown`] hands the bounded in-flight drain + close to the
+/// runtime and returns immediately.
 pub fn tunnel_stop() {
     let taken = TUNNEL.lock().unwrap().take();
     if let Some(t) = taken {
-        rt().block_on(t.shutdown());
+        t.begin_shutdown(rt());
     }
+}
+
+/// Current selected-path kind (one of the `PATH_*` codes); `PATH_UNKNOWN` when
+/// nothing is running or no path is selected yet.
+pub fn tunnel_path_kind() -> u8 {
+    TUNNEL
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|t| t.path_kind())
+        .unwrap_or(PATH_UNKNOWN)
 }
 
 /// Current tunnel status (one of the `STATUS_*` codes); `STATUS_DOWN` when none.

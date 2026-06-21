@@ -104,7 +104,13 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 - just_audio error-stream recovery (`audio_stuff._onPlaybackError`): on an iroh stream error, wait for the tunnel, re-seed the source, resume at position (debounced).
 - In-app **re-pair**: `iroh_repair_sheet` (paste/scan a fresh code) → `ServerManager.repairIrohPairingCode()` restarts the tunnel. QR scanner extracted to the shared `widgets/iroh_scanner.dart` (reused by add-server + re-pair).
 
-**Tier 3 — polish & validation:** direct-vs-relay indicator (`Connection::path_events`), keepalive/battery policy doc, server-switch teardown drain, and the true **cross-network NAT** test (phone on cellular, server elsewhere).
+**Tier 3 — polish & validation ✅ (built; `cargo test` + interop + `flutter analyze` green, APK builds, device check pending):**
+- Direct-vs-relay indicator: the shim classifies the live connection's *selected* path via `Connection::paths()` (`is_selected`/`is_relay`) → `mstream_iroh_path_kind` (0/1/2) → Dart `IrohPathKind` + `ServerManager.pathKindStream` (sampled on the 2 s status poll). Surfaced as a "Connected via relay — slower path" banner strip (direct stays hidden, so everyday use is clean), a live Direct/Relay chip on the active iroh server's manage-servers tile (only while connected), and a "· direct / · via relay" suffix on the add-server Test result.
+- Server-switch teardown drain: `Tunnel::begin_shutdown` is non-blocking (stop() is synchronous on the UI isolate) and hands the runtime a bounded drain — wait ≤ `DRAIN_TIMEOUT` (3 s) for in-flight bridges (`BridgeGuard` counts them), then a capped `endpoint.close()` — so a server switch doesn't abruptly cut an in-flight request.
+- Keepalive/battery: **no custom transport config** — iroh's defaults (5 s keepalive, 15–30 s idle) already detect a dead path and self-heal, and backgrounded recovery rides the resume-time `network_change()` + verify-rebuild. Rationale + the (unused) knob recipe documented in [`IROH_KEEPALIVE_BATTERY.md`](IROH_KEEPALIVE_BATTERY.md).
+- Adversarially reviewed (4 dimensions, every finding independently verified): **0 blockers/high**; 3 low/nit confirmed + fixed (capped `endpoint.close()` + accurate teardown docs; re-emit the server list on startup failover so the chip re-evaluates; chip gated to the connected state).
+
+**Remaining: the true cross-network NAT test** (phone on cellular, server elsewhere) — the upcoming full test.
 
 - **Accept:** rotate the server secret → clean re-pair prompt; playback survives backgrounding + a network blip; cross-network NAT works.
 

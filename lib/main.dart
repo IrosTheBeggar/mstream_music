@@ -282,73 +282,86 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // Banner for iroh tunnel trouble on the active server: reconnecting (transient),
-  // re-pair needed (rotated secret), or disconnected (hard-down). Hidden when
-  // connected or the active server isn't iroh. Strings are plain English for now.
+  // Banner for the active iroh server: reconnecting (transient), re-pair needed
+  // (rotated secret), disconnected (hard-down), or — when connected — a heads-up
+  // that we're on a slower relay path (the optimal direct path stays hidden, so
+  // everyday use is clean). Hidden entirely for non-iroh servers. Plain English.
   Widget _tunnelBanner() {
     return StreamBuilder<IrohTunnelStatus>(
       stream: ServerManager().tunnelStatusStream,
       initialData: ServerManager().tunnelStatus,
       builder: (context, snap) {
         final st = snap.data ?? IrohTunnelStatus.down;
-        final isIroh = ServerManager().currentServer?.isIroh == true;
-        if (!isIroh || st == IrohTunnelStatus.connected) {
+        if (ServerManager().currentServer?.isIroh != true) {
           return const SizedBox.shrink();
         }
-        IconData icon;
-        Color color;
-        String text;
-        Widget action;
+        // Connected: surface only the relayed case. Watch the path-kind stream so
+        // the strip appears/clears as iroh re-homes between a direct (hole-punched)
+        // and a relayed path during the session.
+        if (st == IrohTunnelStatus.connected) {
+          return StreamBuilder<IrohPathKind>(
+            stream: ServerManager().pathKindStream,
+            initialData: ServerManager().pathKind,
+            builder: (context, pk) {
+              if ((pk.data ?? IrohPathKind.unknown) != IrohPathKind.relay) {
+                return const SizedBox.shrink();
+              }
+              return _bannerStrip(Icons.cloud_queue, VelvetColors.warning,
+                  'Connected via relay — slower path.');
+            },
+          );
+        }
         switch (st) {
           case IrohTunnelStatus.rejected:
-            icon = Icons.link_off;
-            color = VelvetColors.error;
-            text = 'Server pairing changed — re-pair to reconnect.';
-            action = TextButton(
-              onPressed: () => showIrohRepairSheet(context),
-              child:
-                  Text('Re-pair', style: TextStyle(color: VelvetColors.primary)),
-            );
-            break;
+            return _bannerStrip(
+                Icons.link_off,
+                VelvetColors.error,
+                'Server pairing changed — re-pair to reconnect.',
+                action: TextButton(
+                  onPressed: () => showIrohRepairSheet(context),
+                  child: Text('Re-pair',
+                      style: TextStyle(color: VelvetColors.primary)),
+                ));
           case IrohTunnelStatus.down:
-            icon = Icons.cloud_off;
-            color = VelvetColors.warning;
-            text = 'Disconnected from server.';
-            action = TextButton(
-              onPressed: () =>
-                  unawaited(ServerManager().handleNetworkChange()),
-              child:
-                  Text('Retry', style: TextStyle(color: VelvetColors.primary)),
-            );
-            break;
+            return _bannerStrip(
+                Icons.cloud_off, VelvetColors.warning, 'Disconnected from server.',
+                action: TextButton(
+                  onPressed: () =>
+                      unawaited(ServerManager().handleNetworkChange()),
+                  child: Text('Retry',
+                      style: TextStyle(color: VelvetColors.primary)),
+                ));
           default: // connecting / reconnecting
-            icon = Icons.sync_problem;
-            color = VelvetColors.warning;
-            text = 'Reconnecting to server…';
-            action = SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, valueColor: AlwaysStoppedAnimation(color)),
-            );
+            return _bannerStrip(
+                Icons.sync_problem, VelvetColors.warning, 'Reconnecting to server…',
+                action: const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ));
         }
-        return Material(
-          color: VelvetColors.surface,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Row(children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(text,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary, fontSize: 13)),
-              ),
-              action,
-            ]),
-          ),
-        );
       },
+    );
+  }
+
+  // Thin iroh status strip — matches the migration banner's Material + padding +
+  // row layout (icon · message · optional trailing action/spinner).
+  Widget _bannerStrip(IconData icon, Color color, String text, {Widget? action}) {
+    return Material(
+      color: VelvetColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style:
+                    TextStyle(color: VelvetColors.textPrimary, fontSize: 13)),
+          ),
+          ?action,
+        ]),
+      ),
     );
   }
 

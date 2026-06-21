@@ -46,6 +46,7 @@ class _Bindings {
   final _VoidDart stop;
   final _BoolDart isActive;
   final _Int32Dart statusCode;
+  final _Int32Dart pathKindCode;
   final _VoidDart networkChanged;
   final _LastErrNative lastError;
   final _FreeDart stringFree;
@@ -58,6 +59,7 @@ class _Bindings {
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_stop'),
       lib.lookupFunction<_BoolNative, _BoolDart>('mstream_iroh_is_active'),
       lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_status'),
+      lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_path_kind'),
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_network_changed'),
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_last_error'),
       lib.lookupFunction<_FreeNative, _FreeDart>('mstream_iroh_string_free'),
@@ -65,7 +67,7 @@ class _Bindings {
   }
 
   _Bindings._(this.start, this.stop, this.isActive, this.statusCode,
-      this.networkChanged, this.lastError, this.stringFree);
+      this.pathKindCode, this.networkChanged, this.lastError, this.stringFree);
 
   String? takeLastError() {
     final p = lastError();
@@ -121,6 +123,18 @@ class IrohTunnel {
     return IrohTunnelStatus.values[code];
   }
 
+  /// Current connection path kind (direct vs relayed) for the active tunnel.
+  /// [IrohPathKind.unknown] when unsupported, nothing is running, or no path is
+  /// selected yet. A cheap pure read — safe to poll from the main isolate.
+  IrohPathKind get pathKind {
+    if (!isSupported) return IrohPathKind.unknown;
+    final code = _b.pathKindCode();
+    if (code < 0 || code >= IrohPathKind.values.length) {
+      return IrohPathKind.unknown;
+    }
+    return IrohPathKind.values[code];
+  }
+
   /// Notify the native tunnel that the device network changed, so iroh re-homes
   /// the relay and re-probes paths promptly (it can't self-detect this on
   /// Android). Cheap; safe to call when nothing is running.
@@ -132,6 +146,11 @@ class IrohTunnel {
 /// Tunnel connection status — mirrors the STATUS_* codes in
 /// rust/iroh_tunnel/src/lib.rs (index == code).
 enum IrohTunnelStatus { connecting, connected, reconnecting, rejected, down }
+
+/// Tunnel path kind — mirrors the PATH_* codes in rust/iroh_tunnel/src/lib.rs
+/// (index == code). `direct` is a hole-punched peer-to-peer path (fast);
+/// `relay` means traffic is routed via a relay server (works anywhere, slower).
+enum IrohPathKind { unknown, direct, relay }
 
 // Top-level so it can run in a background isolate (no captured `this`). The .so
 // is process-global, so opening the bindings here and starting the tunnel leaves

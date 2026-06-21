@@ -25,7 +25,7 @@ pub mod ffi;
 #[cfg(target_os = "android")]
 mod android_init;
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -58,6 +58,13 @@ const BRIDGE_OPEN_ATTEMPTS: u32 = 3;
 const BRIDGE_RETRY_DELAY: Duration = Duration::from_millis(400);
 const RECONNECT_BACKOFF_MAX: Duration = Duration::from_secs(30);
 
+// Graceful teardown: on stop/switch, let in-flight bridges finish before closing
+// the connection, bounded so a long media stream can't hold the old endpoint open.
+// Also caps endpoint.close() (see drain_and_close), so total background teardown is
+// drain + close ≈ up to 2×DRAIN_TIMEOUT before the old UDP socket is released.
+const DRAIN_TIMEOUT: Duration = Duration::from_secs(3);
+const DRAIN_POLL: Duration = Duration::from_millis(50);
+
 /// Tunnel status, shared with the C ABI / Dart (keep values in sync with
 /// `lib/native/iroh_tunnel.dart`).
 pub const STATUS_CONNECTING: u8 = 0;
@@ -65,6 +72,11 @@ pub const STATUS_CONNECTED: u8 = 1;
 pub const STATUS_RECONNECTING: u8 = 2;
 pub const STATUS_REJECTED: u8 = 3; // wrong/rotated secret — re-pair needed
 pub const STATUS_DOWN: u8 = 4;
+
+/// Selected-path kind, shared with the C ABI / Dart (`IrohPathKind`).
+pub const PATH_UNKNOWN: u8 = 0;
+pub const PATH_DIRECT: u8 = 1; // hole-punched direct path
+pub const PATH_RELAY: u8 = 2; // routed via a relay server
 
 /// State shared between the accept loop, the per-socket bridges, and the reconnect
 /// supervisor. The live [`Connection`] is swapped in place on reconnect (it's a
@@ -75,6 +87,8 @@ struct Shared {
     secret: Vec<u8>,
     conn: Mutex<Connection>,
     status: AtomicU8,
+    /// In-flight TCP⇆bi-stream bridges, so teardown can drain them gracefully.
+    active_bridges: AtomicUsize,
 }
 
 impl Shared {
@@ -84,6 +98,51 @@ impl Shared {
     fn current_conn(&self) -> Connection {
         self.conn.lock().unwrap().clone()
     }
+    /// Classify the live connection's *selected* path: direct (hole-punched),
+    /// relayed, or unknown (no path selected yet / not connected). A snapshot.
+    fn path_kind(&self) -> u8 {
+        if self.status.load(Ordering::Relaxed) != STATUS_CONNECTED {
+            return PATH_UNKNOWN;
+        }
+        let conn = self.current_conn();
+        for p in conn.paths().iter() {
+            if p.is_selected() {
+                return if p.is_relay() { PATH_RELAY } else { PATH_DIRECT };
+            }
+        }
+        PATH_UNKNOWN
+    }
+}
+
+/// RAII counter for [`Shared::active_bridges`]: increments on creation and
+/// decrements on drop, so teardown can wait for in-flight bridges to finish on
+/// every exit path (clean EOF, error, early return, panic).
+struct BridgeGuard<'a>(&'a Arc<Shared>);
+impl<'a> BridgeGuard<'a> {
+    fn new(shared: &'a Arc<Shared>) -> Self {
+        shared.active_bridges.fetch_add(1, Ordering::Relaxed);
+        BridgeGuard(shared)
+    }
+}
+impl Drop for BridgeGuard<'_> {
+    fn drop(&mut self) {
+        self.0.active_bridges.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// Bounded drain then graceful close: wait (up to [`DRAIN_TIMEOUT`]) for in-flight
+/// bridges to finish, send a clean QUIC CONNECTION_CLOSE, then close the endpoint.
+/// iroh's `endpoint.close()` retransmits the CONNECTION_CLOSE and can take ~3s on a
+/// bad link, so we cap it too — a wedged close can't pin the old UDP socket open.
+async fn drain_and_close(shared: Arc<Shared>) {
+    let deadline = tokio::time::Instant::now() + DRAIN_TIMEOUT;
+    while shared.active_bridges.load(Ordering::Relaxed) > 0
+        && tokio::time::Instant::now() < deadline
+    {
+        tokio::time::sleep(DRAIN_POLL).await;
+    }
+    shared.current_conn().close(0u32.into(), b"client shutdown");
+    let _ = tokio::time::timeout(DRAIN_TIMEOUT, shared.endpoint.close()).await;
 }
 
 /// A running tunnel. The loopback port is STABLE for the tunnel's lifetime (it
@@ -95,6 +154,9 @@ pub struct Tunnel {
     shared: Arc<Shared>,
     accept_task: JoinHandle<()>,
     supervisor: JoinHandle<()>,
+    /// Set by [`Tunnel::begin_shutdown`] so [`Drop`] doesn't slam the connection
+    /// shut after a graceful, drained teardown was already scheduled.
+    shutting_down: AtomicBool,
 }
 
 impl Tunnel {
@@ -103,24 +165,37 @@ impl Tunnel {
         self.shared.status.load(Ordering::Relaxed)
     }
 
+    /// Current selected-path kind (one of the `PATH_*` constants).
+    pub fn path_kind(&self) -> u8 {
+        self.shared.path_kind()
+    }
+
     /// Notify iroh the network may have changed (Android can't self-detect), so it
     /// promptly re-homes the relay and re-probes direct paths.
     pub async fn network_changed(&self) {
         self.shared.endpoint.network_change().await;
     }
 
-    /// Graceful teardown: stop accepting + supervising, send a clean QUIC
-    /// CONNECTION_CLOSE, and drain the endpoint.
-    pub async fn shutdown(self) {
+    /// Begin a graceful, NON-BLOCKING teardown: stop accepting + supervising, then on
+    /// `rt` run [`drain_and_close`] (drain in-flight bridges, then close conn +
+    /// endpoint — see it for the bounded teardown window). The app calls stop()
+    /// synchronously on the UI isolate, so this must return promptly — hence the
+    /// work runs on the runtime instead of blocking the caller.
+    pub fn begin_shutdown(self, rt: &tokio::runtime::Runtime) {
         self.accept_task.abort();
         self.supervisor.abort();
-        self.shared.current_conn().close(0u32.into(), b"client shutdown");
-        self.shared.endpoint.close().await;
+        // Suppress the immediate-close Drop; the spawned drain owns the close now.
+        self.shutting_down.store(true, Ordering::Relaxed);
+        rt.spawn(drain_and_close(self.shared.clone()));
     }
 }
 
 impl Drop for Tunnel {
     fn drop(&mut self) {
+        // A graceful, drained teardown was already scheduled by begin_shutdown.
+        if self.shutting_down.load(Ordering::Relaxed) {
+            return;
+        }
         self.accept_task.abort();
         self.supervisor.abort();
         // Closing the connection makes in-flight bridge streams error out promptly.
@@ -308,6 +383,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         secret: pairing.secret,
         conn: Mutex::new(conn),
         status: AtomicU8::new(STATUS_CONNECTED),
+        active_bridges: AtomicUsize::new(0),
     });
 
     let accept_shared = shared.clone();
@@ -330,6 +406,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         shared,
         accept_task,
         supervisor,
+        shutting_down: AtomicBool::new(false),
     })
 }
 
@@ -339,6 +416,9 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
 /// EOF (finish/shutdown), but if either direction *errors* we cancel the partner
 /// so a half-open stream can't park.
 async fn bridge_socket(sock: TcpStream, shared: Arc<Shared>) {
+    // Count this bridge as in-flight for its whole lifetime (drops on every exit
+    // path), so a graceful teardown can wait for it before closing the connection.
+    let _bridge = BridgeGuard::new(&shared);
     // Open a bi-stream on the CURRENT connection, retrying briefly so a request
     // mid-reconnect can ride the swapped-in connection instead of hard-failing.
     let mut attempt = 0u32;

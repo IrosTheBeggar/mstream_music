@@ -19,7 +19,8 @@ use std::panic::{self, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
 
 use crate::ffi::{
-    tunnel_is_active, tunnel_network_changed, tunnel_start, tunnel_status, tunnel_stop,
+    tunnel_is_active, tunnel_network_changed, tunnel_path_kind, tunnel_start, tunnel_status,
+    tunnel_stop,
 };
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
@@ -122,6 +123,13 @@ pub extern "C" fn mstream_iroh_status() -> i32 {
 #[no_mangle]
 pub extern "C" fn mstream_iroh_network_changed() {
     guard((), tunnel_network_changed);
+}
+
+/// Current path kind: 0=unknown, 1=direct (hole-punched), 2=relayed. Mirrors the
+/// PATH_* constants in lib.rs and the Dart `IrohPathKind` enum.
+#[no_mangle]
+pub extern "C" fn mstream_iroh_path_kind() -> i32 {
+    guard(crate::PATH_UNKNOWN as i32, || tunnel_path_kind() as i32)
 }
 
 /// The last error message as a heap-allocated NUL-terminated C string, or null if
