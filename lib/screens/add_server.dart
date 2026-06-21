@@ -9,8 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-// import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter/services.dart';
 import '../build_variant.dart';
+import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
@@ -106,6 +108,12 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool _testing = false;
   String? _testResult;
   bool? _testSuccess;
+
+  // --- iroh pairing tab state ---
+  final TextEditingController _irohCodeCtrl = TextEditingController();
+  bool _irohTesting = false;
+  String? _irohTestResult;
+  bool? _irohTestSuccess;
 
   @override
   @protected
@@ -425,6 +433,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _downloadFolderCtrl.dispose();
+    _irohCodeCtrl.dispose();
     ServerManager().clearPendingSelfSigned();
 
     super.dispose();
@@ -1207,6 +1216,285 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Add mode shows two tabs (Server URL / iroh); edit mode targets one
+    // existing URL server, so it skips the pairing tab.
+    if (widget.editThisServer != null) {
+      return _buildStandardForm(context);
+    }
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Material(
+            color: VelvetColors.surface,
+            child: TabBar(
+              labelColor: VelvetColors.primary,
+              unselectedLabelColor: VelvetColors.textSecondary,
+              indicatorColor: VelvetColors.primary,
+              tabs: const [
+                Tab(text: 'Server URL'),
+                Tab(text: 'iroh'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildStandardForm(context),
+                _buildIrohTab(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Shared success/error banner used by both the standard and iroh test flows.
+  Widget _statusBanner(String message, bool success) {
+    final color = success ? VelvetColors.success : VelvetColors.error;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color, width: 1),
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+      ),
+      child: Row(
+        children: [
+          Icon(success ? Icons.check_circle_outline : Icons.error_outline,
+              color: color, size: 18),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(message,
+                style:
+                    TextStyle(color: VelvetColors.textPrimary, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- iroh pairing tab ---
+  // Strings are intentionally plain English for this first slice; localize via
+  // the .arb files once the flow is confirmed end to end.
+
+  void _clearIrohTestResult() {
+    if (_irohTestResult != null) {
+      setState(() {
+        _irohTestResult = null;
+        _irohTestSuccess = null;
+      });
+    }
+  }
+
+  Future<void> _pasteIrohCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (text != null && text.isNotEmpty && mounted) {
+      setState(() {
+        _irohCodeCtrl.text = text;
+        _irohTestResult = null;
+        _irohTestSuccess = null;
+      });
+    }
+  }
+
+  Future<void> _scanQr() async {
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, 'QR scanning is only available on Android.');
+      return;
+    }
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Camera permission is needed to scan a code.')));
+      }
+      return;
+    }
+    if (!mounted) return;
+    final code = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const _IrohScannerPage()));
+    if (code != null && code.trim().isNotEmpty && mounted) {
+      setState(() {
+        _irohCodeCtrl.text = code.trim();
+        _irohTestResult = null;
+        _irohTestSuccess = null;
+      });
+    }
+  }
+
+  // Proves the tunnel end to end: start it from the pairing code, fetch the
+  // server's public /api/ through the local proxy, then tear it down (this is
+  // only a connectivity check; saving an iroh server comes later).
+  Future<void> _testIrohConnection() async {
+    final code = _irohCodeCtrl.text.trim();
+    if (code.isEmpty) {
+      _showIrohResult(false, 'Paste or scan a pairing code first.');
+      return;
+    }
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, 'iroh is only supported on Android.');
+      return;
+    }
+    setState(() {
+      _irohTesting = true;
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+    });
+    try {
+      final port = await IrohTunnel.instance.start(code);
+      final resp = await http
+          .get(Uri.parse('http://127.0.0.1:$port/api/'))
+          .timeout(Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        String suffix = '';
+        try {
+          final v = (jsonDecode(resp.body) as Map<String, dynamic>)['server']
+              ?.toString();
+          if (v != null && v.isNotEmpty) suffix = ' — mStream v$v';
+        } catch (_) {}
+        _showIrohResult(true, 'Connected through the iroh tunnel$suffix');
+      } else {
+        // Any response at all proves the tunnel carried HTTP to the server.
+        _showIrohResult(true,
+            'Tunnel works — server responded (HTTP ${resp.statusCode}).');
+      }
+    } on IrohTunnelException catch (e) {
+      _showIrohResult(false, e.message);
+    } on TimeoutException {
+      _showIrohResult(
+          false, 'Tunnel opened but the server did not respond in time.');
+    } catch (e) {
+      _showIrohResult(false, 'Tunnel test failed: $e');
+    } finally {
+      // Connectivity check only — don't leave the tunnel running.
+      IrohTunnel.instance.stop();
+    }
+  }
+
+  void _showIrohResult(bool success, String message) {
+    if (!mounted) return;
+    setState(() {
+      _irohTesting = false;
+      _irohTestSuccess = success;
+      _irohTestResult = message;
+    });
+  }
+
+  Widget _buildIrohTab(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Connect peer-to-peer',
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+            SizedBox(height: 6),
+            Text(
+              'Reach your server from anywhere — no port-forwarding or public IP. '
+              'Enable Remote Access on the server, then paste its pairing code or '
+              'scan the QR.',
+              style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _irohCodeCtrl,
+              minLines: 2,
+              maxLines: 4,
+              autocorrect: false,
+              enableSuggestions: false,
+              onChanged: (_) => _clearIrohTestResult(),
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
+                labelText: 'Pairing code',
+                hintText: 'Paste the code from the server Remote Access panel',
+                prefixIcon: Icon(Icons.vpn_key_outlined),
+              ),
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.qr_code_scanner, size: 18),
+                    label: Text('Scan QR'),
+                    onPressed: _irohTesting ? null : _scanQr,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.content_paste, size: 18),
+                    label: Text('Paste'),
+                    onPressed: _irohTesting ? null : _pasteIrohCode,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: VelvetColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+                textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              icon: _irohTesting
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : Icon(Icons.network_check),
+              label: Text(_irohTesting ? 'Testing…' : 'Test connection'),
+              onPressed: _irohTesting ? null : _testIrohConnection,
+            ),
+            if (_irohTestResult != null) ...[
+              SizedBox(height: 12),
+              _statusBanner(_irohTestResult!, _irohTestSuccess ?? false),
+            ],
+            SizedBox(height: 16),
+            Text(
+              'Once the test passes, saving an iroh server is the next step.',
+              style: TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardForm(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SafeArea(
       // SingleChildScrollView ensures the Save button is reachable
@@ -1345,45 +1633,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               ),
               if (_testResult != null) ...[
                 SizedBox(height: 10),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: (_testSuccess ?? false)
-                        ? VelvetColors.success.withValues(alpha: 0.12)
-                        : VelvetColors.error.withValues(alpha: 0.12),
-                    border: Border.all(
-                      color: (_testSuccess ?? false)
-                          ? VelvetColors.success
-                          : VelvetColors.error,
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(
-                        VelvetColors.radiusSmall),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        (_testSuccess ?? false)
-                            ? Icons.check_circle_outline
-                            : Icons.error_outline,
-                        color: (_testSuccess ?? false)
-                            ? VelvetColors.success
-                            : VelvetColors.error,
-                        size: 18,
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _testResult!,
-                          style: TextStyle(
-                              color: VelvetColors.textPrimary,
-                              fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _statusBanner(_testResult!, _testSuccess ?? false),
               ],
               // Storage location: App local (default) / Permanent / SD card
               // (the SD option only when a removable card is present, or when
@@ -1557,6 +1807,44 @@ class MyCustomFormState extends State<MyCustomForm> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Full-screen QR scanner for the iroh pairing code. Pops with the first decoded
+// string (mobile_scanner: CameraX/ML Kit on Android).
+class _IrohScannerPage extends StatefulWidget {
+  const _IrohScannerPage();
+
+  @override
+  State<_IrohScannerPage> createState() => _IrohScannerPageState();
+}
+
+class _IrohScannerPageState extends State<_IrohScannerPage> {
+  final MobileScannerController _controller = MobileScannerController();
+  bool _handled = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    final raw =
+        capture.barcodes.isNotEmpty ? capture.barcodes.first.rawValue : null;
+    if (raw != null && raw.isNotEmpty) {
+      _handled = true;
+      Navigator.of(context).pop(raw);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Scan pairing QR')),
+      body: MobileScanner(controller: _controller, onDetect: _onDetect),
     );
   }
 }
