@@ -109,6 +109,15 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.felnanuke.google_cast.GoogleCastOptionsProvider" />
+
+        <!-- Android Auto: opt in as a media app so Auto lists mStream and binds
+             the audio_service MediaBrowserService declared below. Lives in the
+             base (src/main) manifest so BOTH the `play` and `full` flavors
+             inherit it (the play flavor ships no flavor manifest). The browsable
+             tree is served from Dart (AudioPlayerHandler.getChildren). -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
             
         <service android:name="com.ryanheise.audioservice.AudioService" android:exported="true" android:foregroundServiceType="mediaPlayback">
           <intent-filter>
@@ -128,6 +137,20 @@
             android:name=".MigrationService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Serves album art to Android Auto as local content:// URIs (Auto
+             rejects remote https artUri for browse items). Must be exported so
+             the separate Android Auto (gearhead) process can open it — the
+             MediaBrowserService framework does NOT auto-grant browse-item icon
+             URI permission, so exported=false gets a Permission Denial.
+             ArtContentProvider only fetches http(s) art (scheme-guarded) so the
+             open provider can't be abused as a file:// read / SSRF gadget.
+             Authority is flavor-scoped so the play + full builds don't collide. -->
+        <provider
+            android:name=".ArtContentProvider"
+            android:authorities="${applicationId}.art"
+            android:exported="true"
+            android:grantUriPermissions="true" />
 
     </application>
 </manifest>

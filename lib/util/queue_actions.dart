@@ -58,6 +58,10 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
     // Duration when the server reported it — surfaces in the queue list and the
     // now-playing readout before playback loads (just_audio refines it later).
     duration: i.metadata?.duration,
+    // Promote album art to artUri so the notification, lock screen, and Android
+    // Auto now-playing render artwork — those surfaces ignore extras['artUrl']
+    // (which the in-app UI reads). Both are kept in sync.
+    artUri: artUrl == null ? null : Uri.parse(artUrl),
     extras: {
       'server': i.server!.localname,
       'path': i.data,

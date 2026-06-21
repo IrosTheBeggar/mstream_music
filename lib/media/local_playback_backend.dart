@@ -92,8 +92,12 @@ class LocalPlaybackBackend implements PlaybackBackend {
       _player.setShuffleModeEnabled(enabled);
 
   @override
-  Future<void> setRepeatAll(bool enabled) =>
-      _player.setLoopMode(enabled ? LoopMode.all : LoopMode.off);
+  Future<void> setRepeat(BackendRepeat mode) =>
+      _player.setLoopMode(switch (mode) {
+        BackendRepeat.off => LoopMode.off,
+        BackendRepeat.all => LoopMode.all,
+        BackendRepeat.one => LoopMode.one,
+      });
 
   @override
   Future<void> setVolume(double volume) => _player.setVolume(volume);
@@ -106,7 +110,11 @@ class LocalPlaybackBackend implements PlaybackBackend {
   bool get shuffleEnabled => _player.shuffleModeEnabled;
 
   @override
-  bool get repeatAll => _player.loopMode == LoopMode.all;
+  BackendRepeat get repeat => switch (_player.loopMode) {
+        LoopMode.off => BackendRepeat.off,
+        LoopMode.all => BackendRepeat.all,
+        LoopMode.one => BackendRepeat.one,
+      };
 
   @override
   Duration get position => _player.position;

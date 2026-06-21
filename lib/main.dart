@@ -37,6 +37,7 @@ import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
 import 'media/cast_target.dart';
+import 'media/auto_browse.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'l10n/app_localizations.dart';
@@ -79,6 +80,9 @@ Future<void> _startApp() async {
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
   await SettingsManager().load();
+  // Resolve the album-art ContentProvider authority from the real package name
+  // so Android Auto cover art works on any build (not just VARIANT=play ones).
+  await initAutoArt();
   await MediaManager().start();
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
@@ -162,7 +166,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // loadServerList so it's already true before the home grid first renders.
     BrowserManager().awaitingStartupView =
         SettingsManager().startupView != StartupView.browser;
-    ServerManager().loadServerList().then((_) {
+    ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
     });

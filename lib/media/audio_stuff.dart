@@ -11,6 +11,7 @@ import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
 import 'local_media_server.dart';
+import 'auto_browse.dart';
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../objects/server.dart';
@@ -75,6 +76,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   // the session musically coherent rather than drifting). Reset on
   // setAutoDJ off or server switch.
   String? _camelotAnchor;
+
+  // The repeat mode requested by the UI / Android Auto, and the source of truth
+  // for the published PlaybackState: it preserves all of none/all/one (and
+  // 'group', which the backend collapses to 'all'), so a client that cycles
+  // none→all→one→none can always get back to none. The backend honours the
+  // mapped BackendRepeat — including a true single-track loop for 'one'.
+  AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
 
   AudioPlayerHandler() {
     _init();
@@ -221,7 +229,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await prev.pause();
 
     await next.setShuffleEnabled(prev.shuffleEnabled);
-    await next.setRepeatAll(prev.repeatAll);
+    await next.setRepeat(prev.repeat);
     await next.setSources(queue.value);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
@@ -355,14 +363,16 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// shuffle/repeat. Used by QueueStore.init() so the app reopens exactly where
   /// it left off. No-op for an empty list.
   Future<void> restoreQueue(List<MediaItem> items, int index, Duration position,
-      {bool shuffle = false, bool repeat = false}) async {
+      {bool shuffle = false,
+      AudioServiceRepeatMode repeat = AudioServiceRepeatMode.none}) async {
     if (items.isEmpty) return;
     queue.add(items.toList());
     await _backend.setSources(items);
     final int i = index.clamp(0, items.length - 1);
     // play: false → load paused at the saved spot (don't blast audio on open).
     await _backend.seek(position, index: i, play: false);
-    if (repeat) await _backend.setRepeatAll(true);
+    _repeatMode = repeat;
+    await _backend.setRepeat(_backendRepeat(repeat));
     if (shuffle) await _backend.setShuffleEnabled(true);
     _emitCurrentMediaItem();
     _broadcastState();
@@ -411,31 +421,76 @@ class AudioPlayerHandler extends BaseAudioHandler
     await super.stop();
   }
 
+  // Honor the requested mode: Android Auto and the lock screen send an absolute
+  // target (not a toggle), and the in-app buttons already pass the desired mode.
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
-    if (_backend.shuffleEnabled == true) {
-      await _backend.setShuffleEnabled(false);
-      await super.setShuffleMode(AudioServiceShuffleMode.none);
-    } else {
-      await _backend.setShuffleEnabled(true);
-      await super.setShuffleMode(AudioServiceShuffleMode.all);
+    // A transport toggle from Android Auto / the lock screen must never throw
+    // out of the handler if the backend rejects the call (e.g. nothing loaded
+    // yet on a cold headless bind); still re-broadcast the (unchanged) state.
+    try {
+      await _backend
+          .setShuffleEnabled(shuffleMode == AudioServiceShuffleMode.all);
+    } catch (e) {
+      appLog('[audio] setShuffleMode failed: $e');
     }
-
     _broadcastState();
   }
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
-    if (_backend.repeatAll == true) {
-      await _backend.setRepeatAll(false);
-      await super.setRepeatMode(AudioServiceRepeatMode.none);
-    } else {
-      await _backend.setRepeatAll(true);
-      await super.setRepeatMode(AudioServiceRepeatMode.all);
+    _repeatMode = repeatMode;
+    try {
+      await _backend.setRepeat(_backendRepeat(repeatMode));
+    } catch (e) {
+      appLog('[audio] setRepeatMode failed: $e');
     }
-
     _broadcastState();
   }
+
+  // Map the audio_service repeat mode to what the backend models. 'group' has
+  // no queue-group concept here, so it behaves as 'all'.
+  static BackendRepeat _backendRepeat(AudioServiceRepeatMode mode) {
+    switch (mode) {
+      case AudioServiceRepeatMode.one:
+        return BackendRepeat.one;
+      case AudioServiceRepeatMode.none:
+        return BackendRepeat.off;
+      case AudioServiceRepeatMode.all:
+      case AudioServiceRepeatMode.group:
+        return BackendRepeat.all;
+    }
+  }
+
+  // ── Android Auto browsing (delegated to AutoBrowse). The native AudioService
+  // IS the MediaBrowserService that Auto binds; these answer its browse/play
+  // calls. They run headless (no UI), so AutoBrowse must self-bootstrap and
+  // never throw — see auto_browse.dart.
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId,
+          [Map<String, dynamic>? options]) =>
+      AutoBrowse.children(parentMediaId);
+
+  @override
+  Future<MediaItem?> getMediaItem(String mediaId) =>
+      AutoBrowse.mediaItem(mediaId);
+
+  @override
+  Future<void> playFromMediaId(String mediaId,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.play(mediaId);
+
+  @override
+  Future<List<MediaItem>> search(String query,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.search(query);
+
+  // Google Assistant "play <X> on mStream" — advertised to the system via
+  // MediaAction.playFromSearch in _broadcastState's systemActions.
+  @override
+  Future<void> playFromSearch(String query,
+          [Map<String, dynamic>? extras]) =>
+      AutoBrowse.playFromSearch(query);
 
   @override
   Future<void> removeQueueItem(MediaItem mediaItem) async {
@@ -634,7 +689,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       final pos = _backend.position;
       final wasPlaying = _backend.playing;
       final wasShuffle = _backend.shuffleEnabled;
-      final wasRepeat = _backend.repeatAll;
+      final wasRepeat = _backend.repeat;
       _reordering = true;
       try {
         queue.add(rebuilt);
@@ -643,7 +698,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // setSources rebuilds the playlist; re-apply shuffle/repeat so a
         // transcode change doesn't silently drop them (mirrors restoreQueue).
         await _backend.setShuffleEnabled(wasShuffle);
-        await _backend.setRepeatAll(wasRepeat);
+        await _backend.setRepeat(wasRepeat);
       } finally {
         _reordering = false;
       }
@@ -659,9 +714,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         ? AudioServiceShuffleMode.all
         : AudioServiceShuffleMode.none;
 
-    final AudioServiceRepeatMode repeat = _backend.repeatAll == true
-        ? AudioServiceRepeatMode.all
-        : AudioServiceRepeatMode.none;
+    // Emit the exact requested mode (_repeatMode); the backend's BackendRepeat
+    // collapses 'group' to 'all', so reading it back would lose information.
+    // This keeps none/all/one distinct for clients that cycle through them.
+    final AudioServiceRepeatMode repeat = _repeatMode;
 
     playbackState.add(playbackState.value.copyWith(
       controls: [
@@ -674,6 +730,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        // Lets Google Assistant route "play <X> on mStream" to playFromSearch.
+        MediaAction.playFromSearch,
       },
       shuffleMode: shuffle,
       repeatMode: repeat,
@@ -769,6 +827,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       Map<String, dynamic> decoded;
       try {
+        // Bounded like every other headless fetch so a black-hole server (e.g.
+        // a Shuffle All started from Android Auto, which awaits this) can't hang
+        // forever; the catch below treats the TimeoutException as a network
+        // error and bails silently.
         final res = await http.post(
           Uri.parse(autoDJServer!.url).resolve('/api/v1/db/random-songs'),
           headers: {
@@ -776,7 +838,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             'x-access-token': autoDJServer?.jwt ?? '',
           },
           body: jsonEncode(payload),
-        );
+        ).timeout(const Duration(seconds: 15));
         if (res.statusCode > 299) return; // server error → bail silently
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
       } catch (_) {
@@ -808,7 +870,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool autoPlay = false, bool incrementIndex = false}) {
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
-    final filepath = song['filepath'] as String;
+    final filepath = song['filepath'] as String?;
+    if (filepath == null) return; // skip a degenerate random-songs row
 
     // Transcode-aware stream URL (honors the /transcode endpoint + codec/bitrate
     // when transcoding is on), shared with browse / queue-restore / recursive.
@@ -829,6 +892,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       album: meta.album,
       artist: meta.artist,
       genre: meta.genreLabel,
+      // Artwork for the notification / lock screen / Android Auto (see
+      // buildServerFileMediaItem — artUri mirrors extras['artUrl']).
+      artUri: artUrl == null ? null : Uri.parse(artUrl),
       extras: {
         // Tag with the source server so Share Playlist's multi-server
         // detection recognises AutoDJ-added songs as shareable.

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declares mStream Music as an Android Auto MEDIA app. Referenced from the
+     <meta-data android:name="com.google.android.gms.car.application"> entry in
+     AndroidManifest.xml. The browsable content tree and playback are served by
+     the audio_service MediaBrowserService (Dart: AudioPlayerHandler). -->
+<automotiveApp>
+    <uses name="media" />
+</automotiveApp>

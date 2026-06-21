@@ -21,6 +21,24 @@ class MediaManager {
       config: AudioServiceConfig(
         androidNotificationChannelName: 'mStream Music',
         androidNotificationOngoing: true,
+        // White, tintable status-bar / Android Auto icon. Without this the
+        // colored launcher icon renders as a white square in the notification.
+        androidNotificationIcon: 'drawable/ic_stat_music',
+        // Bound the memory used decoding remote album art for the notification,
+        // lock screen, and Android Auto now-playing.
+        artDownscaleWidth: 384,
+        artDownscaleHeight: 384,
+        // Android Auto content-style hints, returned in onGetRoot: albums look
+        // best as a grid, tracks as a list. Harmless until the browse tree
+        // (AudioPlayerHandler.getChildren) lands; per-node MediaItem.extras can
+        // override these per category.
+        androidBrowsableRootExtras: <String, dynamic>{
+          AndroidContentStyle.supportedKey: true,
+          AndroidContentStyle.browsableHintKey:
+              AndroidContentStyle.gridItemHintValue,
+          AndroidContentStyle.playableHintKey:
+              AndroidContentStyle.listItemHintValue,
+        },
       ),
     );
 

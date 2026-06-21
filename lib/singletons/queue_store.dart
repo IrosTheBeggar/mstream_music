@@ -65,6 +65,22 @@ class QueueStore {
     _attachListeners();
   }
 
+  // Persist repeat as a tri-state name so a true single-track repeat-one loop
+  // survives a restart; it used to be a bool (== all), which collapsed 'one' to
+  // 'off'. Legacy snapshots stored a bool, so the reader still accepts true.
+  static String _repeatName(AudioServiceRepeatMode m) =>
+      m == AudioServiceRepeatMode.one
+          ? 'one'
+          : m == AudioServiceRepeatMode.none
+              ? 'none'
+              : 'all';
+
+  static AudioServiceRepeatMode _repeatFromStored(dynamic v) => v == 'one'
+      ? AudioServiceRepeatMode.one
+      : (v == 'all' || v == true)
+          ? AudioServiceRepeatMode.all
+          : AudioServiceRepeatMode.none;
+
   Future<void> _restore() async {
     if (!SettingsManager().resumeQueue) return; // feature disabled
     final file = await _file;
@@ -93,7 +109,7 @@ class QueueStore {
           index,
           Duration(milliseconds: positionMs),
           shuffle: raw['shuffle'] == true,
-          repeat: raw['repeat'] == true,
+          repeat: _repeatFromStored(raw['repeat']),
         );
   }
 
@@ -154,7 +170,7 @@ class QueueStore {
         'index': state.queueIndex ?? 0,
         'positionMs': handler.position.inMilliseconds,
         'shuffle': state.shuffleMode == AudioServiceShuffleMode.all,
-        'repeat': state.repeatMode == AudioServiceRepeatMode.all,
+        'repeat': _repeatName(state.repeatMode),
         'items': queue.map(itemToJson).toList(),
       };
       await file.writeAsString(jsonEncode(snapshot));
@@ -207,6 +223,12 @@ class QueueStore {
       album: j['album'] as String?,
       artist: j['artist'] as String?,
       genre: j['genre'] as String?,
+      // Restore artwork for the lock screen / Android Auto. extras['artUrl'] is
+      // the persisted /album-art URL (its token is the stored JWT, the same one
+      // the freshly-rebuilt stream URL above relies on).
+      artUri: extras['artUrl'] is String
+          ? Uri.tryParse(extras['artUrl'] as String)
+          : null,
       duration:
           j['durationMs'] is int ? Duration(milliseconds: j['durationMs'] as int) : null,
       extras: extras,
