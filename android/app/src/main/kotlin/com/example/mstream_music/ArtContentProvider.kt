@@ -71,12 +71,13 @@ class ArtContentProvider : ContentProvider() {
             cacheFile, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
-    // Cache key is the STABLE part of the URL (host + path + the compress size),
-    // ignoring the per-request token / app_uuid, so rotating tokens don't keep
-    // re-downloading the same cover.
+    // Cache key is the STABLE part of the URL (host + port + path + the compress
+    // size), ignoring the per-request token / app_uuid, so rotating tokens don't
+    // keep re-downloading the same cover. Port is included so two servers on the
+    // same host but different ports with the same album_art_file don't collide.
     private fun cacheFileFor(remote: String): File {
         val u = Uri.parse(remote)
-        val key = (u.host ?: "") + (u.path ?: "") +
+        val key = (u.host ?: "") + ":" + u.port + (u.path ?: "") +
             "?compress=" + (u.getQueryParameter("compress") ?: "")
         val dir = File(context!!.cacheDir, "auto_art").apply { mkdirs() }
         return File(dir, md5(key) + ".img")

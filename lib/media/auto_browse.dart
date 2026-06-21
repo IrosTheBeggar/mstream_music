@@ -584,7 +584,10 @@ class AutoBrowse {
   static List<MediaItem> _albumNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
     for (final r in rows) {
-      if (r.type != 'album') continue;
+      // Skip a null-named album (mStream's untagged-tracks "Singles" bucket):
+      // its id would carry no 'v', and album:null can't be loaded server-side
+      // (matches _firstNamed / _dirNodes / _trackNodes).
+      if (r.type != 'album' || r.data == null) continue;
       final art = r.altAlbumArt != null
           ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'm')
           : null;
@@ -601,7 +604,7 @@ class AutoBrowse {
   static List<MediaItem> _artistNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
     for (final r in rows) {
-      if (r.type != 'artist') continue;
+      if (r.type != 'artist' || r.data == null) continue;
       // Grid hint so this artist's albums (its browsable children) show as an
       // art grid instead of inheriting the 'list' hint from the Artists tab.
       out.add(_browse(_id('artist', {'s': srv.localname, 'v': r.data}), r.name,
@@ -613,7 +616,7 @@ class AutoBrowse {
   static List<MediaItem> _playlistNodes(List<DisplayItem> rows, Server srv) {
     final out = <MediaItem>[];
     for (final r in rows) {
-      if (r.type != 'playlist') continue;
+      if (r.type != 'playlist' || r.data == null) continue;
       out.add(
           _browse(_id('playlist', {'s': srv.localname, 'v': r.data}), r.name));
     }
