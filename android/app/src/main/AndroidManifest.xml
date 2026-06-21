@@ -15,10 +15,15 @@
          downloaded files (MigrationService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- CAMERA for the iroh QR pairing scanner is declared in the `full` flavor
-         (android/app/src/full/AndroidManifest.xml). mobile_scanner merges CAMERA
-         transitively too, so it also lands in the play merged manifest —
-         refining play (justify, or paste-only) is TODO. -->
+    <!-- CAMERA for the iroh Remote Access QR pairing scanner. Declared in the
+         `full` flavor; mobile_scanner also merges it into `play`. DECISION: keep
+         it in BOTH flavors so Play users can scan a pairing QR — the camera only
+         decodes the QR on-device, nothing is captured/stored/sent. Play Console
+         permission declaration + data-safety wording: see PLAY_COMPLIANCE.md.
+         The uses-feature keeps camera OPTIONAL (mobile_scanner sets this too; we
+         state it explicitly so it can't regress), so the app stays installable on
+         camera-less devices — pasting the code is the no-camera pairing path. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <!-- Storage permissions for the user-chosen download folders (Permanent /
          SD-card modes, which need "All files access") live in the `full` flavor
          ONLY — see android/app/src/full/AndroidManifest.xml. The Play edition

@@ -14,10 +14,11 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 
     <!-- Camera for the iroh Remote Access QR pairing scanner (add-server → iroh
-         tab). Declared in the full/sideload flavor where it's tested. Note:
-         mobile_scanner's own manifest also merges CAMERA into the play flavor,
-         so a play-flavor decision (justify in Play console, or paste-only with
-         the permission removed) is still TODO. -->
+         tab). Kept in BOTH flavors (mobile_scanner also merges it into play), so
+         Play users can scan a pairing QR; the camera only decodes the QR on-device,
+         nothing captured/stored/sent. Play permission declaration + data-safety
+         wording: see PLAY_COMPLIANCE.md. (uses-feature camera required=false is in
+         the main manifest, keeping the app installable on camera-less devices.) -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- Distinct label so the "Plus" sideload build (mstream.music.plus) is
