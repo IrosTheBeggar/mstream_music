@@ -10,6 +10,8 @@ import './browser_list.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../native/iroh_tunnel.dart';
+import '../media/cast_target.dart';
+import 'cast_manager.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -298,6 +300,11 @@ class ServerManager {
     if (!IrohTunnel.isSupported) return;
     final s = currentServer;
     if (s != null && s.isIroh && s.irohPairingCode != null) {
+      // A remote renderer (Chromecast/DLNA) can't reach the phone-local tunnel,
+      // so fall back to on-device playback if we were casting.
+      if (CastManager().isCasting) {
+        unawaited(CastManager().selectTarget(CastTarget.local));
+      }
       if (_activeTunnelCode == s.irohPairingCode && s.tunnelPort != null) {
         return; // already up for this server
       }
