@@ -116,7 +116,8 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 
 ### M4 — Build/CI, flavors, release
 - ✅ **`.so` delivery — commit the prebuilt `libiroh_tunnel.so`** (both ABIs), same model as `libprojectM-4.so`: the release runner (ubuntu-latest) has no Rust/NDK toolchain, so it ships the committed binary. `release.yml` guards that the `.so` is bundled in the full APK (arm64-v8a + x86_64) + play AAB (arm64-v8a); `build-android.sh` documents the rebuild-and-recommit rule. (commit 26fd618)
-- Remaining: both `full`/`play` flavors within a size budget (+ fix the `--split-per-abi` AGP9 snag for a smaller arm64 sideload APK); `play` camera-permission rationale + Play **data-safety** note (relay routing); localize the iroh-tab/banner strings; user docs (enable on server → scan QR).
+- ✅ **iroh strings localized** (commit cf5ee84): ~40 keys in `app_en.arb` (template) covering the banner, re-pair sheet, QR scanner, add-server iroh tab, the Direct/Relay tile chip, and the cast/share notes; ICU placeholders for the dynamic ones (server version, HTTP status, error, path suffix); reuse `fieldUsername`/`fieldPassword`. The 9 non-English locales fall back to English and are tracked in `l10n_untranslated.txt` for translation.
+- Remaining: both `full`/`play` flavors within a size budget (+ fix the `--split-per-abi` AGP9 snag for a smaller arm64 sideload APK); `play` camera-permission rationale + Play **data-safety** note (relay routing); user docs (enable on server → scan QR).
 - **Accept:** signed builds of both flavors install, scan, connect; size delta documented.
 
 ---
