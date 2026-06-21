@@ -115,7 +115,8 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 - **Accept:** rotate the server secret → clean re-pair prompt; playback survives backgrounding + a network blip; cross-network NAT works.
 
 ### M4 — Build/CI, flavors, release
-- CI cross-compiles both ABIs; both `full`/`play` flavors build within an agreed size budget; camera-permission rationale; Play **data-safety** note (relay routing); user docs (enable on server → scan QR).
+- ✅ **`.so` delivery — commit the prebuilt `libiroh_tunnel.so`** (both ABIs), same model as `libprojectM-4.so`: the release runner (ubuntu-latest) has no Rust/NDK toolchain, so it ships the committed binary. `release.yml` guards that the `.so` is bundled in the full APK (arm64-v8a + x86_64) + play AAB (arm64-v8a); `build-android.sh` documents the rebuild-and-recommit rule. (commit 26fd618)
+- Remaining: both `full`/`play` flavors within a size budget (+ fix the `--split-per-abi` AGP9 snag for a smaller arm64 sideload APK); `play` camera-permission rationale + Play **data-safety** note (relay routing); localize the iroh-tab/banner strings; user docs (enable on server → scan QR).
 - **Accept:** signed builds of both flavors install, scan, connect; size delta documented.
 
 ---
