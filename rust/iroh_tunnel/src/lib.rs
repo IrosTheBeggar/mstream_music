@@ -170,10 +170,15 @@ impl Tunnel {
         self.shared.path_kind()
     }
 
-    /// Notify iroh the network may have changed (Android can't self-detect), so it
-    /// promptly re-homes the relay and re-probes direct paths.
-    pub async fn network_changed(&self) {
-        self.shared.endpoint.network_change().await;
+    /// Fire-and-forget network nudge: tell iroh the network may have changed (Android
+    /// can't self-detect) so it re-homes the relay + re-probes paths. Runs on `rt`
+    /// and holds no lock during the re-probe — `tunnel_network_changed` is reached
+    /// from the UI isolate, which also polls status and must not block.
+    pub fn nudge_network(&self, rt: &tokio::runtime::Runtime) {
+        let endpoint = self.shared.endpoint.clone();
+        rt.spawn(async move {
+            endpoint.network_change().await;
+        });
     }
 
     /// Begin a graceful, NON-BLOCKING teardown: stop accepting + supervising, then on

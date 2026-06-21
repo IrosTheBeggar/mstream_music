@@ -30,16 +30,33 @@ fn rt() -> &'static tokio::runtime::Runtime {
 /// `local_port = 0` to let the OS pick. Idempotent: if a tunnel is already
 /// running, returns its existing port.
 pub fn tunnel_start(pairing_code: String, local_port: u16) -> Result<u16, String> {
-    let mut guard = TUNNEL.lock().unwrap();
-    if let Some(t) = guard.as_ref() {
-        return Ok(t.local_port);
+    // Fast path: already running. Hold the lock only to peek — never during connect.
+    if let Some(port) = TUNNEL.lock().unwrap().as_ref().map(|t| t.local_port) {
+        return Ok(port);
     }
+    // Dial WITHOUT holding the global lock. connect_tunnel can take tens of seconds
+    // (relay warmup + handshake); status / path-kind / network-change are polled from
+    // the app's UI isolate and lock this same mutex — holding it across the connect
+    // froze the app (ANR). So connect first, then lock briefly to store.
     let tunnel = rt()
         .block_on(connect_tunnel(&pairing_code, local_port))
         .map_err(|e| format!("{e:#}"))?;
     let port = tunnel.local_port;
-    *guard = Some(tunnel);
-    Ok(port)
+    let mut guard = TUNNEL.lock().unwrap();
+    match guard.as_ref() {
+        // Lost a race (another start stored one while we dialed): keep theirs and
+        // tear ours down in the background.
+        Some(existing) => {
+            let existing_port = existing.local_port;
+            drop(guard);
+            tunnel.begin_shutdown(rt());
+            Ok(existing_port)
+        }
+        None => {
+            *guard = Some(tunnel);
+            Ok(port)
+        }
+    }
 }
 
 /// Stop the tunnel (graceful). Safe to call when nothing is running.
@@ -86,6 +103,8 @@ pub fn tunnel_is_active() -> bool {
 pub fn tunnel_network_changed() {
     let guard = TUNNEL.lock().unwrap();
     if let Some(t) = guard.as_ref() {
-        rt().block_on(t.network_changed());
+        // Fire-and-forget on the runtime: do NOT block_on under the lock (the UI
+        // isolate polls status and must not stall behind a network re-probe).
+        t.nudge_network(rt());
     }
 }

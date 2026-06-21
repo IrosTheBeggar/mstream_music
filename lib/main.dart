@@ -331,7 +331,15 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   child: Text('Retry',
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
-          default: // connecting / reconnecting
+          case IrohTunnelStatus.connecting:
+            return _bannerStrip(
+                Icons.sync, VelvetColors.warning, 'Connecting to server…',
+                action: const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ));
+          default: // reconnecting
             return _bannerStrip(
                 Icons.sync_problem, VelvetColors.warning, 'Reconnecting to server…',
                 action: const SizedBox(

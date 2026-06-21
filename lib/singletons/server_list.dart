@@ -7,6 +7,7 @@ import '../objects/server.dart';
 import '../util/server_compat.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
+import './log_manager.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../native/iroh_tunnel.dart';
@@ -337,14 +338,19 @@ class ServerManager {
         IrohTunnel.instance.stop();
         _activeTunnelCode = null;
       }
+      _tunnelStarting = true;
+      _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
       try {
         final port = await IrohTunnel.instance.start(s.irohPairingCode!);
         s.tunnelPort = port;
         _activeTunnelCode = s.irohPairingCode;
-      } catch (_) {
+      } catch (e) {
         s.tunnelPort = null;
         _activeTunnelCode = null;
         // Leave it down; requests fail fast via effectiveBaseUrl until retried.
+        appLog('[iroh] tunnel start failed: $e');
+      } finally {
+        _tunnelStarting = false;
       }
       _refreshTunnelStatus();
     } else if (_activeTunnelCode != null) {
@@ -379,12 +385,24 @@ class ServerManager {
   Stream<IrohPathKind> get pathKindStream => _pathKind.stream;
   IrohPathKind get pathKind => _pathKind.value;
   Timer? _statusPoll;
+  // True while IrohTunnel.start() is dialing. The native tunnel isn't stored until
+  // the dial returns (so native status reads "down"); surface "connecting" instead.
+  bool _tunnelStarting = false;
 
   void _refreshTunnelStatus() {
     final isIroh = IrohTunnel.isSupported && currentServer?.isIroh == true;
-    final st = isIroh ? IrohTunnel.instance.status : IrohTunnelStatus.down;
+    final IrohTunnelStatus st;
+    if (!isIroh) {
+      st = IrohTunnelStatus.down;
+    } else if (_tunnelStarting) {
+      st = IrohTunnelStatus.connecting;
+    } else {
+      st = IrohTunnel.instance.status;
+    }
     if (st != _tunnelStatus.value) _tunnelStatus.add(st);
-    final pk = isIroh ? IrohTunnel.instance.pathKind : IrohPathKind.unknown;
+    final pk = (isIroh && !_tunnelStarting)
+        ? IrohTunnel.instance.pathKind
+        : IrohPathKind.unknown;
     if (pk != _pathKind.value) _pathKind.add(pk);
   }
 
