@@ -13,7 +13,7 @@ This is a faithful Rust port of the server's reference client `scripts/mstream-i
 
 ## Frozen wire contract (must match the server byte-for-byte)
 
-- Pairing code = `base64url(JSON{ t: <EndpointTicket>, s: <connectSecret base64> })`, secret = 32 bytes.
+- Pairing code = versioned envelope `mstr<V>:<base64url(JSON{ t: <EndpointTicket>, s: <connectSecret base64> })>` (spec: mStream `docs/iroh-pairing-code.md`). v1 current; a bare (un-prefixed) body is legacy implicit v1; a newer version is rejected with an "update the app" error. secret = 32 bytes.
 - ALPN = `mstream/tunnel/2`.
 - Bind an ephemeral endpoint, wait for our home relay (`online()`, bounded) **before** dialing.
 - Handshake on the **first** bi-stream: write the 32 secret bytes, then expect ASCII `"OK"` (a `"NO"`/reset means the secret was wrong or rotated → re-pair).

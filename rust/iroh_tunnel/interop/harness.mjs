@@ -119,9 +119,10 @@ async function main() {
     }
   })();
 
-  // 3) Composite pairing code = base64url(JSON{ t: EndpointTicket, s: secret b64 }).
+  // 3) Pairing code = versioned envelope "mstr1:<base64url(JSON{ t, s })>".
   const ticketStr = EndpointTicket.fromAddr(endpoint.addr()).toString();
-  const code = Buffer.from(JSON.stringify({ t: ticketStr, s: connectSecret.toString('base64') })).toString('base64url');
+  const code = 'mstr1:' +
+      Buffer.from(JSON.stringify({ t: ticketStr, s: connectSecret.toString('base64') })).toString('base64url');
 
   // 4) Spawn the compiled Rust client and read its chosen local port.
   const exe = path.join(__dirname, '..', 'target', 'debug', process.platform === 'win32' ? 'iroh-tunnel-client.exe' : 'iroh-tunnel-client');

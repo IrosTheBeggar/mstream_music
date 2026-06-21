@@ -46,6 +46,9 @@ const ONLINE_TIMEOUT: Duration = Duration::from_secs(8);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(25);
 const HANDSHAKE_RESP_LIMIT: usize = 8;
 const SECRET_LEN: usize = 32;
+/// Highest pairing-code schema version this client understands. The pairing-code
+/// version (the `mstr<V>:` envelope) is independent of the tunnel ALPN version.
+const PAIRING_VERSION: u32 = 1;
 
 /// A running tunnel. Prefer [`Tunnel::shutdown`] for a graceful close; `Drop` is a
 /// best-effort fallback.
@@ -82,6 +85,7 @@ impl Drop for Tunnel {
     }
 }
 
+#[derive(Debug)]
 struct Pairing {
     ticket: String,
     secret: Vec<u8>,
@@ -106,22 +110,43 @@ fn b64_loose(s: &str) -> Result<Vec<u8>> {
         .map_err(|e| anyhow!("invalid base64: {e}"))
 }
 
-/// Parse the composite pairing code into its EndpointTicket + connect secret.
-/// Pure; mirrors `parseCode` in the reference client.
+/// Parse the pairing code into its EndpointTicket + connect secret.
+///
+/// Format (docs/iroh-pairing-code.md in mStream PR #643): a versioned envelope
+/// `mstr<V>:<base64url(JSON{t,s})>`. A bare (un-prefixed) base64url body is a
+/// legacy code → implicit v1. A version newer than this client understands is
+/// rejected with an actionable "update the app" error. Pure (no native module).
 fn parse_pairing_code(code: &str) -> Result<Pairing> {
-    let json = b64_loose(code.trim()).context("pairing code is not valid base64")?;
+    let trimmed = code.trim();
+    // Split the `mstr<V>:` envelope; anything without a valid prefix is a legacy
+    // bare body (implicit v1).
+    let (version, body): (u32, &str) = match trimmed.strip_prefix("mstr").and_then(|rest| {
+        rest.split_once(':').filter(|(ver, _)| {
+            !ver.is_empty() && ver.bytes().all(|b| b.is_ascii_digit())
+        })
+    }) {
+        Some((ver, body)) => (ver.parse::<u32>().unwrap_or(u32::MAX), body),
+        None => (1, trimmed),
+    };
+    if version > PAIRING_VERSION {
+        bail!(
+            "Pairing code is version {version}; this app supports up to v{PAIRING_VERSION}. Update to a newer version of the app."
+        );
+    }
+
+    let json = b64_loose(body).context("invalid pairing code (not base64)")?;
     let v: serde_json::Value =
-        serde_json::from_slice(&json).context("pairing code is not valid JSON")?;
+        serde_json::from_slice(&json).context("invalid pairing code (not JSON)")?;
     let ticket = v
         .get("t")
         .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow!("pairing code missing ticket (t)"))?
+        .ok_or_else(|| anyhow!("invalid pairing code (missing ticket)"))?
         .to_string();
     let secret_b64 = v
         .get("s")
         .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow!("pairing code missing secret (s)"))?;
-    let secret = b64_loose(secret_b64).context("connect secret is not valid base64")?;
+        .ok_or_else(|| anyhow!("invalid pairing code (missing secret)"))?;
+    let secret = b64_loose(secret_b64).context("invalid pairing code (bad secret)")?;
     if secret.len() != SECRET_LEN {
         bail!("connect secret must be {SECRET_LEN} bytes (got {})", secret.len());
     }
@@ -263,5 +288,62 @@ async fn pump_recv_to_writer(mut recv: RecvStream, mut w: OwnedWriteHalf) -> boo
                 return false;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::Engine;
+
+    fn body(t: &str, secret: &[u8]) -> String {
+        let s = base64::engine::general_purpose::STANDARD.encode(secret);
+        let json = format!(r#"{{"t":"{t}","s":"{s}"}}"#);
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json.as_bytes())
+    }
+
+    #[test]
+    fn parses_versioned_envelope() {
+        let secret = [7u8; SECRET_LEN];
+        let p = parse_pairing_code(&format!("mstr1:{}", body("endpointabc", &secret))).unwrap();
+        assert_eq!(p.ticket, "endpointabc");
+        assert_eq!(p.secret, secret.to_vec());
+    }
+
+    #[test]
+    fn parses_legacy_bare_as_v1() {
+        let p = parse_pairing_code(&body("endpointlegacy", &[1u8; SECRET_LEN])).unwrap();
+        assert_eq!(p.ticket, "endpointlegacy");
+    }
+
+    #[test]
+    fn trims_surrounding_whitespace() {
+        let code = format!("  mstr1:{}\n", body("endpointws", &[2u8; SECRET_LEN]));
+        assert_eq!(parse_pairing_code(&code).unwrap().ticket, "endpointws");
+    }
+
+    #[test]
+    fn rejects_newer_version_with_update_hint() {
+        let err = parse_pairing_code(&format!("mstr2:{}", body("x", &[0u8; SECRET_LEN])))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("version 2"), "got: {err}");
+        assert!(err.to_lowercase().contains("update"), "got: {err}");
+    }
+
+    #[test]
+    fn rejects_garbage() {
+        assert!(parse_pairing_code("not-a-real-ticket!!").is_err());
+    }
+
+    #[test]
+    fn rejects_missing_secret() {
+        let b = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(br#"{"t":"only"}"#);
+        assert!(parse_pairing_code(&format!("mstr1:{b}")).is_err());
+    }
+
+    #[test]
+    fn rejects_wrong_secret_length() {
+        assert!(parse_pairing_code(&format!("mstr1:{}", body("endpointx", &[9u8; 10]))).is_err());
     }
 }

@@ -22,8 +22,7 @@ An opt-in Iroh tunnel in mStream (`src/state/iroh.js`, admin "Remote Access" pan
 
 ## 2. Protocol contract — FROZEN by PR #643 (the app must match byte-for-byte)
 
-1. **Pairing code** (the QR contents) = `base64url( JSON.stringify({ t: <EndpointTicket string>, s: <connectSecret as base64> }) )`.
-   Parse → `{ ticket, secret }`; `secret` is **32 bytes** (base64-decoded). Reject malformed/missing-field payloads.
+1. **Pairing code** (the QR contents) = a **versioned envelope** `mstr<V>:<base64url(JSON{ t: <EndpointTicket>, s: <connectSecret base64> })>` (spec: `docs/iroh-pairing-code.md` in PR #643). Schema is currently **v1** (`mstr1:`); an un-prefixed body is a legacy code → implicit v1; a version newer than the client supports is rejected with an "update the app" error. `t`/`s` are stable across versions; `secret` is **32 bytes** (base64-decoded). Reject malformed/missing-field payloads.
 2. **ALPN** = UTF-8 bytes of `"mstream/tunnel/2"` (note: **v2**). Both ends must present identical bytes; the version bumps if framing changes.
 3. **Connect:**
    - Bind an **ephemeral** client endpoint (`Endpoint::bind` with no secret key — the server does *not* allowlist client identity; the shared secret is the gate).
@@ -126,7 +125,7 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 | Thing | Value |
 |---|---|
 | ALPN | `mstream/tunnel/2` (UTF-8 bytes) |
-| Pairing code | `base64url(JSON{ t: EndpointTicket, s: secret-base64 })`; secret = 32 bytes |
+| Pairing code | `mstr<V>:base64url(JSON{ t, s })` envelope (v1 current; bare body = legacy v1); secret = 32 bytes |
 | Handshake | first bi-stream: write 32 secret bytes → expect ASCII `"OK"` |
 | `iroh` Rust crate (shim) | `1` → 1.0.0 (core only); `Endpoint::bind` / `connect` / `open_bi` |
 | `@number0/iroh` (server) | `next` → 1.0.0 |
