@@ -98,7 +98,11 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 - Honest health: `is_active`/`status` now reflect the real `Connection` state (`connecting|connected|reconnecting|rejected|down`), exposed over the C ABI + `IrohTunnelStatus` in Dart.
 - Android network nudge: `mstream_iroh_network_changed()` → `Endpoint::network_change()` (iroh can't self-detect on Android), driven by `connectivity_plus` + the app-resume hook; `ServerManager.handleNetworkChange()`. `ensureActiveTunnel({verify})` consults real health + an in-flight guard.
 
-**Tier 2 — recovery UX:** status banner ("Reconnecting…"), reconnect-then-retry in `makeServerCall`, just_audio error-stream recovery, and an in-app **re-pair** prompt on a rotated secret (`STATUS_REJECTED`) incl. an "Update pairing code" action for an existing iroh server.
+**Tier 2 — recovery UX ✅ (built; `flutter analyze` clean + APK builds, device check pending):**
+- Status banner (`main.dart` `_tunnelBanner`) driven by a polled `ServerManager.tunnelStatusStream`: "Reconnecting…" while the supervisor re-dials, "Disconnected — Retry" when hard-down, "Server pairing changed — Re-pair" on `rejected`.
+- Reconnect-then-retry in `makeServerCall`: iroh requests are time-bounded and, on a connection error, `awaitTunnelReady()` then retry once.
+- just_audio error-stream recovery (`audio_stuff._onPlaybackError`): on an iroh stream error, wait for the tunnel, re-seed the source, resume at position (debounced).
+- In-app **re-pair**: `iroh_repair_sheet` (paste/scan a fresh code) → `ServerManager.repairIrohPairingCode()` restarts the tunnel. QR scanner extracted to the shared `widgets/iroh_scanner.dart` (reused by add-server + re-pair).
 
 **Tier 3 — polish & validation:** direct-vs-relay indicator (`Connection::path_events`), keepalive/battery policy doc, server-switch teardown drain, and the true **cross-network NAT** test (phone on cellular, server elsewhere).
 
