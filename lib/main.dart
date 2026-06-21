@@ -295,6 +295,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         if (ServerManager().currentServer?.isIroh != true) {
           return const SizedBox.shrink();
         }
+        final l = AppLocalizations.of(context);
         // Connected: surface only the relayed case. Watch the path-kind stream so
         // the strip appears/clears as iroh re-homes between a direct (hole-punched)
         // and a relayed path during the session.
@@ -306,8 +307,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
               if ((pk.data ?? IrohPathKind.unknown) != IrohPathKind.relay) {
                 return const SizedBox.shrink();
               }
-              return _bannerStrip(Icons.cloud_queue, VelvetColors.warning,
-                  'Connected via relay — slower path.');
+              return _bannerStrip(
+                  Icons.cloud_queue, VelvetColors.warning, l.irohBannerRelay);
             },
           );
         }
@@ -316,24 +317,24 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             return _bannerStrip(
                 Icons.link_off,
                 VelvetColors.error,
-                'Server pairing changed — re-pair to reconnect.',
+                l.irohBannerRepair,
                 action: TextButton(
                   onPressed: () => showIrohRepairSheet(context),
-                  child: Text('Re-pair',
+                  child: Text(l.irohRepairAction,
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
           case IrohTunnelStatus.down:
             return _bannerStrip(
-                Icons.cloud_off, VelvetColors.warning, 'Disconnected from server.',
+                Icons.cloud_off, VelvetColors.warning, l.irohBannerDisconnected,
                 action: TextButton(
                   onPressed: () =>
                       unawaited(ServerManager().handleNetworkChange()),
-                  child: Text('Retry',
+                  child: Text(l.irohRetry,
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
           case IrohTunnelStatus.connecting:
             return _bannerStrip(
-                Icons.sync, VelvetColors.warning, 'Connecting to server…',
+                Icons.sync, VelvetColors.warning, l.irohBannerConnecting,
                 action: const SizedBox(
                   width: 16,
                   height: 16,
@@ -341,7 +342,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                 ));
           default: // reconnecting
             return _bannerStrip(
-                Icons.sync_problem, VelvetColors.warning, 'Reconnecting to server…',
+                Icons.sync_problem, VelvetColors.warning, l.irohBannerReconnecting,
                 action: const SizedBox(
                   width: 16,
                   height: 16,

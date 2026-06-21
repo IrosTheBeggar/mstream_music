@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n/app_localizations.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import 'iroh_scanner.dart';
@@ -45,8 +46,8 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
     final status = await Permission.camera.request();
     if (!status.isGranted) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Camera permission is needed to scan a code.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).irohCameraPermission)));
       }
       return;
     }
@@ -76,6 +77,7 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -84,15 +86,14 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Re-pair server',
+            Text(l.irohRepairTitle,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text(
-              'This server\'s pairing code changed (its secret was rotated). Paste '
-              'or scan the new code from the server\'s Remote Access panel.',
+              l.irohRepairBody,
               style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -104,9 +105,9 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
               enableSuggestions: false,
               enabled: !_busy,
               style: TextStyle(color: VelvetColors.textPrimary, fontSize: 13),
-              decoration: const InputDecoration(
-                labelText: 'Pairing code',
-                prefixIcon: Icon(Icons.vpn_key_outlined),
+              decoration: InputDecoration(
+                labelText: l.irohPairingCodeLabel,
+                prefixIcon: const Icon(Icons.vpn_key_outlined),
               ),
             ),
             const SizedBox(height: 10),
@@ -115,7 +116,7 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
                 child: OutlinedButton.icon(
                   style: _outlined,
                   icon: const Icon(Icons.qr_code_scanner, size: 18),
-                  label: const Text('Scan QR'),
+                  label: Text(l.irohScanQr),
                   onPressed: _busy ? null : _scan,
                 ),
               ),
@@ -124,7 +125,7 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
                 child: OutlinedButton.icon(
                   style: _outlined,
                   icon: const Icon(Icons.content_paste, size: 18),
-                  label: const Text('Paste'),
+                  label: Text(l.irohPaste),
                   onPressed: _busy ? null : _paste,
                 ),
               ),
@@ -147,7 +148,7 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation(Colors.white)))
-                  : const Text('Re-pair'),
+                  : Text(l.irohRepairAction),
             ),
           ],
         ),

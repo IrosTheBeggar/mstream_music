@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Full-screen QR scanner for an iroh pairing code. Pops with the first decoded
 /// string (mobile_scanner: CameraX/ML Kit on Android). Shared by the add-server
 /// iroh tab and the re-pair sheet.
@@ -33,8 +35,9 @@ class _IrohScannerPageState extends State<IrohScannerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan pairing QR')),
+      appBar: AppBar(title: Text(l.irohScannerTitle)),
       body: MobileScanner(controller: _controller, onDetect: _onDetect),
     );
   }

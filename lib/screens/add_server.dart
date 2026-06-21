@@ -1245,9 +1245,9 @@ class MyCustomFormState extends State<MyCustomForm> {
               labelColor: VelvetColors.primary,
               unselectedLabelColor: VelvetColors.textSecondary,
               indicatorColor: VelvetColors.primary,
-              tabs: const [
-                Tab(text: 'Server URL'),
-                Tab(text: 'iroh'),
+              tabs: [
+                Tab(text: AppLocalizations.of(context).addServerTabUrl),
+                const Tab(text: 'iroh'),
               ],
             ),
           ),
@@ -1324,15 +1324,16 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 
   Future<void> _scanQr() async {
+    final l = AppLocalizations.of(context);
     if (!IrohTunnel.isSupported) {
-      _showIrohResult(false, 'QR scanning is only available on Android.');
+      _showIrohResult(false, l.irohQrAndroidOnly);
       return;
     }
     final status = await Permission.camera.request();
     if (!status.isGranted) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Camera permission is needed to scan a code.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l.irohCameraPermission)));
       }
       return;
     }
@@ -1355,13 +1356,14 @@ class MyCustomFormState extends State<MyCustomForm> {
   // through it. On success the tunnel is LEFT RUNNING and the sign-in form is
   // revealed (sign-in + save reuse it); a failed test tears the tunnel down.
   Future<void> _testIrohConnection() async {
+    final l = AppLocalizations.of(context);
     final code = _irohCodeCtrl.text.trim();
     if (code.isEmpty) {
-      _showIrohResult(false, 'Paste or scan a pairing code first.');
+      _showIrohResult(false, l.irohPasteFirst);
       return;
     }
     if (!IrohTunnel.isSupported) {
-      _showIrohResult(false, 'iroh is only supported on Android.');
+      _showIrohResult(false, l.irohAndroidOnly);
       return;
     }
     // Re-test: drop any tunnel left from a previous test (the code may differ).
@@ -1378,12 +1380,12 @@ class MyCustomFormState extends State<MyCustomForm> {
       final resp = await http
           .get(Uri.parse('http://127.0.0.1:$port/api/'))
           .timeout(Duration(seconds: 10));
-      String suffix = '';
+      String? version;
       if (resp.statusCode == 200) {
         try {
           final v = (jsonDecode(resp.body) as Map<String, dynamic>)['server']
               ?.toString();
-          if (v != null && v.isNotEmpty) suffix = ' — mStream v$v';
+          if (v != null && v.isNotEmpty) version = v;
         } catch (_) {}
       }
       if (!mounted) {
@@ -1395,14 +1397,17 @@ class MyCustomFormState extends State<MyCustomForm> {
       // Report the path the handshake landed on (it may upgrade direct↔relay
       // shortly after; this is the snapshot at test time).
       final pathSuffix = switch (IrohTunnel.instance.pathKind) {
-        IrohPathKind.direct => ' · direct',
-        IrohPathKind.relay => ' · via relay',
+        IrohPathKind.direct => l.irohPathSuffixDirect,
+        IrohPathKind.relay => l.irohPathSuffixRelay,
         IrohPathKind.unknown => '',
       };
+      final v = version;
+      final base =
+          v != null ? l.irohTestConnectedVersion(v) : l.irohTestConnected;
       setState(() {
         _irohTesting = false;
         _irohTestSuccess = true;
-        _irohTestResult = 'Connected through the iroh tunnel$suffix$pathSuffix';
+        _irohTestResult = base + pathSuffix;
         _irohPort = port;
         _irohSignedInReady = true;
       });
@@ -1411,11 +1416,10 @@ class MyCustomFormState extends State<MyCustomForm> {
       _showIrohResult(false, e.message);
     } on TimeoutException {
       IrohTunnel.instance.stop();
-      _showIrohResult(
-          false, 'Tunnel opened but the server did not respond in time.');
+      _showIrohResult(false, l.irohTunnelTimeout);
     } catch (e) {
       IrohTunnel.instance.stop();
-      _showIrohResult(false, 'Tunnel test failed: $e');
+      _showIrohResult(false, l.irohTunnelTestFailed('$e'));
     }
   }
 
@@ -1431,10 +1435,11 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Authenticate THROUGH the live tunnel (mirrors the standard login), then save
   // the iroh server, adopting the test tunnel as the active connection.
   Future<void> _signInAndSaveIroh() async {
+    final l = AppLocalizations.of(context);
     final code = _irohCodeCtrl.text.trim();
     final port = _irohPort;
     if (port == null) {
-      _showIrohResult(false, 'Test the connection first.');
+      _showIrohResult(false, l.irohTestFirst);
       return;
     }
     setState(() => _irohSaving = true);
@@ -1450,8 +1455,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         ).timeout(Duration(seconds: 8));
         if (login.statusCode != 200) {
           if (mounted) setState(() => _irohSaving = false);
-          _showIrohResult(false,
-              'Sign-in failed (HTTP ${login.statusCode}). Check your username and password.');
+          _showIrohResult(false, l.irohSignInFailedHttp(login.statusCode));
           return;
         }
         jwt = (jsonDecode(login.body)['token'] ?? '').toString();
@@ -1459,10 +1463,10 @@ class MyCustomFormState extends State<MyCustomForm> {
       await _saveIrohServer(code: code, port: port, jwt: jwt);
     } on TimeoutException {
       if (mounted) setState(() => _irohSaving = false);
-      _showIrohResult(false, 'Sign-in timed out.');
+      _showIrohResult(false, l.irohSignInTimeout);
     } catch (e) {
       if (mounted) setState(() => _irohSaving = false);
-      _showIrohResult(false, 'Sign-in failed: $e');
+      _showIrohResult(false, l.irohSignInFailed('$e'));
     }
   }
 
@@ -1490,22 +1494,21 @@ class MyCustomFormState extends State<MyCustomForm> {
   }
 
   Widget _buildIrohTab(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 20, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Connect peer-to-peer',
+            Text(l.irohConnectHeader,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
             SizedBox(height: 6),
             Text(
-              'Reach your server from anywhere — no port-forwarding or public IP. '
-              'Enable Remote Access on the server, then paste its pairing code or '
-              'scan the QR.',
+              l.irohConnectBody,
               style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
             ),
             SizedBox(height: 16),
@@ -1518,8 +1521,8 @@ class MyCustomFormState extends State<MyCustomForm> {
               onChanged: (_) => _clearIrohTestResult(),
               style: TextStyle(color: VelvetColors.textPrimary, fontSize: 13),
               decoration: InputDecoration(
-                labelText: 'Pairing code',
-                hintText: 'Paste the code from the server Remote Access panel',
+                labelText: l.irohPairingCodeLabel,
+                hintText: l.irohPairingCodeHint,
                 prefixIcon: Icon(Icons.vpn_key_outlined),
               ),
             ),
@@ -1538,7 +1541,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       ),
                     ),
                     icon: Icon(Icons.qr_code_scanner, size: 18),
-                    label: Text('Scan QR'),
+                    label: Text(l.irohScanQr),
                     onPressed: _irohTesting ? null : _scanQr,
                   ),
                 ),
@@ -1555,7 +1558,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       ),
                     ),
                     icon: Icon(Icons.content_paste, size: 18),
-                    label: Text('Paste'),
+                    label: Text(l.irohPaste),
                     onPressed: _irohTesting ? null : _pasteIrohCode,
                   ),
                 ),
@@ -1582,7 +1585,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       ),
                     )
                   : Icon(Icons.network_check),
-              label: Text(_irohTesting ? 'Testing…' : 'Test connection'),
+              label: Text(_irohTesting ? l.irohTesting : l.irohTestConnection),
               onPressed: _irohTesting ? null : _testIrohConnection,
             ),
             if (_irohTestResult != null) ...[
@@ -1593,14 +1596,14 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 20),
               Divider(color: VelvetColors.border2),
               SizedBox(height: 12),
-              Text('Sign in',
+              Text(l.irohSignInHeader,
                   style: TextStyle(
                       color: VelvetColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Public server (no login)',
+                title: Text(l.irohPublicServer,
                     style: TextStyle(
                         color: VelvetColors.textPrimary, fontSize: 14)),
                 value: _irohPublic,
@@ -1615,7 +1618,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                 keyboardType: TextInputType.emailAddress,
                 style: TextStyle(color: VelvetColors.textPrimary),
                 decoration: InputDecoration(
-                  labelText: 'Username',
+                  labelText: l.fieldUsername,
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
@@ -1628,7 +1631,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                 enableSuggestions: false,
                 style: TextStyle(color: VelvetColors.textPrimary),
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
@@ -1655,7 +1658,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                         ),
                       )
                     : Icon(Icons.login),
-                label: Text(_irohSaving ? 'Signing in…' : 'Sign in & save'),
+                label: Text(_irohSaving ? l.irohSigningIn : l.irohSignInSave),
                 onPressed: _irohSaving ? null : _signInAndSaveIroh,
               ),
             ],

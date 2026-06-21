@@ -1408,4 +1408,143 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importedShadersDownloadsNoPermission =>
       'Storage permission is needed to read Downloads';
+
+  @override
+  String get addServerTabUrl => 'Server URL';
+
+  @override
+  String get irohConnectHeader => 'Connect peer-to-peer';
+
+  @override
+  String get irohConnectBody =>
+      'Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.';
+
+  @override
+  String get irohPairingCodeLabel => 'Pairing code';
+
+  @override
+  String get irohPairingCodeHint =>
+      'Paste the code from the server Remote Access panel';
+
+  @override
+  String get irohScanQr => 'Scan QR';
+
+  @override
+  String get irohPaste => 'Paste';
+
+  @override
+  String get irohTestConnection => 'Test connection';
+
+  @override
+  String get irohTesting => 'Testing…';
+
+  @override
+  String get irohScannerTitle => 'Scan pairing QR';
+
+  @override
+  String get irohQrAndroidOnly => 'QR scanning is only available on Android.';
+
+  @override
+  String get irohAndroidOnly => 'iroh is only supported on Android.';
+
+  @override
+  String get irohCameraPermission =>
+      'Camera permission is needed to scan a code.';
+
+  @override
+  String get irohPasteFirst => 'Paste or scan a pairing code first.';
+
+  @override
+  String get irohTestFirst => 'Test the connection first.';
+
+  @override
+  String get irohTestConnected => 'Connected through the iroh tunnel';
+
+  @override
+  String irohTestConnectedVersion(String version) {
+    return 'Connected through the iroh tunnel — mStream v$version';
+  }
+
+  @override
+  String get irohPathSuffixDirect => ' · direct';
+
+  @override
+  String get irohPathSuffixRelay => ' · via relay';
+
+  @override
+  String get irohTunnelTimeout =>
+      'Tunnel opened but the server did not respond in time.';
+
+  @override
+  String irohTunnelTestFailed(String error) {
+    return 'Tunnel test failed: $error';
+  }
+
+  @override
+  String get irohSignInHeader => 'Sign in';
+
+  @override
+  String get irohPublicServer => 'Public server (no login)';
+
+  @override
+  String get irohSigningIn => 'Signing in…';
+
+  @override
+  String get irohSignInSave => 'Sign in & save';
+
+  @override
+  String get irohSignInTimeout => 'Sign-in timed out.';
+
+  @override
+  String irohSignInFailed(String error) {
+    return 'Sign-in failed: $error';
+  }
+
+  @override
+  String irohSignInFailedHttp(int status) {
+    return 'Sign-in failed (HTTP $status). Check your username and password.';
+  }
+
+  @override
+  String get irohBannerConnecting => 'Connecting to server…';
+
+  @override
+  String get irohBannerReconnecting => 'Reconnecting to server…';
+
+  @override
+  String get irohBannerDisconnected => 'Disconnected from server.';
+
+  @override
+  String get irohBannerRelay => 'Connected via relay — slower path.';
+
+  @override
+  String get irohBannerRepair =>
+      'Server pairing changed — re-pair to reconnect.';
+
+  @override
+  String get irohRepairAction => 'Re-pair';
+
+  @override
+  String get irohRetry => 'Retry';
+
+  @override
+  String get irohRepairTitle => 'Re-pair server';
+
+  @override
+  String get irohRepairBody =>
+      'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.';
+
+  @override
+  String get irohPathDirect => 'Direct';
+
+  @override
+  String get irohPathRelay => 'Relay';
+
+  @override
+  String get irohCastUnavailable =>
+      'Casting to external devices isn\'t available for peer-to-peer (iroh) servers — playback stays on this device.';
+
+  @override
+  String get irohShareUnavailable =>
+      'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
 }

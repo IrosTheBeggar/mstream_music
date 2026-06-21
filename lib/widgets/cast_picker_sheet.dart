@@ -125,8 +125,7 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  'Casting to external devices isn’t available for peer-to-peer '
-                  '(iroh) servers — playback stays on this device.',
+                  l.irohCastUnavailable,
                   style:
                       TextStyle(fontSize: 12, color: VelvetColors.textSecondary),
                 ),

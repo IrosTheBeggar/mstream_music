@@ -49,8 +49,7 @@ Future<void> showSharePlaylistDialog(BuildContext context) async {
       // An iroh server has no public URL — a share link would point at a dead
       // loopback address — so block sharing its tracks with a clear message.
       if (server.isIroh) {
-        await _alert(context, l.shareBlockedTitle,
-            'Sharing isn’t available for peer-to-peer (iroh) servers — they have no public URL to link to.');
+        await _alert(context, l.shareBlockedTitle, l.irohShareUnavailable);
         return;
       }
       await showDialog<void>(

@@ -137,6 +137,7 @@ class ManageServersScreen extends StatelessWidget {
           builder: (context, pSnap) {
             final pk = pSnap.data ?? IrohPathKind.unknown;
             if (pk == IrohPathKind.unknown) return const SizedBox.shrink();
+            final l = AppLocalizations.of(context);
             final bool relay = pk == IrohPathKind.relay;
             final Color color =
                 relay ? VelvetColors.warning : VelvetColors.success;
@@ -150,7 +151,7 @@ class ManageServersScreen extends StatelessWidget {
                 Icon(relay ? Icons.cloud_queue : Icons.bolt,
                     size: 13, color: color),
                 const SizedBox(width: 4),
-                Text(relay ? 'Relay' : 'Direct',
+                Text(relay ? l.irohPathRelay : l.irohPathDirect,
                     style: TextStyle(fontSize: 11, color: color)),
               ]),
             );

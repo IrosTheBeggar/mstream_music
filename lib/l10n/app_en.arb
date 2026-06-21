@@ -923,5 +923,174 @@
   "importedShadersDownloadsNoPermission": "Storage permission is needed to read Downloads",
   "@importedShadersDownloadsNoPermission": {
     "description": "Snackbar when all-files access is denied, so Downloads can't be read."
+  },
+
+  "addServerTabUrl": "Server URL",
+  "@addServerTabUrl": {
+    "description": "Add-server form: tab label for the classic HTTP URL connection (paired with the 'iroh' tab)."
+  },
+  "irohConnectHeader": "Connect peer-to-peer",
+  "@irohConnectHeader": {
+    "description": "Header of the iroh tab on the add-server form."
+  },
+  "irohConnectBody": "Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.",
+  "@irohConnectBody": {
+    "description": "Explainer under the iroh tab header on the add-server form."
+  },
+  "irohPairingCodeLabel": "Pairing code",
+  "@irohPairingCodeLabel": {
+    "description": "Text field label for the iroh pairing code (add-server iroh tab and the re-pair sheet)."
+  },
+  "irohPairingCodeHint": "Paste the code from the server Remote Access panel",
+  "@irohPairingCodeHint": {
+    "description": "Hint text inside the iroh pairing-code field."
+  },
+  "irohScanQr": "Scan QR",
+  "@irohScanQr": {
+    "description": "Button that opens the camera to scan an iroh pairing QR code."
+  },
+  "irohPaste": "Paste",
+  "@irohPaste": {
+    "description": "Button that pastes an iroh pairing code from the clipboard."
+  },
+  "irohTestConnection": "Test connection",
+  "@irohTestConnection": {
+    "description": "Button that tests the iroh tunnel to the server."
+  },
+  "irohTesting": "Testing…",
+  "@irohTesting": {
+    "description": "Busy label on the iroh Test-connection button while the test runs."
+  },
+  "irohScannerTitle": "Scan pairing QR",
+  "@irohScannerTitle": {
+    "description": "App-bar title of the full-screen iroh QR scanner."
+  },
+  "irohQrAndroidOnly": "QR scanning is only available on Android.",
+  "@irohQrAndroidOnly": {
+    "description": "Shown when QR scanning is attempted on a non-Android platform."
+  },
+  "irohAndroidOnly": "iroh is only supported on Android.",
+  "@irohAndroidOnly": {
+    "description": "Shown when the iroh test connection is attempted on a non-Android platform."
+  },
+  "irohCameraPermission": "Camera permission is needed to scan a code.",
+  "@irohCameraPermission": {
+    "description": "Shown when the camera permission is denied while trying to scan an iroh QR."
+  },
+  "irohPasteFirst": "Paste or scan a pairing code first.",
+  "@irohPasteFirst": {
+    "description": "Validation shown when testing the iroh connection with no pairing code entered."
+  },
+  "irohTestFirst": "Test the connection first.",
+  "@irohTestFirst": {
+    "description": "Validation shown when trying to sign in before a successful iroh test connection."
+  },
+  "irohTestConnected": "Connected through the iroh tunnel",
+  "@irohTestConnected": {
+    "description": "Result shown when the iroh test connection succeeds (server version unknown)."
+  },
+  "irohTestConnectedVersion": "Connected through the iroh tunnel — mStream v{version}",
+  "@irohTestConnectedVersion": {
+    "description": "Result shown when the iroh test connection succeeds and the server reported its version.",
+    "placeholders": { "version": { "type": "String" } }
+  },
+  "irohPathSuffixDirect": " · direct",
+  "@irohPathSuffixDirect": {
+    "description": "Suffix appended to the iroh test result when the path is a direct (hole-punched) connection."
+  },
+  "irohPathSuffixRelay": " · via relay",
+  "@irohPathSuffixRelay": {
+    "description": "Suffix appended to the iroh test result when the connection is routed through a relay."
+  },
+  "irohTunnelTimeout": "Tunnel opened but the server did not respond in time.",
+  "@irohTunnelTimeout": {
+    "description": "Shown when the iroh tunnel connects but the server's HTTP reply times out."
+  },
+  "irohTunnelTestFailed": "Tunnel test failed: {error}",
+  "@irohTunnelTestFailed": {
+    "description": "Shown when the iroh tunnel test fails; {error} is the raw error text.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "irohSignInHeader": "Sign in",
+  "@irohSignInHeader": {
+    "description": "Header of the sign-in step on the iroh tab (after a successful test)."
+  },
+  "irohPublicServer": "Public server (no login)",
+  "@irohPublicServer": {
+    "description": "Toggle on the iroh sign-in step for a server that needs no credentials."
+  },
+  "irohSigningIn": "Signing in…",
+  "@irohSigningIn": {
+    "description": "Busy label on the iroh 'Sign in & save' button while signing in."
+  },
+  "irohSignInSave": "Sign in & save",
+  "@irohSignInSave": {
+    "description": "Button that signs in through the iroh tunnel and saves the server."
+  },
+  "irohSignInTimeout": "Sign-in timed out.",
+  "@irohSignInTimeout": {
+    "description": "Shown when signing in through the iroh tunnel times out."
+  },
+  "irohSignInFailed": "Sign-in failed: {error}",
+  "@irohSignInFailed": {
+    "description": "Shown when iroh sign-in fails unexpectedly; {error} is the raw error text.",
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "irohSignInFailedHttp": "Sign-in failed (HTTP {status}). Check your username and password.",
+  "@irohSignInFailedHttp": {
+    "description": "Shown when iroh sign-in returns an HTTP error; {status} is the HTTP status code.",
+    "placeholders": { "status": { "type": "int" } }
+  },
+  "irohBannerConnecting": "Connecting to server…",
+  "@irohBannerConnecting": {
+    "description": "Banner while the iroh tunnel is making its first connection."
+  },
+  "irohBannerReconnecting": "Reconnecting to server…",
+  "@irohBannerReconnecting": {
+    "description": "Banner while the iroh tunnel is re-dialing after a drop."
+  },
+  "irohBannerDisconnected": "Disconnected from server.",
+  "@irohBannerDisconnected": {
+    "description": "Banner when the iroh tunnel is down; paired with a Retry action."
+  },
+  "irohBannerRelay": "Connected via relay — slower path.",
+  "@irohBannerRelay": {
+    "description": "Banner when the iroh tunnel is connected but routed through a relay (not direct)."
+  },
+  "irohBannerRepair": "Server pairing changed — re-pair to reconnect.",
+  "@irohBannerRepair": {
+    "description": "Banner when the server's connect secret was rotated; paired with a Re-pair action."
+  },
+  "irohRepairAction": "Re-pair",
+  "@irohRepairAction": {
+    "description": "Action button to re-pair an iroh server (banner) and confirm in the re-pair sheet."
+  },
+  "irohRetry": "Retry",
+  "@irohRetry": {
+    "description": "Action button to retry connecting a down iroh tunnel."
+  },
+  "irohRepairTitle": "Re-pair server",
+  "@irohRepairTitle": {
+    "description": "Title of the iroh re-pair bottom sheet."
+  },
+  "irohRepairBody": "This server's pairing code changed (its secret was rotated). Paste or scan the new code from the server's Remote Access panel.",
+  "@irohRepairBody": {
+    "description": "Explainer in the iroh re-pair sheet."
+  },
+  "irohPathDirect": "Direct",
+  "@irohPathDirect": {
+    "description": "Chip label on the active iroh server's tile when the connection is direct (hole-punched)."
+  },
+  "irohPathRelay": "Relay",
+  "@irohPathRelay": {
+    "description": "Chip label on the active iroh server's tile when the connection is routed through a relay."
+  },
+  "irohCastUnavailable": "Casting to external devices isn't available for peer-to-peer (iroh) servers — playback stays on this device.",
+  "@irohCastUnavailable": {
+    "description": "Note in the cast picker when the active server is an iroh (peer-to-peer) server."
+  },
+  "irohShareUnavailable": "Sharing isn't available for peer-to-peer (iroh) servers — they have no public URL to link to.",
+  "@irohShareUnavailable": {
+    "description": "Shown when trying to share tracks from an iroh (peer-to-peer) server."
   }
 }
