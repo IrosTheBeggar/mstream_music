@@ -60,14 +60,21 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        // Visualizer: we only ship libprojectM-4.so for these ABIs, and
-        // the bridge .so can only link if projectM is present, so cap
-        // the app to the same set. armeabi-v7a (very old 32-bit ARM)
-        // is dropped. abiFilters has to be set in both ndk and
-        // externalNativeBuild — the former filters what Flutter ships,
-        // the latter what CMake compiles.
-        ndk {
-            abiFilters "arm64-v8a", "x86_64"
+        // Visualizer + iroh: we only ship libprojectM-4.so / libiroh_tunnel.so for
+        // these ABIs, so cap the app to the same set. armeabi-v7a (very old 32-bit
+        // ARM) is dropped. abiFilters is set in both ndk (what Flutter ships) and
+        // externalNativeBuild (what CMake compiles).
+        //
+        // BUT ndk.abiFilters cannot coexist with the splits.abi that Flutter
+        // configures for `--split-per-abi` (AGP throws "Conflicting configuration").
+        // So skip the ndk filter in that mode — a split build must instead pass
+        // `--target-platform android-arm64,android-x64` to stay on these two ABIs
+        // (otherwise it would emit a broken armeabi-v7a split with no native libs).
+        // Non-split builds (universal APK, Play AAB) are unaffected.
+        if (!((project.findProperty("split-per-abi") ?: "false").toString().toBoolean())) {
+            ndk {
+                abiFilters "arm64-v8a", "x86_64"
+            }
         }
         externalNativeBuild {
             cmake {
