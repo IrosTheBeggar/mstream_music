@@ -1,0 +1,8 @@
+{
+  "name": "iroh-tunnel-interop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interop test: Rust tunnel client <-> JS server (PR #643 protocol)",
+  "dependencies": { "@number0/iroh": "1.0.0" }
+}

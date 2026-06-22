@@ -9,8 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-// import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:flutter/services.dart';
+import '../widgets/iroh_scanner.dart';
 import '../build_variant.dart';
+import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
@@ -106,6 +108,22 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool _testing = false;
   String? _testResult;
   bool? _testSuccess;
+
+  // --- iroh pairing tab state ---
+  final TextEditingController _irohCodeCtrl = TextEditingController();
+  final TextEditingController _irohUserCtrl = TextEditingController();
+  final TextEditingController _irohPassCtrl = TextEditingController();
+  bool _irohTesting = false;
+  String? _irohTestResult;
+  bool? _irohTestSuccess;
+  // Live tunnel port after a passing test (null = no tunnel up).
+  int? _irohPort;
+  // Test passed → reveal the sign-in form.
+  bool _irohSignedInReady = false;
+  bool _irohPublic = false;
+  bool _irohSaving = false;
+  // Set once the server is saved, so dispose() won't stop the now-active tunnel.
+  bool _irohSaved = false;
 
   @override
   @protected
@@ -425,6 +443,11 @@ class MyCustomFormState extends State<MyCustomForm> {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _downloadFolderCtrl.dispose();
+    _irohCodeCtrl.dispose();
+    _irohUserCtrl.dispose();
+    _irohPassCtrl.dispose();
+    // A tunnel left running from a test that was never saved is torn down here.
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
     ServerManager().clearPendingSelfSigned();
 
     super.dispose();
@@ -1207,6 +1230,448 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Add mode shows two tabs (Server URL / iroh); edit mode targets one
+    // existing URL server, so it skips the pairing tab.
+    if (widget.editThisServer != null) {
+      return _buildStandardForm(context);
+    }
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Material(
+            color: VelvetColors.surface,
+            child: TabBar(
+              labelColor: VelvetColors.primary,
+              unselectedLabelColor: VelvetColors.textSecondary,
+              indicatorColor: VelvetColors.primary,
+              tabs: [
+                Tab(text: AppLocalizations.of(context).addServerTabUrl),
+                const Tab(text: 'iroh'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildStandardForm(context),
+                _buildIrohTab(context),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Shared success/error banner used by both the standard and iroh test flows.
+  Widget _statusBanner(String message, bool success) {
+    final color = success ? VelvetColors.success : VelvetColors.error;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color, width: 1),
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+      ),
+      child: Row(
+        children: [
+          Icon(success ? Icons.check_circle_outline : Icons.error_outline,
+              color: color, size: 18),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(message,
+                style:
+                    TextStyle(color: VelvetColors.textPrimary, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- iroh pairing tab ---
+  // Strings are intentionally plain English for this first slice; localize via
+  // the .arb files once the flow is confirmed end to end.
+
+  // Editing/replacing the code invalidates a prior test: drop the (now stale)
+  // tunnel and hide the sign-in form.
+  void _clearIrohTestResult() {
+    if (_irohTestResult == null && !_irohSignedInReady && _irohPort == null) {
+      return;
+    }
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    setState(() {
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+      _irohSignedInReady = false;
+      _irohPort = null;
+    });
+  }
+
+  Future<void> _pasteIrohCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (text != null && text.isNotEmpty && mounted) {
+      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+      setState(() {
+        _irohCodeCtrl.text = text;
+        _irohTestResult = null;
+        _irohTestSuccess = null;
+        _irohSignedInReady = false;
+        _irohPort = null;
+      });
+    }
+  }
+
+  Future<void> _scanQr() async {
+    final l = AppLocalizations.of(context);
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, l.irohQrAndroidOnly);
+      return;
+    }
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l.irohCameraPermission)));
+      }
+      return;
+    }
+    if (!mounted) return;
+    final code = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const IrohScannerPage()));
+    if (code != null && code.trim().isNotEmpty && mounted) {
+      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+      setState(() {
+        _irohCodeCtrl.text = code.trim();
+        _irohTestResult = null;
+        _irohTestSuccess = null;
+        _irohSignedInReady = false;
+        _irohPort = null;
+      });
+    }
+  }
+
+  // Opens the tunnel from the pairing code and fetches the server's public /api/
+  // through it. On success the tunnel is LEFT RUNNING and the sign-in form is
+  // revealed (sign-in + save reuse it); a failed test tears the tunnel down.
+  Future<void> _testIrohConnection() async {
+    final l = AppLocalizations.of(context);
+    final code = _irohCodeCtrl.text.trim();
+    if (code.isEmpty) {
+      _showIrohResult(false, l.irohPasteFirst);
+      return;
+    }
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, l.irohAndroidOnly);
+      return;
+    }
+    // Re-test: drop any tunnel left from a previous test (the code may differ).
+    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    setState(() {
+      _irohTesting = true;
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+      _irohSignedInReady = false;
+      _irohPort = null;
+    });
+    try {
+      final port = await IrohTunnel.instance.start(code);
+      final lt = IrohTunnel.instance.localToken ?? '';
+      final resp = await http
+          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
+          .timeout(Duration(seconds: 10));
+      String? version;
+      if (resp.statusCode == 200) {
+        try {
+          final v = (jsonDecode(resp.body) as Map<String, dynamic>)['server']
+              ?.toString();
+          if (v != null && v.isNotEmpty) version = v;
+        } catch (_) {}
+      }
+      if (!mounted) {
+        IrohTunnel.instance.stop();
+        return;
+      }
+      // Any response proves the tunnel carried HTTP to the server → keep it up
+      // for sign-in + save.
+      // Report the path the handshake landed on (it may upgrade direct↔relay
+      // shortly after; this is the snapshot at test time).
+      final pathSuffix = switch (IrohTunnel.instance.pathKind) {
+        IrohPathKind.direct => l.irohPathSuffixDirect,
+        IrohPathKind.relay => l.irohPathSuffixRelay,
+        IrohPathKind.unknown => '',
+      };
+      final v = version;
+      final base =
+          v != null ? l.irohTestConnectedVersion(v) : l.irohTestConnected;
+      setState(() {
+        _irohTesting = false;
+        _irohTestSuccess = true;
+        _irohTestResult = base + pathSuffix;
+        _irohPort = port;
+        _irohSignedInReady = true;
+      });
+    } on IrohTunnelException catch (e) {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, e.message);
+    } on TimeoutException {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTimeout);
+    } catch (e) {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTestFailed('$e'));
+    }
+  }
+
+  void _showIrohResult(bool success, String message) {
+    if (!mounted) return;
+    setState(() {
+      _irohTesting = false;
+      _irohTestSuccess = success;
+      _irohTestResult = message;
+    });
+  }
+
+  // Authenticate THROUGH the live tunnel (mirrors the standard login), then save
+  // the iroh server, adopting the test tunnel as the active connection.
+  Future<void> _signInAndSaveIroh() async {
+    final l = AppLocalizations.of(context);
+    final code = _irohCodeCtrl.text.trim();
+    final port = _irohPort;
+    if (port == null) {
+      _showIrohResult(false, l.irohTestFirst);
+      return;
+    }
+    setState(() => _irohSaving = true);
+    String jwt = '';
+    try {
+      if (!_irohPublic) {
+        final login = await http.post(
+          Uri.parse(
+              'http://127.0.0.1:$port/api/v1/auth/login?__lt=${IrohTunnel.instance.localToken ?? ''}'),
+          body: {
+            'username': _irohUserCtrl.text,
+            'password': _irohPassCtrl.text,
+          },
+        ).timeout(Duration(seconds: 8));
+        if (login.statusCode != 200) {
+          if (mounted) setState(() => _irohSaving = false);
+          _showIrohResult(false, l.irohSignInFailedHttp(login.statusCode));
+          return;
+        }
+        jwt = (jsonDecode(login.body)['token'] ?? '').toString();
+      }
+      await _saveIrohServer(code: code, port: port, jwt: jwt);
+    } on TimeoutException {
+      if (mounted) setState(() => _irohSaving = false);
+      _showIrohResult(false, l.irohSignInTimeout);
+    } catch (e) {
+      if (mounted) setState(() => _irohSaving = false);
+      _showIrohResult(false, l.irohSignInFailed('$e'));
+    }
+  }
+
+  // Persist an iroh server keyed by its pairing code (its durable identity), with
+  // the live tunnel adopted as the active connection, then switch to it.
+  Future<void> _saveIrohServer(
+      {required String code, required int port, required String jwt}) async {
+    final id = code.hashCode.toUnsigned(32).toRadixString(16);
+    final username = _irohPublic ? '' : _irohUserCtrl.text;
+    final password = _irohPublic ? '' : _irohPassCtrl.text;
+    final server = Server('iroh://$id', username, password, jwt, 'iroh-$id')
+      ..connectionType = 'iroh'
+      ..irohPairingCode = code
+      ..tunnelPort = port
+      ..storageMode = 'appLocal';
+    // Ping through the live tunnel to populate vpaths / transcode caps.
+    await ServerManager().getServerPaths(server);
+    await ServerManager().addServer(server);
+    // Adopt the test tunnel as the active one, then make this the current server.
+    ServerManager().registerActiveTunnel(server, port);
+    _irohSaved = true; // dispose() must not stop the now-active tunnel
+    final idx = ServerManager().serverList.indexOf(server);
+    if (idx >= 0) await ServerManager().changeCurrentServer(idx);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Widget _buildIrohTab(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.irohConnectHeader,
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+            SizedBox(height: 6),
+            Text(
+              l.irohConnectBody,
+              style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _irohCodeCtrl,
+              enabled: !_irohTesting,
+              minLines: 2,
+              maxLines: 4,
+              autocorrect: false,
+              enableSuggestions: false,
+              onChanged: (_) => _clearIrohTestResult(),
+              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
+                labelText: l.irohPairingCodeLabel,
+                hintText: l.irohPairingCodeHint,
+                prefixIcon: Icon(Icons.vpn_key_outlined),
+              ),
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.qr_code_scanner, size: 18),
+                    label: Text(l.irohScanQr),
+                    onPressed: _irohTesting ? null : _scanQr,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.content_paste, size: 18),
+                    label: Text(l.irohPaste),
+                    onPressed: _irohTesting ? null : _pasteIrohCode,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: VelvetColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+                textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              icon: _irohTesting
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                      ),
+                    )
+                  : Icon(Icons.network_check),
+              label: Text(_irohTesting ? l.irohTesting : l.irohTestConnection),
+              onPressed: _irohTesting ? null : _testIrohConnection,
+            ),
+            if (_irohTestResult != null) ...[
+              SizedBox(height: 12),
+              _statusBanner(_irohTestResult!, _irohTestSuccess ?? false),
+            ],
+            if (_irohSignedInReady) ...[
+              SizedBox(height: 20),
+              Divider(color: VelvetColors.border2),
+              SizedBox(height: 12),
+              Text(l.irohSignInHeader,
+                  style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.irohPublicServer,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary, fontSize: 14)),
+                value: _irohPublic,
+                onChanged:
+                    _irohSaving ? null : (v) => setState(() => _irohPublic = v),
+                activeThumbColor: VelvetColors.primary,
+              ),
+              TextField(
+                controller: _irohUserCtrl,
+                enabled: !_irohPublic && !_irohSaving,
+                autocorrect: false,
+                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(color: VelvetColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: l.fieldUsername,
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              SizedBox(height: 12),
+              TextField(
+                controller: _irohPassCtrl,
+                enabled: !_irohPublic && !_irohSaving,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                style: TextStyle(color: VelvetColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: l.fieldPassword,
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: VelvetColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(VelvetColors.radiusSmall),
+                  ),
+                  textStyle:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                icon: _irohSaving
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : Icon(Icons.login),
+                label: Text(_irohSaving ? l.irohSigningIn : l.irohSignInSave),
+                onPressed: _irohSaving ? null : _signInAndSaveIroh,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardForm(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SafeArea(
       // SingleChildScrollView ensures the Save button is reachable
@@ -1345,45 +1810,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               ),
               if (_testResult != null) ...[
                 SizedBox(height: 10),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: (_testSuccess ?? false)
-                        ? VelvetColors.success.withValues(alpha: 0.12)
-                        : VelvetColors.error.withValues(alpha: 0.12),
-                    border: Border.all(
-                      color: (_testSuccess ?? false)
-                          ? VelvetColors.success
-                          : VelvetColors.error,
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(
-                        VelvetColors.radiusSmall),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        (_testSuccess ?? false)
-                            ? Icons.check_circle_outline
-                            : Icons.error_outline,
-                        color: (_testSuccess ?? false)
-                            ? VelvetColors.success
-                            : VelvetColors.error,
-                        size: 18,
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _testResult!,
-                          style: TextStyle(
-                              color: VelvetColors.textPrimary,
-                              fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _statusBanner(_testResult!, _testSuccess ?? false),
               ],
               // Storage location: App local (default) / Permanent / SD card
               // (the SD option only when a removable card is present, or when
@@ -1560,3 +1987,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     );
   }
 }
+
+// The QR scanner page moved to lib/widgets/iroh_scanner.dart (IrohScannerPage),
+// shared with the re-pair sheet.

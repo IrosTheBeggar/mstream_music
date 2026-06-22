@@ -90,6 +90,13 @@ abstract class PlaybackBackend {
   /// playback + a toast. Never emits on the local backend.
   Stream<String> get rendererLostStream;
 
+  /// Emits when on-device playback itself errors — e.g. the audio source fails
+  /// mid-stream (for an iroh server, a tunnel drop killing the HTTP stream).
+  /// just_audio surfaces these on a DEDICATED error channel, not as errors on
+  /// [changeStream], so the handler listens here to recover. Empty on remote
+  /// (cast) backends, which report failures via [rendererLostStream] instead.
+  Stream<Object> get errorStream;
+
   // ── Local-only capabilities (false / null on remote backends) ──
   bool get supportsEqualizer;
 

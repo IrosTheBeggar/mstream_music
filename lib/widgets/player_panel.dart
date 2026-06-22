@@ -10,7 +10,6 @@ import '../objects/player_layout.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
-import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
@@ -1461,8 +1460,12 @@ String _fmt(Duration d) => formatDuration(d);
 /// URL so a base path / a folder named "transcode" can't false-positive.
 bool _isTranscoding(MediaItem? item) {
   if (item == null || item.extras?['localPath'] != null) return false;
-  final s = ServerManager().byLocalname(item.extras?['server'] as String?);
-  return s != null && item.id.startsWith('${s.url}/transcode');
+  // Port-independent: an iroh stream URL's loopback port changes across tunnel
+  // rebuilds, so match the path, not the full origin. buildServerStreamUrl emits
+  // /transcode/... for transcoded streams and /media/... otherwise (the leading
+  // slash keeps a user folder named "transcode" under /media from false-positiving).
+  final u = Uri.tryParse(item.id);
+  return u != null && u.path.startsWith('/transcode');
 }
 
 /// Small transcoding glyph that sits just left of a time readout in the player;

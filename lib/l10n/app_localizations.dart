@@ -2471,6 +2471,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Storage permission is needed to read Downloads'**
   String get importedShadersDownloadsNoPermission;
+
+  /// Add-server form: tab label for the classic HTTP URL connection (paired with the 'iroh' tab).
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL'**
+  String get addServerTabUrl;
+
+  /// Header of the iroh tab on the add-server form.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect peer-to-peer'**
+  String get irohConnectHeader;
+
+  /// Explainer under the iroh tab header on the add-server form.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.'**
+  String get irohConnectBody;
+
+  /// Text field label for the iroh pairing code (add-server iroh tab and the re-pair sheet).
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing code'**
+  String get irohPairingCodeLabel;
+
+  /// Hint text inside the iroh pairing-code field.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the code from the server Remote Access panel'**
+  String get irohPairingCodeHint;
+
+  /// Button that opens the camera to scan an iroh pairing QR code.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get irohScanQr;
+
+  /// Button that pastes an iroh pairing code from the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get irohPaste;
+
+  /// Button that tests the iroh tunnel to the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Test connection'**
+  String get irohTestConnection;
+
+  /// Busy label on the iroh Test-connection button while the test runs.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get irohTesting;
+
+  /// App-bar title of the full-screen iroh QR scanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan pairing QR'**
+  String get irohScannerTitle;
+
+  /// Shown when QR scanning is attempted on a non-Android platform.
+  ///
+  /// In en, this message translates to:
+  /// **'QR scanning is only available on Android.'**
+  String get irohQrAndroidOnly;
+
+  /// Shown when the iroh test connection is attempted on a non-Android platform.
+  ///
+  /// In en, this message translates to:
+  /// **'iroh is only supported on Android.'**
+  String get irohAndroidOnly;
+
+  /// Shown when the camera permission is denied while trying to scan an iroh QR.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission is needed to scan a code.'**
+  String get irohCameraPermission;
+
+  /// Validation shown when testing the iroh connection with no pairing code entered.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste or scan a pairing code first.'**
+  String get irohPasteFirst;
+
+  /// Validation shown when trying to sign in before a successful iroh test connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test the connection first.'**
+  String get irohTestFirst;
+
+  /// Result shown when the iroh test connection succeeds (server version unknown).
+  ///
+  /// In en, this message translates to:
+  /// **'Connected through the iroh tunnel'**
+  String get irohTestConnected;
+
+  /// Result shown when the iroh test connection succeeds and the server reported its version.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected through the iroh tunnel — mStream v{version}'**
+  String irohTestConnectedVersion(String version);
+
+  /// Suffix appended to the iroh test result when the path is a direct (hole-punched) connection.
+  ///
+  /// In en, this message translates to:
+  /// **' · direct'**
+  String get irohPathSuffixDirect;
+
+  /// Suffix appended to the iroh test result when the connection is routed through a relay.
+  ///
+  /// In en, this message translates to:
+  /// **' · via relay'**
+  String get irohPathSuffixRelay;
+
+  /// Shown when the iroh tunnel connects but the server's HTTP reply times out.
+  ///
+  /// In en, this message translates to:
+  /// **'Tunnel opened but the server did not respond in time.'**
+  String get irohTunnelTimeout;
+
+  /// Shown when the iroh tunnel test fails; {error} is the raw error text.
+  ///
+  /// In en, this message translates to:
+  /// **'Tunnel test failed: {error}'**
+  String irohTunnelTestFailed(String error);
+
+  /// Header of the sign-in step on the iroh tab (after a successful test).
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get irohSignInHeader;
+
+  /// Toggle on the iroh sign-in step for a server that needs no credentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Public server (no login)'**
+  String get irohPublicServer;
+
+  /// Busy label on the iroh 'Sign in & save' button while signing in.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get irohSigningIn;
+
+  /// Button that signs in through the iroh tunnel and saves the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in & save'**
+  String get irohSignInSave;
+
+  /// Shown when signing in through the iroh tunnel times out.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in timed out.'**
+  String get irohSignInTimeout;
+
+  /// Shown when iroh sign-in fails unexpectedly; {error} is the raw error text.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed: {error}'**
+  String irohSignInFailed(String error);
+
+  /// Shown when iroh sign-in returns an HTTP error; {status} is the HTTP status code.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed (HTTP {status}). Check your username and password.'**
+  String irohSignInFailedHttp(int status);
+
+  /// Banner while the iroh tunnel is making its first connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to server…'**
+  String get irohBannerConnecting;
+
+  /// Banner while the iroh tunnel is re-dialing after a drop.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting to server…'**
+  String get irohBannerReconnecting;
+
+  /// Banner when the iroh tunnel is down; paired with a Retry action.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected from server.'**
+  String get irohBannerDisconnected;
+
+  /// Banner when the iroh tunnel is connected but routed through a relay (not direct).
+  ///
+  /// In en, this message translates to:
+  /// **'Connected via relay — slower path.'**
+  String get irohBannerRelay;
+
+  /// Banner when the server's connect secret was rotated; paired with a Re-pair action.
+  ///
+  /// In en, this message translates to:
+  /// **'Server pairing changed — re-pair to reconnect.'**
+  String get irohBannerRepair;
+
+  /// Action button to re-pair an iroh server (banner) and confirm in the re-pair sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-pair'**
+  String get irohRepairAction;
+
+  /// Action button to retry connecting a down iroh tunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get irohRetry;
+
+  /// Title of the iroh re-pair bottom sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-pair server'**
+  String get irohRepairTitle;
+
+  /// Explainer in the iroh re-pair sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.'**
+  String get irohRepairBody;
+
+  /// Snackbar in the re-pair sheet when the new pairing code fails to connect; the previous code is kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t connect with that code — check it and try again.'**
+  String get irohRepairFailed;
+
+  /// Chip label on the active iroh server's tile when the connection is direct (hole-punched).
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get irohPathDirect;
+
+  /// Chip label on the active iroh server's tile when the connection is routed through a relay.
+  ///
+  /// In en, this message translates to:
+  /// **'Relay'**
+  String get irohPathRelay;
+
+  /// Note in the cast picker when the active server is an iroh (peer-to-peer) server.
+  ///
+  /// In en, this message translates to:
+  /// **'Casting to external devices isn\'t available for peer-to-peer (iroh) servers — playback stays on this device.'**
+  String get irohCastUnavailable;
+
+  /// Shown when trying to share tracks from an iroh (peer-to-peer) server.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.'**
+  String get irohShareUnavailable;
 }
 
 class _AppLocalizationsDelegate

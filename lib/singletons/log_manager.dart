@@ -90,6 +90,13 @@ class LogManager {
             r'("?(?:jwt|password|x-access-token)"?\s*[:=]\s*"?)([^",}\s&]+)',
             caseSensitive: false),
         (m) => '${m[1]}***');
+    // iroh pairing-code envelope (mstr<V>:..., embeds the connect secret) and the
+    // loopback auth token (__lt=...) — credentials that must never reach the
+    // shareable diagnostics buffer or logcat if a future line interpolates them.
+    out = out.replaceAll(
+        RegExp(r'mstr\d*:[A-Za-z0-9_\-]+', caseSensitive: false), 'mstr:***');
+    out = out.replaceAllMapped(
+        RegExp(r'(__lt=)[^&\s"\)\]]+', caseSensitive: false), (m) => '${m[1]}***');
     return out;
   }
 }

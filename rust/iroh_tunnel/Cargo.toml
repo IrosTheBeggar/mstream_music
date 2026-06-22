@@ -1,0 +1,39 @@
+[package]
+name = "iroh_tunnel"
+version = "0.1.0"
+edition = "2021"
+description = "mStream iroh remote-access tunnel client (port of scripts/mstream-iroh-client.mjs, PR #643)"
+license = "MIT"
+
+[lib]
+# cdylib → Android .so (consumed via flutter_rust_bridge); rlib → the dev bin + tests.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "iroh-tunnel-client"
+path = "src/bin/client.rs"
+
+[dependencies]
+# iroh CORE only — no iroh-blobs/docs/gossip/rpc (keeps the Android .so small).
+iroh = "1"
+iroh-tickets = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros"] }
+serde_json = "1"
+base64 = "0.22"
+anyhow = "1"
+# Random 128-bit loopback token that authenticates the localhost hop, so other
+# apps on the device can't use the tunnel as an open proxy. 0.2 is already in tree.
+getrandom = "0.2"
+
+# Android only: register the JavaVM + app Context with ndk_context (iroh's
+# network monitoring needs it). Versions match what iroh already pulls in.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+ndk-context = "0.1"
+
+# Size-optimized release (Android). Host/dev builds use the default debug profile.
+[profile.release]
+opt-level = "z"
+lto = "thin"
+strip = true
+codegen-units = 1

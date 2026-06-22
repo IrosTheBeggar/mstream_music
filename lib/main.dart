@@ -40,6 +40,9 @@ import 'media/cast_target.dart';
 import 'media/auto_browse.dart';
 import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'native/iroh_tunnel.dart';
+import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
@@ -147,6 +150,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // to be hidden. This key lets the app-bar hamburger open that outer drawer.
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void initState() {
@@ -183,6 +187,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // toast; the handler has already fallen back to local playback.
     _castErrorSub = CastManager().castErrorStream.listen((msg) {
       rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
+    });
+    // An iroh tunnel is a long-lived QUIC connection; unlike fresh per-request
+    // HTTP sockets it needs an explicit kick when the device network changes.
+    // Nudge it on every connectivity transition that has a usable network.
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (results.any((r) => r != ConnectivityResult.none)) {
+        unawaited(ServerManager().handleNetworkChange());
+      }
     });
   }
 
@@ -246,6 +258,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         (ModalRoute.of(context)?.isCurrent ?? true)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
+    // A tunnel can die while backgrounded (idle drop / process pressure); on
+    // resume, nudge iroh + rebuild it if it's hard-down. Fire-and-forget — the
+    // native start can block for tens of seconds.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(ServerManager().handleNetworkChange());
+    }
     // Flush the queue/position to disk when leaving the foreground, so a
     // backgrounded app that's later killed by the OS still reopens in place.
     if (state == AppLifecycleState.paused ||
@@ -259,8 +277,101 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
+    _connectivitySub?.cancel();
     DownloadManager().dispose();
     super.dispose();
+  }
+
+  // Banner for the active iroh server: reconnecting (transient), re-pair needed
+  // (rotated secret), disconnected (hard-down), or — when connected — a heads-up
+  // that we're on a slower relay path (the optimal direct path stays hidden, so
+  // everyday use is clean). Hidden entirely for non-iroh servers. Plain English.
+  Widget _tunnelBanner() {
+    return StreamBuilder<IrohTunnelStatus>(
+      stream: ServerManager().tunnelStatusStream,
+      initialData: ServerManager().tunnelStatus,
+      builder: (context, snap) {
+        final st = snap.data ?? IrohTunnelStatus.down;
+        if (ServerManager().currentServer?.isIroh != true) {
+          return const SizedBox.shrink();
+        }
+        final l = AppLocalizations.of(context);
+        // Connected: surface only the relayed case. Watch the path-kind stream so
+        // the strip appears/clears as iroh re-homes between a direct (hole-punched)
+        // and a relayed path during the session.
+        if (st == IrohTunnelStatus.connected) {
+          return StreamBuilder<IrohPathKind>(
+            stream: ServerManager().pathKindStream,
+            initialData: ServerManager().pathKind,
+            builder: (context, pk) {
+              if ((pk.data ?? IrohPathKind.unknown) != IrohPathKind.relay) {
+                return const SizedBox.shrink();
+              }
+              return _bannerStrip(
+                  Icons.cloud_queue, VelvetColors.warning, l.irohBannerRelay);
+            },
+          );
+        }
+        switch (st) {
+          case IrohTunnelStatus.rejected:
+            return _bannerStrip(
+                Icons.link_off,
+                VelvetColors.error,
+                l.irohBannerRepair,
+                action: TextButton(
+                  onPressed: () => showIrohRepairSheet(context),
+                  child: Text(l.irohRepairAction,
+                      style: TextStyle(color: VelvetColors.primary)),
+                ));
+          case IrohTunnelStatus.down:
+            return _bannerStrip(
+                Icons.cloud_off, VelvetColors.warning, l.irohBannerDisconnected,
+                action: TextButton(
+                  onPressed: () =>
+                      unawaited(ServerManager().handleNetworkChange()),
+                  child: Text(l.irohRetry,
+                      style: TextStyle(color: VelvetColors.primary)),
+                ));
+          case IrohTunnelStatus.connecting:
+            return _bannerStrip(
+                Icons.sync, VelvetColors.warning, l.irohBannerConnecting,
+                action: const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ));
+          default: // reconnecting
+            return _bannerStrip(
+                Icons.sync_problem, VelvetColors.warning, l.irohBannerReconnecting,
+                action: const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ));
+        }
+      },
+    );
+  }
+
+  // Thin iroh status strip — matches the migration banner's Material + padding +
+  // row layout (icon · message · optional trailing action/spinner).
+  Widget _bannerStrip(IconData icon, Color color, String text, {Widget? action}) {
+    return Material(
+      color: VelvetColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        child: Row(children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style:
+                    TextStyle(color: VelvetColors.textPrimary, fontSize: 13)),
+          ),
+          ?action,
+        ]),
+      ),
+    );
   }
 
   // Thin banner above the tabs showing a background storage move's progress
@@ -543,6 +654,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       ),
       body: Column(children: [
         _migrationBanner(),
+        _tunnelBanner(),
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(

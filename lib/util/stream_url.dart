@@ -32,9 +32,9 @@ String buildServerStreamUrl(Server server, String path) {
   // without waiting for the ping. A queue mixing capable + incapable servers
   // resolves to the right endpoint per track once each server is pinged.
   if (tm.transcodeOn != true || server.transcodeAvailable == false) {
-    return '${server.url}/media$p?app_uuid=${Uuid().v4()}$token';
+    return '${server.effectiveBaseUrl}/media$p?app_uuid=${Uuid().v4()}$token${server.localTokenQuery}';
   }
-  final sb = StringBuffer(server.url)
+  final sb = StringBuffer(server.effectiveBaseUrl)
     ..write('/transcode')
     ..write(p)
     ..write('?app_uuid=')
@@ -42,6 +42,7 @@ String buildServerStreamUrl(Server server, String path) {
     ..write(token);
   if (tm.codec != null) sb.write('&codec=${tm.codec!}');
   if (tm.bitrate != null) sb.write('&bitrate=${tm.bitrate!}');
+  sb.write(server.localTokenQuery);
   return sb.toString();
 }
 
@@ -56,5 +57,5 @@ String buildServerStreamUrl(Server server, String path) {
 String buildAlbumArtUrl(Server server, String artFile, {String compress = 's'}) {
   final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
   return Uri.encodeFull(
-      '${server.url}/album-art/$artFile?compress=$compress$token');
+      '${server.effectiveBaseUrl}/album-art/$artFile?compress=$compress$token${server.localTokenQuery}');
 }

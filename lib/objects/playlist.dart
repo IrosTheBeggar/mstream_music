@@ -6,6 +6,9 @@
 
 import 'package:audio_service/audio_service.dart';
 
+import '../singletons/server_list.dart';
+import '../util/stream_url.dart';
+
 class Playlist {
   String name;
   final List<PlaylistEntry> entries;
@@ -75,18 +78,32 @@ class PlaylistEntry {
         extras: Map<String, dynamic>.from(item.extras ?? const {}),
       );
 
-  MediaItem toMediaItem() => MediaItem(
-        id: id,
-        title: title,
-        artist: artist,
-        album: album,
-        // Artwork for the lock screen / Android Auto, from the stored
-        // /album-art URL captured in extras when the entry was created.
-        artUri: extras['artUrl'] is String
-            ? Uri.tryParse(extras['artUrl'] as String)
-            : null,
-        duration:
-            durationMs == null ? null : Duration(milliseconds: durationMs!),
-        extras: Map<String, dynamic>.from(extras),
-      );
+  MediaItem toMediaItem() {
+    final extrasMap = Map<String, dynamic>.from(extras);
+    // Artwork for the lock screen / Android Auto, from the stored /album-art URL.
+    // For an iroh server that URL carries a previous session's loopback port +
+    // token, so re-origin it against the live tunnel (mirrors queue_store); HTTP
+    // servers keep the persisted URL (their host:port is durable).
+    String? artUrl = extrasMap['artUrl'] as String?;
+    final server = ServerManager().byLocalname(extrasMap['server'] as String?);
+    if (artUrl != null && server != null && server.isIroh) {
+      final u = Uri.tryParse(artUrl);
+      if (u != null &&
+          u.pathSegments.length >= 2 &&
+          u.pathSegments.first == 'album-art') {
+        artUrl = buildAlbumArtUrl(server, u.pathSegments.sublist(1).join('/'),
+            compress: u.queryParameters['compress'] ?? 's');
+        extrasMap['artUrl'] = artUrl;
+      }
+    }
+    return MediaItem(
+      id: id,
+      title: title,
+      artist: artist,
+      album: album,
+      artUri: artUrl != null ? Uri.tryParse(artUrl) : null,
+      duration: durationMs == null ? null : Duration(milliseconds: durationMs!),
+      extras: extrasMap,
+    );
+  }
 }

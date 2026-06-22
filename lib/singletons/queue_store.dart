@@ -201,10 +201,11 @@ class QueueStore {
       {Server? Function(String localname)? resolveServer}) {
     final extras = Map<String, dynamic>.from(j['extras'] ?? const {});
     final serverName = extras['server'] as String?;
+    final Server? server =
+        serverName != null ? (resolveServer ?? _defaultResolve)(serverName) : null;
 
     String id;
     if (serverName != null) {
-      final server = (resolveServer ?? _defaultResolve)(serverName);
       if (server == null) return null; // server removed since the queue was saved
       final path = extras['path'] as String?;
       if (path == null) return null;
@@ -215,6 +216,22 @@ class QueueStore {
       id = (j['id'] as String?) ?? Uuid().v4();
     }
 
+    // For an iroh server the persisted artUrl carries the PREVIOUS session's
+    // ephemeral loopback port + token, so re-origin it against the current tunnel:
+    // pull the album-art file + compress out of the stale URL and rebuild via
+    // buildAlbumArtUrl (live effectiveBaseUrl/token). HTTP servers keep the URL.
+    String? artUrl = extras['artUrl'] as String?;
+    if (artUrl != null && server != null && server.isIroh) {
+      final u = Uri.tryParse(artUrl);
+      if (u != null &&
+          u.pathSegments.length >= 2 &&
+          u.pathSegments.first == 'album-art') {
+        artUrl = buildAlbumArtUrl(server, u.pathSegments.sublist(1).join('/'),
+            compress: u.queryParameters['compress'] ?? 's');
+        extras['artUrl'] = artUrl; // keep extras consistent (player panel / Auto)
+      }
+    }
+
     return MediaItem(
       id: id,
       title: (j['title'] as String?) ??
@@ -223,12 +240,9 @@ class QueueStore {
       album: j['album'] as String?,
       artist: j['artist'] as String?,
       genre: j['genre'] as String?,
-      // Restore artwork for the lock screen / Android Auto. extras['artUrl'] is
-      // the persisted /album-art URL (its token is the stored JWT, the same one
-      // the freshly-rebuilt stream URL above relies on).
-      artUri: extras['artUrl'] is String
-          ? Uri.tryParse(extras['artUrl'] as String)
-          : null,
+      // Restore artwork for the lock screen / Android Auto (re-originated above
+      // for iroh; the persisted URL is kept as-is for HTTP servers).
+      artUri: artUrl != null ? Uri.tryParse(artUrl) : null,
       duration:
           j['durationMs'] is int ? Duration(milliseconds: j['durationMs'] as int) : null,
       extras: extras,

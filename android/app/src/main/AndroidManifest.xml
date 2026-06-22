@@ -15,10 +15,15 @@
          downloaded files (MigrationService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- CAMERA removed: the only consumer (QR-code add-server via
-         flutter_barcode_scanner) is commented out, so declaring it was an
-         unused-sensitive-permission flag for Play review. Re-add it (ideally in
-         the full flavor) if the QR scanner is restored. -->
+    <!-- CAMERA for the iroh Remote Access QR pairing scanner. Declared in the
+         `full` flavor; mobile_scanner also merges it into `play`. DECISION: keep
+         it in BOTH flavors so Play users can scan a pairing QR — the camera only
+         decodes the QR on-device, nothing is captured/stored/sent. Play Console
+         permission declaration + data-safety wording: see PLAY_COMPLIANCE.md.
+         The uses-feature keeps camera OPTIONAL (mobile_scanner sets this too; we
+         state it explicitly so it can't regress), so the app stays installable on
+         camera-less devices — pasting the code is the no-camera pairing path. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <!-- Storage permissions for the user-chosen download folders (Permanent /
          SD-card modes, which need "All files access") live in the `full` flavor
          ONLY — see android/app/src/full/AndroidManifest.xml. The Play edition
@@ -51,9 +56,13 @@
          additional functionality it is fine to subclass or reimplement
          FlutterApplication and put your custom class here. -->
     
+    <!-- allowBackup=false: servers.json holds credentials (JWT, password, and the
+         iroh pairing code's connect secret), so keep it out of adb / cloud backups
+         where another process could exfiltrate it. -->
     <application
         android:name="${applicationName}"
         android:label="mStream Music"
+        android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
         <activity

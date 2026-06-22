@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
+import '../native/iroh_tunnel.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
 import 'add_server.dart';
@@ -118,6 +119,48 @@ class ManageServersScreen extends StatelessWidget {
     );
   }
 
+  // Live Direct/Relay chip for the ACTIVE iroh server's tunnel — shown only while
+  // CONNECTED (the banner covers reconnecting/down/re-pair), so the chip stays
+  // focused on direct-vs-relay and never shows an ambiguous "…" when disconnected.
+  // Meaningless for HTTP/inactive servers, so the caller also gates on those.
+  Widget _irohPathChip() {
+    return StreamBuilder<IrohTunnelStatus>(
+      stream: ServerManager().tunnelStatusStream,
+      initialData: ServerManager().tunnelStatus,
+      builder: (context, sSnap) {
+        if (sSnap.data != IrohTunnelStatus.connected) {
+          return const SizedBox.shrink();
+        }
+        return StreamBuilder<IrohPathKind>(
+          stream: ServerManager().pathKindStream,
+          initialData: ServerManager().pathKind,
+          builder: (context, pSnap) {
+            final pk = pSnap.data ?? IrohPathKind.unknown;
+            if (pk == IrohPathKind.unknown) return const SizedBox.shrink();
+            final l = AppLocalizations.of(context);
+            final bool relay = pk == IrohPathKind.relay;
+            final Color color =
+                relay ? VelvetColors.warning : VelvetColors.success;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(relay ? Icons.cloud_queue : Icons.bolt,
+                    size: 13, color: color),
+                const SizedBox(width: 4),
+                Text(relay ? l.irohPathRelay : l.irohPathDirect,
+                    style: TextStyle(fontSize: 11, color: color)),
+              ]),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // A modern server row, mirroring the playlist rows: an icon tile (tinted
   // for the default server), the URL, a star marking the default, and the
   // ⋮ menu. Tapping the row opens the edit screen.
@@ -162,6 +205,11 @@ class ManageServersScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (server.isIroh && server == ServerManager().currentServer)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: _irohPathChip(),
+                ),
               if (isDefault)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
