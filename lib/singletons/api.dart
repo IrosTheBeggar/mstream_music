@@ -125,7 +125,9 @@ class ApiManager {
         // self-healing tunnel a moment to recover, then retry once. (Skip on a
         // user cancel — closing the client throws too.)
         if (isIroh && !BrowserManager().isLoadCancelled(loadToken)) {
-          final ready = await ServerManager().awaitTunnelReady();
+          // Wait for THIS call's server (the tunnel may be serving a background
+          // playback server instead of the browsed one).
+          final ready = await ServerManager().awaitTunnelReady(server: server);
           if (!ready) {
             appLog('[api] iroh tunnel down; $getOrPost $location failed: $e');
             rethrow;

@@ -292,7 +292,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       initialData: ServerManager().tunnelStatus,
       builder: (context, snap) {
         final st = snap.data ?? IrohTunnelStatus.down;
-        if (ServerManager().currentServer?.isIroh != true) {
+        // Show whenever the tunnel has a server to serve — including a background
+        // playback server while a non-iroh default is the selected server (the
+        // tunnel "follows playback").
+        if (!ServerManager().tunnelActive) {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);

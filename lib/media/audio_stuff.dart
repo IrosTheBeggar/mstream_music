@@ -22,7 +22,6 @@ import '../singletons/app_messenger.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
-import '../native/iroh_tunnel.dart';
 import '../util/camelot.dart';
 import '../util/stream_url.dart';
 
@@ -120,11 +119,18 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       if (index != null && index >= 0 && index < queue.value.length) {
         final item = queue.value[index];
+        // The single iroh tunnel follows playback: point it at this track's iroh
+        // server so a queue from a non-default iroh server connects in the
+        // background (default stays selected) and a multi-server queue re-targets
+        // the tunnel as it advances. Null for a local/HTTP track (no tunnel).
+        ServerManager().setPlaybackServer(_serverFor(item));
         if (item.id != _lastPlayLoggedId) {
           _lastPlayLoggedId = item.id;
           appLog('[play] track ${index + 1}/${queue.value.length}: '
               '${item.title}');
         }
+      } else {
+        ServerManager().setPlaybackServer(null);
       }
       _emitCurrentMediaItem();
     });
@@ -341,36 +347,31 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   // just_audio surfaced a playback error (local stream path only — remote
-  // backends report failures via rendererLostStream). Two cases:
-  //  • the FAILED source is served through the current iroh tunnel and that
-  //    tunnel is down/reconnecting → a transport blip, not a bad source: recover
-  //    in place once it's back rather than skipping (it bails gracefully if the
-  //    tunnel can't come back — the reconnect / re-pair banner explains why);
-  //  • anything else (bad/missing track, server 500, dead URL, or a connected
-  //    tunnel) → warn and skip to the next track.
+  // backends report failures via rendererLostStream). The split, keyed on the
+  // FAILED track's iroh server (the tunnel "follows playback", so it may not be
+  // the browsed server):
+  //  • iroh source whose tunnel is NOT live for it yet — launch, a cross-server
+  //    queue advance that needs a tunnel switch, or a mid-stream drop → recover in
+  //    place (ensure that server's tunnel, then re-seed + resume), don't skip;
+  //  • anything else (local/HTTP source, or an iroh source whose tunnel IS up and
+  //    it still failed = bad source) → warn and skip to the next track.
   void _onPlaybackError(Object error) {
     if (!identical(_backend, _localBackend)) return;
     // One error-handler at a time: while a recover or skip is in flight, ignore
     // further errors (a burst for one failure, or the wrap-around after a skip).
     // Whatever's playing when it finishes re-decides on its own fresh error.
     if (_recoveringPlayback || _skipPending) return;
-    // Resolve the FAILED item's server (not just currentServer): only the current
-    // iroh server's items ride the single live tunnel, so a local file, an HTTP
-    // item, or an item from a different iroh server can't be recovered by waiting
-    // on this tunnel — those skip instead.
     final idx = _localBackend.currentIndex;
     final q = queue.value;
     final failed = (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
-    final itemServer = failed == null
-        ? null
-        : ServerManager().byLocalname(failed.extras?['server'] as String?);
-    final current = ServerManager().currentServer;
+    final itemServer = failed == null ? null : _serverFor(failed);
     if (itemServer != null &&
-        current != null &&
-        itemServer.localname == current.localname &&
-        current.isIroh &&
-        IrohTunnel.instance.status != IrohTunnelStatus.connected) {
-      _recoverIrohPlayback();
+        itemServer.isIroh &&
+        !ServerManager().tunnelServes(itemServer)) {
+      // The tunnel isn't live for this track's iroh server — point it there and
+      // resume rather than skipping. (If it IS serving this server and the track
+      // still failed, that's a bad source → falls through to skip below.)
+      _recoverIrohPlayback(itemServer);
       return;
     }
     // Serialize the skip through _switchChain (shared with recovery + backend
@@ -384,31 +385,40 @@ class AudioPlayerHandler extends BaseAudioHandler
         .whenComplete(() => _skipPending = false);
   }
 
-  // Recover on an iroh mid-stream tunnel drop: the supervisor reconnects on the
-  // SAME loopback port, so once it's back we re-seed the current source and resume
-  // at its position. Debounced (and guarded) so a persistently-failing source
-  // can't spin.
+  // Bring the single tunnel to [server] (the failed track's iroh server) and
+  // resume in place: covers a mid-stream drop (supervisor reconnects the same
+  // loopback port), a launch with a not-yet-connected tunnel, and a cross-server
+  // queue advance that needs a tunnel switch. setPlaybackServer re-targets the
+  // tunnel; awaitTunnelReady(server:) waits for THAT server; then re-seed (live
+  // URLs, rebuilt on the (re)bind) + resume. Debounced + guarded so it can't spin.
   bool _recoveringPlayback = false;
-  DateTime? _lastPlaybackRecovery;
-  void _recoverIrohPlayback() {
+  // Per-server cooldown (keyed by localname): a persistently-failing server can't
+  // spin, but advancing across servers in a multi-iroh queue isn't blocked by one
+  // server's recent recovery.
+  final Map<String, DateTime> _lastRecoveryByServer = {};
+  void _recoverIrohPlayback(Server server) {
     if (_recoveringPlayback) return;
     final now = DateTime.now();
-    if (_lastPlaybackRecovery != null &&
-        now.difference(_lastPlaybackRecovery!) < const Duration(seconds: 10)) {
+    final last = _lastRecoveryByServer[server.localname];
+    if (last != null && now.difference(last) < const Duration(seconds: 10)) {
       return;
     }
     // A transport drop isn't a bad source — don't let it eat the skip budget.
     _failedSkips = 0;
     _recoveringPlayback = true;
-    _lastPlaybackRecovery = now;
+    _lastRecoveryByServer[server.localname] = now;
+    // Point the single tunnel at this track's server (no-op if already there).
+    ServerManager().setPlaybackServer(server);
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
       final pos = _localBackend.position;
       final idx = _localBackend.currentIndex ?? 0;
-      final ready = await ServerManager().awaitTunnelReady();
-      if (!ready) return; // tunnel didn't recover; the banner shows why
+      final ready = await ServerManager().awaitTunnelReady(server: server);
+      if (!ready) return; // tunnel didn't come up; the banner shows why
       await _localBackend.setSources(queue.value);
-      await _localBackend.seek(pos, index: idx, play: true);
+      // Resume with the user's intent: a mid-stream drop while playing resumes
+      // playing; a launch-time recovery (never played) stays paused.
+      await _localBackend.seek(pos, index: idx, play: _playIntent);
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
@@ -527,15 +537,22 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[queue] add: ${mediaItem.title} (now ${queue.value.length})');
   }
 
+  // The user's intended play state, tracked across just_audio errors (which flip
+  // the backend's `playing` to false). A recovery uses this so a launch-time
+  // re-seed resumes PAUSED rather than autoplaying on open.
+  bool _playIntent = false;
+
   @override
   Future<void> play() {
     appLog('[play] play');
+    _playIntent = true;
     return _backend.play();
   }
 
   @override
   Future<void> pause() {
     appLog('[play] pause');
+    _playIntent = false;
     return _backend.pause();
   }
 
@@ -555,6 +572,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> stop() async {
     appLog('[play] stop');
+    _playIntent = false;
+    // Playback ended — release the tunnel claim so it reverts to the browsed
+    // server (or tears down) instead of lingering for a stopped queue.
+    ServerManager().setPlaybackServer(null);
     await _backend.stop();
     await super.stop();
   }

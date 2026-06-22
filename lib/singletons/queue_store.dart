@@ -83,10 +83,10 @@ class QueueStore {
 
   /// Localname of the server the saved queue would resume on — its current-index
   /// item's `extras['server']` — or null when there's no resumable queue or that
-  /// item is local. Lets startup bring up the right (iroh) tunnel and make that
-  /// server active BEFORE the queue is restored, so its items rebuild against a
-  /// live tunnel instead of a dead loopback port. Cheap: reads + parses the file
-  /// but builds no MediaItems.
+  /// item is local. Lets startup bring that (iroh) server's tunnel up in the
+  /// BACKGROUND before restoring, so the items rebuild against a live tunnel
+  /// instead of a dead loopback port (the default stays the selected server).
+  /// Cheap: reads + parses the file but builds no MediaItems.
   Future<String?> peekResumeServer() async {
     if (!SettingsManager().resumeQueue) return null;
     try {

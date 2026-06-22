@@ -103,23 +103,22 @@ class ServerManager {
 
     if (serverList.isNotEmpty) {
       currentServer = serverList[0];
-      // If a saved queue would resume on a *different* iroh server, make that the
-      // active one. The shim holds a single tunnel, so a non-active iroh server's
-      // tunnel is down and its restored queue items would bake against a dead
-      // loopback port (fixed only by a later manual re-select). Activating it here
-      // — before QueueStore.init restores (main.dart gates that on loadServerList
-      // completing) — brings its tunnel up so the items resolve to a live URL.
-      // HTTP/local resume targets need no tunnel, so they leave the primary active.
-      final resumeServerName = await QueueStore().peekResumeServer();
-      if (resumeServerName != null) {
-        final resumeServer = byLocalname(resumeServerName);
-        if (resumeServer != null && resumeServer.isIroh) {
-          currentServer = resumeServer;
+      // Bring up the tunnel for an iroh default server BEFORE the browser queries
+      // it.
+      await ensureActiveTunnel();
+      // Pre-warm the saved queue's iroh server (if it's a DIFFERENT server) in the
+      // BACKGROUND — without selecting it — so the queue restores against a live
+      // tunnel instead of a dead loopback port. The default stays selected; this
+      // just points the playback tunnel ahead of QueueStore.init (main.dart gates
+      // that on loadServerList completing). Bounded by awaitTunnelReady's cap.
+      final resumeName = await QueueStore().peekResumeServer();
+      if (resumeName != null && resumeName != currentServer?.localname) {
+        final rs = byLocalname(resumeName);
+        if (rs != null && rs.isIroh) {
+          setPlaybackServer(rs);
+          await awaitTunnelReady(server: rs);
         }
       }
-      // Bring up the tunnel for an iroh active server BEFORE the browser queries
-      // it and before the queue is restored.
-      await ensureActiveTunnel();
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
       for (var s in serverList) {
@@ -319,6 +318,49 @@ class ServerManager {
   // can't race the single tunnel's start/stop (mirrors the cast _switchChain).
   Future<void> _tunnelChain = Future.value();
 
+  // The iroh server of the currently-playing/queued track, when it differs from
+  // (or equals) the browsed server. The single tunnel "follows playback": it
+  // serves this server so a queue from a non-default iroh server plays while the
+  // default stays selected. Pushed by the audio handler on every track change.
+  Server? _playbackServer;
+
+  /// Point the (single) tunnel at the iroh server backing the current track.
+  /// [s] is the playing track's server (or null for a local / HTTP / no track).
+  /// No-op when unchanged; otherwise re-evaluates the tunnel target.
+  void setPlaybackServer(Server? s) {
+    final next = (s != null && s.isIroh) ? s : null;
+    if (next?.localname == _playbackServer?.localname) return;
+    _playbackServer = next;
+    unawaited(ensureActiveTunnel());
+  }
+
+  // Which iroh server the single tunnel should currently serve. Playback wins:
+  // the playing track's iroh server (so a background queue plays under a non-iroh
+  // default); otherwise the browsed server when it's iroh. Null → no tunnel.
+  // (With one tunnel, browsing a *different* iroh server than the one playing
+  // can't load until playback stops — rare, since setups usually have one.)
+  Server? _tunnelTargetServer() {
+    final p = _playbackServer;
+    if (p != null && p.isIroh) return p;
+    final c = currentServer;
+    return (c != null && c.isIroh) ? c : null;
+  }
+
+  /// True when the tunnel currently has a server to serve (the browsed iroh server
+  /// OR a background playback server). Drives the status banner — which must show
+  /// for a background tunnel even while a non-iroh default is the selected server.
+  bool get tunnelActive => _tunnelTargetServer() != null;
+
+  /// True when the single tunnel is currently assigned to [s] (regardless of its
+  /// connection state) — i.e. [s] is the server we last (re)started it for.
+  bool tunnelAssignedTo(Server s) =>
+      s.isIroh && _activeTunnelCode != null && s.irohPairingCode == _activeTunnelCode;
+
+  /// True when the tunnel is assigned to [s] AND reports connected — i.e. [s]'s
+  /// loopback is live right now.
+  bool tunnelServes(Server s) =>
+      tunnelAssignedTo(s) && IrohTunnel.instance.status == IrohTunnelStatus.connected;
+
   /// Bring the single iroh tunnel in line with the active server. With [verify],
   /// also force a rebuild when the native tunnel is fully *down* despite our
   /// bookkeeping (the shim's supervisor self-heals transient drops, so this only
@@ -331,7 +373,7 @@ class ServerManager {
 
   Future<void> _ensureActiveTunnel(bool verify) async {
     if (!IrohTunnel.isSupported) return;
-    final s = currentServer;
+    final s = _tunnelTargetServer();
     if (s != null && s.isIroh && s.irohPairingCode != null) {
       // NB: don't drop an active cast here at the top. A renderer reaches an iroh
       // server through the LAN proxy (LocalMediaServer), so casting iroh is
@@ -409,8 +451,9 @@ class ServerManager {
   /// (it can't self-detect on Android) and rebuild the tunnel if it's hard-down.
   /// Cheap and safe when the active server isn't iroh.
   Future<void> handleNetworkChange() async {
-    final s = currentServer;
-    if (!IrohTunnel.isSupported || s == null || !s.isIroh) return;
+    // Nudge whichever server the tunnel serves (a background playback server, not
+    // just the browsed one) so a Wi-Fi/cellular switch re-probes the live tunnel.
+    if (!IrohTunnel.isSupported || _tunnelTargetServer() == null) return;
     IrohTunnel.instance.networkChanged();
     await ensureActiveTunnel(verify: true);
   }
@@ -433,7 +476,9 @@ class ServerManager {
   bool _tunnelStarting = false;
 
   void _refreshTunnelStatus() {
-    final isIroh = IrohTunnel.isSupported && currentServer?.isIroh == true;
+    // Status reflects the tunnel's target (which may be a background playback
+    // server, not the browsed one).
+    final isIroh = IrohTunnel.isSupported && _tunnelTargetServer() != null;
     final IrohTunnelStatus st;
     if (!isIroh) {
       st = IrohTunnelStatus.down;
@@ -452,7 +497,7 @@ class ServerManager {
   void _startStatusPolling() {
     _statusPoll ??= Timer.periodic(const Duration(seconds: 2), (_) {
       _refreshTunnelStatus();
-      if (currentServer?.isIroh != true) _stopStatusPolling();
+      if (_tunnelTargetServer() == null) _stopStatusPolling();
     });
     _refreshTunnelStatus();
   }
@@ -472,8 +517,10 @@ class ServerManager {
   /// verify-rebuild in case it's hard-down. Returns true once connected; false on
   /// a rejected (re-pair) state or timeout. Non-iroh servers are ready immediately.
   Future<bool> awaitTunnelReady(
-      {Duration timeout = const Duration(seconds: 12)}) async {
-    final s = currentServer;
+      {Server? server, Duration timeout = const Duration(seconds: 12)}) async {
+    // Default to the browsed server; callers on the playback path pass the
+    // track's server (which the single tunnel may be serving instead).
+    final s = server ?? currentServer;
     if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
     unawaited(ensureActiveTunnel(verify: true));
     // start() can take ~30s; don't report not-ready while a dial is in flight.
@@ -481,13 +528,17 @@ class ServerManager {
     final hardCap = DateTime.now().add(const Duration(seconds: 45));
     var deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline) && DateTime.now().isBefore(hardCap)) {
-      final st = IrohTunnel.instance.status;
-      if (st == IrohTunnelStatus.connected) return true;
-      if (st == IrohTunnelStatus.rejected) return false;
+      // Ready only when the tunnel is connected AND serving THIS server — with one
+      // tunnel, a different server being served means s isn't reachable yet.
+      if (tunnelServes(s)) return true;
+      if (tunnelAssignedTo(s) &&
+          IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
+        return false; // this server's code was rejected (needs re-pair)
+      }
       if (_tunnelStarting) deadline = DateTime.now().add(timeout);
       await Future.delayed(const Duration(milliseconds: 300));
     }
-    return IrohTunnel.instance.status == IrohTunnelStatus.connected;
+    return tunnelServes(s);
   }
 
   /// Re-pair the active iroh server with a fresh pairing code (after a rotated
@@ -496,7 +547,10 @@ class ServerManager {
   /// and nothing is written — so a wrong/typo code can't destroy a working one.
   /// Returns true iff the new code connected.
   Future<bool> repairIrohPairingCode(String newCode) async {
-    final s = currentServer;
+    // Re-pair whichever server the tunnel actually serves — that's the one whose
+    // code was rejected (it may be a background playback server, not the browsed
+    // one). Falls back to the browsed server.
+    final s = _tunnelTargetServer() ?? currentServer;
     if (s == null || !s.isIroh) return false;
     final oldCode = s.irohPairingCode;
 
