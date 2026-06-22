@@ -319,11 +319,16 @@ class ServerManager {
     if (!IrohTunnel.isSupported) return;
     final s = currentServer;
     if (s != null && s.isIroh && s.irohPairingCode != null) {
-      // A remote renderer (Chromecast/DLNA) can't reach the phone-local tunnel,
-      // so fall back to on-device playback if we were casting.
-      if (CastManager().isCasting) {
-        unawaited(CastManager().selectTarget(CastTarget.local));
-      }
+      // NB: don't drop an active cast here at the top. A renderer reaches an iroh
+      // server through the LAN proxy (LocalMediaServer), so casting iroh is
+      // supported, and a no-op ensure (healthy tunnel → early return below) must
+      // leave the cast alone — otherwise every app-resume/network-change would
+      // kick playback back to the phone. A real same-server rebuild (new loopback
+      // port) is handled by rebuildTranscodeUrls below, which reloads the active
+      // backend (cast included) onto the fresh tunnel. The only case that DOES
+      // fall back to the phone — switching to a *different* iroh server, which
+      // tears the single tunnel out from under the current queue — is handled at
+      // the stop below.
       _startStatusPolling();
       if (_activeTunnelCode == s.irohPairingCode && s.tunnelPort != null) {
         // Already wired up. The supervisor handles transient drops itself; only
@@ -336,6 +341,14 @@ class ServerManager {
       // The shim holds one tunnel; switching servers (or rebuilding a dead one)
       // requires dropping the old one first (start() returns the stale port otherwise).
       if (_activeTunnelCode != null) {
+        // Switching to a DIFFERENT iroh server tears down the only tunnel, so the
+        // current queue (which belongs to the outgoing server) can no longer be
+        // reached by a renderer — fall back to on-device playback. A same-server
+        // rebuild keeps the queue valid (the cast reloads via rebuildTranscodeUrls
+        // below), so it must NOT drop.
+        if (_activeTunnelCode != s.irohPairingCode && CastManager().isCasting) {
+          unawaited(CastManager().selectTarget(CastTarget.local));
+        }
         IrohTunnel.instance.stop();
         _activeTunnelCode = null;
       }
@@ -351,7 +364,13 @@ class ServerManager {
         // loopback port + token, so any queued iroh stream URLs are stale. Rebuild
         // them off the current effectiveBaseUrl (idempotent — no-op if unchanged)
         // so resume / play doesn't load a dead port.
-        if (oldPort != null && oldPort != port) {
+        //
+        // Also rebuild on a fresh bind from null (oldPort == null) *while casting*:
+        // if a previous resume's start() failed it nulled tunnelPort, so this
+        // recovered bind would otherwise skip the rebuild and leave the renderer
+        // stranded on the dead old port. (When not casting, a null→port bind is a
+        // cold start with no live stream to reload, so leave that path unchanged.)
+        if (oldPort != port && (oldPort != null || CastManager().isCasting)) {
           unawaited(MediaManager().audioHandler.customAction(
               'rebuildTranscodeUrls', const {'upcomingOnly': false}));
         }

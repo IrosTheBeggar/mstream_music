@@ -6,7 +6,6 @@ import 'package:rxdart/rxdart.dart';
 import '../media/cast_target.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
-import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../l10n/app_localizations.dart';
 
@@ -21,6 +20,8 @@ class CastPickerSheet extends StatefulWidget {
 
 class _CastPickerSheetState extends State<CastPickerSheet> {
   // Sticky choice: when checked, picking a Chromecast streams the visualizer.
+  // Works for iroh too: the transcoder reads the iroh loopback source on-device
+  // (re-origined to the live tunnel — see ChromecastPlaybackBackend).
   late bool _visualizer = SettingsManager().castVisualizerEnabled;
 
   // After an initial window the "searching…" spinner settles to a quiet hint so
@@ -29,21 +30,14 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
   bool _searchSettled = false;
   Timer? _searchTimer;
 
-  // External (DLNA/Chromecast) renderers can't reach an iroh server's loopback
-  // tunnel, so for an iroh server only "This device" is offered.
-  final bool _irohActive = ServerManager().currentServer?.isIroh == true;
-
   @override
   void initState() {
     super.initState();
-    // Scan only while the picker is visible — and not at all for an iroh server
-    // (no external target can play its loopback stream).
-    if (!_irohActive) {
-      CastManager().startDiscovery();
-      _searchTimer = Timer(const Duration(seconds: 10), () {
-        if (mounted) setState(() => _searchSettled = true);
-      });
-    }
+    // Scan only while the picker is visible (battery-friendly).
+    CastManager().startDiscovery();
+    _searchTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _searchSettled = true);
+    });
   }
 
   @override
@@ -104,35 +98,23 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     for (final t in targets)
-                      if (!_irohActive || t.kind == CastTargetKind.local)
-                        _TargetRow(
-                          target: t,
-                          selected: t == active,
-                          icon: _iconFor(t.kind),
-                          onTap: () {
-                            CastManager()
-                                .selectTarget(t, visualizer: _visualizer);
-                            Navigator.of(context).pop();
-                          },
-                        ),
+                      _TargetRow(
+                        target: t,
+                        selected: t == active,
+                        icon: _iconFor(t.kind),
+                        onTap: () {
+                          CastManager()
+                              .selectTarget(t, visualizer: _visualizer);
+                          Navigator.of(context).pop();
+                        },
+                      ),
                   ],
                 );
               },
             ),
-            // iroh: only "This device" works; external renderers can't reach the
-            // phone-local tunnel.
-            if (_irohActive)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  l.irohCastUnavailable,
-                  style:
-                      TextStyle(fontSize: 12, color: VelvetColors.textSecondary),
-                ),
-              ),
             // The "searching…" hint only appears once discovery backends are
             // registered (Phase 3+). Until then the list is just this device.
-            if (!_irohActive && CastManager().hasDiscoverers) ...[
+            if (CastManager().hasDiscoverers) ...[
               const SizedBox(height: 12),
               if (!_searchSettled)
                 Row(
@@ -165,36 +147,34 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                   ),
                 ),
             ],
-            // Cast-the-visualizer is Chromecast-only, so it's irrelevant for an
-            // iroh server (no external target).
-            if (!_irohActive) ...[
-              const Divider(height: 24),
-              // Stream the app's own visualizer (rendered + encoded on-device) to
-              // the TV instead of plain audio. Chromecast only; the choice is
-              // sticky (persisted) and applied when a device is picked above.
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                activeColor: VelvetColors.primary,
-                value: _visualizer,
-                onChanged: (v) {
-                  setState(() => _visualizer = v ?? false);
-                  SettingsManager().setCastVisualizerEnabled(_visualizer);
-                },
-                title: Text(
-                  l.castVisualizer,
-                  style: TextStyle(color: VelvetColors.textPrimary),
-                ),
-                subtitle: Text(
-                  l.castVisualizerSubtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: VelvetColors.textSecondary,
-                  ),
+            // Stream the app's own visualizer (rendered + encoded on-device) to
+            // the TV instead of plain audio. Chromecast only; the choice is
+            // sticky (persisted) and applied when a device is picked above. Works
+            // for an iroh server too — the transcoder reads its loopback source
+            // directly on-device (re-origined to the live tunnel).
+            const Divider(height: 24),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              activeColor: VelvetColors.primary,
+              value: _visualizer,
+              onChanged: (v) {
+                setState(() => _visualizer = v ?? false);
+                SettingsManager().setCastVisualizerEnabled(_visualizer);
+              },
+              title: Text(
+                l.castVisualizer,
+                style: TextStyle(color: VelvetColors.textPrimary),
+              ),
+              subtitle: Text(
+                l.castVisualizerSubtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: VelvetColors.textSecondary,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

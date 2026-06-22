@@ -11,6 +11,7 @@ import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'cast_origin.dart';
 import 'emulated_playlist_backend.dart';
 import 'local_media_server.dart';
 import 'playback_backend.dart';
@@ -167,9 +168,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   // ── Media construction ──
-  // A network id (server URL) is sent as-is; a local-only item (file-explorer
-  // track — id is a UUID) is served from the phone's LocalMediaServer so the
-  // receiver can reach it.
+  // A plain HTTP server id is sent as-is; a local-only item (file-explorer track
+  // — id is a UUID) is served from the phone's LocalMediaServer; an iroh server's
+  // id is the phone-loopback tunnel URL the receiver can't reach, so it's relayed
+  // through the LocalMediaServer proxy (re-bound to the live tunnel).
   Future<Uri> _resolveUri(MediaItem item) async {
     final localPath = item.extras?['localPath'] as String?;
     final isNetwork =
@@ -178,12 +180,25 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       await LocalMediaServer().ensureStarted();
       return LocalMediaServer().registerFile(localPath);
     }
+    final iroh = irohServerFor(item);
+    if (iroh != null) {
+      await LocalMediaServer().ensureStarted();
+      // A downloaded iroh track is already on disk — serve it from there (faster,
+      // and it skips the tunnel relay). Its id is a 127.0.0.1 loopback URL, so
+      // isNetwork is true and the disk branch above is bypassed; handle it here.
+      if (localPath != null && File(localPath).existsSync()) {
+        return LocalMediaServer().registerFile(localPath);
+      }
+      return irohProxyUri(iroh, item.id);
+    }
     return Uri.parse(item.id);
   }
 
   GoogleCastMediaInformation _mediaInfo(MediaItem item, String url) {
-    // Full-res art (drop the compress= size param) — looks sharp on a TV.
-    final art = castArtUrl(item);
+    // Full-res art (drop the compress= size param) — looks sharp on a TV; for an
+    // iroh server it's relayed through the LAN proxy (LocalMediaServer already
+    // started by _resolveUri above) so the receiver can fetch it.
+    final art = castArtUriFor(item);
     return GoogleCastMediaInformation(
       contentId: url,
       contentUrl: Uri.parse(url),
@@ -292,7 +307,20 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     final dir = '$parent/$_loadCounter';
     _currentVizDir = dir;
 
-    final source = (item.extras?['localPath'] as String?) ?? item.id;
+    // The transcoder reads this source on-device. A downloaded track is read
+    // straight from disk; otherwise, for an iroh server, item.id is a stored
+    // loopback URL whose port/token may have gone stale — re-origin to the live
+    // tunnel (loopback IS reachable on the phone, so no LAN proxy is needed for
+    // the transcoder's own input, only for the renderer's HLS pull).
+    final localPath = item.extras?['localPath'] as String?;
+    final String source;
+    if (localPath != null && File(localPath).existsSync()) {
+      source = localPath;
+    } else {
+      final iroh = irohServerFor(item);
+      source =
+          iroh != null ? irohLoopbackUri(iroh, item.id).toString() : item.id;
+    }
     final cfg = await resolveVisualizerCastConfig();
     if (gen != _loadGen) throw StateError('superseded');
     final quality = SettingsManager().castVisualizerQuality;
