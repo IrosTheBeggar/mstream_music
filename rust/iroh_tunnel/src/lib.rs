@@ -263,7 +263,10 @@ async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[
         }
         match recv.read_to_end(HANDSHAKE_RESP_LIMIT).await {
             Ok(resp) if resp == b"OK" => DialResult::Connected(conn),
-            Ok(_) => DialResult::Rejected,
+            Ok(resp) if resp == b"NO" => DialResult::Rejected,
+            // Empty / unexpected reply (truncation, a non-conforming server) is
+            // transient — retry rather than declaring a permanent "re-pair".
+            Ok(_) => DialResult::Failed,
             Err(_) => DialResult::Failed,
         }
     };

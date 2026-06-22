@@ -1516,6 +1516,7 @@ class MyCustomFormState extends State<MyCustomForm> {
             SizedBox(height: 16),
             TextField(
               controller: _irohCodeCtrl,
+              enabled: !_irohTesting,
               minLines: 2,
               maxLines: 4,
               autocorrect: false,

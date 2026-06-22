@@ -150,7 +150,9 @@ pub extern "C" fn mstream_iroh_local_token() -> *mut c_char {
 /// [`mstream_iroh_string_free`].
 #[no_mangle]
 pub extern "C" fn mstream_iroh_last_error() -> *mut c_char {
-    match LAST_ERROR.lock().unwrap().as_ref() {
+    // Poison-tolerant (no unwrap panic across the C ABI): recover the inner value
+    // if a writer ever panicked while holding the lock.
+    match LAST_ERROR.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
         Some(s) => s.clone().into_raw(),
         None => std::ptr::null_mut(),
     }

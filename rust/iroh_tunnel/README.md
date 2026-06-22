@@ -53,14 +53,23 @@ export ANDROID_NDK_HOME=.../Android/Sdk/ndk/28.2.13676358
 ./build-android.sh                 # stages libiroh_tunnel.so into ../../android/app/src/main/jniLibs/<abi>/
 ```
 
-Real shipped `.so` size (release, `opt-level=z` + thin-LTO + stripped, API 26):
+Real shipped `.so` (release, `opt-level=z` + thin-LTO + stripped, API 26). The
+binary is **committed** to `jniLibs` (the CI release runner has no Rust/NDK), so
+these checksums let a reviewer/user verify the shipped artifact — **rebuild via
+`./build-android.sh` and update this table whenever `src/` changes** (CI fails a
+release if the `.so` is missing, but cannot detect a stale one):
 
-| ABI | size |
-|---|---|
-| arm64-v8a | **9.48 MB** (9,943,624 bytes) |
-| x86_64 | 11.02 MB (11,551,544 bytes) — emulators only |
+| ABI | size | sha256 |
+|---|---|---|
+| arm64-v8a | **9.50 MB** (9,965,352 bytes) | `f3babd1f27aeae7618be45e7baecacaacc0d2605225d0f68ec003a1fe6a7635a` |
+| x86_64 | 11.05 MB (11,582,384 bytes) — emulators only | `7a604388a985695b6477e839df0b3e89f537c3e965ee22cb4e3220df8dba8855` |
 
 With Play app-bundle ABI splits, an arm64 device downloads only its own slice (~9.5 MB). iroh **core only** — no blobs/docs/gossip/rpc (the full off-the-shelf FFI is 31 MB).
+
+The release **sideload APK is universal** (both ABIs) on purpose — it runs on arm64
+phones and x86_64 emulators from one artifact. For a smaller arm64-only sideload
+build use `flutter build apk --flavor full --split-per-abi --target-platform android-arm64,android-x64`
+(the Play AAB always splits per device).
 
 ## On-device acceptance (the remaining M1 step)
 

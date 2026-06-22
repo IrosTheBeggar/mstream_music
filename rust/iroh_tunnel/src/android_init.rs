@@ -20,21 +20,27 @@ pub extern "system" fn Java_com_example_mstream_1music_IrohNative_nativeInit<'lo
     _this: JObject<'local>,
     context: JObject<'local>,
 ) {
-    let vm = match env.get_java_vm() {
-        Ok(vm) => vm,
-        Err(_) => return,
-    };
-    // A global ref so the Context survives past this call; intentionally leaked
-    // (forget) to keep it valid for the whole process lifetime.
-    let ctx = match env.new_global_ref(&context) {
-        Ok(g) => g,
-        Err(_) => return,
-    };
-    unsafe {
-        ndk_context::initialize_android_context(
-            vm.get_java_vm_pointer() as *mut c_void,
-            ctx.as_obj().as_raw() as *mut c_void,
-        );
-    }
-    std::mem::forget(ctx);
+    // Never let a panic unwind across the JNI boundary (UB / hard abort): in
+    // particular ndk_context::initialize_android_context asserts on a second init.
+    // The Kotlin DCL guard makes that unreachable today, but honor the FFI panic
+    // -safety contract here too.
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let vm = match env.get_java_vm() {
+            Ok(vm) => vm,
+            Err(_) => return,
+        };
+        // A global ref so the Context survives past this call; intentionally leaked
+        // (forget) to keep it valid for the whole process lifetime.
+        let ctx = match env.new_global_ref(&context) {
+            Ok(g) => g,
+            Err(_) => return,
+        };
+        unsafe {
+            ndk_context::initialize_android_context(
+                vm.get_java_vm_pointer() as *mut c_void,
+                ctx.as_obj().as_raw() as *mut c_void,
+            );
+        }
+        std::mem::forget(ctx);
+    }));
 }

@@ -445,11 +445,15 @@ class ServerManager {
     final s = currentServer;
     if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
     unawaited(ensureActiveTunnel(verify: true));
-    final deadline = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(deadline)) {
+    // start() can take ~30s; don't report not-ready while a dial is in flight.
+    // Keep extending the window while connecting, bounded by a hard cap.
+    final hardCap = DateTime.now().add(const Duration(seconds: 45));
+    var deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline) && DateTime.now().isBefore(hardCap)) {
       final st = IrohTunnel.instance.status;
       if (st == IrohTunnelStatus.connected) return true;
       if (st == IrohTunnelStatus.rejected) return false;
+      if (_tunnelStarting) deadline = DateTime.now().add(timeout);
       await Future.delayed(const Duration(milliseconds: 300));
     }
     return IrohTunnel.instance.status == IrohTunnelStatus.connected;
@@ -490,9 +494,15 @@ class ServerManager {
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active
   /// one, so [ensureActiveTunnel] won't needlessly restart it.
   void registerActiveTunnel(Server s, int port) {
-    s.tunnelPort = port;
-    s.tunnelToken = IrohTunnel.instance.localToken;
-    _activeTunnelCode = s.irohPairingCode;
+    final token = IrohTunnel.instance.localToken;
+    // Serialize the adopt through _tunnelChain so an in-flight (re)start can't
+    // clobber these values mid-flight; the changeCurrentServer that follows chains
+    // after this and observes the adopted tunnel (no needless re-dial).
+    _tunnelChain = _tunnelChain.then((_) {
+      s.tunnelPort = port;
+      s.tunnelToken = token;
+      _activeTunnelCode = s.irohPairingCode;
+    }).catchError((_) {});
   }
 
   Future<void> removeServer(

@@ -63,7 +63,12 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
     final code = _ctrl.text.trim();
     if (code.isEmpty) return;
     setState(() => _busy = true);
-    final ok = await ServerManager().repairIrohPairingCode(code);
+    bool ok = false;
+    try {
+      ok = await ServerManager().repairIrohPairingCode(code);
+    } catch (_) {
+      ok = false; // e.g. a writeServerFile disk error — fail, don't hang the spinner.
+    }
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop();
