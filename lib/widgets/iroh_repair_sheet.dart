@@ -63,8 +63,16 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
     final code = _ctrl.text.trim();
     if (code.isEmpty) return;
     setState(() => _busy = true);
-    await ServerManager().repairIrohPairingCode(code);
-    if (mounted) Navigator.of(context).pop();
+    final ok = await ServerManager().repairIrohPairingCode(code);
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop();
+    } else {
+      // Old code was kept; let the user fix the new one instead of silently popping.
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).irohRepairFailed)));
+    }
   }
 
   ButtonStyle get _outlined => OutlinedButton.styleFrom(

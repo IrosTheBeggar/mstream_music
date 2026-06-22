@@ -2694,6 +2694,12 @@ abstract class AppLocalizations {
   /// **'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.'**
   String get irohRepairBody;
 
+  /// Snackbar in the re-pair sheet when the new pairing code fails to connect; the previous code is kept.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t connect with that code — check it and try again.'**
+  String get irohRepairFailed;
+
   /// Chip label on the active iroh server's tile when the connection is direct (hole-punched).
   ///
   /// In en, this message translates to:

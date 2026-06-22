@@ -1077,6 +1077,10 @@
   "@irohRepairBody": {
     "description": "Explainer in the iroh re-pair sheet."
   },
+  "irohRepairFailed": "Couldn't connect with that code — check it and try again.",
+  "@irohRepairFailed": {
+    "description": "Snackbar in the re-pair sheet when the new pairing code fails to connect; the previous code is kept."
+  },
   "irohPathDirect": "Direct",
   "@irohPathDirect": {
     "description": "Chip label on the active iroh server's tile when the connection is direct (hole-punched)."

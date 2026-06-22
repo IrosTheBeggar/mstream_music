@@ -1548,6 +1548,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.';
 
   @override
+  String get irohRepairFailed =>
+      'Couldn\'t connect with that code — check it and try again.';
+
+  @override
   String get irohPathDirect => 'Direct';
 
   @override

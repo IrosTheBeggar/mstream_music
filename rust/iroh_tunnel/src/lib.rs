@@ -46,6 +46,10 @@ pub const TUNNEL_ALPN: &[u8] = b"mstream/tunnel/2";
 const READ_CHUNK: usize = 64 * 1024;
 const ONLINE_TIMEOUT: Duration = Duration::from_secs(8);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(25);
+// Deadline for the post-connect secret handshake. Without it, a half-dead server
+// that accepts the bi-stream but never writes "OK"/FIN parks read_to_end forever
+// (no idle timeout fires while it answers keep-alives), freezing the supervisor.
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 const HANDSHAKE_RESP_LIMIT: usize = 8;
 const SECRET_LEN: usize = 32;
 /// Highest pairing-code schema version this client understands. The pairing-code
@@ -248,17 +252,24 @@ async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[
         Ok(Ok(c)) => c,
         _ => return DialResult::Failed,
     };
-    let (mut send, mut recv) = match conn.open_bi().await {
-        Ok(pair) => pair,
-        Err(_) => return DialResult::Failed,
+    // Bound the handshake so a stalled/half-dead server can't park the supervisor.
+    let handshake = async {
+        let (mut send, mut recv) = match conn.open_bi().await {
+            Ok(pair) => pair,
+            Err(_) => return DialResult::Failed,
+        };
+        if send.write_all(secret).await.is_err() || send.finish().is_err() {
+            return DialResult::Failed;
+        }
+        match recv.read_to_end(HANDSHAKE_RESP_LIMIT).await {
+            Ok(resp) if resp == b"OK" => DialResult::Connected(conn),
+            Ok(_) => DialResult::Rejected,
+            Err(_) => DialResult::Failed,
+        }
     };
-    if send.write_all(secret).await.is_err() || send.finish().is_err() {
-        return DialResult::Failed;
-    }
-    match recv.read_to_end(HANDSHAKE_RESP_LIMIT).await {
-        Ok(resp) if resp == b"OK" => DialResult::Connected(conn),
-        Ok(_) => DialResult::Rejected,
-        Err(_) => DialResult::Failed,
+    match tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake).await {
+        Ok(result) => result,
+        Err(_) => DialResult::Failed, // handshake stalled → treat as transient
     }
 }
 

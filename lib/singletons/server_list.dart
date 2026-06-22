@@ -13,6 +13,7 @@ import '../util/insecure_tls_channel.dart';
 import '../native/iroh_tunnel.dart';
 import '../media/cast_target.dart';
 import 'cast_manager.dart';
+import './media.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -338,6 +339,7 @@ class ServerManager {
         IrohTunnel.instance.stop();
         _activeTunnelCode = null;
       }
+      final oldPort = s.tunnelPort;
       _tunnelStarting = true;
       _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
       try {
@@ -345,6 +347,14 @@ class ServerManager {
         s.tunnelPort = port;
         s.tunnelToken = IrohTunnel.instance.localToken;
         _activeTunnelCode = s.irohPairingCode;
+        // A hard rebuild (re-pair, verify-when-down, server switch) binds a NEW
+        // loopback port + token, so any queued iroh stream URLs are stale. Rebuild
+        // them off the current effectiveBaseUrl (idempotent — no-op if unchanged)
+        // so resume / play doesn't load a dead port.
+        if (oldPort != null && oldPort != port) {
+          unawaited(MediaManager().audioHandler.customAction(
+              'rebuildTranscodeUrls', const {'upcomingOnly': false}));
+        }
       } catch (e) {
         s.tunnelPort = null;
         s.tunnelToken = null;
@@ -446,19 +456,35 @@ class ServerManager {
   }
 
   /// Re-pair the active iroh server with a fresh pairing code (after a rotated
-  /// secret) and restart the tunnel with it. The caller should have validated the
-  /// code first (a successful test connection). Persists the new code.
-  Future<void> repairIrohPairingCode(String newCode) async {
+  /// secret) and restart the tunnel. Validates the new code by bringing the tunnel
+  /// up BEFORE persisting; on failure the previous code is restored (and re-dialed)
+  /// and nothing is written — so a wrong/typo code can't destroy a working one.
+  /// Returns true iff the new code connected.
+  Future<bool> repairIrohPairingCode(String newCode) async {
     final s = currentServer;
-    if (s == null || !s.isIroh) return;
-    s.irohPairingCode = newCode;
-    // Drop the rejected tunnel so ensureActiveTunnel re-dials with the new code.
-    IrohTunnel.instance.stop();
-    _activeTunnelCode = null;
-    s.tunnelPort = null;
-    await writeServerFile();
-    await ensureActiveTunnel(verify: true);
+    if (s == null || !s.isIroh) return false;
+    final oldCode = s.irohPairingCode;
+
+    Future<void> activate(String? code) async {
+      s.irohPairingCode = code;
+      IrohTunnel.instance.stop();
+      _activeTunnelCode = null;
+      s.tunnelPort = null;
+      s.tunnelToken = null;
+      await ensureActiveTunnel(verify: true);
+    }
+
+    // Try the new code WITHOUT persisting yet.
+    await activate(newCode);
+    if (IrohTunnel.instance.status == IrohTunnelStatus.connected) {
+      await writeServerFile(); // persist only a code that actually connected
+      _refreshTunnelStatus();
+      return true;
+    }
+    // Failed → roll back to the previous code and re-establish the old tunnel.
+    await activate(oldCode);
     _refreshTunnelStatus();
+    return false;
   }
 
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active
