@@ -352,7 +352,6 @@ class ServerManager {
         IrohTunnel.instance.stop();
         _activeTunnelCode = null;
       }
-      final oldPort = s.tunnelPort;
       _tunnelStarting = true;
       _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
       try {
@@ -360,20 +359,19 @@ class ServerManager {
         s.tunnelPort = port;
         s.tunnelToken = IrohTunnel.instance.localToken;
         _activeTunnelCode = s.irohPairingCode;
-        // A hard rebuild (re-pair, verify-when-down, server switch) binds a NEW
-        // loopback port + token, so any queued iroh stream URLs are stale. Rebuild
-        // them off the current effectiveBaseUrl (idempotent — no-op if unchanged)
-        // so resume / play doesn't load a dead port.
-        //
-        // Also rebuild on a fresh bind from null (oldPort == null) *while casting*:
-        // if a previous resume's start() failed it nulled tunnelPort, so this
-        // recovered bind would otherwise skip the rebuild and leave the renderer
-        // stranded on the dead old port. (When not casting, a null→port bind is a
-        // cold start with no live stream to reload, so leave that path unchanged.)
-        if (oldPort != port && (oldPort != null || CastManager().isCasting)) {
-          unawaited(MediaManager().audioHandler.customAction(
-              'rebuildTranscodeUrls', const {'upcomingOnly': false}));
-        }
+        // This bind set a loopback port + token. Any queued iroh stream URL built
+        // before now is stale, so rebuild them off the live effectiveBaseUrl.
+        // Unconditional on purpose: besides a port that changed on a reconnect /
+        // re-pair / server switch, the queue can also be restored at launch
+        // BEFORE the tunnel is up (a slow or failed first connect bakes
+        // http://127.0.0.1:0 with no token), and the retry that finally connects
+        // has no prior port — so a "changed-only" guard would skip exactly the
+        // case that strands the saved queue. Only an actual (re)start reaches here
+        // (the already-wired-up fast path returned above), and the rebuild no-ops
+        // when no URL actually changed. (Also reloads an active cast onto the fresh
+        // tunnel — see the no-drop note above.)
+        unawaited(MediaManager().audioHandler.customAction(
+            'rebuildTranscodeUrls', const {'upcomingOnly': false}));
       } catch (e) {
         s.tunnelPort = null;
         s.tunnelToken = null;
