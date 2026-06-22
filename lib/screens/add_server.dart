@@ -87,6 +87,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   String _storageMode = 'appLocal';
   // Full flavor only: accept a self-signed / untrusted TLS cert for this server.
   bool _allowSelfSigned = false;
+  // True when editing an existing iroh server. iroh connects through the loopback
+  // tunnel, not a fetchable URL, so the URL field is read-only, the self-signed
+  // TLS switch + Test-connection button are hidden, and Save skips the HTTP probe.
+  bool _editingIroh = false;
 
   // Show/hide toggle for the password field.
   bool _obscurePassword = true;
@@ -142,6 +146,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _storageBasePath = s.storageBasePath;
       _downloadFolderCtrl.text = s.localname;
       isEdit = true;
+      _editingIroh = s.isIroh;
       // An existing server saved without credentials is a public
       // server — start in public mode so the toggle reflects reality.
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
@@ -866,6 +871,15 @@ class MyCustomFormState extends State<MyCustomForm> {
   void _onSavePressed() {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+    if (_editingIroh) {
+      // iroh reaches the backend through the loopback tunnel, not a fetchable
+      // URL — the HTTP ping/login probe in checkServer() can't reach an iroh://
+      // URL and would always fail. The pairing already validated the connection,
+      // so persist the edited credentials/folder directly (URL stays unchanged).
+      setState(() => submitPending = true);
+      saveServer(Uri.parse(_urlCtrl.text));
+      return;
+    }
     checkServer();
   }
 
@@ -1715,22 +1729,29 @@ class MyCustomFormState extends State<MyCustomForm> {
             children: <Widget>[
               TextFormField(
                 controller: _urlCtrl,
+                // iroh server: reached through the loopback tunnel, not this URL
+                // (it's an iroh:// pairing id), so it's read-only when editing one.
+                enabled: !_editingIroh,
                 keyboardType: TextInputType.url,
                 autocorrect: false,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l.validatorUrlNeeded;
-                  }
-                  try {
-                    final parsed = Uri.parse(value);
-                    if (parsed.origin is Error || parsed.origin.isEmpty) {
-                      return l.validatorUrlParse;
-                    }
-                  } catch (_) {
-                    return l.validatorUrlParse;
-                  }
-                  return null;
-                },
+                // Skip the http/https validator for iroh — an iroh:// URL has no
+                // origin, so it would otherwise fail validation and block Save.
+                validator: _editingIroh
+                    ? null
+                    : (value) {
+                        if (value == null || value.isEmpty) {
+                          return l.validatorUrlNeeded;
+                        }
+                        try {
+                          final parsed = Uri.parse(value);
+                          if (parsed.origin is Error || parsed.origin.isEmpty) {
+                            return l.validatorUrlParse;
+                          }
+                        } catch (_) {
+                          return l.validatorUrlParse;
+                        }
+                        return null;
+                      },
                 decoration: InputDecoration(
                   labelText: l.fieldServerUrl,
                   hintText: 'https://mstream.example.com',
@@ -1754,8 +1775,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                 activeThumbColor: VelvetColors.primary,
               ),
               // Full flavor only: opt into a self-signed / untrusted TLS cert
-              // for this server (API + streaming). Hidden on the Play build.
-              if (!isPlayBuild)
+              // for this server (API + streaming). Hidden on the Play build, and
+              // for iroh (it tunnels over QUIC — there's no TLS cert to trust).
+              if (!isPlayBuild && !_editingIroh)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l.selfSignedTitle),
@@ -1811,35 +1833,40 @@ class MyCustomFormState extends State<MyCustomForm> {
                 ),
                 onSaved: (v) => _passwordCtrl.text = v ?? '',
               ),
-              SizedBox(height: 16),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: VelvetColors.textPrimary,
-                  side: BorderSide(color: VelvetColors.border2),
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(VelvetColors.radiusSmall),
+              // Test connection is an HTTP probe — meaningless for an iroh server
+              // (it's reached through the tunnel, tested during pairing), so hide
+              // it when editing one.
+              if (!_editingIroh) ...[
+                SizedBox(height: 16),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: VelvetColors.textPrimary,
+                    side: BorderSide(color: VelvetColors.border2),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
                   ),
+                  icon: _testing
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(VelvetColors.primary),
+                          ),
+                        )
+                      : Icon(Icons.network_check),
+                  label: Text(_testing ? l.testing : l.testConnectionButton),
+                  onPressed:
+                      _testing || submitPending ? null : _testConnection,
                 ),
-                icon: _testing
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation(VelvetColors.primary),
-                        ),
-                      )
-                    : Icon(Icons.network_check),
-                label: Text(_testing ? l.testing : l.testConnectionButton),
-                onPressed:
-                    _testing || submitPending ? null : _testConnection,
-              ),
-              if (_testResult != null) ...[
-                SizedBox(height: 10),
-                _statusBanner(_testResult!, _testSuccess ?? false),
+                if (_testResult != null) ...[
+                  SizedBox(height: 10),
+                  _statusBanner(_testResult!, _testSuccess ?? false),
+                ],
               ],
               // Storage location: App local (default) / Permanent / SD card
               // (the SD option only when a removable card is present, or when
