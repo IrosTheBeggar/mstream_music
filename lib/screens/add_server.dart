@@ -1476,6 +1476,12 @@ class MyCustomFormState extends State<MyCustomForm> {
   // the live tunnel adopted as the active connection, then switch to it.
   Future<void> _saveIrohServer(
       {required String code, required int port, required String jwt}) async {
+    // Backstop the one-iroh-server cap (the tab UI normally blocks reaching here).
+    if (ServerManager().hasIrohServer) {
+      if (mounted) setState(() => _irohSaving = false);
+      _showIrohResult(false, AppLocalizations.of(context).irohOneServerLimit);
+      return;
+    }
     final id = code.hashCode.toUnsigned(32).toRadixString(16);
     final username = _irohPublic ? '' : _irohUserCtrl.text;
     final password = _irohPublic ? '' : _irohPassCtrl.text;
@@ -1497,6 +1503,29 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Widget _buildIrohTab(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // One iroh server max (a single native tunnel). If one's already configured,
+    // show why instead of the pairing UI.
+    if (ServerManager().hasIrohServer) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 40, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.hub_outlined,
+                  size: 40, color: VelvetColors.textSecondary),
+              const SizedBox(height: 16),
+              Text(
+                l.irohOneServerLimit,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 20, 20, 24),

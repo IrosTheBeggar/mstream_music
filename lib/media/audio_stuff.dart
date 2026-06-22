@@ -18,6 +18,7 @@ import '../objects/server.dart';
 import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/app_messenger.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
@@ -126,6 +127,22 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       _emitCurrentMediaItem();
     });
+    // Tunnel-follows-queue (one-iroh-server cap): keep the iroh tunnel up whenever
+    // the queue holds a song from the iroh server, and let it go when none remain.
+    // Recomputed on every queue edit; with the cap, the first iroh match is THE
+    // iroh server. This is what makes a queue from the iroh server connect in the
+    // background while the default stays selected.
+    queue.listen((items) {
+      Server? iroh;
+      for (final it in items) {
+        final s = _serverFor(it);
+        if (s != null && s.isIroh) {
+          iroh = s;
+          break;
+        }
+      }
+      ServerManager().setQueueIrohServer(iroh);
+    });
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
     // so the BottomBar progress formula stops dividing by 1.
@@ -143,6 +160,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();
+      // A track that loads (vs. failing to load) clears the consecutive-failure
+      // count, so the skip-bad-track loop guard only trips on a genuine run of
+      // unplayable tracks.
+      if (state == BackendProcessingState.ready) _failedSkips = 0;
     });
     // A remote backend that loses its renderer mid-cast (TV off, Wi-Fi drop)
     // emits here; fall back to local playback at the same spot + a toast.
@@ -334,35 +355,141 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
   }
 
-  // just_audio surfaced a playback error. On an iroh server a mid-stream tunnel
-  // drop lands here; the supervisor reconnects on the SAME loopback port, so once
-  // it's back we re-seed the current source and resume at its position. Debounced
-  // (and guarded) so a persistently-failing source can't spin.
-  bool _recoveringPlayback = false;
-  DateTime? _lastPlaybackRecovery;
+  // just_audio surfaced a playback error (local stream path only — remote
+  // backends report failures via rendererLostStream). The split, keyed on the
+  // FAILED track's iroh server (the tunnel "follows playback", so it may not be
+  // the browsed server):
+  //  • iroh source whose tunnel is NOT live for it yet — launch, a cross-server
+  //    queue advance that needs a tunnel switch, or a mid-stream drop → recover in
+  //    place (ensure that server's tunnel, then re-seed + resume), don't skip;
+  //  • anything else (local/HTTP source, or an iroh source whose tunnel IS up and
+  //    it still failed = bad source) → warn and skip to the next track.
   void _onPlaybackError(Object error) {
-    if (_recoveringPlayback) return;
-    if (!identical(_backend, _localBackend)) return; // on-device stream path only
-    final server = ServerManager().currentServer;
-    if (server == null || !server.isIroh) return;
-    final now = DateTime.now();
-    if (_lastPlaybackRecovery != null &&
-        now.difference(_lastPlaybackRecovery!) < const Duration(seconds: 10)) {
+    if (!identical(_backend, _localBackend)) return;
+    // One error-handler at a time: while a recover or skip is in flight, ignore
+    // further errors (a burst for one failure, or the wrap-around after a skip).
+    // Whatever's playing when it finishes re-decides on its own fresh error.
+    if (_recoveringPlayback || _skipPending) return;
+    final idx = _localBackend.currentIndex;
+    final q = queue.value;
+    final failed = (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+    final itemServer = failed == null ? null : _serverFor(failed);
+    if (itemServer != null &&
+        itemServer.isIroh &&
+        !ServerManager().tunnelServes(itemServer)) {
+      // The tunnel isn't live for this track's iroh server — point it there and
+      // resume rather than skipping. (If it IS serving this server and the track
+      // still failed, that's a bad source → falls through to skip below.)
+      _recoverIrohPlayback(itemServer);
       return;
     }
+    // Serialize the skip through _switchChain (shared with recovery + backend
+    // switches, so none run concurrently on the backend); _skipPending collapses
+    // a burst of error events into the single skip.
+    _skipPending = true;
+    _switchChain = _switchChain
+        .then((_) => _skipFailedTrack(error))
+        .catchError((Object e) =>
+            castLog('skip-to-next after playback error failed', error: e))
+        .whenComplete(() => _skipPending = false);
+  }
+
+  // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
+  // drop (the supervisor reconnects the same loopback port) or a launch where the
+  // tunnel wasn't up when the queue was restored. The tunnel target is owned by
+  // the queue listener (this server's songs are queued); just await it for
+  // [server], then re-seed (URLs rebuilt on the (re)bind) + resume with the user's
+  // play intent. Per-server debounced + guarded so a failing source can't spin.
+  bool _recoveringPlayback = false;
+  // Per-server cooldown (keyed by localname) so a persistently-failing server
+  // can't spin on recovery.
+  final Map<String, DateTime> _lastRecoveryByServer = {};
+  void _recoverIrohPlayback(Server server) {
+    if (_recoveringPlayback) return;
+    final now = DateTime.now();
+    final last = _lastRecoveryByServer[server.localname];
+    if (last != null && now.difference(last) < const Duration(seconds: 10)) {
+      return;
+    }
+    // A transport drop isn't a bad source — don't let it eat the skip budget.
+    _failedSkips = 0;
     _recoveringPlayback = true;
-    _lastPlaybackRecovery = now;
+    _lastRecoveryByServer[server.localname] = now;
+    // The tunnel target is owned by the queue listener (this server's songs are
+    // queued, so it's already the target); just wait for it and re-seed.
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
       final pos = _localBackend.position;
       final idx = _localBackend.currentIndex ?? 0;
-      final ready = await ServerManager().awaitTunnelReady();
-      if (!ready) return; // tunnel didn't recover; the banner shows why
-      await _localBackend.setSources(queue.value);
-      await _localBackend.seek(pos, index: idx, play: true);
+      final ready = await ServerManager().awaitTunnelReady(server: server);
+      if (!ready) return; // tunnel didn't come up; the banner shows why
+      // Rebuild URLs against the now-live tunnel ourselves rather than reusing
+      // queue.value: a hard restart may have changed the port/token, and the
+      // concurrent rebuild-on-(re)bind might not have refreshed queue.value yet —
+      // _withRebuiltUrl uses the current effectiveBaseUrl, so these are always live.
+      final fresh = queue.value.map(_withRebuiltUrl).toList();
+      queue.add(fresh);
+      await _localBackend.setSources(fresh);
+      // Resume with the user's intent: a mid-stream drop while playing resumes
+      // playing; a launch-time recovery (never played) stays paused.
+      await _localBackend.seek(pos, index: idx, play: _playIntent);
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  // Consecutive failed tracks since one last loaded (reset on a `ready` state).
+  int _failedSkips = 0;
+  // True while a skip is chained/running — collapses an error burst into one skip
+  // and keeps the before/after index read uncontended.
+  bool _skipPending = false;
+  DateTime? _lastErrorToast;
+  // Collapse a run of failures into one toast (a long unplayable stretch
+  // shouldn't fire a snackbar per track).
+  static const Duration _kErrorToastGap = Duration(seconds: 4);
+
+  // A source failed to play — warn (debounced) and skip to the next track, bounded
+  // so an entirely-unplayable queue stops instead of looping (notably under
+  // repeat-all). Serialized via _switchChain by the caller; local backend only.
+  Future<void> _skipFailedTrack(Object error) async {
+    if (!identical(_backend, _localBackend)) return; // switched to a renderer meanwhile
+    final q = queue.value;
+    if (q.isEmpty) return;
+    castLog('playback error — skipping track', error: error);
+    _failedSkips++;
+    if (_failedSkips >= q.length) {
+      // Tried every track once and none loaded — the whole queue is unplayable.
+      _failedSkips = 0;
+      _showPlaybackErrorToast(
+          "Can't play these tracks — check your connection or server.");
+      await _localBackend.stop();
+      return;
+    }
+    _showPlaybackErrorToast('Skipping a track that won’t play.', debounce: true);
+    final before = _localBackend.currentIndex;
+    // seekToNext()'s Future completes only after _player.currentIndex is updated,
+    // so the post-await read reliably reflects the new position.
+    await _localBackend.seekToNext(); // shuffle/repeat-aware
+    if (_localBackend.currentIndex == before) {
+      // No-op → end of the queue with no repeat; stop rather than replay the
+      // failed track.
+      _failedSkips = 0;
+      await _localBackend.stop();
+      return;
+    }
+    unawaited(_localBackend.play());
+  }
+
+  void _showPlaybackErrorToast(String message, {bool debounce = false}) {
+    if (debounce) {
+      final now = DateTime.now();
+      if (_lastErrorToast != null &&
+          now.difference(_lastErrorToast!) < _kErrorToastGap) {
+        return;
+      }
+      _lastErrorToast = now;
+    }
+    showGlobalSnack(message);
   }
 
   // Re-seed the inherited customState with a typed CustomEvent default (it
@@ -424,15 +551,22 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[queue] add: ${mediaItem.title} (now ${queue.value.length})');
   }
 
+  // The user's intended play state, tracked across just_audio errors (which flip
+  // the backend's `playing` to false). A recovery uses this so a launch-time
+  // re-seed resumes PAUSED rather than autoplaying on open.
+  bool _playIntent = false;
+
   @override
   Future<void> play() {
     appLog('[play] play');
+    _playIntent = true;
     return _backend.play();
   }
 
   @override
   Future<void> pause() {
     appLog('[play] pause');
+    _playIntent = false;
     return _backend.pause();
   }
 
@@ -452,6 +586,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> stop() async {
     appLog('[play] stop');
+    _playIntent = false;
+    // Don't touch the tunnel here: it follows the QUEUE, not the play/stop state,
+    // so a stopped-but-still-queued iroh song keeps its tunnel (the queue listener
+    // tears it down when the iroh songs are actually removed/cleared).
     await _backend.stop();
     await super.stop();
   }
