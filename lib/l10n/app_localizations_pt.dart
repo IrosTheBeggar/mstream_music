@@ -1433,6 +1433,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get addServerTabUrl => 'Server URL';
 
   @override
+  String get addServerTabQuickConnect => 'Quick Connect';
+
+  @override
   String get irohConnectHeader => 'Connect peer-to-peer';
 
   @override

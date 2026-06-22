@@ -1261,7 +1261,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               indicatorColor: VelvetColors.primary,
               tabs: [
                 Tab(text: AppLocalizations.of(context).addServerTabUrl),
-                const Tab(text: 'iroh'),
+                Tab(text: AppLocalizations.of(context).addServerTabQuickConnect),
               ],
             ),
           ),

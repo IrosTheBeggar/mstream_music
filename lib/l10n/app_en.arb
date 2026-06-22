@@ -929,7 +929,11 @@
 
   "addServerTabUrl": "Server URL",
   "@addServerTabUrl": {
-    "description": "Add-server form: tab label for the classic HTTP URL connection (paired with the 'iroh' tab)."
+    "description": "Add-server form: tab label for the classic HTTP URL connection (paired with the 'Quick Connect' tab)."
+  },
+  "addServerTabQuickConnect": "Quick Connect",
+  "@addServerTabQuickConnect": {
+    "description": "Add-server form: tab label for the iroh peer-to-peer pairing flow (paired with the 'Server URL' tab)."
   },
   "irohConnectHeader": "Connect peer-to-peer",
   "@irohConnectHeader": {

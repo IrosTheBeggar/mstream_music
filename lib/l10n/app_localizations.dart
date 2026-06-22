@@ -2484,11 +2484,17 @@ abstract class AppLocalizations {
   /// **'Storage permission is needed to read Downloads'**
   String get importedShadersDownloadsNoPermission;
 
-  /// Add-server form: tab label for the classic HTTP URL connection (paired with the 'iroh' tab).
+  /// Add-server form: tab label for the classic HTTP URL connection (paired with the 'Quick Connect' tab).
   ///
   /// In en, this message translates to:
   /// **'Server URL'**
   String get addServerTabUrl;
+
+  /// Add-server form: tab label for the iroh peer-to-peer pairing flow (paired with the 'Server URL' tab).
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Connect'**
+  String get addServerTabQuickConnect;
 
   /// Header of the iroh tab on the add-server form.
   ///
