@@ -14,6 +14,7 @@ import 'package:path/path.dart' as path;
 import '../objects/download_tracker.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
+import '../media/cast_origin.dart' show irohLoopbackUri;
 
 class DownloadManager {
   DownloadManager._privateConstructor();
@@ -36,6 +37,9 @@ class DownloadManager {
   // doesn't queue one snackbar per skipped file.
   DateTime? _lastFatWarn;
   StreamSubscription<TaskUpdate>? _updatesSub;
+  // Cap on how many times a single download is re-resolved onto a fresh iroh
+  // tunnel URL after a hard rebuild, so a repeatedly-rotating tunnel can't loop.
+  static const int _kMaxReResolves = 2;
 
   Future<void> initDownloader() async {
     // background_downloader delivers status + progress for every task on a
@@ -44,7 +48,7 @@ class DownloadManager {
     _updatesSub = FileDownloader().updates.listen(_onUpdate);
   }
 
-  void _onUpdate(TaskUpdate update) {
+  Future<void> _onUpdate(TaskUpdate update) async {
     final DownloadTracker? dt = downloadMap[update.task.taskId];
     if (dt == null) return;
 
@@ -63,15 +67,21 @@ class DownloadManager {
           // local copy without a queue rebuild.
           break;
         case TaskStatus.failed:
-        case TaskStatus.notFound:
-          // Reset the row so a stuck partial bar doesn't imply a cached
-          // file that isn't there, and tell the user it didn't work.
+          // An iroh download's URL bakes in the loopback port + __lt token, and a
+          // hard tunnel rebuild rotates both (background_downloader's own retries
+          // reuse the same dead URL). Re-resolve against the live tunnel and
+          // re-enqueue before giving up — only then is it a genuine failure. The
+          // re-enqueued task carries its own tracker, so bail here without a toast.
+          if (await _reEnqueueOnLiveTunnel(dt, update.task)) return;
           dt.progress = 0;
           terminal = true;
-          final ctx = rootMessengerKey.currentContext;
-          showGlobalSnack(ctx != null
-              ? AppLocalizations.of(ctx).dlFailed
-              : 'A download failed — check your connection.');
+          _warnDownloadFailed();
+          break;
+        case TaskStatus.notFound:
+          // 404 — the source is genuinely gone; re-resolving wouldn't help.
+          dt.progress = 0;
+          terminal = true;
+          _warnDownloadFailed();
           break;
         case TaskStatus.canceled:
           dt.progress = 0;
@@ -106,6 +116,52 @@ class DownloadManager {
 
     // Re-emit so the Downloads screen's StreamBuilder rebuilds.
     _downloadStream.add(downloadMap);
+  }
+
+  void _warnDownloadFailed() {
+    final ctx = rootMessengerKey.currentContext;
+    // Reset the row (handled by the caller) and tell the user it didn't work.
+    showGlobalSnack(ctx != null
+        ? AppLocalizations.of(ctx).dlFailed
+        : 'A download failed — check your connection.');
+  }
+
+  // A failed iroh download may just have a stale loopback URL: the captured
+  // http://127.0.0.1:<port>/...&__lt=<token> is invalidated by a hard tunnel
+  // rebuild (server switch / re-pair / verify-when-down), and
+  // background_downloader's retries reuse it. Bring the tunnel back up, re-origin
+  // the URL onto the live port + token, and re-enqueue under a fresh task.
+  // Returns true when it re-enqueued (the caller treats the failure as
+  // non-terminal). Bounded by [_kMaxReResolves]; only fires when the URL actually
+  // changed, so a genuinely dead source or an unchanged tunnel still fails.
+  Future<bool> _reEnqueueOnLiveTunnel(DownloadTracker dt, Task failed) async {
+    final name = dt.serverName;
+    final dataPath = dt.dataPath;
+    if (name == null || dataPath == null) return false;
+    if (dt.reResolves >= _kMaxReResolves) return false;
+
+    final Server server;
+    try {
+      server = ServerManager().lookupServer(name);
+    } catch (_) {
+      return false; // server removed while the download lingered
+    }
+    if (!server.isIroh) return false; // only loopback URLs rotate this way
+
+    // Bring the tunnel up (rebuilds it if hard-down) and wait for a live port;
+    // if it can't connect, this is a real failure.
+    if (!await ServerManager().awaitTunnelReady(server: server)) return false;
+    final freshUrl = irohLoopbackUri(server, dt.serverUrl).toString();
+    if (freshUrl == dt.serverUrl) return false; // port + token didn't rotate
+
+    // Hand off to a fresh task: drop this one's bookkeeping so the re-enqueue's
+    // existence / in-flight guards pass, then go through the normal enqueue path
+    // (re-resolves the destination dir, applies retries) carrying the bumped count.
+    downloadMap.remove(failed.taskId);
+    _inFlight.remove(dt.filePath);
+    await downloadOneFile(freshUrl, name, dataPath,
+        referenceItem: dt.referenceDisplayItem, reResolves: dt.reResolves + 1);
+    return true;
   }
 
   void disposeDownloader() {}
@@ -170,7 +226,7 @@ class DownloadManager {
 
   Future<void> downloadOneFile(String downloadUrl, String serverName,
       String filepath,
-      {DisplayItem? referenceItem}) async {
+      {DisplayItem? referenceItem, int reResolves = 0}) async {
     String downloadDirectory = serverName + filepath;
 
     // The originating server may have been removed while this track lingered
@@ -250,7 +306,10 @@ class DownloadManager {
       _inFlight.add(downloadDirectory);
       downloadMap[task.taskId] =
           DownloadTracker(downloadUrl, downloadDirectory)
-            ..referenceDisplayItem = referenceItem;
+            ..referenceDisplayItem = referenceItem
+            ..serverName = serverName
+            ..dataPath = filepath
+            ..reResolves = reResolves;
       _downloadStream.add(downloadMap);
 
       await FileDownloader().enqueue(task);
