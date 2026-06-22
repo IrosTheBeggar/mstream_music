@@ -342,24 +342,46 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   // just_audio surfaced a playback error (local stream path only — remote
   // backends report failures via rendererLostStream). Two cases:
-  //  • an iroh tunnel drop (the transport blipped, the source is fine) → recover
-  //    in place once the tunnel is back, rather than skipping;
-  //  • the source itself failed (missing/bad track, server 500, dead URL) → warn
-  //    and skip to the next track.
+  //  • the FAILED source is served through the current iroh tunnel and that
+  //    tunnel is down/reconnecting → a transport blip, not a bad source: recover
+  //    in place once it's back rather than skipping (it bails gracefully if the
+  //    tunnel can't come back — the reconnect / re-pair banner explains why);
+  //  • anything else (bad/missing track, server 500, dead URL, or a connected
+  //    tunnel) → warn and skip to the next track.
   void _onPlaybackError(Object error) {
     if (!identical(_backend, _localBackend)) return;
-    final server = ServerManager().currentServer;
-    // Any non-connected iroh state is a transport problem, not a bad source:
-    // recover (which bails gracefully if the tunnel can't come back — the
-    // reconnect / re-pair banner then explains why) instead of burning through
-    // the queue. A connected tunnel that still errored means the source is bad.
-    if (server != null &&
-        server.isIroh &&
+    // One error-handler at a time: while a recover or skip is in flight, ignore
+    // further errors (a burst for one failure, or the wrap-around after a skip).
+    // Whatever's playing when it finishes re-decides on its own fresh error.
+    if (_recoveringPlayback || _skipPending) return;
+    // Resolve the FAILED item's server (not just currentServer): only the current
+    // iroh server's items ride the single live tunnel, so a local file, an HTTP
+    // item, or an item from a different iroh server can't be recovered by waiting
+    // on this tunnel — those skip instead.
+    final idx = _localBackend.currentIndex;
+    final q = queue.value;
+    final failed = (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+    final itemServer = failed == null
+        ? null
+        : ServerManager().byLocalname(failed.extras?['server'] as String?);
+    final current = ServerManager().currentServer;
+    if (itemServer != null &&
+        current != null &&
+        itemServer.localname == current.localname &&
+        current.isIroh &&
         IrohTunnel.instance.status != IrohTunnelStatus.connected) {
       _recoverIrohPlayback();
       return;
     }
-    unawaited(_skipFailedTrack(error));
+    // Serialize the skip through _switchChain (shared with recovery + backend
+    // switches, so none run concurrently on the backend); _skipPending collapses
+    // a burst of error events into the single skip.
+    _skipPending = true;
+    _switchChain = _switchChain
+        .then((_) => _skipFailedTrack(error))
+        .catchError((Object e) =>
+            castLog('skip-to-next after playback error failed', error: e))
+        .whenComplete(() => _skipPending = false);
   }
 
   // Recover on an iroh mid-stream tunnel drop: the supervisor reconnects on the
@@ -375,6 +397,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         now.difference(_lastPlaybackRecovery!) < const Duration(seconds: 10)) {
       return;
     }
+    // A transport drop isn't a bad source — don't let it eat the skip budget.
+    _failedSkips = 0;
     _recoveringPlayback = true;
     _lastPlaybackRecovery = now;
     _switchChain = _switchChain.then((_) async {
@@ -392,6 +416,9 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   // Consecutive failed tracks since one last loaded (reset on a `ready` state).
   int _failedSkips = 0;
+  // True while a skip is chained/running — collapses an error burst into one skip
+  // and keeps the before/after index read uncontended.
+  bool _skipPending = false;
   DateTime? _lastErrorToast;
   // Collapse a run of failures into one toast (a long unplayable stretch
   // shouldn't fire a snackbar per track).
@@ -399,13 +426,14 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   // A source failed to play — warn (debounced) and skip to the next track, bounded
   // so an entirely-unplayable queue stops instead of looping (notably under
-  // repeat-all). Local backend only; the iroh-recover case is handled above.
+  // repeat-all). Serialized via _switchChain by the caller; local backend only.
   Future<void> _skipFailedTrack(Object error) async {
+    if (!identical(_backend, _localBackend)) return; // switched to a renderer meanwhile
     final q = queue.value;
     if (q.isEmpty) return;
     castLog('playback error — skipping track', error: error);
     _failedSkips++;
-    if (_failedSkips > q.length) {
+    if (_failedSkips >= q.length) {
       // Tried every track once and none loaded — the whole queue is unplayable.
       _failedSkips = 0;
       _showPlaybackErrorToast(
@@ -414,20 +442,18 @@ class AudioPlayerHandler extends BaseAudioHandler
       return;
     }
     _showPlaybackErrorToast('Skipping a track that won’t play.', debounce: true);
-    try {
-      final before = _localBackend.currentIndex;
-      await _localBackend.seekToNext(); // shuffle/repeat-aware
-      if (_localBackend.currentIndex == before) {
-        // seekToNext was a no-op → end of the queue with no repeat; stop rather
-        // than replay the failed track.
-        _failedSkips = 0;
-        await _localBackend.stop();
-        return;
-      }
-      unawaited(_localBackend.play());
-    } catch (e) {
-      castLog('skip-to-next after playback error failed', error: e);
+    final before = _localBackend.currentIndex;
+    // seekToNext()'s Future completes only after _player.currentIndex is updated,
+    // so the post-await read reliably reflects the new position.
+    await _localBackend.seekToNext(); // shuffle/repeat-aware
+    if (_localBackend.currentIndex == before) {
+      // No-op → end of the queue with no repeat; stop rather than replay the
+      // failed track.
+      _failedSkips = 0;
+      await _localBackend.stop();
+      return;
     }
+    unawaited(_localBackend.play());
   }
 
   void _showPlaybackErrorToast(String message, {bool debounce = false}) {
