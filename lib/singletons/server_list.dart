@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
-import '../util/server_compat.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
 import './log_manager.dart';
@@ -124,49 +123,11 @@ class ServerManager {
       for (var s in serverList) {
         getServerPaths(s);
       }
-      // Probe saved servers in the background; flips the active server
-      // away from an unsupported build without blocking startup.
-      unawaited(_screenServers());
     } else {
       BrowserManager().noServerScreen();
     }
   }
 
-  // Marks every saved server this client doesn't support. Runs after the
-  // UI has already shown the first server (so startup isn't gated on the
-  // network); if the active server turns out to be unsupported, falls
-  // back to the first supported one, or the no-server screen if none.
-  Future<void> _screenServers() async {
-    await Future.wait(serverList.map((Server s) async {
-      // iroh servers speak the same API through the tunnel; the build-compat
-      // probe needs a live tunnel, so treat them as supported (skip the probe).
-      if (s.isIroh) {
-        s.unsupported = false;
-        return;
-      }
-      s.unsupported = !await isServerSupported(s.url);
-    }));
-
-    if (currentServer?.unsupported != true) return;
-
-    Server? next;
-    for (final Server s in serverList) {
-      if (!s.unsupported) {
-        next = s;
-        break;
-      }
-    }
-    currentServer = next;
-    _currentServerStream.sink.add(currentServer);
-    // Re-emit the list so list-bound UIs (e.g. the manage-servers iroh path chip,
-    // which keys off the active server) re-evaluate against the new currentServer.
-    _serverListStream.sink.add(serverList);
-    if (next != null) {
-      BrowserManager().goToNavScreen();
-    } else {
-      BrowserManager().noServerScreen();
-    }
-  }
 
   /// True when an iroh server is already configured. Only one is supported (a
   /// single native tunnel), so the add-server flow gates a second one.
@@ -232,10 +193,6 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
-    if (server.unsupported) {
-      if (throwErr) throw Exception('Failed to connect to server');
-      return;
-    }
     // An iroh server can only be pinged through its live tunnel; skip when the
     // tunnel isn't up (e.g. a non-active iroh server at startup).
     if (server.isIroh && server.tunnelPort == null) {

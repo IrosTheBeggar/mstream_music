@@ -23,7 +23,6 @@ import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
-import '../util/server_compat.dart';
 
 class AddServerScreen extends StatelessWidget {
   const AddServerScreen({super.key});
@@ -333,11 +332,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
 
     try {
-      // Fail unsupported builds with the same generic message Save uses.
-      if (!await isServerSupported(url.toString())) {
-        _showTestResult(false, l.testCouldNotConnect);
-        return;
-      }
 
       // 1) Unauthenticated ping — succeeds for public servers (and any
       //    server that doesn't gate /api/v1/ping behind auth).
@@ -465,20 +459,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     });
     Uri lol = Uri.parse(_urlCtrl.text);
     http.Response response;
-
-    // Compatibility gate: refuse server builds this client doesn't
-    // support, surfacing only a generic failure (no special-casing
-    // shown to the user).
-    if (!await isServerSupported(lol.toString())) {
-      if (mounted) {
-        setState(() {
-          submitPending = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(l.connectFailedSnack)));
-      }
-      return;
-    }
 
     try {
       // Do a quick check on /ping to see if this server even needs authentication
