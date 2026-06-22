@@ -6,7 +6,6 @@ import 'package:rxdart/rxdart.dart';
 import '../media/cast_target.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/settings.dart';
-import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../l10n/app_localizations.dart';
 
@@ -20,20 +19,10 @@ class CastPickerSheet extends StatefulWidget {
 }
 
 class _CastPickerSheetState extends State<CastPickerSheet> {
-  // An iroh server's stream is a phone-loopback tunnel URL a renderer can't reach
-  // directly; casting relays it through the on-device LAN proxy (LocalMediaServer).
-  // That works for audio, but the visualizer cast transcodes the source on-device
-  // and can't yet read an iroh loopback source — so the visualizer toggle (only)
-  // stays hidden for iroh.
-  final bool _irohActive = ServerManager().currentServer?.isIroh == true;
-
   // Sticky choice: when checked, picking a Chromecast streams the visualizer.
-  // Forced off for iroh — the persisted setting must not leak in, since the
-  // toggle that could clear it is hidden for iroh (otherwise a user who enabled
-  // it on a normal server would feed a 127.0.0.1 loopback source to the on-device
-  // transcoder, the exact path the hidden toggle exists to prevent).
-  late bool _visualizer =
-      !_irohActive && SettingsManager().castVisualizerEnabled;
+  // Works for iroh too: the transcoder reads the iroh loopback source on-device
+  // (re-origined to the live tunnel — see ChromecastPlaybackBackend).
+  late bool _visualizer = SettingsManager().castVisualizerEnabled;
 
   // After an initial window the "searching…" spinner settles to a quiet hint so
   // it doesn't imply an endless scan — discovery keeps running underneath while
@@ -114,11 +103,8 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                         selected: t == active,
                         icon: _iconFor(t.kind),
                         onTap: () {
-                          // Belt-and-suspenders: never hand the visualizer path
-                          // an iroh loopback source (the flag is already forced
-                          // off for iroh above; this guards future refactors).
-                          CastManager().selectTarget(t,
-                              visualizer: _irohActive ? false : _visualizer);
+                          CastManager()
+                              .selectTarget(t, visualizer: _visualizer);
                           Navigator.of(context).pop();
                         },
                       ),
@@ -161,37 +147,34 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                   ),
                 ),
             ],
-            // Cast-the-visualizer transcodes the source on-device; that path
-            // can't yet read an iroh server's loopback source, so it's hidden for
-            // iroh (audio casting above still works). Chromecast-only.
-            if (!_irohActive) ...[
-              const Divider(height: 24),
-              // Stream the app's own visualizer (rendered + encoded on-device) to
-              // the TV instead of plain audio. Chromecast only; the choice is
-              // sticky (persisted) and applied when a device is picked above.
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                activeColor: VelvetColors.primary,
-                value: _visualizer,
-                onChanged: (v) {
-                  setState(() => _visualizer = v ?? false);
-                  SettingsManager().setCastVisualizerEnabled(_visualizer);
-                },
-                title: Text(
-                  l.castVisualizer,
-                  style: TextStyle(color: VelvetColors.textPrimary),
-                ),
-                subtitle: Text(
-                  l.castVisualizerSubtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: VelvetColors.textSecondary,
-                  ),
+            // Stream the app's own visualizer (rendered + encoded on-device) to
+            // the TV instead of plain audio. Chromecast only; the choice is
+            // sticky (persisted) and applied when a device is picked above. Works
+            // for an iroh server too — the transcoder reads its loopback source
+            // directly on-device (re-origined to the live tunnel).
+            const Divider(height: 24),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              activeColor: VelvetColors.primary,
+              value: _visualizer,
+              onChanged: (v) {
+                setState(() => _visualizer = v ?? false);
+                SettingsManager().setCastVisualizerEnabled(_visualizer);
+              },
+              title: Text(
+                l.castVisualizer,
+                style: TextStyle(color: VelvetColors.textPrimary),
+              ),
+              subtitle: Text(
+                l.castVisualizerSubtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: VelvetColors.textSecondary,
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

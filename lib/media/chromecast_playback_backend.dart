@@ -307,7 +307,20 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     final dir = '$parent/$_loadCounter';
     _currentVizDir = dir;
 
-    final source = (item.extras?['localPath'] as String?) ?? item.id;
+    // The transcoder reads this source on-device. A downloaded track is read
+    // straight from disk; otherwise, for an iroh server, item.id is a stored
+    // loopback URL whose port/token may have gone stale — re-origin to the live
+    // tunnel (loopback IS reachable on the phone, so no LAN proxy is needed for
+    // the transcoder's own input, only for the renderer's HLS pull).
+    final localPath = item.extras?['localPath'] as String?;
+    final String source;
+    if (localPath != null && File(localPath).existsSync()) {
+      source = localPath;
+    } else {
+      final iroh = irohServerFor(item);
+      source =
+          iroh != null ? irohLoopbackUri(iroh, item.id).toString() : item.id;
+    }
     final cfg = await resolveVisualizerCastConfig();
     if (gen != _loadGen) throw StateError('superseded');
     final quality = SettingsManager().castVisualizerQuality;

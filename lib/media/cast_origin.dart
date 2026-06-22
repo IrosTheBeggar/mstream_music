@@ -21,25 +21,33 @@ Server? irohServerFor(MediaItem item) {
   return (s != null && s.isIroh) ? s : null;
 }
 
-/// Re-origin a loopback iroh URL through the LAN proxy so a renderer can reach
-/// it. [loopback] is a stored `http://127.0.0.1:<port>/...` URL; its path/query
-/// are rebound to [server]'s LIVE tunnel — current port + `__lt` token — so a
-/// port/token that went stale since the URL was built self-heals, and the
-/// loopback token never appears in the LAN-facing URL. The caller must have
-/// started [LocalMediaServer] first ([LocalMediaServer.ensureStarted]).
-Uri irohProxyUri(Server server, String loopback) {
-  final u = Uri.parse(loopback);
+/// Rebind a stored loopback iroh URL to [server]'s LIVE tunnel — current port +
+/// `__lt` token — so a port/token that went stale since the URL was built
+/// self-heals. [stored] is a `http://127.0.0.1:<port>/...` URL. Returns the live
+/// loopback URL; the caller decides whether to relay it through the LAN proxy
+/// ([irohProxyUri], for a renderer that can't reach loopback) or hand it to an
+/// on-device consumer that can (the visualizer transcoder).
+Uri irohLoopbackUri(Server server, String stored) {
+  final u = Uri.parse(stored);
   final base = Uri.parse(server.effectiveBaseUrl); // http://127.0.0.1:<livePort>
   final q = Map<String, String>.from(u.queryParameters);
   if (server.tunnelToken != null) q['__lt'] = server.tunnelToken!;
-  final upstream = u.replace(
+  return u.replace(
     scheme: base.scheme,
     host: base.host,
     port: base.port,
     queryParameters: q.isEmpty ? null : q,
   );
-  return LocalMediaServer().registerProxy(upstream);
 }
+
+/// Re-origin a loopback iroh URL through the LAN proxy so a renderer can reach
+/// it. [loopback] is a stored `http://127.0.0.1:<port>/...` URL, rebound to the
+/// LIVE tunnel ([irohLoopbackUri]) so a stale port/token self-heals; the loopback
+/// `__lt` token rides only the inward leg and never appears in the LAN-facing
+/// URL. The caller must have started [LocalMediaServer] first
+/// ([LocalMediaServer.ensureStarted]).
+Uri irohProxyUri(Server server, String loopback) =>
+    LocalMediaServer().registerProxy(irohLoopbackUri(server, loopback));
 
 /// The album-art URL to hand a renderer: full-resolution [castArtUrl], re-
 /// originated through the LAN proxy when the track is from an iroh server.
