@@ -12,7 +12,7 @@ import '../theme/velvet_theme.dart';
 ///   * every bundled visualizer shader with author + license + source
 ///     (CC-BY-3.0 attribution for Cyber Fuji is a license requirement,
 ///     not just courtesy),
-///   * vendored native libraries (projectM, KissFFT),
+///   * vendored native libraries (projectM, KissFFT, iroh),
 ///   * a link to Flutter's auto-generated license page for the rest of
 ///     the pub dependencies.
 class AttributionsScreen extends StatelessWidget {
@@ -44,6 +44,8 @@ class AttributionsScreen extends StatelessWidget {
         'LGPL-2.1', 'https://github.com/projectM-visualizer/projectm'),
     _Attribution('KissFFT', 'Mark Borgerding', 'BSD-3-Clause',
         'https://github.com/mborgerding/kissfft'),
+    _Attribution('iroh', 'n0 — peer-to-peer QUIC networking',
+        'Apache-2.0 / MIT', 'https://github.com/n0-computer/iroh'),
   ];
 
   const AttributionsScreen({super.key});
