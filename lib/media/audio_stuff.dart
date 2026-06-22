@@ -18,9 +18,11 @@ import '../objects/server.dart';
 import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/app_messenger.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
+import '../native/iroh_tunnel.dart';
 import '../util/camelot.dart';
 import '../util/stream_url.dart';
 
@@ -143,6 +145,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) stop();
+      // A track that loads (vs. failing to load) clears the consecutive-failure
+      // count, so the skip-bad-track loop guard only trips on a genuine run of
+      // unplayable tracks.
+      if (state == BackendProcessingState.ready) _failedSkips = 0;
     });
     // A remote backend that loses its renderer mid-cast (TV off, Wi-Fi drop)
     // emits here; fall back to local playback at the same spot + a toast.
@@ -334,17 +340,36 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
   }
 
-  // just_audio surfaced a playback error. On an iroh server a mid-stream tunnel
-  // drop lands here; the supervisor reconnects on the SAME loopback port, so once
-  // it's back we re-seed the current source and resume at its position. Debounced
-  // (and guarded) so a persistently-failing source can't spin.
+  // just_audio surfaced a playback error (local stream path only — remote
+  // backends report failures via rendererLostStream). Two cases:
+  //  • an iroh tunnel drop (the transport blipped, the source is fine) → recover
+  //    in place once the tunnel is back, rather than skipping;
+  //  • the source itself failed (missing/bad track, server 500, dead URL) → warn
+  //    and skip to the next track.
+  void _onPlaybackError(Object error) {
+    if (!identical(_backend, _localBackend)) return;
+    final server = ServerManager().currentServer;
+    // Any non-connected iroh state is a transport problem, not a bad source:
+    // recover (which bails gracefully if the tunnel can't come back — the
+    // reconnect / re-pair banner then explains why) instead of burning through
+    // the queue. A connected tunnel that still errored means the source is bad.
+    if (server != null &&
+        server.isIroh &&
+        IrohTunnel.instance.status != IrohTunnelStatus.connected) {
+      _recoverIrohPlayback();
+      return;
+    }
+    unawaited(_skipFailedTrack(error));
+  }
+
+  // Recover on an iroh mid-stream tunnel drop: the supervisor reconnects on the
+  // SAME loopback port, so once it's back we re-seed the current source and resume
+  // at its position. Debounced (and guarded) so a persistently-failing source
+  // can't spin.
   bool _recoveringPlayback = false;
   DateTime? _lastPlaybackRecovery;
-  void _onPlaybackError(Object error) {
+  void _recoverIrohPlayback() {
     if (_recoveringPlayback) return;
-    if (!identical(_backend, _localBackend)) return; // on-device stream path only
-    final server = ServerManager().currentServer;
-    if (server == null || !server.isIroh) return;
     final now = DateTime.now();
     if (_lastPlaybackRecovery != null &&
         now.difference(_lastPlaybackRecovery!) < const Duration(seconds: 10)) {
@@ -363,6 +388,58 @@ class AudioPlayerHandler extends BaseAudioHandler
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  // Consecutive failed tracks since one last loaded (reset on a `ready` state).
+  int _failedSkips = 0;
+  DateTime? _lastErrorToast;
+  // Collapse a run of failures into one toast (a long unplayable stretch
+  // shouldn't fire a snackbar per track).
+  static const Duration _kErrorToastGap = Duration(seconds: 4);
+
+  // A source failed to play — warn (debounced) and skip to the next track, bounded
+  // so an entirely-unplayable queue stops instead of looping (notably under
+  // repeat-all). Local backend only; the iroh-recover case is handled above.
+  Future<void> _skipFailedTrack(Object error) async {
+    final q = queue.value;
+    if (q.isEmpty) return;
+    castLog('playback error — skipping track', error: error);
+    _failedSkips++;
+    if (_failedSkips > q.length) {
+      // Tried every track once and none loaded — the whole queue is unplayable.
+      _failedSkips = 0;
+      _showPlaybackErrorToast(
+          "Can't play these tracks — check your connection or server.");
+      await _localBackend.stop();
+      return;
+    }
+    _showPlaybackErrorToast('Skipping a track that won’t play.', debounce: true);
+    try {
+      final before = _localBackend.currentIndex;
+      await _localBackend.seekToNext(); // shuffle/repeat-aware
+      if (_localBackend.currentIndex == before) {
+        // seekToNext was a no-op → end of the queue with no repeat; stop rather
+        // than replay the failed track.
+        _failedSkips = 0;
+        await _localBackend.stop();
+        return;
+      }
+      unawaited(_localBackend.play());
+    } catch (e) {
+      castLog('skip-to-next after playback error failed', error: e);
+    }
+  }
+
+  void _showPlaybackErrorToast(String message, {bool debounce = false}) {
+    if (debounce) {
+      final now = DateTime.now();
+      if (_lastErrorToast != null &&
+          now.difference(_lastErrorToast!) < _kErrorToastGap) {
+        return;
+      }
+      _lastErrorToast = now;
+    }
+    showGlobalSnack(message);
   }
 
   // Re-seed the inherited customState with a typed CustomEvent default (it
