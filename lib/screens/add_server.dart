@@ -87,6 +87,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   String _storageMode = 'appLocal';
   // Full flavor only: accept a self-signed / untrusted TLS cert for this server.
   bool _allowSelfSigned = false;
+  // True when editing an existing iroh server. iroh connects through the loopback
+  // tunnel, not a fetchable URL, so the URL field is read-only, the self-signed
+  // TLS switch + Test-connection button are hidden, and Save skips the HTTP probe.
+  bool _editingIroh = false;
 
   // Show/hide toggle for the password field.
   bool _obscurePassword = true;
@@ -142,6 +146,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _storageBasePath = s.storageBasePath;
       _downloadFolderCtrl.text = s.localname;
       isEdit = true;
+      _editingIroh = s.isIroh;
       // An existing server saved without credentials is a public
       // server — start in public mode so the toggle reflects reality.
       if ((s.username ?? '').isEmpty && (s.password ?? '').isEmpty) {
@@ -189,11 +194,11 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
-  // The auto folder name: "${subdomain}-${domain}", plus a stable short id
-  // when another configured server already uses that name — so two servers
-  // on the same domain don't share one download directory. (Checks the
-  // server list, not the filesystem, so re-adding a lost server can still
-  // reuse its orphaned folder for recovery.)
+  // The auto folder name: "${subdomain}-${domain}-${id}" — always suffixed with
+  // a short random id (stable per screen) so no two servers ever share a
+  // download directory, even on the same domain or after a re-add. The folder
+  // field stays editable, so re-adding a lost server can still recover its
+  // downloads by pointing at the old folder name.
   //
   // A bare IP host (e.g. a LAN server at 192.168.1.71) makes a poor,
   // collision-prone folder name, so those become "my-server-N" with the lowest
@@ -202,7 +207,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (_hostIsIp(_urlCtrl.text)) return _nextMyServerName();
     final base = _defaultLocalName(_urlCtrl.text);
     if (base == null) return null;
-    return _localNameTaken(base) ? '$base-$_folderSuffix' : base;
+    return '$base-$_folderSuffix';
   }
 
   // True when the server URL's host is a bare IP address (v4 or v6).
@@ -866,6 +871,15 @@ class MyCustomFormState extends State<MyCustomForm> {
   void _onSavePressed() {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
+    if (_editingIroh) {
+      // iroh reaches the backend through the loopback tunnel, not a fetchable
+      // URL — the HTTP ping/login probe in checkServer() can't reach an iroh://
+      // URL and would always fail. The pairing already validated the connection,
+      // so persist the edited credentials/folder directly (URL stays unchanged).
+      setState(() => submitPending = true);
+      saveServer(Uri.parse(_urlCtrl.text));
+      return;
+    }
     checkServer();
   }
 
@@ -1247,7 +1261,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               indicatorColor: VelvetColors.primary,
               tabs: [
                 Tab(text: AppLocalizations.of(context).addServerTabUrl),
-                const Tab(text: 'iroh'),
+                Tab(text: AppLocalizations.of(context).addServerTabQuickConnect),
               ],
             ),
           ),
@@ -1715,22 +1729,29 @@ class MyCustomFormState extends State<MyCustomForm> {
             children: <Widget>[
               TextFormField(
                 controller: _urlCtrl,
+                // iroh server: reached through the loopback tunnel, not this URL
+                // (it's an iroh:// pairing id), so it's read-only when editing one.
+                enabled: !_editingIroh,
                 keyboardType: TextInputType.url,
                 autocorrect: false,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return l.validatorUrlNeeded;
-                  }
-                  try {
-                    final parsed = Uri.parse(value);
-                    if (parsed.origin is Error || parsed.origin.isEmpty) {
-                      return l.validatorUrlParse;
-                    }
-                  } catch (_) {
-                    return l.validatorUrlParse;
-                  }
-                  return null;
-                },
+                // Skip the http/https validator for iroh — an iroh:// URL has no
+                // origin, so it would otherwise fail validation and block Save.
+                validator: _editingIroh
+                    ? null
+                    : (value) {
+                        if (value == null || value.isEmpty) {
+                          return l.validatorUrlNeeded;
+                        }
+                        try {
+                          final parsed = Uri.parse(value);
+                          if (parsed.origin is Error || parsed.origin.isEmpty) {
+                            return l.validatorUrlParse;
+                          }
+                        } catch (_) {
+                          return l.validatorUrlParse;
+                        }
+                        return null;
+                      },
                 decoration: InputDecoration(
                   labelText: l.fieldServerUrl,
                   hintText: 'https://mstream.example.com',
@@ -1754,8 +1775,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                 activeThumbColor: VelvetColors.primary,
               ),
               // Full flavor only: opt into a self-signed / untrusted TLS cert
-              // for this server (API + streaming). Hidden on the Play build.
-              if (!isPlayBuild)
+              // for this server (API + streaming). Hidden on the Play build, and
+              // for iroh (it tunnels over QUIC — there's no TLS cert to trust).
+              if (!isPlayBuild && !_editingIroh)
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l.selfSignedTitle),
@@ -1811,84 +1833,109 @@ class MyCustomFormState extends State<MyCustomForm> {
                 ),
                 onSaved: (v) => _passwordCtrl.text = v ?? '',
               ),
-              SizedBox(height: 16),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: VelvetColors.textPrimary,
-                  side: BorderSide(color: VelvetColors.border2),
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(VelvetColors.radiusSmall),
+              // Test connection is an HTTP probe — meaningless for an iroh server
+              // (it's reached through the tunnel, tested during pairing), so hide
+              // it when editing one.
+              if (!_editingIroh) ...[
+                SizedBox(height: 16),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: VelvetColors.textPrimary,
+                    side: BorderSide(color: VelvetColors.border2),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
                   ),
+                  icon: _testing
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(VelvetColors.primary),
+                          ),
+                        )
+                      : Icon(Icons.network_check),
+                  label: Text(_testing ? l.testing : l.testConnectionButton),
+                  onPressed:
+                      _testing || submitPending ? null : _testConnection,
                 ),
-                icon: _testing
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation(VelvetColors.primary),
-                        ),
-                      )
-                    : Icon(Icons.network_check),
-                label: Text(_testing ? l.testing : l.testConnectionButton),
-                onPressed:
-                    _testing || submitPending ? null : _testConnection,
-              ),
-              if (_testResult != null) ...[
-                SizedBox(height: 10),
-                _statusBanner(_testResult!, _testSuccess ?? false),
+                if (_testResult != null) ...[
+                  SizedBox(height: 10),
+                  _statusBanner(_testResult!, _testSuccess ?? false),
+                ],
               ],
-              // Storage location: App local (default) / Permanent / SD card
-              // (the SD option only when a removable card is present, or when
-              // this server is already configured for it). Replaces the old
-              // SD-card toggle; see _storageHelp for the per-mode caveats.
-              SizedBox(height: 16),
-              Text(l.storageLocationLabel,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-              SizedBox(height: 6),
-              InputDecorator(
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: Icon(Icons.sd_storage_outlined),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _displayStorageMode,
-                    isExpanded: true,
+              // Storage location. Play build keeps it simple: internal storage by
+              // default, with an optional "Save to SD card" switch when a
+              // removable card is present (the card's app-specific dir — no
+              // permission, but cleared on uninstall). Full build offers the
+              // app-local / external / permanent / SD modes via a dropdown. Either
+              // way the download folder is auto-named (the field below).
+              if (isPlayBuild) ...[
+                if (_hasSdCard) ...[
+                  SizedBox(height: 16),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: Icon(Icons.sd_storage_outlined),
+                    title: Text(l.storageSdSwitchTitle),
+                    subtitle: Text(
+                      l.storageSdSwitchSubtitle,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                    value: _storageMode == 'sdCardApp',
+                    onChanged: submitPending
+                        ? null
+                        : (v) => setState(() =>
+                            _storageMode = v ? 'sdCardApp' : 'appLocal'),
+                    activeThumbColor: VelvetColors.primary,
+                  ),
+                ],
+              ] else ...[
+                SizedBox(height: 16),
+                Text(l.storageLocationLabel,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                SizedBox(height: 6),
+                InputDecorator(
+                  decoration: InputDecoration(
                     isDense: true,
-                    dropdownColor: VelvetColors.surface,
-                    style: TextStyle(color: VelvetColors.textPrimary),
-                    items: [
-                      DropdownMenuItem(
-                          value: 'appLocal', child: Text(l.storageAppLocal)),
-                      DropdownMenuItem(
-                          value: 'appExternal',
-                          child: Text(l.storageAppExternal)),
-                      // Permanent / SD card write to a user-chosen shared-storage
-                      // folder, which needs All-files-access — full flavor only.
-                      // The Play build omits the permission from its manifest, so
-                      // these modes aren't offered there.
-                      if (!isPlayBuild)
+                    prefixIcon: Icon(Icons.sd_storage_outlined),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _displayStorageMode,
+                      isExpanded: true,
+                      isDense: true,
+                      dropdownColor: VelvetColors.surface,
+                      style: TextStyle(color: VelvetColors.textPrimary),
+                      items: [
+                        DropdownMenuItem(
+                            value: 'appLocal', child: Text(l.storageAppLocal)),
+                        DropdownMenuItem(
+                            value: 'appExternal',
+                            child: Text(l.storageAppExternal)),
+                        // Permanent / SD card write to a user-chosen shared-storage
+                        // folder, which needs All-files-access (full flavor only).
                         DropdownMenuItem(
                             value: 'permanent',
                             child: Text(l.storagePermanent)),
-                      if (!isPlayBuild &&
-                          (_hasSdCard || _storageMode == 'sdCard'))
-                        DropdownMenuItem(
-                            value: 'sdCard', child: Text(l.storageSdCard)),
-                    ],
-                    onChanged: submitPending ? null : _onStorageModeChanged,
+                        if (_hasSdCard || _storageMode == 'sdCard')
+                          DropdownMenuItem(
+                              value: 'sdCard', child: Text(l.storageSdCard)),
+                      ],
+                      onChanged: submitPending ? null : _onStorageModeChanged,
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: 8),
-              _storageHelp(),
+                SizedBox(height: 8),
+                _storageHelp(),
+              ],
               if (_storageMode == 'permanent' ||
                   _storageMode == 'sdCard') ...[
                 SizedBox(height: 10),

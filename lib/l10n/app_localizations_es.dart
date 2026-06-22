@@ -1106,6 +1106,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get storageSdCard => 'Tarjeta SD';
 
   @override
+  String get storageSdSwitchTitle => 'Save to SD card';
+
+  @override
+  String get storageSdSwitchSubtitle =>
+      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+
+  @override
   String get storageHelpAppLocal =>
       'Guardado dentro de la aplicación. Se elimina al desinstalar o borrar los datos de la app.';
 
@@ -1427,6 +1434,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addServerTabUrl => 'Server URL';
+
+  @override
+  String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
   String get irohConnectHeader => 'Connect peer-to-peer';

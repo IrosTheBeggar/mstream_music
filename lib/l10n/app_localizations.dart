@@ -1938,6 +1938,18 @@ abstract class AppLocalizations {
   /// **'SD card'**
   String get storageSdCard;
 
+  /// No description provided for @storageSdSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to SD card'**
+  String get storageSdSwitchTitle;
+
+  /// No description provided for @storageSdSwitchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.'**
+  String get storageSdSwitchSubtitle;
+
   /// No description provided for @storageHelpAppLocal.
   ///
   /// In en, this message translates to:
@@ -2472,11 +2484,17 @@ abstract class AppLocalizations {
   /// **'Storage permission is needed to read Downloads'**
   String get importedShadersDownloadsNoPermission;
 
-  /// Add-server form: tab label for the classic HTTP URL connection (paired with the 'iroh' tab).
+  /// Add-server form: tab label for the classic HTTP URL connection (paired with the 'Quick Connect' tab).
   ///
   /// In en, this message translates to:
   /// **'Server URL'**
   String get addServerTabUrl;
+
+  /// Add-server form: tab label for the iroh peer-to-peer pairing flow (paired with the 'Server URL' tab).
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Connect'**
+  String get addServerTabQuickConnect;
 
   /// Header of the iroh tab on the add-server form.
   ///
