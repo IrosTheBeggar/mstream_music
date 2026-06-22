@@ -1938,6 +1938,18 @@ abstract class AppLocalizations {
   /// **'SD card'**
   String get storageSdCard;
 
+  /// No description provided for @storageSdSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to SD card'**
+  String get storageSdSwitchTitle;
+
+  /// No description provided for @storageSdSwitchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.'**
+  String get storageSdSwitchSubtitle;
+
   /// No description provided for @storageHelpAppLocal.
   ///
   /// In en, this message translates to:

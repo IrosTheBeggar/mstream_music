@@ -763,6 +763,8 @@
   "storageAppLocal": "App local",
   "storagePermanent": "Permanent",
   "storageSdCard": "SD card",
+  "storageSdSwitchTitle": "Save to SD card",
+  "storageSdSwitchSubtitle": "Stored in the SD card's app folder — no permission needed, but removed if you uninstall the app.",
   "storageHelpAppLocal": "Saved inside the app. Deleted when you uninstall or clear the app.",
   "storageHelpPermanent": "Saved to a folder you choose. Survives uninstalling the app. Requires \"All files access\".",
   "storageHelpSdCard": "Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don't let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.",

@@ -255,16 +255,14 @@ class DownloadManager {
       return;
     }
 
-    // A user-chosen folder (Permanent / SD card) may sit on a FAT/exFAT
-    // filesystem that can't store certain names. When the name is illegal,
-    // probe the actual destination (cached) — the same source of truth
-    // migration uses, rather than trusting the mode label — and skip it
-    // (it would fail to write anyway), warning once.
-    final isUserFolder =
-        server.storageMode == 'permanent' || server.storageMode == 'sdCard';
-    if (isUserFolder &&
-        hasFatIllegalChars(downloadDirectory) &&
-        await isFatLikeDir(dir.path)) {
+    // Any destination that can sit on a FAT/exFAT volume — the SD card
+    // (sdCardApp) or a user-chosen Permanent/SD folder — may be unable to store
+    // certain names. The name check is cheap; only when it trips do we probe the
+    // actual destination filesystem (cached — the same source of truth migration
+    // uses, rather than trusting the mode label) and skip the file (it would fail
+    // to write anyway), warning once. Internal storage (ext4/f2fs) never trips
+    // isFatLikeDir, so this is a no-op there.
+    if (hasFatIllegalChars(downloadDirectory) && await isFatLikeDir(dir.path)) {
       _warnFatSkip();
       return;
     }

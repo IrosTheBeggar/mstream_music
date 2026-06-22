@@ -1108,6 +1108,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get storageSdCard => 'SD-Karte';
 
   @override
+  String get storageSdSwitchTitle => 'Save to SD card';
+
+  @override
+  String get storageSdSwitchSubtitle =>
+      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+
+  @override
   String get storageHelpAppLocal =>
       'Innerhalb der App gespeichert. Wird beim Deinstallieren oder Leeren der App gelöscht.';
 

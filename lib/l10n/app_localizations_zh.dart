@@ -1044,6 +1044,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageSdCard => 'SD 卡';
 
   @override
+  String get storageSdSwitchTitle => 'Save to SD card';
+
+  @override
+  String get storageSdSwitchSubtitle =>
+      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+
+  @override
   String get storageHelpAppLocal => '保存在应用内部。卸载或清除应用时会被删除。';
 
   @override

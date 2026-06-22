@@ -174,6 +174,14 @@ class FileExplorer {
         // option offered in the UI; 'legacyExternal' is the migration-only
         // value that resolves to the same place.
         return getExternalStorageDirectory();
+      case 'sdCardApp':
+        // The SD card's app-specific dir (Android/data/<pkg>/files on the
+        // removable volume). Play-compliant (no permission), but cleared on
+        // uninstall. getExternalStorageDirectories returns one Directory per
+        // volume; the second is the SD card. Null when no card is present — the
+        // caller null-guards, so that reads as "no local copy here".
+        final dirs = await getExternalStorageDirectories();
+        return (dirs != null && dirs.length > 1) ? dirs[1] : null;
       case 'appLocal':
       default:
         return getApplicationDocumentsDirectory();
