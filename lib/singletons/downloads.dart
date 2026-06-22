@@ -237,6 +237,14 @@ class DownloadManager {
         baseDirectory: BaseDirectory.root,
         directory: targetDir,
         updates: Updates.statusAndProgress,
+        // Survive a transient network interruption (Wi-Fi blip, Wi-Fi<->cellular
+        // handover). Without this, background_downloader defaults to retries: 0,
+        // so the moment the network drops WorkManager cancels the in-flight
+        // worker and the download fails permanently instead of resuming when the
+        // network returns. Retries back off exponentially and only surface a
+        // terminal `failed` once exhausted; the intermediate `waitingToRetry`
+        // status is already treated as non-terminal in _onUpdate.
+        retries: 5,
       );
 
       _inFlight.add(downloadDirectory);
