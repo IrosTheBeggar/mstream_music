@@ -14,6 +14,7 @@ import '../native/iroh_tunnel.dart';
 import '../media/cast_target.dart';
 import 'cast_manager.dart';
 import './media.dart';
+import './queue_store.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -102,9 +103,22 @@ class ServerManager {
 
     if (serverList.isNotEmpty) {
       currentServer = serverList[0];
-      // Bring up the tunnel for an iroh default server BEFORE the browser queries
-      // it and before the queue is restored (main.dart gates QueueStore.init on
-      // loadServerList completing).
+      // If a saved queue would resume on a *different* iroh server, make that the
+      // active one. The shim holds a single tunnel, so a non-active iroh server's
+      // tunnel is down and its restored queue items would bake against a dead
+      // loopback port (fixed only by a later manual re-select). Activating it here
+      // — before QueueStore.init restores (main.dart gates that on loadServerList
+      // completing) — brings its tunnel up so the items resolve to a live URL.
+      // HTTP/local resume targets need no tunnel, so they leave the primary active.
+      final resumeServerName = await QueueStore().peekResumeServer();
+      if (resumeServerName != null) {
+        final resumeServer = byLocalname(resumeServerName);
+        if (resumeServer != null && resumeServer.isIroh) {
+          currentServer = resumeServer;
+        }
+      }
+      // Bring up the tunnel for an iroh active server BEFORE the browser queries
+      // it and before the queue is restored.
       await ensureActiveTunnel();
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);

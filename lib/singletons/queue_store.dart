@@ -81,6 +81,32 @@ class QueueStore {
           ? AudioServiceRepeatMode.all
           : AudioServiceRepeatMode.none;
 
+  /// Localname of the server the saved queue would resume on — its current-index
+  /// item's `extras['server']` — or null when there's no resumable queue or that
+  /// item is local. Lets startup bring up the right (iroh) tunnel and make that
+  /// server active BEFORE the queue is restored, so its items rebuild against a
+  /// live tunnel instead of a dead loopback port. Cheap: reads + parses the file
+  /// but builds no MediaItems.
+  Future<String?> peekResumeServer() async {
+    if (!SettingsManager().resumeQueue) return null;
+    try {
+      final file = await _file;
+      if (!await file.exists()) return null;
+      final dynamic raw = jsonDecode(await file.readAsString());
+      if (raw is! Map || raw['version'] != _schemaVersion) return null;
+      final dynamic items = raw['items'];
+      if (items is! List || items.isEmpty) return null;
+      int index = (raw['index'] is int) ? raw['index'] as int : 0;
+      if (index < 0 || index >= items.length) index = 0;
+      final entry = items[index];
+      if (entry is! Map) return null;
+      final extras = entry['extras'];
+      return (extras is Map) ? extras['server'] as String? : null;
+    } catch (_) {
+      return null; // a corrupt/unreadable file must never block startup
+    }
+  }
+
   Future<void> _restore() async {
     if (!SettingsManager().resumeQueue) return; // feature disabled
     final file = await _file;
