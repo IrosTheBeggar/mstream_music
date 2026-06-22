@@ -1419,13 +1419,41 @@ class MyCustomFormState extends State<MyCustomForm> {
       final v = version;
       final base =
           v != null ? l.irohTestConnectedVersion(v) : l.irohTestConnected;
+      // Detect whether the server requires auth: an unauthenticated ping that
+      // returns 200 means it's public. Public -> skip the sign-in form and save
+      // straight away; otherwise reveal the form (no public toggle — we already
+      // know it isn't public).
+      bool isPublic = false;
+      try {
+        final ping = await http
+            .get(Uri.parse('http://127.0.0.1:$port/api/v1/ping?__lt=$lt'))
+            .timeout(Duration(seconds: 8));
+        isPublic = ping.statusCode == 200;
+      } catch (_) {
+        // Probe failed (blip / endpoint quirk) — fall back to the sign-in form
+        // rather than wrongly saving a public server.
+      }
+      if (!mounted) {
+        IrohTunnel.instance.stop();
+        return;
+      }
       setState(() {
-        _irohTesting = false;
+        // Public: stay "testing" through the straight-to-save below so the Test
+        // button can't be re-tapped mid-save. Private: clear it and reveal the
+        // sign-in form.
+        _irohTesting = isPublic;
         _irohTestSuccess = true;
         _irohTestResult = base + pathSuffix;
         _irohPort = port;
-        _irohSignedInReady = true;
+        _irohPublic = isPublic;
+        _irohSignedInReady = !isPublic;
       });
+      if (isPublic) {
+        // No credentials needed — save immediately (the form pops on success;
+        // the one-iroh cap backstop in _saveIrohServer clears state otherwise).
+        showGlobalSnack(l.connectionSuccessful);
+        await _saveIrohServer(code: code, port: port, jwt: '');
+      }
     } on IrohTunnelException catch (e) {
       IrohTunnel.instance.stop();
       _showIrohResult(false, e.message);
@@ -1647,19 +1675,12 @@ class MyCustomFormState extends State<MyCustomForm> {
                       color: VelvetColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.irohPublicServer,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary, fontSize: 14)),
-                value: _irohPublic,
-                onChanged:
-                    _irohSaving ? null : (v) => setState(() => _irohPublic = v),
-                activeThumbColor: VelvetColors.primary,
-              ),
+              SizedBox(height: 12),
+              // No public-server toggle: the test already determined this server
+              // needs auth (a public one would have skipped straight to saved).
               TextField(
                 controller: _irohUserCtrl,
-                enabled: !_irohPublic && !_irohSaving,
+                enabled: !_irohSaving,
                 autocorrect: false,
                 keyboardType: TextInputType.emailAddress,
                 style: TextStyle(color: VelvetColors.textPrimary),
@@ -1671,7 +1692,7 @@ class MyCustomFormState extends State<MyCustomForm> {
               SizedBox(height: 12),
               TextField(
                 controller: _irohPassCtrl,
-                enabled: !_irohPublic && !_irohSaving,
+                enabled: !_irohSaving,
                 obscureText: true,
                 autocorrect: false,
                 enableSuggestions: false,
