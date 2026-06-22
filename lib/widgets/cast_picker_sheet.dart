@@ -20,21 +20,26 @@ class CastPickerSheet extends StatefulWidget {
 }
 
 class _CastPickerSheetState extends State<CastPickerSheet> {
-  // Sticky choice: when checked, picking a Chromecast streams the visualizer.
-  late bool _visualizer = SettingsManager().castVisualizerEnabled;
-
-  // After an initial window the "searching…" spinner settles to a quiet hint so
-  // it doesn't imply an endless scan — discovery keeps running underneath while
-  // the sheet is open, so a device that wakes up later still appears.
-  bool _searchSettled = false;
-  Timer? _searchTimer;
-
   // An iroh server's stream is a phone-loopback tunnel URL a renderer can't reach
   // directly; casting relays it through the on-device LAN proxy (LocalMediaServer).
   // That works for audio, but the visualizer cast transcodes the source on-device
   // and can't yet read an iroh loopback source — so the visualizer toggle (only)
   // stays hidden for iroh.
   final bool _irohActive = ServerManager().currentServer?.isIroh == true;
+
+  // Sticky choice: when checked, picking a Chromecast streams the visualizer.
+  // Forced off for iroh — the persisted setting must not leak in, since the
+  // toggle that could clear it is hidden for iroh (otherwise a user who enabled
+  // it on a normal server would feed a 127.0.0.1 loopback source to the on-device
+  // transcoder, the exact path the hidden toggle exists to prevent).
+  late bool _visualizer =
+      !_irohActive && SettingsManager().castVisualizerEnabled;
+
+  // After an initial window the "searching…" spinner settles to a quiet hint so
+  // it doesn't imply an endless scan — discovery keeps running underneath while
+  // the sheet is open, so a device that wakes up later still appears.
+  bool _searchSettled = false;
+  Timer? _searchTimer;
 
   @override
   void initState() {
@@ -109,8 +114,11 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
                         selected: t == active,
                         icon: _iconFor(t.kind),
                         onTap: () {
-                          CastManager()
-                              .selectTarget(t, visualizer: _visualizer);
+                          // Belt-and-suspenders: never hand the visualizer path
+                          // an iroh loopback source (the flag is already forced
+                          // off for iroh above; this guards future refactors).
+                          CastManager().selectTarget(t,
+                              visualizer: _irohActive ? false : _visualizer);
                           Navigator.of(context).pop();
                         },
                       ),

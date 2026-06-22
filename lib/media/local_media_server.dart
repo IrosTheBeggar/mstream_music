@@ -349,7 +349,7 @@ class LocalMediaServer {
       res.headers.set(
           HttpHeaders.contentTypeHeader,
           upRes.headers.value(HttpHeaders.contentTypeHeader) ??
-              mimeForPath(_basename(upstream.path)));
+              _proxyFallbackType(upstream.path));
       final cr = upRes.headers.value(HttpHeaders.contentRangeHeader);
       if (cr != null) res.headers.set(HttpHeaders.contentRangeHeader, cr);
       res.headers.set(HttpHeaders.acceptRangesHeader, 'bytes');
@@ -383,6 +383,20 @@ class LocalMediaServer {
         await res.close();
       } catch (_) {}
     }
+  }
+
+  // Content-Type fallback for a proxied upstream that omits the header. Unlike
+  // the file-serving branch (always audio), the proxy relays BOTH the iroh audio
+  // stream and the iroh album-art image, so the audio-only mimeForPath would
+  // mislabel a header-less art relay as audio/mpeg. Recognize image extensions
+  // here, then defer to the audio sniff for the stream case.
+  String _proxyFallbackType(String path) {
+    final name = _basename(path).toLowerCase();
+    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.webp')) return 'image/webp';
+    if (name.endsWith('.gif')) return 'image/gif';
+    return mimeForPath(path);
   }
 
   // Body length from a `Content-Range: bytes <start>-<end>/<total>` header.

@@ -180,11 +180,15 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       await LocalMediaServer().ensureStarted();
       return LocalMediaServer().registerFile(localPath);
     }
-    // (A downloaded iroh track carries a localPath and was served as a local file
-    // above — faster, and it skips the tunnel.)
     final iroh = irohServerFor(item);
     if (iroh != null) {
       await LocalMediaServer().ensureStarted();
+      // A downloaded iroh track is already on disk — serve it from there (faster,
+      // and it skips the tunnel relay). Its id is a 127.0.0.1 loopback URL, so
+      // isNetwork is true and the disk branch above is bypassed; handle it here.
+      if (localPath != null && File(localPath).existsSync()) {
+        return LocalMediaServer().registerFile(localPath);
+      }
       return irohProxyUri(iroh, item.id);
     }
     return Uri.parse(item.id);
