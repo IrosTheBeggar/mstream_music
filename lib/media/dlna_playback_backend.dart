@@ -9,6 +9,7 @@ import 'package:meta/meta.dart';
 
 import 'cast_art.dart';
 import 'cast_log.dart';
+import 'cast_origin.dart';
 import 'emulated_playlist_backend.dart';
 import 'local_media_server.dart';
 import 'playback_backend.dart';
@@ -50,9 +51,11 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   static const int _kMaxPollFailures = 4;
 
   // ── Transport ──
-  // DLNA renderers fetch the URL themselves. A network id (server URL) is
-  // handed over as-is; a local-only item (file-explorer track — id is a UUID)
-  // is served from the phone's LocalMediaServer so the renderer can reach it.
+  // DLNA renderers fetch the URL themselves. A plain HTTP server id is handed
+  // over as-is; a local-only item (file-explorer track — id is a UUID) is served
+  // from the phone's LocalMediaServer; an iroh server's id is the phone-loopback
+  // tunnel URL the renderer can't reach, so it's relayed through the
+  // LocalMediaServer proxy (re-bound to the live tunnel).
   Future<Uri> _resolveUri(MediaItem item) async {
     final localPath = item.extras?['localPath'] as String?;
     final isNetwork =
@@ -61,12 +64,21 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       await LocalMediaServer().ensureStarted();
       return LocalMediaServer().registerFile(localPath);
     }
+    // (A downloaded iroh track carries a localPath and was served as a local file
+    // above — faster, and it skips the tunnel.)
+    final iroh = irohServerFor(item);
+    if (iroh != null) {
+      await LocalMediaServer().ensureStarted();
+      return irohProxyUri(iroh, item.id);
+    }
     return Uri.parse(item.id);
   }
 
   AudioMetadata _metaFor(MediaItem item) {
-    // Full-res art (drop the compress= size param) — looks sharp on a TV.
-    final art = castArtUrl(item);
+    // Full-res art (drop the compress= size param) — looks sharp on a TV; for an
+    // iroh server it's relayed through the LAN proxy (LocalMediaServer already
+    // started by _resolveUri above) so the renderer can fetch it.
+    final art = castArtUriFor(item);
     return AudioMetadata(
       title: item.title,
       artist: item.artist,

@@ -29,6 +29,8 @@ class LocalMediaServer {
   final Map<String, String> _files = <String, String>{}; // token -> abs path
   final Map<String, String> _types = <String, String>{}; // token -> content type
   final Map<String, String> _dirs = <String, String>{}; // token -> directory
+  final Map<String, Uri> _proxies = <String, Uri>{}; // token -> upstream loopback URL
+  HttpClient? _proxyClient; // reused for the iroh relay leg (keep-alive to loopback)
 
   bool get isRunning => _server != null;
 
@@ -91,6 +93,43 @@ class LocalMediaServer {
         pathSegments: [token, playlist]);
   }
 
+  /// Register an upstream loopback URL ([upstream], an iroh
+  /// `http://127.0.0.1:<port>/...` tunnel URL a renderer can't reach) and return
+  /// a LAN URL that reverse-proxies to it. Used to cast an iroh server's stream /
+  /// art: the renderer fetches from the phone's LAN address and this server relays
+  /// the bytes over the tunnel (forwarding Range so seeking works). The upstream's
+  /// `__lt` loopback token rides only the inward leg — it's never in the LAN-facing
+  /// URL. Reuses the token for an already-registered upstream. Requires
+  /// [ensureStarted].
+  Uri registerProxy(Uri upstream) {
+    final server = _server;
+    final host = _host;
+    if (server == null || host == null) {
+      throw StateError('registerProxy called before ensureStarted');
+    }
+    // Dedup on the URL minus the `__lt` token: the same track reloaded (seek /
+    // replay / a tunnel reconnect that rotated the token) reuses its slot rather
+    // than leaking a new entry — so the map stays bounded by distinct tracks, not
+    // by loads. The stored upstream is refreshed to the current token for relays.
+    final key = _proxyKey(upstream);
+    for (final e in _proxies.entries) {
+      if (_proxyKey(e.value) == key) {
+        _proxies[e.key] = upstream;
+        return _proxyUrlFor(host, server.port, e.key, upstream);
+      }
+    }
+    final token = _newToken();
+    _proxies[token] = upstream;
+    return _proxyUrlFor(host, server.port, token, upstream);
+  }
+
+  // Dedup key for a proxied upstream: the URL without the rotating `__lt` token.
+  String _proxyKey(Uri upstream) {
+    if (!upstream.queryParameters.containsKey('__lt')) return upstream.toString();
+    final q = Map<String, String>.from(upstream.queryParameters)..remove('__lt');
+    return upstream.replace(queryParameters: q.isEmpty ? null : q).toString();
+  }
+
   /// Close the server and forget all registered files. Called when casting ends.
   Future<void> stop() async {
     final s = _server;
@@ -99,6 +138,10 @@ class LocalMediaServer {
     _files.clear();
     _types.clear();
     _dirs.clear();
+    _proxies.clear();
+    final pc = _proxyClient;
+    _proxyClient = null;
+    pc?.close(force: true);
     if (s != null) {
       try {
         await s.close(force: true);
@@ -115,14 +158,33 @@ class LocalMediaServer {
         pathSegments: [token, _basename(absPath)],
       );
 
+  // The LAN URL a renderer fetches for a proxied upstream. Keep the upstream's
+  // basename as the last segment so a content-type-by-extension sniff (and the
+  // Chromecast contentType) matches what a direct stream would yield.
+  Uri _proxyUrlFor(String host, int port, String token, Uri upstream) {
+    final name = _basename(upstream.path);
+    return Uri(
+      scheme: 'http',
+      host: host,
+      port: port,
+      pathSegments: name.isEmpty ? [token] : [token, name],
+    );
+  }
+
   String _newToken() {
+    // 32 hex chars = 128-bit, matching the Rust loopback token — an unguessable
+    // path segment is the only thing gating a LAN peer from a registered resource.
     const chars = '0123456789abcdef';
     final sb = StringBuffer();
-    for (var i = 0; i < 16; i++) {
+    for (var i = 0; i < 32; i++) {
       sb.write(chars[_rng.nextInt(chars.length)]);
     }
     final t = sb.toString();
-    return (_files.containsKey(t) || _dirs.containsKey(t)) ? _newToken() : t;
+    return (_files.containsKey(t) ||
+            _dirs.containsKey(t) ||
+            _proxies.containsKey(t))
+        ? _newToken()
+        : t;
   }
 
   String? _hlsType(String name) {
@@ -191,6 +253,9 @@ class LocalMediaServer {
     try {
       final seg = req.uri.pathSegments;
       final token = seg.isEmpty ? null : seg.first;
+      if (token != null && _proxies.containsKey(token)) {
+        return _proxyRequest(req, _proxies[token]!);
+      }
       String? path;
       String? contentType;
       if (token != null) {
@@ -256,6 +321,75 @@ class LocalMediaServer {
         await res.close();
       } catch (_) {}
     }
+  }
+
+  // Relay a renderer's GET/HEAD to the [upstream] loopback URL, forwarding Range
+  // so the renderer can seek and copying back status + content headers verbatim.
+  // The upstream is the iroh tunnel's loopback listener; bytes stream through
+  // without buffering the whole track. A failed inner leg surfaces as 502 so the
+  // renderer (and the cast-failure fallback) treats it as a load error.
+  Future<void> _proxyRequest(HttpRequest req, Uri upstream) async {
+    final res = req.response;
+    HttpClientResponse? upRes; // tracked so a failed relay can release the socket
+    try {
+      final client = _proxyClient ??=
+          (HttpClient()..connectionTimeout = const Duration(seconds: 15));
+      final method = req.method == 'HEAD' ? 'HEAD' : 'GET';
+      final up = await client.openUrl(method, upstream);
+      // Forward the byte range; ask for identity so Content-Length / Content-Range
+      // stay exact (audio isn't gzipped, but be explicit rather than rely on it).
+      final range = req.headers.value(HttpHeaders.rangeHeader);
+      if (range != null) up.headers.set(HttpHeaders.rangeHeader, range);
+      up.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
+      upRes = await up.close();
+
+      res.statusCode = upRes.statusCode;
+      // Fall back to a basename sniff when the upstream omits Content-Type: a DLNA
+      // renderer has no separate content-type field and relies on this header.
+      res.headers.set(
+          HttpHeaders.contentTypeHeader,
+          upRes.headers.value(HttpHeaders.contentTypeHeader) ??
+              mimeForPath(_basename(upstream.path)));
+      final cr = upRes.headers.value(HttpHeaders.contentRangeHeader);
+      if (cr != null) res.headers.set(HttpHeaders.contentRangeHeader, cr);
+      res.headers.set(HttpHeaders.acceptRangesHeader, 'bytes');
+      // A 206 may omit Content-Length (only Content-Range is required); derive it
+      // from the range so the renderer always knows the body size for seeking.
+      var len = upRes.headers.contentLength;
+      if (len < 0 && cr != null) len = _lenFromContentRange(cr);
+      if (method == 'HEAD') {
+        // Raw header (not res.contentLength, which would make close() enforce a
+        // matching body on this empty response).
+        if (len >= 0) res.headers.set(HttpHeaders.contentLengthHeader, '$len');
+        await upRes.drain<void>();
+        await res.close();
+        return;
+      }
+      if (len >= 0) res.contentLength = len; // else leave -1 → chunked
+      await res.addStream(upRes);
+      upRes = null; // body fully relayed — nothing to release
+      await res.close();
+    } catch (e) {
+      castLog('LocalMediaServer proxy relay failed', error: e);
+      // Drain the half-read upstream so the reused keep-alive client doesn't pool
+      // a dirty socket (e.g. the renderer aborted mid-stream on a seek).
+      if (upRes != null) {
+        try {
+          await upRes.drain<void>();
+        } catch (_) {}
+      }
+      try {
+        res.statusCode = HttpStatus.badGateway;
+        await res.close();
+      } catch (_) {}
+    }
+  }
+
+  // Body length from a `Content-Range: bytes <start>-<end>/<total>` header.
+  int _lenFromContentRange(String cr) {
+    final m = RegExp(r'bytes\s+(\d+)-(\d+)').firstMatch(cr);
+    if (m == null) return -1;
+    return int.parse(m.group(2)!) - int.parse(m.group(1)!) + 1;
   }
 
   Future<void> _notFound(HttpResponse res) async {
