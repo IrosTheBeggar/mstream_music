@@ -937,6 +937,10 @@
   "@irohConnectBody": {
     "description": "Explainer under the iroh tab header on the add-server form."
   },
+  "irohOneServerLimit": "Only one peer-to-peer (iroh) server is supported. Remove the existing one to connect a different server.",
+  "@irohOneServerLimit": {
+    "description": "Shown on the iroh add-server tab when an iroh server already exists (only one is allowed)."
+  },
   "irohPairingCodeLabel": "Pairing code",
   "@irohPairingCodeLabel": {
     "description": "Text field label for the iroh pairing code (add-server iroh tab and the re-pair sheet)."

@@ -115,7 +115,7 @@ class ServerManager {
       if (resumeName != null && resumeName != currentServer?.localname) {
         final rs = byLocalname(resumeName);
         if (rs != null && rs.isIroh) {
-          setPlaybackServer(rs);
+          setQueueIrohServer(rs);
           await awaitTunnelReady(server: rs);
         }
       }
@@ -168,7 +168,17 @@ class ServerManager {
     }
   }
 
+  /// True when an iroh server is already configured. Only one is supported (a
+  /// single native tunnel), so the add-server flow gates a second one.
+  bool get hasIrohServer => serverList.any((s) => s.isIroh);
+
   Future<void> addServer(Server newServer) async {
+    // One iroh server max (single tunnel). The add-server UI blocks this; this is
+    // the code-level backstop so no other path can add a second.
+    if (newServer.isIroh && hasIrohServer) {
+      showGlobalSnack('Only one iroh server is supported.');
+      return;
+    }
     serverList.add(newServer);
 
     if (currentServer == null) {
@@ -318,32 +328,31 @@ class ServerManager {
   // can't race the single tunnel's start/stop (mirrors the cast _switchChain).
   Future<void> _tunnelChain = Future.value();
 
-  // The iroh server of the currently-playing/queued track, when it differs from
-  // (or equals) the browsed server. The single tunnel "follows playback": it
-  // serves this server so a queue from a non-default iroh server plays while the
-  // default stays selected. Pushed by the audio handler on every track change.
-  Server? _playbackServer;
+  // With the one-iroh-server cap, the tunnel "follows the queue": it's up when
+  // the iroh server is the browsed server OR its songs are in the play queue.
+  // This holds the iroh server the queue currently references (pushed by the
+  // audio handler on queue changes); null when no queued song is from it.
+  Server? _queueIrohServer;
 
-  /// Point the (single) tunnel at the iroh server backing the current track.
-  /// [s] is the playing track's server (or null for a local / HTTP / no track).
-  /// No-op when unchanged; otherwise re-evaluates the tunnel target.
-  void setPlaybackServer(Server? s) {
+  /// Record the iroh server the play queue references ([s]), or null when no
+  /// queued song is from an iroh server. No-op when unchanged; otherwise
+  /// re-evaluates the tunnel target. Called by the audio handler on queue changes.
+  void setQueueIrohServer(Server? s) {
     final next = (s != null && s.isIroh) ? s : null;
-    if (next?.localname == _playbackServer?.localname) return;
-    _playbackServer = next;
+    if (next?.localname == _queueIrohServer?.localname) return;
+    _queueIrohServer = next;
     unawaited(ensureActiveTunnel());
   }
 
-  // Which iroh server the single tunnel should currently serve. Playback wins:
-  // the playing track's iroh server (so a background queue plays under a non-iroh
-  // default); otherwise the browsed server when it's iroh. Null → no tunnel.
-  // (With one tunnel, browsing a *different* iroh server than the one playing
-  // can't load until playback stops — rare, since setups usually have one.)
+  // Which iroh server the single tunnel should serve: the browsed server when it
+  // IS the iroh server, OR the iroh server whose songs are queued. Null → no
+  // tunnel. (One-iroh-server cap, so these resolve to the same server when both
+  // apply — there's never a second iroh server to contend for the tunnel.)
   Server? _tunnelTargetServer() {
-    final p = _playbackServer;
-    if (p != null && p.isIroh) return p;
     final c = currentServer;
-    return (c != null && c.isIroh) ? c : null;
+    if (c != null && c.isIroh) return c;
+    final q = _queueIrohServer;
+    return (q != null && q.isIroh) ? q : null;
   }
 
   /// True when the tunnel currently has a server to serve (the browsed iroh server
@@ -594,6 +603,12 @@ class ServerManager {
       Server removeThisServer, bool removeSyncedFiles) async {
     serverList.remove(removeThisServer);
     _serverListStream.sink.add(serverList);
+    // Drop a stale queue-tunnel pointer to the removed server so ensureActiveTunnel
+    // below doesn't try to keep its tunnel up (the queue listener would clear it on
+    // the next edit, but do it now).
+    if (_queueIrohServer?.localname == removeThisServer.localname) {
+      _queueIrohServer = null;
+    }
 
     if (serverList.isEmpty) {
       // force the browser to rerender so it displays

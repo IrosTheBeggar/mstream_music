@@ -119,20 +119,29 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       if (index != null && index >= 0 && index < queue.value.length) {
         final item = queue.value[index];
-        // The single iroh tunnel follows playback: point it at this track's iroh
-        // server so a queue from a non-default iroh server connects in the
-        // background (default stays selected) and a multi-server queue re-targets
-        // the tunnel as it advances. Null for a local/HTTP track (no tunnel).
-        ServerManager().setPlaybackServer(_serverFor(item));
         if (item.id != _lastPlayLoggedId) {
           _lastPlayLoggedId = item.id;
           appLog('[play] track ${index + 1}/${queue.value.length}: '
               '${item.title}');
         }
-      } else {
-        ServerManager().setPlaybackServer(null);
       }
       _emitCurrentMediaItem();
+    });
+    // Tunnel-follows-queue (one-iroh-server cap): keep the iroh tunnel up whenever
+    // the queue holds a song from the iroh server, and let it go when none remain.
+    // Recomputed on every queue edit; with the cap, the first iroh match is THE
+    // iroh server. This is what makes a queue from the iroh server connect in the
+    // background while the default stays selected.
+    queue.listen((items) {
+      Server? iroh;
+      for (final it in items) {
+        final s = _serverFor(it);
+        if (s != null && s.isIroh) {
+          iroh = s;
+          break;
+        }
+      }
+      ServerManager().setQueueIrohServer(iroh);
     });
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
@@ -385,16 +394,15 @@ class AudioPlayerHandler extends BaseAudioHandler
         .whenComplete(() => _skipPending = false);
   }
 
-  // Bring the single tunnel to [server] (the failed track's iroh server) and
-  // resume in place: covers a mid-stream drop (supervisor reconnects the same
-  // loopback port), a launch with a not-yet-connected tunnel, and a cross-server
-  // queue advance that needs a tunnel switch. setPlaybackServer re-targets the
-  // tunnel; awaitTunnelReady(server:) waits for THAT server; then re-seed (live
-  // URLs, rebuilt on the (re)bind) + resume. Debounced + guarded so it can't spin.
+  // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
+  // drop (the supervisor reconnects the same loopback port) or a launch where the
+  // tunnel wasn't up when the queue was restored. The tunnel target is owned by
+  // the queue listener (this server's songs are queued); just await it for
+  // [server], then re-seed (URLs rebuilt on the (re)bind) + resume with the user's
+  // play intent. Per-server debounced + guarded so a failing source can't spin.
   bool _recoveringPlayback = false;
-  // Per-server cooldown (keyed by localname): a persistently-failing server can't
-  // spin, but advancing across servers in a multi-iroh queue isn't blocked by one
-  // server's recent recovery.
+  // Per-server cooldown (keyed by localname) so a persistently-failing server
+  // can't spin on recovery.
   final Map<String, DateTime> _lastRecoveryByServer = {};
   void _recoverIrohPlayback(Server server) {
     if (_recoveringPlayback) return;
@@ -407,15 +415,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     _failedSkips = 0;
     _recoveringPlayback = true;
     _lastRecoveryByServer[server.localname] = now;
-    // Point the single tunnel at this track's server (no-op if already there).
-    ServerManager().setPlaybackServer(server);
+    // The tunnel target is owned by the queue listener (this server's songs are
+    // queued, so it's already the target); just wait for it and re-seed.
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
       final pos = _localBackend.position;
       final idx = _localBackend.currentIndex ?? 0;
       final ready = await ServerManager().awaitTunnelReady(server: server);
       if (!ready) return; // tunnel didn't come up; the banner shows why
-      await _localBackend.setSources(queue.value);
+      // Rebuild URLs against the now-live tunnel ourselves rather than reusing
+      // queue.value: a hard restart may have changed the port/token, and the
+      // concurrent rebuild-on-(re)bind might not have refreshed queue.value yet —
+      // _withRebuiltUrl uses the current effectiveBaseUrl, so these are always live.
+      final fresh = queue.value.map(_withRebuiltUrl).toList();
+      queue.add(fresh);
+      await _localBackend.setSources(fresh);
       // Resume with the user's intent: a mid-stream drop while playing resumes
       // playing; a launch-time recovery (never played) stays paused.
       await _localBackend.seek(pos, index: idx, play: _playIntent);
@@ -573,9 +587,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> stop() async {
     appLog('[play] stop');
     _playIntent = false;
-    // Playback ended — release the tunnel claim so it reverts to the browsed
-    // server (or tears down) instead of lingering for a stopped queue.
-    ServerManager().setPlaybackServer(null);
+    // Don't touch the tunnel here: it follows the QUEUE, not the play/stop state,
+    // so a stopped-but-still-queued iroh song keeps its tunnel (the queue listener
+    // tears it down when the iroh songs are actually removed/cleared).
     await _backend.stop();
     await super.stop();
   }
