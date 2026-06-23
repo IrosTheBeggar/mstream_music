@@ -116,14 +116,19 @@ jobs:
             unzip -l "$aab" | grep -q "lib/$abi/libiroh_tunnel.so" \
               || { echo "::error::libiroh_tunnel.so missing from play AAB ($abi)"; exit 1; }
           done
-          # armeabi-v7a has no native libs (no iroh/projectM .so) — it must not ship.
-          # Catches an abiFilters / disable-abi-filtering regression.
+          # armeabi-v7a is shipped on purpose for 32-bit-ARM device coverage (Google
+          # Play counts it toward supported devices), but it must NOT carry our native
+          # libs — those are built for arm64-v8a + x86_64 only and the runtime guards
+          # handle their absence. Assert the slice is present AND lib-free, so we catch
+          # both "lost 32-bit device support again" and "a 32-bit .so leaked in".
           for art in "$apk" "$aab"; do
-            if unzip -l "$art" | grep -q "lib/armeabi-v7a/"; then
-              echo "::error::$art contains armeabi-v7a (no native libs) — check ABI config"; exit 1
+            unzip -l "$art" | grep -q "lib/armeabi-v7a/" \
+              || { echo "::error::$art is missing armeabi-v7a — 32-bit ARM device support dropped"; exit 1; }
+            if unzip -l "$art" | grep -qE "lib/armeabi-v7a/(libiroh_tunnel|libprojectM-4|libvisualizer_bridge)\.so"; then
+              echo "::error::$art ships native libs under armeabi-v7a — they aren't built for 32-bit ARM"; exit 1
             fi
           done
-          echo "OK: libiroh_tunnel.so bundled; no armeabi-v7a (APK + AAB: arm64-v8a + x86_64)"
+          echo "OK: libiroh_tunnel.so on arm64-v8a + x86_64; armeabi-v7a present (lib-free) for 32-bit device coverage"
 
       - name: Rename artifacts to include tag
         # Flutter names flavored outputs app-<flavor>-<buildtype>.{apk,aab}.

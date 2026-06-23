@@ -93,13 +93,31 @@ class _Bindings {
   }
 }
 
-/// Thin Dart wrapper over the native tunnel. Only available on Android (the .so
-/// is built for arm64-v8a / x86_64); [isSupported] is false elsewhere.
+/// Thin Dart wrapper over the native tunnel. Available only where the native lib
+/// (`libiroh_tunnel.so`, built for arm64-v8a / x86_64) is actually loadable —
+/// see [isSupported].
 class IrohTunnel {
   IrohTunnel._();
   static final IrohTunnel instance = IrohTunnel._();
 
-  static bool get isSupported => Platform.isAndroid;
+  /// True only when `libiroh_tunnel.so` is present and loadable. It's bundled for
+  /// arm64-v8a / x86_64 only; on a 32-bit armeabi-v7a device (which we still ship
+  /// for broad Play device coverage, without native libs) the .so is absent, so
+  /// iroh is unavailable there too — not just on non-Android platforms. Probed
+  /// once and cached. Every FFI entry point below is gated on this, so a missing
+  /// lib degrades to "unavailable" instead of crashing (mirrors
+  /// ProjectMBindings.isAvailable).
+  static bool get isSupported => _isSupported ??= _probeSupport();
+  static bool? _isSupported;
+  static bool _probeSupport() {
+    if (!Platform.isAndroid) return false;
+    try {
+      DynamicLibrary.open('libiroh_tunnel.so');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   _Bindings? _bindings;
   _Bindings get _b => _bindings ??= _Bindings.open();

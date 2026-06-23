@@ -1463,10 +1463,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get irohScannerTitle => 'Scan pairing QR';
 
   @override
-  String get irohQrAndroidOnly => 'QR scanning is only available on Android.';
+  String get irohQrAndroidOnly =>
+      'QR scanning isn\'t available on this device.';
 
   @override
-  String get irohAndroidOnly => 'iroh is only supported on Android.';
+  String get irohAndroidOnly =>
+      'Quick Connect isn\'t available on this device.';
 
   @override
   String get irohCameraPermission =>

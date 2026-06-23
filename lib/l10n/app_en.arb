@@ -973,13 +973,13 @@
   "@irohScannerTitle": {
     "description": "App-bar title of the full-screen iroh QR scanner."
   },
-  "irohQrAndroidOnly": "QR scanning is only available on Android.",
+  "irohQrAndroidOnly": "QR scanning isn't available on this device.",
   "@irohQrAndroidOnly": {
-    "description": "Shown when QR scanning is attempted on a non-Android platform."
+    "description": "Shown when QR scanning is attempted where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so)."
   },
-  "irohAndroidOnly": "iroh is only supported on Android.",
+  "irohAndroidOnly": "Quick Connect isn't available on this device.",
   "@irohAndroidOnly": {
-    "description": "Shown when the iroh test connection is attempted on a non-Android platform."
+    "description": "Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so)."
   },
   "irohCameraPermission": "Camera permission is needed to scan a code.",
   "@irohCameraPermission": {
