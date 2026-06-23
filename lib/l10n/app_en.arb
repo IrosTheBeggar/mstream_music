@@ -394,9 +394,7 @@
   "validatorUrlParse": "Cannot parse URL",
   "testEnterUrl": "Enter a server URL first.",
   "testParseUrl": "Could not parse URL.",
-  "testCouldNotConnect": "Could not connect. Check the URL and try again.",
   "testTimedOut": "Connection timed out.",
-  "connectFailedSnack": "Could not connect to server. Check the URL and try again.",
   "connectionSuccessful": "Connection Successful!",
   "couldNotReachServer": "Could not reach server. If it requires login, turn off \"Public access\" and add credentials.",
   "failedToLogin": "Failed to Login",
@@ -1024,10 +1022,6 @@
   "irohSignInHeader": "Sign in",
   "@irohSignInHeader": {
     "description": "Header of the sign-in step on the iroh tab (after a successful test)."
-  },
-  "irohPublicServer": "Public server (no login)",
-  "@irohPublicServer": {
-    "description": "Toggle on the iroh sign-in step for a server that needs no credentials."
   },
   "irohSigningIn": "Signing in…",
   "@irohSigningIn": {

@@ -583,15 +583,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get testParseUrl => 'Не удалось разобрать URL.';
 
   @override
-  String get testCouldNotConnect =>
-      'Не удалось подключиться. Проверьте URL и повторите попытку.';
-
-  @override
   String get testTimedOut => 'Время ожидания подключения истекло.';
-
-  @override
-  String get connectFailedSnack =>
-      'Не удалось подключиться к серверу. Проверьте URL и повторите попытку.';
 
   @override
   String get connectionSuccessful => 'Подключение установлено!';
@@ -1534,9 +1526,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get irohSignInHeader => 'Sign in';
-
-  @override
-  String get irohPublicServer => 'Public server (no login)';
 
   @override
   String get irohSigningIn => 'Signing in…';

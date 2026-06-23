@@ -1110,23 +1110,11 @@ abstract class AppLocalizations {
   /// **'Could not parse URL.'**
   String get testParseUrl;
 
-  /// No description provided for @testCouldNotConnect.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not connect. Check the URL and try again.'**
-  String get testCouldNotConnect;
-
   /// No description provided for @testTimedOut.
   ///
   /// In en, this message translates to:
   /// **'Connection timed out.'**
   String get testTimedOut;
-
-  /// No description provided for @connectFailedSnack.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not connect to server. Check the URL and try again.'**
-  String get connectFailedSnack;
 
   /// No description provided for @connectionSuccessful.
   ///
@@ -2627,12 +2615,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in'**
   String get irohSignInHeader;
-
-  /// Toggle on the iroh sign-in step for a server that needs no credentials.
-  ///
-  /// In en, this message translates to:
-  /// **'Public server (no login)'**
-  String get irohPublicServer;
 
   /// Busy label on the iroh 'Sign in & save' button while signing in.
   ///

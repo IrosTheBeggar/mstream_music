@@ -577,15 +577,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get testParseUrl => 'Impossible d\'analyser l\'URL.';
 
   @override
-  String get testCouldNotConnect =>
-      'Connexion impossible. Vérifiez l\'URL et réessayez.';
-
-  @override
   String get testTimedOut => 'Délai de connexion dépassé.';
-
-  @override
-  String get connectFailedSnack =>
-      'Impossible de se connecter au serveur. Vérifiez l\'URL et réessayez.';
 
   @override
   String get connectionSuccessful => 'Connexion réussie !';
@@ -1511,9 +1503,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get irohSignInHeader => 'Sign in';
-
-  @override
-  String get irohPublicServer => 'Public server (no login)';
 
   @override
   String get irohSigningIn => 'Signing in…';

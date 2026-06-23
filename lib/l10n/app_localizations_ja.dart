@@ -560,13 +560,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get testParseUrl => 'URL を解析できませんでした。';
 
   @override
-  String get testCouldNotConnect => '接続できませんでした。URL を確認してもう一度お試しください。';
-
-  @override
   String get testTimedOut => '接続がタイムアウトしました。';
-
-  @override
-  String get connectFailedSnack => 'サーバーに接続できませんでした。URL を確認してもう一度お試しください。';
 
   @override
   String get connectionSuccessful => '接続に成功しました！';
@@ -1450,9 +1444,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get irohSignInHeader => 'Sign in';
-
-  @override
-  String get irohPublicServer => 'Public server (no login)';
 
   @override
   String get irohSigningIn => 'Signing in…';

@@ -243,12 +243,14 @@ class ServerManager {
         });
       }
 
-      // Update Playlists
+      // Update Playlists. Accept both the bare-name form (["A", "B"]) and the
+      // object form ([{"name": "A"}, ...]) that some builds (e.g. Velvet) return.
       server.playlists.clear();
       final pls = res['playlists'];
       if (pls is List) {
         for (final raw in pls) {
-          if (raw is String) server.playlists.add(raw);
+          final name = raw is String ? raw : (raw is Map ? raw['name'] : null);
+          if (name is String && name.isNotEmpty) server.playlists.add(name);
         }
       }
 
