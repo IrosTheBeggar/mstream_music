@@ -3,4 +3,4 @@
 /// Referenced by the About and Attributions screens. `release.sh` bumps
 /// this constant alongside pubspec.yaml's `version:` line, so there is
 /// exactly one place a version string can drift from.
-const String kAppVersion = 'v0.29.0';
+const String kAppVersion = 'v0.29.1';
