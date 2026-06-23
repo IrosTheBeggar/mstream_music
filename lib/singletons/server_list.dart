@@ -214,11 +214,15 @@ class ServerManager {
       var res = jsonDecode(response.body);
 
       Set<String> pathCompare = {};
-      for (var i = 0; i < res['vpaths'].length; i++) {
-        pathCompare.add(res['vpaths'][i]);
-        // add new keys
-        if (!server.autoDJPaths.containsKey(res['vpaths'][i])) {
-          server.autoDJPaths[res['vpaths'][i]] = true;
+      final vpaths = res['vpaths'];
+      if (vpaths is List) {
+        for (final raw in vpaths) {
+          if (raw is! String) continue; // tolerate unexpected element shapes
+          pathCompare.add(raw);
+          // add new keys
+          if (!server.autoDJPaths.containsKey(raw)) {
+            server.autoDJPaths[raw] = true;
+          }
         }
       }
 
@@ -241,8 +245,11 @@ class ServerManager {
 
       // Update Playlists
       server.playlists.clear();
-      for (var i = 0; i < res['playlists'].length; i++) {
-        server.playlists.add(res['playlists'][i]);
+      final pls = res['playlists'];
+      if (pls is List) {
+        for (final raw in pls) {
+          if (raw is String) server.playlists.add(raw);
+        }
       }
 
       // Transcoding capability (mStream/Velvet /api/v1/ping): `transcode` is
@@ -255,9 +262,13 @@ class ServerManager {
       final transcodeInfo = res['transcode'];
       if (transcodeInfo is Map) {
         server.transcodeAvailable = true;
-        server.transcodeDefaultCodec = transcodeInfo['defaultCodec'] as String?;
-        server.transcodeDefaultBitrate =
-            transcodeInfo['defaultBitrate'] as String?;
+        // Coerce defensively: a fork may return these as objects/numbers rather
+        // than strings. A shape mismatch must never throw here — it would surface
+        // as a bogus "failed to connect" on a server that actually responded 200.
+        final codec = transcodeInfo['defaultCodec'];
+        final bitrate = transcodeInfo['defaultBitrate'];
+        server.transcodeDefaultCodec = codec is String ? codec : null;
+        server.transcodeDefaultBitrate = bitrate is String ? bitrate : null;
       } else {
         server.transcodeAvailable = false;
         server.transcodeDefaultCodec = null;
