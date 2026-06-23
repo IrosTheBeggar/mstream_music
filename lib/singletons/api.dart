@@ -100,10 +100,6 @@ class ApiManager {
       Server server = ServerManager().currentServer ??
           (throw Exception('No Server Selected'));
 
-      if (server.unsupported) {
-        throw Exception('Server Call Failed');
-      }
-
       Uri currentUri = server.apiUri(location);
 
       final sw = Stopwatch()..start();

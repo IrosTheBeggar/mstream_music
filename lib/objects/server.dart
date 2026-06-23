@@ -19,11 +19,6 @@ class Server {
   String storageMode = 'appLocal';
   String? storageBasePath;
 
-  // Runtime-only flag (never persisted): set by a compatibility probe
-  // when this client can't work with the server build at [url]. While
-  // true, calls against this server short-circuit to a generic failure.
-  bool unsupported = false;
-
   // Runtime-only (never persisted): the live loopback port of this server's iroh
   // tunnel while it is the active server. Set by ServerManager when the tunnel
   // starts; consumed by [effectiveBaseUrl].

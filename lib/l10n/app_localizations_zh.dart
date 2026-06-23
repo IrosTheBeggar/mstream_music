@@ -549,13 +549,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get testParseUrl => '无法解析地址。';
 
   @override
-  String get testCouldNotConnect => '无法连接。请检查地址后重试。';
-
-  @override
   String get testTimedOut => '连接超时。';
-
-  @override
-  String get connectFailedSnack => '无法连接到服务器。请检查地址后重试。';
 
   @override
   String get connectionSuccessful => '连接成功！';
@@ -1422,9 +1416,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get irohSignInHeader => 'Sign in';
-
-  @override
-  String get irohPublicServer => 'Public server (no login)';
 
   @override
   String get irohSigningIn => 'Signing in…';
