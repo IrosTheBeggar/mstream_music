@@ -1525,6 +1525,30 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Widget _buildIrohTab(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // No native tunnel lib on this device/ABI (e.g. 32-bit armeabi-v7a, which ships
+    // without libiroh_tunnel.so). Say so instead of offering pairing UI that can't
+    // connect — IrohTunnel.isSupported gates every native call.
+    if (!IrohTunnel.isSupported) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 40, 28, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.hub_outlined,
+                  size: 40, color: VelvetColors.textSecondary),
+              const SizedBox(height: 16),
+              Text(
+                l.irohAndroidOnly,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 14, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     // One iroh server max (a single native tunnel). If one's already configured,
     // show why instead of the pairing UI.
     if (ServerManager().hasIrohServer) {

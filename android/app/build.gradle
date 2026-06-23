@@ -60,20 +60,29 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-        // Visualizer + iroh: we only ship libprojectM-4.so / libiroh_tunnel.so for
-        // these ABIs, so cap the app to the same set. armeabi-v7a (very old 32-bit
-        // ARM) is dropped. abiFilters is set in both ndk (what Flutter ships) and
-        // externalNativeBuild (what CMake compiles).
+        // Two ABI lists on purpose — they intentionally differ:
         //
-        // BUT ndk.abiFilters cannot coexist with the splits.abi that Flutter
-        // configures for `--split-per-abi` (AGP throws "Conflicting configuration").
-        // So skip the ndk filter in that mode — a split build must instead pass
-        // `--target-platform android-arm64,android-x64` to stay on these two ABIs
-        // (otherwise it would emit a broken armeabi-v7a split with no native libs).
-        // Non-split builds (universal APK, Play AAB) are unaffected.
+        // ndk.abiFilters (what Flutter PACKAGES) keeps armeabi-v7a so 32-bit-ARM
+        // devices stay supported on Google Play. That slice ships WITHOUT our native
+        // libs: libprojectM-4.so / libiroh_tunnel.so are prebuilt for arm64-v8a +
+        // x86_64 only (see src/main/jniLibs) and the CMake bridge below isn't built
+        // for armeabi-v7a either. The runtime guards handle the absence gracefully —
+        // VisualizerBridge catches the UnsatisfiedLinkError and reports "unavailable",
+        // and iroh servers are gated off — so the rest of the app still runs. Dropping
+        // armeabi-v7a is what cut Play device support, so we deliberately keep it.
+        //
+        // externalNativeBuild.cmake.abiFilters (what CMake COMPILES) stays at the two
+        // ABIs we have native libs for — no point building the bridge for an ABI with
+        // no libprojectM-4.so to link against.
+        //
+        // ndk.abiFilters cannot coexist with the splits.abi that Flutter configures
+        // for `--split-per-abi` (AGP throws "Conflicting configuration"), so skip it
+        // in that mode — a split build selects ABIs via `--target-platform` instead
+        // (e.g. android-arm,android-arm64,android-x64). Non-split builds (universal
+        // APK, Play AAB) use the filter below.
         if (!((project.findProperty("split-per-abi") ?: "false").toString().toBoolean())) {
             ndk {
-                abiFilters "arm64-v8a", "x86_64"
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86_64"
             }
         }
         externalNativeBuild {
