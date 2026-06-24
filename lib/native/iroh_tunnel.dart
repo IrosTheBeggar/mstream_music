@@ -51,11 +51,16 @@ class IrohTunnelException implements Exception {
 //  - iOS: the dynamic framework embedded at Runner.app/Frameworks/ (vended by
 //    packages/iroh_tunnel_native via SwiftPM); dlopen resolves the
 //    bundle-relative framework path — the standard Flutter FFI pattern.
+//  - Desktop: cargo's cdylib sits next to the executable (bundled by the
+//    platform's CMake) — `iroh_tunnel.dll` on Windows (no `lib` prefix),
+//    `libiroh_tunnel.dylib` on macOS, `libiroh_tunnel.so` on Linux.
 DynamicLibrary _openNativeLib() {
   if (Platform.isIOS) {
     return DynamicLibrary.open('iroh_tunnel.framework/iroh_tunnel');
   }
-  return DynamicLibrary.open('libiroh_tunnel.so');
+  if (Platform.isWindows) return DynamicLibrary.open('iroh_tunnel.dll');
+  if (Platform.isMacOS) return DynamicLibrary.open('libiroh_tunnel.dylib');
+  return DynamicLibrary.open('libiroh_tunnel.so'); // Android + Linux
 }
 
 class _Bindings {
@@ -110,7 +115,8 @@ class _Bindings {
 }
 
 /// Thin Dart wrapper over the native tunnel. Available only where the native
-/// lib (Android `libiroh_tunnel.so`, iOS `iroh_tunnel.framework`) is actually
+/// lib (Android `libiroh_tunnel.so`, iOS `iroh_tunnel.framework`, desktop
+/// `iroh_tunnel.dll` / dylib / so next to the executable) is actually
 /// loadable — see [isSupported].
 class IrohTunnel {
   IrohTunnel._();
@@ -121,14 +127,14 @@ class IrohTunnel {
   /// armeabi-v7a device (which we still ship for broad Play device coverage,
   /// without native libs) the .so is absent, so iroh is unavailable there —
   /// not just on unsupported platforms. On iOS it's the embedded
-  /// iroh_tunnel.framework. Probed once and cached. Every FFI entry point
-  /// below is gated on this, so a missing lib degrades to "unavailable"
-  /// instead of crashing (mirrors ProjectMBindings.isAvailable).
+  /// iroh_tunnel.framework. On desktop (Windows/Linux/macOS) the lib is
+  /// bundled next to the executable; if a build ships without it, this
+  /// returns false. Probed once and cached. Every FFI entry point below is
+  /// gated on this, so a missing lib degrades to "unavailable" instead of
+  /// crashing (mirrors ProjectMBindings.isAvailable).
   static bool get isSupported => _isSupported ??= _probeSupport();
   static bool? _isSupported;
   static bool _probeSupport() {
-    // Desktop stays unsupported (no native lib is shipped there).
-    if (!Platform.isAndroid && !Platform.isIOS) return false;
     try {
       _openNativeLib();
       return true;
@@ -145,7 +151,8 @@ class IrohTunnel {
   /// isolate. Throws [IrohTunnelException] on failure.
   Future<int> start(String pairingCode, {int localPort = 0}) async {
     if (!isSupported) {
-      throw IrohTunnelException('iroh tunnel is not supported on this device');
+      throw IrohTunnelException(
+          'iroh tunnel native library is unavailable on this platform');
     }
     // The blocking native call runs on a background isolate; on failure it throws
     // IrohTunnelException, which Isolate.run rethrows here.

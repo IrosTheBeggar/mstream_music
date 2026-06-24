@@ -1308,7 +1308,11 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Future<void> _scanQr() async {
     final l = AppLocalizations.of(context);
-    if (!IrohTunnel.isSupported) {
+    // QR scanning is a camera feature (mobile_scanner → Android/iOS); on desktop
+    // there's no scanner, so fall back to the paste-the-code path. This is gated
+    // on the platform, NOT IrohTunnel.isSupported — the tunnel lib now loads on
+    // desktop too, but the camera scanner doesn't exist there.
+    if (!Platform.isAndroid && !Platform.isIOS) {
       _showIrohResult(false, l.irohQrAndroidOnly);
       return;
     }
