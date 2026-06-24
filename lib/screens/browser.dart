@@ -629,8 +629,11 @@ class _BrowserState extends State<Browser> {
     final l = AppLocalizations.of(context);
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      // Cap the tile width and add columns as the pane widens, instead of
+      // stretching a fixed 2 columns into giant cards on a desktop window.
+      // Phones still land on 2 columns (a ~360–410px pane / 212px ≈ 2).
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: 1.3,

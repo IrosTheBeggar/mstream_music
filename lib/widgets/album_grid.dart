@@ -36,8 +36,14 @@ class AlbumGrid extends StatelessWidget {
   static const double spacing = 12;
   static const double aspectRatio = 0.72;
 
-  static int columnsFor(double width) =>
-      width > 600 ? 4 : (width > 400 ? 3 : 2);
+  // Phones keep their 2/3 columns; wider panes scale by a ~220px target tile so
+  // album cards don't balloon on a desktop window. Used by itemWidthFor and
+  // rowHeightFor too, so the letter-strip jumpTo math stays in sync.
+  static int columnsFor(double width) {
+    if (width <= 400) return 2;
+    if (width <= 600) return 3;
+    return (width ~/ 220).clamp(4, 12);
+  }
 
   static double itemWidthFor(double width) {
     final cols = columnsFor(width);
