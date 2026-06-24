@@ -628,6 +628,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> seek(Duration position) => _backend.seek(position);
 
+  /// Set output volume (0.0–1.0) on the active backend. Used by the desktop
+  /// Now Playing bar's volume slider; the phone UI relies on hardware volume.
+  Future<void> setVolume(double volume) => _backend.setVolume(volume);
+
   @override
   Future<void> stop() async {
     appLog('[play] stop');
