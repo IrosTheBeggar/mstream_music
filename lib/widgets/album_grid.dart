@@ -48,9 +48,14 @@ class AlbumGrid extends StatelessWidget {
   /// tiles laid out under it are half-hidden, and the letter-jump offset is
   /// derived from row height, which moves as soon as the usable width does.
   /// Threading it through all three keeps the two in agreement.
+  ///
+  /// Phones keep their 2/3 columns; wider panes scale by a ~220px target tile
+  /// so album cards don't balloon on a desktop window.
   static int columnsFor(double width, [double gutter = 0]) {
     final w = width - gutter;
-    return w > 600 ? 4 : (w > 400 ? 3 : 2);
+    if (w <= 400) return 2;
+    if (w <= 600) return 3;
+    return (w ~/ 220).clamp(4, 12);
   }
 
   static double itemWidthFor(double width, [double gutter = 0]) {
