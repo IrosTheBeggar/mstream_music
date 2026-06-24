@@ -35,6 +35,7 @@ import '../theme/velvet_theme.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
 import 'browser_toolbar.dart';
+import 'media_shortcuts.dart';
 import 'queue_list.dart';
 
 // Width of the fixed left navigation rail and the right queue panel.
@@ -89,7 +90,7 @@ class _DesktopShellState extends State<DesktopShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final shell = Scaffold(
       backgroundColor: VelvetColors.bg,
       body: Column(
         children: [
@@ -130,6 +131,9 @@ class _DesktopShellState extends State<DesktopShell> {
         ],
       ),
     );
+    // Wrap the whole shell so the media keys work regardless of which pane has
+    // focus (text fields still consume their own keys first).
+    return MediaShortcuts(child: shell);
   }
 }
 
@@ -484,10 +488,6 @@ class DesktopNowPlayingBar extends StatefulWidget {
 }
 
 class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
-  // just_audio defaults to full volume; the handler has no volume getter, so we
-  // hold the slider's value locally and push changes down to the backend.
-  double _volume = 1.0;
-
   // Combined item+position, scoped to the seek row so a position tick doesn't
   // rebuild the transport buttons or artwork.
   late final Stream<_MediaPos> _mediaPos = Rx.combineLatest2(
@@ -655,26 +655,49 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Icon(Icons.volume_up, size: 18, color: VelvetColors.textTertiary),
-        SizedBox(
-          width: 110,
-          child: SliderTheme(
-            data: SliderThemeData(
-              trackHeight: 3,
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-              activeTrackColor: VelvetColors.textSecondary,
-              inactiveTrackColor: VelvetColors.border2,
-              thumbColor: VelvetColors.textSecondary,
-            ),
-            child: Slider(
-              value: _volume,
-              onChanged: (v) {
-                setState(() => _volume = v);
-                MediaManager().audioHandler.setVolume(v);
-              },
-            ),
-          ),
+        // Volume icon (click to mute) + slider, both driven by the shared
+        // playbackVolume notifier so the Up/Down/M keys move them in lockstep.
+        ValueListenableBuilder<double>(
+          valueListenable: playbackVolume,
+          builder: (context, vol, _) {
+            final icon = vol == 0
+                ? Icons.volume_off
+                : (vol < 0.5 ? Icons.volume_down : Icons.volume_up);
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(icon, size: 18),
+                  color: VelvetColors.textTertiary,
+                  tooltip: 'Mute (M)',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: togglePlaybackMute,
+                ),
+                SizedBox(
+                  width: 100,
+                  child: SliderTheme(
+                    data: SliderThemeData(
+                      trackHeight: 3,
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 10),
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      activeTrackColor: VelvetColors.textSecondary,
+                      inactiveTrackColor: VelvetColors.border2,
+                      thumbColor: VelvetColors.textSecondary,
+                    ),
+                    child: Slider(
+                      value: vol,
+                      onChanged: (v) {
+                        playbackVolume.value = v;
+                        MediaManager().audioHandler.setVolume(v);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(width: 4),
         IconButton(
@@ -706,6 +729,7 @@ class _DesktopTransport extends StatelessWidget {
           final on = snap.data == AudioServiceShuffleMode.all;
           return IconButton(
             icon: const Icon(Icons.shuffle, size: 18),
+            tooltip: 'Shuffle (S)',
             color: on ? VelvetColors.primary : VelvetColors.textTertiary,
             onPressed: () => handler.setShuffleMode(on
                 ? AudioServiceShuffleMode.none
@@ -716,6 +740,7 @@ class _DesktopTransport extends StatelessWidget {
       IconButton(
         icon: const Icon(Icons.skip_previous),
         iconSize: 26,
+        tooltip: 'Previous (Ctrl+←)',
         color: VelvetColors.textPrimary,
         onPressed: handler.skipToPrevious,
       ),
@@ -741,6 +766,7 @@ class _DesktopTransport extends StatelessWidget {
             child: IconButton(
               iconSize: 22,
               padding: EdgeInsets.zero,
+              tooltip: playing ? 'Pause (Space)' : 'Play (Space)',
               icon: Icon(playing ? Icons.pause : Icons.play_arrow),
               color: accentInk,
               onPressed: playing ? handler.pause : handler.play,
@@ -751,6 +777,7 @@ class _DesktopTransport extends StatelessWidget {
       IconButton(
         icon: const Icon(Icons.skip_next),
         iconSize: 26,
+        tooltip: 'Next (Ctrl+→)',
         color: VelvetColors.textPrimary,
         onPressed: handler.skipToNext,
       ),
@@ -765,6 +792,7 @@ class _DesktopTransport extends StatelessWidget {
                     ? Icons.repeat_one
                     : Icons.repeat,
                 size: 18),
+            tooltip: 'Repeat (R)',
             color: on ? VelvetColors.primary : VelvetColors.textTertiary,
             onPressed: () {
               final next = mode == AudioServiceRepeatMode.none
