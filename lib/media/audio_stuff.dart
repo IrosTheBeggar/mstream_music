@@ -1245,6 +1245,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   // early and turn the stop's own idle into a bogus 'error' broadcast.
   bool _intentionalStop = false;
 
+  /// Set output volume (0.0–1.0) on the active backend. Used by the desktop
+  /// Now Playing bar's volume slider; the phone UI relies on hardware volume.
+  Future<void> setVolume(double volume) => _backend.setVolume(volume);
+
   @override
   Future<void> stop() async {
     appLog('[play] stop');
