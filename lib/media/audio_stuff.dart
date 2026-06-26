@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -12,6 +13,7 @@ import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
+import 'desktop_chromecast_backend.dart';
 import 'local_media_server.dart';
 import 'auto_browse.dart';
 import 'cast_log.dart';
@@ -267,9 +269,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     } else if (target.kind == CastTargetKind.dlna) {
       next = DlnaPlaybackBackend(udn: target.id);
     } else if (target.kind == CastTargetKind.chromecast) {
-      // visualizer = stream the on-device visualizer (video) instead of audio.
-      next = ChromecastPlaybackBackend(
-          deviceId: target.id, visualizer: visualizer);
+      // Native Google Cast SDK on Android/iOS; pure-Dart CASTV2 on desktop.
+      // (visualizer = stream the on-device visualizer video — Android only.)
+      next = (Platform.isAndroid || Platform.isIOS)
+          ? ChromecastPlaybackBackend(
+              deviceId: target.id, visualizer: visualizer)
+          : DesktopChromecastPlaybackBackend(deviceId: target.id);
     } else {
       return;
     }

@@ -56,6 +56,13 @@ dependencies:
   ffi: ^2.1.4
   media_cast_dlna: ^0.3.1
   flutter_chrome_cast: ^1.4.6
+  # Desktop Chromecast discovery (pure-Dart mDNS, works on Windows/Linux). The
+  # CASTV2 control client is hand-rolled in lib/media/castv2/ (TLS + a tiny
+  # CastMessage protobuf codec) so we control the audio LOAD content-type — the
+  # off-the-shelf Dart cast libs are video-only. flutter_chrome_cast (native
+  # Google SDK) stays for Android/iOS; desktop uses this behind the same
+  # DeviceDiscoverer/PlaybackBackend seam.
+  multicast_dns: ^0.3.2
   # Native share sheet for exporting diagnostic logs (Diagnostics screen).
   share_plus: ^10.1.4
   meta: any
