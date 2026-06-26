@@ -302,12 +302,24 @@ to the exe via an OPTIONAL CMake install (mirrors iroh/jniLibs). Un-gated
 version round-trips. (Built desktop-GL/GLEW, not GLES/ANGLE — simplest path for an
 offscreen WGL context + CPU readback.)
 
-**Still to do (Phase 2 — the big native piece):** offscreen WGL context +
-`glewInit` + FBO; per-frame `projectm_pcm_add_float` (synth PCM) +
-`projectm_opengl_render_frame`; present to Flutter via `glReadPixels` → Dart
-`ui.Image` (before any GPU texture sharing); load `.milk` presets
-(`assets/presets/`, 120) via `projectm_load_preset_file`; desktop projectM screen
-+ switcher. A native FFI shim (like iroh) — unverifiable without eyes on it.
+**Phase 2 — render bridge DONE (native pipeline verified).** Built
+`projectm_desktop.dll` (`windows/projectm_shim/`): a hidden-window **WGL
+Core-profile context + FBO** that feeds PCM, renders projectM, and reads the frame
+back to RGBA (`glReadPixels`). FFI wrapper `lib/native/projectm_desktop.dart`;
+desktop screen `lib/visualizer/projectm_screen.dart` (Ticker → synth PCM →
+`pmd_render` → `decodeImageFromPixels`, flipped for GL bottom-up; loads the
+bundled `.milk` presets via `projectm_load_preset_data` from `rootBundle`; tap/‹ ›
+switches; 640×360 CPU readback). A "Milkdrop" sidebar entry appears on Windows
+when the engine is available.
+
+**Verified on Windows (startup render probe, since removed):** `init=ok
+bytes=16384 checksum=1321` — WGL context + GLEW + FBO + projectM render + readback
+all succeed and produce non-black pixels, no crash. The *visual* output of the
+.milk presets at full size still wants eyes on it.
+
+**Next / polish:** GPU texture sharing (skip the CPU readback) for perf; size to
+the pane; real-audio capture; the shim is built locally (committed prebuilt DLL) —
+a CI step would rebuild it.
 
 ### Path B reference — via ANGLE
 The C++ engines are already `EGL` + `GLES3`; Flutter's Windows embedder ships
