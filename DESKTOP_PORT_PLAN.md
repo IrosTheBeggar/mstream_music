@@ -338,7 +338,7 @@ The C++ engines are already `EGL` + `GLES3`; Flutter's Windows embedder ships
 
 ---
 
-## 7. Chromecast / DLNA — 🔴 HARDEST
+## 7. Chromecast — 🟡 DISCOVERY VERIFIED, CONTROL NEEDS A DEVICE
 
 **Blocker:** `flutter_chrome_cast` wraps Google's native Cast SDK, which only
 ships for Android/iOS/Chromium — there's no desktop Cast sender SDK. `media_cast_
@@ -347,44 +347,53 @@ dlna` is likewise Android/iOS-only. Both are cleanly skipped on the desktop buil
 **The architecture was designed for this swap.** `lib/media/device_discoverer.dart`
 doc: keeping discovery behind the interface means the package choice "(e.g.
 dart_cast vs flutter_chrome_cast) can be made — and changed — without touching
-anything above this seam."
+anything above this seam." That held — nothing above the seam changed.
 
-### Path: pure-Dart CASTV2 sender
-Chromecast = (1) mDNS discovery (`_googlecast._tcp`), (2) TLS+protobuf "CASTV2"
-control channel (launch Default Media Receiver, `LOAD`/`PLAY`/`PAUSE`/`SEEK`/
-`STOP`), (3) device fetches media by URL over HTTP. The [`dart_cast`](https://pub.dev/packages/dart_cast)
-package implements this in pure Dart (ported from `node-castv2`), explicitly
-supports Windows/Linux/macOS, and also does DLNA + an HTTP proxy.
+### Pivot away from `dart_cast` → hand-rolled CASTV2
+`dart_cast` looked ideal (pure-Dart CASTV2, desktop support) but on inspection
+its `LOAD` only emits **video** content-types (`video/mp4`, `video/x-matroska`,
+…) and routes through an HLS-proxy pipeline — there is **no audio path**. Casting
+mStream's audio through it would mislabel the stream and fail. So Chromecast is
+built on a **minimal hand-rolled CASTV2 client** that controls the `LOAD` media
+object (real `audio/*` content-types). Discovery uses the official **`multicast_dns`**
+(pure-Dart, works on Windows). No external cast dependency.
 
+### What shipped (`lib/media/`)
 | Piece | Status |
 |---|---|
-| `CastManager`, `CastTarget`, picker UI, `PlaybackBackend` seam | reuse unchanged |
-| `LocalMediaServer` (serves files to renderers) | reuse — already pure Dart |
-| `EmulatedPlaylistBackend` (playlist/index/transport arithmetic) | reuse |
-| `DesktopChromecastDiscoverer` | new, small (wrap dart_cast mDNS) |
-| ~6 device ops in `ChromecastPlaybackBackend` (currently `GoogleCastRemoteMediaClient`/`SessionManager`) | reimplement against dart_cast |
-| Registration | un-gate `if (Platform.isAndroid)` in `media.dart` |
+| `CastManager`, `CastTarget`, picker UI, `PlaybackBackend` seam | reused unchanged |
+| `EmulatedPlaylistBackend` (playlist/index/transport arithmetic) | reused |
+| `castv2/cast_channel.dart` — TLS socket + hand-rolled `CastMessage` protobuf framing | new |
+| `castv2/chromecast_sender.dart` — CONNECT→LAUNCH→LOAD→PLAY/PAUSE/SEEK/STOP, heartbeat, MEDIA_STATUS polling | new |
+| `desktop_chromecast_discoverer.dart` — `multicast_dns` `_googlecast._tcp` → `CastTarget`s + endpoint registry | new |
+| `desktop_chromecast_backend.dart` — `EmulatedPlaylistBackend` driving the sender | new |
+| Registration in `media.dart` (desktop branch) + backend branch in `audio_stuff.dart` | wired |
+| `tool/cast_discovery_probe.dart` — standalone passive discovery diagnostic | new dev tool |
 
-### Gotchas
-- **Self-signed mStream servers:** the Chromecast fetches the stream itself and
-  won't trust a self-signed cert (already bites Android casting). Mitigation: the
-  desktop app already runs `LocalMediaServer` — proxy the auth'd/self-signed
-  stream and re-serve to the device over plain LAN HTTP. dart_cast's
-  header-injection proxy helps. (Desktop actually has a *cleaner* cast story.)
-- Codec constraints (Default Media Receiver: MP3/AAC/FLAC/Opus/Vorbis/WAV) —
-  existing transcode layer handles these.
-- The **visualizer-to-Chromecast** sub-feature (`_visualizer` mode in
-  `ChromecastPlaybackBackend`, casts the on-device visualizer as HLS video)
-  relies on the Android native MediaCodec transcoder → leave out; audio casting
-  only to start.
-- dart_cast is a community reimplementation of an unofficial protocol — evaluate
-  maturity/activity before committing (the stable receiver protocol rarely
-  changes, so risk is low but nonzero).
-- **Bonus:** the same swap restores **DLNA** on desktop (dart_cast does DLNA too;
-  it's just SSDP + SOAP over HTTP).
+### Verified vs not
+- ✅ **Discovery works on Windows** — `tool/cast_discovery_probe.dart` found a real
+  device (`Family Room TV → 192.168.1.62:8009`). Two Windows-specific fixes were
+  required and are in the discoverer: winsock has no `SO_REUSEPORT` (force
+  `reusePort:false`), and `joinMulticast` on the **loopback** adapter throws
+  `WSAENOPROTOOPT` and aborts `start()` (exclude loopback via `interfacesFactory`).
+- ✅ Builds + boots clean with the discoverer registered.
+- ⚠️ **Control (LOAD/PLAY/…) is untested** — needs a real device, and I won't
+  drive the user's TV unprompted. The protocol flow is implemented to spec but
+  expect to debug payload details on first real run.
 
-Estimate: discoverer ~1 day; backend rewrite + testing against a real device is
-the bulk (a few days); audio-only first.
+### Known limitations (first cut — documented in the backend)
+- **Local/downloaded files** aren't served to the device yet (would need the
+  pure-Dart `LocalMediaServer`); only server stream URLs (the common case) cast.
+- **iroh / loopback / self-signed HTTPS** URLs: the device can't reach `127.0.0.1`
+  on the desktop and won't trust a self-signed cert. Fix = proxy via
+  `LocalMediaServer` re-served on the LAN IP (future).
+- **Visualizer-to-Chromecast** (Android casts the on-device visualizer as HLS
+  video via native MediaCodec) — out of scope; audio only.
+- **DLNA** on desktop is still unimplemented (was bundled with the dart_cast idea;
+  the hand-rolled path is Chromecast-only).
+
+Remaining: test against a real device + fix payload bugs; then local-file +
+loopback proxying via `LocalMediaServer`.
 
 ---
 
