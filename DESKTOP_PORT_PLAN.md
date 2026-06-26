@@ -233,18 +233,21 @@ radix-2 FFT → a **512×2 audio texture** (row 0 = spectrum, row 1 = waveform)
 uploaded as the `iChannel0` sampler, so the ported shader bodies run unchanged.
 Tap or ‹ › cycles presets.
 
-**Ported (`shaders/visualizer/*.frag`):** the 6 single-pass Shadertoy shaders from
-`assets/shaders/` were mechanically ported (preamble + `mainImage`→`main()` with a
-y-flip + `iParams` baked to preset defaults). 5 ship: 01 Spectrum Bars, 02 Audio
-Tunnel, 03 Plasma Pulse, 07 Neonwave Sunrise, 08 Neonwave Sunset.
+**Ported (`shaders/visualizer/*.frag`) — 6 single-pass presets ship:** 01 Spectrum
+Bars, 02 Audio Tunnel, 03 Plasma Pulse, 06 4D Beats, 07 Neonwave Sunrise, 08
+Neonwave Sunset. Mechanical port (preamble + `mainImage`→`main()` with a y-flip +
+`iParams` baked to preset defaults). **06** additionally needed a hand rewrite: its
+comma-operator body AND its non-standard for-header (`for(vec3 r=…; ++i<77.;
+z+=…)` — declares one var, tests another, increments a third) are both rejected by
+SkSL ("missing init declaration"); rewritten into a plain counting loop with
+statement body + `mat2`-from-scalars.
 
-**Not ported:**
-- **06 4D Beats** — its comma-operator-chain raymarch is SkSL-incompatible (the
-  Windows/Skia backend rejects it: "missing init declaration"). Would need a manual
-  rewrite into plain statements.
-- **04 / 05 / 09** — multi-pass (ping-pong feedback buffers); Flutter fragment
-  shaders are single-pass, so these need an offscreen-render harness
-  (PictureRecorder→Image per pass) — a separate, bigger piece of work.
+**Not ported — 04 / 05 / 09 (multi-pass):** these use ping-pong feedback buffers
+(channel routing `// === channel …`, passes `// === pass: …`). Flutter fragment
+shaders are single-pass, so they need an offscreen-render harness (`toImageSync`
+per pass, ping-pong images for self-feedback). 04 is simplest (one 1×1 state buffer
++ image), 05 has a full-size feedback buffer, 09 is 766 lines. Harness is a
+separate, bigger piece of work — see the multi-pass renderer effort.
 
 **Key constraint:** Flutter `FragmentProgram` needs *precompiled* `.frag` assets
 (no runtime GLSL string compile) AND the Windows/Skia backend is stricter than
