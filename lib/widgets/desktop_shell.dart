@@ -31,9 +31,12 @@ import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../native/projectm_controller.dart';
+import '../native/projectm_desktop.dart';
 import '../theme/velvet_theme.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
+import '../visualizer/projectm_screen.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
 import 'media_shortcuts.dart';
@@ -58,8 +61,13 @@ class _DesktopShellState extends State<DesktopShell> {
   final GlobalKey<NavigatorState> _contentNav = GlobalKey<NavigatorState>();
 
   // Sidebar highlight: 0 = Browse (the nested Navigator's root), 1.. = a pushed
-  // tool, -1 = the visualizer. Tools/visualizer pop back to Browse (resets to 0).
+  // tool, -1 = the shader visualizer, -2 = the projectM/Milkdrop visualizer.
+  // Tools/visualizers pop back to Browse (resets to 0).
   static const int _visualizerIndex = -1;
+  static const int _projectMIndex = -2;
+  // Native Milkdrop visualizer is desktop-only and needs the engine DLL loaded.
+  static final bool _projectMAvailable =
+      ProjectMDesktop.isSupported && ProjectMController.isAvailable;
   int _activeIndex = 0;
   bool _queueOpen = false;
 
@@ -97,6 +105,13 @@ class _DesktopShellState extends State<DesktopShell> {
     setState(() => _activeIndex = _visualizerIndex);
   }
 
+  void _openProjectM() {
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _contentNav.currentState
+        ?.push(MaterialPageRoute(builder: (_) => const ProjectMScreen()));
+    setState(() => _activeIndex = _projectMIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final shell = Scaffold(
@@ -113,6 +128,7 @@ class _DesktopShellState extends State<DesktopShell> {
                   onTool: _openTool,
                   onShare: () => showSharePlaylistDialog(context),
                   onVisualizer: _openVisualizer,
+                  onProjectM: _projectMAvailable ? _openProjectM : null,
                 ),
                 VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
                 Expanded(
@@ -167,6 +183,7 @@ class _DesktopSidebar extends StatelessWidget {
   final void Function(int index) onTool;
   final VoidCallback onShare;
   final VoidCallback onVisualizer;
+  final VoidCallback? onProjectM; // null when projectM isn't available
   const _DesktopSidebar({
     required this.tools,
     required this.activeIndex,
@@ -174,6 +191,7 @@ class _DesktopSidebar extends StatelessWidget {
     required this.onTool,
     required this.onShare,
     required this.onVisualizer,
+    required this.onProjectM,
   });
 
   @override
@@ -204,6 +222,13 @@ class _DesktopSidebar extends StatelessWidget {
                   selected: activeIndex == -1,
                   onTap: onVisualizer,
                 ),
+                if (onProjectM != null)
+                  _SidebarTile(
+                    icon: Icons.auto_awesome,
+                    label: 'Milkdrop',
+                    selected: activeIndex == -2,
+                    onTap: onProjectM!,
+                  ),
                 _SidebarTile(
                   icon: Icons.share_outlined,
                   label: l.shareTitle,
