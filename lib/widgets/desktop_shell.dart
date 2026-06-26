@@ -34,6 +34,7 @@ import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
+import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
 import 'media_shortcuts.dart';
 import 'queue_list.dart';
@@ -57,7 +58,8 @@ class _DesktopShellState extends State<DesktopShell> {
   final GlobalKey<NavigatorState> _contentNav = GlobalKey<NavigatorState>();
 
   // Sidebar highlight: 0 = Browse (the nested Navigator's root), 1.. = a pushed
-  // tool. Tools pop back to Browse, which resets this to 0.
+  // tool, -1 = the visualizer. Tools/visualizer pop back to Browse (resets to 0).
+  static const int _visualizerIndex = -1;
   int _activeIndex = 0;
   bool _queueOpen = false;
 
@@ -88,6 +90,13 @@ class _DesktopShellState extends State<DesktopShell> {
     setState(() => _activeIndex = index + 1);
   }
 
+  void _openVisualizer() {
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _contentNav.currentState?.push(
+        MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()));
+    setState(() => _activeIndex = _visualizerIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final shell = Scaffold(
@@ -103,6 +112,7 @@ class _DesktopShellState extends State<DesktopShell> {
                   onBrowse: _openBrowse,
                   onTool: _openTool,
                   onShare: () => showSharePlaylistDialog(context),
+                  onVisualizer: _openVisualizer,
                 ),
                 VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
                 Expanded(
@@ -156,12 +166,14 @@ class _DesktopSidebar extends StatelessWidget {
   final VoidCallback onBrowse;
   final void Function(int index) onTool;
   final VoidCallback onShare;
+  final VoidCallback onVisualizer;
   const _DesktopSidebar({
     required this.tools,
     required this.activeIndex,
     required this.onBrowse,
     required this.onTool,
     required this.onShare,
+    required this.onVisualizer,
   });
 
   @override
@@ -185,6 +197,12 @@ class _DesktopSidebar extends StatelessWidget {
                   label: 'Library',
                   selected: activeIndex == 0,
                   onTap: onBrowse,
+                ),
+                _SidebarTile(
+                  icon: Icons.graphic_eq,
+                  label: 'Visualizer',
+                  selected: activeIndex == -1,
+                  onTap: onVisualizer,
                 ),
                 _SidebarTile(
                   icon: Icons.share_outlined,
