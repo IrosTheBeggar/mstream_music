@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import '../media/audio_stuff.dart';
 import '../media/dlna_discoverer.dart';
 import '../media/chromecast_discoverer.dart';
+import '../media/desktop_chromecast_discoverer.dart';
 import 'cast_manager.dart';
 
 class MediaManager {
@@ -59,12 +60,15 @@ class MediaManager {
       audioHandler = AudioPlayerHandler();
     }
 
-    // DLNA casting discovery is Android-only (media_cast_dlna has no other
-    // platform impl). Registering the discoverer is cheap — it only starts
-    // scanning when the cast picker opens (CastManager.startDiscovery).
+    // DLNA + native-SDK Chromecast discovery are Android-only (media_cast_dlna /
+    // flutter_chrome_cast have no other platform impl). On desktop, register the
+    // pure-Dart mDNS Chromecast discoverer instead. Registering is cheap — it
+    // only scans when the cast picker opens (CastManager.startDiscovery).
     if (Platform.isAndroid) {
       CastManager().registerDiscoverer(DlnaDeviceDiscoverer());
       CastManager().registerDiscoverer(ChromecastDeviceDiscoverer());
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      CastManager().registerDiscoverer(DesktopChromecastDiscoverer());
     }
   }
 }
