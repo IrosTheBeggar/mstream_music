@@ -36,6 +36,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
     _Preset('Spectrum Bars', 'shaders/visualizer/01-spectrum-bars.frag'),
     _Preset('Audio Tunnel', 'shaders/visualizer/02-audio-tunnel.frag'),
     _Preset('Plasma Pulse', 'shaders/visualizer/03-plasma-pulse.frag'),
+    _Preset('4D Beats', 'shaders/visualizer/06-4d-beats.frag'),
     _Preset('Neonwave Sunrise', 'shaders/visualizer/07-neonwave-sunrise.frag'),
     _Preset('Neonwave Sunset', 'shaders/visualizer/08-neonwave-sunset.frag'),
   ];

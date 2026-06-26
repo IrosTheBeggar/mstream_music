@@ -101,6 +101,7 @@ flutter:
     - shaders/visualizer/01-spectrum-bars.frag
     - shaders/visualizer/02-audio-tunnel.frag
     - shaders/visualizer/03-plasma-pulse.frag
+    - shaders/visualizer/06-4d-beats.frag
     - shaders/visualizer/07-neonwave-sunrise.frag
     - shaders/visualizer/08-neonwave-sunset.frag
 
