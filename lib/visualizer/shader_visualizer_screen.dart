@@ -52,6 +52,20 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
               PassDef('image', 'shaders/visualizer/04-cyber-fuji-image.frag',
                   ['music', 'buffera']),
             ])),
+    // Multi-pass: buffera (scene) -> bufferb (full-size feedback) ; bufferc (1×1
+    // music state) ; image composites bufferb + bufferc.
+    _Preset(
+        'Hex Marching',
+        () => MultiPassRenderer([
+              PassDef('buffera', 'shaders/visualizer/05-hex-buffera.frag', []),
+              PassDef('bufferb', 'shaders/visualizer/05-hex-bufferb.frag',
+                  ['buffera', 'bufferb']),
+              PassDef('bufferc', 'shaders/visualizer/05-hex-bufferc.frag',
+                  ['music', 'bufferc'],
+                  fixed1x1: true),
+              PassDef('image', 'shaders/visualizer/05-hex-image.frag',
+                  ['bufferb', 'bufferc']),
+            ])),
   ];
 
   final SpectrumSource _spectrum = SpectrumSource();

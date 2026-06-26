@@ -103,6 +103,10 @@ flutter:
     - shaders/visualizer/03-plasma-pulse.frag
     - shaders/visualizer/04-cyber-fuji-buffera.frag
     - shaders/visualizer/04-cyber-fuji-image.frag
+    - shaders/visualizer/05-hex-buffera.frag
+    - shaders/visualizer/05-hex-bufferb.frag
+    - shaders/visualizer/05-hex-bufferc.frag
+    - shaders/visualizer/05-hex-image.frag
     - shaders/visualizer/06-4d-beats.frag
     - shaders/visualizer/07-neonwave-sunrise.frag
     - shaders/visualizer/08-neonwave-sunset.frag
