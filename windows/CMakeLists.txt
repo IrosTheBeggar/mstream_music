@@ -106,6 +106,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/iroh/iroh_tunnel.dll"
 install(FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/projectm/projectM-4.dll"
     "${CMAKE_CURRENT_SOURCE_DIR}/projectm/glew32.dll"
+    "${CMAKE_CURRENT_SOURCE_DIR}/projectm/projectm_desktop.dll"
   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime
   OPTIONAL)
