@@ -226,17 +226,31 @@ default "synthesized" PCM source has no platform dependency (the Android
 `Visualizer` effect is the only platform-specific path). So feeding audio is NOT
 a blocker on desktop.
 
-### Path A — pure-Flutter shader visualizer — ✅ first slice landed
-Implemented (Windows-verified, builds clean): `shaders/visualizer_spectrum.frag`
-(Flutter GLSL, 64-band spectrum bars + glow, accent-tinted) +
-`lib/visualizer/spectrum_source.dart` (synth PCM → in-Dart radix-2 FFT →
-log-banded, fast-attack/slow-decay smoothing) + `lib/visualizer/
-shader_visualizer_screen.dart` (Ticker-driven CustomPaint feeding the shader),
-reachable from a "Visualizer" sidebar entry. Note: Flutter `FragmentProgram`
-needs *precompiled* `.frag` assets (no runtime GLSL string compile), so the
-existing native Shadertoy presets can't be loaded as-is — they'd be hand-ported
-to Flutter `.frag` files. Next: more shaders + a switcher, optional fullscreen,
-and (later) real-audio capture to replace the synth source.
+### Path A — pure-Flutter shader visualizer — ✅ landed (5 of 9 presets)
+Windows-verified, builds clean. A "Visualizer" sidebar entry opens a Ticker-driven
+`CustomPaint`; `lib/visualizer/spectrum_source.dart` synthesizes PCM → in-Dart
+radix-2 FFT → a **512×2 audio texture** (row 0 = spectrum, row 1 = waveform)
+uploaded as the `iChannel0` sampler, so the ported shader bodies run unchanged.
+Tap or ‹ › cycles presets.
+
+**Ported (`shaders/visualizer/*.frag`):** the 6 single-pass Shadertoy shaders from
+`assets/shaders/` were mechanically ported (preamble + `mainImage`→`main()` with a
+y-flip + `iParams` baked to preset defaults). 5 ship: 01 Spectrum Bars, 02 Audio
+Tunnel, 03 Plasma Pulse, 07 Neonwave Sunrise, 08 Neonwave Sunset.
+
+**Not ported:**
+- **06 4D Beats** — its comma-operator-chain raymarch is SkSL-incompatible (the
+  Windows/Skia backend rejects it: "missing init declaration"). Would need a manual
+  rewrite into plain statements.
+- **04 / 05 / 09** — multi-pass (ping-pong feedback buffers); Flutter fragment
+  shaders are single-pass, so these need an offscreen-render harness
+  (PictureRecorder→Image per pass) — a separate, bigger piece of work.
+
+**Key constraint:** Flutter `FragmentProgram` needs *precompiled* `.frag` assets
+(no runtime GLSL string compile) AND the Windows/Skia backend is stricter than
+desktop GL — exotic GLSL (comma-operator bodies, etc.) is rejected. Next:
+real-audio capture to replace the synth source; optional fullscreen; the 06
+rewrite / multi-pass harness if wanted.
 
 Original sketch of the approach:
 Reimplement the Shadertoy rendering with Flutter's built-in `ui.FragmentShader`
