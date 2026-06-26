@@ -291,7 +291,25 @@ Reimplement the Shadertoy rendering with Flutter's built-in `ui.FragmentShader`
 - Gives the Shadertoy-style visualizers — **not** the Milkdrop preset library.
 - **Realistic near-term path** to *a* visualizer on desktop.
 
-### Path B — native projectM + shader engine via ANGLE 🟡
+### Path B — native projectM (Milkdrop) — 🟡 Phase 1 done (engine loads on Windows)
+
+**Done:** built **libprojectM v4.1.6 → `projectM-4.dll`** for Windows (MSVC, from
+`C:\Users\paul\build\projectm`; needs GLEW — fetched the official 2.1.0 prebuilt).
+Committed `projectM-4.dll` + `glew32.dll` under `windows/projectm/`, bundled next
+to the exe via an OPTIONAL CMake install (mirrors iroh/jniLibs). Un-gated
+`ProjectMBindings._open()` for Windows. **Verified:** the app logs
+`[projectm] libprojectM loaded · v4.1.6` — DLL loads, glew32 resolves, FFI binds,
+version round-trips. (Built desktop-GL/GLEW, not GLES/ANGLE — simplest path for an
+offscreen WGL context + CPU readback.)
+
+**Still to do (Phase 2 — the big native piece):** offscreen WGL context +
+`glewInit` + FBO; per-frame `projectm_pcm_add_float` (synth PCM) +
+`projectm_opengl_render_frame`; present to Flutter via `glReadPixels` → Dart
+`ui.Image` (before any GPU texture sharing); load `.milk` presets
+(`assets/presets/`, 120) via `projectm_load_preset_file`; desktop projectM screen
++ switcher. A native FFI shim (like iroh) — unverifiable without eyes on it.
+
+### Path B reference — via ANGLE
 The C++ engines are already `EGL` + `GLES3`; Flutter's Windows embedder ships
 **ANGLE** (EGL/GLES over D3D11), so the engine code largely compiles against it.
 - Replace the Android `SurfaceTexture`/JNI bits with an offscreen ANGLE EGL
