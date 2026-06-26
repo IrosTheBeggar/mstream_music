@@ -43,6 +43,7 @@ import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'native/iroh_tunnel.dart';
+import 'native/projectm_controller.dart';
 import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
@@ -117,6 +118,11 @@ Future<void> _startApp() async {
   if (IrohTunnel.isSupported) {
     appLog('[iroh] tunnel status: ${IrohTunnel.instance.status.name}');
   }
+  // Whether libprojectM (the Milkdrop visualizer engine) loaded for this
+  // platform/ABI — Android (jniLibs) or the desktop build (bundled DLL). This
+  // only confirms the engine lib + FFI symbols resolve and the version reads;
+  // the per-frame offscreen-GL render bridge is still desktop WIP.
+  appLog('[projectm] ${ProjectMController.statusLine()}');
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
