@@ -66,6 +66,9 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
               PassDef('image', 'shaders/visualizer/05-hex-image.frag',
                   ['bufferb', 'bufferc']),
             ])),
+    // 09 mountainbytes is omitted: its raymarch passes samplers to functions
+    // (forbidden in SkSL runtime effects) and use unbounded loops — see
+    // DESKTOP_PORT_PLAN.md.
   ];
 
   final SpectrumSource _spectrum = SpectrumSource();
