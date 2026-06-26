@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
+import '../media/cast_target.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../screens/about_screen.dart';
@@ -29,6 +30,7 @@ import '../screens/share_playlist_dialog.dart';
 import '../screens/transcode_screen.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../native/projectm_controller.dart';
@@ -39,6 +41,7 @@ import '../util/media_format.dart';
 import '../visualizer/projectm_screen.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
+import 'cast_picker_sheet.dart';
 import 'media_shortcuts.dart';
 import 'queue_list.dart';
 
@@ -743,6 +746,28 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
           },
         ),
         const SizedBox(width: 4),
+        // Cast picker — the same sheet the phone uses; discovery runs only while
+        // it's open. Icon flips to cast_connected (primary) while casting.
+        StreamBuilder<CastTarget>(
+          stream: CastManager().activeTargetStream,
+          initialData: CastManager().activeTarget,
+          builder: (context, snap) {
+            final casting = !(snap.data ?? CastTarget.local).isLocal;
+            return IconButton(
+              icon: Icon(casting ? Icons.cast_connected : Icons.cast),
+              iconSize: 22,
+              tooltip: 'Cast',
+              color:
+                  casting ? VelvetColors.primary : VelvetColors.textSecondary,
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                backgroundColor: VelvetColors.surface,
+                isScrollControlled: true,
+                builder: (_) => const CastPickerSheet(),
+              ),
+            );
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.queue_music),
           iconSize: 22,
