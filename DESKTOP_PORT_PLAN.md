@@ -242,12 +242,21 @@ z+=…)` — declares one var, tests another, increments a third) are both rejec
 SkSL ("missing init declaration"); rewritten into a plain counting loop with
 statement body + `mat2`-from-scalars.
 
-**Not ported — 04 / 05 / 09 (multi-pass):** these use ping-pong feedback buffers
-(channel routing `// === channel …`, passes `// === pass: …`). Flutter fragment
-shaders are single-pass, so they need an offscreen-render harness (`toImageSync`
-per pass, ping-pong images for self-feedback). 04 is simplest (one 1×1 state buffer
-+ image), 05 has a full-size feedback buffer, 09 is 766 lines. Harness is a
-separate, bigger piece of work — see the multi-pass renderer effort.
+**Multi-pass harness — built; 04 ported (7th preset).** `lib/visualizer/
+viz_renderer.dart` adds a `VizRenderer` abstraction: `SinglePassRenderer` (the
+existing path) + `MultiPassRenderer`, which runs passes in order each frame —
+buffer passes render to offscreen images via `Picture.toImageSync`, the `image`
+pass draws to screen; a pass listing its own name reads last frame's image
+(ping-pong feedback). **04 Cyber Fuji** ships (buffera = 1×1 self-feedback band
+buffer + image). Builds clean on Windows; the offscreen ping-pong render path
+itself needs a visual check (only runs when that preset is selected).
+
+**Still not ported — 05 / 09:** same harness, just more passes to port. **05
+hex-marching** has a *full-size* ping-pong buffer (untested perf for full-res
+`toImageSync` each frame) + a 1×1 buffer + a compute buffer. **09 mountainbytes**
+is 766 lines with a `common` shared block (the harness would need to prepend
+common to each pass). Both are mechanical ports on the existing harness but want
+visual iteration — deferred.
 
 **Key constraint:** Flutter `FragmentProgram` needs *precompiled* `.frag` assets
 (no runtime GLSL string compile) AND the Windows/Skia backend is stricter than
