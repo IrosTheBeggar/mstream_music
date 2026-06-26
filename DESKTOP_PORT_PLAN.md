@@ -226,7 +226,19 @@ default "synthesized" PCM source has no platform dependency (the Android
 `Visualizer` effect is the only platform-specific path). So feeding audio is NOT
 a blocker on desktop.
 
-### Path A — pure-Flutter shader visualizer 🟢
+### Path A — pure-Flutter shader visualizer — ✅ first slice landed
+Implemented (Windows-verified, builds clean): `shaders/visualizer_spectrum.frag`
+(Flutter GLSL, 64-band spectrum bars + glow, accent-tinted) +
+`lib/visualizer/spectrum_source.dart` (synth PCM → in-Dart radix-2 FFT →
+log-banded, fast-attack/slow-decay smoothing) + `lib/visualizer/
+shader_visualizer_screen.dart` (Ticker-driven CustomPaint feeding the shader),
+reachable from a "Visualizer" sidebar entry. Note: Flutter `FragmentProgram`
+needs *precompiled* `.frag` assets (no runtime GLSL string compile), so the
+existing native Shadertoy presets can't be loaded as-is — they'd be hand-ported
+to Flutter `.frag` files. Next: more shaders + a switcher, optional fullscreen,
+and (later) real-audio capture to replace the synth source.
+
+Original sketch of the approach:
 Reimplement the Shadertoy rendering with Flutter's built-in `ui.FragmentShader`
 (runtime GLSL, all platforms incl. web). Audio FFT → a sampler image;
 `iTime`/`iResolution`/`iParams` → float uniforms; drive with a `Ticker` into a
