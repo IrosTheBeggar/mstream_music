@@ -94,10 +94,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Runtime GLSL fragment shaders (compiled by the Flutter build). Used by the
-  # desktop shader visualizer — see lib/visualizer/.
+  # Runtime GLSL fragment shaders (compiled by the Flutter build) — the desktop
+  # shader visualizer presets (Shadertoy shaders ported to Flutter's dialect).
+  # See lib/visualizer/ and shaders/visualizer/.
   shaders:
-    - shaders/visualizer_spectrum.frag
+    - shaders/visualizer/01-spectrum-bars.frag
+    - shaders/visualizer/02-audio-tunnel.frag
+    - shaders/visualizer/03-plasma-pulse.frag
+    - shaders/visualizer/07-neonwave-sunrise.frag
+    - shaders/visualizer/08-neonwave-sunset.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:

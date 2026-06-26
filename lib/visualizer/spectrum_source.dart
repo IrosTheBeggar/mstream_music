@@ -1,55 +1,52 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-/// Produces a smoothed [bandCount]-band magnitude spectrum for the desktop shader
-/// visualizer.
+/// Produces the Shadertoy-style audio texture (`iChannel0`) the desktop shader
+/// visualizer samples: an RGBA image, [texWidth]×[texHeight] (512×2), where
+///   row 0 = FFT magnitude spectrum (linear bins, 0..22 kHz)
+///   row 1 = the time-domain waveform (centred at 0.5)
+/// matching the native AudioTexture's layout, so the ported shaders read it with
+/// `texture(iChannel0, vec2(freq, 0.25))` / `vec2(t, 0.75)` unchanged.
 ///
-/// The signal is *synthesized* — the same strategy the Android visualizer uses by
+/// The signal is synthesized — the same strategy the Android visualizer uses by
 /// default (three drifting carriers across bass/mid/treble + light noise + a 2 Hz
-/// beat), so it needs no mic permission and looks alive across the whole spectrum.
-/// Each [advance] synthesizes a fresh window, runs a real FFT, and folds the bins
-/// into log-spaced bands with fast-attack / slow-decay smoothing. Swapping in real
-/// playback PCM later only means replacing [_synth] with captured samples.
+/// beat), so it needs no mic permission and looks alive across the spectrum.
+/// Replacing [_synth] with captured playback PCM later is all that real-audio
+/// reactivity needs.
 class SpectrumSource {
-  SpectrumSource({this.bandCount = 64});
-
-  final int bandCount;
-
-  static const int _fftSize = 512; // power of two
+  static const int _fftSize = 1024; // → 512 magnitude bins
+  static const int bins = _fftSize ~/ 2; // 512
+  static const int texWidth = bins; // 512
+  static const int texHeight = 2;
   static const double _sampleRate = 44100.0;
 
   final Random _rng = Random();
   final Float32List _samples = Float32List(_fftSize);
 
-  /// Latest smoothed band magnitudes (0..1), length [bandCount]. Mutated in place
-  /// each [advance] so the painter can read it by reference without reallocation.
-  late final List<double> bands = List<double>.filled(bandCount, 0.0);
+  /// RGBA8888 pixel buffer (row-major, [texWidth]×[texHeight]), refreshed each
+  /// [advance]. Handed to `decodeImageFromPixels` to build the sampler image.
+  final Uint8List textureBytes = Uint8List(texWidth * texHeight * 4);
 
-  /// Scales amplitude — louder when something's actually playing, quiet (not dead)
-  /// when paused, mirroring the Android source.
+  /// Amplitude follows playback: full when playing, quiet (not dead) when paused.
   bool playing = true;
 
-  // Carrier phases, kept continuous across frames so the tone doesn't click.
   double _phaseBass = 0, _phaseMid = 0, _phaseTreble = 0;
   int _frame = 0;
 
-  // FFT working buffers.
   final Float64List _re = Float64List(_fftSize);
   final Float64List _im = Float64List(_fftSize);
 
-  /// Synthesize one window, transform it, and update the smoothed [bands].
+  /// Synthesize a window, FFT it, and refresh [textureBytes].
   void advance() {
     _synth();
     _fft();
-    _updateBands();
+    _writeTexture();
     _frame++;
   }
 
   void _synth() {
     final amp = playing ? 0.65 : 0.18;
     const beatHz = 2.0;
-    // Sub-1 Hz sweep LFOs evaluated once per window (they barely move across
-    // ~12 ms); the carriers then advance by a fixed phase step per sample.
     final tMid = (_frame * _fftSize + _fftSize / 2) / _sampleRate;
     final bassF = 60 + 60 * (0.5 + 0.5 * sin(2 * pi * 0.31 * tMid));
     final midF = 440 + 530 * (0.5 + 0.5 * sin(2 * pi * 0.47 * tMid));
@@ -78,9 +75,8 @@ class SpectrumSource {
   }
 
   void _fft() {
-    // Hann window into the FFT buffers (reduces spectral leakage / flicker).
     for (var i = 0; i < _fftSize; i++) {
-      final w = 0.5 - 0.5 * cos(2 * pi * i / (_fftSize - 1));
+      final w = 0.5 - 0.5 * cos(2 * pi * i / (_fftSize - 1)); // Hann
       _re[i] = _samples[i] * w;
       _im[i] = 0.0;
     }
@@ -90,7 +86,6 @@ class SpectrumSource {
   // In-place iterative radix-2 Cooley–Tukey FFT (n must be a power of two).
   static void _transform(Float64List re, Float64List im) {
     final n = re.length;
-    // Bit-reversal permutation.
     var j = 0;
     for (var i = 1; i < n; i++) {
       var bit = n >> 1;
@@ -107,7 +102,6 @@ class SpectrumSource {
         im[j] = ti;
       }
     }
-    // Butterflies.
     for (var len = 2; len <= n; len <<= 1) {
       final ang = -2 * pi / len;
       final wr = cos(ang), wi = sin(ang);
@@ -130,31 +124,25 @@ class SpectrumSource {
     }
   }
 
-  void _updateBands() {
-    final bins = _fftSize >> 1; // usable magnitude bins (Nyquist)
-    for (var b = 0; b < bandCount; b++) {
-      final lo = _binForBand(b, bins);
-      final hi = max(lo + 1, _binForBand(b + 1, bins));
-      var sum = 0.0;
-      var cnt = 0;
-      for (var k = lo; k < hi && k < bins; k++) {
-        sum += sqrt(_re[k] * _re[k] + _im[k] * _im[k]);
-        cnt++;
-      }
-      var v = cnt > 0 ? sum / cnt : 0.0;
-      // Log compression so the quiet synth fills the 0..1 range nicely.
-      v = (log(1 + v * 9) / ln10).clamp(0.0, 1.0);
-      // Fast attack, slow decay — bars pop up and fall back smoothly.
-      final prev = bands[b];
-      bands[b] = v > prev ? v : prev * 0.82 + v * 0.18;
-    }
-  }
+  void _writeTexture() {
+    // Normalize a Hann-windowed magnitude (a pure tone peaks near fftSize/4) and
+    // perceptually spread it with sqrt so quiet content still shows.
+    const norm = 1.0 / (_fftSize * 0.25);
+    for (var x = 0; x < bins; x++) {
+      final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm;
+      final v = (sqrt(mag.clamp(0.0, 1.0)) * 255).round();
+      final o = x * 4; // row 0
+      textureBytes[o] = v;
+      textureBytes[o + 1] = v;
+      textureBytes[o + 2] = v;
+      textureBytes[o + 3] = 255;
 
-  // Log-spaced bin boundary for band [b] (skips DC, which would dominate).
-  int _binForBand(int b, int bins) {
-    final f = b / bandCount;
-    const minBin = 1.0;
-    final maxBin = bins.toDouble();
-    return (minBin * pow(maxBin / minBin, f)).floor().clamp(1, bins);
+      final w = ((0.5 + 0.5 * _samples[x]).clamp(0.0, 1.0) * 255).round();
+      final o2 = (bins + x) * 4; // row 1
+      textureBytes[o2] = w;
+      textureBytes[o2 + 1] = w;
+      textureBytes[o2 + 2] = w;
+      textureBytes[o2 + 3] = 255;
+    }
   }
 }
