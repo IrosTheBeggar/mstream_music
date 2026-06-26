@@ -251,12 +251,27 @@ pass draws to screen; a pass listing its own name reads last frame's image
 buffer + image). Builds clean on Windows; the offscreen ping-pong render path
 itself needs a visual check (only runs when that preset is selected).
 
-**Still not ported — 05 / 09:** same harness, just more passes to port. **05
-hex-marching** has a *full-size* ping-pong buffer (untested perf for full-res
-`toImageSync` each frame) + a 1×1 buffer + a compute buffer. **09 mountainbytes**
-is 766 lines with a `common` shared block (the harness would need to prepend
-common to each pass). Both are mechanical ports on the existing harness but want
-visual iteration — deferred.
+**05 hex-marching — ported (8th preset).** 4 passes on the harness: buffera
+(full compute) → bufferb (full-size ping-pong) → bufferc (1×1 music state) →
+image. Its loops use runtime bounds but are well-formed with constant maxima, so
+SkSL accepts them. Builds clean; visual/perf (full-res `toImageSync` each frame)
+needs a check.
+
+**09 mountainbytes — NOT portable to Flutter's SkSL backend.** Two hard SkSL
+runtime-effect limitations, both architectural to the shader:
+1. **Samplers as function parameters are forbidden.** 09's `rayMarch`/`hf`/`fbm`
+   helpers take `sampler2D` args and pass buffer textures around
+   (`unexpected SAMPLER, expecting RIGHT_PAREN`). SkSL requires samplers used
+   directly, not passed — so every helper would have to be inlined/duplicated per
+   buffer.
+2. **Unbounded loops.** SkSL ES2 *unrolls* loops, so bounds must be constant;
+   09's raymarch/fbm loop on runtime counts. Capping with a constant max + `break`
+   clears the error but forces a large unroll.
+   (1) is the dealbreaker — it would mean rewriting the 766-line shader's core.
+Would only work on **Impeller** (real loops, sampler params) once Windows Impeller
+is stable, or via a ground-up rewrite. Omitted from the preset list.
+
+**Net: 8 of 9 shaders ported** (01–08; 09 is SkSL-infeasible).
 
 **Key constraint:** Flutter `FragmentProgram` needs *precompiled* `.frag` assets
 (no runtime GLSL string compile) AND the Windows/Skia backend is stricter than
