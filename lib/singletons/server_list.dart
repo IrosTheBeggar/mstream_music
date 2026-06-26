@@ -170,6 +170,25 @@ class ServerManager {
     syncInsecureTls();
   }
 
+  // SPIKE (desktop): localname of the transient embedded-server entry.
+  static const embeddedLocalname = '__embedded__';
+
+  /// SPIKE (desktop): make the bundled embedded server (already spawned, live on
+  /// [port]) the active server. Transient — never written to servers.json (its
+  /// loopback port is chosen fresh each launch); replaces any prior embedded
+  /// entry. Call AFTER [ensureLoaded] so loadServerList can't override it.
+  Future<void> useEmbeddedServer(int port) async {
+    serverList.removeWhere((s) => s.localname == embeddedLocalname);
+    final s =
+        Server('http://127.0.0.1:$port', null, null, null, embeddedLocalname);
+    serverList.insert(0, s);
+    currentServer = s;
+    _serverListStream.sink.add(serverList);
+    _currentServerStream.sink.add(currentServer);
+    BrowserManager().goToNavScreen();
+    await getServerPaths(s);
+  }
+
   // Storage mode + base path are set directly on the Server in the
   // add-server form (like localname is), so they aren't part of this
   // signature — callAfterEditServer() persists whatever was set.

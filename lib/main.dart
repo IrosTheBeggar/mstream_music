@@ -48,6 +48,13 @@ import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
 import 'widgets/desktop_shell.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:tray_manager/tray_manager.dart';
+import 'desktop/embedded_server.dart';
+
+// SPIKE: true on the desktop platforms that get the embedded server + tray.
+final bool _isDesktop =
+    Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
 void main() {
   // Run the app inside a Zone whose print() handler tees every log line into
@@ -74,6 +81,12 @@ Future<void> _startApp() async {
   // AudioPlayer is constructed (MediaManager.start() below builds one).
   if (Platform.isWindows || Platform.isLinux) {
     JustAudioMediaKit.ensureInitialized();
+  }
+  // SPIKE (desktop): bring up the window + system tray, then spawn the bundled
+  // mStream server. The app is pointed at it once the server list has loaded
+  // (in MStreamApp.initState, below).
+  if (_isDesktop) {
+    await _initDesktop();
   }
   // Full flavor only: route API HTTPS through an override that accepts a
   // self-signed cert for servers the user explicitly opted in
@@ -158,6 +171,45 @@ Future<void> _startApp() async {
   ));
 }
 
+// SPIKE (desktop): window + system tray + embedded server bring-up.
+//   - Closing the window HIDES to tray (setPreventClose); the app + server keep
+//     running in the background.
+//   - The tray menu reopens the window or quits (which stops the server).
+Future<void> _initDesktop() async {
+  await windowManager.ensureInitialized();
+  const opts = WindowOptions(
+    size: Size(1280, 800),
+    minimumSize: Size(900, 600),
+    center: true,
+    title: 'mStream Music',
+  );
+  unawaited(windowManager.waitUntilReadyToShow(opts, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  }));
+  // The window's close button should hide to tray, not quit — so the embedded
+  // server keeps serving after the player window is closed.
+  await windowManager.setPreventClose(true);
+
+  await trayManager.setIcon('assets/tray_icon.ico');
+  await trayManager.setToolTip('mStream Music');
+  await trayManager.setContextMenu(Menu(items: [
+    MenuItem(key: 'show', label: 'Open mStream'),
+    MenuItem.separator(),
+    MenuItem(key: 'quit', label: 'Quit mStream'),
+  ]));
+
+  // Spawn the bundled server now; the app is pointed at it after the server
+  // list loads (MStreamApp.initState). Non-fatal on failure — the window still
+  // opens (just with no embedded server).
+  try {
+    await EmbeddedServer.instance.start();
+    appLog('[embedded] server up on port ${EmbeddedServer.port}');
+  } catch (e) {
+    appLog('[embedded] server failed to start: $e');
+  }
+}
+
 class MStreamApp extends StatefulWidget {
   const MStreamApp({super.key});
 
@@ -165,7 +217,8 @@ class MStreamApp extends StatefulWidget {
   State<MStreamApp> createState() => _MStreamAppState();
 }
 
-class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
+class _MStreamAppState extends State<MStreamApp>
+    with WidgetsBindingObserver, TrayListener, WindowListener {
   final GlobalKey<PlayerPanelState> _panelKey = GlobalKey<PlayerPanelState>();
   // The drawer is hosted on an OUTER Scaffold that wraps the player overlay (see
   // build), so the drawer + scrim paint OVER the player — it dims with the rest
@@ -179,6 +232,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // SPIKE (desktop): receive window-close + tray-click/menu events.
+    if (_isDesktop) {
+      trayManager.addListener(this);
+      windowManager.addListener(this);
+      // Once the first frame is up, warn if the bundled server couldn't start —
+      // most importantly if its fixed port (EmbeddedServer.port) was taken.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final err = EmbeddedServer.instance.startupError;
+        if (err != null && mounted) _showServerWarning(err);
+      });
+    }
     // Keep the system navigation/status bars visible (drawn edge-to-edge behind
     // the app) whenever the main screen is up. The Visualizer flips to immersive
     // and restores this on exit, but a kill mid-immersive can leak that mode to
@@ -193,7 +257,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // loadServerList so it's already true before the home grid first renders.
     BrowserManager().awaitingStartupView =
         SettingsManager().startupView != StartupView.browser;
-    ServerManager().ensureLoaded().then((_) {
+    ServerManager().ensureLoaded().then((_) async {
+      // SPIKE (desktop): point the app at the embedded server once the persisted
+      // list has loaded (so loadServerList can't override the active server).
+      if (_isDesktop && EmbeddedServer.instance.isRunning) {
+        await ServerManager().useEmbeddedServer(EmbeddedServer.port);
+      }
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
     });
@@ -296,9 +365,70 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     }
   }
 
+  // ── SPIKE: desktop tray + window lifecycle ──
+  // Window close button: hide to tray instead of quitting, so the embedded
+  // server keeps serving after the player window is closed.
+  @override
+  void onWindowClose() async {
+    if (await windowManager.isPreventClose()) {
+      await windowManager.hide();
+    }
+  }
+
+  // Left-click the tray icon: restore + focus the window.
+  @override
+  void onTrayIconMouseDown() {
+    windowManager.show();
+    windowManager.focus();
+  }
+
+  // Right-click the tray icon: open the context menu.
+  @override
+  void onTrayIconRightMouseDown() {
+    trayManager.popUpContextMenu();
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) async {
+    switch (menuItem.key) {
+      case 'show':
+        await windowManager.show();
+        await windowManager.focus();
+        break;
+      case 'quit':
+        // Stop the embedded server, then really close (drop preventClose first).
+        EmbeddedServer.instance.stop();
+        await windowManager.setPreventClose(false);
+        await windowManager.destroy();
+        break;
+    }
+  }
+
+  // SPIKE: warn the user that the bundled server didn't start — usually because
+  // its fixed port is already taken. Shown via the app's root navigator.
+  void _showServerWarning(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Built-in mStream server not started'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (_isDesktop) {
+      trayManager.removeListener(this);
+      windowManager.removeListener(this);
+    }
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
     DownloadManager().dispose();

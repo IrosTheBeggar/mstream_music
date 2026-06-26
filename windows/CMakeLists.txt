@@ -98,6 +98,16 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/iroh/iroh_tunnel.dll"
   COMPONENT Runtime
   OPTIONAL)
 
+# SPIKE: bundle the standalone mStream server (windows/sidecar/ = mStream.exe +
+# bin/ + webapp/) next to the runner as server/, so the app can spawn it at
+# runtime (lib/desktop/embedded_server.dart resolves <exe dir>/server/mStream.exe).
+# OPTIONAL so a checkout without the staged bundle still builds.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sidecar/"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/server"
+  COMPONENT Runtime
+  USE_SOURCE_PERMISSIONS
+  OPTIONAL)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"

@@ -133,6 +133,11 @@ local.properties
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
 
+# Staged mStream server bundle (server binary + webapp/ + bin/) — a large build
+# artifact extracted from the mStream server release at build time, NOT source.
+# windows/CMakeLists.txt installs it OPTIONALly, so builds work without it.
+/windows/sidecar/
+
 # Linux
 **/linux/flutter/ephemeral/
 **/linux/flutter/generated_plugin_registrant.cc
