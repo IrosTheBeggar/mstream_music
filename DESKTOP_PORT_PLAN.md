@@ -110,7 +110,7 @@ Known rough edges (first functional pass):
   state survives via the singletons).
 - Desktop-only labels (`Library`, `Queue`, `Add server`) are hardcoded English —
   not yet in the ARB files. Localize later.
-- Cast button omitted on desktop (no Windows discoverers — see §6).
+- Cast button is in the Now Playing bar (opens the shared picker) — see §7.
 
 ---
 
@@ -368,6 +368,7 @@ object (real `audio/*` content-types). Discovery uses the official **`multicast_
 | `desktop_chromecast_discoverer.dart` — `multicast_dns` `_googlecast._tcp` → `CastTarget`s + endpoint registry | new |
 | `desktop_chromecast_backend.dart` — `EmulatedPlaylistBackend` driving the sender | new |
 | Registration in `media.dart` (desktop branch) + backend branch in `audio_stuff.dart` | wired |
+| Cast button in `DesktopNowPlayingBar` opening the shared `CastPickerSheet` (visualizer-to-cast checkbox hidden off-Android) | wired |
 | `tool/cast_discovery_probe.dart` — standalone passive discovery diagnostic | new dev tool |
 
 ### Verified vs not
