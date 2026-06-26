@@ -6,17 +6,14 @@ import 'package:flutter/scheduler.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import 'spectrum_source.dart';
+import 'viz_renderer.dart';
 
-/// Pure-Flutter audio visualizer for desktop — no native code, no platform
-/// channels. Cycles through Shadertoy presets ported to Flutter's runtime
-/// fragment-shader dialect (shaders/visualizer/*.frag). A [Ticker] advances time
-/// and the [SpectrumSource] each frame; the spectrum/waveform is uploaded as the
-/// `iChannel0` sampler so the ported shader bodies run unchanged.
-///
-/// Desktop counterpart to the Android native projectM/shader engine. Multi-pass
-/// presets (04/05/09, which need ping-pong feedback buffers) aren't included —
-/// they'd need an offscreen-render harness Flutter fragment shaders don't give
-/// for free.
+/// Pure-Flutter audio visualizer for desktop — no native code. Cycles through
+/// Shadertoy presets ported to Flutter's runtime fragment-shader dialect
+/// (single-pass via [SinglePassRenderer], multi-pass via [MultiPassRenderer]).
+/// A [Ticker] advances time and the [SpectrumSource] each frame; the
+/// spectrum/waveform is uploaded as the `iChannel0` audio texture so the ported
+/// shader bodies run unchanged.
 class ShaderVisualizerScreen extends StatefulWidget {
   const ShaderVisualizerScreen({super.key});
 
@@ -26,29 +23,44 @@ class ShaderVisualizerScreen extends StatefulWidget {
 
 class _Preset {
   final String name;
-  final String asset;
-  const _Preset(this.name, this.asset);
+  final VizRenderer Function() build;
+  const _Preset(this.name, this.build);
 }
 
 class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
     with SingleTickerProviderStateMixin {
-  static const List<_Preset> _presets = [
-    _Preset('Spectrum Bars', 'shaders/visualizer/01-spectrum-bars.frag'),
-    _Preset('Audio Tunnel', 'shaders/visualizer/02-audio-tunnel.frag'),
-    _Preset('Plasma Pulse', 'shaders/visualizer/03-plasma-pulse.frag'),
-    _Preset('4D Beats', 'shaders/visualizer/06-4d-beats.frag'),
-    _Preset('Neonwave Sunrise', 'shaders/visualizer/07-neonwave-sunrise.frag'),
-    _Preset('Neonwave Sunset', 'shaders/visualizer/08-neonwave-sunset.frag'),
+  static final List<_Preset> _presets = [
+    _Preset('Spectrum Bars',
+        () => SinglePassRenderer('shaders/visualizer/01-spectrum-bars.frag')),
+    _Preset('Audio Tunnel',
+        () => SinglePassRenderer('shaders/visualizer/02-audio-tunnel.frag')),
+    _Preset('Plasma Pulse',
+        () => SinglePassRenderer('shaders/visualizer/03-plasma-pulse.frag')),
+    _Preset('4D Beats',
+        () => SinglePassRenderer('shaders/visualizer/06-4d-beats.frag')),
+    _Preset('Neonwave Sunrise',
+        () => SinglePassRenderer('shaders/visualizer/07-neonwave-sunrise.frag')),
+    _Preset('Neonwave Sunset',
+        () => SinglePassRenderer('shaders/visualizer/08-neonwave-sunset.frag')),
+    // Multi-pass: a 1×1 self-feedback band buffer feeds the scene.
+    _Preset(
+        'Cyber Fuji',
+        () => MultiPassRenderer([
+              PassDef('buffera', 'shaders/visualizer/04-cyber-fuji-buffera.frag',
+                  ['music', 'buffera'],
+                  fixed1x1: true),
+              PassDef('image', 'shaders/visualizer/04-cyber-fuji-image.frag',
+                  ['music', 'buffera']),
+            ])),
   ];
 
   final SpectrumSource _spectrum = SpectrumSource();
   late final Ticker _ticker = createTicker(_onTick);
   final ValueNotifier<int> _repaint = ValueNotifier<int>(0);
 
-  final List<ui.FragmentProgram?> _programs =
-      List<ui.FragmentProgram?>.filled(_presets.length, null);
+  final List<VizRenderer> _renderers = [];
   int _index = 0;
-  ui.FragmentShader? _shader;
+  bool _ready = false;
 
   ui.Image? _audioImage;
   bool _decoding = false;
@@ -63,27 +75,20 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
 
   Future<void> _load() async {
     try {
-      for (var i = 0; i < _presets.length; i++) {
-        _programs[i] = await ui.FragmentProgram.fromAsset(_presets[i].asset);
+      for (final p in _presets) {
+        final r = p.build();
+        await r.load();
+        _renderers.add(r);
       }
       if (!mounted) return;
-      setState(() => _shader = _programs[0]?.fragmentShader());
+      setState(() => _ready = true);
       _ticker.start();
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
     }
   }
 
-  void _setPreset(int i) {
-    final prog = _programs[i];
-    if (prog == null) return;
-    _shader?.dispose();
-    setState(() {
-      _index = i;
-      _shader = prog.fragmentShader();
-    });
-  }
-
+  void _setPreset(int i) => setState(() => _index = i);
   void _next() => _setPreset((_index + 1) % _presets.length);
   void _prev() => _setPreset((_index - 1 + _presets.length) % _presets.length);
 
@@ -97,8 +102,8 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   }
 
   // Build the iChannel0 image from the latest texture bytes. decodeImageFromPixels
-  // is async, so we skip frames while one is in flight (a tiny 512×2 image never
-  // backs up in practice) and keep showing the previous one.
+  // is async, so we skip frames while one is in flight (a 512×2 image never backs
+  // up in practice) and keep showing the previous one.
   void _refreshAudioImage() {
     if (_decoding) return;
     _decoding = true;
@@ -122,7 +127,9 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   @override
   void dispose() {
     _ticker.dispose();
-    _shader?.dispose();
+    for (final r in _renderers) {
+      r.dispose();
+    }
     _audioImage?.dispose();
     _repaint.dispose();
     super.dispose();
@@ -140,7 +147,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
             style: TextStyle(color: VelvetColors.textSecondary)),
       );
     }
-    if (_shader == null) {
+    if (!_ready) {
       return const ColoredBox(
         color: Colors.black,
         child: Center(child: CircularProgressIndicator()),
@@ -155,7 +162,8 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
           children: [
             CustomPaint(
               painter: _VizPainter(
-                shader: () => _shader,
+                renderer: () =>
+                    _index < _renderers.length ? _renderers[_index] : null,
                 image: () => _audioImage,
                 time: () => _time,
                 repaint: _repaint,
@@ -214,12 +222,12 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
 }
 
 class _VizPainter extends CustomPainter {
-  final ui.FragmentShader? Function() shader;
+  final VizRenderer? Function() renderer;
   final ui.Image? Function() image;
   final double Function() time;
 
   _VizPainter({
-    required this.shader,
+    required this.renderer,
     required this.image,
     required this.time,
     required Listenable repaint,
@@ -227,20 +235,14 @@ class _VizPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sh = shader();
+    final r = renderer();
     final img = image();
-    if (sh == null || img == null) {
+    if (r == null || img == null) {
       canvas.drawRect(
           Offset.zero & size, Paint()..color = const Color(0xFF000000));
       return;
     }
-    // Uniform order MUST match the .frag preamble (iResolution xyz, iTime).
-    sh.setFloat(0, size.width);
-    sh.setFloat(1, size.height);
-    sh.setFloat(2, 1.0);
-    sh.setFloat(3, time());
-    sh.setImageSampler(0, img);
-    canvas.drawRect(Offset.zero & size, Paint()..shader = sh);
+    r.render(canvas, size, time(), img);
   }
 
   @override
