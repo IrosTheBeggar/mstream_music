@@ -98,6 +98,18 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/iroh/iroh_tunnel.dll"
   COMPONENT Runtime
   OPTIONAL)
 
+# Prebuilt projectM (Milkdrop) visualizer engine (libprojectM v4.1.6) + its GLEW
+# OpenGL-loader dependency, bundled next to the exe for dart:ffi
+# (DynamicLibrary.open "projectM-4.dll"). Built from C:/Users/paul/build/projectm
+# with MSVC — see windows/projectm/README.md. OPTIONAL so a checkout without the
+# prebuilt DLLs still builds (ProjectMBindings.isAvailable just reports false).
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/projectm/projectM-4.dll"
+    "${CMAKE_CURRENT_SOURCE_DIR}/projectm/glew32.dll"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime
+  OPTIONAL)
+
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"
