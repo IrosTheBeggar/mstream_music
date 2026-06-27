@@ -251,6 +251,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Diagnostic: the lifecycle transition right before a playback stop tells an
+    // OS process-kill (paused/detached → dead) apart from an in-process stop.
+    appLog('[app] lifecycle → $state');
     // On resume, re-assert edge-to-edge so a hidden nav bar (e.g. left over from
     // the Visualizer's immersive mode) comes back — but only when the main
     // screen is the top route, so we don't fight the Visualizer if it's open.

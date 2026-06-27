@@ -20,7 +20,14 @@ class MediaManager {
       builder: () => AudioPlayerHandler(),
       config: AudioServiceConfig(
         androidNotificationChannelName: 'mStream Music',
-        androidNotificationOngoing: true,
+        // Keep the foreground service alive across a pause instead of detaching
+        // it (the default). On Samsung One UI, a detached/background service is
+        // reaped within minutes by app-sleep/Doze, so a brief pause — including
+        // an interruption-driven auto-pause — could leave the process dead and
+        // playback unable to resume. Staying foreground while paused prevents
+        // that. (androidNotificationOngoing must be dropped: audio_service
+        // asserts !ongoing || stopForegroundOnPause.)
+        androidStopForegroundOnPause: false,
         // White, tintable status-bar / Android Auto icon. Without this the
         // colored launcher icon renders as a white square in the notification.
         androidNotificationIcon: 'drawable/ic_stat_music',
