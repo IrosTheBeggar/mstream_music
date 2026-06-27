@@ -1265,6 +1265,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticsHint => '日志仅保存在您的设备上。复制或分享前会隐藏令牌。';
 
   @override
+  String get diagnosticsVerbose => 'Verbose logging';
+
+  @override
+  String get diagnosticsVerboseHint =>
+      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+
+  @override
   String get diagnosticsCopy => '复制';
 
   @override

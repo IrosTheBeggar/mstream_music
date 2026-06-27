@@ -76,6 +76,20 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               },
               activeThumbColor: VelvetColors.primary,
             ),
+            SwitchListTile(
+              title: Text(l.diagnosticsVerbose),
+              subtitle: Text(
+                l.diagnosticsVerboseHint,
+                style:
+                    TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              value: SettingsManager().verboseLogging,
+              onChanged: (v) async {
+                await SettingsManager().setVerboseLogging(v);
+                if (mounted) setState(() {});
+              },
+              activeThumbColor: VelvetColors.primary,
+            ),
             Divider(height: 1, color: VelvetColors.border),
             Expanded(
               child: StreamBuilder<List<String>>(

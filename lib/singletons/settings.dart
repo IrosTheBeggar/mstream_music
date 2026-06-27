@@ -170,6 +170,11 @@ class SettingsManager {
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
+  // Verbose diagnostic logging: high-frequency signals (app lifecycle / focus
+  // transitions, etc.) that are noise during normal use but useful when chasing
+  // an intermittent "stops playing" report. Off by default; gated separately
+  // from [diagnosticsLogging] so users can opt in. See verboseLog().
+  bool verboseLogging = false;
   // Visualizer audio source — synthesized is the default so the
   // visualizer Just Works without prompting for RECORD_AUDIO. Users
   // can opt into real audio in Settings; the toggle there walks them
@@ -276,6 +281,7 @@ class SettingsManager {
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
+      verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
       eqBandGains = rawGains is List
           ? rawGains.whereType<num>().map((n) => n.toDouble()).toList()
@@ -456,6 +462,7 @@ class SettingsManager {
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
       'diagnosticsLogging': diagnosticsLogging,
+      'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
       'visualizerAudioSource': visualizerAudioSource.name,
       'visualizerEngine': visualizerEngine.name,
@@ -572,6 +579,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setVerboseLogging(bool v) async {
+    verboseLogging = v;
+    await _save();
+  }
+
   Future<void> setEqBandGains(List<double> v) async {
     eqBandGains = v;
     await _save();
@@ -639,6 +651,7 @@ class SettingsManager {
     eqEnabled = false;
     resumeQueue = true;
     diagnosticsLogging = true;
+    verboseLogging = false;
     eqBandGains = const [];
     visualizerAudioSource = VisualizerAudioSource.synthesized;
     visualizerEngine = VisualizerEngine.milkdrop;

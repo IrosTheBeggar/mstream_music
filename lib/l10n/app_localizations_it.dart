@@ -1350,6 +1350,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'I log restano sul tuo dispositivo. I token vengono nascosti prima di copiare o condividere.';
 
   @override
+  String get diagnosticsVerbose => 'Verbose logging';
+
+  @override
+  String get diagnosticsVerboseHint =>
+      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+
+  @override
   String get diagnosticsCopy => 'Copia';
 
   @override

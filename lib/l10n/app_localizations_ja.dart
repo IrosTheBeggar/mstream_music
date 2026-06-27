@@ -1291,6 +1291,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get diagnosticsHint => 'ログは端末内にのみ保存されます。コピーや共有の前にトークンは隠されます。';
 
   @override
+  String get diagnosticsVerbose => 'Verbose logging';
+
+  @override
+  String get diagnosticsVerboseHint =>
+      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+
+  @override
   String get diagnosticsCopy => 'コピー';
 
   @override

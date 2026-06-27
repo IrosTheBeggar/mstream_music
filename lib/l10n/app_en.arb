@@ -857,6 +857,8 @@
   "diagnosticsTitle": "Diagnostics",
   "diagnosticsEnable": "Enable logging",
   "diagnosticsHint": "Logs stay on your device. Tokens are hidden before copying or sharing.",
+  "diagnosticsVerbose": "Verbose logging",
+  "diagnosticsVerboseHint": "Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.",
   "diagnosticsCopy": "Copy",
   "diagnosticsShare": "Share",
   "diagnosticsClear": "Clear",
