@@ -49,6 +49,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   // _switchBackend calls (racing on _backend / dispose).
   Future<void> _switchChain = Future<void>.value();
 
+  // Completes when _init() has finished seeding the backend + applying saved EQ.
+  // restoreQueue() (fired in parallel from QueueStore.init once the server list
+  // loads) awaits this so its setSources() can't race _init's seed/EQ on the
+  // single just_audio player — concurrent loads abort each other with
+  // "Loading interrupted".
+  final Completer<void> _initialized = Completer<void>();
+
   // Android-only native equalizer, exposed for the EQ screen. Lives on the
   // local backend (null on non-Android / remote backends). eq_screen.dart
   // reads this via MediaManager().audioHandler.equalizer.
@@ -88,7 +95,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
 
   AudioPlayerHandler() {
-    _init();
+    // Complete _initialized when _init() finishes (success or failure) so a
+    // parallel restoreQueue() never issues setSources() while _init's seed/EQ
+    // are still loading. whenComplete guarantees it even if _init throws, so
+    // restoreQueue can't hang.
+    _init().whenComplete(() {
+      if (!_initialized.isCompleted) _initialized.complete();
+    });
   }
 
   Future<void> _init() async {
@@ -556,6 +569,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool shuffle = false,
       AudioServiceRepeatMode repeat = AudioServiceRepeatMode.none}) async {
     if (items.isEmpty) return;
+    // Wait for _init() to finish seeding the backend + applying EQ before our
+    // own setSources(), so the two don't issue concurrent loads on the player
+    // (which abort each other → "Loading interrupted", losing the restore).
+    await _initialized.future;
     queue.add(items.toList());
     await _backend.setSources(items);
     final int i = index.clamp(0, items.length - 1);
