@@ -194,6 +194,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
       if (results.any((r) => r != ConnectivityResult.none)) {
         unawaited(ServerManager().handleNetworkChange());
+        // Resume on-device playback if a network outage had paused it (no-op
+        // unless the audio handler is in the network-stalled state).
+        MediaManager().audioHandler.onNetworkRegained();
       }
     });
   }
