@@ -55,13 +55,11 @@ class LogManager {
   List<String> get lines => List.unmodifiable(_lines);
   bool get isEmpty => _lines.isEmpty;
 
-  bool get _enabled => SettingsManager().diagnosticsLogging;
-
   /// Append a log entry: split into lines, timestamp + redact each, append, and
-  /// trim to the cap. No-op while logging is disabled. MUST NOT call print()
-  /// itself — it's fed from the print Zone and would recurse.
+  /// trim to the cap. Always on (the Diagnostics screen no longer exposes an
+  /// off switch). MUST NOT call print() itself — it's fed from the print Zone
+  /// and would recurse.
   void add(String message) {
-    if (!_enabled) return;
     final stamp = _stamp();
     for (final raw in message.split('\n')) {
       if (raw.isEmpty) continue;

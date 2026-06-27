@@ -63,20 +63,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         child: Column(
           children: [
             SwitchListTile(
-              title: Text(l.diagnosticsEnable),
-              subtitle: Text(
-                l.diagnosticsHint,
-                style:
-                    TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              value: SettingsManager().diagnosticsLogging,
-              onChanged: (v) async {
-                await SettingsManager().setDiagnosticsLogging(v);
-                if (mounted) setState(() {});
-              },
-              activeThumbColor: VelvetColors.primary,
-            ),
-            SwitchListTile(
               title: Text(l.diagnosticsVerbose),
               subtitle: Text(
                 l.diagnosticsVerboseHint,
