@@ -39,6 +39,16 @@ class LetterStrip extends StatefulWidget {
   // with no letter strip, are free to wrap long titles.
   static int get minItemsToShow => SettingsManager().letterStripThreshold;
 
+  /// Width of the strip's hit region (the visible letters are narrower, but the
+  /// gesture area extends left for an easier touch target).
+  static const double hitWidth = 40;
+
+  /// Width of the *visible* strip (right-aligned within [hitWidth]). Rows reserve
+  /// this much on their right so content clears the letters; the extra
+  /// [hitWidth] − [visibleWidth] of touch margin stays tappable but transparent,
+  /// so trailing controls can sit right up against the visible strip.
+  static const double visibleWidth = 24;
+
   final List<DisplayItem> items;
   final void Function(int itemIndex) onJump;
 
@@ -267,7 +277,7 @@ class _LetterStripState extends State<LetterStrip> {
           // ~16px of extra reach to the left of the letters without
           // pushing the visible strip away from the edge.
           child: SizedBox(
-            width: 40,
+            width: LetterStrip.hitWidth,
             child: Align(
               alignment: Alignment.centerRight,
               // Rebuild only the strip (tint + active cell) as the finger moves,
@@ -278,7 +288,7 @@ class _LetterStripState extends State<LetterStrip> {
                   final active = touched != null;
                   return AnimatedContainer(
                     duration: Duration(milliseconds: 120),
-                    width: 24,
+                    width: LetterStrip.visibleWidth,
                     padding: EdgeInsets.symmetric(vertical: 4, horizontal: 1),
                     decoration: BoxDecoration(
                       color: active
