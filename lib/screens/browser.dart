@@ -918,6 +918,15 @@ class _BrowserState extends State<Browser> {
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
                         final ts = MediaQuery.textScalerOf(context);
+                        // The letter scrubber overlays the right edge when this
+                        // view is alphabetical and long enough to show it. Inset
+                        // the rows' *content* (title + trailing ⋮) by the strip's
+                        // hit width so they don't slide under it — the row itself,
+                        // and its full-width bottom divider, is untouched.
+                        final stripVisible = BrowserManager().isAlphabetical &&
+                            browserList.isNotEmpty &&
+                            !filtering &&
+                            browserList.length >= LetterStrip.minItemsToShow;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -945,8 +954,11 @@ class _BrowserState extends State<Browser> {
                             // so the letter-scrub cumulative math
                             // stays correct.
                             : ListTileTheme.merge(
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
+                                contentPadding: EdgeInsets.only(
+                                    left: 10,
+                                    right: stripVisible
+                                        ? LetterStrip.visibleWidth
+                                        : 10),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
                                 child: ListView.builder(
