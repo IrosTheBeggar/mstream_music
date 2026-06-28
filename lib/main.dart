@@ -150,7 +150,7 @@ Future<void> _startApp() async {
       var palette = paletteFor(theme);
       if (accent != null) palette = palette.withAccent(Color(accent));
       VelvetColors.setActive(palette);
-      return MaterialApp(
+      final Widget app = MaterialApp(
         title: 'mStream Music',
         scaffoldMessengerKey: rootMessengerKey,
         home: MStreamApp(),
@@ -160,6 +160,19 @@ Future<void> _startApp() async {
         supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
       );
+      // Flutter's Windows/Linux accessibility bridge access-violates inside
+      // flutter_windows.dll (0xc0000005) when a large semantics update carries
+      // inconsistent node references — reproducible here on server-switch and
+      // track-skip (big widget-tree churn) once a UI Automation client is
+      // attached, preceded by a flood of accessibility_bridge "Failed to update
+      // ui::AXTree" errors. It's an upstream engine bug, so until it's fixed we
+      // suppress the semantics tree on desktop: the bridge then has nothing to
+      // diff and can't fault. Trade-off: screen-reader support is off on desktop
+      // (mobile is untouched). Revisit if a future engine fixes the crash.
+      if (Platform.isWindows || Platform.isLinux) {
+        return ExcludeSemantics(child: app);
+      }
+      return app;
     },
   ));
 }
