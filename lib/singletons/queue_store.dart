@@ -128,7 +128,11 @@ class QueueStore {
 
     int index = (raw['index'] is int) ? raw['index'] as int : 0;
     if (index < 0 || index >= items.length) index = 0;
-    final int positionMs = (raw['positionMs'] is int) ? raw['positionMs'] as int : 0;
+    // Clamp against the restored track's saved duration so a position at/past its
+    // end (which would seek-past-end → complete → stop on play) starts fresh.
+    final int positionMs = clampResumePositionMs(
+        (raw['positionMs'] is int) ? raw['positionMs'] as int : 0,
+        items[index].duration?.inMilliseconds);
 
     await MediaManager().audioHandler.restoreQueue(
           items,
@@ -194,7 +198,8 @@ class QueueStore {
       final snapshot = <String, dynamic>{
         'version': _schemaVersion,
         'index': state.queueIndex ?? 0,
-        'positionMs': handler.position.inMilliseconds,
+        'positionMs': clampResumePositionMs(handler.position.inMilliseconds,
+            handler.mediaItem.value?.duration?.inMilliseconds),
         'shuffle': state.shuffleMode == AudioServiceShuffleMode.all,
         'repeat': _repeatName(state.repeatMode),
         'items': queue.map(itemToJson).toList(),
@@ -206,6 +211,23 @@ class QueueStore {
   }
 
   // ── (de)serialization — pure & static so they're unit-testable ──
+
+  // Guard against resuming at/past a track's end. A saved position can land at
+  // or beyond the track length — captured as the queue finished, via just_audio's
+  // post-completion position overrun, or from an index/position skew during a
+  // track transition. Restoring there and pressing play seeks past the end → the
+  // player reports `completed` → the handler stops, so playback "won't start" on
+  // reopen. When the position is within [_kResumeEndGuard] of the end (or beyond
+  // a known duration), start the track fresh instead. Returned unchanged when the
+  // duration is unknown (can't judge).
+  static const Duration _kResumeEndGuard = Duration(seconds: 1);
+  static int clampResumePositionMs(int positionMs, int? durationMs) {
+    if (positionMs <= 0) return 0;
+    if (durationMs == null || durationMs <= 0) return positionMs;
+    return positionMs >= durationMs - _kResumeEndGuard.inMilliseconds
+        ? 0
+        : positionMs;
+  }
 
   /// Serialize a [MediaItem] to a JSON-safe map.
   static Map<String, dynamic> itemToJson(MediaItem m) => {
