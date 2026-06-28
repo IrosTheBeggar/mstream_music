@@ -276,8 +276,30 @@ is stable, or via a ground-up rewrite. Omitted from the preset list.
 **Key constraint:** Flutter `FragmentProgram` needs *precompiled* `.frag` assets
 (no runtime GLSL string compile) AND the Windows/Skia backend is stricter than
 desktop GL — exotic GLSL (comma-operator bodies, etc.) is rejected. Next:
-real-audio capture to replace the synth source; optional fullscreen; the 06
-rewrite / multi-pass harness if wanted.
+optional fullscreen; the 06 rewrite / multi-pass harness if wanted.
+
+### Real audio (WASAPI loopback) — ✅ DONE on Windows
+Both visualizers now react to the actual playback signal, not the synth. The
+desktop audio path is libmpv (media_kit), which exposes no PCM to Dart (and
+there's no `androidAudioSessionId` equivalent), so capture is hand-rolled:
+- `windows/audio_capture/audio_capture.cpp` → **audio_capture.dll**: opens the
+  default render endpoint in **shared-mode loopback** on a background thread,
+  downmixes to mono float, keeps the most recent samples in a ring buffer.
+  C ABI: `ac_start`/`ac_stop`/`ac_read`/`ac_sample_rate`/`ac_last_error`. No
+  external deps (Windows SDK only) → builds **in-tree** with the Flutter build
+  (`add_subdirectory`) and bundles via `install(TARGETS)` — no committed prebuilt.
+- `lib/native/audio_capture.dart`: FFI wrapper (`AudioCapture` singleton).
+- `spectrum_source.dart` / `projectm_screen.dart` read real PCM when capture is
+  running and a full window is available, else fall back to synth. The two
+  visualizer screens `start()` capture on open and `stop()` on close.
+- **Verified end-to-end** (`tool/audio_capture_probe.dart`): with audio playing,
+  the probe reports 48 kHz, full 1024-sample reads, and a varying non-zero RMS
+  (the real amplitude envelope). Silence reads back as nothing (loopback delivers
+  no packets while the endpoint is idle — the FFT path then falls back to synth).
+
+Caveats / future: device loopback captures the *whole* endpoint (other apps' sound
+mixes in — Win10 20H1 process-loopback would scope it to our PID); Linux
+(PulseAudio/PipeWire monitor) + macOS (ScreenCaptureKit) need their own backends.
 
 Original sketch of the approach:
 Reimplement the Shadertoy rendering with Flutter's built-in `ui.FragmentShader`
