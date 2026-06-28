@@ -607,10 +607,12 @@ class AudioPlayerHandler extends BaseAudioHandler
       // failed.
       final pos = _localBackend.position;
       final idx = _localBackend.currentIndex ?? 0;
-      // Rebuild the playlist to force a clean reload of the failed source, then
-      // resume at that spot with the user's play intent.
-      await _localBackend.setSources(queue.value);
-      await _localBackend.seek(pos, index: idx, play: _playIntent);
+      // Rebuild the playlist to force a clean reload of the failed source,
+      // loading DIRECTLY at the failed track/position so it doesn't flash track
+      // 0 in the now-playing UI on the way, then honour the user's play intent.
+      await _localBackend.setSources(queue.value,
+          initialIndex: idx, initialPosition: pos);
+      if (_playIntent) unawaited(_localBackend.play());
     }).catchError((Object e) {
       castLog('http playback retry failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
@@ -632,8 +634,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
       final pos = _localBackend.position;
       final idx = _localBackend.currentIndex ?? 0;
-      await _localBackend.setSources(queue.value);
-      await _localBackend.seek(pos, index: idx, play: _playIntent);
+      await _localBackend.setSources(queue.value,
+          initialIndex: idx, initialPosition: pos);
+      if (_playIntent) unawaited(_localBackend.play());
     }).catchError((Object e) {
       castLog('network-regained resume failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);

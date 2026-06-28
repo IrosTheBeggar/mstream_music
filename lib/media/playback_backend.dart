@@ -32,7 +32,11 @@ abstract class PlaybackBackend {
   // Takes [MediaItem]s (not bare URIs) so remote backends can build rich
   // metadata (title/artist/album/art) for the renderer; the local backend
   // extracts the playable URI itself.
-  Future<void> setSources(List<MediaItem> items);
+  /// [initialIndex]/[initialPosition] load the list directly at that track/spot
+  /// instead of defaulting to index 0 and needing a follow-up seek — so a
+  /// reload/restore doesn't briefly flash track 0 in the now-playing UI.
+  Future<void> setSources(List<MediaItem> items,
+      {int? initialIndex, Duration? initialPosition});
   Future<void> addSource(MediaItem item);
   Future<void> removeSourceAt(int index);
 

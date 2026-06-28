@@ -27,8 +27,12 @@ class LocalPlaybackBackend implements PlaybackBackend {
   // just_audio 0.10 deprecated ConcatenatingAudioSource; the playlist API now
   // lives on AudioPlayer directly.
   @override
-  Future<void> setSources(List<MediaItem> items) => _player.setAudioSources(
-      items.map((i) => AudioSource.uri(_uriFor(i))).toList());
+  Future<void> setSources(List<MediaItem> items,
+          {int? initialIndex, Duration? initialPosition}) =>
+      _player.setAudioSources(
+          items.map((i) => AudioSource.uri(_uriFor(i))).toList(),
+          initialIndex: initialIndex,
+          initialPosition: initialPosition);
 
   @override
   Future<void> addSource(MediaItem item) =>
