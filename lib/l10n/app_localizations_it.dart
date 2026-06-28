@@ -124,6 +124,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'Il driver audio di questo dispositivo non segnala bande di equalizzazione.';
 
   @override
+  String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
+
+  @override
   String get eqEnabledOn => 'Attivo — guadagni applicati alla riproduzione';
 
   @override

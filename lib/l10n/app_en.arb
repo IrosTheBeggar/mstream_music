@@ -127,6 +127,10 @@
   "@eqNoBands": {
     "description": "Shown when the device reports zero EQ bands."
   },
+  "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
+  "@eqDisabledHint": {
+    "description": "Shown on Android when the EQ is off; the enable toggle is still visible above."
+  },
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",
   "@eqEnabledOn": {

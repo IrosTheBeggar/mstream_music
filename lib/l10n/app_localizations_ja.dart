@@ -121,6 +121,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eqNoBands => 'この端末のオーディオドライバーは EQ バンドを報告していません。';
 
   @override
+  String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
+
+  @override
   String get eqEnabledOn => 'オン — ゲインを再生に適用中';
 
   @override

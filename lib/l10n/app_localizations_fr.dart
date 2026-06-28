@@ -124,6 +124,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucune bande d\'égaliseur signalée par le pilote audio de cet appareil.';
 
   @override
+  String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
+
+  @override
   String get eqEnabledOn => 'Activé — gains appliqués à la lecture';
 
   @override

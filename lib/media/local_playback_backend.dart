@@ -11,17 +11,48 @@ import 'playback_backend.dart';
 /// lived directly inside [AudioPlayerHandler] — it must remain behaviourally
 /// identical (gapless playlist, native shuffle/repeat, Android equalizer).
 class LocalPlaybackBackend implements PlaybackBackend {
-  // Android-only native equalizer attached to the player's audio pipeline.
-  // just_audio has no iOS/macOS/Linux equivalent, so this stays null on those
-  // platforms and the EQ screen renders an "Android only" empty state.
-  final AndroidEqualizer? _equalizer =
-      Platform.isAndroid ? AndroidEqualizer() : null;
+  // Android-only native equalizer. Attached to the player's AudioPipeline ONLY
+  // when EQ is enabled: an always-attached effect re-activates (priority 0) on
+  // every audio-route change (Bluetooth/wired switch), which on Samsung — where
+  // SoundAlive/Dolby own the effect chain — can drop the slot and cut playback.
+  // So the default is a plain player with nothing in the chain; enabling EQ
+  // rebuilds the player WITH the pipeline. Null whenever the plain player is
+  // active (and always on non-Android).
+  AndroidEqualizer? _equalizer;
 
-  late final AudioPlayer _player = _equalizer != null
-      ? AudioPlayer(
-          audioPipeline: AudioPipeline(androidAudioEffects: [_equalizer]),
-        )
-      : AudioPlayer();
+  late AudioPlayer _player;
+
+  LocalPlaybackBackend({bool withEqualizer = false}) {
+    _buildPlayer(withEqualizer);
+  }
+
+  // (Re)construct the underlying just_audio player. just_audio fixes the
+  // AudioPipeline at construction and binds an effect instance to a single
+  // player, so toggling EQ on/off requires a fresh player (and a fresh
+  // AndroidEqualizer for the on case).
+  void _buildPlayer(bool withEqualizer) {
+    if (withEqualizer && Platform.isAndroid) {
+      final eq = AndroidEqualizer();
+      _equalizer = eq;
+      _player =
+          AudioPlayer(audioPipeline: AudioPipeline(androidAudioEffects: [eq]));
+    } else {
+      _equalizer = null;
+      _player = AudioPlayer();
+    }
+  }
+
+  /// Swap the underlying player between plain and EQ-pipelined. The new player is
+  /// EMPTY: the caller (AudioPlayerHandler) re-seeds the queue, restores
+  /// shuffle/repeat, seeks to the saved spot, re-applies EQ gains, and re-emits
+  /// the backend so the handler's switchMap re-subscribes to the new player's
+  /// streams. The old player is disposed last so the new session id can start
+  /// resolving.
+  Future<void> rebuildPlayer({required bool withEqualizer}) async {
+    final old = _player;
+    _buildPlayer(withEqualizer);
+    await old.dispose();
+  }
 
   // ── Source list ──
   // just_audio 0.10 deprecated ConcatenatingAudioSource; the playlist API now
@@ -163,8 +194,11 @@ class LocalPlaybackBackend implements PlaybackBackend {
   Stream<Object> get errorStream => _player.errorStream;
 
   // ── Local-only capabilities ──
+  // Stable capability: Android local playback can host the native EQ regardless
+  // of whether the pipeline is currently attached. `equalizer` is null while EQ
+  // is off (plain player); enabling EQ rebuilds the player with the pipeline.
   @override
-  bool get supportsEqualizer => _equalizer != null;
+  bool get supportsEqualizer => Platform.isAndroid;
 
   @override
   AndroidEqualizer? get equalizer => _equalizer;
