@@ -1372,6 +1372,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'Журналы хранятся на вашем устройстве. Токены скрываются перед копированием или отправкой.';
 
   @override
+  String get diagnosticsVerbose => 'Verbose logging';
+
+  @override
+  String get diagnosticsVerboseHint =>
+      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+
+  @override
   String get diagnosticsCopy => 'Копировать';
 
   @override

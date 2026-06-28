@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart'
+    show AudioSession, AudioSessionConfiguration;
 import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
@@ -47,6 +49,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   // _switchBackend calls (racing on _backend / dispose).
   Future<void> _switchChain = Future<void>.value();
 
+  // Completes when _init() has finished seeding the backend + applying saved EQ.
+  // restoreQueue() (fired in parallel from QueueStore.init once the server list
+  // loads) awaits this so its setSources() can't race _init's seed/EQ on the
+  // single just_audio player — concurrent loads abort each other with
+  // "Loading interrupted".
+  final Completer<void> _initialized = Completer<void>();
+
   // Android-only native equalizer, exposed for the EQ screen. Lives on the
   // local backend (null on non-Android / remote backends). eq_screen.dart
   // reads this via MediaManager().audioHandler.equalizer.
@@ -86,19 +95,37 @@ class AudioPlayerHandler extends BaseAudioHandler
   AudioServiceRepeatMode _repeatMode = AudioServiceRepeatMode.none;
 
   AudioPlayerHandler() {
-    _init();
+    // Complete _initialized when _init() finishes (success or failure) so a
+    // parallel restoreQueue() never issues setSources() while _init's seed/EQ
+    // are still loading. whenComplete guarantees it even if _init throws, so
+    // restoreQueue can't hang.
+    _init().whenComplete(() {
+      if (!_initialized.isCompleted) _initialized.complete();
+    });
   }
 
   Future<void> _init() async {
-    // AudioSession.instance.then((session) {
-    //   session.configure(const AudioSessionConfiguration.music());
-    // });
-    // final session = await AudioSession.instance;
-
-    //     // Handle unplugged headphones.
-    // session.becomingNoisyEventStream.listen((_) {
-    //   if (_playing) pause();
-    // });
+    // Configure the platform audio session for music playback. Without this,
+    // focus is requested with default attributes and Android is more likely to
+    // classify a transient loss (a call, a nav prompt, a notification ding) as
+    // a permanent one — which pauses playback and never auto-resumes. Declaring
+    // music attributes makes focus/duck/resume behave deterministically.
+    //
+    // We deliberately do NOT add becomingNoisy / interruption *handlers* here:
+    // just_audio already wires those up internally (handleInterruptions
+    // defaults to true) and auto-pauses/resumes. A second handler would
+    // double-fire and fight it. The listener below is logging-only (read-only),
+    // so a "stopped after a call and never came back" report is diagnosable.
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+      session.interruptionEventStream.listen((event) {
+        appLog('[audio] interruption '
+            '${event.begin ? 'begin' : 'end'} type=${event.type}');
+      });
+    } catch (e) {
+      appLog('[audio] audio session configure failed: $e');
+    }
 
     // For Android 11, record the most recent item so it can be resumed.
     mediaItem
@@ -159,7 +186,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     _backendSubject.switchMap((b) => b.errorStream).listen(_onPlaybackError);
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
-      if (state == BackendProcessingState.completed) stop();
+      if (state == BackendProcessingState.completed) {
+        // Log the context so a "stopped on its own" report can be told apart
+        // from a genuine end-of-queue stop: how far into the track we were vs.
+        // its duration, and where we were in the queue.
+        appLog('[play] completed → stop '
+            'pos=${_backend.position.inSeconds}s/'
+            '${_backend.duration?.inSeconds ?? '?'}s '
+            'index=${_backend.currentIndex} of ${queue.value.length}');
+        stop();
+      }
       // A track that loads (vs. failing to load) clears the consecutive-failure
       // count, so the skip-bad-track loop guard only trips on a genuine run of
       // unplayable tracks.
@@ -366,6 +402,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   //    it still failed = bad source) → warn and skip to the next track.
   void _onPlaybackError(Object error) {
     if (!identical(_backend, _localBackend)) return;
+    // Diagnostic: capture the error class + where we were, so a network-blip
+    // stop can be distinguished from a genuinely-unplayable source in the logs.
+    appLog('[play] playback error ($error) '
+        'index=${_localBackend.currentIndex} '
+        'failedSkips=$_failedSkips/${queue.value.length}');
     // One error-handler at a time: while a recover or skip is in flight, ignore
     // further errors (a burst for one failure, or the wrap-around after a skip).
     // Whatever's playing when it finishes re-decides on its own fresh error.
@@ -528,6 +569,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool shuffle = false,
       AudioServiceRepeatMode repeat = AudioServiceRepeatMode.none}) async {
     if (items.isEmpty) return;
+    // Wait for _init() to finish seeding the backend + applying EQ before our
+    // own setSources(), so the two don't issue concurrent loads on the player
+    // (which abort each other → "Loading interrupted", losing the restore).
+    await _initialized.future;
     queue.add(items.toList());
     await _backend.setSources(items);
     final int i = index.clamp(0, items.length - 1);

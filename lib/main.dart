@@ -251,6 +251,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Diagnostic (verbose-only): the lifecycle transition right before a playback
+    // stop tells an OS process-kill (paused/detached → dead) apart from an
+    // in-process stop. Gated behind the Diagnostics "Verbose logging" switch —
+    // these fire on every focus change (shade pull, screen off, dialogs), not
+    // just playback, so they're noise unless you're actively diagnosing.
+    verboseLog('[app] lifecycle → $state');
     // On resume, re-assert edge-to-edge so a hidden nav bar (e.g. left over from
     // the Visualizer's immersive mode) comes back — but only when the main
     // screen is the top route, so we don't fight the Visualizer if it's open.

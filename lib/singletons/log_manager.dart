@@ -17,6 +17,17 @@ void appLog(String message) {
   print(message);
 }
 
+/// Verbose-only logging: high-frequency diagnostic signals (e.g. app lifecycle /
+/// focus transitions) that are noise during normal use but valuable when chasing
+/// an intermittent "stops playing" report. No-ops unless the user has enabled
+/// "Verbose logging" in Diagnostics, so it never reaches the in-app buffer or
+/// logcat otherwise. Routed through the same print Zone as [appLog].
+void verboseLog(String message) {
+  if (!SettingsManager().verboseLogging) return;
+  // ignore: avoid_print
+  print(message);
+}
+
 /// In-app diagnostic log buffer. Captures `print()` output (via a custom print
 /// Zone installed in main()), the cast subsystem's `castLog()`, and uncaught
 /// errors into a bounded ring buffer that the user can view, copy and share from
@@ -44,13 +55,11 @@ class LogManager {
   List<String> get lines => List.unmodifiable(_lines);
   bool get isEmpty => _lines.isEmpty;
 
-  bool get _enabled => SettingsManager().diagnosticsLogging;
-
   /// Append a log entry: split into lines, timestamp + redact each, append, and
-  /// trim to the cap. No-op while logging is disabled. MUST NOT call print()
-  /// itself — it's fed from the print Zone and would recurse.
+  /// trim to the cap. Always on (the Diagnostics screen no longer exposes an
+  /// off switch). MUST NOT call print() itself — it's fed from the print Zone
+  /// and would recurse.
   void add(String message) {
-    if (!_enabled) return;
     final stamp = _stamp();
     for (final raw in message.split('\n')) {
       if (raw.isEmpty) continue;

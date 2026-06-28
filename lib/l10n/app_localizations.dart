@@ -2340,6 +2340,18 @@ abstract class AppLocalizations {
   /// **'Logs stay on your device. Tokens are hidden before copying or sharing.'**
   String get diagnosticsHint;
 
+  /// No description provided for @diagnosticsVerbose.
+  ///
+  /// In en, this message translates to:
+  /// **'Verbose logging'**
+  String get diagnosticsVerbose;
+
+  /// No description provided for @diagnosticsVerboseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.'**
+  String get diagnosticsVerboseHint;
+
   /// No description provided for @diagnosticsCopy.
   ///
   /// In en, this message translates to:

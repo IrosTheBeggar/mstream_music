@@ -1348,6 +1348,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les journaux restent sur votre appareil. Les jetons sont masqués avant copie ou partage.';
 
   @override
+  String get diagnosticsVerbose => 'Verbose logging';
+
+  @override
+  String get diagnosticsVerboseHint =>
+      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+
+  @override
   String get diagnosticsCopy => 'Copier';
 
   @override
