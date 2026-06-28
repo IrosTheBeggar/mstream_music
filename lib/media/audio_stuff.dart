@@ -429,23 +429,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       _recoverIrohPlayback(itemServer);
       return;
     }
-    // A transient network/transport failure on a plain-HTTP source — retry the
-    // same track at the same spot (bounded, with backoff) instead of skipping.
-    // A clear bad source (404 / unsupported / missing file), or once the retry
-    // budget is spent, falls through to the skip below.
-    if (_isTransientNetworkError(error) && _httpRetries < _kMaxHttpRetries) {
-      _retryHttpPlayback();
-      return;
-    }
-    // Serialize the skip through _switchChain (shared with recovery + backend
-    // switches, so none run concurrently on the backend); _skipPending collapses
-    // a burst of error events into the single skip.
-    _skipPending = true;
-    _switchChain = _switchChain
-        .then((_) => _skipFailedTrack(error))
-        .catchError((Object e) =>
-            castLog('skip-to-next after playback error failed', error: e))
-        .whenComplete(() => _skipPending = false);
+    // Non-iroh source failed → hand off to _recoverHttpError, which (with an
+    // async connectivity probe) pauses-and-holds on a real outage, retries a
+    // transient blip in place, or skips a genuinely bad source.
+    _recoverHttpError(error);
   }
 
   // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
@@ -580,41 +567,68 @@ class AudioPlayerHandler extends BaseAudioHandler
     showGlobalSnack(message);
   }
 
-  // Retry the current plain-HTTP source at the same position after a transient
-  // network error, with bounded exponential backoff (1s, 2s, 4s). Mirrors
-  // _recoverIrohPlayback but needs no tunnel — the HTTP URL is already live.
-  // Driven by the error-event loop: each failed reload re-enters
-  // _onPlaybackError, which retries again until _httpRetries hits the cap (then
-  // it skips). Serialized via _switchChain + guarded by _recoveringPlayback so
-  // an error burst can't spin up concurrent retries.
-  void _retryHttpPlayback() {
-    if (_recoveringPlayback) return;
+  // Recover from a non-iroh playback error. The decision needs an async
+  // connectivity probe, so it runs serialized on _switchChain + guarded by
+  // _recoveringPlayback / _skipPending (an error burst can't spin up concurrent
+  // recoveries):
+  //  • clearly bad source (404 / format / missing file) → skip now;
+  //  • NO network (a real outage) → pause-and-hold + arm onNetworkRegained so we
+  //    self-heal when it returns. This is the key fix: relying on the retry/skip
+  //    counters to climb never paused, because a brief `ready` from the preload
+  //    buffer kept resetting _httpRetries, so it spun in retries forever;
+  //  • network up but the track errored (a transient blip) → retry the SAME track
+  //    at its spot, bounded by _kMaxHttpRetries; once spent it's a bad source → skip.
+  void _recoverHttpError(Object error) {
+    if (_recoveringPlayback || _skipPending) return;
+    // Clearly bad/unplayable source → skip now (no network probe / retry needed).
+    if (!_isTransientNetworkError(error)) {
+      _skipPending = true;
+      _switchChain = _switchChain
+          .then((_) => _skipFailedTrack(error))
+          .catchError((Object e) =>
+              castLog('skip-to-next after playback error failed', error: e))
+          .whenComplete(() => _skipPending = false);
+      return;
+    }
     _recoveringPlayback = true;
-    _httpRetries++;
-    final attempt = _httpRetries;
-    // 0s, 1s, 2s — first retry is immediate so a momentary blip recovers fast
-    // (and a genuinely dead source is skipped quickly), later ones give the
-    // network a moment.
-    final backoff = Duration(seconds: attempt - 1);
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
-      appLog('[play] network error — retry $attempt/$_kMaxHttpRetries '
-          'after ${backoff.inSeconds}s');
-      await Future<void>.delayed(backoff);
-      if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
-      // Read the spot AFTER the backoff so a skip/seek made during the wait is
-      // honoured — resume wherever the user actually is now, not the track that
-      // failed.
-      final pos = _localBackend.position;
-      final idx = _localBackend.currentIndex ?? 0;
-      // Rebuild the playlist to force a clean reload of the failed source,
-      // loading DIRECTLY at the failed track/position so it doesn't flash track
-      // 0 in the now-playing UI on the way, then honour the user's play intent.
-      await _localBackend.setSources(queue.value,
-          initialIndex: idx, initialPosition: pos);
-      if (_playIntent) unawaited(_localBackend.play());
+      // No network → an outage: pause-and-hold and let onNetworkRegained resume
+      // us when it's back, instead of churning retries/skips that all fail.
+      if (!await _hasNetwork()) {
+        _httpRetries = 0;
+        _failedSkips = 0;
+        _networkStalled = true;
+        _showPlaybackErrorToast(
+            'Lost the connection — paused. Resumes when you’re back online.');
+        await _localBackend.pause();
+        _broadcastState();
+        return;
+      }
+      // Network is up but the track errored — a transient blip. Retry the SAME
+      // track at its spot (bounded); once retries are spent it's a genuinely bad
+      // source → skip.
+      if (_httpRetries < _kMaxHttpRetries) {
+        _httpRetries++;
+        final attempt = _httpRetries;
+        // 0s, then 1s, 2s — first retry immediate so a momentary blip recovers
+        // fast; later ones give the connection a moment.
+        await Future<void>.delayed(Duration(seconds: attempt - 1));
+        if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
+        // Read the spot AFTER the backoff so a skip/seek during the wait is
+        // honoured, and load DIRECTLY at it (initialIndex/Position) so the
+        // now-playing UI doesn't flash track 0 on the reload.
+        final pos = _localBackend.position;
+        final idx = _localBackend.currentIndex ?? 0;
+        appLog('[play] network error — retry $attempt/$_kMaxHttpRetries');
+        await _localBackend.setSources(queue.value,
+            initialIndex: idx, initialPosition: pos);
+        if (_playIntent) unawaited(_localBackend.play());
+      } else {
+        await _skipFailedTrack(error);
+      }
     }).catchError((Object e) {
-      castLog('http playback retry failed', error: e);
+      castLog('http error recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
   }
 
