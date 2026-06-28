@@ -596,6 +596,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       // No network → an outage: pause-and-hold and let onNetworkRegained resume
       // us when it's back, instead of churning retries/skips that all fail.
       if (!await _hasNetwork()) {
+        appLog('[play] network outage — pausing at '
+            'track ${(_localBackend.currentIndex ?? 0) + 1}; '
+            'will self-heal when connectivity returns');
         _httpRetries = 0;
         _failedSkips = 0;
         _networkStalled = true;
