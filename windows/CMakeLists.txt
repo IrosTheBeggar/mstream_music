@@ -52,6 +52,10 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
 
+# WASAPI loopback audio-capture shim for the desktop visualizer (real audio
+# instead of synthesized PCM). No external deps, so it builds in-tree here.
+add_subdirectory("audio_capture")
+
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
@@ -110,6 +114,11 @@ install(FILES
   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime
   OPTIONAL)
+
+# Bundle the in-tree WASAPI capture shim next to the exe for dart:ffi
+# (DynamicLibrary.open "audio_capture.dll"). Built by audio_capture/ above.
+install(TARGETS audio_capture RUNTIME DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
