@@ -12,7 +12,6 @@ import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
@@ -512,62 +511,55 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      showDialog(
-                          context: c,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                                title: Text(l.browserConfirmDeleteFolder),
-                                content: b[i].getText(),
-                                actions: <Widget>[
-                                  TextButton(
-                                    child: Text(l.goBack),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            // The ⋮ menu replaces the old swipe pane + caret: Delete was the
+            // pane's only action, and a swipe (or the caret that opened it)
+            // has no mouse equivalent on desktop.
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'delete') {
+                  showDialog(
+                      context: c,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                            title: Text(l.browserConfirmDeleteFolder),
+                            content: b[i].getText(),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text(l.goBack),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                  child: Text(
+                                    l.delete,
+                                    style: TextStyle(color: VelvetColors.error),
                                   ),
-                                  TextButton(
-                                      child: Text(
-                                        l.delete,
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                      onPressed: () {
-                                        FileExplorer().deleteDirectory(
-                                            b[i].data!, b[i].server);
-                                        Navigator.of(context).pop();
-                                      })
-                                ]);
-                          });
-                    })
+                                  onPressed: () {
+                                    FileExplorer().deleteDirectory(
+                                        b[i].data!, b[i].server);
+                                    Navigator.of(context).pop();
+                                  })
+                            ]);
+                      });
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: VelvetColors.textTertiary,
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -576,41 +568,41 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      FileExplorer().deleteFile(b[i].data!, b[i].server);
-                    })
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            // The ⋮ menu carries both destinations the old swipe pane and
+            // caret split between them: the track sheet (rate / queue / find
+            // similar) and Delete — so every action is mouse-reachable.
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'actions') {
+                  _showTrackActions(b[i], c);
+                } else if (v == 'delete') {
+                  FileExplorer().deleteFile(b[i].data!, b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                    value: 'actions', child: Text(l.browserMoreActions)),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  // Same overflow a server track row carries, so the queue
-                  // actions sit in the same place whichever kind of track
-                  // you're looking at. Delete stays on the swipe.
-                  trailing: IconButton(
-                    icon: Icon(Icons.more_vert,
-                        size: 20, color: VelvetColors.textSecondary),
-                    tooltip: l.browserMoreActions,
-                    onPressed: () => _showTrackActions(b[i], c),
-                  ),
-                  // Same long-press context sheet as server rows — the queue
-                  // actions apply to local files too (Find similar hides
-                  // itself: a local path can't seed the similarity index).
-                  onLongPress: () => _showTrackActions(b[i], c),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            // Same long-press context sheet as server rows — the queue
+            // actions apply to local files too (Find similar hides
+            // itself: a local path can't seed the similarity index).
+            onLongPress: () => _showTrackActions(b[i], c),
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -622,39 +614,32 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.add_to_queue,
-                    label: l.addAll,
-                    onPressed: (context) {
-                      ApiManager().getRecursiveFiles(b[i].data!,
-                          useThisServer: b[i].server);
-                    })
+        child: ListTile(
+            // Long-press = this row's actions, the same convention the
+            // track rows use (touch); the ⋮ menu is the same action for a
+            // mouse. Both replace the old swipe pane, which was only ever
+            // found by accident.
+            onLongPress: () => _showFolderActions(b[i], c),
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'addAll') {
+                  ApiManager().getRecursiveFiles(b[i].data!,
+                      useThisServer: b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'addAll', child: Text(l.addAll)),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  // Long-press = this row's actions, the same convention the
-                  // track rows use. The swipe pane has carried Add all for a
-                  // while, but a swipe is only found by accident.
-                  onLongPress: () => _showFolderActions(b[i], c),
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  // No caret: it opened the swipe pane, whose only action is
-                  // the Add all the long-press above now offers — two handles
-                  // on one action, the second sitting under the letter strip.
-                  // The swipe itself still works. makeLocalFolderWidget keeps
-                  // its caret: that pane is Delete, and nothing else reaches
-                  // it.
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
