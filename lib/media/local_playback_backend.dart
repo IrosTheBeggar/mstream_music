@@ -51,7 +51,13 @@ class LocalPlaybackBackend implements PlaybackBackend {
   Future<void> rebuildPlayer({required bool withEqualizer}) async {
     final old = _player;
     _buildPlayer(withEqualizer);
-    await old.dispose();
+    try {
+      await old.dispose();
+    } catch (_) {
+      // The new player is already live; a dispose failure on the orphaned old
+      // one must not abort the rebuild (the handler still has to re-seed/re-emit
+      // and persist the toggle). Ignore it.
+    }
   }
 
   // ── Source list ──

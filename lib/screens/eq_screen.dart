@@ -175,12 +175,17 @@ class _EqScreenState extends State<EqScreen> {
     // handler) and persists the setting — see AudioPlayerHandler.setEqEnabled.
     await MediaManager().audioHandler.setEqEnabled(v);
     if (!mounted) return;
-    if (v) {
+    // Reconcile with the source of truth: the handler persists eqEnabled only on
+    // a successful rebuild, so a silent failure reverts the toggle here.
+    final on = SettingsManager().eqEnabled;
+    if (on) {
       // Resolve the sliders against the freshly-built equalizer.
+      setState(() => _eqEnabled = true);
       _params = null;
       await _attemptLoad();
     } else {
       setState(() {
+        _eqEnabled = false;
         _params = null;
         _loading = false;
         _errorKind = _EqError.disabled;

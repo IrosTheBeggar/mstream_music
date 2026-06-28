@@ -102,7 +102,15 @@ class VisualizerAudio {
     VisualizerBridge.stopRealAudio();
     _realAttached = false;
     final sessionId = MediaManager().audioHandler.androidAudioSessionId;
-    if (sessionId != null && await VisualizerBridge.startRealAudio(sessionId)) {
+    final ok =
+        sessionId != null && await VisualizerBridge.startRealAudio(sessionId);
+    // stop() may have run during the await (user left the visualizer); don't
+    // resurrect _realAttached or leave a native attachment dangling.
+    if (!_active) {
+      if (ok) VisualizerBridge.stopRealAudio();
+      return;
+    }
+    if (ok) {
       _realAttached = true;
       return;
     }
