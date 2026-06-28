@@ -1500,7 +1500,7 @@ abstract class AppLocalizations {
   /// **'Search Database'**
   String get browserSearchHint;
 
-  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination).
+  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the five category labels (which categories the DB search queries — the user ticks any combination).
   ///
   /// In en, this message translates to:
   /// **'What to search'**
@@ -1535,6 +1535,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Files'**
   String get searchCategoryFiles;
+
+  /// No description provided for @searchCategoryLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get searchCategoryLyrics;
 
   /// Thin subheader on the search-results page echoing the submitted query.
   ///

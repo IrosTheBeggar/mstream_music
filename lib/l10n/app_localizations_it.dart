@@ -825,6 +825,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get searchCategoryFiles => 'Files';
 
   @override
+  String get searchCategoryLyrics => 'Lyrics';
+
+  @override
   String searchSubheaderResults(String term) {
     return 'Results for “$term”';
   }

@@ -286,7 +286,7 @@ class ApiManager {
 
   Future<void> searchServer(String search) async {
     try {
-      // The user's ticked search categories map 1:1 onto the endpoint's four
+      // The user's ticked search categories map 1:1 onto the endpoint's five
       // `no*` flags — the server only does the work that's asked. The default
       // set (artists+albums+songs) reproduces mStream's classic search.
       final cats = SettingsManager().searchCategories;
@@ -296,6 +296,7 @@ class ApiManager {
         'noAlbums': !cats.contains(SearchCategory.albums),
         'noTitles': !cats.contains(SearchCategory.songs),
         'noFiles': !cats.contains(SearchCategory.files),
+        'noLyrics': !cats.contains(SearchCategory.lyrics),
       }, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
@@ -350,6 +351,24 @@ class ApiManager {
             '/$fp',
             Icon(Icons.insert_drive_file, color: VelvetColors.accent),
             slash > 0 ? fp.substring(0, slash) : null);
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      // Lyric matches (only when the `lyrics` category is ticked; `?.` since
+      // older servers omit the key). Same play target as a title hit, but shown
+      // with a lyrics glyph and the matched excerpt (`snippet`) as the subtitle
+      // so the user sees WHY it matched. `snippet` is null on the LIKE fallback /
+      // non-FTS servers, so fall back to a plain label there.
+      res['lyrics']?.forEach((e) {
+        final snippet = (e['snippet'] as String?)?.trim();
+        DisplayItem newItem = DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.lyrics, color: VelvetColors.accent),
+            snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
         newItem.altAlbumArt = e['album_art_file'];
         newList.add(newItem);
       });

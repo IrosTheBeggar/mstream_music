@@ -591,8 +591,9 @@
   "searchCategoryAlbums": "Albums",
   "searchCategorySongs": "Songs",
   "searchCategoryFiles": "Files",
+  "searchCategoryLyrics": "Lyrics",
   "@searchCategoriesTooltip": {
-    "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination)."
+    "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the five category labels (which categories the DB search queries — the user ticks any combination)."
   },
   "searchSubheaderResults": "Results for “{term}”",
   "@searchSubheaderResults": {

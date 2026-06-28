@@ -901,6 +901,10 @@ class AutoApi {
       'noAlbums': false,
       'noTitles': false,
       'noFiles': true,
+      // Voice/car search wants name matches, not noisy full-text lyric hits, and
+      // this parser ignores the `lyrics` array anyway — opt out so the server
+      // skips the lyric FTS work.
+      'noLyrics': true,
     });
     final artists = <DisplayItem>[];
     for (final e in (res['artists'] as List? ?? const [])) {

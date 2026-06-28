@@ -102,15 +102,16 @@ enum VisualizerAudioSource {
 }
 
 /// A category the whole-server DB search (POST /api/v1/db/search) can query.
-/// The endpoint exposes these four independently through its `noArtists` /
-/// `noAlbums` / `noTitles` / `noFiles` flags, so the search dropdown lets the
-/// user tick any combination (see [SettingsManager.searchCategories]).
+/// The endpoint exposes these five independently through its `noArtists` /
+/// `noAlbums` / `noTitles` / `noFiles` / `noLyrics` flags, so the search dropdown
+/// lets the user tick any combination (see [SettingsManager.searchCategories]).
 /// Persisted as a list of names under the JSON 'searchCategories' key.
 enum SearchCategory {
   artists,
   albums,
   songs,
-  files;
+  files,
+  lyrics;
 
   // Localized labels: SearchCategoryLabel extension in lib/l10n/enum_labels.dart.
 }
@@ -138,8 +139,9 @@ class SettingsManager {
   TapBehavior tapBehavior = TapBehavior.addToQueue;
   StartupView startupView = StartupView.browser;
   // Which categories the whole-server search queries. The default
-  // (artists + albums + songs, files off) reproduces mStream's classic search;
-  // files is opt-in because bare filepath matches are noisy next to titles.
+  // (artists + albums + songs; files + lyrics off) reproduces mStream's classic
+  // search; files and lyrics are opt-in because bare filepath matches and full-
+  // text lyric matches are noisy next to titles.
   // The browser toolbar's checkbox dropdown writes this; at least one category
   // is always kept selected (see [toggleSearchCategory]).
   static const Set<SearchCategory> defaultSearchCategories = {
