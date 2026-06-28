@@ -139,4 +139,28 @@ void main() {
       expect(restored, isNull);
     });
   });
+
+  group('QueueStore.clampResumePositionMs', () {
+    test('keeps a mid-track position', () {
+      expect(QueueStore.clampResumePositionMs(23000, 240000), 23000);
+    });
+    test('resets a position at or past the end to 0', () {
+      expect(QueueStore.clampResumePositionMs(240000, 240000), 0);
+      expect(QueueStore.clampResumePositionMs(999999, 240000), 0);
+    });
+    test('resets a position within 1s of the end to 0', () {
+      expect(QueueStore.clampResumePositionMs(239500, 240000), 0);
+    });
+    test('keeps a position more than 1s before the end', () {
+      expect(QueueStore.clampResumePositionMs(238000, 240000), 238000);
+    });
+    test('leaves the position unchanged when the duration is unknown', () {
+      expect(QueueStore.clampResumePositionMs(700000, null), 700000);
+      expect(QueueStore.clampResumePositionMs(700000, 0), 700000);
+    });
+    test('floors a non-positive position to 0', () {
+      expect(QueueStore.clampResumePositionMs(-5, 240000), 0);
+      expect(QueueStore.clampResumePositionMs(0, 240000), 0);
+    });
+  });
 }
