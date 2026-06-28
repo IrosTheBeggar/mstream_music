@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../native/audio_capture.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import 'spectrum_source.dart';
@@ -87,6 +88,9 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   @override
   void initState() {
     super.initState();
+    // Capture real playback audio (WASAPI loopback) while the visualizer is
+    // open; SpectrumSource prefers it and falls back to synth when unavailable.
+    AudioCapture.instance.start();
     _load();
   }
 
@@ -143,6 +147,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
 
   @override
   void dispose() {
+    AudioCapture.instance.stop();
     _ticker.dispose();
     for (final r in _renderers) {
       r.dispose();

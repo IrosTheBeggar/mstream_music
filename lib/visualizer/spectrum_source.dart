@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import '../native/audio_capture.dart';
+
 /// Produces the Shadertoy-style audio texture (`iChannel0`) the desktop shader
 /// visualizer samples: an RGBA image, [texWidth]×[texHeight] (512×2), where
 ///   row 0 = FFT magnitude spectrum (linear bins, 0..22 kHz)
@@ -36,12 +38,24 @@ class SpectrumSource {
   final Float64List _re = Float64List(_fftSize);
   final Float64List _im = Float64List(_fftSize);
 
-  /// Synthesize a window, FFT it, and refresh [textureBytes].
+  /// Fill a window (real playback PCM if captured, else synthesized), FFT it,
+  /// and refresh [textureBytes].
   void advance() {
-    _synth();
+    if (!_readReal()) _synth();
     _fft();
     _writeTexture();
     _frame++;
+  }
+
+  /// Pull the most recent real playback samples (desktop WASAPI loopback) into
+  /// [_samples]. Returns false — so [advance] falls back to [_synth] — until the
+  /// capture ring holds a full window (the first ~20 ms after the visualizer
+  /// opens) and on platforms / states without capture. Silence reads back as a
+  /// full window of zeros, which the FFT turns into a calm (not frozen) display.
+  bool _readReal() {
+    final cap = AudioCapture.instance;
+    if (!cap.isRunning) return false;
+    return cap.read(_samples, _fftSize) >= _fftSize;
   }
 
   void _synth() {

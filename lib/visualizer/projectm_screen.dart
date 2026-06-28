@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../native/audio_capture.dart';
 import '../native/projectm_desktop.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
@@ -42,6 +43,9 @@ class _ProjectMScreenState extends State<ProjectMScreen>
   @override
   void initState() {
     super.initState();
+    // Capture real playback audio (WASAPI loopback) while the visualizer is
+    // open; the PCM feed prefers it and falls back to synth when unavailable.
+    AudioCapture.instance.start();
     _setup();
   }
 
@@ -117,8 +121,17 @@ class _ProjectMScreenState extends State<ProjectMScreen>
     return _pcm;
   }
 
+  /// Real playback PCM (desktop WASAPI loopback) when captured, else the synth.
+  /// [read] fills [_pcm] in place; a short read falls through to [_synthPcm],
+  /// which fully overwrites it.
+  Float32List _pcmForFrame() {
+    final cap = AudioCapture.instance;
+    if (cap.isRunning && cap.read(_pcm, 512) >= 512) return _pcm;
+    return _synthPcm();
+  }
+
   void _onTick(Duration elapsed) {
-    _pm.addPcm(_synthPcm());
+    _pm.addPcm(_pcmForFrame());
     // Skip a render while the previous frame is still decoding — the render
     // reuses one native buffer, so we must not overwrite it mid-decode.
     if (_decoding) return;
@@ -139,6 +152,7 @@ class _ProjectMScreenState extends State<ProjectMScreen>
 
   @override
   void dispose() {
+    AudioCapture.instance.stop();
     _ticker.dispose();
     _pm.dispose();
     _image?.dispose();
