@@ -37,16 +37,19 @@ MediaItem buildLocalFileMediaItem(DisplayItem i) {
 /// playback can fall back to streaming if the local file goes missing; the local
 /// path lives in extras and is re-checked at play time.
 ///
-/// A metadata-less item — an OLDER server's search hit; newer servers inline the
-/// block (PR #685) and browse/album rows always carry it — has its full metadata
-/// fetched here (POST /api/v1/db/metadata) before the MediaItem is built, so the
-/// queued track doesn't land with no album / artist / cover / duration.
-/// Best-effort: a miss or a server without the route leaves [meta] null and we
-/// fall back to the row's altAlbumArt for the cover. Items that already carry
-/// metadata skip the fetch.
+/// A search hit carries at most the lite metadata subset (PR #685, flagged
+/// [DisplayItem.partialMetadata]) and an older server's hit carries none; either
+/// way the full block is fetched here (POST /api/v1/db/metadata) before the
+/// MediaItem is built, so the queued track has the fidelity / counts / play-count
+/// the now-playing + Song Info screens show. Browsed/album rows already carry the
+/// full block and skip the fetch. Best-effort: on a miss we keep whatever the row
+/// had (the lite block, or null) and fall back to its altAlbumArt for the cover.
 Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
-  final MusicMetadata? meta =
-      i.metadata ?? await ApiManager().fetchTrackMetadata(i.server!, i.data!);
+  MusicMetadata? meta = i.metadata;
+  if (meta == null || i.partialMetadata) {
+    final full = await ApiManager().fetchTrackMetadata(i.server!, i.data!);
+    if (full != null) meta = full;
+  }
 
   final String downloadDirectory = i.server!.localname + i.data!;
   final dir = await FileExplorer()

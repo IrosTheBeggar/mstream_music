@@ -325,12 +325,13 @@ class ApiManager {
         newList.add(newItem);
       });
 
-      // Track hits now carry the full metadata block (PR #685, same shape as
-      // album-songs); attach it so the row shows the real title/artist AND the
-      // queue enqueues with full metadata, skipping the per-track /db/metadata
-      // fetch. Older servers omit the key → metadata stays null and
-      // buildServerFileMediaItem fetches it lazily. With metadata the artist is
-      // the subtitle, so the 'song' type hint only matters on the old path.
+      // Track hits carry the LITE metadata subset (PR #685, same kebab-case keys
+      // as the full block, so fromServerMap parses it directly). Attach it so the
+      // row renders a real card (title / artist) and flag it partial so the queue
+      // refetches the full block (fidelity / counts) on enqueue. Older servers
+      // omit the key → metadata stays null (still partial → still fetched). With
+      // metadata the artist is the subtitle, so the 'song' type hint only matters
+      // on the metadata-less path.
       res['title'].forEach((e) {
         final md = e['metadata'];
         final meta = md is Map ? MusicMetadata.fromServerMap(md) : null;
@@ -343,15 +344,16 @@ class ApiManager {
             meta != null ? null : 'song');
         newItem.altAlbumArt = e['album_art_file'];
         newItem.metadata = meta;
+        newItem.partialMetadata = true;
         newList.add(newItem);
       });
 
       // Files (filepath matches) — only populated when the scope is `files`.
-      // Carries the metadata block too (PR #685); `?.` because older servers may
-      // omit the `files` key entirely. We keep the folder as the subtitle (the
+      // Carries the lite metadata block too (PR #685); `?.` because older servers
+      // may omit the `files` key entirely. We keep the folder as the subtitle (the
       // match context — getSubText shows an explicit subtext over the metadata
       // artist); getText shows the title once metadata is attached, the filename
-      // otherwise.
+      // otherwise. Flagged partial so the queue refetches the full block.
       res['files']?.forEach((e) {
         final String fp = e['filepath'];
         final int slash = fp.lastIndexOf('/');
@@ -365,15 +367,17 @@ class ApiManager {
             slash > 0 ? fp.substring(0, slash) : null);
         newItem.altAlbumArt = e['album_art_file'];
         if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+        newItem.partialMetadata = true;
         newList.add(newItem);
       });
 
       // Lyric matches (only when the `lyrics` category is ticked; `?.` since
-      // older servers omit the key). Carries the metadata block (PR #685) for the
-      // queue, plus a `snippet` excerpt. We keep the snippet as the subtitle so
-      // the user sees WHY it matched (getSubText prefers an explicit subtext over
-      // the metadata artist); getText shows the real title once metadata is
-      // attached. `snippet` is null on the LIKE / non-FTS path → plain label.
+      // older servers omit the key). Carries the lite metadata block (PR #685)
+      // plus a `snippet` excerpt. We keep the snippet as the subtitle so the user
+      // sees WHY it matched (getSubText prefers an explicit subtext over the
+      // metadata artist); getText shows the real title once metadata is attached.
+      // `snippet` is null on the LIKE / non-FTS path → plain label. Flagged
+      // partial so the queue refetches the full block.
       res['lyrics']?.forEach((e) {
         final snippet = (e['snippet'] as String?)?.trim();
         final md = e['metadata'];
@@ -386,6 +390,7 @@ class ApiManager {
             snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
         newItem.altAlbumArt = e['album_art_file'];
         if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+        newItem.partialMetadata = true;
         newList.add(newItem);
       });
 

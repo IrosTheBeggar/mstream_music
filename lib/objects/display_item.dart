@@ -18,6 +18,11 @@ class DisplayItem {
   Icon? icon;
   String name;
   MusicMetadata? metadata;
+  // When true, [metadata] is at most the lite subset the search endpoint returns
+  // (PR #685) — enough for the row's card, but missing the heavier fidelity /
+  // count fields. buildServerFileMediaItem refetches the full block before
+  // enqueuing so the now-playing / Song Info screens stay complete.
+  bool partialMetadata = false;
   String? altAlbumArt;
   String? subtext;
 
