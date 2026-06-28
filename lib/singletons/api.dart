@@ -4,6 +4,7 @@ import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
+import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/stream_url.dart';
@@ -79,6 +80,35 @@ class ApiManager {
       throw Exception('Share failed (HTTP ${response.statusCode})');
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  /// `GET /api/v1/lyrics?path=<vpath/relpath>` — fetches the lyrics the server has
+  /// stored for a track (embedded plain text and/or a synced LRC). Returns null
+  /// when there are none for this track (404) or the server predates the lyrics
+  /// API; throws only on an unexpected transport / HTTP error so the lyrics
+  /// screen can offer a retry. Direct http (like [rateSong]) so it stays off the
+  /// browser loading bar. [filepath] is the track's data path — a leading slash
+  /// is tolerated, and each segment is encoded like the stream-URL builder so
+  /// spaces / specials are escaped while the `/` separators stay literal.
+  Future<LyricsResult?> fetchLyrics(Server server, String filepath) async {
+    final encodedPath = filepath
+        .split('/')
+        .where((s) => s.isNotEmpty)
+        .map(Uri.encodeComponent)
+        .join('/');
+    final uri = Uri.parse('${server.effectiveBaseUrl}/api/v1/lyrics'
+        '?path=$encodedPath${server.localTokenQuery}');
+
+    final response =
+        await http.get(uri, headers: {'x-access-token': server.jwt ?? ''});
+    if (response.statusCode == 404) return null; // no lyrics for this track
+    if (response.statusCode > 299) {
+      throw Exception('Lyrics fetch failed (HTTP ${response.statusCode})');
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final result = LyricsResult.fromJson(decoded);
+    return result.isEmpty ? null : result;
   }
 
   Future makeServerCall(Server? currentServer, String location, Map payload,

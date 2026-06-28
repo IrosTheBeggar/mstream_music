@@ -31,6 +31,11 @@ class MusicMetadata {
   int? trackTotal;
   int? discTotal;
   int? playCount;
+  // Whether the server has lyrics stored for this track (`has-lyrics`, from the
+  // lyrics-backfill API; true for embedded plain text OR a synced LRC). Absent
+  // on older servers → false. Gates the Song Info lyrics badge, which fetches
+  // the text on demand via GET /api/v1/lyrics rather than inlining it here.
+  bool hasLyrics;
   // Genre names for this track. Velvet servers emit `metadata.genres` as a
   // string list (many-to-many via track_genres); empty when untagged or on
   // servers that don't surface genres.
@@ -47,7 +52,8 @@ class MusicMetadata {
       this.format,
       this.trackTotal,
       this.discTotal,
-      this.playCount});
+      this.playCount,
+      this.hasLyrics = false});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
       : artist = json['artist'],
@@ -68,6 +74,7 @@ class MusicMetadata {
         trackTotal = json['trackTotal'],
         discTotal = json['discTotal'],
         playCount = json['playCount'],
+        hasLyrics = json['hasLyrics'] == true,
         genres = parseGenres(json['genres']);
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +96,7 @@ class MusicMetadata {
         'trackTotal': trackTotal,
         'discTotal': discTotal,
         'playCount': playCount,
+        'hasLyrics': hasLyrics,
         'genres': genres,
       };
 
@@ -123,6 +131,10 @@ class MusicMetadata {
         trackTotal: _asInt(m['track-total'] ?? m['trackTotal']),
         discTotal: _asInt(m['disc-total'] ?? m['discTotal']),
         playCount: _asInt(m['play-count'] ?? m['playCount']),
+        // Lyrics-availability flag from the lyrics-backfill API; the synced
+        // variant (`has-synced-lyrics`) isn't threaded — the lyrics fetch
+        // reports plain vs synced itself.
+        hasLyrics: m['has-lyrics'] == true,
       );
 
   /// Parses the server's `genres` value (normally a string list) into a

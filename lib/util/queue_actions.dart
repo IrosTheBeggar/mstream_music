@@ -83,6 +83,8 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
       'trackTotal': i.metadata?.trackTotal,
       'discTotal': i.metadata?.discTotal,
       'playCount': i.metadata?.playCount,
+      // Drives the Song Info lyrics badge (tap → fetch via GET /api/v1/lyrics).
+      'hasLyrics': i.metadata?.hasLyrics ?? false,
     },
   );
 }

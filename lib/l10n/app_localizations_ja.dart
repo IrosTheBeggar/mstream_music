@@ -103,6 +103,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get songInfoTitle => '曲の情報';
 
   @override
+  String get lyricsTitle => 'Lyrics';
+
+  @override
+  String get lyricsEmpty => 'No lyrics found for this song';
+
+  @override
+  String get lyricsError => 'Couldn\'t load lyrics';
+
+  @override
+  String get lyricsRetry => 'Retry';
+
+  @override
   String get eqTitle => 'イコライザー';
 
   @override
