@@ -544,6 +544,34 @@ class ApiManager {
     }
   }
 
+  /// POST /api/v1/db/metadata — the full metadata block for a single track by its
+  /// (library-prefixed) [filepath]. Used to enrich queue items built from the
+  /// lightweight search endpoint, which returns only name/filepath/art. Returns
+  /// null on a miss (the server 200s with `metadata: null`), any error, or an
+  /// older server without the route — so callers degrade to what they already
+  /// have. Best-effort: never throws. Direct http (like [rateSong]) so it stays
+  /// off the browser loading bar. A leading slash on [filepath] is tolerated.
+  Future<MusicMetadata?> fetchTrackMetadata(
+      Server server, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    try {
+      final response = await http.post(
+        server.apiUri('/api/v1/db/metadata'),
+        body: jsonEncode({'filepath': fp}),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-token': server.jwt ?? '',
+        },
+      );
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      final md = decoded is Map ? decoded['metadata'] : null;
+      return md is Map ? MusicMetadata.fromServerMap(md) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> getArtists({Server? useThisServer}) async {
     dynamic res;
     try {

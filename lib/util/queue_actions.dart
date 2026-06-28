@@ -12,6 +12,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:uuid/uuid.dart';
 
 import '../objects/display_item.dart';
+import '../objects/metadata.dart';
+import '../singletons/api.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
@@ -34,7 +36,18 @@ MediaItem buildLocalFileMediaItem(DisplayItem i) {
 /// The streaming URL is the MediaItem id for BOTH local and online items, so
 /// playback can fall back to streaming if the local file goes missing; the local
 /// path lives in extras and is re-checked at play time.
+///
+/// Search results carry no metadata block — the search endpoint returns only
+/// name/filepath/art (and a fused "Artist - Title" name) — so for a metadata-less
+/// item we fetch the full block (POST /api/v1/db/metadata) first; otherwise the
+/// queued track would land with no album / artist / cover / duration. Best-effort:
+/// a miss or an older server leaves [meta] null and we fall back to the row's
+/// altAlbumArt for the cover. Browsed/album items already carry metadata, so they
+/// skip the fetch.
 Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
+  final MusicMetadata? meta =
+      i.metadata ?? await ApiManager().fetchTrackMetadata(i.server!, i.data!);
+
   final String downloadDirectory = i.server!.localname + i.data!;
   final dir = await FileExplorer()
       .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
@@ -45,19 +58,23 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
 
   final String streamUrl = buildServerStreamUrl(i.server!, i.data!);
 
-  final String? artUrl = i.metadata?.albumArt != null
-      ? buildAlbumArtUrl(i.server!, i.metadata!.albumArt!, compress: 'l')
+  // Prefer the (fetched) metadata cover; fall back to the search row's
+  // altAlbumArt so a queued search hit keeps its art even when the metadata
+  // fetch missed.
+  final String? artFile = meta?.albumArt ?? i.altAlbumArt;
+  final String? artUrl = artFile != null
+      ? buildAlbumArtUrl(i.server!, artFile, compress: 'l')
       : null;
 
   return MediaItem(
     id: streamUrl,
-    title: i.metadata?.title ?? i.name,
-    album: i.metadata?.album,
-    artist: i.metadata?.artist,
-    genre: i.metadata?.genreLabel,
+    title: meta?.title ?? i.name,
+    album: meta?.album,
+    artist: meta?.artist,
+    genre: meta?.genreLabel,
     // Duration when the server reported it — surfaces in the queue list and the
     // now-playing readout before playback loads (just_audio refines it later).
-    duration: i.metadata?.duration,
+    duration: meta?.duration,
     // Promote album art to artUri so the notification, lock screen, and Android
     // Auto now-playing render artwork — those surfaces ignore extras['artUrl']
     // (which the in-app UI reads). Both are kept in sync.
@@ -66,25 +83,25 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
       'server': i.server!.localname,
       'path': i.data,
       if (isLocal) 'localPath': finalString,
-      'year': i.metadata?.year,
-      'track': i.metadata?.track,
-      'disc': i.metadata?.disc,
+      'year': meta?.year,
+      'track': meta?.track,
+      'disc': meta?.disc,
       // Song rating (0–10 server scale) so the now-playing screen can show +
       // edit stars for the current track without a refetch.
-      'rating': i.metadata?.rating,
+      'rating': meta?.rating,
       'artUrl': artUrl,
       // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing modes.
-      'bpm': i.metadata?.bpm,
-      'musicalKey': i.metadata?.musicalKey,
+      'bpm': meta?.bpm,
+      'musicalKey': meta?.musicalKey,
       // Fidelity + counts for the Song Info screen (it reads only from extras).
-      'bitrate': i.metadata?.bitrate,
-      'sampleRate': i.metadata?.sampleRate,
-      'format': i.metadata?.format,
-      'trackTotal': i.metadata?.trackTotal,
-      'discTotal': i.metadata?.discTotal,
-      'playCount': i.metadata?.playCount,
+      'bitrate': meta?.bitrate,
+      'sampleRate': meta?.sampleRate,
+      'format': meta?.format,
+      'trackTotal': meta?.trackTotal,
+      'discTotal': meta?.discTotal,
+      'playCount': meta?.playCount,
       // Drives the Song Info lyrics badge (tap → fetch via GET /api/v1/lyrics).
-      'hasLyrics': i.metadata?.hasLyrics ?? false,
+      'hasLyrics': meta?.hasLyrics ?? false,
     },
   );
 }
