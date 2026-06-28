@@ -127,20 +127,26 @@ class DisplayItem {
   }
 
   Widget? getSubText({AppLocalizations? l}) {
-    if (metadata?.artist != null) {
+    // An explicitly-set subtext wins over the derived artist line. Search rows
+    // rely on this to keep their match context — a lyric snippet, a file's
+    // folder — visible even though the full metadata block (which carries the
+    // artist) is now attached so the queue can skip a /db/metadata fetch. Every
+    // browse row that has metadata leaves subtext null (or sets it to the artist
+    // itself), so those fall through to the artist exactly as before.
+    if (subtext != null) {
       return Text(
-        metadata!.artist!,
+        (l != null && type == 'addServer')
+            ? browserChromeLabel(l, subtext!)
+            : subtext!,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       );
     }
 
-    if (subtext != null) {
+    if (metadata?.artist != null) {
       return Text(
-        (l != null && type == 'addServer')
-            ? browserChromeLabel(l, subtext!)
-            : subtext!,
+        metadata!.artist!,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

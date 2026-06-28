@@ -37,13 +37,13 @@ MediaItem buildLocalFileMediaItem(DisplayItem i) {
 /// playback can fall back to streaming if the local file goes missing; the local
 /// path lives in extras and is re-checked at play time.
 ///
-/// Search results carry no metadata block — the search endpoint returns only
-/// name/filepath/art (and a fused "Artist - Title" name) — so for a metadata-less
-/// item we fetch the full block (POST /api/v1/db/metadata) first; otherwise the
-/// queued track would land with no album / artist / cover / duration. Best-effort:
-/// a miss or an older server leaves [meta] null and we fall back to the row's
-/// altAlbumArt for the cover. Browsed/album items already carry metadata, so they
-/// skip the fetch.
+/// A metadata-less item — an OLDER server's search hit; newer servers inline the
+/// block (PR #685) and browse/album rows always carry it — has its full metadata
+/// fetched here (POST /api/v1/db/metadata) before the MediaItem is built, so the
+/// queued track doesn't land with no album / artist / cover / duration.
+/// Best-effort: a miss or a server without the route leaves [meta] null and we
+/// fall back to the row's altAlbumArt for the cover. Items that already carry
+/// metadata skip the fetch.
 Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
   final MusicMetadata? meta =
       i.metadata ?? await ApiManager().fetchTrackMetadata(i.server!, i.data!);
