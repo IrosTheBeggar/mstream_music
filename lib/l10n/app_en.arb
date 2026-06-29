@@ -122,6 +122,18 @@
   "@onboardingSectionTitle": {
     "description": "Header above the preference controls on the first-run Add Server screen."
   },
+  "batterySettingTitle": "Keep playback alive",
+  "@batterySettingTitle": {
+    "description": "Title of the battery-optimization exemption tile in Settings."
+  },
+  "batterySettingOn": "Battery optimization is off — background playback won't be interrupted",
+  "@batterySettingOn": {
+    "description": "Battery tile subtitle when the app is already exempt from battery optimization."
+  },
+  "batterySettingOff": "Stop Android from pausing playback when the screen is off",
+  "@batterySettingOff": {
+    "description": "Battery tile subtitle when the app is NOT yet exempt; tapping opens the system screen."
+  },
   "eqTitle": "Equalizer",
   "@eqTitle": {
     "description": "Equalizer screen title / switch label."

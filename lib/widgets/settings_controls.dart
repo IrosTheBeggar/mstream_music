@@ -3,11 +3,14 @@
 // self-contained StatefulWidget that reads/writes SettingsManager and owns its
 // own setState, so it looks and behaves identically wherever it's dropped in.
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../native/battery_optimization.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 
@@ -228,6 +231,66 @@ class _VisualizerSourceSettingTileState
             .toList(),
         onChanged: _onChanged,
       ),
+    );
+  }
+}
+
+// ── Battery-optimization exemption (Android-only; hides elsewhere) ───────────
+class BatteryOptimizationTile extends StatefulWidget {
+  const BatteryOptimizationTile({super.key});
+
+  @override
+  State<BatteryOptimizationTile> createState() =>
+      _BatteryOptimizationTileState();
+}
+
+class _BatteryOptimizationTileState extends State<BatteryOptimizationTile>
+    with WidgetsBindingObserver {
+  bool _exempt = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Re-check after the user comes back from the system settings screen.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final v = await BatteryOptimization().isIgnored();
+    if (mounted) setState(() => _exempt = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The exemption is an Android concept; render nothing on other platforms.
+    if (!Platform.isAndroid) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    return ListTile(
+      leading: Icon(
+        _exempt ? Icons.battery_charging_full : Icons.battery_alert,
+        color: _exempt ? VelvetColors.primary : VelvetColors.textSecondary,
+      ),
+      title: Text(l.batterySettingTitle, overflow: TextOverflow.ellipsis),
+      subtitle: Text(_exempt ? l.batterySettingOn : l.batterySettingOff,
+          style: _subtitleStyle),
+      trailing: _exempt
+          ? Icon(Icons.check_circle, color: VelvetColors.primary)
+          : Icon(Icons.chevron_right, color: VelvetColors.textSecondary),
+      // Already exempt → nothing to do; otherwise open the system screen and
+      // let didChangeAppLifecycleState refresh the state on return.
+      onTap: _exempt ? null : () => BatteryOptimization().openSettings(),
     );
   }
 }

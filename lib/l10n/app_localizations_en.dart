@@ -120,6 +120,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingSectionTitle => 'Quick setup';
 
   @override
+  String get batterySettingTitle => 'Keep playback alive';
+
+  @override
+  String get batterySettingOn =>
+      'Battery optimization is off — background playback won\'t be interrupted';
+
+  @override
+  String get batterySettingOff =>
+      'Stop Android from pausing playback when the screen is off';
+
+  @override
   String get eqTitle => 'Equalizer';
 
   @override

@@ -133,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionPlayback),
+          const BatteryOptimizationTile(),
           SwitchListTile(
             title: Text(l.settingsResumeQueue),
             subtitle: Text(
