@@ -7,7 +7,7 @@ A tight regression-detection loop for an existing Flutter app whose modernizatio
 ## What we have today
 
 - **App version**: 0.14.0+25
-- **Flutter**: 3.44.4 / Dart 3.12.0 (Android: AGP 9.0.1 / Gradle 9.1.0 / Kotlin 2.3.20)
+- **Flutter**: 3.44.4 / Dart 3.12.2 (Android: AGP 9.0.1 / Gradle 9.1.0 / Kotlin 2.3.20)
 - **Source tree**: `lib/main.dart` (root UI), `lib/screens/*` (page widgets), `lib/singletons/*` (state + side effects), `lib/objects/*` (data classes), `lib/media/*` (audio_service handler)
 - **Existing tests**: a 2021 boilerplate counter test that never matched the app — replaced.
 - **Baseline `flutter analyze`**: 2 minor issues
