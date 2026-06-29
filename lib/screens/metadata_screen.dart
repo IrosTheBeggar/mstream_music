@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
+import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import '../widgets/star_rating.dart';
+import 'lyrics_screen.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
 /// backdrop, a hero cover, the title / artist / album·year, a track/disc line,
@@ -31,6 +33,12 @@ class MetadataScreen extends StatelessWidget {
     final year = extras['year'];
     final key = extras['musicalKey'] as String?;
     final genre = item.genre;
+
+    // Lyrics badge: shown only when the server advertised lyrics for this track
+    // (`hasLyrics`) AND we can resolve its source server + path to fetch them —
+    // both null for a local file, so it stays hidden there.
+    final lyricsServer =
+        ServerManager().byLocalname(extras['server'] as String?);
 
     final subtitle = <String>[
       if (item.album != null && item.album!.trim().isNotEmpty) item.album!.trim(),
@@ -66,6 +74,21 @@ class MetadataScreen extends StatelessWidget {
       // a rateable track: a local file has no server-side rating, and adding it
       // unconditionally would force an empty chip row to render for one.
       if (MediaItemRating.canRate(item)) MediaItemRating(item: item, size: 18),
+      if (extras['hasLyrics'] == true && lyricsServer != null && path != null)
+        _lyricsChip(
+          l.lyricsTitle,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LyricsScreen(
+                server: lyricsServer,
+                path: path,
+                title: item.title,
+                artist: item.artist,
+              ),
+            ),
+          ),
+        ),
       if (item.duration != null)
         _chip(Icons.schedule_rounded, formatDuration(item.duration!)),
       if (fidelity.isNotEmpty) _chip(Icons.high_quality_rounded, fidelity),
@@ -280,6 +303,44 @@ class MetadataScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Tappable sibling of [_chip] for the lyrics badge: the same pill plus an ink
+  /// ripple and a trailing chevron to signal that it opens the lyrics page.
+  Widget _lyricsChip(String label, VoidCallback onTap) {
+    return Material(
+      color: VelvetColors.raised,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: VelvetColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lyrics_rounded, size: 14, color: VelvetColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right_rounded,
+                  size: 16, color: VelvetColors.textTertiary),
+            ],
+          ),
+        ),
       ),
     );
   }

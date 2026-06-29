@@ -4,6 +4,7 @@ import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
 import '../objects/display_item.dart';
+import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/stream_url.dart';
@@ -79,6 +80,35 @@ class ApiManager {
       throw Exception('Share failed (HTTP ${response.statusCode})');
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  /// `GET /api/v1/lyrics?path=<vpath/relpath>` — fetches the lyrics the server has
+  /// stored for a track (embedded plain text and/or a synced LRC). Returns null
+  /// when there are none for this track (404) or the server predates the lyrics
+  /// API; throws only on an unexpected transport / HTTP error so the lyrics
+  /// screen can offer a retry. Direct http (like [rateSong]) so it stays off the
+  /// browser loading bar. [filepath] is the track's data path — a leading slash
+  /// is tolerated, and each segment is encoded like the stream-URL builder so
+  /// spaces / specials are escaped while the `/` separators stay literal.
+  Future<LyricsResult?> fetchLyrics(Server server, String filepath) async {
+    final encodedPath = filepath
+        .split('/')
+        .where((s) => s.isNotEmpty)
+        .map(Uri.encodeComponent)
+        .join('/');
+    final uri = Uri.parse('${server.effectiveBaseUrl}/api/v1/lyrics'
+        '?path=$encodedPath${server.localTokenQuery}');
+
+    final response =
+        await http.get(uri, headers: {'x-access-token': server.jwt ?? ''});
+    if (response.statusCode == 404) return null; // no lyrics for this track
+    if (response.statusCode > 299) {
+      throw Exception('Lyrics fetch failed (HTTP ${response.statusCode})');
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final result = LyricsResult.fromJson(decoded);
+    return result.isEmpty ? null : result;
   }
 
   Future makeServerCall(Server? currentServer, String location, Map payload,
@@ -256,7 +286,7 @@ class ApiManager {
 
   Future<void> searchServer(String search) async {
     try {
-      // The user's ticked search categories map 1:1 onto the endpoint's four
+      // The user's ticked search categories map 1:1 onto the endpoint's five
       // `no*` flags — the server only does the work that's asked. The default
       // set (artists+albums+songs) reproduces mStream's classic search.
       final cats = SettingsManager().searchCategories;
@@ -266,6 +296,7 @@ class ApiManager {
         'noAlbums': !cats.contains(SearchCategory.albums),
         'noTitles': !cats.contains(SearchCategory.songs),
         'noFiles': !cats.contains(SearchCategory.files),
+        'noLyrics': !cats.contains(SearchCategory.lyrics),
       }, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
@@ -294,25 +325,39 @@ class ApiManager {
         newList.add(newItem);
       });
 
+      // Track hits carry the LITE metadata subset (PR #685, same kebab-case keys
+      // as the full block, so fromServerMap parses it directly). Attach it so the
+      // row renders a real card (title / artist) and flag it partial so the queue
+      // refetches the full block (fidelity / counts) on enqueue. Older servers
+      // omit the key → metadata stays null (still partial → still fetched). With
+      // metadata the artist is the subtitle, so the 'song' type hint only matters
+      // on the metadata-less path.
       res['title'].forEach((e) {
+        final md = e['metadata'];
+        final meta = md is Map ? MusicMetadata.fromServerMap(md) : null;
         DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
             'file',
             '/${e['filepath']}',
             Icon(Icons.music_note, color: VelvetColors.accent),
-            'song');
+            meta != null ? null : 'song');
         newItem.altAlbumArt = e['album_art_file'];
+        newItem.metadata = meta;
+        newItem.partialMetadata = true;
         newList.add(newItem);
       });
 
       // Files (filepath matches) — only populated when the scope is `files`.
-      // Same shape as titles (name + filepath); guarded with `?.` because
-      // older servers may omit the key entirely. The row renders as a file:
-      // getText shows the filename, so we surface the folder as the subtitle.
+      // Carries the lite metadata block too (PR #685); `?.` because older servers
+      // may omit the `files` key entirely. We keep the folder as the subtitle (the
+      // match context — getSubText shows an explicit subtext over the metadata
+      // artist); getText shows the title once metadata is attached, the filename
+      // otherwise. Flagged partial so the queue refetches the full block.
       res['files']?.forEach((e) {
         final String fp = e['filepath'];
         final int slash = fp.lastIndexOf('/');
+        final md = e['metadata'];
         DisplayItem newItem = DisplayItem(
             ServerManager().currentServer,
             e['name'],
@@ -321,6 +366,31 @@ class ApiManager {
             Icon(Icons.insert_drive_file, color: VelvetColors.accent),
             slash > 0 ? fp.substring(0, slash) : null);
         newItem.altAlbumArt = e['album_art_file'];
+        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+        newItem.partialMetadata = true;
+        newList.add(newItem);
+      });
+
+      // Lyric matches (only when the `lyrics` category is ticked; `?.` since
+      // older servers omit the key). Carries the lite metadata block (PR #685)
+      // plus a `snippet` excerpt. We keep the snippet as the subtitle so the user
+      // sees WHY it matched (getSubText prefers an explicit subtext over the
+      // metadata artist); getText shows the real title once metadata is attached.
+      // `snippet` is null on the LIKE / non-FTS path → plain label. Flagged
+      // partial so the queue refetches the full block.
+      res['lyrics']?.forEach((e) {
+        final snippet = (e['snippet'] as String?)?.trim();
+        final md = e['metadata'];
+        DisplayItem newItem = DisplayItem(
+            ServerManager().currentServer,
+            e['name'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.lyrics, color: VelvetColors.accent),
+            snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
+        newItem.altAlbumArt = e['album_art_file'];
+        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+        newItem.partialMetadata = true;
         newList.add(newItem);
       });
 
@@ -492,6 +562,34 @@ class ApiManager {
     );
     if (response.statusCode > 299) {
       throw Exception('Rating failed (HTTP ${response.statusCode})');
+    }
+  }
+
+  /// POST /api/v1/db/metadata — the full metadata block for a single track by its
+  /// (library-prefixed) [filepath]. Used to enrich queue items built from the
+  /// lightweight search endpoint, which returns only name/filepath/art. Returns
+  /// null on a miss (the server 200s with `metadata: null`), any error, or an
+  /// older server without the route — so callers degrade to what they already
+  /// have. Best-effort: never throws. Direct http (like [rateSong]) so it stays
+  /// off the browser loading bar. A leading slash on [filepath] is tolerated.
+  Future<MusicMetadata?> fetchTrackMetadata(
+      Server server, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    try {
+      final response = await http.post(
+        server.apiUri('/api/v1/db/metadata'),
+        body: jsonEncode({'filepath': fp}),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-token': server.jwt ?? '',
+        },
+      );
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      final md = decoded is Map ? decoded['metadata'] : null;
+      return md is Map ? MusicMetadata.fromServerMap(md) : null;
+    } catch (_) {
+      return null;
     }
   }
 

@@ -102,6 +102,22 @@
   "@songInfoTitle": {
     "description": "Metadata screen app bar title."
   },
+  "lyricsTitle": "Lyrics",
+  "@lyricsTitle": {
+    "description": "Lyrics page app bar title and the Song Info lyrics badge label."
+  },
+  "lyricsEmpty": "No lyrics found for this song",
+  "@lyricsEmpty": {
+    "description": "Empty state on the lyrics page when the server has no lyrics."
+  },
+  "lyricsError": "Couldn't load lyrics",
+  "@lyricsError": {
+    "description": "Error state on the lyrics page when the fetch fails."
+  },
+  "lyricsRetry": "Retry",
+  "@lyricsRetry": {
+    "description": "Button to retry loading lyrics after an error."
+  },
   "eqTitle": "Equalizer",
   "@eqTitle": {
     "description": "Equalizer screen title / switch label."
@@ -575,8 +591,9 @@
   "searchCategoryAlbums": "Albums",
   "searchCategorySongs": "Songs",
   "searchCategoryFiles": "Files",
+  "searchCategoryLyrics": "Lyrics",
   "@searchCategoriesTooltip": {
-    "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination)."
+    "description": "Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the five category labels (which categories the DB search queries — the user ticks any combination)."
   },
   "searchSubheaderResults": "Results for “{term}”",
   "@searchSubheaderResults": {

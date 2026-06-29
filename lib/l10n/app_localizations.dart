@@ -276,6 +276,30 @@ abstract class AppLocalizations {
   /// **'Song Info'**
   String get songInfoTitle;
 
+  /// Lyrics page app bar title and the Song Info lyrics badge label.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get lyricsTitle;
+
+  /// Empty state on the lyrics page when the server has no lyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'No lyrics found for this song'**
+  String get lyricsEmpty;
+
+  /// Error state on the lyrics page when the fetch fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load lyrics'**
+  String get lyricsError;
+
+  /// Button to retry loading lyrics after an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get lyricsRetry;
+
   /// Equalizer screen title / switch label.
   ///
   /// In en, this message translates to:
@@ -1476,7 +1500,7 @@ abstract class AppLocalizations {
   /// **'Search Database'**
   String get browserSearchHint;
 
-  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the four category labels (which categories the DB search queries — the user ticks any combination).
+  /// Search-category checkbox dropdown: tooltip on the icon button, the menu header, and the five category labels (which categories the DB search queries — the user ticks any combination).
   ///
   /// In en, this message translates to:
   /// **'What to search'**
@@ -1511,6 +1535,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Files'**
   String get searchCategoryFiles;
+
+  /// No description provided for @searchCategoryLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get searchCategoryLyrics;
 
   /// Thin subheader on the search-results page echoing the submitted query.
   ///

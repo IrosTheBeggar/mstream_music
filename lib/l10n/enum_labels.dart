@@ -93,6 +93,8 @@ extension SearchCategoryLabel on SearchCategory {
         return l.searchCategorySongs;
       case SearchCategory.files:
         return l.searchCategoryFiles;
+      case SearchCategory.lyrics:
+        return l.searchCategoryLyrics;
     }
   }
 }
