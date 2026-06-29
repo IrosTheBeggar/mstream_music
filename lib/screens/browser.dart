@@ -13,6 +13,7 @@ import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
+import '../widgets/settings_controls.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
@@ -625,6 +626,58 @@ class _BrowserState extends State<Browser> {
   }
 
   // ── Default browser landing: section shortcuts as a modern card grid ──
+  // First-run welcome state: the lone "Welcome to mStream" (addServer) tile,
+  // shown with a Quick-setup card of the key first-run preferences below it.
+  Widget _welcomeView(BuildContext context, List<DisplayItem> items) {
+    final l = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          makeListItem(items, 0, context),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _quickSetupCard(context, l),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // The key first-run preferences, built from the same reusable controls as the
+  // Settings screen (language / "when you tap a song" / visualizer source).
+  Widget _quickSetupCard(BuildContext context, AppLocalizations l) {
+    return Container(
+      decoration: BoxDecoration(
+        color: VelvetColors.surface,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        border: Border.all(color: VelvetColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
+            child: Text(
+              l.onboardingSectionTitle.toUpperCase(),
+              style: TextStyle(
+                color: VelvetColors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ),
+          const LanguageSettingTile(),
+          const TapBehaviorSettingTile(),
+          const VisualizerSourceSettingTile(),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+
   Widget _homeView(BuildContext context, List<DisplayItem> items) {
     final l = AppLocalizations.of(context);
     return GridView.builder(
@@ -933,6 +986,14 @@ class _BrowserState extends State<Browser> {
                                 BrowserManager().listName == 'Playlists');
                     if (isPlaylistView) {
                       return _playlistsView(context, browserList);
+                    }
+
+                    // First run: the lone "Welcome to mStream" (addServer) tile.
+                    // Render it with a Quick-setup card of the key first-run prefs
+                    // below — so a brand-new user sees them before adding a server.
+                    if (browserList.length == 1 &&
+                        browserList[0].type == 'addServer') {
+                      return _welcomeView(context, browserList);
                     }
 
                     // If the whole list is albums and the user has the

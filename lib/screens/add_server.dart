@@ -17,7 +17,6 @@ import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
-import '../widgets/settings_controls.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
@@ -1740,42 +1739,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     );
   }
 
-  // First-run "Quick setup" card shown above the Add Server form: the key
-  // preferences a new user benefits from setting immediately, built from the
-  // same reusable controls as the Settings screen (language / tap behavior /
-  // visualizer source). The battery-optimization tile is intentionally Settings-
-  // only, not surfaced here.
-  Widget _onboardingCard(BuildContext context, AppLocalizations l) {
-    return Container(
-      decoration: BoxDecoration(
-        color: VelvetColors.surface,
-        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-        border: Border.all(color: VelvetColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
-            child: Text(
-              l.onboardingSectionTitle.toUpperCase(),
-              style: TextStyle(
-                color: VelvetColors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.6,
-              ),
-            ),
-          ),
-          const LanguageSettingTile(),
-          const TapBehaviorSettingTile(),
-          const VisualizerSourceSettingTile(),
-          SizedBox(height: 6),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStandardForm(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SafeArea(
@@ -1789,13 +1752,6 @@ class MyCustomFormState extends State<MyCustomForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // First-run only (no servers yet, add mode): surface the key
-              // preferences up front so a new user sees them before connecting.
-              if (widget.editThisServer == null &&
-                  ServerManager().serverList.isEmpty) ...[
-                _onboardingCard(context, l),
-                SizedBox(height: 20),
-              ],
               TextFormField(
                 controller: _urlCtrl,
                 // iroh server: reached through the loopback tunnel, not this URL
