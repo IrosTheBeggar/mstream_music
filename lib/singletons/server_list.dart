@@ -580,6 +580,11 @@ class ServerManager {
       _queueIrohServer = null;
     }
 
+    // Drop any queued tracks that streamed from the now-removed server — they
+    // can no longer be played.
+    await MediaManager().audioHandler.customAction(
+        'removeServerFromQueue', {'server': removeThisServer.localname});
+
     if (serverList.isEmpty) {
       // force the browser to rerender so it displays
       BrowserManager().noServerScreen();
