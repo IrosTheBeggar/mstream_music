@@ -252,6 +252,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。';
 
   @override
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
+
+  @override
   String get settingsAlbumGrid => '专辑网格视图';
 
   @override

@@ -558,6 +558,12 @@ abstract class AppLocalizations {
   /// **'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.'**
   String get visualizerSourceSubtitleReal;
 
+  /// No description provided for @visualizerSourcePermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Real Audio requires the RECORD_AUDIO permission.'**
+  String get visualizerSourcePermission;
+
   /// Album-grid toggle row.
   ///
   /// In en, this message translates to:

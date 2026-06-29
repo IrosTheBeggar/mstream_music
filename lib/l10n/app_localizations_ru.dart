@@ -266,6 +266,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Визуализация реагирует на реальный аудиовыход. Требуется разрешение RECORD_AUDIO на Android.';
 
   @override
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
+
+  @override
   String get settingsAlbumGrid => 'Альбомы сеткой';
 
   @override

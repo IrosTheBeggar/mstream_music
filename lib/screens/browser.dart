@@ -637,7 +637,7 @@ class _BrowserState extends State<Browser> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          makeListItem(items, 0, context),
+          _welcomeButton(context, l, items),
           _quickSetupHeader(l.quickSetupTheme),
           const AccentColorSettingTile(),
           _quickSetupHeader(l.quickSetupConfig),
@@ -660,6 +660,73 @@ class _BrowserState extends State<Browser> {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.6,
+        ),
+      ),
+    );
+  }
+
+  // The first-run call to action: a bold gradient "Welcome to mStream" button so
+  // the primary action stands out. Taps route to Add Server via the addServer
+  // DisplayItem's handleTap (items[0]).
+  Widget _welcomeButton(
+      BuildContext context, AppLocalizations l, List<DisplayItem> items) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+          onTap: () => handleTap(items, 0, context),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [VelvetColors.primaryHover, VelvetColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              boxShadow: [
+                BoxShadow(
+                  color: VelvetColors.primaryGlow,
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            child: Row(
+              children: [
+                Icon(Icons.add_circle_outline,
+                    color: VelvetColors.onPrimary, size: 30),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.browserWelcomeTitle,
+                        style: TextStyle(
+                          color: VelvetColors.onPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        l.browserWelcomeSubtitle,
+                        style: TextStyle(
+                          color: VelvetColors.onPrimary.withValues(alpha: 0.85),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: VelvetColors.onPrimary),
+              ],
+            ),
+          ),
         ),
       ),
     );

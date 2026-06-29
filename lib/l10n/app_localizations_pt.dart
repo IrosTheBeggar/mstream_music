@@ -264,6 +264,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'O visualizador reage à saída de áudio real. Exige a permissão RECORD_AUDIO no Android.';
 
   @override
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
+
+  @override
   String get settingsAlbumGrid => 'Visualização em grade de álbuns';
 
   @override

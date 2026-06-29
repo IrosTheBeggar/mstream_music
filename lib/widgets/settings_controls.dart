@@ -138,14 +138,6 @@ class VisualizerSourceSettingTile extends StatefulWidget {
 
 class _VisualizerSourceSettingTileState
     extends State<VisualizerSourceSettingTile> {
-  String _subtitle(AppLocalizations l, VisualizerAudioSource s) {
-    switch (s) {
-      case VisualizerAudioSource.synthesized:
-        return l.visualizerSourceSubtitleSynthesized;
-      case VisualizerAudioSource.real:
-        return l.visualizerSourceSubtitleReal;
-    }
-  }
 
   // Switching to "real" walks the user through the RECORD_AUDIO permission flow
   // with an up-front explanation of *why* a music app wants the microphone. If
@@ -221,8 +213,7 @@ class _VisualizerSourceSettingTileState
     final l = AppLocalizations.of(context);
     return ListTile(
       title: Text(l.settingsVisualizerSource, overflow: TextOverflow.ellipsis),
-      subtitle: Text(_subtitle(l, SettingsManager().visualizerAudioSource),
-          style: _subtitleStyle),
+      subtitle: Text(l.visualizerSourcePermission, style: _subtitleStyle),
       trailing: DropdownButton<VisualizerAudioSource>(
         value: SettingsManager().visualizerAudioSource,
         underline: SizedBox.shrink(),
