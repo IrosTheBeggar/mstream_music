@@ -1,8 +1,11 @@
 package com.example.mstream_music
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.os.StatFs
+import android.provider.Settings
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -65,6 +68,37 @@ class MainActivity : AudioServiceActivity() {
                     "stopMove" -> {
                         try {
                             stopService(Intent(this, MigrationService::class.java))
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        // Battery-optimization (Doze / OEM app-sleeping) exemption. A
+        // foreground-service music player that isn't exempt can be frozen or
+        // killed with the screen off → "playback stops". We CHECK the state and
+        // open the system screen; we deliberately use the permission-free
+        // settings-list intent, not the restricted one-tap request.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mstream/battery")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isIgnoringBatteryOptimizations" -> {
+                        try {
+                            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                            result.success(
+                                pm.isIgnoringBatteryOptimizations(packageName))
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    "openBatterySettings" -> {
+                        try {
+                            startActivity(
+                                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                             result.success(true)
                         } catch (e: Exception) {
                             result.success(false)

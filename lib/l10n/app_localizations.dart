@@ -306,6 +306,24 @@ abstract class AppLocalizations {
   /// **'Quick setup'**
   String get onboardingSectionTitle;
 
+  /// Title of the battery-optimization exemption tile in Settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep playback alive'**
+  String get batterySettingTitle;
+
+  /// Battery tile subtitle when the app is already exempt from battery optimization.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimization is off — background playback won\'t be interrupted'**
+  String get batterySettingOn;
+
+  /// Battery tile subtitle when the app is NOT yet exempt; tapping opens the system screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop Android from pausing playback when the screen is off'**
+  String get batterySettingOff;
+
   /// Equalizer screen title / switch label.
   ///
   /// In en, this message translates to:
