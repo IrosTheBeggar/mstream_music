@@ -41,10 +41,15 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       final file = File(
           '${dir.path}/mstream-log-${DateTime.now().millisecondsSinceEpoch}.txt');
       await file.writeAsString(body);
-      await Share.shareXFiles([XFile(file.path, mimeType: 'text/plain')],
-          subject: 'mStream logs');
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'text/plain')],
+        subject: 'mStream logs',
+      ));
     } catch (_) {
-      await Share.share(body, subject: 'mStream logs');
+      await SharePlus.instance.share(ShareParams(
+        text: body,
+        subject: 'mStream logs',
+      ));
     }
   }
 

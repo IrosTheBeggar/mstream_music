@@ -52,7 +52,7 @@ jobs:
         # same day doesn't surprise us mid-release-cut.
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.0'
+          flutter-version: '3.44.4'
           cache: true
 
       - name: Restore keystore from secret
