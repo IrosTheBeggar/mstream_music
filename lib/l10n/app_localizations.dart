@@ -171,7 +171,7 @@ abstract class AppLocalizations {
   /// First entry in the language picker: follow the OS locale.
   ///
   /// In en, this message translates to:
-  /// **'System default'**
+  /// **'Default'**
   String get languageSystemDefault;
 
   /// Subtitle under the language picker row in Settings.
@@ -300,11 +300,17 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get lyricsRetry;
 
-  /// Header above the preference controls on the first-run Add Server screen.
+  /// Section header in the first-run Quick setup (accent colour).
   ///
   /// In en, this message translates to:
-  /// **'Quick setup'**
-  String get onboardingSectionTitle;
+  /// **'Theme'**
+  String get quickSetupTheme;
+
+  /// Section header in the first-run Quick setup (language / tap / visualizer).
+  ///
+  /// In en, this message translates to:
+  /// **'Config'**
+  String get quickSetupConfig;
 
   /// Equalizer screen title / switch label.
   ///
@@ -501,7 +507,7 @@ abstract class AppLocalizations {
   /// No description provided for @tapSubtitlePlayFromHere.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.'**
+  /// **'Replaces the queue with the songs in the current view and plays from the tapped song — the usual streaming-app (Spotify-style) behaviour.'**
   String get tapSubtitlePlayFromHere;
 
   /// No description provided for @tapSubtitleAppendAndJump.

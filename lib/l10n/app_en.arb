@@ -33,7 +33,7 @@
   "@settingsLanguage": {
     "description": "Settings row label for the language picker."
   },
-  "languageSystemDefault": "System default",
+  "languageSystemDefault": "Default",
   "@languageSystemDefault": {
     "description": "First entry in the language picker: follow the OS locale."
   },
@@ -118,9 +118,13 @@
   "@lyricsRetry": {
     "description": "Button to retry loading lyrics after an error."
   },
-  "onboardingSectionTitle": "Quick setup",
-  "@onboardingSectionTitle": {
-    "description": "Header above the preference controls on the first-run Add Server screen."
+  "quickSetupTheme": "Theme",
+  "@quickSetupTheme": {
+    "description": "Section header in the first-run Quick setup (accent colour)."
+  },
+  "quickSetupConfig": "Config",
+  "@quickSetupConfig": {
+    "description": "Section header in the first-run Quick setup (language / tap / visualizer)."
   },
   "eqTitle": "Equalizer",
   "@eqTitle": {
@@ -195,7 +199,7 @@
   "settingsStartupPage": "Startup page",
   "settingsStartupPageSubtitle": "Open the app to this browser view; Back returns to the browser.",
   "tapSubtitleAddToQueue": "Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.",
-  "tapSubtitlePlayFromHere": "Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.",
+  "tapSubtitlePlayFromHere": "Replaces the queue with the songs in the current view and plays from the tapped song — the usual streaming-app (Spotify-style) behaviour.",
   "tapSubtitleAppendAndJump": "Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.",
   "@settingsTapBehavior": {
     "description": "Tap-behavior picker row label + per-mode subtitles."

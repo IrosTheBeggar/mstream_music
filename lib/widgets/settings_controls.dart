@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+import 'accent_color_sheet.dart';
 
 // Not const: VelvetColors.* are theme-dependent globals, so this re-evaluates
 // per build (matching the original inline style and picking up theme changes).
@@ -18,7 +19,9 @@ TextStyle get _subtitleStyle =>
 
 // ── Language ──────────────────────────────────────────────────────────────
 class LanguageSettingTile extends StatefulWidget {
-  const LanguageSettingTile({super.key});
+  // When compact, the subtitle is dropped (used in the tight first-run card).
+  final bool compact;
+  const LanguageSettingTile({super.key, this.compact = false});
 
   @override
   State<LanguageSettingTile> createState() => _LanguageSettingTileState();
@@ -46,7 +49,9 @@ class _LanguageSettingTileState extends State<LanguageSettingTile> {
     final l = AppLocalizations.of(context);
     return ListTile(
       title: Text(l.settingsLanguage, overflow: TextOverflow.ellipsis),
-      subtitle: Text(l.settingsLanguageSubtitle, style: _subtitleStyle),
+      subtitle: widget.compact
+          ? null
+          : Text(l.settingsLanguageSubtitle, style: _subtitleStyle),
       trailing: DropdownButton<String?>(
         value: SettingsManager().language,
         underline: SizedBox.shrink(),
@@ -228,6 +233,43 @@ class _VisualizerSourceSettingTileState
             .toList(),
         onChanged: _onChanged,
       ),
+    );
+  }
+}
+
+// ── Accent colour picker ────────────────────────────────────────────────────
+class AccentColorSettingTile extends StatefulWidget {
+  const AccentColorSettingTile({super.key});
+
+  @override
+  State<AccentColorSettingTile> createState() => _AccentColorSettingTileState();
+}
+
+class _AccentColorSettingTileState extends State<AccentColorSettingTile> {
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return ListTile(
+      title: Text(l.settingsAccentColor, overflow: TextOverflow.ellipsis),
+      subtitle: Text(l.settingsAccentColorSubtitle, style: _subtitleStyle),
+      trailing: Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: VelvetColors.primary,
+          shape: BoxShape.circle,
+          border: Border.all(color: VelvetColors.border),
+        ),
+      ),
+      onTap: () async {
+        await showModalBottomSheet(
+          context: context,
+          backgroundColor: VelvetColors.surface,
+          isScrollControlled: true,
+          builder: (_) => const AccentColorSheet(),
+        );
+        if (mounted) setState(() {}); // refresh the swatch to the new accent
+      },
     );
   }
 }

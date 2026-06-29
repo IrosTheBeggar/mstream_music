@@ -114,7 +114,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
-  String get onboardingSectionTitle => 'Quick setup';
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
 
   @override
   String get eqTitle => '均衡器';

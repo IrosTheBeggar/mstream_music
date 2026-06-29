@@ -627,7 +627,9 @@ class _BrowserState extends State<Browser> {
 
   // ── Default browser landing: section shortcuts as a modern card grid ──
   // First-run welcome state: the lone "Welcome to mStream" (addServer) tile,
-  // shown with a Quick-setup card of the key first-run preferences below it.
+  // shown with the key first-run preferences below it. No bordered card — the
+  // controls run edge-to-edge to save horizontal space — split into a Theme
+  // section (accent colour) and a Config section (language / tap / visualizer).
   Widget _welcomeView(BuildContext context, List<DisplayItem> items) {
     final l = AppLocalizations.of(context);
     return SingleChildScrollView(
@@ -636,44 +638,29 @@ class _BrowserState extends State<Browser> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           makeListItem(items, 0, context),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: _quickSetupCard(context, l),
-          ),
+          _quickSetupHeader(l.quickSetupTheme),
+          const AccentColorSettingTile(),
+          _quickSetupHeader(l.quickSetupConfig),
+          const LanguageSettingTile(compact: true),
+          const TapBehaviorSettingTile(),
+          const VisualizerSourceSettingTile(),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  // The key first-run preferences, built from the same reusable controls as the
-  // Settings screen (language / "when you tap a song" / visualizer source).
-  Widget _quickSetupCard(BuildContext context, AppLocalizations l) {
-    return Container(
-      decoration: BoxDecoration(
-        color: VelvetColors.surface,
-        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
-        border: Border.all(color: VelvetColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
-            child: Text(
-              l.onboardingSectionTitle.toUpperCase(),
-              style: TextStyle(
-                color: VelvetColors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.6,
-              ),
-            ),
-          ),
-          const LanguageSettingTile(),
-          const TapBehaviorSettingTile(),
-          const VisualizerSourceSettingTile(),
-          const SizedBox(height: 6),
-        ],
+  Widget _quickSetupHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: VelvetColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.6,
+        ),
       ),
     );
   }

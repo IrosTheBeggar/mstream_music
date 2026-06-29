@@ -37,7 +37,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguage => 'Language';
 
   @override
-  String get languageSystemDefault => 'System default';
+  String get languageSystemDefault => 'Default';
 
   @override
   String get settingsLanguageSubtitle =>
@@ -117,7 +117,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
-  String get onboardingSectionTitle => 'Quick setup';
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
 
   @override
   String get eqTitle => 'Equalizer';
@@ -228,7 +231,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.';
+      'Replaces the queue with the songs in the current view and plays from the tapped song — the usual streaming-app (Spotify-style) behaviour.';
 
   @override
   String get tapSubtitleAppendAndJump =>
