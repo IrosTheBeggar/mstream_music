@@ -540,23 +540,11 @@ abstract class AppLocalizations {
   /// **'Shadertoy-style fragment shaders. Lighter, modular — drop .glsl files in assets/shaders/ to extend the catalog.'**
   String get visualizerEngineSubtitleShaders;
 
-  /// Visualizer audio-source picker row label + per-source subtitles.
+  /// Visualizer audio-source picker row label.
   ///
   /// In en, this message translates to:
   /// **'Visualizer audio source'**
   String get settingsVisualizerSource;
-
-  /// No description provided for @visualizerSourceSubtitleSynthesized.
-  ///
-  /// In en, this message translates to:
-  /// **'Default. Visualizer reacts to playback timing only — no microphone permission required.'**
-  String get visualizerSourceSubtitleSynthesized;
-
-  /// No description provided for @visualizerSourceSubtitleReal.
-  ///
-  /// In en, this message translates to:
-  /// **'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.'**
-  String get visualizerSourceSubtitleReal;
 
   /// No description provided for @visualizerSourcePermission.
   ///

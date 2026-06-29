@@ -215,11 +215,9 @@
     "description": "Visualizer-engine picker row label + per-engine subtitles."
   },
   "settingsVisualizerSource": "Visualizer audio source",
-  "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
-  "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",
   "visualizerSourcePermission": "Real Audio requires the RECORD_AUDIO permission.",
   "@settingsVisualizerSource": {
-    "description": "Visualizer audio-source picker row label + per-source subtitles."
+    "description": "Visualizer audio-source picker row label."
   },
   "settingsAlbumGrid": "Album grid view",
   "settingsAlbumGridSubtitle": "Show albums as a grid of cards with cover art instead of a plain list.",

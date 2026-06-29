@@ -7,7 +7,6 @@ import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
-import '../widgets/accent_color_sheet.dart';
 import '../widgets/settings_controls.dart';
 import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
@@ -56,29 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
-          ListTile(
-            title: Text(l.settingsAccentColor),
-            subtitle: Text(
-              l.settingsAccentColorSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                color: VelvetColors.primary,
-                shape: BoxShape.circle,
-                border: Border.all(color: VelvetColors.border),
-              ),
-            ),
-            onTap: () => showModalBottomSheet(
-              context: context,
-              backgroundColor: VelvetColors.surface,
-              isScrollControlled: true,
-              builder: (_) => const AccentColorSheet(),
-            ),
-          ),
+          const AccentColorSettingTile(),
           ListTile(
             title: const Text('Now Playing layout'),
             subtitle: Text(

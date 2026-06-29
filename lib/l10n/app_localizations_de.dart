@@ -257,14 +257,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsVisualizerSource => 'Visualizer-Audioquelle';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'Standard. Der Visualizer reagiert nur auf das Wiedergabe-Timing – keine Mikrofonberechtigung erforderlich.';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'Der Visualizer reagiert auf die tatsächliche Audioausgabe. Erfordert die RECORD_AUDIO-Berechtigung unter Android.';
-
-  @override
   String get visualizerSourcePermission =>
       'Real Audio requires the RECORD_AUDIO permission.';
 

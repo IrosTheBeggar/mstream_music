@@ -66,8 +66,6 @@
   "visualizerEngineSubtitleMilkdrop": "projectM による Milkdrop プリセット（デフォルト）。効果が豊かで、GPU への負荷が高めです。",
   "visualizerEngineSubtitleShaders": "Shadertoy スタイルのフラグメントシェーダー。軽量でモジュール式 — assets/shaders/ に .glsl ファイルを置くとカタログを拡張できます。",
   "settingsVisualizerSource": "ビジュアライザーの音声ソース",
-  "visualizerSourceSubtitleSynthesized": "デフォルト。ビジュアライザーは再生タイミングのみに反応します — マイクの権限は不要です。",
-  "visualizerSourceSubtitleReal": "ビジュアライザーが実際の音声出力に反応します。Android では RECORD_AUDIO 権限が必要です。",
   "settingsAlbumGrid": "アルバムのグリッド表示",
   "settingsAlbumGridSubtitle": "アルバムを単純なリストではなく、ジャケット付きのカードのグリッドで表示します。",
   "settingsFileMetadata": "ファイルエクスプローラーで曲のメタデータを読み取る",

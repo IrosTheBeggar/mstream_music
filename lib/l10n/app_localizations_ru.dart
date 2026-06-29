@@ -258,14 +258,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsVisualizerSource => 'Источник звука визуализации';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'По умолчанию. Визуализация реагирует только на тайминг воспроизведения — разрешение на микрофон не требуется.';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'Визуализация реагирует на реальный аудиовыход. Требуется разрешение RECORD_AUDIO на Android.';
-
-  @override
   String get visualizerSourcePermission =>
       'Real Audio requires the RECORD_AUDIO permission.';
 

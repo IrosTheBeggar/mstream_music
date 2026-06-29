@@ -66,8 +66,6 @@
   "visualizerEngineSubtitleMilkdrop": "Milkdrop-Presets über projectM (Standard). Reichhaltigere Effekte, höhere GPU-Last.",
   "visualizerEngineSubtitleShaders": "Fragment-Shader im Shadertoy-Stil. Leichter, modular – lege .glsl-Dateien in assets/shaders/ ab, um den Katalog zu erweitern.",
   "settingsVisualizerSource": "Visualizer-Audioquelle",
-  "visualizerSourceSubtitleSynthesized": "Standard. Der Visualizer reagiert nur auf das Wiedergabe-Timing – keine Mikrofonberechtigung erforderlich.",
-  "visualizerSourceSubtitleReal": "Der Visualizer reagiert auf die tatsächliche Audioausgabe. Erfordert die RECORD_AUDIO-Berechtigung unter Android.",
   "settingsAlbumGrid": "Album-Rasteransicht",
   "settingsAlbumGridSubtitle": "Alben als Raster von Karten mit Cover-Art statt als einfache Liste anzeigen.",
   "settingsFileMetadata": "Song-Metadaten im Datei-Explorer lesen",

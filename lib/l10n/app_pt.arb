@@ -66,8 +66,6 @@
   "visualizerEngineSubtitleMilkdrop": "Predefinições do Milkdrop via projectM (padrão). Efeitos mais ricos, mais pesados para a GPU.",
   "visualizerEngineSubtitleShaders": "Shaders de fragmento no estilo Shadertoy. Mais leves e modulares — coloque arquivos .glsl em assets/shaders/ para ampliar o catálogo.",
   "settingsVisualizerSource": "Fonte de áudio do visualizador",
-  "visualizerSourceSubtitleSynthesized": "Padrão. O visualizador reage apenas ao tempo da reprodução — não exige permissão de microfone.",
-  "visualizerSourceSubtitleReal": "O visualizador reage à saída de áudio real. Exige a permissão RECORD_AUDIO no Android.",
   "settingsAlbumGrid": "Visualização em grade de álbuns",
   "settingsAlbumGridSubtitle": "Mostra os álbuns como uma grade de cartões com capas em vez de uma lista simples.",
   "settingsFileMetadata": "Ler metadados das músicas no explorador de arquivos",
