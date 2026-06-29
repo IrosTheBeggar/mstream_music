@@ -1,0 +1,897 @@
+// desktop_shell.dart — the wide/desktop layout, in the shape of a traditional
+// desktop music player: a persistent left sidebar (server picker · library ·
+// tools), the browse / album-detail area in a nested Navigator so tool screens
+// (Settings, Diagnostics, …) open inside the content pane while the sidebar and
+// player stay put, an optional right-hand queue panel, and a full-width Now
+// Playing bar pinned to the bottom (art · transport · seek · volume · queue).
+//
+// Chosen over the phone shell by a width breakpoint in MStreamApp.build (desktop
+// platforms only). This is a VIEW only: it reads the same singletons / streams
+// as the mobile UI and drives the same AudioPlayerHandler — no playback or
+// business logic lives here.
+
+import 'package:audio_service/audio_service.dart';
+import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
+
+import '../l10n/app_localizations.dart';
+import '../media/cast_target.dart';
+import '../objects/display_item.dart';
+import '../objects/server.dart';
+import '../screens/about_screen.dart';
+import '../screens/add_server.dart';
+import '../screens/album_detail_view.dart';
+import '../screens/auto_dj.dart';
+import '../screens/browser.dart';
+import '../screens/diagnostics_screen.dart';
+import '../screens/manage_server.dart';
+import '../screens/settings_screen.dart';
+import '../screens/share_playlist_dialog.dart';
+import '../screens/transcode_screen.dart';
+import '../singletons/app_messenger.dart';
+import '../singletons/browser_list.dart';
+import '../singletons/cast_manager.dart';
+import '../singletons/media.dart';
+import '../singletons/server_list.dart';
+import '../native/projectm_controller.dart';
+import '../native/projectm_desktop.dart';
+import '../theme/velvet_theme.dart';
+import '../util/image_cache.dart';
+import '../util/media_format.dart';
+import '../visualizer/projectm_screen.dart';
+import '../visualizer/shader_visualizer_screen.dart';
+import 'browser_toolbar.dart';
+import 'cast_picker_sheet.dart';
+import 'media_shortcuts.dart';
+import 'queue_list.dart';
+
+// Width of the fixed left navigation rail and the right queue panel.
+const double _kSidebarWidth = 248;
+const double _kQueueWidth = 320;
+const double _kNowPlayingHeight = 88;
+
+class DesktopShell extends StatefulWidget {
+  const DesktopShell({super.key});
+
+  @override
+  State<DesktopShell> createState() => _DesktopShellState();
+}
+
+class _DesktopShellState extends State<DesktopShell> {
+  // The content pane is its own Navigator so tool screens push WITHIN it —
+  // keeping the sidebar and the Now Playing bar visible — instead of covering
+  // the whole window the way a root-level push would.
+  final GlobalKey<NavigatorState> _contentNav = GlobalKey<NavigatorState>();
+
+  // Sidebar highlight: 0 = Browse (the nested Navigator's root), 1.. = a pushed
+  // tool, -1 = the shader visualizer, -2 = the projectM/Milkdrop visualizer.
+  // Tools/visualizers pop back to Browse (resets to 0).
+  static const int _visualizerIndex = -1;
+  static const int _projectMIndex = -2;
+  // Native Milkdrop visualizer is desktop-only and needs the engine DLL loaded.
+  static final bool _projectMAvailable =
+      ProjectMDesktop.isSupported && ProjectMController.isAvailable;
+  int _activeIndex = 0;
+  bool _queueOpen = false;
+
+  late final List<_NavItem> _tools = [
+    _NavItem(Icons.router_outlined, (l) => l.manageServersTitle,
+        (_) => ManageServersScreen()),
+    _NavItem(Icons.album_outlined, (l) => l.autoDjTitle, (_) => AutoDJScreen()),
+    _NavItem(Icons.transform, (l) => l.transcodeTitle,
+        (_) => TranscodeScreen()),
+    _NavItem(Icons.settings_outlined, (l) => l.settingsTitle,
+        (_) => SettingsScreen()),
+    _NavItem(Icons.bug_report_outlined, (l) => l.diagnosticsTitle,
+        (_) => DiagnosticsScreen()),
+    _NavItem(Icons.info_outline, (l) => l.aboutTitle, (_) => AboutScreen()),
+  ];
+
+  void _openBrowse() {
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    setState(() => _activeIndex = 0);
+  }
+
+  void _openTool(int index) {
+    // Reset to the browse root first so tools never stack on each other —
+    // selecting a second tool replaces the first rather than burying it.
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _contentNav.currentState
+        ?.push(MaterialPageRoute(builder: (_) => _tools[index].build(context)));
+    setState(() => _activeIndex = index + 1);
+  }
+
+  void _openVisualizer() {
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _contentNav.currentState?.push(
+        MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()));
+    setState(() => _activeIndex = _visualizerIndex);
+  }
+
+  void _openProjectM() {
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _contentNav.currentState
+        ?.push(MaterialPageRoute(builder: (_) => const ProjectMScreen()));
+    setState(() => _activeIndex = _projectMIndex);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = Scaffold(
+      backgroundColor: VelvetColors.bg,
+      body: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _DesktopSidebar(
+                  tools: _tools,
+                  activeIndex: _activeIndex,
+                  onBrowse: _openBrowse,
+                  onTool: _openTool,
+                  onShare: () => showSharePlaylistDialog(context),
+                  onVisualizer: _openVisualizer,
+                  onProjectM: _projectMAvailable ? _openProjectM : null,
+                ),
+                VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
+                Expanded(
+                  child: Navigator(
+                    key: _contentNav,
+                    onGenerateRoute: (_) => MaterialPageRoute(
+                        builder: (_) => const _DesktopBrowseView()),
+                  ),
+                ),
+                if (_queueOpen) ...[
+                  VerticalDivider(
+                      width: 1, thickness: 1, color: VelvetColors.border),
+                  SizedBox(
+                    width: _kQueueWidth,
+                    child: _DesktopQueuePanel(
+                        onClose: () => setState(() => _queueOpen = false)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          DesktopNowPlayingBar(
+            queueOpen: _queueOpen,
+            onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
+          ),
+        ],
+      ),
+    );
+    // Wrap the whole shell so the media keys work regardless of which pane has
+    // focus (text fields still consume their own keys first).
+    return MediaShortcuts(child: shell);
+  }
+}
+
+// A sidebar / tool destination: an icon, a localized label, and the screen it
+// pushes into the content pane.
+class _NavItem {
+  final IconData icon;
+  final String Function(AppLocalizations) label;
+  final Widget Function(BuildContext) build;
+  const _NavItem(this.icon, this.label, this.build);
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar
+// ---------------------------------------------------------------------------
+
+class _DesktopSidebar extends StatelessWidget {
+  final List<_NavItem> tools;
+  final int activeIndex;
+  final VoidCallback onBrowse;
+  final void Function(int index) onTool;
+  final VoidCallback onShare;
+  final VoidCallback onVisualizer;
+  final VoidCallback? onProjectM; // null when projectM isn't available
+  const _DesktopSidebar({
+    required this.tools,
+    required this.activeIndex,
+    required this.onBrowse,
+    required this.onTool,
+    required this.onShare,
+    required this.onVisualizer,
+    required this.onProjectM,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      width: _kSidebarWidth,
+      color: VelvetColors.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SidebarLogo(),
+          const _SidebarServer(),
+          Divider(height: 1, color: VelvetColors.border),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              children: [
+                _SidebarTile(
+                  icon: Icons.library_music,
+                  label: 'Library',
+                  selected: activeIndex == 0,
+                  onTap: onBrowse,
+                ),
+                _SidebarTile(
+                  icon: Icons.graphic_eq,
+                  label: 'Visualizer',
+                  selected: activeIndex == -1,
+                  onTap: onVisualizer,
+                ),
+                if (onProjectM != null)
+                  _SidebarTile(
+                    icon: Icons.auto_awesome,
+                    label: 'Milkdrop',
+                    selected: activeIndex == -2,
+                    onTap: onProjectM!,
+                  ),
+                _SidebarTile(
+                  icon: Icons.share_outlined,
+                  label: l.shareTitle,
+                  selected: false,
+                  onTap: onShare,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+                  child: Text('TOOLS',
+                      style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                          color: VelvetColors.textTertiary)),
+                ),
+                for (var i = 0; i < tools.length; i++)
+                  _SidebarTile(
+                    icon: tools[i].icon,
+                    label: tools[i].label(l),
+                    selected: activeIndex == i + 1,
+                    onTap: () => onTool(i),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarLogo extends StatelessWidget {
+  const _SidebarLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+      child: Row(
+        children: [
+          Icon(Icons.graphic_eq, color: VelvetColors.primary, size: 26),
+          const SizedBox(width: 10),
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(
+                  text: 'm',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w300,
+                      color: VelvetColors.textSecondary)),
+              TextSpan(
+                  text: 'Stream',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: VelvetColors.textPrimary)),
+            ]),
+            style: const TextStyle(fontSize: 20, letterSpacing: -0.3),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Current-server readout + a popup to switch servers or add a new one. Mirrors
+// the phone app bar's server picker (same ServerManager calls).
+class _SidebarServer extends StatelessWidget {
+  const _SidebarServer();
+
+  Future<void> _switchTo(BuildContext context, int index) async {
+    if (index == -1) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => AddServerScreen()));
+      return;
+    }
+    // Capture the localized error before any await — the context may be gone by
+    // the time the connect fails, and we surface it through the app-wide
+    // messenger (like the phone picker) rather than this element's context.
+    final failedMsg = AppLocalizations.of(context).mainFailedToConnect;
+    ServerManager().changeCurrentServer(index);
+    try {
+      await ServerManager()
+          .getServerPaths(ServerManager().currentServer!, throwErr: true);
+      await ServerManager().callAfterEditServer();
+    } catch (_) {
+      showGlobalSnack(failedMsg);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Server?>(
+      stream: ServerManager().currentServerStream,
+      initialData: ServerManager().currentServer,
+      builder: (context, snap) {
+        final server = snap.data;
+        return PopupMenuButton<int>(
+          tooltip: '',
+          onSelected: (i) => _switchTo(context, i),
+          color: VelvetColors.raised,
+          itemBuilder: (context) => [
+            for (final s in ServerManager().serverList)
+              PopupMenuItem(
+                value: ServerManager().serverList.indexOf(s),
+                child: Text(s.url,
+                    style: TextStyle(
+                        color: s == ServerManager().currentServer
+                            ? VelvetColors.primary
+                            : VelvetColors.textPrimary)),
+              ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: -1,
+              child: Row(children: [
+                Icon(Icons.add, size: 18, color: VelvetColors.textSecondary),
+                const SizedBox(width: 8),
+                const Text('Add server'),
+              ]),
+            ),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+            child: Row(
+              children: [
+                Icon(Icons.dns_outlined,
+                    size: 18, color: VelvetColors.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    server?.url ?? 'No server',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 13, color: VelvetColors.textSecondary),
+                  ),
+                ),
+                Icon(Icons.unfold_more,
+                    size: 18, color: VelvetColors.textTertiary),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SidebarTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SidebarTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? VelvetColors.primary : VelvetColors.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+      child: Material(
+        color: selected
+            ? VelvetColors.primary.withValues(alpha: 0.14)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Padding(
+            // h:10 so the icon lands 20px from the sidebar edge (10 outer + 10),
+            // aligning with the logo, server row, and section headers.
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          color: selected
+                              ? VelvetColors.textPrimary
+                              : VelvetColors.textSecondary)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Content pane: browse list ↔ album detail (same BrowserManager model as the
+// phone shell, just without the app bar / drawer chrome).
+// ---------------------------------------------------------------------------
+
+class _DesktopBrowseView extends StatelessWidget {
+  const _DesktopBrowseView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: VelvetColors.bg,
+      child: Column(
+        children: [
+          // The consolidated browse chrome (back · label · search · download ·
+          // add-all). It's a PreferredSizeWidget; give it its intrinsic height
+          // since it's not in an AppBar's bottom slot here.
+          const SizedBox(height: 50, child: BrowserToolbar()),
+          Divider(height: 1, color: VelvetColors.border),
+          Expanded(
+            child: StreamBuilder<DisplayItem?>(
+              stream: BrowserManager().albumDetailStream,
+              initialData: BrowserManager().albumDetail,
+              builder: (context, snap) {
+                final album = snap.data;
+                return IndexedStack(
+                  index: album == null ? 0 : 1,
+                  sizing: StackFit.expand,
+                  children: [
+                    const Browser(),
+                    album == null
+                        ? const SizedBox.shrink()
+                        : AlbumDetailView(key: ValueKey(album), album: album),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Right-hand queue panel
+// ---------------------------------------------------------------------------
+
+class _DesktopQueuePanel extends StatelessWidget {
+  final VoidCallback onClose;
+  const _DesktopQueuePanel({required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: VelvetColors.surface,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
+            child: Row(
+              children: [
+                Text('Queue',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: VelvetColors.textPrimary)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  color: VelvetColors.textSecondary,
+                  onPressed: onClose,
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: VelvetColors.border),
+          const Expanded(child: QueueList()),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Now Playing bar (full width, pinned to the bottom)
+// ---------------------------------------------------------------------------
+
+class DesktopNowPlayingBar extends StatefulWidget {
+  final bool queueOpen;
+  final VoidCallback onToggleQueue;
+  const DesktopNowPlayingBar({
+    super.key,
+    required this.queueOpen,
+    required this.onToggleQueue,
+  });
+
+  @override
+  State<DesktopNowPlayingBar> createState() => _DesktopNowPlayingBarState();
+}
+
+class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
+  // Combined item+position, scoped to the seek row so a position tick doesn't
+  // rebuild the transport buttons or artwork.
+  late final Stream<_MediaPos> _mediaPos = Rx.combineLatest2(
+    MediaManager().audioHandler.mediaItem,
+    MediaManager().audioHandler.positionStream,
+    (MediaItem? item, Duration pos) => _MediaPos(item, pos),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _kNowPlayingHeight,
+      decoration: BoxDecoration(
+        color: VelvetColors.surface,
+        border: Border(top: BorderSide(color: VelvetColors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // Left third: artwork + track / artist.
+          Expanded(child: _trackInfo()),
+          // Center: transport + seek. mainAxisSize.min keeps the two rows from
+          // overflowing the fixed bar height; the Row centers the cluster.
+          Expanded(
+            flex: 2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const _DesktopTransport(),
+                const SizedBox(height: 2),
+                _seekRow(),
+              ],
+            ),
+          ),
+          // Right third: volume + queue toggle.
+          Expanded(child: _rightControls()),
+        ],
+      ),
+    );
+  }
+
+  Widget _trackInfo() {
+    return StreamBuilder<MediaItem?>(
+      stream: MediaManager().audioHandler.mediaItem,
+      builder: (context, snap) {
+        final item = snap.data;
+        final url = item?.extras?['artUrl'] as String?;
+        final subtitle = [item?.artist, item?.album]
+            .where((s) => s != null && s.isNotEmpty)
+            .join(' — ');
+        return Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: url == null
+                    ? albumArtFallback(iconSize: 22)
+                    : Image.network(url,
+                        fit: BoxFit.cover,
+                        cacheWidth: artCacheSize(56),
+                        errorBuilder: (_, _, _) =>
+                            albumArtFallback(iconSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item == null ? 'Nothing playing' : item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: item == null
+                              ? VelvetColors.textTertiary
+                              : VelvetColors.textPrimary)),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: VelvetColors.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _seekRow() {
+    return StreamBuilder<_MediaPos>(
+      stream: _mediaPos,
+      builder: (context, snap) {
+        final pos = snap.data?.position ?? Duration.zero;
+        final dur = snap.data?.item?.duration;
+        final ms = dur?.inMilliseconds ?? 0;
+        final ratio =
+            ms == 0 ? 0.0 : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
+        return Row(
+          children: [
+            SizedBox(
+              width: 44,
+              child: Text(formatDuration(pos),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      // Elapsed in the accent colour, like the phone player.
+                      color: VelvetColors.primary)),
+            ),
+            Expanded(
+              // Bound the slider's height so it can't push the transport+seek
+              // column past the fixed bar height (Sliders otherwise reserve the
+              // full interactive dimension).
+              child: SizedBox(
+                height: 28,
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 10),
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    activeTrackColor: VelvetColors.primary,
+                    inactiveTrackColor: VelvetColors.border2,
+                    thumbColor: VelvetColors.primary,
+                  ),
+                  child: Slider(
+                    value: ratio,
+                    onChanged: dur == null
+                        ? null
+                        : (f) => MediaManager()
+                            .audioHandler
+                            .seek(Duration(milliseconds: (ms * f).round())),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 44,
+              child: Text(dur == null ? '--:--' : formatDuration(dur),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      color: VelvetColors.textTertiary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _rightControls() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        // Volume icon (click to mute) + slider, both driven by the shared
+        // playbackVolume notifier so the Up/Down/M keys move them in lockstep.
+        ValueListenableBuilder<double>(
+          valueListenable: playbackVolume,
+          builder: (context, vol, _) {
+            final icon = vol == 0
+                ? Icons.volume_off
+                : (vol < 0.5 ? Icons.volume_down : Icons.volume_up);
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(icon, size: 18),
+                  color: VelvetColors.textTertiary,
+                  tooltip: 'Mute (M)',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: togglePlaybackMute,
+                ),
+                SizedBox(
+                  width: 100,
+                  child: SliderTheme(
+                    data: SliderThemeData(
+                      trackHeight: 3,
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 10),
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      activeTrackColor: VelvetColors.textSecondary,
+                      inactiveTrackColor: VelvetColors.border2,
+                      thumbColor: VelvetColors.textSecondary,
+                    ),
+                    child: Slider(
+                      value: vol,
+                      onChanged: (v) {
+                        playbackVolume.value = v;
+                        MediaManager().audioHandler.setVolume(v);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(width: 4),
+        // Cast picker — the same sheet the phone uses; discovery runs only while
+        // it's open. Icon flips to cast_connected (primary) while casting.
+        StreamBuilder<CastTarget>(
+          stream: CastManager().activeTargetStream,
+          initialData: CastManager().activeTarget,
+          builder: (context, snap) {
+            final casting = !(snap.data ?? CastTarget.local).isLocal;
+            return IconButton(
+              icon: Icon(casting ? Icons.cast_connected : Icons.cast),
+              iconSize: 22,
+              tooltip: 'Cast',
+              color:
+                  casting ? VelvetColors.primary : VelvetColors.textSecondary,
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                backgroundColor: VelvetColors.surface,
+                isScrollControlled: true,
+                builder: (_) => const CastPickerSheet(),
+              ),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.queue_music),
+          iconSize: 22,
+          tooltip: 'Queue',
+          color: widget.queueOpen
+              ? VelvetColors.primary
+              : VelvetColors.textSecondary,
+          onPressed: widget.onToggleQueue,
+        ),
+      ],
+    );
+  }
+}
+
+// Shuffle · previous · play/pause · next · repeat — the same handler calls the
+// phone player uses, laid out for a mouse.
+class _DesktopTransport extends StatelessWidget {
+  const _DesktopTransport();
+
+  @override
+  Widget build(BuildContext context) {
+    final handler = MediaManager().audioHandler;
+    final buttons = <Widget>[
+      StreamBuilder<AudioServiceShuffleMode>(
+        stream: handler.playbackState.map((s) => s.shuffleMode).distinct(),
+        builder: (context, snap) {
+          final on = snap.data == AudioServiceShuffleMode.all;
+          return IconButton(
+            icon: const Icon(Icons.shuffle, size: 18),
+            tooltip: 'Shuffle (S)',
+            color: on ? VelvetColors.primary : VelvetColors.textTertiary,
+            onPressed: () => handler.setShuffleMode(on
+                ? AudioServiceShuffleMode.none
+                : AudioServiceShuffleMode.all),
+          );
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.skip_previous),
+        iconSize: 26,
+        tooltip: 'Previous (Ctrl+←)',
+        color: VelvetColors.textPrimary,
+        onPressed: handler.skipToPrevious,
+      ),
+      StreamBuilder<bool>(
+        stream: handler.playbackState.map((s) => s.playing).distinct(),
+        builder: (context, snap) {
+          final playing = snap.data ?? false;
+          return Container(
+            width: 40,
+            height: 40,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: VelvetColors.primary,
+              shape: BoxShape.circle,
+              // Accent glow, matching the phone player's play button.
+              boxShadow: [
+                BoxShadow(
+                    color: VelvetColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4)),
+              ],
+            ),
+            child: IconButton(
+              iconSize: 22,
+              padding: EdgeInsets.zero,
+              tooltip: playing ? 'Pause (Space)' : 'Play (Space)',
+              icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+              color: accentInk,
+              onPressed: playing ? handler.pause : handler.play,
+            ),
+          );
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.skip_next),
+        iconSize: 26,
+        tooltip: 'Next (Ctrl+→)',
+        color: VelvetColors.textPrimary,
+        onPressed: handler.skipToNext,
+      ),
+      StreamBuilder<AudioServiceRepeatMode>(
+        stream: handler.playbackState.map((s) => s.repeatMode).distinct(),
+        builder: (context, snap) {
+          final mode = snap.data ?? AudioServiceRepeatMode.none;
+          final on = mode != AudioServiceRepeatMode.none;
+          return IconButton(
+            icon: Icon(
+                mode == AudioServiceRepeatMode.one
+                    ? Icons.repeat_one
+                    : Icons.repeat,
+                size: 18),
+            tooltip: 'Repeat (R)',
+            color: on ? VelvetColors.primary : VelvetColors.textTertiary,
+            onPressed: () {
+              final next = mode == AudioServiceRepeatMode.none
+                  ? AudioServiceRepeatMode.all
+                  : mode == AudioServiceRepeatMode.all
+                      ? AudioServiceRepeatMode.one
+                      : AudioServiceRepeatMode.none;
+              handler.setRepeatMode(next);
+            },
+          );
+        },
+      ),
+    ];
+    // Shrink-wrap the icon buttons (default 48px tap targets would push the
+    // transport + seek rows past the fixed bar height) and lay them out for a
+    // mouse. The play button keeps its accent disc.
+    return IconButtonTheme(
+      data: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(40, 40),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
+    );
+  }
+}
+
+class _MediaPos {
+  final MediaItem? item;
+  final Duration position;
+  const _MediaPos(this.item, this.position);
+}

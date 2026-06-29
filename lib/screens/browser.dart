@@ -13,7 +13,6 @@ import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
 import '../util/queue_actions.dart';
@@ -449,62 +448,52 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      showDialog(
-                          context: c,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                                title: Text(l.browserConfirmDeleteFolder),
-                                content: b[i].getText(),
-                                actions: <Widget>[
-                                  TextButton(
-                                    child: Text(l.goBack),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'delete') {
+                  showDialog(
+                      context: c,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                            title: Text(l.browserConfirmDeleteFolder),
+                            content: b[i].getText(),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text(l.goBack),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                  child: Text(
+                                    l.delete,
+                                    style: TextStyle(color: VelvetColors.error),
                                   ),
-                                  TextButton(
-                                      child: Text(
-                                        l.delete,
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                      onPressed: () {
-                                        FileExplorer().deleteDirectory(
-                                            b[i].data!, b[i].server);
-                                        Navigator.of(context).pop();
-                                      })
-                                ]);
-                          });
-                    })
+                                  onPressed: () {
+                                    FileExplorer().deleteDirectory(
+                                        b[i].data!, b[i].server);
+                                    Navigator.of(context).pop();
+                                  })
+                            ]);
+                      });
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -513,38 +502,30 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      FileExplorer().deleteFile(b[i].data!, b[i].server);
-                    })
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'delete') {
+                  FileExplorer().deleteFile(b[i].data!, b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -556,39 +537,27 @@ class _BrowserState extends State<Browser> {
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.add_to_queue,
-                    label: l.addAll,
-                    onPressed: (context) {
-                      ApiManager().getRecursiveFiles(b[i].data!,
-                          useThisServer: b[i].server);
-                    })
+        child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'addAll') {
+                  ApiManager().getRecursiveFiles(b[i].data!,
+                      useThisServer: b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'addAll', child: Text(l.addAll)),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            }));
   }
 
   // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
@@ -629,8 +598,11 @@ class _BrowserState extends State<Browser> {
     final l = AppLocalizations.of(context);
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      // Cap the tile width and add columns as the pane widens, instead of
+      // stretching a fixed 2 columns into giant cards on a desktop window.
+      // Phones still land on 2 columns (a ~360–410px pane / 212px ≈ 2).
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: 1.3,
@@ -946,6 +918,15 @@ class _BrowserState extends State<Browser> {
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
                         final ts = MediaQuery.textScalerOf(context);
+                        // The letter scrubber overlays the right edge when this
+                        // view is alphabetical and long enough to show it. Inset
+                        // the rows' *content* (title + trailing ⋮) by the strip's
+                        // hit width so they don't slide under it — the row itself,
+                        // and its full-width bottom divider, is untouched.
+                        final stripVisible = BrowserManager().isAlphabetical &&
+                            browserList.isNotEmpty &&
+                            !filtering &&
+                            browserList.length >= LetterStrip.minItemsToShow;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -973,8 +954,11 @@ class _BrowserState extends State<Browser> {
                             // so the letter-scrub cumulative math
                             // stays correct.
                             : ListTileTheme.merge(
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
+                                contentPadding: EdgeInsets.only(
+                                    left: 10,
+                                    right: stripVisible
+                                        ? LetterStrip.visibleWidth
+                                        : 10),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
                                 child: ListView.builder(

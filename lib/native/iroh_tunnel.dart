@@ -41,6 +41,17 @@ class IrohTunnelException implements Exception {
   String toString() => 'IrohTunnelException: $message';
 }
 
+/// Platform-specific filename of the prebuilt tunnel library. cargo's cdylib
+/// output is `iroh_tunnel.dll` on Windows (no `lib` prefix), `libiroh_tunnel.dylib`
+/// on macOS, and `libiroh_tunnel.so` on Android/Linux. On Android the loader finds
+/// it on the jniLibs path; on desktop it sits next to the executable (bundled by
+/// the platform's CMake).
+String _irohLibName() {
+  if (Platform.isWindows) return 'iroh_tunnel.dll';
+  if (Platform.isMacOS) return 'libiroh_tunnel.dylib';
+  return 'libiroh_tunnel.so'; // Android + Linux
+}
+
 class _Bindings {
   final _StartDart start;
   final _VoidDart stop;
@@ -53,8 +64,9 @@ class _Bindings {
   final _LastErrNative localTokenPtr;
 
   factory _Bindings.open() {
-    // jniLibs places the .so on the loader path under its SONAME on Android.
-    final lib = DynamicLibrary.open('libiroh_tunnel.so');
+    // jniLibs places the .so on the loader path under its SONAME on Android; on
+    // desktop the lib sits next to the executable. See [_irohLibName].
+    final lib = DynamicLibrary.open(_irohLibName());
     return _Bindings._(
       lib.lookupFunction<_StartNative, _StartDart>('mstream_iroh_start'),
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_stop'),
@@ -100,19 +112,25 @@ class IrohTunnel {
   IrohTunnel._();
   static final IrohTunnel instance = IrohTunnel._();
 
-  /// True only when `libiroh_tunnel.so` is present and loadable. It's bundled for
-  /// arm64-v8a / x86_64 only; on a 32-bit armeabi-v7a device (which we still ship
-  /// for broad Play device coverage, without native libs) the .so is absent, so
-  /// iroh is unavailable there too — not just on non-Android platforms. Probed
-  /// once and cached. Every FFI entry point below is gated on this, so a missing
-  /// lib degrades to "unavailable" instead of crashing (mirrors
-  /// ProjectMBindings.isAvailable).
+  /// True only when the tunnel library is present and loadable. On Android it's
+  /// bundled for arm64-v8a / x86_64 only; on a 32-bit armeabi-v7a device (which we
+  /// still ship for broad Play device coverage, without native libs) the .so is
+  /// absent, so iroh is unavailable there too. On desktop (Windows/Linux/macOS)
+  /// the lib is bundled next to the executable; if a build ships without it, this
+  /// returns false. Probed once and cached. Every FFI entry point below is gated
+  /// on this, so a missing lib degrades to "unavailable" instead of crashing
+  /// (mirrors ProjectMBindings.isAvailable).
   static bool get isSupported => _isSupported ??= _probeSupport();
   static bool? _isSupported;
   static bool _probeSupport() {
-    if (!Platform.isAndroid) return false;
+    if (!Platform.isAndroid &&
+        !Platform.isWindows &&
+        !Platform.isLinux &&
+        !Platform.isMacOS) {
+      return false;
+    }
     try {
-      DynamicLibrary.open('libiroh_tunnel.so');
+      DynamicLibrary.open(_irohLibName());
       return true;
     } catch (_) {
       return false;
@@ -127,7 +145,8 @@ class IrohTunnel {
   /// isolate. Throws [IrohTunnelException] on failure.
   Future<int> start(String pairingCode, {int localPort = 0}) async {
     if (!isSupported) {
-      throw IrohTunnelException('iroh tunnel is only supported on Android');
+      throw IrohTunnelException(
+          'iroh tunnel native library is unavailable on this platform');
     }
     // The blocking native call runs on a background isolate; on failure it throws
     // IrohTunnelException, which Isolate.run rethrows here.
