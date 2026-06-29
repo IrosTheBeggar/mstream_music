@@ -117,6 +117,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
+  String get onboardingSectionTitle => 'Quick setup';
+
+  @override
   String get eqTitle => 'Égaliseur';
 
   @override

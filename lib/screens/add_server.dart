@@ -17,6 +17,7 @@ import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/server_list.dart';
+import '../widgets/settings_controls.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
@@ -1739,6 +1740,42 @@ class MyCustomFormState extends State<MyCustomForm> {
     );
   }
 
+  // First-run "Quick setup" card shown above the Add Server form: the key
+  // preferences a new user benefits from setting immediately, built from the
+  // same reusable controls as the Settings screen (language / tap behavior /
+  // visualizer source). The battery-optimization tile is intentionally Settings-
+  // only, not surfaced here.
+  Widget _onboardingCard(BuildContext context, AppLocalizations l) {
+    return Container(
+      decoration: BoxDecoration(
+        color: VelvetColors.surface,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        border: Border.all(color: VelvetColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 2),
+            child: Text(
+              l.onboardingSectionTitle.toUpperCase(),
+              style: TextStyle(
+                color: VelvetColors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+              ),
+            ),
+          ),
+          const LanguageSettingTile(),
+          const TapBehaviorSettingTile(),
+          const VisualizerSourceSettingTile(),
+          SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStandardForm(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SafeArea(
@@ -1752,6 +1789,13 @@ class MyCustomFormState extends State<MyCustomForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // First-run only (no servers yet, add mode): surface the key
+              // preferences up front so a new user sees them before connecting.
+              if (widget.editThisServer == null &&
+                  ServerManager().serverList.isEmpty) ...[
+                _onboardingCard(context, l),
+                SizedBox(height: 20),
+              ],
               TextFormField(
                 controller: _urlCtrl,
                 // iroh server: reached through the loopback tunnel, not this URL
@@ -2049,37 +2093,47 @@ class MyCustomFormState extends State<MyCustomForm> {
               // OutlinedButton.icon block here + uncomment the dep
               // when scanning is back online. The parseQrCode helper
               // above is preserved.
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: VelvetColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(VelvetColors.radiusSmall),
+              // Colorful primary CTA: a gradient fill (brighter → base accent)
+              // plus a leading icon so the "add server" action pops on the
+              // first-run screen. onPrimary keeps the label legible whatever
+              // accent the user has picked.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [VelvetColors.primaryHover, VelvetColors.primary],
                   ),
-                  textStyle: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
+                  borderRadius:
+                      BorderRadius.circular(VelvetColors.radiusSmall),
                 ),
-                onPressed: submitPending ? null : _onSavePressed,
-                child: submitPending
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation(Colors.white),
-                            ),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: VelvetColors.onPrimary,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
+                    textStyle:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: submitPending ? null : _onSavePressed,
+                  icon: submitPending
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                                VelvetColors.onPrimary),
                           ),
-                          SizedBox(width: 12),
-                          Text(l.connecting),
-                        ],
-                      )
-                    : Text(l.save),
+                        )
+                      : Icon(Icons.add_rounded),
+                  label: Text(submitPending ? l.connecting : l.save),
+                ),
               ),
             ],
           ),

@@ -300,6 +300,12 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get lyricsRetry;
 
+  /// Header above the preference controls on the first-run Add Server screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick setup'**
+  String get onboardingSectionTitle;
+
   /// Equalizer screen title / switch label.
   ///
   /// In en, this message translates to:

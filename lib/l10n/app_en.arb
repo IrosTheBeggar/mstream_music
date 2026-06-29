@@ -118,6 +118,10 @@
   "@lyricsRetry": {
     "description": "Button to retry loading lyrics after an error."
   },
+  "onboardingSectionTitle": "Quick setup",
+  "@onboardingSectionTitle": {
+    "description": "Header above the preference controls on the first-run Add Server screen."
+  },
   "eqTitle": "Equalizer",
   "@eqTitle": {
     "description": "Equalizer screen title / switch label."
