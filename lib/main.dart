@@ -513,15 +513,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           resizeToAvoidBottomInset: false,
           drawer: _appDrawer(context, l),
           body: Stack(children: [
-            // Rebuild the home scaffold (and its app-bar toolbar) when the
-            // server list flips empty <-> non-empty, so the first-run view can
-            // drop the browse toolbar entirely (no "Browser" label / dead icons).
-            StreamBuilder<List<Server>>(
-              stream: ServerManager().serverListStream,
-              initialData: ServerManager().serverList,
-              builder: (context, snap) => _homeScaffold(
-                  context, l, (snap.data ?? const <Server>[]).isEmpty),
-            ),
+            _homeScaffold(context, l),
             // Full-screen player overlay — collapsed it's the bottom mini-player;
             // expanded it rises over the app bar into the full Now Playing view.
             // RepaintBoundary isolates the playing scrubber/waveform's per-frame
@@ -537,8 +529,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // over the browser ↔ album-detail body. It sits BELOW the player overlay and
   // the outer Scaffold's drawer in build()'s Stack, so an open drawer dims it
   // like any other content.
-  Widget _homeScaffold(
-      BuildContext context, AppLocalizations l, bool noServers) {
+  Widget _homeScaffold(BuildContext context, AppLocalizations l) {
     return Scaffold(
       // The only text input over this Scaffold is the search field in the
       // toolbar (always at the top, never under the keyboard), so don't
@@ -668,7 +659,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         // Consolidated browser chrome (back · label/album · search ·
         // download · add-all) — replaces both the old label-only strip and
         // the Browser's in-body header row. See widgets/browser_toolbar.dart.
-        bottom: noServers ? null : const BrowserToolbar(),
+        bottom: const BrowserToolbar(),
       ),
       body: Column(children: [
         _migrationBanner(),

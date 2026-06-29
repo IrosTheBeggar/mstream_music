@@ -227,11 +227,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapSubtitleAddToQueue =>
-      'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.';
+      'Append the song to the end of the queue. For Spotify-like behavior, use \'Play from here\'.';
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Replaces the queue with the songs in the current view and plays from the tapped song — the usual streaming-app (Spotify-style) behaviour.';
+      'Replaces the queue with the songs in the current view and plays from the tapped song.';
 
   @override
   String get tapSubtitleAppendAndJump =>

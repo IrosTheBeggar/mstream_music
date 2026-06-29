@@ -700,27 +700,14 @@ class _BrowserState extends State<Browser> {
                     color: VelvetColors.onPrimary, size: 30),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l.browserWelcomeTitle,
-                        style: TextStyle(
-                          color: VelvetColors.onPrimary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l.browserWelcomeSubtitle,
-                        style: TextStyle(
-                          color: VelvetColors.onPrimary.withValues(alpha: 0.85),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    l.browserWelcomeSubtitle,
+                    style: TextStyle(
+                      color: VelvetColors.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
                 Icon(Icons.chevron_right, color: VelvetColors.onPrimary),

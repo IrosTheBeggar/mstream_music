@@ -501,13 +501,13 @@ abstract class AppLocalizations {
   /// No description provided for @tapSubtitleAddToQueue.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.'**
+  /// **'Append the song to the end of the queue. For Spotify-like behavior, use \'Play from here\'.'**
   String get tapSubtitleAddToQueue;
 
   /// No description provided for @tapSubtitlePlayFromHere.
   ///
   /// In en, this message translates to:
-  /// **'Replaces the queue with the songs in the current view and plays from the tapped song — the usual streaming-app (Spotify-style) behaviour.'**
+  /// **'Replaces the queue with the songs in the current view and plays from the tapped song.'**
   String get tapSubtitlePlayFromHere;
 
   /// No description provided for @tapSubtitleAppendAndJump.
