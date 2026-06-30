@@ -63,21 +63,40 @@ class ServerBinaryManager {
   ServerBinaryManager._();
   static final ServerBinaryManager instance = ServerBinaryManager._();
 
-  /// The version the app targets. Bump it (in an app release) to adopt a new
-  /// server: the manager downloads it on next [ensureReady], activates it, and
-  /// prunes older versions (keeping one for rollback).
-  ServerRelease target = const ServerRelease(
-    repo: 'IrosTheBeggar/mStream',
-    version: '6.15.1',
-    // Pinned per-platform SHA-256 of the release zip (compute via
-    // tool/server_binary_probe.dart). A pinned hash is enforced; an unpinned
-    // platform is accepted on HTTPS trust + a warning. win-x64 verified against
-    // the real v6.15.1 release; fill the others when those builds are targeted.
-    sha256ByPlatform: <String, String>{
+  static const _repo = 'IrosTheBeggar/mStream';
+
+  /// Pinned floor: the verified, offline fallback version. With
+  /// [autoUpdateToLatest] on, the manager runs the latest GitHub release that is
+  /// >= this floor when reachable, and falls back to the newest already-installed
+  /// version (or the floor) when offline. Bump it when a newer version becomes
+  /// the guaranteed-shipped baseline.
+  String floorVersion = '6.15.1';
+
+  /// On [ensureReady], resolve to the latest release (>= [floorVersion]) instead
+  /// of pinning the floor — i.e. the app auto-updates to the newest server.
+  bool autoUpdateToLatest = true;
+
+  /// Per-version pinned SHA-256 of the release zip, keyed by version then
+  /// platform ([ServerRelease.platformKey]). A pinned hash is enforced; a
+  /// version/platform without one is accepted on HTTPS trust + a warning (so a
+  /// brand-new release the app hasn't pinned yet still auto-updates). Compute
+  /// hashes via tool/server_binary_probe.dart.
+  static const Map<String, Map<String, String>> _knownHashes = {
+    '6.15.1': {
       'win-x64':
           '95180bc852d76f910eaf71b3c530077c1fda80da43bbc5517254182b35c5e5dd',
     },
-  );
+    '6.15.2': {
+      'win-x64':
+          'cce87f60a6a97206a22949ba753f81e799553fbb63ceed95c23f5191b6809c17',
+    },
+  };
+
+  ServerRelease _releaseFor(String version) => ServerRelease(
+        repo: _repo,
+        version: version,
+        sha256ByPlatform: _knownHashes[version] ?? const <String, String>{},
+      );
 
   final ValueNotifier<ServerStatus> status =
       ValueNotifier<ServerStatus>(const ServerStatus(ServerPhase.idle));
@@ -115,29 +134,68 @@ class ServerBinaryManager {
   /// installed AND verified, else null.
   Future<String?> installedExecutable([String? version]) async {
     if (!isSupported) return null;
-    final v = version ?? target.version;
+    final v = version ?? floorVersion;
     final vd = _versionDir(await _root(), v);
     if (!await _verifiedMarker(vd).exists()) return null;
     final exe = _exePath(vd, v);
     return await File(exe).exists() ? exe : null;
   }
 
-  /// Ensure the [target] version is downloaded, verified, and extracted.
+  /// Ensure the resolved version (latest >= floor when auto-updating + online,
+  /// else the floor / newest installed) is downloaded, verified, and extracted.
   /// Returns the executable path, or null on an unsupported platform / failure
-  /// (inspect [status] for the reason). Idempotent: a present+verified install
-  /// short-circuits.
+  /// (inspect [status] for the reason). A present+verified install short-circuits.
   Future<String?> ensureReady() async {
     if (!isSupported) {
       _set(const ServerStatus(ServerPhase.unsupported));
       return null;
     }
-    final existing = await installedExecutable();
+    final version = await _resolveVersion();
+    final existing = await installedExecutable(version);
     if (existing != null) {
       _set(ServerStatus(ServerPhase.ready,
-          version: target.version, executablePath: existing));
+          version: version, executablePath: existing));
       return existing;
     }
-    return _install(target);
+    return _install(_releaseFor(version));
+  }
+
+  /// The version to run: the latest GitHub release >= [floorVersion] when
+  /// [autoUpdateToLatest] and reachable; otherwise the newest already-installed
+  /// version, or the floor.
+  Future<String> _resolveVersion() async {
+    if (autoUpdateToLatest) {
+      final latest = await _tryLatestVersion();
+      if (latest != null && _compareVersions(latest, floorVersion) >= 0) {
+        _log('auto-update: latest release $latest (floor $floorVersion)');
+        return latest;
+      }
+    }
+    final installed = await _newestInstalled();
+    return installed ?? floorVersion;
+  }
+
+  Future<String?> _tryLatestVersion() async {
+    try {
+      return await _latestVersion(_repo);
+    } catch (e) {
+      _log('latest-version check failed (offline?): $e');
+      return null;
+    }
+  }
+
+  /// Newest already-installed + verified version, or null if none.
+  Future<String?> _newestInstalled() async {
+    final root = await _root();
+    String? best;
+    await for (final e in root.list(followLinks: false)) {
+      if (e is! Directory) continue;
+      final v = p.basename(e.path);
+      if (!_looksLikeVersion(v)) continue;
+      if (!await _verifiedMarker(e).exists()) continue;
+      if (best == null || _compareVersions(v, best) > 0) best = v;
+    }
+    return best;
   }
 
   /// Query GitHub for the latest release and compare to what's installed.
@@ -147,8 +205,8 @@ class ServerBinaryManager {
     final prev = status.value;
     _set(const ServerStatus(ServerPhase.checking));
     try {
-      final latest = await _latestVersion(target.repo);
-      final installed = await installedExecutable() != null ? target.version : null;
+      final latest = await _latestVersion(_repo);
+      final installed = await _newestInstalled();
       _set(prev); // restore the prior phase; the check itself isn't a state
       return UpdateInfo(installedVersion: installed, latestVersion: latest);
     } catch (e) {
@@ -158,20 +216,10 @@ class ServerBinaryManager {
     }
   }
 
-  /// Download + verify + activate [version], adopt it as the new [target], and
-  /// prune older versions. Use after [checkForUpdate] reports an update (note:
-  /// a dynamically-chosen version has no pinned hash unless the app ships one,
-  /// so it's accepted on HTTPS trust — see [_verify]).
-  Future<String?> applyUpdate(String version) async {
-    final release = ServerRelease(
-      repo: target.repo,
-      version: version,
-      sha256ByPlatform: target.sha256ByPlatform,
-    );
-    final exe = await _install(release);
-    if (exe != null) target = release;
-    return exe;
-  }
+  /// Download + verify + activate [version] (the install pipeline prunes older
+  /// versions, keeping one for rollback). Used to apply an update reported by
+  /// [checkForUpdate]; [ensureReady] already does this for the resolved version.
+  Future<String?> applyUpdate(String version) => _install(_releaseFor(version));
 
   // ── install pipeline ──
   Future<String?> _install(ServerRelease release) async {
