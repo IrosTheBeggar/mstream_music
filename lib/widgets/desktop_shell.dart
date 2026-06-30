@@ -154,23 +154,28 @@ class _DesktopShellState extends State<DesktopShell> {
   Widget build(BuildContext context) {
     final shell = Scaffold(
       backgroundColor: VelvetColors.bg,
-      body: Column(
+      body: Row(
         children: [
+          // Sidebar runs the full window height down the left edge (like the
+          // queue on the right); the Now Playing bar begins where it ends, so
+          // the nav gets the bar's height back as extra vertical space.
+          _DesktopSidebar(
+            categories: _categories,
+            tools: _tools,
+            gearItems: _gearItems,
+            active: _active,
+            onCategory: _openCategory,
+            onSearch: _openSearch,
+            onTool: _openTool,
+            onVisualizer: _openVisualizer,
+            onProjectM: _projectMAvailable ? _openProjectM : null,
+          ),
+          VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
+          // Browse content with the Now Playing bar pinned along its bottom —
+          // spanning only the width between the sidebar and the queue.
           Expanded(
-            child: Row(
+            child: Column(
               children: [
-                _DesktopSidebar(
-                  categories: _categories,
-                  tools: _tools,
-                  gearItems: _gearItems,
-                  active: _active,
-                  onCategory: _openCategory,
-                  onSearch: _openSearch,
-                  onTool: _openTool,
-                  onVisualizer: _openVisualizer,
-                  onProjectM: _projectMAvailable ? _openProjectM : null,
-                ),
-                VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
                 Expanded(
                   child: Navigator(
                     key: _contentNav,
@@ -178,22 +183,23 @@ class _DesktopShellState extends State<DesktopShell> {
                         builder: (_) => const _DesktopBrowseView()),
                   ),
                 ),
-                if (_queueOpen) ...[
-                  VerticalDivider(
-                      width: 1, thickness: 1, color: VelvetColors.border),
-                  SizedBox(
-                    width: _kQueueWidth,
-                    child: _DesktopQueuePanel(
-                        onClose: () => setState(() => _queueOpen = false)),
-                  ),
-                ],
+                DesktopNowPlayingBar(
+                  queueOpen: _queueOpen,
+                  onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
+                ),
               ],
             ),
           ),
-          DesktopNowPlayingBar(
-            queueOpen: _queueOpen,
-            onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
-          ),
+          // Queue runs the full window height down the right edge, carrying the
+          // expanded now-playing info at its own bottom.
+          if (_queueOpen) ...[
+            VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
+            SizedBox(
+              width: _kQueueWidth,
+              child: _DesktopQueuePanel(
+                  onClose: () => setState(() => _queueOpen = false)),
+            ),
+          ],
         ],
       ),
     );
@@ -634,6 +640,10 @@ class _DesktopQueuePanel extends StatelessWidget {
           ),
           Divider(height: 1, color: VelvetColors.border),
           const Expanded(child: QueueList()),
+          Divider(height: 1, color: VelvetColors.border),
+          // The expanded now-playing lives at the foot of the queue — this is
+          // what the bar's compact now-playing "grows into" when opened.
+          const _ExpandedNowPlaying(),
         ],
       ),
     );
@@ -699,14 +709,6 @@ class DesktopNowPlayingBar extends StatefulWidget {
 }
 
 class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
-  // Combined item+position, scoped to the seek row so a position tick doesn't
-  // rebuild the transport buttons or artwork.
-  late final Stream<_MediaPos> _mediaPos = Rx.combineLatest2(
-    MediaManager().audioHandler.mediaItem,
-    MediaManager().audioHandler.positionStream,
-    (MediaItem? item, Duration pos) => _MediaPos(item, pos),
-  );
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -718,24 +720,33 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Left third: artwork + track / artist.
-          Expanded(child: _trackInfo()),
-          // Center: transport + seek. mainAxisSize.min keeps the two rows from
-          // overflowing the fixed bar height; the Row centers the cluster.
+          // Transport (left-aligned) and the right-aligned control cluster
+          // (volume · cast · queue) sit above the progress bar, starting flush
+          // at the bar's left edge.
           Expanded(
             flex: 2,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const _DesktopTransport(),
+                Row(
+                  children: [
+                    const _DesktopTransport(),
+                    const Spacer(),
+                    _controls(),
+                  ],
+                ),
                 const SizedBox(height: 2),
-                _seekRow(),
+                const _SeekBar(),
               ],
             ),
           ),
-          // Right third: volume + queue toggle.
-          Expanded(child: _rightControls()),
+          // Right: now-playing info — click to open the queue.
+          if (!widget.queueOpen)
+            Expanded(
+              child: _NowPlayingTab(
+                  onTap: widget.onToggleQueue, child: _trackInfo()),
+            ),
         ],
       ),
     );
@@ -751,7 +762,36 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
             .where((s) => s != null && s.isNotEmpty)
             .join(' — ');
         return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(item == null ? 'Nothing playing' : item.title,
+                      maxLines: 1,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: item == null
+                              ? VelvetColors.textTertiary
+                              : VelvetColors.textPrimary)),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        maxLines: 1,
+                        textAlign: TextAlign.right,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: VelvetColors.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: SizedBox(
@@ -766,105 +806,15 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                             albumArtFallback(iconSize: 22)),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item == null ? 'Nothing playing' : item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: item == null
-                              ? VelvetColors.textTertiary
-                              : VelvetColors.textPrimary)),
-                  if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12, color: VelvetColors.textSecondary)),
-                  ],
-                ],
-              ),
-            ),
           ],
         );
       },
     );
   }
 
-  Widget _seekRow() {
-    return StreamBuilder<_MediaPos>(
-      stream: _mediaPos,
-      builder: (context, snap) {
-        final pos = snap.data?.position ?? Duration.zero;
-        final dur = snap.data?.item?.duration;
-        final ms = dur?.inMilliseconds ?? 0;
-        final ratio =
-            ms == 0 ? 0.0 : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
-        return Row(
-          children: [
-            SizedBox(
-              width: 44,
-              child: Text(formatDuration(pos),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      // Elapsed in the accent colour, like the phone player.
-                      color: VelvetColors.primary)),
-            ),
-            Expanded(
-              // Bound the slider's height so it can't push the transport+seek
-              // column past the fixed bar height (Sliders otherwise reserve the
-              // full interactive dimension).
-              child: SizedBox(
-                height: 28,
-                child: SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 3,
-                    overlayShape:
-                        const RoundSliderOverlayShape(overlayRadius: 10),
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    activeTrackColor: VelvetColors.primary,
-                    inactiveTrackColor: VelvetColors.border2,
-                    thumbColor: VelvetColors.primary,
-                  ),
-                  child: Slider(
-                    value: ratio,
-                    onChanged: dur == null
-                        ? null
-                        : (f) => MediaManager()
-                            .audioHandler
-                            .seek(Duration(milliseconds: (ms * f).round())),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 44,
-              child: Text(dur == null ? '--:--' : formatDuration(dur),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      color: VelvetColors.textTertiary)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _rightControls() {
+  Widget _controls() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Volume icon (click to mute) + slider, both driven by the shared
         // playbackVolume notifier so the Up/Down/M keys move them in lockstep.
@@ -943,6 +893,200 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
           onPressed: widget.onToggleQueue,
         ),
       ],
+    );
+  }
+}
+
+// Elapsed · slider · duration, driven by its own combined item+position stream
+// so a per-second position tick repaints only the slider. Shared by the Now
+// Playing bar and the expanded now-playing at the foot of the queue.
+class _SeekBar extends StatefulWidget {
+  const _SeekBar();
+  @override
+  State<_SeekBar> createState() => _SeekBarState();
+}
+
+class _SeekBarState extends State<_SeekBar> {
+  late final Stream<_MediaPos> _mediaPos = Rx.combineLatest2(
+    MediaManager().audioHandler.mediaItem,
+    MediaManager().audioHandler.positionStream,
+    (MediaItem? item, Duration pos) => _MediaPos(item, pos),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<_MediaPos>(
+      stream: _mediaPos,
+      builder: (context, snap) {
+        final pos = snap.data?.position ?? Duration.zero;
+        final dur = snap.data?.item?.duration;
+        final ms = dur?.inMilliseconds ?? 0;
+        final ratio =
+            ms == 0 ? 0.0 : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
+        return Row(
+          children: [
+            SizedBox(
+              width: 44,
+              child: Text(formatDuration(pos),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      // Elapsed in the accent colour, like the phone player.
+                      color: VelvetColors.primary)),
+            ),
+            Expanded(
+              // Bound the slider's height so it can't push the transport+seek
+              // column past the fixed bar height (Sliders otherwise reserve the
+              // full interactive dimension).
+              child: SizedBox(
+                height: 28,
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 10),
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    activeTrackColor: VelvetColors.primary,
+                    inactiveTrackColor: VelvetColors.border2,
+                    thumbColor: VelvetColors.primary,
+                  ),
+                  child: Slider(
+                    value: ratio,
+                    onChanged: dur == null
+                        ? null
+                        : (f) => MediaManager()
+                            .audioHandler
+                            .seek(Duration(milliseconds: (ms * f).round())),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 44,
+              child: Text(dur == null ? '--:--' : formatDuration(dur),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      color: VelvetColors.textTertiary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// The now-playing info doubles as a button on the right of the bar: a pointer
+// cursor and a hover wash signal that clicking it opens the queue.
+class _NowPlayingTab extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _NowPlayingTab({required this.child, required this.onTap});
+  @override
+  State<_NowPlayingTab> createState() => _NowPlayingTabState();
+}
+
+class _NowPlayingTabState extends State<_NowPlayingTab> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: _hover ? VelvetColors.hover : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+// Larger now-playing block at the foot of the queue panel: art + title/artist
+// over the same seek bar as the main Now Playing bar.
+class _ExpandedNowPlaying extends StatelessWidget {
+  const _ExpandedNowPlaying();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: VelvetColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StreamBuilder<MediaItem?>(
+            stream: MediaManager().audioHandler.mediaItem,
+            builder: (context, snap) {
+              final item = snap.data;
+              final url = item?.extras?['artUrl'] as String?;
+              final subtitle = [item?.artist, item?.album]
+                  .where((s) => s != null && s.isNotEmpty)
+                  .join(' — ');
+              return Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: url == null
+                          ? albumArtFallback(iconSize: 28)
+                          : Image.network(url,
+                              fit: BoxFit.cover,
+                              cacheWidth: artCacheSize(72),
+                              errorBuilder: (_, _, _) =>
+                                  albumArtFallback(iconSize: 28)),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item == null ? 'Nothing playing' : item.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: item == null
+                                    ? VelvetColors.textTertiary
+                                    : VelvetColors.textPrimary)),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: VelvetColors.textSecondary)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1050,7 +1194,7 @@ class _DesktopTransport extends StatelessWidget {
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
+      child: Row(mainAxisSize: MainAxisSize.min, children: buttons),
     );
   }
 }
