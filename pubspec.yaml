@@ -69,6 +69,16 @@ dependencies:
   # Package name (applicationId) lookup so the album-art ContentProvider
   # authority always matches the manifest, regardless of --dart-define flags.
   package_info_plus: ^8.0.0
+  # Desktop window/tray/startup integration (leanflutter). Desktop-only plugins
+  # (no Android/iOS native impl, so they're skipped there); all calls are gated
+  # to desktop in lib/desktop/desktop_integration.dart. window_manager =
+  # sized window + close-to-tray; tray_manager = tray icon + menu;
+  # launch_at_startup = boot-on-login (toggled from Settings).
+  window_manager: ^0.5.1
+  tray_manager: ^0.5.3
+  launch_at_startup: ^0.5.1
+  crypto: ^3.0.7
+  archive: ^4.0.9
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -96,6 +106,8 @@ flutter:
     - graphics/default.png
     - assets/presets/
     - assets/shaders/
+    # System-tray icon for the desktop build (tray_manager).
+    - assets/tray_icon.ico
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
