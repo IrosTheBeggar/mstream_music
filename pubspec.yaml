@@ -43,7 +43,7 @@ dependencies:
   mobile_scanner: ^7.2.0
   # Network-change signal that kicks the iroh tunnel's reconnect — iroh can't
   # self-detect interface changes (Wi-Fi<->cellular) on Android.
-  connectivity_plus: ^6.1.0
+  connectivity_plus: ^7.2.0
   cupertino_icons: ^1.0.8
   path: any
   # Visualizer: FFI bindings to libprojectM (loaded from jniLibs on Android).
