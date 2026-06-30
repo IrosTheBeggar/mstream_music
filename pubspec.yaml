@@ -91,6 +91,14 @@ flutter_icons:
   ios: true
   image_path_android: "graphics/icon/icon.png"
   image_path_ios: "graphics/icon/mstream.png"
+  # Desktop (Windows) app icon — same mStream mark as mobile so the exe / window
+  # / taskbar icon matches the rest of the app instead of the default Flutter
+  # logo. Regenerates windows/runner/resources/app_icon.ico via
+  # `dart run flutter_launcher_icons`.
+  windows:
+    generate: true
+    image_path: "graphics/icon/mstream.png"
+    icon_size: 256
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
