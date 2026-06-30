@@ -44,6 +44,7 @@ import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
 import 'cast_picker_sheet.dart';
 import 'media_shortcuts.dart';
+import 'playlist_name_dialog.dart';
 import 'queue_list.dart';
 
 // Width of the fixed left navigation rail and the right queue panel.
@@ -597,13 +598,31 @@ class _DesktopQueuePanel extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: VelvetColors.textPrimary)),
                 const Spacer(),
-                // Share the current queue as a playlist — it acts on the queue,
-                // so it lives here rather than in the sidebar.
-                IconButton(
-                  icon: const Icon(Icons.share_outlined, size: 19),
-                  color: VelvetColors.textSecondary,
-                  tooltip: l.shareTitle,
-                  onPressed: () => showSharePlaylistDialog(context),
+                // Queue actions (act on the queue, so they live here): save the
+                // queue as a playlist, download it, or share it.
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  color: VelvetColors.surface,
+                  tooltip: l.mainMore,
+                  onSelected: (v) {
+                    switch (v) {
+                      case 'save':
+                        _saveQueueAsPlaylist(context);
+                        break;
+                      case 'download':
+                        downloadQueue(context);
+                        break;
+                      case 'share':
+                        showSharePlaylistDialog(context);
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    _queueMenuItem('save', Icons.playlist_add, 'Save as playlist'),
+                    _queueMenuItem(
+                        'download', Icons.download_for_offline, l.queueDownloadAll),
+                    _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
+                  ],
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
@@ -618,6 +637,47 @@ class _DesktopQueuePanel extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+PopupMenuItem<String> _queueMenuItem(
+    String value, IconData icon, String label) {
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(children: [
+      Icon(icon, size: 18, color: VelvetColors.textSecondary),
+      const SizedBox(width: 12),
+      Text(label),
+    ]),
+  );
+}
+
+/// Save the current queue as a server playlist: collect the queue's server-track
+/// paths, prompt for a name, then POST /playlist/save. Local-only / no-server
+/// items (which can't live in a server playlist) are skipped.
+Future<void> _saveQueueAsPlaylist(BuildContext context) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final paths = MediaManager()
+      .audioHandler
+      .queue
+      .value
+      .map((m) => m.extras?['path'])
+      .whereType<String>()
+      .toList();
+  if (paths.isEmpty) {
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Nothing in the queue to save')));
+    return;
+  }
+  final name = await PlaylistNameDialog.show(context,
+      title: 'Save as playlist', action: 'Save');
+  if (name == null || name.isEmpty) return;
+  try {
+    await ApiManager().savePlaylist(name, paths);
+    messenger.showSnackBar(SnackBar(content: Text('Saved “$name”')));
+  } catch (_) {
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Couldn’t save the playlist')));
   }
 }
 
