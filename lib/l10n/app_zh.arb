@@ -66,8 +66,6 @@
   "visualizerEngineSubtitleMilkdrop": "通过 projectM 使用 Milkdrop 预设（默认）。效果更丰富，但更消耗 GPU。",
   "visualizerEngineSubtitleShaders": "Shadertoy 风格的片段着色器。更轻量、模块化 — 将 .glsl 文件放入 assets/shaders/ 即可扩展目录。",
   "settingsVisualizerSource": "可视化音频来源",
-  "visualizerSourceSubtitleSynthesized": "默认。可视化效果仅根据播放时间作出反应 — 无需麦克风权限。",
-  "visualizerSourceSubtitleReal": "可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。",
   "settingsAlbumGrid": "专辑网格视图",
   "settingsAlbumGridSubtitle": "以带封面的卡片网格显示专辑，而非普通列表。",
   "settingsFileMetadata": "在文件浏览器中读取歌曲元数据",

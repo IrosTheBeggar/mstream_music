@@ -66,8 +66,6 @@
   "visualizerEngineSubtitleMilkdrop": "Пресеты Milkdrop через projectM (по умолчанию). Более насыщенные эффекты, выше нагрузка на GPU.",
   "visualizerEngineSubtitleShaders": "Фрагментные шейдеры в стиле Shadertoy. Легче и модульнее — добавляйте файлы .glsl в assets/shaders/, чтобы расширить каталог.",
   "settingsVisualizerSource": "Источник звука визуализации",
-  "visualizerSourceSubtitleSynthesized": "По умолчанию. Визуализация реагирует только на тайминг воспроизведения — разрешение на микрофон не требуется.",
-  "visualizerSourceSubtitleReal": "Визуализация реагирует на реальный аудиовыход. Требуется разрешение RECORD_AUDIO на Android.",
   "settingsAlbumGrid": "Альбомы сеткой",
   "settingsAlbumGridSubtitle": "Показывать альбомы сеткой карточек с обложками вместо обычного списка.",
   "settingsFileMetadata": "Читать метаданные треков в проводнике файлов",

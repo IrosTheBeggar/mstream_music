@@ -119,6 +119,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
+
+  @override
   String get eqTitle => 'Эквалайзер';
 
   @override
@@ -252,12 +258,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsVisualizerSource => 'Источник звука визуализации';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'По умолчанию. Визуализация реагирует только на тайминг воспроизведения — разрешение на микрофон не требуется.';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'Визуализация реагирует на реальный аудиовыход. Требуется разрешение RECORD_AUDIO на Android.';
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
 
   @override
   String get settingsAlbumGrid => 'Альбомы сеткой';

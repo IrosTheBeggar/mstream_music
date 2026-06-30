@@ -117,6 +117,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
+
+  @override
   String get eqTitle => 'Égaliseur';
 
   @override
@@ -250,12 +256,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsVisualizerSource => 'Source audio du visualiseur';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'Par défaut. Le visualiseur réagit uniquement au rythme de lecture — aucune autorisation micro requise.';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'Le visualiseur réagit à la sortie audio réelle. Nécessite l\'autorisation RECORD_AUDIO sur Android.';
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
 
   @override
   String get settingsAlbumGrid => 'Vue en grille des albums';

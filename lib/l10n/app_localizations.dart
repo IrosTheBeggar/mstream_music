@@ -171,7 +171,7 @@ abstract class AppLocalizations {
   /// First entry in the language picker: follow the OS locale.
   ///
   /// In en, this message translates to:
-  /// **'System default'**
+  /// **'Default'**
   String get languageSystemDefault;
 
   /// Subtitle under the language picker row in Settings.
@@ -299,6 +299,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get lyricsRetry;
+
+  /// Section header in the first-run Quick setup (accent colour).
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get quickSetupTheme;
+
+  /// Section header in the first-run Quick setup (language / tap / visualizer).
+  ///
+  /// In en, this message translates to:
+  /// **'Config'**
+  String get quickSetupConfig;
 
   /// Equalizer screen title / switch label.
   ///
@@ -489,13 +501,13 @@ abstract class AppLocalizations {
   /// No description provided for @tapSubtitleAddToQueue.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.'**
+  /// **'Append the song to the end of the queue. For Spotify-like behavior, use \'Play from here\'.'**
   String get tapSubtitleAddToQueue;
 
   /// No description provided for @tapSubtitlePlayFromHere.
   ///
   /// In en, this message translates to:
-  /// **'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.'**
+  /// **'Replaces the queue with the songs in the current view and plays from the tapped song.'**
   String get tapSubtitlePlayFromHere;
 
   /// No description provided for @tapSubtitleAppendAndJump.
@@ -528,23 +540,17 @@ abstract class AppLocalizations {
   /// **'Shadertoy-style fragment shaders. Lighter, modular — drop .glsl files in assets/shaders/ to extend the catalog.'**
   String get visualizerEngineSubtitleShaders;
 
-  /// Visualizer audio-source picker row label + per-source subtitles.
+  /// Visualizer audio-source picker row label.
   ///
   /// In en, this message translates to:
   /// **'Visualizer audio source'**
   String get settingsVisualizerSource;
 
-  /// No description provided for @visualizerSourceSubtitleSynthesized.
+  /// No description provided for @visualizerSourcePermission.
   ///
   /// In en, this message translates to:
-  /// **'Default. Visualizer reacts to playback timing only — no microphone permission required.'**
-  String get visualizerSourceSubtitleSynthesized;
-
-  /// No description provided for @visualizerSourceSubtitleReal.
-  ///
-  /// In en, this message translates to:
-  /// **'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.'**
-  String get visualizerSourceSubtitleReal;
+  /// **'Real Audio requires the RECORD_AUDIO permission.'**
+  String get visualizerSourcePermission;
 
   /// Album-grid toggle row.
   ///

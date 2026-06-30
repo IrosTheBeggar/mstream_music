@@ -2049,37 +2049,47 @@ class MyCustomFormState extends State<MyCustomForm> {
               // OutlinedButton.icon block here + uncomment the dep
               // when scanning is back online. The parseQrCode helper
               // above is preserved.
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: VelvetColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(VelvetColors.radiusSmall),
+              // Colorful primary CTA: a gradient fill (brighter → base accent)
+              // plus a leading icon so the "add server" action pops on the
+              // first-run screen. onPrimary keeps the label legible whatever
+              // accent the user has picked.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [VelvetColors.primaryHover, VelvetColors.primary],
                   ),
-                  textStyle: TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w600),
+                  borderRadius:
+                      BorderRadius.circular(VelvetColors.radiusSmall),
                 ),
-                onPressed: submitPending ? null : _onSavePressed,
-                child: submitPending
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation(Colors.white),
-                            ),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: VelvetColors.onPrimary,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
+                    textStyle:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: submitPending ? null : _onSavePressed,
+                  icon: submitPending
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                                VelvetColors.onPrimary),
                           ),
-                          SizedBox(width: 12),
-                          Text(l.connecting),
-                        ],
-                      )
-                    : Text(l.save),
+                        )
+                      : Icon(Icons.add_rounded),
+                  label: Text(submitPending ? l.connecting : l.save),
+                ),
               ),
             ],
           ),

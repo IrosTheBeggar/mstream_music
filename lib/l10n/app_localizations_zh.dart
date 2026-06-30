@@ -114,6 +114,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
+
+  @override
   String get eqTitle => '均衡器';
 
   @override
@@ -238,12 +244,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsVisualizerSource => '可视化音频来源';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      '默认。可视化效果仅根据播放时间作出反应 — 无需麦克风权限。';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      '可视化效果根据实际音频输出作出反应。需要 Android 的 RECORD_AUDIO 权限。';
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
 
   @override
   String get settingsAlbumGrid => '专辑网格视图';
