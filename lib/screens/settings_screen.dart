@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 
+import '../desktop/desktop_integration.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/language_names.dart';
@@ -27,6 +28,20 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // Reflects the OS launch-at-login state (the registry/login-item is the source
+  // of truth, so there's no separate persisted preference). Desktop only.
+  bool _launchAtStartup = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (DesktopIntegration.isDesktop) {
+      DesktopIntegration.instance.isLaunchAtStartupEnabled().then((v) {
+        if (mounted) setState(() => _launchAtStartup = v);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -36,6 +51,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         top: false,
         child: ListView(
         children: [
+          if (DesktopIntegration.isDesktop) ...[
+            _sectionHeader('Desktop'),
+            SwitchListTile(
+              title: const Text('Launch at startup'),
+              subtitle: Text(
+                'Start mStream automatically when you sign in',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              value: _launchAtStartup,
+              onChanged: (v) async {
+                await DesktopIntegration.instance.setLaunchAtStartup(v);
+                final actual = await DesktopIntegration.instance
+                    .isLaunchAtStartupEnabled();
+                if (mounted) setState(() => _launchAtStartup = actual);
+              },
+              activeThumbColor: VelvetColors.primary,
+            ),
+            Divider(color: VelvetColors.border, height: 1),
+          ],
           _sectionHeader(l.settingsSectionAppearance),
           ListTile(
             title: Text(l.settingsTheme),
