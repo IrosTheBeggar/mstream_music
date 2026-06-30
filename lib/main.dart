@@ -40,6 +40,7 @@ import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
+import 'desktop/desktop_integration.dart';
 import 'util/self_signed_overrides.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
@@ -88,6 +89,10 @@ Future<void> _implicitViewReady() async {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Desktop window + system tray + launch-at-startup (sized window, close-to-
+  // tray so the app keeps running). No-op on mobile (the plugins have no
+  // Android/iOS implementation); must run before runApp shows the window.
+  await DesktopIntegration.instance.init();
   // Desktop playback: route just_audio through media_kit (libmpv) on
   // Windows/Linux, where just_audio has no native backend. No-op on
   // Android/iOS/macOS (those keep just_audio's own native implementation), so
