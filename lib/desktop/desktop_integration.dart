@@ -5,6 +5,8 @@ import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../server/server_controller.dart';
+
 /// Desktop-only window/tray/startup integration (leanflutter suite), matching
 /// the Electron build's behaviours:
 ///   * a sized, min-bounded window;
@@ -126,6 +128,9 @@ class DesktopIntegration with WindowListener, TrayListener {
   }
 
   Future<void> _quit() async {
+    // Tear down the built-in server (and its sidecars) before exiting — the
+    // window's X only hides to tray, so the server runs until a real Quit.
+    await ServerController.instance.stop();
     await windowManager.setPreventClose(false);
     await trayManager.destroy();
     await windowManager.close();
