@@ -45,9 +45,12 @@ class ServerController {
   ServerController._();
   static final ServerController instance = ServerController._();
 
-  // mStream's default port. Assumed for now; a configurable port is a follow-up.
-  static const int port = 3000;
-  String get baseUrl => 'http://127.0.0.1:$port';
+  // Chosen at first run (prefers 3000, else a free loopback port) and persisted
+  // in the server config; read back from the config on later runs so the URL
+  // stays stable.
+  int _port = 3000;
+  int get port => _port;
+  String get baseUrl => 'http://127.0.0.1:$_port';
 
   final ValueNotifier<ServerRunStatus> status =
       ValueNotifier<ServerRunStatus>(const ServerRunStatus(ServerRunPhase.stopped));
@@ -92,7 +95,8 @@ class ServerController {
       // updates and the old version dir is pruned. Pass `-j <config>` with the
       // storage dirs redirected into the stable data folder; mStream fills in
       // the rest (secrets, iroh keys) and maintains the file from there.
-      final configPath = await _ensureConfig(dataDir);
+      final (:configPath, :port) = await _ensureConfig(dataDir);
+      _port = port;
       final proc = await Process.start(exe, ['-j', configPath],
           workingDirectory: dataDir.path);
       _process = proc;
@@ -183,29 +187,65 @@ class ServerController {
     }
   }
 
-  /// Write a boot config (first run only) that redirects mStream's five
-  /// appRoot-relative storage dirs into [dataDir], then return its path for
-  /// `-j`. Written only when absent so mStream owns it afterwards (it persists
-  /// secrets, iroh keys, the library, and the user's settings there).
-  Future<String> _ensureConfig(Directory dataDir) async {
+  /// Resolve the boot config + port. Seeds the config when needed with (a) the
+  /// five appRoot-relative storage dirs redirected into [dataDir] (else they'd
+  /// sit in the binary's version folder and be pruned on update) and (b) a chosen
+  /// port. The port is reused from the existing config when present (stable URL
+  /// across runs), otherwise picked fresh (preferring 3000) and persisted. mStream
+  /// owns the file otherwise — secrets, iroh keys, library, settings live there.
+  Future<({String configPath, int port})> _ensureConfig(Directory dataDir) async {
     final confDir = Directory(p.join(dataDir.path, 'conf'));
     await confDir.create(recursive: true);
     final configFile = File(p.join(confDir.path, 'default.json'));
-    if (!await configFile.exists()) {
-      final cfg = <String, dynamic>{
-        'storage': <String, String>{
-          'albumArtDirectory': p.join(dataDir.path, 'image-cache'),
-          'dbDirectory': p.join(dataDir.path, 'db'),
-          'logsDirectory': p.join(dataDir.path, 'logs'),
-          'syncConfigDirectory': p.join(dataDir.path, 'sync'),
-          'waveformCacheDirectory': p.join(dataDir.path, 'waveform-cache'),
-        },
+
+    Map<String, dynamic> cfg = <String, dynamic>{};
+    if (await configFile.exists()) {
+      try {
+        cfg = jsonDecode(await configFile.readAsString())
+            as Map<String, dynamic>;
+      } catch (_) {/* corrupt — reseed below */}
+    }
+
+    final saved = cfg['port'];
+    final port = (saved is int && saved > 0) ? saved : await _pickPort();
+
+    // Only write when we changed something the app owns, so mStream's own edits
+    // (secrets, iroh, the rest) are preserved.
+    if (cfg['port'] != port || cfg['storage'] == null) {
+      cfg['port'] = port;
+      cfg['storage'] = <String, String>{
+        'albumArtDirectory': p.join(dataDir.path, 'image-cache'),
+        'dbDirectory': p.join(dataDir.path, 'db'),
+        'logsDirectory': p.join(dataDir.path, 'logs'),
+        'syncConfigDirectory': p.join(dataDir.path, 'sync'),
+        'waveformCacheDirectory': p.join(dataDir.path, 'waveform-cache'),
       };
       await configFile
           .writeAsString(const JsonEncoder.withIndent('  ').convert(cfg));
-      _log('seeded config at ${configFile.path}');
+      _log('wrote config (port $port) at ${configFile.path}');
     }
-    return configFile.path;
+    return (configPath: configFile.path, port: port);
+  }
+
+  /// A free loopback port, preferring 3000; falls back to an OS-assigned one.
+  /// (Small TOCTOU window before mStream binds — acceptable for a local server.)
+  Future<int> _pickPort() async {
+    if (await _isPortFree(3000)) return 3000;
+    final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = s.port;
+    await s.close();
+    _log('port 3000 in use; chose $port');
+    return port;
+  }
+
+  Future<bool> _isPortFree(int port) async {
+    try {
+      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      await s.close();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Directory? _dataDirCache;
