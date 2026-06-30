@@ -28,6 +28,7 @@ import '../screens/manage_server.dart';
 import '../screens/settings_screen.dart';
 import '../screens/share_playlist_dialog.dart';
 import '../screens/transcode_screen.dart';
+import '../singletons/api.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/cast_manager.dart';
@@ -63,56 +64,89 @@ class _DesktopShellState extends State<DesktopShell> {
   // the whole window the way a root-level push would.
   final GlobalKey<NavigatorState> _contentNav = GlobalKey<NavigatorState>();
 
-  // Sidebar highlight: 0 = Browse (the nested Navigator's root), 1.. = a pushed
-  // tool, -1 = the shader visualizer, -2 = the projectM/Milkdrop visualizer.
-  // Tools/visualizers pop back to Browse (resets to 0).
-  static const int _visualizerIndex = -1;
-  static const int _projectMIndex = -2;
+  // Highlighted sidebar destination, by key. '' = the browse landing; a
+  // category key ('albums', …), a tool key, 'search', or a visualizer key.
+  String _active = '';
+  bool _queueOpen = false;
+
   // Native Milkdrop visualizer is desktop-only and needs the engine DLL loaded.
   static final bool _projectMAvailable =
       ProjectMDesktop.isSupported && ProjectMController.isAvailable;
-  int _activeIndex = 0;
-  bool _queueOpen = false;
 
-  late final List<_NavItem> _tools = [
-    _NavItem(Icons.router_outlined, (l) => l.manageServersTitle,
-        (_) => ManageServersScreen()),
-    _NavItem(Icons.album_outlined, (l) => l.autoDjTitle, (_) => AutoDJScreen()),
-    _NavItem(Icons.transform, (l) => l.transcodeTitle,
-        (_) => TranscodeScreen()),
-    _NavItem(Icons.settings_outlined, (l) => l.settingsTitle,
-        (_) => SettingsScreen()),
-    _NavItem(Icons.bug_report_outlined, (l) => l.diagnosticsTitle,
-        (_) => DiagnosticsScreen()),
-    _NavItem(Icons.info_outline, (l) => l.aboutTitle, (_) => AboutScreen()),
+  Server? get _server => ServerManager().currentServer;
+
+  // MUSIC section: direct browse destinations. Each loads its view into the
+  // shared browse pane via the same ApiManager calls the phone browser uses.
+  late final List<_Category> _categories = [
+    _Category('files', Icons.folder_outlined, 'File Explorer',
+        () => ApiManager().getFileList('~', useThisServer: _server)),
+    _Category('playlists', Icons.queue_music, 'Playlists',
+        () => ApiManager().getPlaylists(useThisServer: _server)),
+    _Category('albums', Icons.album_outlined, 'Albums',
+        () => ApiManager().getAlbums(useThisServer: _server)),
+    _Category('artists', Icons.person_outline, 'Artists',
+        () => ApiManager().getArtists(useThisServer: _server)),
+    _Category('recent', Icons.fiber_new_outlined, 'Recently Added',
+        () => ApiManager().getRecentlyAdded(useThisServer: _server)),
+    _Category('rated', Icons.star_outline, 'Rated',
+        () => ApiManager().getRated(useThisServer: _server)),
   ];
 
-  void _openBrowse() {
-    _contentNav.currentState?.popUntil((r) => r.isFirst);
-    setState(() => _activeIndex = 0);
+  // TOOLS section: screens pushed into the content pane.
+  late final List<_NavItem> _tools = [
+    _NavItem('autodj', Icons.album_outlined, (l) => l.autoDjTitle,
+        (_) => AutoDJScreen()),
+    _NavItem('transcode', Icons.transform, (l) => l.transcodeTitle,
+        (_) => TranscodeScreen()),
+  ];
+
+  // Bottom gear overflow: settings / admin, kept out of the primary nav per
+  // desktop convention.
+  late final List<_NavItem> _gearItems = [
+    _NavItem('manageServers', Icons.dns_outlined, (l) => l.manageServersTitle,
+        (_) => ManageServersScreen()),
+    _NavItem('settings', Icons.settings_outlined, (l) => l.settingsTitle,
+        (_) => SettingsScreen()),
+    _NavItem('diagnostics', Icons.bug_report_outlined,
+        (l) => l.diagnosticsTitle, (_) => DiagnosticsScreen()),
+    _NavItem('about', Icons.info_outline, (l) => l.aboutTitle,
+        (_) => AboutScreen()),
+  ];
+
+  // Reset to the browse root so destinations never stack on each other.
+  void _showBrowse() => _contentNav.currentState?.popUntil((r) => r.isFirst);
+
+  void _openCategory(_Category cat) {
+    _showBrowse();
+    cat.load();
+    setState(() => _active = cat.key);
   }
 
-  void _openTool(int index) {
-    // Reset to the browse root first so tools never stack on each other —
-    // selecting a second tool replaces the first rather than burying it.
-    _contentNav.currentState?.popUntil((r) => r.isFirst);
+  void _openSearch() {
+    _showBrowse();
+    BrowserManager().openSearch();
+    setState(() => _active = 'search');
+  }
+
+  void _openTool(_NavItem tool) {
+    _showBrowse();
     _contentNav.currentState
-        ?.push(MaterialPageRoute(builder: (_) => _tools[index].build(context)));
-    setState(() => _activeIndex = index + 1);
+        ?.push(MaterialPageRoute(builder: (_) => tool.build(context)));
+    setState(() => _active = tool.key);
   }
 
   void _openVisualizer() {
-    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _showBrowse();
     _contentNav.currentState?.push(
         MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()));
-    setState(() => _activeIndex = _visualizerIndex);
+    setState(() => _active = 'visualizer');
   }
 
   void _openProjectM() {
-    _contentNav.currentState?.popUntil((r) => r.isFirst);
+    _showBrowse();
     _contentNav.currentState
         ?.push(MaterialPageRoute(builder: (_) => const ProjectMScreen()));
-    setState(() => _activeIndex = _projectMIndex);
+    setState(() => _active = 'milkdrop');
   }
 
   @override
@@ -125,11 +159,13 @@ class _DesktopShellState extends State<DesktopShell> {
             child: Row(
               children: [
                 _DesktopSidebar(
+                  categories: _categories,
                   tools: _tools,
-                  activeIndex: _activeIndex,
-                  onBrowse: _openBrowse,
+                  gearItems: _gearItems,
+                  active: _active,
+                  onCategory: _openCategory,
+                  onSearch: _openSearch,
                   onTool: _openTool,
-                  onShare: () => showSharePlaylistDialog(context),
                   onVisualizer: _openVisualizer,
                   onProjectM: _projectMAvailable ? _openProjectM : null,
                 ),
@@ -166,13 +202,39 @@ class _DesktopShellState extends State<DesktopShell> {
   }
 }
 
-// A sidebar / tool destination: an icon, a localized label, and the screen it
-// pushes into the content pane.
+// A tool destination: a stable key (for highlight), an icon, a localized label,
+// and the screen it pushes into the content pane.
 class _NavItem {
+  final String key;
   final IconData icon;
   final String Function(AppLocalizations) label;
   final Widget Function(BuildContext) build;
-  const _NavItem(this.icon, this.label, this.build);
+  const _NavItem(this.key, this.icon, this.label, this.build);
+}
+
+// A MUSIC-section browse destination: a key, icon, label, and the loader that
+// fills the shared browse pane (the same ApiManager calls the phone uses).
+class _Category {
+  final String key;
+  final IconData icon;
+  final String label;
+  final VoidCallback load;
+  const _Category(this.key, this.icon, this.label, this.load);
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  const _SectionHeader(this.label);
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                color: VelvetColors.textTertiary)),
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -180,19 +242,23 @@ class _NavItem {
 // ---------------------------------------------------------------------------
 
 class _DesktopSidebar extends StatelessWidget {
+  final List<_Category> categories;
   final List<_NavItem> tools;
-  final int activeIndex;
-  final VoidCallback onBrowse;
-  final void Function(int index) onTool;
-  final VoidCallback onShare;
+  final List<_NavItem> gearItems;
+  final String active;
+  final void Function(_Category) onCategory;
+  final VoidCallback onSearch;
+  final void Function(_NavItem) onTool;
   final VoidCallback onVisualizer;
   final VoidCallback? onProjectM; // null when projectM isn't available
   const _DesktopSidebar({
+    required this.categories,
     required this.tools,
-    required this.activeIndex,
-    required this.onBrowse,
+    required this.gearItems,
+    required this.active,
+    required this.onCategory,
+    required this.onSearch,
     required this.onTool,
-    required this.onShare,
     required this.onVisualizer,
     required this.onProjectM,
   });
@@ -214,47 +280,77 @@ class _DesktopSidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
                 _SidebarTile(
-                  icon: Icons.library_music,
-                  label: 'Library',
-                  selected: activeIndex == 0,
-                  onTap: onBrowse,
+                  icon: Icons.search,
+                  label: 'Search',
+                  selected: active == 'search',
+                  onTap: onSearch,
                 ),
+                const _SectionHeader('MUSIC'),
+                for (final c in categories)
+                  _SidebarTile(
+                    icon: c.icon,
+                    label: c.label,
+                    selected: active == c.key,
+                    onTap: () => onCategory(c),
+                  ),
+                const _SectionHeader('TOOLS'),
+                for (final t in tools)
+                  _SidebarTile(
+                    icon: t.icon,
+                    label: t.label(l),
+                    selected: active == t.key,
+                    onTap: () => onTool(t),
+                  ),
                 _SidebarTile(
                   icon: Icons.graphic_eq,
                   label: 'Visualizer',
-                  selected: activeIndex == -1,
+                  selected: active == 'visualizer',
                   onTap: onVisualizer,
                 ),
                 if (onProjectM != null)
                   _SidebarTile(
                     icon: Icons.auto_awesome,
                     label: 'Milkdrop',
-                    selected: activeIndex == -2,
+                    selected: active == 'milkdrop',
                     onTap: onProjectM!,
                   ),
-                _SidebarTile(
-                  icon: Icons.share_outlined,
-                  label: l.shareTitle,
-                  selected: false,
-                  onTap: onShare,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-                  child: Text('TOOLS',
-                      style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w700,
-                          color: VelvetColors.textTertiary)),
-                ),
-                for (var i = 0; i < tools.length; i++)
-                  _SidebarTile(
-                    icon: tools[i].icon,
-                    label: tools[i].label(l),
-                    selected: activeIndex == i + 1,
-                    onTap: () => onTool(i),
+              ],
+            ),
+          ),
+          // Bottom: a Settings/admin overflow, kept out of the primary nav
+          // (desktop-style). Presented as a full-width tile that opens the menu.
+          Divider(height: 1, color: VelvetColors.border),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: PopupMenuButton<_NavItem>(
+              tooltip: '',
+              color: VelvetColors.surface,
+              onSelected: onTool,
+              itemBuilder: (_) => [
+                for (final g in gearItems)
+                  PopupMenuItem<_NavItem>(
+                    value: g,
+                    child: Row(children: [
+                      Icon(g.icon, size: 18, color: VelvetColors.textSecondary),
+                      const SizedBox(width: 12),
+                      Text(g.label(l)),
+                    ]),
                   ),
               ],
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                child: Row(children: [
+                  Icon(Icons.settings_outlined,
+                      size: 20, color: VelvetColors.textSecondary),
+                  const SizedBox(width: 14),
+                  Text('Settings',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: VelvetColors.textSecondary)),
+                ]),
+              ),
             ),
           ),
         ],
@@ -486,6 +582,7 @@ class _DesktopQueuePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       color: VelvetColors.surface,
       child: Column(
@@ -500,6 +597,14 @@ class _DesktopQueuePanel extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: VelvetColors.textPrimary)),
                 const Spacer(),
+                // Share the current queue as a playlist — it acts on the queue,
+                // so it lives here rather than in the sidebar.
+                IconButton(
+                  icon: const Icon(Icons.share_outlined, size: 19),
+                  color: VelvetColors.textSecondary,
+                  tooltip: l.shareTitle,
+                  onPressed: () => showSharePlaylistDialog(context),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   color: VelvetColors.textSecondary,
