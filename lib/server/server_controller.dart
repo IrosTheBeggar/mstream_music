@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'server_binary_manager.dart';
+import 'server_log.dart';
 
 /// When the built-in mStream server is launched.
 ///
@@ -95,14 +96,22 @@ class ServerController {
       final proc = await Process.start(exe, ['-j', configPath],
           workingDirectory: dataDir.path);
       _process = proc;
+      // Mirror the server's console into ServerLog (the Diagnostics "Server"
+      // view) and the app console. debugPrint also tees into the app log buffer.
       proc.stdout
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .listen((l) => debugPrint('[mstream] $l'));
+          .listen((l) {
+        ServerLog().add(l);
+        debugPrint('[mstream] $l');
+      });
       proc.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
-          .listen((l) => debugPrint('[mstream:err] $l'));
+          .listen((l) {
+        ServerLog().add(l);
+        debugPrint('[mstream:err] $l');
+      });
       unawaited(proc.exitCode.then(_onProcessExit));
 
       final ready = await _waitForHealth();
