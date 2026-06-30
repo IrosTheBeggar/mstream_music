@@ -181,7 +181,9 @@ class ServerBinaryManager {
       return null;
     }
     final root = await _root();
-    final tmpZip = File(p.join(root.path, '${release.version}.download'));
+    // Keep the .zip extension: archive's extractFileToDisk picks the format from
+    // the file name and rejects an unknown/none suffix.
+    final tmpZip = File(p.join(root.path, '${release.version}.download.zip'));
     final tmpDir = Directory(p.join(root.path, '${release.version}.extracting'));
     final finalDir = _versionDir(root, release.version);
     try {
