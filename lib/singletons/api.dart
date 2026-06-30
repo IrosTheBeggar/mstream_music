@@ -263,6 +263,15 @@ class ApiManager {
     await refreshPlaylists();
   }
 
+  /// Saves (creates or overwrites) a playlist named [title] with [songs] —
+  /// server file paths, in order — via POST /playlist/save. Used to save the
+  /// current queue as a playlist. Throws on failure.
+  Future<void> savePlaylist(String title, List<String> songs) async {
+    await makeServerCall(null, '/api/v1/playlist/save',
+        {'title': title, 'songs': songs}, 'POST', cancelable: false);
+    await refreshPlaylists();
+  }
+
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
   Future<void> renamePlaylist(String oldName, String newName) async {
     await makeServerCall(null, '/api/v1/playlist/rename',
