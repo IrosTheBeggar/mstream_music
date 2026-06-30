@@ -330,6 +330,12 @@ abstract class AppLocalizations {
   /// **'No EQ bands reported by this device\'s audio driver.'**
   String get eqNoBands;
 
+  /// Shown on Android when the EQ is off; the enable toggle is still visible above.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the equalizer to adjust the bands.'**
+  String get eqDisabledHint;
+
   /// EQ enable switch subtitle when on.
   ///
   /// In en, this message translates to:

@@ -138,6 +138,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Sterownik audio tego urządzenia nie zgłasza żadnych pasm korektora.';
 
   @override
+  String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
+
+  @override
   String get eqEnabledOn => 'Włączony — wzmocnienia stosowane do odtwarzania';
 
   @override

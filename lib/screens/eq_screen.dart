@@ -19,6 +19,7 @@
 // (not on every drag tick) to avoid thrashing the JSON file.
 
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ import '../theme/velvet_theme.dart';
 // Why the EQ couldn't be shown. Stored as a kind (not a localized
 // string) so the message is resolved against the active locale at
 // render time and stays correct if the language changes.
-enum _EqError { onlyAndroid, needsPlayback, initFailed, casting }
+enum _EqError { onlyAndroid, disabled, needsPlayback, initFailed, casting }
 
 class EqScreen extends StatefulWidget {
   const EqScreen({super.key});
@@ -47,6 +48,10 @@ class _EqScreenState extends State<EqScreen> {
   AndroidEqualizerParameters? _params;
   bool _loading = true;
   _EqError? _errorKind;
+  // Toggle state, seeded from settings. The equalizer object is null while EQ is
+  // off (plain player), so the switch can't read eq.enabledStream — drive it from
+  // here and flip it in _setEnabled.
+  bool _eqEnabled = SettingsManager().eqEnabled;
   // Raw exception text for _EqError.initFailed (not translated).
   String? _errorDetail;
   StreamSubscription<PlaybackState>? _playbackSub;
@@ -65,6 +70,7 @@ class _EqScreenState extends State<EqScreen> {
     _playbackSub = MediaManager().audioHandler.playbackState.listen((state) {
       if (_params == null &&
           !CastManager().isCasting &&
+          MediaManager().audioHandler.equalizer != null &&
           state.processingState != AudioProcessingState.idle) {
         _attemptLoad();
       }
@@ -115,7 +121,11 @@ class _EqScreenState extends State<EqScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _errorKind = _EqError.onlyAndroid;
+        // Android but the EQ pipeline isn't attached (EQ off) vs. a platform with
+        // no native EQ at all. Either way the enable toggle still shows; only the
+        // body message differs.
+        _errorKind =
+            Platform.isAndroid ? _EqError.disabled : _EqError.onlyAndroid;
       });
       return;
     }
@@ -156,10 +166,31 @@ class _EqScreenState extends State<EqScreen> {
   }
 
   Future<void> _setEnabled(bool v) async {
-    final eq = MediaManager().audioHandler.equalizer;
-    if (eq == null) return;
-    await eq.setEnabled(v);
-    await SettingsManager().setEqEnabled(v);
+    setState(() {
+      _eqEnabled = v;
+      _loading = true;
+      _errorKind = null;
+    });
+    // Rebuilds the player with/without the EQ pipeline (serialized in the
+    // handler) and persists the setting — see AudioPlayerHandler.setEqEnabled.
+    await MediaManager().audioHandler.setEqEnabled(v);
+    if (!mounted) return;
+    // Reconcile with the source of truth: the handler persists eqEnabled only on
+    // a successful rebuild, so a silent failure reverts the toggle here.
+    final on = SettingsManager().eqEnabled;
+    if (on) {
+      // Resolve the sliders against the freshly-built equalizer.
+      setState(() => _eqEnabled = true);
+      _params = null;
+      await _attemptLoad();
+    } else {
+      setState(() {
+        _eqEnabled = false;
+        _params = null;
+        _loading = false;
+        _errorKind = _EqError.disabled;
+      });
+    }
   }
 
   // Snapshot the current band gains and write them to settings.json.
@@ -214,6 +245,44 @@ class _EqScreenState extends State<EqScreen> {
   }
 
   Widget _buildBody() {
+    // No native EQ off Android — just the explanation, no toggle.
+    if (!Platform.isAndroid) {
+      return _centeredMessage(AppLocalizations.of(context).eqOnlyAndroid);
+    }
+    // On Android the enable toggle is ALWAYS visible: it's how the user turns EQ
+    // on when it's off and the equalizer object doesn't exist yet. The region
+    // below shows the sliders or an explanatory message.
+    return Column(
+      children: [
+        _enableToggle(),
+        Divider(height: 1, color: VelvetColors.border),
+        Expanded(child: _buildContent()),
+      ],
+    );
+  }
+
+  Widget _enableToggle() {
+    final l = AppLocalizations.of(context);
+    final casting = CastManager().isCasting;
+    return SwitchListTile(
+      contentPadding: EdgeInsets.symmetric(horizontal: 20),
+      title: Text(
+        l.eqTitle,
+        style: TextStyle(
+            color: VelvetColors.textPrimary, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        _eqEnabled ? l.eqEnabledOn : l.eqEnabledOff,
+        style: TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+      ),
+      value: _eqEnabled,
+      // Disabled while casting — the EQ only affects on-device playback.
+      onChanged: casting ? null : _setEnabled,
+      activeThumbColor: VelvetColors.primary,
+    );
+  }
+
+  Widget _buildContent() {
     final l = AppLocalizations.of(context);
     if (_loading) {
       return Center(
@@ -226,6 +295,9 @@ class _EqScreenState extends State<EqScreen> {
         case _EqError.onlyAndroid:
           msg = l.eqOnlyAndroid;
           break;
+        case _EqError.disabled:
+          msg = l.eqDisabledHint;
+          break;
         case _EqError.needsPlayback:
           msg = l.eqNeedsPlayback;
           break;
@@ -236,88 +308,54 @@ class _EqScreenState extends State<EqScreen> {
           msg = l.eqCasting;
           break;
       }
-      return Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(
-          child: Text(
-            msg,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: VelvetColors.textSecondary),
-          ),
-        ),
-      );
+      return _centeredMessage(msg);
     }
-    final p = _params!;
-    if (p.bands.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(
-          child: Text(
-            l.eqNoBands,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: VelvetColors.textSecondary),
-          ),
-        ),
-      );
+    final p = _params;
+    if (p == null || p.bands.isEmpty) {
+      return _centeredMessage(l.eqNoBands);
     }
+    return _bandSliders(p);
+  }
 
-    final eq = MediaManager().audioHandler.equalizer!;
+  Widget _centeredMessage(String msg) {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Center(
+        child: Text(
+          msg,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: VelvetColors.textSecondary),
+        ),
+      ),
+    );
+  }
 
+  Widget _bandSliders(AndroidEqualizerParameters p) {
     return Column(
       children: [
-        // Enable/disable — reactive via the equalizer's enabledStream
-        // so external mutations (e.g. settings sync, app restart)
-        // reflect here too. Initial value seeded from the persisted
-        // setting so the switch shows the right state before the
-        // first stream emission.
-        StreamBuilder<bool>(
-          stream: eq.enabledStream,
-          initialData: SettingsManager().eqEnabled,
-          builder: (context, snap) {
-            final on = snap.data ?? false;
-            return SwitchListTile(
-              contentPadding: EdgeInsets.symmetric(horizontal: 20),
-              title: Text(
-                l.eqTitle,
-                style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                on ? l.eqEnabledOn : l.eqEnabledOff,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12),
-              ),
-              value: on,
-              onChanged: _setEnabled,
-              activeThumbColor: VelvetColors.primary,
-            );
-          },
-        ),
-        Divider(height: 1, color: VelvetColors.border),
-        // dB range labels above the sliders, aligned to the rail
-        // positions (min on the left, 0 in the middle, max on the
-        // right) so the user can read the absolute span at a glance.
+        // dB range labels above the sliders, aligned to the rail positions (min
+        // on the left, 0 in the middle, max on the right) so the user can read
+        // the absolute span at a glance.
         Padding(
           padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
           child: Row(
             children: [
               Text(
                 '${p.minDecibels.toStringAsFixed(0)} dB',
-                style: TextStyle(
-                    color: VelvetColors.textTertiary, fontSize: 10),
+                style:
+                    TextStyle(color: VelvetColors.textTertiary, fontSize: 10),
               ),
               Spacer(),
               Text(
                 '0 dB',
-                style: TextStyle(
-                    color: VelvetColors.textTertiary, fontSize: 10),
+                style:
+                    TextStyle(color: VelvetColors.textTertiary, fontSize: 10),
               ),
               Spacer(),
               Text(
                 '+${p.maxDecibels.toStringAsFixed(0)} dB',
-                style: TextStyle(
-                    color: VelvetColors.textTertiary, fontSize: 10),
+                style:
+                    TextStyle(color: VelvetColors.textTertiary, fontSize: 10),
               ),
             ],
           ),

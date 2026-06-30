@@ -136,6 +136,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'No EQ bands reported by this device\'s audio driver.';
 
   @override
+  String get eqDisabledHint => 'Turn on the equalizer to adjust the bands.';
+
+  @override
   String get eqEnabledOn => 'On — gains applied to playback';
 
   @override

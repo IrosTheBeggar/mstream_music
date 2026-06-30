@@ -92,6 +92,34 @@ class VisualizerAudio {
     _playbackSub = null;
   }
 
+  /// Re-point real-audio capture at the player's CURRENT audio-session id, which
+  /// changes when the player is rebuilt (e.g. toggling the EQ, which swaps the
+  /// underlying just_audio player). No-op unless real-audio capture is currently
+  /// attached. If the new session isn't ready yet (null) or the OS refuses the
+  /// attach, fall back to the synthesized timer so the visualizer never goes dead.
+  Future<void> reattachSession() async {
+    if (!_active || !_realAttached) return;
+    VisualizerBridge.stopRealAudio();
+    _realAttached = false;
+    final sessionId = MediaManager().audioHandler.androidAudioSessionId;
+    final ok =
+        sessionId != null && await VisualizerBridge.startRealAudio(sessionId);
+    // stop() may have run during the await (user left the visualizer); don't
+    // resurrect _realAttached or leave a native attachment dangling.
+    if (!_active) {
+      if (ok) VisualizerBridge.stopRealAudio();
+      return;
+    }
+    if (ok) {
+      _realAttached = true;
+      return;
+    }
+    _timer ??= Timer.periodic(
+      Duration(milliseconds: (1000 / _tickHz).round()),
+      (_) => _tick(),
+    );
+  }
+
   void _tick() {
     VisualizerBridge.addPcm(_generate());
   }
