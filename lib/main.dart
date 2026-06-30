@@ -34,6 +34,7 @@ import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'desktop/desktop_integration.dart';
+import 'server/server_controller.dart';
 import 'util/self_signed_overrides.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
@@ -128,6 +129,14 @@ Future<void> _startApp() async {
   // only confirms the engine lib + FFI symbols resolve and the version reads;
   // the per-frame offscreen-GL render bridge is still desktop WIP.
   appLog('[projectm] ${ProjectMController.statusLine()}');
+
+  // Built-in mStream server (desktop): launch per the configured trigger
+  // (kServerStartTrigger in server_controller.dart — currently app-start).
+  // Fire-and-forget: ensureReady() may download the binary on first run, so we
+  // don't block first paint; watch ServerController.instance.status for progress.
+  // To start it on first local-folder add instead, flip kServerStartTrigger and
+  // call maybeStartFor(ServerStartTrigger.firstLocalFolder) from that flow.
+  ServerController.instance.maybeStartFor(ServerStartTrigger.appStart);
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
