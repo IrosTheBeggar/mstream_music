@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../desktop/desktop_integration.dart';
 import '../l10n/app_localizations.dart';
+import '../server/server_log.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -23,16 +25,26 @@ class DiagnosticsScreen extends StatefulWidget {
 }
 
 class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
+  // App diagnostics vs the bundled server's console. The toggle only appears on
+  // desktop (where the server exists); elsewhere this stays false.
+  bool _showServer = false;
+
+  Stream<List<String>> get _activeStream =>
+      _showServer ? ServerLog().stream : LogManager().stream;
+  List<String> get _activeLines =>
+      _showServer ? ServerLog().lines : LogManager().lines;
+  String _activeDump() => _showServer ? ServerLog().dump() : LogManager().dump();
+
   Future<void> _copy() async {
     final l = AppLocalizations.of(context);
-    await Clipboard.setData(ClipboardData(text: LogManager().dump()));
+    await Clipboard.setData(ClipboardData(text: _activeDump()));
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(l.diagnosticsCopied)));
   }
 
   Future<void> _share() async {
-    final text = LogManager().dump();
+    final text = _activeDump();
     final body = text.isEmpty ? '(no logs)' : text;
     try {
       // Share a .txt file so a long log isn't truncated the way a text share
@@ -54,7 +66,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   }
 
   void _clear() {
-    LogManager().clear();
+    if (_showServer) {
+      ServerLog().clear();
+    } else {
+      LogManager().clear();
+    }
     setState(() {});
   }
 
@@ -62,35 +78,72 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l.diagnosticsTitle)),
+      appBar: AppBar(
+        title: Text(l.diagnosticsTitle),
+        // App diagnostics vs the bundled-server console — only where a server
+        // can exist (desktop). Sits in the top bar under the title.
+        bottom: DesktopIntegration.isDesktop
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(52),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                            value: false,
+                            label: Text('App'),
+                            icon: Icon(Icons.bug_report_outlined, size: 18)),
+                        ButtonSegment(
+                            value: true,
+                            label: Text('Server'),
+                            icon: Icon(Icons.dns_outlined, size: 18)),
+                      ],
+                      selected: {_showServer},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) =>
+                          setState(() => _showServer = s.first),
+                    ),
+                  ),
+                ),
+              )
+            : null,
+      ),
       body: SafeArea(
         top: false,
         child: Column(
           children: [
-            SwitchListTile(
-              title: Text(l.diagnosticsVerbose),
-              subtitle: Text(
-                l.diagnosticsVerboseHint,
-                style:
-                    TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+            // Verbose capture applies to app logging only.
+            if (!_showServer) ...[
+              SwitchListTile(
+                title: Text(l.diagnosticsVerbose),
+                subtitle: Text(
+                  l.diagnosticsVerboseHint,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                ),
+                value: SettingsManager().verboseLogging,
+                onChanged: (v) async {
+                  await SettingsManager().setVerboseLogging(v);
+                  if (mounted) setState(() {});
+                },
+                activeThumbColor: VelvetColors.primary,
               ),
-              value: SettingsManager().verboseLogging,
-              onChanged: (v) async {
-                await SettingsManager().setVerboseLogging(v);
-                if (mounted) setState(() {});
-              },
-              activeThumbColor: VelvetColors.primary,
-            ),
-            Divider(height: 1, color: VelvetColors.border),
+              Divider(height: 1, color: VelvetColors.border),
+            ],
             Expanded(
               child: StreamBuilder<List<String>>(
-                stream: LogManager().stream,
-                initialData: LogManager().lines,
+                stream: _activeStream,
+                initialData: _activeLines,
                 builder: (context, snap) {
                   final lines = snap.data ?? const <String>[];
                   if (lines.isEmpty) {
                     return Center(
-                      child: Text(l.diagnosticsEmpty,
+                      child: Text(
+                          _showServer
+                              ? 'No server logs yet'
+                              : l.diagnosticsEmpty,
                           style:
                               TextStyle(color: VelvetColors.textSecondary)),
                     );
