@@ -135,9 +135,19 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
 
   // ── Source list (mirrors just_audio's on-player playlist API) ──
   @override
-  Future<void> setSources(List<MediaItem> items) async {
+  Future<void> setSources(List<MediaItem> items,
+      {int? initialIndex, Duration? initialPosition}) async {
     _items = List<MediaItem>.from(items);
-    _index = _items.isEmpty ? -1 : 0;
+    // Honour initialIndex so a reload/restore lands on the right track (no
+    // index-0 flash). The renderer gets the position via the seek that follows;
+    // initialPosition isn't needed here.
+    _index = _items.isEmpty
+        ? -1
+        : (initialIndex != null &&
+                initialIndex >= 0 &&
+                initialIndex < _items.length
+            ? initialIndex
+            : 0);
     _loadedIndex = -1;
     emitIndex(_index < 0 ? null : _index);
     setProcessingState(_items.isEmpty

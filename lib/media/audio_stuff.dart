@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
@@ -196,10 +197,14 @@ class AudioPlayerHandler extends BaseAudioHandler
             'index=${_backend.currentIndex} of ${queue.value.length}');
         stop();
       }
-      // A track that loads (vs. failing to load) clears the consecutive-failure
-      // count, so the skip-bad-track loop guard only trips on a genuine run of
-      // unplayable tracks.
-      if (state == BackendProcessingState.ready) _failedSkips = 0;
+      // A track that loads clears the skip-budget AND the HTTP retry budget,
+      // and lifts any network-stall pause — so the guards only trip on a genuine
+      // run of failures, not after a recovery.
+      if (state == BackendProcessingState.ready) {
+        _failedSkips = 0;
+        _httpRetries = 0;
+        _networkStalled = false;
+      }
     });
     // A remote backend that loses its renderer mid-cast (TV off, Wi-Fi drop)
     // emits here; fall back to local playback at the same spot + a toast.
@@ -424,15 +429,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       _recoverIrohPlayback(itemServer);
       return;
     }
-    // Serialize the skip through _switchChain (shared with recovery + backend
-    // switches, so none run concurrently on the backend); _skipPending collapses
-    // a burst of error events into the single skip.
-    _skipPending = true;
-    _switchChain = _switchChain
-        .then((_) => _skipFailedTrack(error))
-        .catchError((Object e) =>
-            castLog('skip-to-next after playback error failed', error: e))
-        .whenComplete(() => _skipPending = false);
+    // Non-iroh source failed → hand off to _recoverHttpError, which (with an
+    // async connectivity probe) pauses-and-holds on a real outage, retries a
+    // transient blip in place, or skips a genuinely bad source.
+    _recoverHttpError(error);
   }
 
   // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
@@ -489,6 +489,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   // shouldn't fire a snackbar per track).
   static const Duration _kErrorToastGap = Duration(seconds: 4);
 
+  // ── HTTP transient-error retry (resume-at-position) ──
+  // A plain-HTTP source that drops mid-stream (a network blip, screen-off Wi-Fi
+  // park, cellular handoff) used to skip immediately — and a queue-wide blip
+  // stopped everything. Instead we retry the SAME track at the same spot a few
+  // times with backoff before giving up. The counter resets to 0 when any track
+  // actually loads (`ready`), so it bounds total retry effort during a real
+  // outage: the first failing track retries, the rest skip fast.
+  static const int _kMaxHttpRetries = 3;
+  int _httpRetries = 0;
+  // Set when a queue-wide network failure has PAUSED (not stopped) playback, so
+  // a later connectivity-regained event (onNetworkRegained) resumes it. Cleared
+  // when a track loads again.
+  bool _networkStalled = false;
+
   // A source failed to play — warn (debounced) and skip to the next track, bounded
   // so an entirely-unplayable queue stops instead of looping (notably under
   // repeat-all). Serialized via _switchChain by the caller; local backend only.
@@ -499,11 +513,23 @@ class AudioPlayerHandler extends BaseAudioHandler
     castLog('playback error — skipping track', error: error);
     _failedSkips++;
     if (_failedSkips >= q.length) {
-      // Tried every track once and none loaded — the whole queue is unplayable.
+      // Tried every track once and none loaded. The error string can't tell a
+      // 404 from a network drop on Android (ExoPlayer reports both as a generic
+      // "Source error"), so probe the actual network: no connectivity → a real
+      // outage, PAUSE (don't stop) and arm onNetworkRegained to resume when it
+      // returns; connectivity present → the sources/server are bad, so stop.
       _failedSkips = 0;
-      _showPlaybackErrorToast(
-          "Can't play these tracks — check your connection or server.");
-      await _localBackend.stop();
+      if (!await _hasNetwork()) {
+        _showPlaybackErrorToast(
+            'Lost the connection — paused. Resumes when you’re back online.');
+        await _localBackend.pause();
+        _networkStalled = true;
+      } else {
+        _showPlaybackErrorToast(
+            "Can't play these tracks — check the files or server.");
+        await _localBackend.stop();
+      }
+      _broadcastState();
       return;
     }
     _showPlaybackErrorToast('Skipping a track that won’t play.', debounce: true);
@@ -512,10 +538,18 @@ class AudioPlayerHandler extends BaseAudioHandler
     // so the post-await read reliably reflects the new position.
     await _localBackend.seekToNext(); // shuffle/repeat-aware
     if (_localBackend.currentIndex == before) {
-      // No-op → end of the queue with no repeat; stop rather than replay the
-      // failed track.
+      // No-op → end of the queue with no repeat. Probe the network (the error
+      // string can't distinguish outage from bad source on Android): no
+      // connectivity → pause + arm self-heal so the user's spot survives;
+      // otherwise stop.
       _failedSkips = 0;
-      await _localBackend.stop();
+      if (!await _hasNetwork()) {
+        await _localBackend.pause();
+        _networkStalled = true;
+      } else {
+        await _localBackend.stop();
+      }
+      _broadcastState();
       return;
     }
     unawaited(_localBackend.play());
@@ -531,6 +565,133 @@ class AudioPlayerHandler extends BaseAudioHandler
       _lastErrorToast = now;
     }
     showGlobalSnack(message);
+  }
+
+  // Recover from a non-iroh playback error. The decision needs an async
+  // connectivity probe, so it runs serialized on _switchChain + guarded by
+  // _recoveringPlayback / _skipPending (an error burst can't spin up concurrent
+  // recoveries):
+  //  • clearly bad source (404 / format / missing file) → skip now;
+  //  • NO network (a real outage) → pause-and-hold + arm onNetworkRegained so we
+  //    self-heal when it returns. This is the key fix: relying on the retry/skip
+  //    counters to climb never paused, because a brief `ready` from the preload
+  //    buffer kept resetting _httpRetries, so it spun in retries forever;
+  //  • network up but the track errored (a transient blip) → retry the SAME track
+  //    at its spot, bounded by _kMaxHttpRetries; once spent it's a bad source → skip.
+  void _recoverHttpError(Object error) {
+    if (_recoveringPlayback || _skipPending) return;
+    // Clearly bad/unplayable source → skip now (no network probe / retry needed).
+    if (!_isTransientNetworkError(error)) {
+      _skipPending = true;
+      _switchChain = _switchChain
+          .then((_) => _skipFailedTrack(error))
+          .catchError((Object e) =>
+              castLog('skip-to-next after playback error failed', error: e))
+          .whenComplete(() => _skipPending = false);
+      return;
+    }
+    _recoveringPlayback = true;
+    _switchChain = _switchChain.then((_) async {
+      if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
+      // No network → an outage: pause-and-hold and let onNetworkRegained resume
+      // us when it's back, instead of churning retries/skips that all fail.
+      if (!await _hasNetwork()) {
+        appLog('[play] network outage — pausing at '
+            'track ${(_localBackend.currentIndex ?? 0) + 1}; '
+            'will self-heal when connectivity returns');
+        _httpRetries = 0;
+        _failedSkips = 0;
+        _networkStalled = true;
+        _showPlaybackErrorToast(
+            'Lost the connection — paused. Resumes when you’re back online.');
+        await _localBackend.pause();
+        _broadcastState();
+        return;
+      }
+      // Network is up but the track errored — a transient blip. Retry the SAME
+      // track at its spot (bounded); once retries are spent it's a genuinely bad
+      // source → skip.
+      if (_httpRetries < _kMaxHttpRetries) {
+        _httpRetries++;
+        final attempt = _httpRetries;
+        // 0s, then 1s, 2s — first retry immediate so a momentary blip recovers
+        // fast; later ones give the connection a moment.
+        await Future<void>.delayed(Duration(seconds: attempt - 1));
+        if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
+        // Read the spot AFTER the backoff so a skip/seek during the wait is
+        // honoured, and load DIRECTLY at it (initialIndex/Position) so the
+        // now-playing UI doesn't flash track 0 on the reload.
+        final pos = _localBackend.position;
+        final idx = _localBackend.currentIndex ?? 0;
+        appLog('[play] network error — retry $attempt/$_kMaxHttpRetries');
+        await _localBackend.setSources(queue.value,
+            initialIndex: idx, initialPosition: pos);
+        if (_playIntent) unawaited(_localBackend.play());
+      } else {
+        await _skipFailedTrack(error);
+      }
+    }).catchError((Object e) {
+      castLog('http error recovery failed', error: e);
+    }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  // Resume after a queue-wide network stall when connectivity returns. Wired to
+  // the app's connectivity listener (main.dart). No-op unless we actually paused
+  // on a network outage (_networkStalled); resumes the current track at its spot
+  // with the user's play intent.
+  void onNetworkRegained() {
+    if (!identical(_backend, _localBackend)) return;
+    if (!_networkStalled || _recoveringPlayback) return;
+    if (queue.value.isEmpty) return;
+    _networkStalled = false;
+    _httpRetries = 0;
+    _recoveringPlayback = true;
+    appLog('[play] connectivity back — resuming after network stall');
+    _switchChain = _switchChain.then((_) async {
+      if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
+      final pos = _localBackend.position;
+      final idx = _localBackend.currentIndex ?? 0;
+      await _localBackend.setSources(queue.value,
+          initialIndex: idx, initialPosition: pos);
+      if (_playIntent) unawaited(_localBackend.play());
+    }).catchError((Object e) {
+      castLog('network-regained resume failed', error: e);
+    }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  // Is any network interface up right now? After every queued track has failed,
+  // this is the reliable signal for outage (pause + self-heal) vs bad sources
+  // (stop) — the error string can't distinguish them on Android. Best-effort: a
+  // failed probe assumes online, so we stop rather than leave a stuck pause.
+  Future<bool> _hasNetwork() async {
+    try {
+      final r = await Connectivity().checkConnectivity();
+      return r.any((c) => c != ConnectivityResult.none);
+    } catch (_) {
+      return true;
+    }
+  }
+
+  // Heuristic: does this error look like a clearly bad/unplayable source (skip
+  // now) vs something worth retrying (a network/transport blip)? Best-effort and
+  // platform-limited: on Android ExoPlayer reports almost everything — INCLUDING
+  // 404s — as a generic "(0) Source error" and doesn't forward the real cause to
+  // Dart, so most failures fall through to "retry" (bounded by _kMaxHttpRetries).
+  // The needles below mainly catch iOS/web, where the message is richer. The real
+  // outage-vs-bad-source decision for the END state is made by _hasNetwork().
+  static bool _isTransientNetworkError(Object error) {
+    final s = error.toString().toLowerCase();
+    // Clear "bad/unplayable source" signals → not transient (skip, don't retry).
+    const badSource = [
+      'response code: 4', // 4xx (404/403/401…)
+      'unsupported', 'no suitable', 'decoder', 'unrecognized',
+      'malformed', 'file not found', 'does not exist',
+    ];
+    for (final m in badSource) {
+      if (s.contains(m)) return false;
+    }
+    // Everything else (network/transport, generic "Source error") → retry.
+    return true;
   }
 
   // Re-seed the inherited customState with a typed CustomEvent default (it
