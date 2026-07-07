@@ -149,9 +149,9 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   Future<void> _onSessionEnded() async {
-    final online = await _hasNetwork();
+    final lanUp = await _hasLanNetwork();
     if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
-    if (online) {
+    if (lanUp) {
       _fireRendererLost();
       return;
     }
@@ -160,11 +160,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   Future<void> _onGraceExpired() async {
+    // cancel() too, not just null: the session listener can have armed a FRESH
+    // timer in the gap between this one firing and this handler running —
+    // dropping that reference without cancelling would leave an orphan timer
+    // double-driving this handler.
+    _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
     if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
     if (_graceExtensions < _kMaxGraceExtensions) {
-      if (!await _hasNetwork()) {
-        // Our own network is still down — the SDK can't possibly have resumed.
+      if (!await _hasLanNetwork()) {
+        // The LAN is still down — neither the SDK nor we can reach the
+        // renderer yet.
         _graceExtensions++;
         _graceWasOffline = true;
         _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
@@ -187,6 +193,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         if (_sessions.hasConnectedSession) return; // SDK resumed meanwhile
         // Not yet (device not re-discovered / session won't start) — another
         // window, bounded by the extension budget.
+        _sessionLossGrace?.cancel();
         _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
         return;
       }
@@ -226,12 +233,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     }
   }
 
-  // Any network interface up right now? Best-effort: a failed probe counts as
-  // online so the grace can't extend forever on a broken probe.
-  Future<bool> _hasNetwork() async {
+  // Is a LAN-capable transport (Wi-Fi / ethernet) up right now? A cast session
+  // lives on the LAN, so "any connectivity" is the wrong question: when Wi-Fi
+  // blips, the phone fails over to MOBILE DATA within seconds and a generic
+  // probe reports online — which made a null-session during a Wi-Fi blip look
+  // like a genuine end (verified on-device). Best-effort: a failed probe
+  // counts as online so the grace can't extend forever on a broken probe.
+  Future<bool> _hasLanNetwork() async {
     try {
       final r = await Connectivity().checkConnectivity();
-      return r.any((c) => c != ConnectivityResult.none);
+      return r.contains(ConnectivityResult.wifi) ||
+          r.contains(ConnectivityResult.ethernet);
     } catch (_) {
       return true;
     }
