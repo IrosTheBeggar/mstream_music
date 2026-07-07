@@ -256,7 +256,26 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // hiccup. Otherwise (receiver relaunched idle / nothing arrives) reload the
   // current track at the last known position.
   Future<bool> _tryReattach() async {
+    var startedDiscovery = false;
     try {
+      // startSessionWithDevice resolves through MediaRouter's LIVE route list
+      // — the plugin's native selectRoute silently no-ops when the route is
+      // absent — and routes are only maintained while discovery runs, which
+      // is normally only while the cast picker is open. Round-5 smoke burned
+      // its whole retry budget on that silent no-op. Re-populate the routes
+      // and wait for OUR device to reappear (post-blip mDNS takes seconds).
+      final discovery = GoogleCastDiscoveryManager.instance;
+      if (!discovery.devices.any((d) => d.deviceID == _deviceId)) {
+        await discovery.startDiscovery();
+        startedDiscovery = true;
+        try {
+          await discovery.devicesStream
+              .firstWhere((ds) => ds.any((d) => d.deviceID == _deviceId))
+              .timeout(const Duration(seconds: 8));
+        } catch (_) {
+          return false; // device hasn't reappeared — retry next window
+        }
+      }
       _sessionStarted = false; // force _ensureSession to re-connect
       await _ensureSession();
       if (!_sessions.hasConnectedSession) return false;
@@ -289,6 +308,14 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     } catch (e) {
       castLog('cast re-attach failed', error: e);
       return false;
+    } finally {
+      if (startedDiscovery) {
+        // Don't leave a background mDNS scan running (battery); the picker
+        // manages its own discovery lifecycle when open.
+        try {
+          await GoogleCastDiscoveryManager.instance.stopDiscovery();
+        } catch (_) {}
+      }
     }
   }
 
