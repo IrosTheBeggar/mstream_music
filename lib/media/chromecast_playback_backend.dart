@@ -181,7 +181,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         unawaited(_onSessionEnded());
         return;
       }
-      _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
+      if (_sessionLossGrace == null && !_lossBusy) {
+        appLog('[cast] session suspended — starting loss recovery');
+        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+      }
     });
   }
 
@@ -192,6 +195,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       _fireRendererLost();
       return;
     }
+    appLog('[cast] session ended while the LAN is down — starting loss recovery');
     _graceWasOffline = true;
     _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
   }
@@ -215,6 +219,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       if (!await _hasLanNetwork()) {
         // The LAN is still down — neither the SDK nor we can reach the
         // renderer yet.
+        appLog('[cast] loss recovery $_graceExtensions/$_kMaxGraceExtensions: '
+            'LAN still down, waiting');
         _graceWasOffline = true;
         _rearmLossRecovery();
         return;
@@ -224,6 +230,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         // SUSPENDED session in this time, and Play Services itself needs a
         // few seconds back on the network before it can start sessions — one
         // quiet window before we intervene.
+        appLog('[cast] loss recovery $_graceExtensions/$_kMaxGraceExtensions: '
+            'LAN back — giving the SDK one window to resume');
         _graceWasOffline = false;
         _rearmLossRecovery();
         return;
@@ -231,8 +239,18 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       // The LAN is up and the SDK had its window: re-attach ourselves —
       // rejoin (or relaunch) the receiver and pick playback back up. The
       // receiver keeps playing through a sender-side drop, so a successful
-      // rejoin is usually seamless. Retries ride the extension budget.
-      if (await _tryReattach()) {
+      // rejoin is usually seamless. Retries ride the extension budget. The
+      // hard timeout is load-bearing: plugin calls against a broken session
+      // can hang forever (round-6 smoke froze the whole recovery machine —
+      // a hanging await never reaches finally, so _lossBusy never cleared).
+      appLog('[cast] loss recovery $_graceExtensions/$_kMaxGraceExtensions: '
+          're-attaching');
+      final ok = await _tryReattach().timeout(const Duration(seconds: 30),
+          onTimeout: () {
+        appLog('[cast] re-attach attempt hung (30s) — will retry');
+        return false;
+      });
+      if (ok) {
         appLog('[cast] re-attached to the cast device');
         _graceExtensions = 0;
         return;
@@ -306,7 +324,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       }
       return true;
     } catch (e) {
-      castLog('cast re-attach failed', error: e);
+      appLog('[cast] re-attach attempt failed: $e');
       return false;
     } finally {
       if (startedDiscovery) {
