@@ -97,14 +97,15 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
 
   @protected
   @override
-  Future<void> loadIndex(int target, {required bool play}) async {
-    if (target < 0 || target >= items.length) return;
+  Future<bool> loadIndex(int target, {required bool play}) async {
+    if (target < 0 || target >= items.length) return false;
     index = target;
     emitIndex(target);
     final item = items[target];
     _confirmedPlaying = false;
     _reachedNearEnd = false;
     setProcessingState(BackendProcessingState.loading);
+    var ok = false;
     try {
       final uri = await _resolveUri(item);
       await _api.setMediaUri(_udn, Url(value: uri.toString()), _metaFor(item));
@@ -119,10 +120,12 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       }
       setProcessingState(BackendProcessingState.ready);
       _startPolling();
+      ok = true;
     } catch (e) {
       castLog('DLNA load failed', error: e);
     }
     change();
+    return ok;
   }
 
   @override

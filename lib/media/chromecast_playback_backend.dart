@@ -219,16 +219,18 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
 
   @protected
   @override
-  Future<void> loadIndex(int target,
+  Future<bool> loadIndex(int target,
       {required bool play, Duration startAt = Duration.zero}) async {
-    if (target < 0 || target >= items.length) return;
-    final gen = ++_loadGen; // this load owns the pipeline until a newer one starts
+    if (target < 0 || target >= items.length) return false;
+    final gen = ++_loadGen; // this load owns the pipeline until a newer load starts
     index = target;
     emitIndex(target);
     setProcessingState(BackendProcessingState.loading);
     try {
       await _ensureSession();
-      if (gen != _loadGen) return; // superseded by a newer load
+      // Superseded by a newer load: not a failure — the newer load owns the
+      // renderer now, so report success and let it drive the state.
+      if (gen != _loadGen) return true;
       _ensureListeners();
       // True only when this load actually served the visualizer (vs audio or
       // the audio fallback below) — drives the start position emitted after.
@@ -239,13 +241,13 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           // possible, so startAt is ignored for the visualizer.
           final url =
               (await _resolveVisualizerUri(items[target], gen)).toString();
-          if (gen != _loadGen) return; // superseded during the warm-up
+          if (gen != _loadGen) return true; // superseded during the warm-up
           await _client.loadMedia(_visualizerMediaInfo(items[target], url),
               autoPlay: play);
           servedVisualizer = true;
           _visualizerFailures = 0; // recovered — a transient failure won't stick
         } catch (e) {
-          if (gen != _loadGen) return; // superseded, not a real failure
+          if (gen != _loadGen) return true; // superseded, not a real failure
           // Transcode/render failed — don't strand the cast on the phone; keep
           // the music on the TV as plain audio and tell the user. After a couple
           // of consecutive failures we stop re-attempting (avoids repeated waits).
@@ -258,17 +260,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           CastManager().reportCastInfo(
               "Couldn't start the visualizer — casting audio to the TV");
           final url = (await _resolveUri(items[target])).toString();
-          if (gen != _loadGen) return;
+          if (gen != _loadGen) return true;
           await _client.loadMedia(_mediaInfo(items[target], url),
               autoPlay: play, playPosition: startAt);
         }
       } else {
         final url = (await _resolveUri(items[target])).toString();
-        if (gen != _loadGen) return;
+        if (gen != _loadGen) return true;
         await _client.loadMedia(_mediaInfo(items[target], url),
             autoPlay: play, playPosition: startAt);
       }
-      if (gen != _loadGen) return;
+      if (gen != _loadGen) return true;
       loadedIndex = target;
       playing = play;
       duration = items[target].duration;
@@ -277,8 +279,11 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       emitPos(position);
     } catch (e) {
       castLog('Chromecast load failed', error: e);
+      change();
+      return false;
     }
     change();
+    return true;
   }
 
   // ── Visualizer cast ──
