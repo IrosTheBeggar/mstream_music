@@ -63,10 +63,18 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   StreamSubscription<dynamic>? _sessionSub;
 
   // Guards the renderer-lost emit. _disposing suppresses our own teardown;
-  // _lostFired makes it one-shot (disconnecting → disconnected would otherwise
-  // emit twice).
+  // _lostFired makes it one-shot per drop (disconnecting → disconnected would
+  // otherwise emit twice); it re-arms when the session reconnects.
   bool _disposing = false;
   bool _lostFired = false;
+
+  // Grace timer for a not-connected session: the Cast SDK SUSPENDS a session
+  // on a transient network blip and auto-resumes it (the receiver keeps
+  // playing from its buffer), so tearing down immediately would turn a
+  // 3-second Wi-Fi blip into a dead cast. A session that ENDS outright
+  // (stream payload null) gets no grace — nothing will resume it.
+  Timer? _sessionLossGrace;
+  static const Duration _kSessionLossGrace = Duration(seconds: 10);
 
   void _ensureListeners() {
     _statusSub ??= _client.mediaStatusStream.listen(_onStatus);
@@ -77,17 +85,35 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     });
     // Detect an unexpected session drop (TV off, Wi-Fi lost). Listeners attach
     // only after _ensureSession connected (_sessionStarted), so a transition to
-    // not-connected we didn't initiate means the renderer is gone.
-    _sessionSub ??= _sessions.currentSessionStream.listen((_) {
-      if (_sessionStarted &&
-          !_disposing &&
-          !_lostFired &&
-          !_sessions.hasConnectedSession) {
-        _lostFired = true;
-        emitRendererLost(
-            'Lost connection to the cast device — back on this phone');
+    // not-connected we didn't initiate means the renderer is gone — after the
+    // suspend grace above, in case the SDK resumes it.
+    _sessionSub ??= _sessions.currentSessionStream.listen((session) {
+      if (_disposing || !_sessionStarted) return;
+      if (_sessions.hasConnectedSession) {
+        // (Re)connected — a suspended session resumed. Cancel any pending
+        // loss and re-arm one-shot detection for the next drop.
+        _sessionLossGrace?.cancel();
+        _sessionLossGrace = null;
+        _lostFired = false;
+        return;
       }
+      if (_lostFired) return;
+      if (session == null) {
+        _fireRendererLost(); // ended outright — no resume coming
+        return;
+      }
+      _sessionLossGrace ??= Timer(_kSessionLossGrace, () {
+        if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
+        _fireRendererLost();
+      });
     });
+  }
+
+  void _fireRendererLost() {
+    _sessionLossGrace?.cancel();
+    _sessionLossGrace = null;
+    _lostFired = true;
+    emitRendererLost('Lost connection to the cast device — back on this phone');
   }
 
   void _onStatus(GoggleCastMediaStatus? status) {
@@ -473,6 +499,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   @override
   Future<void> disposeRenderer() async {
     _disposing = true;
+    _sessionLossGrace?.cancel();
     if (_visualizer) {
       // Stop the off-screen transcode so it isn't left encoding after we switch
       // away. (LocalMediaServer is torn down by the handler on switch-to-local.)
