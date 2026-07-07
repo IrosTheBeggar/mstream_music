@@ -56,7 +56,6 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // Readiness poll: 20 × 500 ms = 10 s for the first segments before giving up.
   static const int _kReadyPollAttempts = 20;
 
-  bool _advancing = false;
   bool _sessionStarted = false;
 
   StreamSubscription<GoggleCastMediaStatus?>? _statusSub;
@@ -101,7 +100,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     switch (status.playerState) {
       case CastMediaPlayerState.playing:
         playing = true;
-        _advancing = false;
+        trackPlaying();
         setProcessingState(BackendProcessingState.ready);
         break;
       case CastMediaPlayerState.paused:
@@ -115,29 +114,22 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         setProcessingState(BackendProcessingState.loading);
         break;
       case CastMediaPlayerState.idle:
-        // Only a natural FINISH means end-of-track; cancelled/interrupted are
-        // our own load/stop transitions and must not trigger an advance.
+        // A natural FINISH advances. ERROR means the receiver couldn't fetch
+        // or decode the track (server blip, proxy 502, bad media) — walk on,
+        // bounded, instead of leaving the TV silent with the state stuck on
+        // 'playing'. cancelled/interrupted are our own load/stop transitions
+        // and must not trigger anything.
         if (status.idleReason == GoogleCastMediaIdleReason.finished) {
-          _onTrackEnded();
+          advanceOnComplete();
+        } else if (status.idleReason == GoogleCastMediaIdleReason.error) {
+          playing = false;
+          trackFailed('receiver reported a media error');
         }
         break;
       case CastMediaPlayerState.unknown:
         break;
     }
     change();
-  }
-
-  Future<void> _onTrackEnded() async {
-    if (_advancing) return;
-    _advancing = true;
-    final n = nextIndex(onComplete: true);
-    if (n != null) {
-      await loadIndex(n, play: true);
-    } else {
-      playing = false;
-      _advancing = false;
-      setProcessingState(BackendProcessingState.completed);
-    }
   }
 
   Future<void> _ensureSession() async {
