@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Directory, File;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
@@ -73,8 +74,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // playing from its buffer), so tearing down immediately would turn a
   // 3-second Wi-Fi blip into a dead cast. A session that ENDS outright
   // (stream payload null) gets no grace — nothing will resume it.
+  //
+  // The grace must not expire while the PHONE ITSELF has no network: the blip
+  // that suspended the session usually took our connectivity too, and the SDK
+  // cannot resume until it returns (Wi-Fi reassociation alone can exceed any
+  // sane fixed window — verified on-device: a 5s blip took ~20s end to end).
+  // While offline, the window re-arms instead of firing, bounded by
+  // _kMaxGraceExtensions so a genuinely dead session still falls back.
   Timer? _sessionLossGrace;
+  int _graceExtensions = 0;
   static const Duration _kSessionLossGrace = Duration(seconds: 10);
+  static const int _kMaxGraceExtensions = 8; // ≈90s worst case, offline only
 
   // Set via prepareCastToCastHandoff when the backend replacing this one is
   // also a Chromecast backend — teardown then leaves the shared session (and,
@@ -114,6 +124,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         // loss and re-arm one-shot detection for the next drop.
         _sessionLossGrace?.cancel();
         _sessionLossGrace = null;
+        _graceExtensions = 0;
         _lostFired = false;
         return;
       }
@@ -122,11 +133,33 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         _fireRendererLost(); // ended outright — no resume coming
         return;
       }
-      _sessionLossGrace ??= Timer(_kSessionLossGrace, () {
-        if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
-        _fireRendererLost();
-      });
+      _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
     });
+  }
+
+  Future<void> _onGraceExpired() async {
+    _sessionLossGrace = null;
+    if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
+    if (_graceExtensions < _kMaxGraceExtensions && !await _hasNetwork()) {
+      // Our own network is still down — the SDK can't have resumed yet. Wait
+      // another window; once connectivity returns the SDK gets one final
+      // window to deliver its resume before we declare the renderer lost.
+      _graceExtensions++;
+      _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+      return;
+    }
+    _fireRendererLost();
+  }
+
+  // Any network interface up right now? Best-effort: a failed probe counts as
+  // online so the grace can't extend forever on a broken probe.
+  Future<bool> _hasNetwork() async {
+    try {
+      final r = await Connectivity().checkConnectivity();
+      return r.any((c) => c != ConnectivityResult.none);
+    } catch (_) {
+      return true;
+    }
   }
 
   void _fireRendererLost() {
