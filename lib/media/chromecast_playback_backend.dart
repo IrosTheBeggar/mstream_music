@@ -158,6 +158,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     // suspend grace above, in case the SDK resumes it.
     _sessionSub ??= _sessions.currentSessionStream.listen((session) {
       if (_disposing || !_sessionStarted) return;
+      // The recovery loop owns the session state during its critical section:
+      // its own force-teardown pushes a null that must not be classified as a
+      // fresh loss (LAN is up by then — it would fire renderer-lost mid-fix).
+      if (_lossBusy) return;
       if (_sessions.hasConnectedSession) {
         // (Re)connected — a suspended session resumed. Cancel any pending
         // loss and re-arm one-shot detection for the next drop.
@@ -295,17 +299,25 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           return false; // device hasn't reappeared — retry next window
         }
       }
+      _sessionStarted = false; // force _ensureSession to re-connect
       if (_sessions.currentSession != null && !_sessions.hasConnectedSession) {
-        // A stale SUSPENDED session lingers — startSessionWithDevice collides
-        // with it (round-7 smoke: every connect wait expired). End it
-        // gracefully (endSession does NOT stop the receiver, which keeps
-        // playing) so the fresh start below can cleanly JOIN the receiver.
-        appLog('[cast] re-attach: clearing the stale suspended session');
+        // A stale SUSPENDED session lingers, keeping its route selected —
+        // startSessionWithDevice collides with it and every connect wait
+        // expires (round-7 smoke). The graceful endSession() no-ops on a
+        // suspended session (round-8), so force it: the stop command rides
+        // the dead socket and never reaches the receiver, which keeps
+        // playing — the fresh start below then JOINs it. Wait for the
+        // teardown to actually settle before starting.
+        appLog('[cast] re-attach: force-clearing the stale suspended session');
         try {
-          await _sessions.endSession();
+          await _sessions.endSessionAndStopCasting();
+        } catch (_) {}
+        try {
+          await _sessions.currentSessionStream
+              .firstWhere((s) => s == null)
+              .timeout(const Duration(seconds: 3));
         } catch (_) {}
       }
-      _sessionStarted = false; // force _ensureSession to re-connect
       await _ensureSession();
       if (!_sessions.hasConnectedSession) {
         appLog('[cast] re-attach: session did not connect');
