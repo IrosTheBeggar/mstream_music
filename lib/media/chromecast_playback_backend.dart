@@ -136,11 +136,27 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       }
       if (_lostFired) return;
       if (session == null) {
-        _fireRendererLost(); // ended outright — no resume coming
+        // On Android a NETWORK drop surfaces as a full session END (a null
+        // push), not a suspend — verified on-device. Probe connectivity
+        // before believing it: while offline the "end" is just our own dead
+        // network, so it gets the reconnect grace + re-attach like a suspend.
+        // A null while online is a genuine end (TV quit) — fall back now.
+        unawaited(_onSessionEnded());
         return;
       }
       _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
     });
+  }
+
+  Future<void> _onSessionEnded() async {
+    final online = await _hasNetwork();
+    if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
+    if (online) {
+      _fireRendererLost();
+      return;
+    }
+    _graceWasOffline = true;
+    _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
   }
 
   Future<void> _onGraceExpired() async {
@@ -155,18 +171,59 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         return;
       }
       if (_graceWasOffline) {
-        // The network came back since the last check. The SDK's session
-        // resume takes several seconds FROM HERE, so an expiry landing right
-        // after reconnect must grant one more window — firing now tears down
-        // a session that is about to recover (observed on-device: fallback +
-        // zombie TV + double audio).
-        _graceWasOffline = false;
+        // The network came back since the last check. The SDK auto-resumes a
+        // SUSPENDED session from here (give it the window below) — but a
+        // network drop that surfaced as an END won't resume on its own, so
+        // actively re-attach: rejoin (or relaunch) the receiver and pick
+        // playback back up. The receiver keeps playing through a sender-side
+        // drop, so a successful rejoin is usually seamless.
         _graceExtensions++;
+        if (await _tryReattach()) {
+          appLog('[cast] re-attached to the cast device after a network drop');
+          _graceWasOffline = false;
+          _graceExtensions = 0;
+          return;
+        }
+        if (_sessions.hasConnectedSession) return; // SDK resumed meanwhile
+        // Not yet (device not re-discovered / session won't start) — another
+        // window, bounded by the extension budget.
         _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
         return;
       }
     }
     _fireRendererLost();
+  }
+
+  // Rebuild the session after a network-drop END and pick playback back up.
+  // If the rejoined receiver reports our media still going (first FRESH
+  // status — skip(1) bypasses the stream's stale replayed value), adopt it
+  // as-is: the status/position streams resume driving state with no audible
+  // hiccup. Otherwise (receiver relaunched idle / nothing arrives) reload the
+  // current track at the last known position.
+  Future<bool> _tryReattach() async {
+    try {
+      _sessionStarted = false; // force _ensureSession to re-connect
+      await _ensureSession();
+      if (!_sessions.hasConnectedSession) return false;
+      _lostFired = false;
+      GoggleCastMediaStatus? fresh;
+      try {
+        fresh = await _client.mediaStatusStream
+            .skip(1)
+            .first
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+      final alive = fresh?.playerState == CastMediaPlayerState.playing ||
+          fresh?.playerState == CastMediaPlayerState.buffering;
+      if (!alive) {
+        final ok = await loadIndex(index, play: playing, startAt: position);
+        if (!ok) return false;
+      }
+      return true;
+    } catch (e) {
+      castLog('cast re-attach failed', error: e);
+      return false;
+    }
   }
 
   // Any network interface up right now? Best-effort: a failed probe counts as
