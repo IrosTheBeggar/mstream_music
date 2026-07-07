@@ -46,6 +46,14 @@ class _FakeDlnaApi extends MediaCastDlnaApi {
   }
 }
 
+/// DLNA backend with the failure-walk delay zeroed so fakeAsync tests don't
+/// have to elapse the inter-strike backoff.
+class _TestDlnaBackend extends DlnaPlaybackBackend {
+  _TestDlnaBackend({required super.udn, super.api}) {
+    failureWalkDelay = Duration.zero;
+  }
+}
+
 PlaybackInfo _info(TransportState state, int posSec, int durSec) =>
     PlaybackInfo(
         state: state,
@@ -59,7 +67,7 @@ void main() {
   test('natural end (near-end latched) advances to the next track', () {
     fakeAsync((fa) {
       final api = _FakeDlnaApi();
-      final b = DlnaPlaybackBackend(udn: 'udn', api: api);
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
       b.setSources(List.generate(3, (i) => _track(i)));
       fa.flushMicrotasks();
       b.play();
@@ -81,7 +89,7 @@ void main() {
   test('mid-track STOPPED is treated as a failure and walks on', () {
     fakeAsync((fa) {
       final api = _FakeDlnaApi();
-      final b = DlnaPlaybackBackend(udn: 'udn', api: api);
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
       b.setSources(List.generate(3, (i) => _track(i)));
       fa.flushMicrotasks();
       b.play();
@@ -102,7 +110,7 @@ void main() {
   test('unknown duration: a stop after real progress is a natural end', () {
     fakeAsync((fa) {
       final api = _FakeDlnaApi();
-      final b = DlnaPlaybackBackend(udn: 'udn', api: api);
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
       b.setSources(List.generate(2, (i) => _track(i))); // no item duration
       fa.flushMicrotasks();
       b.play();
@@ -122,7 +130,7 @@ void main() {
   test('transient STOPPED before playback is confirmed is ignored', () {
     fakeAsync((fa) {
       final api = _FakeDlnaApi();
-      final b = DlnaPlaybackBackend(udn: 'udn', api: api);
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
       b.setSources(List.generate(2, (i) => _track(i)));
       fa.flushMicrotasks();
       b.play();
@@ -141,7 +149,7 @@ void main() {
       'polling', () {
     fakeAsync((fa) {
       final api = _FakeDlnaApi();
-      final b = DlnaPlaybackBackend(udn: 'udn', api: api);
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
       final lost = <String>[];
       b.rendererLostStream.listen(lost.add);
       b.setSources(List.generate(6, (i) => _track(i)));

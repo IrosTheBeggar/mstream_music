@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io' show Directory, File;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_chrome_cast/flutter_chrome_cast.dart';
 import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../native/visualizer_bridge.dart';
+import '../util/connectivity_probe.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
@@ -64,11 +64,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<dynamic>? _sessionSub;
 
-  // Guards the renderer-lost emit. _disposing suppresses our own teardown;
-  // _lostFired makes it one-shot per drop (disconnecting → disconnected would
-  // otherwise emit twice); it re-arms when the session reconnects.
+  // Suppresses loss handling during our own teardown. (The renderer-lost
+  // emit itself is one-shot at the single emit point in the base class —
+  // see EmulatedPlaylistBackend.emitRendererLost / rendererLostEmitted.)
   bool _disposing = false;
-  bool _lostFired = false;
 
   // Grace timer for a not-connected session: the Cast SDK SUSPENDS a session
   // on a transient network blip and auto-resumes it (the receiver keeps
@@ -86,7 +85,19 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   int _graceExtensions = 0;
   bool _graceWasOffline = false;
   static const Duration _kSessionLossGrace = Duration(seconds: 10);
-  static const int _kMaxGraceExtensions = 8; // ≈90s worst case, offline only
+  // Attempt budgets: an episode that spent time OFFLINE deserves the long
+  // budget (Wi-Fi reassociation + SDK re-bind take tens of seconds); one that
+  // stayed online throughout (receiver crashed / rebooted) should give up —
+  // and fall back to the phone — much sooner.
+  static const int _kMaxGraceExtensions = 8; // ≈90s+ worst case
+  static const int _kMaxOnlineAttempts = 3; // ≈30-60s when never offline
+  bool _episodeWentOffline = false;
+  // Bumped per _tryReattach and on dispose: a re-attach that outlives its
+  // 30s outer timeout (Future.timeout does NOT cancel the underlying future)
+  // or the backend itself must become inert at its next await, not keep
+  // starting/ending sessions under the live attempt or after disposal.
+  int _reattachGen = 0;
+  bool _reattachDiscoveryActive = false;
 
   // Set via prepareCastToCastHandoff when the backend replacing this one is
   // also a Chromecast backend — teardown then leaves the shared session (and,
@@ -126,18 +137,15 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   static const Duration _kStuckLoadingAfter = Duration(seconds: 30);
   // Serializes the recovery loop: _onGraceExpired is the ONLY actor (probe /
   // SDK window / re-attach / give up); the watchdog and session events merely
-  // ARM its timer. Round-4 smoke had the watchdog re-attaching directly —
-  // racing the grace loop's own re-attach (double session starts) and firing
-  // renderer-lost after a single attempt made at the worst possible moment
-  // (Play Services needs seconds back on the LAN before it can start
-  // sessions), which burned the whole budget in 12s.
+  // ARM its timer. Two concurrent actors double-start sessions and burn the
+  // retry budget on attempts made before Play Services can serve them.
   bool _lossBusy = false;
   static const Duration _kStaleAfter = Duration(seconds: 20);
 
   void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
 
   Future<void> _checkStale() async {
-    if (_disposing || _lostFired || rendererLostEmitted) return;
+    if (_disposing || rendererLostEmitted) return;
     if (_sessionLossGrace != null || _lossBusy) return; // recovery already live
     final loading = _loadingSince;
     if (loading != null &&
@@ -145,17 +153,28 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       _loadingSince = null;
       appLog('[cast] receiver stuck loading for '
           '${_kStuckLoadingAfter.inSeconds}s — treating as a failed track');
-      unawaited(trackFailed('receiver stuck loading'));
+      unawaited(trackFailed('receiver stuck loading', play: playing));
       return;
     }
     if (!playing) return;
     if (DateTime.now().difference(_lastRendererEvent) < _kStaleAfter) return;
-    appLog('[cast] no renderer events for ${_kStaleAfter.inSeconds}s '
-        'while playing — starting loss recovery');
     // Offline waits out the LAN like any drop; a half-dead socket with the
     // LAN up skips the SDK-courtesy window (the SDK hasn't even noticed).
-    _graceWasOffline = !await _hasLanNetwork();
-    _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
+    _armLossRecovery(
+        offline: !await hasConnectivity(lanOnly: true),
+        why: 'no renderer events for ${_kStaleAfter.inSeconds}s while playing');
+  }
+
+  /// Single entry point for arming the loss-recovery timer. No-ops when
+  /// recovery is already armed/running or moot, so every detector (suspend
+  /// event, offline session-end, staleness watchdog) can call it blindly.
+  void _armLossRecovery({required bool offline, required String why}) {
+    if (_disposing || rendererLostEmitted || _lossBusy) return;
+    if (_sessionLossGrace != null) return;
+    appLog('[cast] $why — starting loss recovery');
+    _graceWasOffline = offline;
+    if (offline) _episodeWentOffline = true;
+    _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
   }
 
   void _ensureListeners() {
@@ -180,7 +199,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       if (_lossBusy) return;
       if (_sessions.hasConnectedSession) {
         // (Re)connected — a suspended session resumed. Cancel any pending
-        // loss and re-arm one-shot detection for the next drop.
+        // loss and reset the episode bookkeeping for the next drop.
         if (_sessionLossGrace != null) {
           appLog('[cast] session resumed within the grace window');
         }
@@ -188,10 +207,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         _sessionLossGrace = null;
         _graceExtensions = 0;
         _graceWasOffline = false;
-        _lostFired = false;
+        _episodeWentOffline = false;
         return;
       }
-      if (_lostFired) return;
+      if (rendererLostEmitted) return;
       if (session == null) {
         // On Android a NETWORK drop surfaces as a full session END (a null
         // push), not a suspend — verified on-device. Probe connectivity
@@ -201,23 +220,22 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         unawaited(_onSessionEnded());
         return;
       }
-      if (_sessionLossGrace == null && !_lossBusy) {
-        appLog('[cast] session suspended — starting loss recovery');
-        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
-      }
+      _armLossRecovery(offline: false, why: 'session suspended');
     });
   }
 
   Future<void> _onSessionEnded() async {
-    final lanUp = await _hasLanNetwork();
-    if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
+    final lanUp = await hasConnectivity(lanOnly: true);
+    // Recheck EVERYTHING after the async probe: the grace timer or the
+    // recovery loop can have started meanwhile, and firing renderer-lost
+    // under a running re-attach would tear down the session it is building.
+    if (_disposing || rendererLostEmitted || _lossBusy) return;
+    if (_sessionLossGrace != null || _sessions.hasConnectedSession) return;
     if (lanUp) {
       _fireRendererLost();
       return;
     }
-    appLog('[cast] session ended while the LAN is down — starting loss recovery');
-    _graceWasOffline = true;
-    _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
+    _armLossRecovery(offline: true, why: 'session ended while the LAN is down');
   }
 
   Future<void> _onGraceExpired() async {
@@ -227,21 +245,24 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     // double-driving this handler.
     _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
-    if (_disposing || _lostFired || _lossBusy) return;
+    if (_disposing || rendererLostEmitted || _lossBusy) return;
     if (_sessions.hasConnectedSession) return; // SDK recovered on its own
     _lossBusy = true;
     try {
-      if (_graceExtensions >= _kMaxGraceExtensions) {
+      final budget =
+          _episodeWentOffline ? _kMaxGraceExtensions : _kMaxOnlineAttempts;
+      if (_graceExtensions >= budget) {
         _fireRendererLost();
         return;
       }
       _graceExtensions++;
-      if (!await _hasLanNetwork()) {
+      if (!await hasConnectivity(lanOnly: true)) {
         // The LAN is still down — neither the SDK nor we can reach the
         // renderer yet.
         appLog('[cast] loss recovery $_graceExtensions/$_kMaxGraceExtensions: '
             'LAN still down, waiting');
         _graceWasOffline = true;
+        _episodeWentOffline = true;
         _rearmLossRecovery();
         return;
       }
@@ -261,8 +282,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       // receiver keeps playing through a sender-side drop, so a successful
       // rejoin is usually seamless. Retries ride the extension budget. The
       // hard timeout is load-bearing: plugin calls against a broken session
-      // can hang forever (round-6 smoke froze the whole recovery machine —
-      // a hanging await never reaches finally, so _lossBusy never cleared).
+      // can hang FOREVER, and a hanging await never reaches finally — the
+      // recovery machine (and everything gated on _lossBusy) would freeze.
       appLog('[cast] loss recovery $_graceExtensions/$_kMaxGraceExtensions: '
           're-attaching');
       final ok = await _tryReattach().timeout(const Duration(seconds: 30),
@@ -273,6 +294,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       if (ok) {
         appLog('[cast] re-attached to the cast device');
         _graceExtensions = 0;
+        _episodeWentOffline = false;
         return;
       }
       if (_sessions.hasConnectedSession) return; // SDK resumed meanwhile
@@ -294,18 +316,26 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // hiccup. Otherwise (receiver relaunched idle / nothing arrives) reload the
   // current track at the last known position.
   Future<bool> _tryReattach() async {
+    final gen = ++_reattachGen;
+    // Inert-after-supersession: the caller's Future.timeout does NOT cancel
+    // this future, and dispose can arrive mid-await — a superseded or
+    // orphaned attempt must stop acting (no session starts/ends, no reloads)
+    // the moment it resumes.
+    bool dead() => _disposing || gen != _reattachGen;
     var startedDiscovery = false;
     try {
-      // startSessionWithDevice resolves through MediaRouter's LIVE route list
-      // — the plugin's native selectRoute silently no-ops when the route is
-      // absent — and routes are only maintained while discovery runs, which
-      // is normally only while the cast picker is open. Round-5 smoke burned
-      // its whole retry budget on that silent no-op. Re-populate the routes
-      // and wait for OUR device to reappear (post-blip mDNS takes seconds).
+      // startSessionWithDevice resolves through MediaRouter's LIVE route
+      // list — the plugin's native selectRoute silently no-ops (reporting
+      // success) when the route is absent — and routes are only maintained
+      // while discovery runs, which is normally only while the cast picker
+      // is open. Re-populate the routes and wait for OUR device to reappear
+      // (post-blip mDNS takes seconds).
       final discovery = GoogleCastDiscoveryManager.instance;
       if (!discovery.devices.any((d) => d.deviceID == _deviceId)) {
         await discovery.startDiscovery();
         startedDiscovery = true;
+        _reattachDiscoveryActive = true;
+        if (dead()) return false;
         try {
           await discovery.devicesStream
               .firstWhere((ds) => ds.any((d) => d.deviceID == _deviceId))
@@ -314,32 +344,26 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           appLog('[cast] re-attach: device not re-discovered yet');
           return false; // device hasn't reappeared — retry next window
         }
+        if (dead()) return false;
       }
       _sessionStarted = false; // force _ensureSession to re-connect
       if (_sessions.currentSession != null && !_sessions.hasConnectedSession) {
-        // A stale SUSPENDED session lingers, keeping its route selected —
-        // startSessionWithDevice collides with it and every connect wait
-        // expires (round-7 smoke). The graceful endSession() no-ops on a
-        // suspended session (round-8), so force it: the stop command rides
-        // the dead socket and never reaches the receiver, which keeps
-        // playing — the fresh start below then JOINs it. Wait for the
-        // teardown to actually settle before starting.
+        // A stale SUSPENDED session lingers, keeping its route selected, and
+        // startSessionWithDevice collides with it (every connect wait
+        // expires). The graceful endSession() NO-OPs on a suspended session,
+        // so force it: the stop command rides the dead socket and never
+        // reaches the receiver, which keeps playing — the fresh start below
+        // then JOINs it.
         appLog('[cast] re-attach: force-clearing the stale suspended session');
-        try {
-          await _sessions.endSessionAndStopCasting();
-        } catch (_) {}
-        try {
-          await _sessions.currentSessionStream
-              .firstWhere((s) => s == null)
-              .timeout(const Duration(seconds: 3));
-        } catch (_) {}
+        await _endSessionQuietly(waitForTeardown: true);
+        if (dead()) return false;
       }
       await _ensureSession();
+      if (dead()) return false;
       if (!_sessions.hasConnectedSession) {
         appLog('[cast] re-attach: session did not connect');
         return false;
       }
-      _lostFired = false;
       GoggleCastMediaStatus? fresh;
       try {
         fresh = await _client.mediaStatusStream
@@ -347,6 +371,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
             .first
             .timeout(const Duration(seconds: 3));
       } catch (_) {}
+      if (dead()) return false;
       final alive = fresh?.playerState == CastMediaPlayerState.playing ||
           fresh?.playerState == CastMediaPlayerState.buffering;
       if (!alive) {
@@ -354,11 +379,11 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           // The session claims connected but delivers nothing — a half-dead
           // socket the SDK hasn't noticed. Force a genuinely fresh session
           // before reloading, or the loadMedia below goes into the same void.
-          try {
-            await _sessions.endSessionAndStopCasting();
-          } catch (_) {}
+          await _endSessionQuietly(waitForTeardown: true);
+          if (dead()) return false;
           _sessionStarted = false;
           await _ensureSession();
+          if (dead()) return false;
           if (!_sessions.hasConnectedSession) return false;
         }
         final ok = await loadIndex(index, play: playing, startAt: position);
@@ -372,9 +397,11 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       appLog('[cast] re-attach attempt failed: $e');
       return false;
     } finally {
-      if (startedDiscovery) {
-        // Don't leave a background mDNS scan running (battery); the picker
-        // manages its own discovery lifecycle when open.
+      // Don't leave a background mDNS scan running (battery); the picker
+      // manages its own discovery lifecycle when open. A superseded attempt
+      // leaves the scan to its successor; dispose stops any leftover scan.
+      if (startedDiscovery && (gen == _reattachGen || _disposing)) {
+        _reattachDiscoveryActive = false;
         try {
           await GoogleCastDiscoveryManager.instance.stopDiscovery();
         } catch (_) {}
@@ -382,26 +409,25 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     }
   }
 
-  // Is a LAN-capable transport (Wi-Fi / ethernet) up right now? A cast session
-  // lives on the LAN, so "any connectivity" is the wrong question: when Wi-Fi
-  // blips, the phone fails over to MOBILE DATA within seconds and a generic
-  // probe reports online — which made a null-session during a Wi-Fi blip look
-  // like a genuine end (verified on-device). Best-effort: a failed probe
-  // counts as online so the grace can't extend forever on a broken probe.
-  Future<bool> _hasLanNetwork() async {
+  /// Force-end the current Cast session, swallowing failures. With
+  /// [waitForTeardown], also wait (bounded) for the session stream to settle
+  /// on null — starting a new session against a half-torn-down one collides
+  /// and times out its connect wait.
+  Future<void> _endSessionQuietly({bool waitForTeardown = false}) async {
     try {
-      final r = await Connectivity().checkConnectivity();
-      return r.contains(ConnectivityResult.wifi) ||
-          r.contains(ConnectivityResult.ethernet);
-    } catch (_) {
-      return true;
-    }
+      await _sessions.endSessionAndStopCasting();
+    } catch (_) {}
+    if (!waitForTeardown) return;
+    try {
+      await _sessions.currentSessionStream
+          .firstWhere((s) => s == null)
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {}
   }
 
   void _fireRendererLost() {
     _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
-    _lostFired = true;
     appLog(_graceExtensions == 0
         ? '[cast] session ended while online — falling back to this phone'
         : '[cast] session lost after $_graceExtensions recovery attempts — '
@@ -446,8 +472,9 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
         if (status.idleReason == GoogleCastMediaIdleReason.finished) {
           advanceOnComplete();
         } else if (status.idleReason == GoogleCastMediaIdleReason.error) {
+          final wasPlaying = playing;
           playing = false;
-          trackFailed('receiver reported a media error');
+          trackFailed('receiver reported a media error', play: wasPlaying);
         }
         break;
       case CastMediaPlayerState.unknown:
@@ -473,11 +500,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       // The existing session is on a DIFFERENT Chromecast (cast→cast device
       // switch). The SDK holds one session per app, so it must be moved —
       // reusing it would keep casting to the old device.
-      try {
-        await _sessions.endSessionAndStopCasting();
-      } catch (e) {
-        castLog('Ending the previous cast session failed', error: e);
-      }
+      await _endSessionQuietly();
     }
     if (!_sessions.hasConnectedSession) {
       await _sessions.startSessionWithDevice(device);
@@ -494,37 +517,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     _sessionStarted = true;
   }
 
-  // ── Media construction ──
-  // A plain HTTP server id is sent as-is; a local-only item (file-explorer track
-  // — id is a UUID) is served from the phone's LocalMediaServer; an iroh server's
-  // id is the phone-loopback tunnel URL the receiver can't reach, so it's relayed
-  // through the LocalMediaServer proxy (re-bound to the live tunnel).
-  Future<Uri> _resolveUri(MediaItem item) async {
-    final localPath = item.extras?['localPath'] as String?;
-    final isNetwork =
-        item.id.startsWith('http://') || item.id.startsWith('https://');
-    if (!isNetwork && localPath != null && File(localPath).existsSync()) {
-      await LocalMediaServer().ensureStarted();
-      return LocalMediaServer().registerFile(localPath);
-    }
-    final iroh = irohServerFor(item);
-    if (iroh != null) {
-      await LocalMediaServer().ensureStarted();
-      // A downloaded iroh track is already on disk — serve it from there (faster,
-      // and it skips the tunnel relay). Its id is a 127.0.0.1 loopback URL, so
-      // isNetwork is true and the disk branch above is bypassed; handle it here.
-      if (localPath != null && File(localPath).existsSync()) {
-        return LocalMediaServer().registerFile(localPath);
-      }
-      return irohProxyUri(iroh, item.id);
-    }
-    return Uri.parse(item.id);
-  }
-
   GoogleCastMediaInformation _mediaInfo(MediaItem item, String url) {
     // Full-res art (drop the compress= size param) — looks sharp on a TV; for an
     // iroh server it's relayed through the LAN proxy (LocalMediaServer already
-    // started by _resolveUri above) so the receiver can fetch it.
+    // started by resolveRendererUri) so the receiver can fetch it.
     final art = castArtUriFor(item);
     return GoogleCastMediaInformation(
       contentId: url,
@@ -590,13 +586,13 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           _deleteDir(_currentVizDir);
           CastManager().reportCastInfo(
               "Couldn't start the visualizer — casting audio to the TV");
-          final url = (await _resolveUri(items[target])).toString();
+          final url = (await resolveRendererUri(items[target])).toString();
           if (gen != _loadGen) return true;
           await _client.loadMedia(_mediaInfo(items[target], url),
               autoPlay: play, playPosition: startAt);
         }
       } else {
-        final url = (await _resolveUri(items[target])).toString();
+        final url = (await resolveRendererUri(items[target])).toString();
         if (gen != _loadGen) return true;
         await _client.loadMedia(_mediaInfo(items[target], url),
             autoPlay: play, playPosition: startAt);
@@ -738,7 +734,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> play() async {
     if (index < 0) return;
     if (loadedIndex != index) {
-      await loadIndex(index, play: true);
+      final ok = await loadIndex(index, play: true);
+      if (!ok) unawaited(trackFailed('load failed', play: true));
       return;
     }
     try {
@@ -775,7 +772,12 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> seek(Duration position, {int? index, bool? play}) async {
     final target = index ?? this.index;
     if (target >= 0 && target != loadedIndex) {
-      await loadIndex(target, play: play ?? playing, startAt: position);
+      final intent = play ?? playing;
+      final ok = await loadIndex(target, play: intent, startAt: position);
+      // A failed user-driven load has no watchdog before the first successful
+      // _ensureSession (the ticker arms in _ensureListeners) — walk instead
+      // of stranding the backend in 'loading'.
+      if (!ok) unawaited(trackFailed('load failed', play: intent));
       return;
     }
     try {
@@ -789,13 +791,19 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   @override
   Future<void> seekToNext() async {
     final n = nextIndex();
-    if (n != null) await loadIndex(n, play: playing);
+    if (n != null) {
+      final intent = playing;
+      final ok = await loadIndex(n, play: intent);
+      if (!ok) unawaited(trackFailed('load failed', play: intent));
+    }
   }
 
   @override
   Future<void> seekToPrevious() async {
     if (index > 0) {
-      await loadIndex(index - 1, play: playing);
+      final intent = playing;
+      final ok = await loadIndex(index - 1, play: intent);
+      if (!ok) unawaited(trackFailed('load failed', play: intent));
     } else {
       await seek(Duration.zero);
     }
@@ -812,8 +820,15 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   @override
   Future<void> disposeRenderer() async {
     _disposing = true;
+    _reattachGen++; // any in-flight re-attach becomes inert at its next await
     _sessionLossGrace?.cancel();
     _staleTicker?.cancel();
+    if (_reattachDiscoveryActive) {
+      _reattachDiscoveryActive = false;
+      try {
+        await GoogleCastDiscoveryManager.instance.stopDiscovery();
+      } catch (_) {}
+    }
     if (_visualizer && !_handoffToVisualizer) {
       // Stop the off-screen transcode so it isn't left encoding after we switch
       // away. (LocalMediaServer is torn down by the handler on switch-to-local.)
@@ -828,9 +843,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     await _positionSub?.cancel();
     await _sessionSub?.cancel();
     if (!_keepSharedSession) {
-      try {
-        await _sessions.endSessionAndStopCasting();
-      } catch (_) {}
+      await _endSessionQuietly();
     }
   }
 }

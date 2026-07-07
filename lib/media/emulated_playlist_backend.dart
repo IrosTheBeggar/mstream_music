@@ -112,6 +112,11 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
 
   @protected
   void emitRendererLost(String message) {
+    // One-shot at the single emit point: every loss path (failure walk, poll
+    // failures, session loss) funnels here, and the handler must see exactly
+    // one fallback trigger per backend life. Also quiesces the walk (_lost).
+    if (_lost) return;
+    _lost = true;
     if (!_rendererLost.isClosed) _rendererLost.add(message);
   }
 
@@ -199,38 +204,75 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   Future<void> trackFailed(String reason, {bool play = true}) =>
       _advance(failedBecause: reason, play: play);
 
+  /// Delay between failure-walk strikes, so a transient outage at a track
+  /// boundary (e.g. the iroh tunnel supervisor's few-second reconnect, during
+  /// which loads fail instantly) can't burn the whole budget in milliseconds.
+  /// Overridable so unit tests don't sleep.
+  @protected
+  Duration failureWalkDelay = const Duration(seconds: 2);
+
+  // True while an _advance body is executing (its delay + load awaits). The
+  // `advancing` latch alone can't serve both roles: it is deliberately left
+  // held AFTER a successful load (until the renderer confirms PLAYING), and a
+  // failure event in that pending-confirm state must be allowed to release it
+  // — but a failure event while the walk body is actually running must not
+  // re-enter it.
+  bool _walkRunning = false;
+
   Future<void> _advance(
       {required String? failedBecause, required bool play}) async {
-    if (advancing || _lost) return;
+    if (_lost || _walkRunning) return;
+    if (advancing) {
+      // Duplicate end events for the same track boundary must not
+      // double-advance. A FAILURE event in the pending-confirm state is
+      // different: the walk's own freshly-loaded track failed at the renderer
+      // (loadIndex resolves when the load is handed over, before the renderer
+      // fetches the media) — swallowing it would wedge the walk forever, so
+      // release the latch and keep walking under the same budget.
+      if (failedBecause == null) return;
+      advancing = false;
+    }
     if (items.isEmpty) return;
+    _walkRunning = true;
     advancing = true;
-    if (failedBecause != null) {
-      castLog('cast track failed ($failedBecause) — moving on');
-      _trackFailures++;
-      if (_trackFailures >= kMaxTrackFailures) {
-        _trackFailures = 0;
-        advancing = false;
-        _lost = true;
-        onPlaybackSettled();
-        emitRendererLost(
-            "The cast device couldn't play these tracks — back on this phone");
-        return;
+    try {
+      var failure = failedBecause;
+      while (true) {
+        if (failure != null) {
+          castLog('cast track failed ($failure) — moving on');
+          _trackFailures++;
+          if (_trackFailures >= kMaxTrackFailures) {
+            _trackFailures = 0;
+            advancing = false;
+            onPlaybackSettled();
+            emitRendererLost(
+                "The cast device couldn't play these tracks — back on this phone");
+            return;
+          }
+          if (failureWalkDelay > Duration.zero) {
+            await Future<void>.delayed(failureWalkDelay);
+            if (_lost) {
+              advancing = false;
+              return;
+            }
+          }
+        }
+        // onComplete:true so repeat-one retries its own track (bounded by the
+        // failure budget) rather than skipping a track the user asked to loop.
+        final n = nextIndex(onComplete: true);
+        if (n == null) {
+          playing = false;
+          advancing = false;
+          setProcessingState(BackendProcessingState.completed);
+          onPlaybackSettled();
+          return;
+        }
+        final ok = await loadIndex(n, play: play);
+        if (ok) return; // latch stays held until the renderer confirms PLAYING
+        failure = 'load failed';
       }
-    }
-    // onComplete:true so repeat-one retries its own track (bounded by the
-    // failure budget) rather than skipping a track the user asked to loop.
-    final n = nextIndex(onComplete: true);
-    if (n == null) {
-      playing = false;
-      advancing = false;
-      setProcessingState(BackendProcessingState.completed);
-      onPlaybackSettled();
-      return;
-    }
-    final ok = await loadIndex(n, play: play);
-    if (!ok) {
-      advancing = false;
-      await trackFailed('load failed', play: play);
+    } finally {
+      _walkRunning = false;
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
@@ -44,6 +45,28 @@ String buildServerStreamUrl(Server server, String path) {
   if (tm.bitrate != null) sb.write('&bitrate=${tm.bitrate!}');
   sb.write(server.localTokenQuery);
   return sb.toString();
+}
+
+/// Whether two stream URLs point at the same stream. [buildServerStreamUrl]
+/// stamps a fresh cache-busting `app_uuid` on EVERY call, so a raw string
+/// compare sees every rebuild as a change — and rebuild paths would reload
+/// the whole queue (dumping the player's buffer, or clobbering an active
+/// cast) even when endpoint, port and token are identical. Lives here, next
+/// to the builder that mints the cache-buster it ignores.
+bool sameStreamUrl(String a, String b) {
+  if (a == b) return true;
+  final ua = Uri.tryParse(a);
+  final ub = Uri.tryParse(b);
+  if (ua == null || ub == null) return false;
+  if (ua.scheme != ub.scheme ||
+      ua.host != ub.host ||
+      ua.port != ub.port ||
+      ua.path != ub.path) {
+    return false;
+  }
+  final qa = Map.of(ua.queryParameters)..remove('app_uuid');
+  final qb = Map.of(ub.queryParameters)..remove('app_uuid');
+  return mapEquals(qa, qb);
 }
 
 /// Single source of truth for a server's album-art URL.

@@ -8,7 +8,6 @@ import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
@@ -26,6 +25,7 @@ import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
 import '../util/camelot.dart';
+import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
@@ -296,7 +296,12 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     await next.setShuffleEnabled(prev.shuffleEnabled);
     await next.setRepeat(prev.repeat);
-    await next.setSources(queue.value);
+    // Returning to the phone must re-derive queue URLs (the auto rebuild is
+    // skipped while casting; a tunnel restart mid-cast leaves stale loopback
+    // ports in the stored ids). Cast backends re-resolve per track instead.
+    await next.setSources(identical(next, _localBackend)
+        ? _queueWithFreshUrls()
+        : queue.value);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
       // Carry the play state into the load: a renderer then auto-plays when its
@@ -368,25 +373,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     try {
       await failed.pause();
     } catch (_) {}
-    // Subject swap first, disposals in a finally — same reasoning as
-    // _onRendererLost: a fallback load fighting a dead server must not leak
-    // the remote backends or strand the handler on one of them.
-    _backendSubject.add(_localBackend);
-    try {
-      await _localBackend.setSources(queue.value);
-      if (queue.value.isNotEmpty) {
-        await _localBackend.seek(pos, index: idx, play: true);
-      }
-    } finally {
-      _broadcastState();
-      if (!identical(failed, _localBackend)) await failed.dispose();
-      if (!identical(prev, _localBackend) && !identical(prev, failed)) {
-        await prev.dispose();
-      }
-      await LocalMediaServer().stop();
-      CastManager().reportCastFailed(
-          "Couldn't play on the cast device — back on this phone");
-    }
+    await _reseedLocalAfterCastLoss(
+      pos: pos,
+      idx: idx,
+      play: true,
+      dispose: [
+        if (!identical(failed, _localBackend)) failed,
+        if (!identical(prev, _localBackend) && !identical(prev, failed)) prev,
+      ],
+      message: "Couldn't play on the cast device — back on this phone",
+    );
   }
 
   // A remote renderer dropped offline *during* playback (not at switch time —
@@ -402,27 +398,66 @@ class AudioPlayerHandler extends BaseAudioHandler
       final wasPlaying = failed.playing;
       appLog('[cast] renderer lost mid-cast — back to this phone at '
           'track ${idx + 1}, ${pos.inSeconds}s (playing=$wasPlaying)');
-      // Hand control to the local backend BEFORE its (fallible) load, and
-      // dispose the failed one in a finally: the reseed can throw when the
-      // fallback is itself fighting a dead server (its errors then flow to
-      // _onPlaybackError, whose recovery owns them) — skipping the dispose
-      // leaked the cast backend's ticker + session listener, and skipping
-      // the subject swap stranded the handler on a dead backend.
-      _backendSubject.add(_localBackend);
-      try {
-        await _localBackend.setSources(queue.value);
-        if (queue.value.isNotEmpty) {
-          await _localBackend.seek(pos, index: idx, play: wasPlaying);
-        }
-      } finally {
-        _broadcastState();
-        await failed.dispose();
-        await LocalMediaServer().stop();
-        CastManager().reportCastFailed(message);
-      }
+      await _reseedLocalAfterCastLoss(
+          pos: pos, idx: idx, play: wasPlaying, dispose: [failed], message: message);
     }).catchError((Object e) {
       castLog('Renderer-lost fallback failed', error: e);
     });
+  }
+
+  /// Shared tail of every lost/failed-cast fallback: reseed the LOCAL backend
+  /// with the queue (URLs refreshed — see [_queueWithFreshUrls]) and park/play
+  /// at [pos]/[idx], then — in a `finally`, so a reseed fighting a dead server
+  /// can't skip it — hand the subject over, dispose the remote [dispose]
+  /// backends (leaking one leaves its tickers + session listeners running),
+  /// stop the LAN file server, and surface [message]. The subject swap sits in
+  /// the `finally` too: after a THROWING reseed the handler must still point
+  /// at the local backend (whose errorStream recovery owns dead-server
+  /// handling), and on the happy path swapping after the load means the
+  /// switchMap listeners replay a loaded player, not a stale idle one.
+  Future<void> _reseedLocalAfterCastLoss({
+    required Duration pos,
+    required int idx,
+    required bool play,
+    required List<PlaybackBackend> dispose,
+    required String message,
+  }) async {
+    try {
+      final items = _queueWithFreshUrls();
+      await _localBackend.setSources(items);
+      if (items.isNotEmpty) {
+        await _localBackend.seek(pos, index: idx, play: play);
+      }
+    } finally {
+      _backendSubject.add(_localBackend);
+      _broadcastState();
+      for (final b in dispose) {
+        await b.dispose();
+      }
+      await LocalMediaServer().stop();
+      CastManager().reportCastFailed(message);
+    }
+  }
+
+  /// The queue with every stream URL re-derived against the CURRENT tunnel /
+  /// transcode state, updating the queue subject when anything changed. The
+  /// auto rebuild is skipped while casting (cast loads re-resolve per track),
+  /// so this is the deferred catch-up every return-to-local must run: after a
+  /// tunnel restart mid-cast the stored ids still carry the OLD loopback
+  /// port/token, and seeding just_audio with those fails on a tunnel that
+  /// LOOKS healthy (tunnelServes == true), which sidesteps the iroh recovery.
+  List<MediaItem> _queueWithFreshUrls() {
+    final q = queue.value;
+    if (q.isEmpty) return q;
+    final rebuilt = q.map(_withRebuiltUrl).toList();
+    var changed = false;
+    for (int i = 0; i < q.length; i++) {
+      if (!identical(rebuilt[i], q[i])) changed = true;
+    }
+    if (!changed) return q;
+    appLog('[queue] stream URLs refreshed on return to local playback');
+    queue.add(rebuilt);
+    return rebuilt;
   }
 
   // just_audio surfaced a playback error (local stream path only — remote
@@ -548,7 +583,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // outage, PAUSE (don't stop) and arm onNetworkRegained to resume when it
       // returns; connectivity present → the sources/server are bad, so stop.
       _failedSkips = 0;
-      if (!await _hasNetwork()) {
+      if (!await hasConnectivity()) {
         _showPlaybackErrorToast(
             'Lost the connection — paused. Resumes when you’re back online.');
         await _localBackend.pause();
@@ -572,7 +607,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // connectivity → pause + arm self-heal so the user's spot survives;
       // otherwise stop.
       _failedSkips = 0;
-      if (!await _hasNetwork()) {
+      if (!await hasConnectivity()) {
         await _localBackend.pause();
         _networkStalled = true;
       } else {
@@ -624,7 +659,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
       // No network → an outage: pause-and-hold and let onNetworkRegained resume
       // us when it's back, instead of churning retries/skips that all fail.
-      if (!await _hasNetwork()) {
+      if (!await hasConnectivity()) {
         appLog('[play] network outage — pausing at '
             'track ${(_localBackend.currentIndex ?? 0) + 1}; '
             'will self-heal when connectivity returns');
@@ -688,26 +723,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     }).whenComplete(() => _recoveringPlayback = false);
   }
 
-  // Is any network interface up right now? After every queued track has failed,
-  // this is the reliable signal for outage (pause + self-heal) vs bad sources
-  // (stop) — the error string can't distinguish them on Android. Best-effort: a
-  // failed probe assumes online, so we stop rather than leave a stuck pause.
-  Future<bool> _hasNetwork() async {
-    try {
-      final r = await Connectivity().checkConnectivity();
-      return r.any((c) => c != ConnectivityResult.none);
-    } catch (_) {
-      return true;
-    }
-  }
-
   // Heuristic: does this error look like a clearly bad/unplayable source (skip
   // now) vs something worth retrying (a network/transport blip)? Best-effort and
   // platform-limited: on Android ExoPlayer reports almost everything — INCLUDING
   // 404s — as a generic "(0) Source error" and doesn't forward the real cause to
   // Dart, so most failures fall through to "retry" (bounded by _kMaxHttpRetries).
   // The needles below mainly catch iOS/web, where the message is richer. The real
-  // outage-vs-bad-source decision for the END state is made by _hasNetwork().
+  // outage-vs-bad-source decision for the END state is made by hasConnectivity().
   static bool _isTransientNetworkError(Object error) {
     final s = error.toString().toLowerCase();
     // Clear "bad/unplayable source" signals → not transient (skip, don't retry).
@@ -1048,32 +1070,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (path == null || server == null) return m; // local-only / unknown server
     final newId = buildServerStreamUrl(server, path);
     return sameStreamUrl(newId, m.id) ? m : m.copyWith(id: newId);
-  }
-
-  /// Whether two stream URLs point at the same stream. buildServerStreamUrl
-  /// stamps a fresh cache-busting `app_uuid` on EVERY call, so a raw string
-  /// compare sees every rebuild as a change — and the auto-fired rebuild on
-  /// each tunnel (re)connect then reloads the whole queue (dumping the
-  /// player's buffer, or clobbering an active cast) even when endpoint, port
-  /// and token are identical. Compare everything except the cache-buster.
-  static bool sameStreamUrl(String a, String b) {
-    if (a == b) return true;
-    final ua = Uri.tryParse(a);
-    final ub = Uri.tryParse(b);
-    if (ua == null || ub == null) return false;
-    if (ua.scheme != ub.scheme ||
-        ua.host != ub.host ||
-        ua.port != ub.port ||
-        ua.path != ub.path) {
-      return false;
-    }
-    final qa = Map.of(ua.queryParameters)..remove('app_uuid');
-    final qb = Map.of(ub.queryParameters)..remove('app_uuid');
-    if (qa.length != qb.length) return false;
-    for (final e in qa.entries) {
-      if (qb[e.key] != e.value) return false;
-    }
-    return true;
   }
 
   /// Rebuild queue stream URLs after a transcode-setting change ([auto] false)

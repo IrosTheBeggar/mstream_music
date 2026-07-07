@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show File;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
 // Hide media_cast_dlna's own MediaItem — we use audio_service's MediaItem for
@@ -7,11 +6,11 @@ import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:media_cast_dlna/media_cast_dlna.dart' hide MediaItem;
 import 'package:meta/meta.dart';
 
+import '../util/connectivity_probe.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
 import 'cast_origin.dart';
 import 'emulated_playlist_backend.dart';
-import 'local_media_server.dart';
 import 'playback_backend.dart';
 
 /// [PlaybackBackend] that plays through a DLNA renderer (TV / AV receiver /
@@ -59,38 +58,10 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   int _pollFailures = 0;
   static const int _kMaxPollFailures = 4;
 
-  // ── Transport ──
-  // DLNA renderers fetch the URL themselves. A plain HTTP server id is handed
-  // over as-is; a local-only item (file-explorer track — id is a UUID) is served
-  // from the phone's LocalMediaServer; an iroh server's id is the phone-loopback
-  // tunnel URL the renderer can't reach, so it's relayed through the
-  // LocalMediaServer proxy (re-bound to the live tunnel).
-  Future<Uri> _resolveUri(MediaItem item) async {
-    final localPath = item.extras?['localPath'] as String?;
-    final isNetwork =
-        item.id.startsWith('http://') || item.id.startsWith('https://');
-    if (!isNetwork && localPath != null && File(localPath).existsSync()) {
-      await LocalMediaServer().ensureStarted();
-      return LocalMediaServer().registerFile(localPath);
-    }
-    final iroh = irohServerFor(item);
-    if (iroh != null) {
-      await LocalMediaServer().ensureStarted();
-      // A downloaded iroh track is already on disk — serve it from there (faster,
-      // and it skips the tunnel relay). Its id is a 127.0.0.1 loopback URL, so
-      // isNetwork is true and the disk branch above is bypassed; handle it here.
-      if (localPath != null && File(localPath).existsSync()) {
-        return LocalMediaServer().registerFile(localPath);
-      }
-      return irohProxyUri(iroh, item.id);
-    }
-    return Uri.parse(item.id);
-  }
-
   AudioMetadata _metaFor(MediaItem item) {
     // Full-res art (drop the compress= size param) — looks sharp on a TV; for an
     // iroh server it's relayed through the LAN proxy (LocalMediaServer already
-    // started by _resolveUri above) so the renderer can fetch it.
+    // started by resolveRendererUri) so the renderer can fetch it.
     final art = castArtUriFor(item);
     return AudioMetadata(
       title: item.title,
@@ -118,7 +89,7 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
     setProcessingState(BackendProcessingState.loading);
     var ok = false;
     try {
-      final uri = await _resolveUri(item);
+      final uri = await resolveRendererUri(item);
       await _api.setMediaUri(_udn, Url(value: uri.toString()), _metaFor(item));
       loadedIndex = target;
       duration = item.duration;
@@ -143,7 +114,8 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> play() async {
     if (index < 0) return;
     if (loadedIndex != index) {
-      await loadIndex(index, play: true);
+      final ok = await loadIndex(index, play: true);
+      if (!ok) await trackFailed('load failed', play: true);
       return;
     }
     try {
@@ -190,7 +162,11 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> seek(Duration position, {int? index, bool? play}) async {
     final target = index ?? this.index;
     if (target >= 0 && target != loadedIndex) {
-      await loadIndex(target, play: play ?? playing);
+      final intent = play ?? playing;
+      final ok = await loadIndex(target, play: intent);
+      // A failed user-driven load would otherwise strand the backend in
+      // 'loading' with no watchdog running (polling only starts on success).
+      if (!ok) await trackFailed('load failed', play: intent);
     }
     try {
       await _api.seek(_udn, TimePosition(seconds: position.inSeconds));
@@ -204,15 +180,19 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> seekToNext() async {
     final n = nextIndex();
     if (n != null) {
-      await loadIndex(n,
-          play: playing || processingState == BackendProcessingState.ready);
+      final intent =
+          playing || processingState == BackendProcessingState.ready;
+      final ok = await loadIndex(n, play: intent);
+      if (!ok) await trackFailed('load failed', play: intent);
     }
   }
 
   @override
   Future<void> seekToPrevious() async {
     if (index > 0) {
-      await loadIndex(index - 1, play: playing);
+      final intent = playing;
+      final ok = await loadIndex(index - 1, play: intent);
+      if (!ok) await trackFailed('load failed', play: intent);
     } else {
       await seek(Duration.zero);
     }
@@ -285,8 +265,9 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       if (loading != null &&
           DateTime.now().difference(loading) > _kStuckLoadingAfter) {
         _loadingSince = null;
-        await trackFailed('renderer stuck loading for '
-            '${_kStuckLoadingAfter.inSeconds}s');
+        await trackFailed(
+            'renderer stuck loading for ${_kStuckLoadingAfter.inSeconds}s',
+            play: playing);
       }
       change();
     } catch (_) {
@@ -295,6 +276,16 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       // fails every poll; after _kMaxPollFailures in a row, declare it lost so
       // the handler can fall back to local playback.
       if (!_disposed && ++_pollFailures >= _kMaxPollFailures) {
+        // The renderer pulls its stream from the server directly, so when the
+        // PHONE's own LAN is what dropped, the cast is usually still playing
+        // fine — hold instead of tearing a working cast down and falling back
+        // to a phone that is itself offline. Polls keep retrying; the first
+        // success resets the counter, and a threshold crossing once the LAN
+        // is back means the renderer is genuinely gone.
+        if (!await hasConnectivity(lanOnly: true)) {
+          _pollFailures = _kMaxPollFailures; // hold at the threshold
+          return;
+        }
         _stopPolling();
         emitRendererLost(
             'Lost connection to the cast device — back on this phone');
@@ -322,10 +313,15 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
     } else {
       // Stopped well before the end: the renderer aborted (fetch/decode
       // error). Walk on (bounded) instead of ignoring the stop forever with
-      // the published state stuck on 'playing'.
+      // the published state stuck on 'playing'. Known tradeoff: a stop issued
+      // from the renderer's OWN remote / another control point is
+      // indistinguishable from an abort and also walks — recovering the
+      // dead-server case is worth that rare misfire.
+      final wasPlaying = playing;
       playing = false;
       await trackFailed(
-          'renderer stopped mid-track at ${_lastPlayingPosition.inSeconds}s');
+          'renderer stopped mid-track at ${_lastPlayingPosition.inSeconds}s',
+          play: wasPlaying);
     }
   }
 

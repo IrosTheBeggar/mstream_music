@@ -6,6 +6,10 @@ import 'package:mstream_music/media/playback_backend.dart';
 /// Scriptable stand-in for a renderer backend: loads succeed/fail per
 /// [loadResult], and the protected advance API is exposed for the tests.
 class _FakeBackend extends EmulatedPlaylistBackend {
+  _FakeBackend() {
+    failureWalkDelay = Duration.zero; // tests must not sleep between strikes
+  }
+
   final List<String> loads = [];
   bool Function(int index)? loadResult;
   int settledCalls = 0;
@@ -114,6 +118,19 @@ void main() {
       await b.endOfTrack();
       await b.endOfTrack();
       expect(b.loads, ['1:play']);
+    });
+
+    test(
+        'a renderer failure of the walk-loaded track releases the latch and '
+        'keeps walking (loadIndex resolves before the renderer fetches)',
+        () async {
+      final b = await _seeded(5);
+      await b.endOfTrack(); // loads 1 successfully, latch held pending PLAYING
+      expect(b.loads, ['1:play']);
+      // The receiver then fails to FETCH track 1 (proxy 502 / dead tunnel):
+      // this arrives as a failure event while the latch is still held.
+      await b.failTrack('receiver reported a media error');
+      expect(b.loads, ['1:play', '2:play']); // walked on — no wedge
     });
   });
 
