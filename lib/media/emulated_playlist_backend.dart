@@ -168,6 +168,13 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   // without this latch they would restart the walk mid-fallback.
   bool _lost = false;
 
+  /// True once the failure walk has declared this renderer lost — subclass
+  /// watchdogs gate on it so they stop re-reporting while the handler swaps
+  /// backends (the swap can take a while when the fallback's own load is
+  /// fighting a dead network).
+  @protected
+  bool get rendererLostEmitted => _lost;
+
   /// The renderer confirmed the current track is playing: clear the advance
   /// latch and reset the failure budget. Subclasses call this from their
   /// PLAYING state handler.

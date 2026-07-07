@@ -365,20 +365,28 @@ class AudioPlayerHandler extends BaseAudioHandler
       Duration pos, int idx) async {
     appLog('[cast] cast failed to start — back to this phone '
         'at track ${idx + 1}, ${pos.inSeconds}s');
-    await failed.pause();
-    await _localBackend.setSources(queue.value);
+    try {
+      await failed.pause();
+    } catch (_) {}
+    // Subject swap first, disposals in a finally — same reasoning as
+    // _onRendererLost: a fallback load fighting a dead server must not leak
+    // the remote backends or strand the handler on one of them.
     _backendSubject.add(_localBackend);
-    if (queue.value.isNotEmpty) {
-      await _localBackend.seek(pos, index: idx, play: true);
+    try {
+      await _localBackend.setSources(queue.value);
+      if (queue.value.isNotEmpty) {
+        await _localBackend.seek(pos, index: idx, play: true);
+      }
+    } finally {
+      _broadcastState();
+      if (!identical(failed, _localBackend)) await failed.dispose();
+      if (!identical(prev, _localBackend) && !identical(prev, failed)) {
+        await prev.dispose();
+      }
+      await LocalMediaServer().stop();
+      CastManager().reportCastFailed(
+          "Couldn't play on the cast device — back on this phone");
     }
-    _broadcastState();
-    if (!identical(failed, _localBackend)) await failed.dispose();
-    if (!identical(prev, _localBackend) && !identical(prev, failed)) {
-      await prev.dispose();
-    }
-    await LocalMediaServer().stop();
-    CastManager().reportCastFailed(
-        "Couldn't play on the cast device — back on this phone");
   }
 
   // A remote renderer dropped offline *during* playback (not at switch time —
@@ -394,15 +402,24 @@ class AudioPlayerHandler extends BaseAudioHandler
       final wasPlaying = failed.playing;
       appLog('[cast] renderer lost mid-cast — back to this phone at '
           'track ${idx + 1}, ${pos.inSeconds}s (playing=$wasPlaying)');
-      await _localBackend.setSources(queue.value);
+      // Hand control to the local backend BEFORE its (fallible) load, and
+      // dispose the failed one in a finally: the reseed can throw when the
+      // fallback is itself fighting a dead server (its errors then flow to
+      // _onPlaybackError, whose recovery owns them) — skipping the dispose
+      // leaked the cast backend's ticker + session listener, and skipping
+      // the subject swap stranded the handler on a dead backend.
       _backendSubject.add(_localBackend);
-      if (queue.value.isNotEmpty) {
-        await _localBackend.seek(pos, index: idx, play: wasPlaying);
+      try {
+        await _localBackend.setSources(queue.value);
+        if (queue.value.isNotEmpty) {
+          await _localBackend.seek(pos, index: idx, play: wasPlaying);
+        }
+      } finally {
+        _broadcastState();
+        await failed.dispose();
+        await LocalMediaServer().stop();
+        CastManager().reportCastFailed(message);
       }
-      _broadcastState();
-      await failed.dispose();
-      await LocalMediaServer().stop();
-      CastManager().reportCastFailed(message);
     }).catchError((Object e) {
       castLog('Renderer-lost fallback failed', error: e);
     });

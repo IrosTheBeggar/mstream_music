@@ -137,7 +137,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
 
   Future<void> _checkStale() async {
-    if (_disposing || _lostFired) return;
+    if (_disposing || _lostFired || rendererLostEmitted) return;
     if (_sessionLossGrace != null || _lossBusy) return; // recovery already live
     final loading = _loadingSince;
     if (loading != null &&
