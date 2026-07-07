@@ -386,8 +386,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
     _lostFired = true;
-    appLog('[cast] session lost (grace exhausted: $_graceExtensions '
-        'extensions) — falling back to this phone');
+    appLog(_graceExtensions == 0
+        ? '[cast] session ended while online — falling back to this phone'
+        : '[cast] session lost after $_graceExtensions recovery attempts — '
+            'falling back to this phone');
     emitRendererLost('Lost connection to the cast device — back on this phone');
   }
 
