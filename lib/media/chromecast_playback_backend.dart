@@ -108,9 +108,50 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     _handoffToVisualizer = next._visualizer;
   }
 
+  // ── Silent-death watchdog ──
+  // A sender-side network blip can sever the session with NO SessionManager
+  // event at all (observed on-device: no suspend, no null — the SDK's
+  // heartbeat takes minutes to notice, if ever, while the app sits 'playing'
+  // with a frozen position). While the receiver plays, status/position events
+  // tick ~every second — prolonged silence IS the failure signal (verified:
+  // the progress listener genuinely stops on a dead session, it is not
+  // interpolated locally). Mirrors the DLNA backend's poll-failure detection.
+  Timer? _staleTicker;
+  DateTime _lastRendererEvent = DateTime.now();
+  bool _reattaching = false;
+  static const Duration _kStaleAfter = Duration(seconds: 20);
+
+  void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
+
+  Future<void> _checkStale() async {
+    if (_disposing || _lostFired || _reattaching || !playing) return;
+    if (DateTime.now().difference(_lastRendererEvent) < _kStaleAfter) return;
+    _reattaching = true;
+    try {
+      appLog('[cast] no renderer events for ${_kStaleAfter.inSeconds}s '
+          'while playing — probing the session');
+      if (!await _hasLanNetwork()) {
+        // Same as an offline session drop: wait out the LAN via the grace loop.
+        _graceWasOffline = true;
+        _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
+        return;
+      }
+      if (await _tryReattach()) {
+        appLog('[cast] re-attached after a silent session loss');
+        return;
+      }
+      _fireRendererLost();
+    } finally {
+      _reattaching = false;
+    }
+  }
+
   void _ensureListeners() {
+    _staleTicker ??=
+        Timer.periodic(const Duration(seconds: 5), (_) => _checkStale());
     _statusSub ??= _client.mediaStatusStream.listen(_onStatus);
     _positionSub ??= _client.playerPositionStream.listen((pos) {
+      _noteRendererEvent();
       position = pos;
       emitPos(pos);
       change();
@@ -223,6 +264,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       final alive = fresh?.playerState == CastMediaPlayerState.playing ||
           fresh?.playerState == CastMediaPlayerState.buffering;
       if (!alive) {
+        if (_sessions.hasConnectedSession) {
+          // The session claims connected but delivers nothing — a half-dead
+          // socket the SDK hasn't noticed. Force a genuinely fresh session
+          // before reloading, or the loadMedia below goes into the same void.
+          try {
+            await _sessions.endSessionAndStopCasting();
+          } catch (_) {}
+          _sessionStarted = false;
+          await _ensureSession();
+          if (!_sessions.hasConnectedSession) return false;
+        }
         final ok = await loadIndex(index, play: playing, startAt: position);
         if (!ok) return false;
       }
@@ -259,6 +311,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   void _onStatus(GoggleCastMediaStatus? status) {
+    _noteRendererEvent();
     if (status == null) return;
     final d = status.mediaInformation?.duration;
     if (d != null) {
@@ -396,6 +449,9 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     final gen = ++_loadGen; // this load owns the pipeline until a newer load starts
     index = target;
     emitIndex(target);
+    // A load (visualizer warm-up especially) legitimately produces no renderer
+    // events for many seconds — restart the staleness clock.
+    _noteRendererEvent();
     setProcessingState(BackendProcessingState.loading);
     try {
       await _ensureSession();
@@ -653,6 +709,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> disposeRenderer() async {
     _disposing = true;
     _sessionLossGrace?.cancel();
+    _staleTicker?.cancel();
     if (_visualizer && !_handoffToVisualizer) {
       // Stop the off-screen transcode so it isn't left encoding after we switch
       // away. (LocalMediaServer is torn down by the handler on switch-to-local.)
