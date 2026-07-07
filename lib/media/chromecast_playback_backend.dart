@@ -76,6 +76,26 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Timer? _sessionLossGrace;
   static const Duration _kSessionLossGrace = Duration(seconds: 10);
 
+  // Set via prepareCastToCastHandoff when the backend replacing this one is
+  // also a Chromecast backend — teardown then leaves the shared session (and,
+  // when the successor casts the visualizer, the global transcode pipeline)
+  // to the successor instead of destroying what it is already using.
+  bool _keepSharedSession = false;
+  bool _handoffToVisualizer = false;
+
+  /// Called by the handler before disposing this backend on a Chromecast →
+  /// Chromecast switch (device change or visualizer toggle). The Cast SDK
+  /// holds ONE session per app, shared by every backend instance through the
+  /// singleton session manager — ending it in [disposeRenderer] would stop
+  /// the session the successor just loaded media on. Likewise the visualizer
+  /// transcode pipeline is global: when the successor runs the visualizer,
+  /// its own first load already stopped ours and started its own, so stopping
+  /// "the" transcode here would cut the successor's stream.
+  void prepareCastToCastHandoff(ChromecastPlaybackBackend next) {
+    _keepSharedSession = true;
+    _handoffToVisualizer = next._visualizer;
+  }
+
   void _ensureListeners() {
     _statusSub ??= _client.mediaStatusStream.listen(_onStatus);
     _positionSub ??= _client.playerPositionStream.listen((pos) {
@@ -169,6 +189,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     }
     if (device == null) {
       throw StateError('Chromecast device $_deviceId not found in discovery');
+    }
+    if (_sessions.hasConnectedSession &&
+        _sessions.currentSession?.device?.deviceID != _deviceId) {
+      // The existing session is on a DIFFERENT Chromecast (cast→cast device
+      // switch). The SDK holds one session per app, so it must be moved —
+      // reusing it would keep casting to the old device.
+      try {
+        await _sessions.endSessionAndStopCasting();
+      } catch (e) {
+        castLog('Ending the previous cast session failed', error: e);
+      }
     }
     if (!_sessions.hasConnectedSession) {
       await _sessions.startSessionWithDevice(device);
@@ -500,9 +531,11 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> disposeRenderer() async {
     _disposing = true;
     _sessionLossGrace?.cancel();
-    if (_visualizer) {
+    if (_visualizer && !_handoffToVisualizer) {
       // Stop the off-screen transcode so it isn't left encoding after we switch
       // away. (LocalMediaServer is torn down by the handler on switch-to-local.)
+      // Skipped on a handoff to another visualizer backend, whose first load
+      // already stopped ours and now owns the global pipeline.
       try {
         await VisualizerBridge.stopTranscode();
       } catch (_) {}
@@ -511,8 +544,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     await _statusSub?.cancel();
     await _positionSub?.cancel();
     await _sessionSub?.cancel();
-    try {
-      await _sessions.endSessionAndStopCasting();
-    } catch (_) {}
+    if (!_keepSharedSession) {
+      try {
+        await _sessions.endSessionAndStopCasting();
+      } catch (_) {}
+    }
   }
 }

@@ -323,6 +323,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
 
     if (!identical(prev, _localBackend)) {
+      // Chromecast → Chromecast (device change or visualizer toggle): the Cast
+      // session is app-global, shared by both backend instances — the outgoing
+      // one must not end the session the new one just loaded media on.
+      if (prev is ChromecastPlaybackBackend &&
+          next is ChromecastPlaybackBackend) {
+        prev.prepareCastToCastHandoff(next);
+      }
       await prev.dispose();
     }
     // Switched back to the phone — tear down the local file server (no-op if it
