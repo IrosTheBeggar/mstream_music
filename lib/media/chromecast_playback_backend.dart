@@ -118,32 +118,28 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // interpolated locally). Mirrors the DLNA backend's poll-failure detection.
   Timer? _staleTicker;
   DateTime _lastRendererEvent = DateTime.now();
-  bool _reattaching = false;
+  // Serializes the recovery loop: _onGraceExpired is the ONLY actor (probe /
+  // SDK window / re-attach / give up); the watchdog and session events merely
+  // ARM its timer. Round-4 smoke had the watchdog re-attaching directly —
+  // racing the grace loop's own re-attach (double session starts) and firing
+  // renderer-lost after a single attempt made at the worst possible moment
+  // (Play Services needs seconds back on the LAN before it can start
+  // sessions), which burned the whole budget in 12s.
+  bool _lossBusy = false;
   static const Duration _kStaleAfter = Duration(seconds: 20);
 
   void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
 
   Future<void> _checkStale() async {
-    if (_disposing || _lostFired || _reattaching || !playing) return;
+    if (_disposing || _lostFired || !playing) return;
+    if (_sessionLossGrace != null || _lossBusy) return; // recovery already live
     if (DateTime.now().difference(_lastRendererEvent) < _kStaleAfter) return;
-    _reattaching = true;
-    try {
-      appLog('[cast] no renderer events for ${_kStaleAfter.inSeconds}s '
-          'while playing — probing the session');
-      if (!await _hasLanNetwork()) {
-        // Same as an offline session drop: wait out the LAN via the grace loop.
-        _graceWasOffline = true;
-        _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
-        return;
-      }
-      if (await _tryReattach()) {
-        appLog('[cast] re-attached after a silent session loss');
-        return;
-      }
-      _fireRendererLost();
-    } finally {
-      _reattaching = false;
-    }
+    appLog('[cast] no renderer events for ${_kStaleAfter.inSeconds}s '
+        'while playing — starting loss recovery');
+    // Offline waits out the LAN like any drop; a half-dead socket with the
+    // LAN up skips the SDK-courtesy window (the SDK hasn't even noticed).
+    _graceWasOffline = !await _hasLanNetwork();
+    _sessionLossGrace ??= Timer(_kSessionLossGrace, _onGraceExpired);
   }
 
   void _ensureListeners() {
@@ -207,39 +203,50 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     // double-driving this handler.
     _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
-    if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
-    if (_graceExtensions < _kMaxGraceExtensions) {
+    if (_disposing || _lostFired || _lossBusy) return;
+    if (_sessions.hasConnectedSession) return; // SDK recovered on its own
+    _lossBusy = true;
+    try {
+      if (_graceExtensions >= _kMaxGraceExtensions) {
+        _fireRendererLost();
+        return;
+      }
+      _graceExtensions++;
       if (!await _hasLanNetwork()) {
         // The LAN is still down — neither the SDK nor we can reach the
         // renderer yet.
-        _graceExtensions++;
         _graceWasOffline = true;
-        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+        _rearmLossRecovery();
         return;
       }
       if (_graceWasOffline) {
-        // The network came back since the last check. The SDK auto-resumes a
-        // SUSPENDED session from here (give it the window below) — but a
-        // network drop that surfaced as an END won't resume on its own, so
-        // actively re-attach: rejoin (or relaunch) the receiver and pick
-        // playback back up. The receiver keeps playing through a sender-side
-        // drop, so a successful rejoin is usually seamless.
-        _graceExtensions++;
-        if (await _tryReattach()) {
-          appLog('[cast] re-attached to the cast device after a network drop');
-          _graceWasOffline = false;
-          _graceExtensions = 0;
-          return;
-        }
-        if (_sessions.hasConnectedSession) return; // SDK resumed meanwhile
-        // Not yet (device not re-discovered / session won't start) — another
-        // window, bounded by the extension budget.
-        _sessionLossGrace?.cancel();
-        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+        // First window after the LAN returned: the SDK auto-resumes a merely
+        // SUSPENDED session in this time, and Play Services itself needs a
+        // few seconds back on the network before it can start sessions — one
+        // quiet window before we intervene.
+        _graceWasOffline = false;
+        _rearmLossRecovery();
         return;
       }
+      // The LAN is up and the SDK had its window: re-attach ourselves —
+      // rejoin (or relaunch) the receiver and pick playback back up. The
+      // receiver keeps playing through a sender-side drop, so a successful
+      // rejoin is usually seamless. Retries ride the extension budget.
+      if (await _tryReattach()) {
+        appLog('[cast] re-attached to the cast device');
+        _graceExtensions = 0;
+        return;
+      }
+      if (_sessions.hasConnectedSession) return; // SDK resumed meanwhile
+      _rearmLossRecovery();
+    } finally {
+      _lossBusy = false;
     }
-    _fireRendererLost();
+  }
+
+  void _rearmLossRecovery() {
+    _sessionLossGrace?.cancel();
+    _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
   }
 
   // Rebuild the session after a network-drop END and pick playback back up.
