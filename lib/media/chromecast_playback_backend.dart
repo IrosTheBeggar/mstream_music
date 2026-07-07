@@ -118,6 +118,12 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // interpolated locally). Mirrors the DLNA backend's poll-failure detection.
   Timer? _staleTicker;
   DateTime _lastRendererEvent = DateTime.now();
+  // A receiver stuck fetching media it can never get (dead iroh tunnel, dead
+  // server) keeps its status channel ALIVE — event-silence staleness never
+  // trips. Track how long we've been in loading/buffering without reaching
+  // playback; past the threshold the track is failed into the bounded walk.
+  DateTime? _loadingSince;
+  static const Duration _kStuckLoadingAfter = Duration(seconds: 30);
   // Serializes the recovery loop: _onGraceExpired is the ONLY actor (probe /
   // SDK window / re-attach / give up); the watchdog and session events merely
   // ARM its timer. Round-4 smoke had the watchdog re-attaching directly —
@@ -131,8 +137,18 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
 
   Future<void> _checkStale() async {
-    if (_disposing || _lostFired || !playing) return;
+    if (_disposing || _lostFired) return;
     if (_sessionLossGrace != null || _lossBusy) return; // recovery already live
+    final loading = _loadingSince;
+    if (loading != null &&
+        DateTime.now().difference(loading) > _kStuckLoadingAfter) {
+      _loadingSince = null;
+      appLog('[cast] receiver stuck loading for '
+          '${_kStuckLoadingAfter.inSeconds}s — treating as a failed track');
+      unawaited(trackFailed('receiver stuck loading'));
+      return;
+    }
+    if (!playing) return;
     if (DateTime.now().difference(_lastRendererEvent) < _kStaleAfter) return;
     appLog('[cast] no renderer events for ${_kStaleAfter.inSeconds}s '
         'while playing — starting loss recovery');
@@ -405,16 +421,20 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       case CastMediaPlayerState.playing:
         playing = true;
         trackPlaying();
+        _loadingSince = null;
         setProcessingState(BackendProcessingState.ready);
         break;
       case CastMediaPlayerState.paused:
         playing = false;
+        _loadingSince = null;
         setProcessingState(BackendProcessingState.ready);
         break;
       case CastMediaPlayerState.buffering:
+        _loadingSince ??= DateTime.now();
         setProcessingState(BackendProcessingState.buffering);
         break;
       case CastMediaPlayerState.loading:
+        _loadingSince ??= DateTime.now();
         setProcessingState(BackendProcessingState.loading);
         break;
       case CastMediaPlayerState.idle:
@@ -533,8 +553,9 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     index = target;
     emitIndex(target);
     // A load (visualizer warm-up especially) legitimately produces no renderer
-    // events for many seconds — restart the staleness clock.
+    // events for many seconds — restart the staleness and stuck-loading clocks.
     _noteRendererEvent();
+    _loadingSince = DateTime.now();
     setProcessingState(BackendProcessingState.loading);
     try {
       await _ensureSession();

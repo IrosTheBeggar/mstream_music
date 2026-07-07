@@ -341,7 +341,12 @@ class LocalMediaServer {
       final range = req.headers.value(HttpHeaders.rangeHeader);
       if (range != null) up.headers.set(HttpHeaders.rangeHeader, range);
       up.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
-      upRes = await up.close();
+      // Bound the wait for the upstream response headers: a tunnel that
+      // accepts the connection but never answers (supervisor mid-reconnect)
+      // would otherwise hang this relay and leave the renderer 'loading'
+      // forever. The timeout lands in the catch below → 502 → the renderer
+      // reports a media error and the cast failure walk takes over.
+      upRes = await up.close().timeout(const Duration(seconds: 12));
 
       res.statusCode = upRes.statusCode;
       // Fall back to a basename sniff when the upstream omits Content-Type: a DLNA

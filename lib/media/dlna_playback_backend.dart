@@ -43,6 +43,12 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   // reset position to 0 the moment they stop, so the STOPPED classification
   // below reads this instead of the (already-overwritten) live position.
   Duration _lastPlayingPosition = Duration.zero;
+  // A renderer stuck fetching media it can never get (dead iroh tunnel, dead
+  // server) answers every poll in TRANSITIONING forever — no poll failure, no
+  // stop. Track how long a load has gone without reaching playback; past the
+  // threshold the track is failed into the bounded walk.
+  DateTime? _loadingSince;
+  static const Duration _kStuckLoadingAfter = Duration(seconds: 30);
 
   Timer? _pollTimer;
   bool _polling = false;
@@ -108,6 +114,7 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
     _confirmedPlaying = false;
     _reachedNearEnd = false;
     _lastPlayingPosition = Duration.zero;
+    _loadingSince = DateTime.now();
     setProcessingState(BackendProcessingState.loading);
     var ok = false;
     try {
@@ -256,13 +263,16 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
           playing = true;
           trackPlaying();
           _confirmedPlaying = true;
+          _loadingSince = null;
           if (position > _lastPlayingPosition) _lastPlayingPosition = position;
           setProcessingState(BackendProcessingState.ready);
           break;
         case TransportState.paused:
           playing = false;
+          _loadingSince = null;
           break;
         case TransportState.transitioning:
+          _loadingSince ??= DateTime.now();
           setProcessingState(BackendProcessingState.buffering);
           break;
         case TransportState.stopped:
@@ -270,6 +280,13 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
           break;
         case TransportState.noMediaPresent:
           break;
+      }
+      final loading = _loadingSince;
+      if (loading != null &&
+          DateTime.now().difference(loading) > _kStuckLoadingAfter) {
+        _loadingSince = null;
+        await trackFailed('renderer stuck loading for '
+            '${_kStuckLoadingAfter.inSeconds}s');
       }
       change();
     } catch (_) {
