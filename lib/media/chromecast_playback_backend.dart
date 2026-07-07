@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../native/visualizer_bridge.dart';
 import '../singletons/cast_manager.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/settings.dart';
 import 'cast_art.dart';
 import 'cast_log.dart';
@@ -83,6 +84,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   // _kMaxGraceExtensions so a genuinely dead session still falls back.
   Timer? _sessionLossGrace;
   int _graceExtensions = 0;
+  bool _graceWasOffline = false;
   static const Duration _kSessionLossGrace = Duration(seconds: 10);
   static const int _kMaxGraceExtensions = 8; // ≈90s worst case, offline only
 
@@ -122,9 +124,13 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       if (_sessions.hasConnectedSession) {
         // (Re)connected — a suspended session resumed. Cancel any pending
         // loss and re-arm one-shot detection for the next drop.
+        if (_sessionLossGrace != null) {
+          appLog('[cast] session resumed within the grace window');
+        }
         _sessionLossGrace?.cancel();
         _sessionLossGrace = null;
         _graceExtensions = 0;
+        _graceWasOffline = false;
         _lostFired = false;
         return;
       }
@@ -140,13 +146,25 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   Future<void> _onGraceExpired() async {
     _sessionLossGrace = null;
     if (_disposing || _lostFired || _sessions.hasConnectedSession) return;
-    if (_graceExtensions < _kMaxGraceExtensions && !await _hasNetwork()) {
-      // Our own network is still down — the SDK can't have resumed yet. Wait
-      // another window; once connectivity returns the SDK gets one final
-      // window to deliver its resume before we declare the renderer lost.
-      _graceExtensions++;
-      _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
-      return;
+    if (_graceExtensions < _kMaxGraceExtensions) {
+      if (!await _hasNetwork()) {
+        // Our own network is still down — the SDK can't possibly have resumed.
+        _graceExtensions++;
+        _graceWasOffline = true;
+        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+        return;
+      }
+      if (_graceWasOffline) {
+        // The network came back since the last check. The SDK's session
+        // resume takes several seconds FROM HERE, so an expiry landing right
+        // after reconnect must grant one more window — firing now tears down
+        // a session that is about to recover (observed on-device: fallback +
+        // zombie TV + double audio).
+        _graceWasOffline = false;
+        _graceExtensions++;
+        _sessionLossGrace = Timer(_kSessionLossGrace, _onGraceExpired);
+        return;
+      }
     }
     _fireRendererLost();
   }
@@ -166,6 +184,8 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     _sessionLossGrace?.cancel();
     _sessionLossGrace = null;
     _lostFired = true;
+    appLog('[cast] session lost (grace exhausted: $_graceExtensions '
+        'extensions) — falling back to this phone');
     emitRendererLost('Lost connection to the cast device — back on this phone');
   }
 

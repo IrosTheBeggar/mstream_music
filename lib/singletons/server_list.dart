@@ -403,10 +403,12 @@ class ServerManager {
         // has no prior port — so a "changed-only" guard would skip exactly the
         // case that strands the saved queue. Only an actual (re)start reaches here
         // (the already-wired-up fast path returned above), and the rebuild no-ops
-        // when no URL actually changed. (Also reloads an active cast onto the fresh
-        // tunnel — see the no-drop note above.)
+        // when no URL actually changed. auto:true → skipped while casting: the
+        // cast backends re-resolve each track against the live tunnel at load
+        // time (irohProxyUri), and a mid-session reload clobbers the Cast SDK's
+        // own suspend/resume recovery.
         unawaited(MediaManager().audioHandler.customAction(
-            'rebuildTranscodeUrls', const {'upcomingOnly': false}));
+            'rebuildTranscodeUrls', const {'upcomingOnly': false, 'auto': true}));
       } catch (e) {
         s.tunnelPort = null;
         s.tunnelToken = null;

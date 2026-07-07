@@ -353,6 +353,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           .timeout(const Duration(seconds: 12));
       return true;
     } catch (_) {
+      appLog('[cast] remote start timed out (12s)');
       return false;
     }
   }
@@ -362,6 +363,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   // so the UI reverts to "This device" and shows a message.
   Future<void> _fallBackToLocal(PlaybackBackend prev, PlaybackBackend failed,
       Duration pos, int idx) async {
+    appLog('[cast] cast failed to start — back to this phone '
+        'at track ${idx + 1}, ${pos.inSeconds}s');
     await failed.pause();
     await _localBackend.setSources(queue.value);
     _backendSubject.add(_localBackend);
@@ -389,6 +392,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       final pos = failed.position;
       final idx = failed.currentIndex ?? 0;
       final wasPlaying = failed.playing;
+      appLog('[cast] renderer lost mid-cast — back to this phone at '
+          'track ${idx + 1}, ${pos.inSeconds}s (playing=$wasPlaying)');
       await _localBackend.setSources(queue.value);
       _backendSubject.add(_localBackend);
       if (queue.value.isNotEmpty) {
@@ -1005,7 +1010,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         break;
       case 'rebuildTranscodeUrls':
         await _rebuildTranscodeUrls(
-            upcomingOnly: extras?['upcomingOnly'] == true);
+            upcomingOnly: extras?['upcomingOnly'] == true,
+            auto: extras?['auto'] == true);
         break;
     }
   }
@@ -1024,16 +1030,54 @@ class AudioPlayerHandler extends BaseAudioHandler
     final server = _serverFor(m);
     if (path == null || server == null) return m; // local-only / unknown server
     final newId = buildServerStreamUrl(server, path);
-    return newId == m.id ? m : m.copyWith(id: newId);
+    return sameStreamUrl(newId, m.id) ? m : m.copyWith(id: newId);
   }
 
-  /// Rebuild queue stream URLs after a transcode-setting change.
+  /// Whether two stream URLs point at the same stream. buildServerStreamUrl
+  /// stamps a fresh cache-busting `app_uuid` on EVERY call, so a raw string
+  /// compare sees every rebuild as a change — and the auto-fired rebuild on
+  /// each tunnel (re)connect then reloads the whole queue (dumping the
+  /// player's buffer, or clobbering an active cast) even when endpoint, port
+  /// and token are identical. Compare everything except the cache-buster.
+  static bool sameStreamUrl(String a, String b) {
+    if (a == b) return true;
+    final ua = Uri.tryParse(a);
+    final ub = Uri.tryParse(b);
+    if (ua == null || ub == null) return false;
+    if (ua.scheme != ub.scheme ||
+        ua.host != ub.host ||
+        ua.port != ub.port ||
+        ua.path != ub.path) {
+      return false;
+    }
+    final qa = Map.of(ua.queryParameters)..remove('app_uuid');
+    final qb = Map.of(ub.queryParameters)..remove('app_uuid');
+    if (qa.length != qb.length) return false;
+    for (final e in qa.entries) {
+      if (qb[e.key] != e.value) return false;
+    }
+    return true;
+  }
+
+  /// Rebuild queue stream URLs after a transcode-setting change ([auto] false)
+  /// or a tunnel (re)connect ([auto] true, fired by ServerManager).
   ///
   /// [upcomingOnly] leaves the current track playing and only swaps the
   /// not-yet-played tracks; otherwise the whole queue reloads at the current
   /// index/position (the current track briefly re-buffers). No-op when no URL
   /// actually changes (e.g. nothing to convert, or transcoding unavailable).
-  Future<void> _rebuildTranscodeUrls({required bool upcomingOnly}) async {
+  Future<void> _rebuildTranscodeUrls(
+      {required bool upcomingOnly, bool auto = false}) async {
+    // An auto rebuild must not touch an active cast: the cast backends
+    // re-resolve every track's URL at load time (irohProxyUri rebinds to the
+    // live tunnel), so the reload is unnecessary — and issuing it mid-session
+    // clobbers the Cast SDK's own suspend/resume recovery (observed
+    // on-device: zombie TV + double audio after a Wi-Fi blip). A user-driven
+    // transcode change still applies while casting.
+    if (auto && !identical(_backend, _localBackend)) {
+      appLog('[queue] auto URL rebuild skipped while casting');
+      return;
+    }
     final q = queue.value;
     if (q.isEmpty) return;
     final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
@@ -1069,9 +1113,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       final rebuilt = q.map(_withRebuiltUrl).toList();
       bool changed = false;
       for (int i = 0; i < q.length; i++) {
-        if (rebuilt[i].id != q[i].id) changed = true;
+        if (!identical(rebuilt[i], q[i])) changed = true;
       }
       if (!changed) return;
+      appLog('[queue] stream URLs rebuilt — reloading at track ${cur + 1}'
+          '${auto ? ' (auto)' : ''}');
       final pos = _backend.position;
       final wasPlaying = _backend.playing;
       final wasShuffle = _backend.shuffleEnabled;
