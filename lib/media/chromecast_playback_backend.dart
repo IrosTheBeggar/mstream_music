@@ -291,12 +291,26 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
               .firstWhere((ds) => ds.any((d) => d.deviceID == _deviceId))
               .timeout(const Duration(seconds: 8));
         } catch (_) {
+          appLog('[cast] re-attach: device not re-discovered yet');
           return false; // device hasn't reappeared — retry next window
         }
       }
+      if (_sessions.currentSession != null && !_sessions.hasConnectedSession) {
+        // A stale SUSPENDED session lingers — startSessionWithDevice collides
+        // with it (round-7 smoke: every connect wait expired). End it
+        // gracefully (endSession does NOT stop the receiver, which keeps
+        // playing) so the fresh start below can cleanly JOIN the receiver.
+        appLog('[cast] re-attach: clearing the stale suspended session');
+        try {
+          await _sessions.endSession();
+        } catch (_) {}
+      }
       _sessionStarted = false; // force _ensureSession to re-connect
       await _ensureSession();
-      if (!_sessions.hasConnectedSession) return false;
+      if (!_sessions.hasConnectedSession) {
+        appLog('[cast] re-attach: session did not connect');
+        return false;
+      }
       _lostFired = false;
       GoggleCastMediaStatus? fresh;
       try {
@@ -320,7 +334,10 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
           if (!_sessions.hasConnectedSession) return false;
         }
         final ok = await loadIndex(index, play: playing, startAt: position);
-        if (!ok) return false;
+        if (!ok) {
+          appLog('[cast] re-attach: reload on the rejoined session failed');
+          return false;
+        }
       }
       return true;
     } catch (e) {
