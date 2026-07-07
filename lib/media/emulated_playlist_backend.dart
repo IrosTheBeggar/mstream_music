@@ -162,6 +162,12 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   int _trackFailures = 0;
   static const int kMaxTrackFailures = 3;
 
+  // Set when the failure walk gives up and declares the renderer lost. The
+  // handler is about to dispose this backend; renderer events keep arriving
+  // until it does (DLNA polls still succeed, Cast still pushes status), and
+  // without this latch they would restart the walk mid-fallback.
+  bool _lost = false;
+
   /// The renderer confirmed the current track is playing: clear the advance
   /// latch and reset the failure budget. Subclasses call this from their
   /// PLAYING state handler.
@@ -188,7 +194,7 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
 
   Future<void> _advance(
       {required String? failedBecause, required bool play}) async {
-    if (advancing) return;
+    if (advancing || _lost) return;
     if (items.isEmpty) return;
     advancing = true;
     if (failedBecause != null) {
@@ -197,6 +203,8 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
       if (_trackFailures >= kMaxTrackFailures) {
         _trackFailures = 0;
         advancing = false;
+        _lost = true;
+        onPlaybackSettled();
         emitRendererLost(
             "The cast device couldn't play these tracks — back on this phone");
         return;

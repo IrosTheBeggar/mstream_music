@@ -168,15 +168,29 @@ void main() {
       expect(b.loads, isEmpty);
     });
 
-    test('a failed walk does not wedge later natural advances', () async {
+    test('a mid-walk failure does not wedge the following natural advance',
+        () async {
       final b = await _seeded(5);
-      b.loadResult = (_) => false;
-      await b.endOfTrack(); // trips renderer-lost, latch released
-      b.loadResult = null; // renderer healthy again
+      b.loadResult = (i) => i != 1; // one broken track, then healthy
+      await b.endOfTrack(); // 1 fails, 2 loads (latch held until PLAYING)
       b.confirmPlaying();
       b.loads.clear();
       await b.endOfTrack();
-      expect(b.loads, hasLength(1)); // advances normally
+      expect(b.loads, ['3:play']); // advances normally — no wedge
+    });
+
+    test(
+        'after renderer-lost the walk quiesces — straggler renderer events '
+        'cannot restart it while the handler swaps backends', () async {
+      final b = await _seeded(5);
+      b.loadResult = (_) => false;
+      await b.endOfTrack(); // trips renderer-lost
+      expect(b.settledCalls, 1); // quiesce hook fired (DLNA stops polling)
+      b.loadResult = null;
+      b.loads.clear();
+      await b.endOfTrack();
+      await b.failTrack('straggler poll');
+      expect(b.loads, isEmpty);
     });
   });
 }

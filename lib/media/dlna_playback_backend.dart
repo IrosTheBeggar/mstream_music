@@ -37,9 +37,12 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   final MediaCastDlnaApi _api;
   final DeviceUdn _udn;
 
-  bool _advancing = false; // guards against double-advance while a track loads
   bool _confirmedPlaying = false; // renderer reached PLAYING for the current track
   bool _reachedNearEnd = false; // position reached end-of-track while playing
+  // Furthest position seen while PLAYING for the current track. Some renderers
+  // reset position to 0 the moment they stop, so the STOPPED classification
+  // below reads this instead of the (already-overwritten) live position.
+  Duration _lastPlayingPosition = Duration.zero;
 
   Timer? _pollTimer;
   bool _polling = false;
@@ -104,6 +107,7 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
     final item = items[target];
     _confirmedPlaying = false;
     _reachedNearEnd = false;
+    _lastPlayingPosition = Duration.zero;
     setProcessingState(BackendProcessingState.loading);
     var ok = false;
     try {
@@ -250,8 +254,9 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       switch (info.state) {
         case TransportState.playing:
           playing = true;
-          _advancing = false;
+          trackPlaying();
           _confirmedPlaying = true;
+          if (position > _lastPlayingPosition) _lastPlayingPosition = position;
           setProcessingState(BackendProcessingState.ready);
           break;
         case TransportState.paused:
@@ -283,22 +288,34 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   Future<void> _onRendererStopped() async {
-    // Only treat STOPPED as end-of-track if the track actually started
-    // (ignores the transient STOPPED during the load->play transition that
-    // otherwise skips a freshly-selected track) AND playback reached the end.
-    // Without these guards a just-loaded track skips after a few seconds.
-    if (_advancing || !_confirmedPlaying || !_reachedNearEnd) return;
-    _advancing = true;
-    final n = nextIndex(onComplete: true);
-    if (n != null) {
-      await loadIndex(n, play: true); // _advancing cleared when poll sees PLAYING
+    // Ignore the transient STOPPED during the load→play transition — without
+    // the _confirmedPlaying guard a freshly-selected track skips after a few
+    // seconds. (advancing additionally collapses the repeated STOPPED polls
+    // while the next track loads.)
+    if (advancing || !_confirmedPlaying) return;
+    final dur = duration;
+    // With no usable duration (missing metadata, or a renderer that reports
+    // 0), _reachedNearEnd can never latch — accept a stop after real playing
+    // progress as the track's natural end, or such queues halt after every
+    // single track.
+    final endedWithoutDuration = (dur == null || dur == Duration.zero) &&
+        _lastPlayingPosition >= const Duration(seconds: 5);
+    if (_reachedNearEnd || endedWithoutDuration) {
+      await advanceOnComplete();
     } else {
+      // Stopped well before the end: the renderer aborted (fetch/decode
+      // error). Walk on (bounded) instead of ignoring the stop forever with
+      // the published state stuck on 'playing'.
       playing = false;
-      _advancing = false;
-      setProcessingState(BackendProcessingState.completed);
-      _stopPolling();
+      await trackFailed(
+          'renderer stopped mid-track at ${_lastPlayingPosition.inSeconds}s');
     }
   }
+
+  // The advance walk settled (end of a non-repeating list, or it gave up and
+  // declared the renderer lost) — nothing is playing, so stop the 1 Hz poll.
+  @override
+  void onPlaybackSettled() => _stopPolling();
 
   @protected
   @override
