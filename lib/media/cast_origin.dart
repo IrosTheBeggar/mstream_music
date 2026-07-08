@@ -1,3 +1,5 @@
+import 'dart:io' show File;
+
 import 'package:audio_service/audio_service.dart' show MediaItem;
 
 import '../objects/server.dart';
@@ -46,8 +48,18 @@ Uri irohLoopbackUri(Server server, String stored) {
 /// `__lt` token rides only the inward leg and never appears in the LAN-facing
 /// URL. The caller must have started [LocalMediaServer] first
 /// ([LocalMediaServer.ensureStarted]).
-Uri irohProxyUri(Server server, String loopback) =>
-    LocalMediaServer().registerProxy(irohLoopbackUri(server, loopback));
+Uri irohProxyUri(Server server, String loopback) {
+  // Fail fast when the tunnel isn't live: handing the renderer a proxy URL
+  // whose upstream can't answer leaves the receiver stuck 'loading' (observed
+  // on-device on a demo→iroh queue jump with the server down). Throwing here
+  // fails the load, which feeds the bounded cast failure walk immediately —
+  // and the walk's renderer-lost fallback lands on the phone, whose local
+  // iroh recovery owns waiting for the tunnel.
+  if (!ServerManager().tunnelServes(server)) {
+    throw StateError('iroh tunnel is not serving ${server.localname}');
+  }
+  return LocalMediaServer().registerProxy(irohLoopbackUri(server, loopback));
+}
 
 /// The album-art URL to hand a renderer: full-resolution [castArtUrl], re-
 /// originated through the LAN proxy when the track is from an iroh server.
@@ -58,5 +70,42 @@ String? castArtUriFor(MediaItem item) {
   final art = castArtUrl(item);
   if (art == null) return null;
   final server = irohServerFor(item);
-  return server == null ? art : irohProxyUri(server, art).toString();
+  if (server == null) return art;
+  try {
+    return irohProxyUri(server, art).toString();
+  } catch (_) {
+    // Art is optional: a dead tunnel must not fail the whole load — notably a
+    // DOWNLOADED iroh track streams from disk and needs no tunnel at all.
+    return null;
+  }
+}
+
+/// Resolve the URL a RENDERER can fetch [item] from. Shared by both cast
+/// backends: a plain HTTP server id is handed over as-is; a local-only item
+/// (file-explorer track — id is a UUID) is served from the phone's
+/// [LocalMediaServer]; an iroh server's id is the phone-loopback tunnel URL a
+/// device across the LAN can't reach, so it's relayed through the
+/// [LocalMediaServer] proxy (re-bound to the live tunnel). A downloaded iroh
+/// track is served from disk — faster, and it needs no tunnel.
+/// Throws (via [irohProxyUri]) when a needed tunnel isn't serving, so the
+/// load fails fast into the cast failure walk.
+Future<Uri> resolveRendererUri(MediaItem item) async {
+  final localPath = item.extras?['localPath'] as String?;
+  final isNetwork =
+      item.id.startsWith('http://') || item.id.startsWith('https://');
+  if (!isNetwork && localPath != null && File(localPath).existsSync()) {
+    await LocalMediaServer().ensureStarted();
+    return LocalMediaServer().registerFile(localPath);
+  }
+  final iroh = irohServerFor(item);
+  if (iroh != null) {
+    await LocalMediaServer().ensureStarted();
+    // A downloaded iroh track's id is a 127.0.0.1 loopback URL, so isNetwork
+    // is true and the disk branch above is bypassed; handle it here.
+    if (localPath != null && File(localPath).existsSync()) {
+      return LocalMediaServer().registerFile(localPath);
+    }
+    return irohProxyUri(iroh, item.id);
+  }
+  return Uri.parse(item.id);
 }

@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart' show AndroidEqualizer;
 import 'package:meta/meta.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'cast_log.dart';
 import 'playback_backend.dart';
 
 /// Shared base for the renderer backends (DLNA, Chromecast) that *emulate*
@@ -111,6 +112,11 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
 
   @protected
   void emitRendererLost(String message) {
+    // One-shot at the single emit point: every loss path (failure walk, poll
+    // failures, session loss) funnels here, and the handler must see exactly
+    // one fallback trigger per backend life. Also quiesces the walk (_lost).
+    if (_lost) return;
+    _lost = true;
     if (!_rendererLost.isClosed) _rendererLost.add(message);
   }
 
@@ -118,8 +124,13 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   /// Push [index] to the renderer and start / queue playback. Called both by a
   /// backend's own transport and by [removeSourceAt] when the playing track is
   /// removed and the slot it left behind must be (re)loaded.
+  ///
+  /// Returns whether the track was successfully handed to the renderer (and
+  /// never throws). A `false` from an auto-advance feeds the bounded failure
+  /// walk in [_advance] — a dead load emits no renderer event, so nothing else
+  /// would move playback forward.
   @protected
-  Future<void> loadIndex(int index, {required bool play});
+  Future<bool> loadIndex(int index, {required bool play});
 
   /// Stop the renderer and settle the terminal (idle) state after the source
   /// list has been emptied (clearSources, or removing the last item). A hook
@@ -132,6 +143,138 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   /// session). Called by [dispose] *before* the shared subjects are closed.
   @protected
   Future<void> disposeRenderer();
+
+  /// Called when an advance settles with nothing left to play (end of a
+  /// non-repeating list, or a failure walk that ran out of tracks). DLNA stops
+  /// its poll timer here; the Cast SDK pushes events, so Chromecast needs
+  /// nothing. Default: no-op.
+  @protected
+  void onPlaybackSettled() {}
+
+  // ── Failure-bounded auto-advance ──
+  /// Latched while an advance (natural end or failure skip) is loading the
+  /// next track, so duplicate end/error events for the same track boundary
+  /// can't double-advance. Cleared by [trackPlaying] when the renderer
+  /// confirms PLAYING — not when the load call returns, because renderers keep
+  /// re-reporting the OLD track's end until the new media is up — and by
+  /// [_advance] itself when a load fails, so a dead load can't wedge the latch
+  /// (the failure walk continues under its own budget instead).
+  @protected
+  bool advancing = false;
+
+  // Consecutive renderer-side track failures (load failed, receiver media
+  // error, premature stop). Reset when any track reaches confirmed playback.
+  int _trackFailures = 0;
+  static const int kMaxTrackFailures = 3;
+
+  // Set when the failure walk gives up and declares the renderer lost. The
+  // handler is about to dispose this backend; renderer events keep arriving
+  // until it does (DLNA polls still succeed, Cast still pushes status), and
+  // without this latch they would restart the walk mid-fallback.
+  bool _lost = false;
+
+  /// True once the failure walk has declared this renderer lost — subclass
+  /// watchdogs gate on it so they stop re-reporting while the handler swaps
+  /// backends (the swap can take a while when the fallback's own load is
+  /// fighting a dead network).
+  @protected
+  bool get rendererLostEmitted => _lost;
+
+  /// The renderer confirmed the current track is playing: clear the advance
+  /// latch and reset the failure budget. Subclasses call this from their
+  /// PLAYING state handler.
+  @protected
+  void trackPlaying() {
+    advancing = false;
+    _trackFailures = 0;
+  }
+
+  /// Natural end of the current track — advance per shuffle/repeat, or settle
+  /// `completed` at the end of a non-repeating list.
+  @protected
+  Future<void> advanceOnComplete() => _advance(failedBecause: null, play: true);
+
+  /// The current track failed on the renderer (load error, receiver media
+  /// error, premature stop) — move on so the queue doesn't silently stop,
+  /// bounded by [kMaxTrackFailures]: after that many consecutive failures the
+  /// renderer is declared lost, which sends the handler's existing fallback
+  /// home to local playback at the same spot. [play] carries the play intent
+  /// through the walk (a failure while paused must not start audio).
+  @protected
+  Future<void> trackFailed(String reason, {bool play = true}) =>
+      _advance(failedBecause: reason, play: play);
+
+  /// Delay between failure-walk strikes, so a transient outage at a track
+  /// boundary (e.g. the iroh tunnel supervisor's few-second reconnect, during
+  /// which loads fail instantly) can't burn the whole budget in milliseconds.
+  /// Overridable so unit tests don't sleep.
+  @protected
+  Duration failureWalkDelay = const Duration(seconds: 2);
+
+  // True while an _advance body is executing (its delay + load awaits). The
+  // `advancing` latch alone can't serve both roles: it is deliberately left
+  // held AFTER a successful load (until the renderer confirms PLAYING), and a
+  // failure event in that pending-confirm state must be allowed to release it
+  // — but a failure event while the walk body is actually running must not
+  // re-enter it.
+  bool _walkRunning = false;
+
+  Future<void> _advance(
+      {required String? failedBecause, required bool play}) async {
+    if (_lost || _walkRunning) return;
+    if (advancing) {
+      // Duplicate end events for the same track boundary must not
+      // double-advance. A FAILURE event in the pending-confirm state is
+      // different: the walk's own freshly-loaded track failed at the renderer
+      // (loadIndex resolves when the load is handed over, before the renderer
+      // fetches the media) — swallowing it would wedge the walk forever, so
+      // release the latch and keep walking under the same budget.
+      if (failedBecause == null) return;
+      advancing = false;
+    }
+    if (items.isEmpty) return;
+    _walkRunning = true;
+    advancing = true;
+    try {
+      var failure = failedBecause;
+      while (true) {
+        if (failure != null) {
+          castLog('cast track failed ($failure) — moving on');
+          _trackFailures++;
+          if (_trackFailures >= kMaxTrackFailures) {
+            _trackFailures = 0;
+            advancing = false;
+            onPlaybackSettled();
+            emitRendererLost(
+                "The cast device couldn't play these tracks — back on this phone");
+            return;
+          }
+          if (failureWalkDelay > Duration.zero) {
+            await Future<void>.delayed(failureWalkDelay);
+            if (_lost) {
+              advancing = false;
+              return;
+            }
+          }
+        }
+        // onComplete:true so repeat-one retries its own track (bounded by the
+        // failure budget) rather than skipping a track the user asked to loop.
+        final n = nextIndex(onComplete: true);
+        if (n == null) {
+          playing = false;
+          advancing = false;
+          setProcessingState(BackendProcessingState.completed);
+          onPlaybackSettled();
+          return;
+        }
+        final ok = await loadIndex(n, play: play);
+        if (ok) return; // latch stays held until the renderer confirms PLAYING
+        failure = 'load failed';
+      }
+    } finally {
+      _walkRunning = false;
+    }
+  }
 
   // ── Source list (mirrors just_audio's on-player playlist API) ──
   @override
@@ -186,7 +329,10 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
       if (_index >= _items.length) _index = _items.length - 1;
       _loadedIndex = -1;
       emitIndex(_index);
-      await loadIndex(_index, play: _playing);
+      final ok = await loadIndex(_index, play: _playing);
+      // A dead load emits no renderer event; walk on so playback isn't
+      // silently stranded on the removed track's empty slot.
+      if (!ok) await trackFailed('load after remove failed', play: _playing);
     }
   }
 

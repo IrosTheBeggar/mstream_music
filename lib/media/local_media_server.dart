@@ -330,18 +330,24 @@ class LocalMediaServer {
   // renderer (and the cast-failure fallback) treats it as a load error.
   Future<void> _proxyRequest(HttpRequest req, Uri upstream) async {
     final res = req.response;
+    HttpClientRequest? up; // tracked so a timed-out relay can abort its socket
     HttpClientResponse? upRes; // tracked so a failed relay can release the socket
     try {
       final client = _proxyClient ??=
           (HttpClient()..connectionTimeout = const Duration(seconds: 15));
       final method = req.method == 'HEAD' ? 'HEAD' : 'GET';
-      final up = await client.openUrl(method, upstream);
+      up = await client.openUrl(method, upstream);
       // Forward the byte range; ask for identity so Content-Length / Content-Range
       // stay exact (audio isn't gzipped, but be explicit rather than rely on it).
       final range = req.headers.value(HttpHeaders.rangeHeader);
       if (range != null) up.headers.set(HttpHeaders.rangeHeader, range);
       up.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
-      upRes = await up.close();
+      // Bound the wait for the upstream response headers: a tunnel that
+      // accepts the connection but never answers (supervisor mid-reconnect)
+      // would otherwise hang this relay and leave the renderer 'loading'
+      // forever. The timeout lands in the catch below → 502 → the renderer
+      // reports a media error and the cast failure walk takes over.
+      upRes = await up.close().timeout(const Duration(seconds: 12));
 
       res.statusCode = upRes.statusCode;
       // Fall back to a basename sniff when the upstream omits Content-Type: a DLNA
@@ -371,6 +377,14 @@ class LocalMediaServer {
       await res.close();
     } catch (e) {
       castLog('LocalMediaServer proxy relay failed', error: e);
+      // A relay that never got response headers (first-byte timeout) leaves
+      // its request in flight on the shared keep-alive client — abort it, or
+      // each timed-out fetch strands a zombie connection to the dead tunnel.
+      if (upRes == null && up != null) {
+        try {
+          up.abort();
+        } catch (_) {}
+      }
       // Drain the half-read upstream so the reused keep-alive client doesn't pool
       // a dirty socket (e.g. the renderer aborted mid-stream on a seek).
       if (upRes != null) {
