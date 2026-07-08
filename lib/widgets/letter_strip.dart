@@ -49,13 +49,22 @@ class LetterStrip extends StatefulWidget {
   /// so trailing controls can sit right up against the visible strip.
   static const double visibleWidth = 24;
 
+  /// Height of the hit region when laid out [Axis.horizontal] — a clickable
+  /// letter row above the list (desktop) rather than a strip on its edge.
+  static const double hitHeight = 34;
+
   final List<DisplayItem> items;
   final void Function(int itemIndex) onJump;
+
+  /// Vertical (default) = strip on the list's right edge (mobile, finger-drag).
+  /// Horizontal = a clickable letter row above the list (desktop).
+  final Axis axis;
 
   const LetterStrip({
     super.key,
     required this.items,
     required this.onJump,
+    this.axis = Axis.vertical,
   });
 
   @override
@@ -167,12 +176,18 @@ class _LetterStripState extends State<LetterStrip> {
   }
 
   Widget _buildBubble(BuildContext context) {
-    // Bubble sits to the LEFT of the finger so the finger isn't
-    // occluding it. Clamp so it never spills past the left edge on
-    // narrow screens.
-    final screenW = MediaQuery.of(context).size.width;
-    final left = (_fingerGlobalPos.dx - 110).clamp(16.0, screenW - 96.0);
-    final top = (_fingerGlobalPos.dy - 40).clamp(40.0, double.infinity);
+    // Vertical strip: bubble sits to the LEFT of the finger so it isn't
+    // occluded. Horizontal strip (row above the list): bubble sits just BELOW
+    // the pointer, centered on it. Clamp so it never spills past the edges.
+    final screen = MediaQuery.of(context).size;
+    final double left, top;
+    if (widget.axis == Axis.vertical) {
+      left = (_fingerGlobalPos.dx - 110).clamp(16.0, screen.width - 96.0);
+      top = (_fingerGlobalPos.dy - 40).clamp(40.0, double.infinity);
+    } else {
+      left = (_fingerGlobalPos.dx - 40).clamp(16.0, screen.width - 96.0);
+      top = (_fingerGlobalPos.dy + 22).clamp(40.0, screen.height - 96.0);
+    }
     return Positioned(
       left: left,
       top: top,
@@ -209,10 +224,10 @@ class _LetterStripState extends State<LetterStrip> {
   }
 
   void _handleTouch(
-      Offset localPos, Offset globalPos, double height, BuildContext context) {
-    final perLetter = height / _letters.length;
-    final i =
-        (localPos.dy / perLetter).floor().clamp(0, _letters.length - 1);
+      Offset localPos, Offset globalPos, double extent, BuildContext context) {
+    final perLetter = extent / _letters.length;
+    final coord = widget.axis == Axis.vertical ? localPos.dy : localPos.dx;
+    final i = (coord / perLetter).floor().clamp(0, _letters.length - 1);
     final touched = _letters[i];
 
     final itemIndex = _nearestIndex(touched);
@@ -257,73 +272,101 @@ class _LetterStripState extends State<LetterStrip> {
         widget.items.length < LetterStrip.minItemsToShow) {
       return SizedBox.shrink();
     }
+    final vertical = widget.axis == Axis.vertical;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final h = constraints.maxHeight;
+        // Along-axis extent the pointer maps onto: height for a vertical strip,
+        // width for a horizontal one.
+        final extent = vertical ? constraints.maxHeight : constraints.maxWidth;
+        void touch(Offset local, Offset global) =>
+            _handleTouch(local, global, extent, context);
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (d) =>
-              _handleTouch(d.localPosition, d.globalPosition, h, context),
+          onTapDown: (d) => touch(d.localPosition, d.globalPosition),
           onTapUp: (_) => _clearActive(),
           onTapCancel: _clearActive,
-          onVerticalDragStart: (d) =>
-              _handleTouch(d.localPosition, d.globalPosition, h, context),
-          onVerticalDragUpdate: (d) =>
-              _handleTouch(d.localPosition, d.globalPosition, h, context),
-          onVerticalDragEnd: (_) => _clearActive(),
-          onVerticalDragCancel: _clearActive,
-          // Outer SizedBox = hit region (40 wide); inner Container =
-          // visible strip (24 wide, right-aligned). Gives the finger
-          // ~16px of extra reach to the left of the letters without
-          // pushing the visible strip away from the edge.
-          child: SizedBox(
-            width: LetterStrip.hitWidth,
-            child: Align(
-              alignment: Alignment.centerRight,
-              // Rebuild only the strip (tint + active cell) as the finger moves,
-              // via [_touched] — not the enclosing LayoutBuilder/GestureDetector.
-              child: ValueListenableBuilder<String?>(
-                valueListenable: _touched,
-                builder: (context, touched, _) {
-                  final active = touched != null;
-                  return AnimatedContainer(
-                    duration: Duration(milliseconds: 120),
-                    width: LetterStrip.visibleWidth,
-                    padding: EdgeInsets.symmetric(vertical: 4, horizontal: 1),
-                    decoration: BoxDecoration(
-                      color: active
-                          ? VelvetColors.surface.withValues(alpha: 0.7)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: _letters.map((letter) {
-                        final present =
-                            _firstIndexByLetter.containsKey(letter);
-                        final isActive = letter == touched;
-                        return Text(
-                          letter,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight:
-                                isActive ? FontWeight.w900 : FontWeight.w600,
-                            color: isActive
-                                ? VelvetColors.primary
-                                : (present
-                                    ? VelvetColors.textPrimary
-                                    : VelvetColors.textTertiary),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+          onVerticalDragStart:
+              vertical ? (d) => touch(d.localPosition, d.globalPosition) : null,
+          onVerticalDragUpdate:
+              vertical ? (d) => touch(d.localPosition, d.globalPosition) : null,
+          onVerticalDragEnd: vertical ? (_) => _clearActive() : null,
+          onVerticalDragCancel: vertical ? _clearActive : null,
+          onHorizontalDragStart:
+              vertical ? null : (d) => touch(d.localPosition, d.globalPosition),
+          onHorizontalDragUpdate:
+              vertical ? null : (d) => touch(d.localPosition, d.globalPosition),
+          onHorizontalDragEnd: vertical ? null : (_) => _clearActive(),
+          onHorizontalDragCancel: vertical ? null : _clearActive,
+          child: vertical ? _verticalStrip() : _horizontalStrip(),
         );
       },
+    );
+  }
+
+  // Outer SizedBox = hit region (40 wide); inner Container = visible strip (24
+  // wide, right-aligned). Gives the finger ~16px of extra reach to the left of
+  // the letters without pushing the visible strip away from the edge.
+  Widget _verticalStrip() {
+    return SizedBox(
+      width: LetterStrip.hitWidth,
+      child: Align(
+        alignment: Alignment.centerRight,
+        // Rebuild only the strip (tint + active cell) as the pointer moves, via
+        // [_touched] — not the enclosing LayoutBuilder/GestureDetector.
+        child: ValueListenableBuilder<String?>(
+          valueListenable: _touched,
+          builder: (context, touched, _) => AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: LetterStrip.visibleWidth,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 1),
+            decoration: BoxDecoration(
+              color: touched != null
+                  ? VelvetColors.surface.withValues(alpha: 0.7)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _letters.map((l) => _cell(l, touched)).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // A clickable letter row above the list (desktop). The letters spread evenly
+  // across the full content width; the active one highlights.
+  Widget _horizontalStrip() {
+    return Container(
+      height: LetterStrip.hitHeight,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: VelvetColors.border)),
+      ),
+      child: ValueListenableBuilder<String?>(
+        valueListenable: _touched,
+        builder: (context, touched, _) => Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: _letters.map((l) => _cell(l, touched)).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _cell(String letter, String? touched) {
+    final present = _firstIndexByLetter.containsKey(letter);
+    final isActive = letter == touched;
+    return Text(
+      letter,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+        color: isActive
+            ? VelvetColors.primary
+            : (present ? VelvetColors.textPrimary : VelvetColors.textTertiary),
+      ),
     );
   }
 }
