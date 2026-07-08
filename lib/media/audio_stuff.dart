@@ -25,6 +25,7 @@ import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/log_manager.dart';
+import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
 import '../util/camelot.dart';
@@ -936,11 +937,49 @@ class AudioPlayerHandler extends BaseAudioHandler
       !queueEmpty &&
       !recovering;
 
+  // Completes when the launch queue restore has settled — restored, nothing
+  // to restore (feature off / no snapshot / empty), or failed. Signalled by
+  // QueueStore.init(); play() awaits it on a cold boot so a transport command
+  // that beats the restore doesn't no-op on an empty player.
+  final Completer<void> _restoreSettled = Completer<void>();
+  Future<void> get queueRestoreSettled => _restoreSettled.future;
+  void markQueueRestoreSettled() {
+    if (!_restoreSettled.isCompleted) _restoreSettled.complete();
+  }
+
+  // Cold-boot resume race: a PLAY from the media-resumption chip, Bluetooth,
+  // or Android Auto can reach a headless-booted service before QueueStore has
+  // restored the saved queue — a bare play on an empty player silently no-ops
+  // (the reseed net needs a non-empty queue). Trigger the restore ourselves
+  // (both calls are idempotent; on a headless boot no widget may ever run
+  // main.dart's initState trigger) and wait for it to settle. Bounded: the
+  // settle can legitimately take tens of seconds (loadServerList dials an
+  // iroh tunnel first), but a wedged startup must not hold the transport
+  // forever.
+  Future<void> _awaitQueueRestore() {
+    unawaited(ServerManager()
+        .ensureLoaded()
+        .then((_) => QueueStore().init())
+        .catchError((Object e) => appLog('[play] restore trigger failed: $e')));
+    return queueRestoreSettled.timeout(const Duration(seconds: 60),
+        onTimeout: () =>
+            appLog('[play] queue restore never settled — playing as-is'));
+  }
+
   @override
-  Future<void> play() {
+  Future<void> play() async {
     appLog('[play] play');
     _playIntent = true;
     _intentionalStop = false;
+    if (queue.value.isEmpty && !_restoreSettled.isCompleted) {
+      await _awaitQueueRestore();
+      // The wait can run tens of seconds — a pause/stop that arrived during
+      // it must win, not be overridden by this stale play when the restored
+      // queue comes up. (pause() and stop() both clear _playIntent.)
+      if (!_playIntent) return;
+      // The restore parks paused at the saved spot; fall through so the bare
+      // play (or the reseed net, if the restore load failed) resumes it.
+    }
     if (shouldReseedOnPlay(
         onLocalBackend: identical(_backend, _localBackend),
         processingState: _backend.processingState,
