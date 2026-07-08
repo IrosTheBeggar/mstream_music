@@ -42,7 +42,12 @@ class DesktopIntegration with WindowListener, TrayListener {
     await windowManager.ensureInitialized();
     const options = WindowOptions(
       size: Size(1280, 800),
-      minimumSize: Size(900, 600),
+      // Keep the floor comfortably above the 900px desktop-shell breakpoint
+      // (main.dart): minimumSize is the OUTER window, but the breakpoint reads
+      // the inner Flutter view (window minus borders, scaled by DPI), which is a
+      // few px smaller. Sitting the min at exactly 900 let the content tip under
+      // 900 at the smallest size and flip to the phone shell — 960 leaves room.
+      minimumSize: Size(960, 640),
       center: true,
       title: 'mStream Music',
       titleBarStyle: TitleBarStyle.normal,
