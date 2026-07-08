@@ -16,6 +16,7 @@ import 'local_media_server.dart';
 import 'auto_browse.dart';
 import 'cast_log.dart';
 import 'cast_target.dart';
+import '../native/iroh_tunnel.dart';
 import '../objects/server.dart';
 import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
@@ -185,6 +186,18 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (just_audio's error channel), NOT as errors on changeStream — recover the
     // iroh mid-stream-drop case from here.
     _backendSubject.switchMap((b) => b.errorStream).listen(_onPlaybackError);
+    // The iroh supervisor re-dials a dropped tunnel forever on the same
+    // loopback port, so a dead server coming back flips this status to
+    // connected without any app-side event: the phone's network never changed
+    // (the connectivity listener stays silent) and the error-time recovery
+    // timed out long ago. This transition is the only signal that playback
+    // parked by the outage can resume.
+    ServerManager().tunnelStatusStream.listen((status) {
+      final prev = _lastTunnelStatus;
+      _lastTunnelStatus = status;
+      if (prev == null || prev == IrohTunnelStatus.connected) return;
+      if (status == IrohTunnelStatus.connected) _onTunnelReconnected();
+    });
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
       if (state == BackendProcessingState.completed) {
@@ -713,16 +726,93 @@ class AudioPlayerHandler extends BaseAudioHandler
     _httpRetries = 0;
     _recoveringPlayback = true;
     appLog('[play] connectivity back — resuming after network stall');
-    _switchChain = _switchChain.then((_) async {
-      if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
-      final pos = _localBackend.position;
-      final idx = _localBackend.currentIndex ?? 0;
-      await _localBackend.setSources(queue.value,
-          initialIndex: idx, initialPosition: pos);
-      if (_playIntent) unawaited(_localBackend.play());
-    }).catchError((Object e) {
+    _switchChain = _switchChain
+        .then((_) => _reseedLocalAtSpot())
+        .catchError((Object e) {
       castLog('network-regained resume failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  /// Reload the local backend at its current spot, with every URL re-derived
+  /// against the live tunnel/transcode state, then resume if the user still
+  /// wants playback. The revive primitive for a parked player: once just_audio
+  /// goes idle (a playback error tears the platform player down) a bare play()
+  /// silently no-ops — only a re-seed brings audio back. _playIntent is read
+  /// AFTER the load on purpose: setSources is network-bound (seconds over a
+  /// just-reconnected tunnel) and a pause landing mid-load must win over the
+  /// recovery that scheduled us. Callers serialize on _switchChain and hold
+  /// _recoveringPlayback.
+  Future<void> _reseedLocalAtSpot() async {
+    if (!identical(_backend, _localBackend)) return;
+    final fresh = _queueWithFreshUrls();
+    if (fresh.isEmpty) return;
+    final pos = _localBackend.position;
+    final idx = (_localBackend.currentIndex ?? 0).clamp(0, fresh.length - 1);
+    // Load DIRECTLY at the spot (initialIndex/Position) so the now-playing UI
+    // doesn't flash track 0 on the reload.
+    await _localBackend.setSources(fresh,
+        initialIndex: idx, initialPosition: pos);
+    if (_playIntent) unawaited(_localBackend.play());
+  }
+
+  // Resume playback parked by an iroh server outage, fired on the tunnel's
+  // not-connected → connected transition (listener in _init). The supervisor
+  // heals a dropped tunnel in place — same loopback port — so the stored URLs
+  // still look current and _ensureActiveTunnel's rebuild-on-restart never
+  // runs; without this hook nothing reloads the player when the server
+  // returns. Only touches a player that is actually parked: local backend,
+  // idle without a deliberate stop, current track owned by the served server.
+  IrohTunnelStatus? _lastTunnelStatus;
+  // One-shot re-check for a connected edge that arrived while a transient
+  // guard blocked the heal. The status subject emits on change only, so a
+  // consumed edge never re-fires on its own — dropping it would park playback
+  // until the user taps play.
+  Timer? _tunnelHealRetry;
+  void _onTunnelReconnected() {
+    _tunnelHealRetry?.cancel();
+    _tunnelHealRetry = null;
+    if (!identical(_backend, _localBackend)) return;
+    if (_intentionalStop) return;
+    if (_recoveringPlayback || _skipPending) {
+      _rearmTunnelHeal();
+      return;
+    }
+    if (_localBackend.processingState != BackendProcessingState.idle) return;
+    final q = queue.value;
+    if (q.isEmpty) return;
+    final idx = _localBackend.currentIndex ?? 0;
+    final item = (idx >= 0 && idx < q.length) ? q[idx] : null;
+    final server = item == null ? null : _serverFor(item);
+    if (server == null || !server.isIroh) return;
+    if (!ServerManager().tunnelServes(server)) return;
+    // Shares the error-time recovery's per-server budget so a flapping tunnel
+    // (connected↔reconnecting) can't spin reloads against a dying server.
+    final now = DateTime.now();
+    final last = _lastRecoveryByServer[server.localname];
+    if (last != null && now.difference(last) < const Duration(seconds: 10)) {
+      _rearmTunnelHeal();
+      return;
+    }
+    _lastRecoveryByServer[server.localname] = now;
+    _recoveringPlayback = true;
+    appLog('[play] iroh tunnel back — resuming parked playback');
+    _switchChain = _switchChain.then((_) async {
+      // Re-check the park under the chain: something queued ahead of us (a
+      // backend switch, a user play) may already have revived the player.
+      if (_localBackend.processingState != BackendProcessingState.idle) return;
+      await _reseedLocalAtSpot();
+    }).catchError((Object e) {
+      castLog('tunnel-reconnect resume failed', error: e);
+    }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  // Check the parked state again once the blocking guard has had time to
+  // clear (the cooldown runs 10s; recoveries always finish). Terminates: a
+  // healed player fails the idle guard and a still-dead tunnel fails
+  // tunnelServes, and neither of those re-arms.
+  void _rearmTunnelHeal() {
+    _tunnelHealRetry =
+        Timer(const Duration(seconds: 11), _onTunnelReconnected);
   }
 
   // Heuristic: does this error look like a clearly bad/unplayable source (skip
@@ -789,13 +879,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _initialized.future;
     _intentionalStop = false;
     queue.add(items.toList());
-    await _backend.setSources(items);
-    final int i = index.clamp(0, items.length - 1);
-    // play: false → load paused at the saved spot (don't blast audio on open).
-    await _backend.seek(position, index: i, play: false);
-    _repeatMode = repeat;
-    await _backend.setRepeat(_backendRepeat(repeat));
-    if (shuffle) await _backend.setShuffleEnabled(true);
+    // Serialized on _switchChain: the re-seed paths (reload-on-play, tunnel
+    // heal) chain their loads there, and an un-serialized restore load racing
+    // one of them makes the two setSources abort each other ("Loading
+    // interrupted"), losing the saved spot.
+    final done = _switchChain.then((_) async {
+      await _backend.setSources(items);
+      final int i = index.clamp(0, items.length - 1);
+      // play: false → load paused at the saved spot (don't blast audio on open).
+      await _backend.seek(position, index: i, play: false);
+      _repeatMode = repeat;
+      await _backend.setRepeat(_backendRepeat(repeat));
+      if (shuffle) await _backend.setShuffleEnabled(true);
+    });
+    _switchChain = done.catchError((_) {});
+    await done;
     _emitCurrentMediaItem();
     _broadcastState();
   }
@@ -816,11 +914,40 @@ class AudioPlayerHandler extends BaseAudioHandler
   // re-seed resumes PAUSED rather than autoplaying on open.
   bool _playIntent = false;
 
+  /// Whether play() must re-seed the local player instead of issuing a bare
+  /// backend.play(): just_audio parked idle (a playback error tears the
+  /// platform player down) with tracks still queued, so a bare play() would
+  /// silently no-op. Never while a recovery is in flight — it re-seeds itself
+  /// and reads the play intent when it does. Pure; unit-tested.
+  static bool shouldReseedOnPlay({
+    required bool onLocalBackend,
+    required BackendProcessingState processingState,
+    required bool queueEmpty,
+    required bool recovering,
+  }) =>
+      onLocalBackend &&
+      processingState == BackendProcessingState.idle &&
+      !queueEmpty &&
+      !recovering;
+
   @override
   Future<void> play() {
     appLog('[play] play');
     _playIntent = true;
     _intentionalStop = false;
+    if (shouldReseedOnPlay(
+        onLocalBackend: identical(_backend, _localBackend),
+        processingState: _backend.processingState,
+        queueEmpty: queue.value.isEmpty,
+        recovering: _recoveringPlayback)) {
+      appLog('[play] play on an idle player — re-seeding sources');
+      _recoveringPlayback = true;
+      _switchChain = _switchChain
+          .then((_) => _reseedLocalAtSpot())
+          .catchError((Object e) => castLog('re-seed on play failed', error: e))
+          .whenComplete(() => _recoveringPlayback = false);
+      return _switchChain;
+    }
     return _backend.play();
   }
 
