@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show File;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -8,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
+import 'package:wifi_lock_shim/wifi_lock_shim.dart';
 import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
@@ -292,6 +294,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       return;
     }
     if (identical(next, _backend)) return;
+    // A visualizer cast makes the phone the renderer's byte origin (on-device
+    // HLS transcode served by LocalMediaServer) — the WifiLock heuristics need
+    // to know, and the backend itself doesn't expose it.
+    _castVisualizer = !target.isLocal && visualizer;
     await _switchBackend(next);
   }
 
@@ -1323,7 +1329,83 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   /// Broadcasts the current state to all clients.
+  /// Whether the Android WifiLock should be held: the phone is actively
+  /// moving audio bytes over the network. Either the local player is playing
+  /// a network source, or a cast renderer is being fed FROM the phone (iroh
+  /// LAN relay, local-file serve, visualizer HLS — LocalMediaServer moves
+  /// every byte, so radio power-save starves the TV just the same; a
+  /// plain-HTTP cast streams renderer-direct and doesn't need it). Never for
+  /// on-disk files and never while paused, stopped, or parked — a silent
+  /// player holding a full-power Wi-Fi lock for hours is a battery bug, and
+  /// the tunnel heal works without it. Pure; unit-tested.
+  static bool shouldHoldWifiLock({
+    required bool playing,
+    required bool onLocalBackend,
+    required BackendProcessingState processingState,
+    required bool itemIsNetworkSource,
+    required bool castRelaysViaPhone,
+  }) {
+    if (!playing) return false;
+    if (castRelaysViaPhone) return true;
+    return onLocalBackend &&
+        itemIsNetworkSource &&
+        processingState != BackendProcessingState.idle &&
+        processingState != BackendProcessingState.completed;
+  }
+
+  // Whether the LOCAL backend actually pulls [item] over the network. Mirrors
+  // LocalPlaybackBackend._uriFor: a downloaded track plays from disk only
+  // while its file still exists — gone (SD ejected, folder cleared) it falls
+  // back to streaming the id, which needs the lock like any other stream.
+  static bool _streamsFromNetwork(MediaItem item) {
+    if (!item.id.startsWith('http://') && !item.id.startsWith('https://')) {
+      return false;
+    }
+    final localPath = item.extras?['localPath'] as String?;
+    return localPath == null || !File(localPath).existsSync();
+  }
+
+  // Whether a cast renderer fetches [item] FROM THE PHONE rather than from a
+  // server. Mirrors resolveRendererUri (cast_origin.dart): a local-only file
+  // is served by LocalMediaServer, an iroh track is relayed through its proxy
+  // (or disk-served); only a plain-HTTP server track goes renderer-direct.
+  bool _phoneIsCastOrigin(MediaItem item) {
+    final localPath = item.extras?['localPath'] as String?;
+    final isNetwork =
+        item.id.startsWith('http://') || item.id.startsWith('https://');
+    if (!isNetwork && localPath != null && File(localPath).existsSync()) {
+      return true;
+    }
+    return _serverFor(item)?.isIroh ?? false;
+  }
+
+  // True while the active cast backend streams the on-device visualizer: the
+  // phone transcodes and serves the HLS itself, so it is the renderer's byte
+  // origin regardless of where the track's audio came from. Set on every cast
+  // switch; only consulted while a cast backend is active.
+  bool _castVisualizer = false;
+
+  // Re-evaluated on every state broadcast (play/pause, track change, backend
+  // swap, processing-state moves all land there); the shim dedupes, so only
+  // actual transitions cross the platform channel.
+  void _updateWifiLock() {
+    final q = queue.value;
+    final idx = _backend.currentIndex ?? 0;
+    final item = (idx >= 0 && idx < q.length) ? q[idx] : null;
+    final onLocal = identical(_backend, _localBackend);
+    unawaited(WifiLockShim.setHeld(shouldHoldWifiLock(
+      playing: _backend.playing,
+      onLocalBackend: onLocal,
+      processingState: _backend.processingState,
+      itemIsNetworkSource: item != null && _streamsFromNetwork(item),
+      castRelaysViaPhone: !onLocal &&
+          item != null &&
+          (_castVisualizer || _phoneIsCastOrigin(item)),
+    )));
+  }
+
   void _broadcastState() {
+    _updateWifiLock();
     final playing = _backend.playing;
     final AudioServiceShuffleMode shuffle = _backend.shuffleEnabled == true
         ? AudioServiceShuffleMode.all
