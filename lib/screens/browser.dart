@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
@@ -1112,8 +1114,14 @@ class _BrowserState extends State<Browser> {
                             browserList.isNotEmpty &&
                             !filtering &&
                             LetterStrip.showsFor(browserList);
-                        final gutter =
-                            stripShowing ? LetterStrip.gutterWidth : 0.0;
+                        // Desktop shows the strip as a row ABOVE the list, so
+                        // no side gutter is reserved there.
+                        final horizontalStrip = Platform.isWindows ||
+                            Platform.isLinux ||
+                            Platform.isMacOS;
+                        final gutter = stripShowing && !horizontalStrip
+                            ? LetterStrip.gutterWidth
+                            : 0.0;
                         final stripOnLeft = LetterStrip.onLeft;
                         final Widget content = useGrid
                             ? AlbumGrid(
@@ -1190,6 +1198,50 @@ class _BrowserState extends State<Browser> {
                         if (!stripShowing) {
                           return content;
                         }
+                        void onJump(int i) {
+                          final sc = BrowserManager().sc;
+                          if (!sc.hasClients) return;
+                          final double offset;
+                          if (useGrid) {
+                            final w = MediaQuery.of(context).size.width;
+                            final cols = AlbumGrid.columnsFor(w, gutter);
+                            final rowH = AlbumGrid.rowHeightFor(w, gutter);
+                            final row = i ~/ cols;
+                            offset = AlbumGrid.padTop +
+                                row * (rowH + AlbumGrid.spacing);
+                          } else {
+                            // Sum the SAME per-row extents the ListView lays out
+                            // with (see _rowExtent) so the jump lands exactly on
+                            // the target row. File Explorer mixes 1- and 2-line
+                            // rows, hence the walk-and-sum. O(i), microseconds
+                            // even at 10k+ items.
+                            double sum = 0;
+                            final stop = i.clamp(0, browserList.length);
+                            for (var k = 0; k < stop; k++) {
+                              sum += _rowExtent(browserList[k], ts);
+                            }
+                            offset = sum;
+                          }
+                          sc.jumpTo(offset
+                              .clamp(0.0, sc.position.maxScrollExtent)
+                              .toDouble());
+                        }
+
+                        // Desktop: a clickable letter row above the list.
+                        // Mobile: the vertical strip overlaid on the right edge
+                        // (finger-drag).
+                        if (horizontalStrip) {
+                          return Column(
+                            children: [
+                              LetterStrip(
+                                items: browserList,
+                                axis: Axis.horizontal,
+                                onJump: onJump,
+                              ),
+                              Expanded(child: content),
+                            ],
+                          );
+                        }
                         return Stack(
                           children: [
                             content,
@@ -1218,41 +1270,7 @@ class _BrowserState extends State<Browser> {
                               bottom: 0,
                               child: LetterStrip(
                                 items: browserList,
-                                onJump: (i) {
-                                  final sc = BrowserManager().sc;
-                                  if (!sc.hasClients) return;
-                                  final double offset;
-                                  if (useGrid) {
-                                    final w = MediaQuery.of(context)
-                                        .size
-                                        .width;
-                                    final cols =
-                                        AlbumGrid.columnsFor(w, gutter);
-                                    final rowH =
-                                        AlbumGrid.rowHeightFor(w, gutter);
-                                    final row = i ~/ cols;
-                                    offset = AlbumGrid.padTop +
-                                        row * (rowH + AlbumGrid.spacing);
-                                  } else {
-                                    // Sum the SAME per-row extents the ListView
-                                    // lays out with (see _rowExtent) so the jump
-                                    // lands exactly on the target row. File
-                                    // Explorer mixes 1- and 2-line rows, hence
-                                    // the walk-and-sum. O(i), microseconds even
-                                    // at 10k+ items.
-                                    double sum = 0;
-                                    final stop =
-                                        i.clamp(0, browserList.length);
-                                    for (var k = 0; k < stop; k++) {
-                                      sum += _rowExtent(browserList[k], ts);
-                                    }
-                                    offset = sum;
-                                  }
-                                  sc.jumpTo(offset
-                                      .clamp(
-                                          0.0, sc.position.maxScrollExtent)
-                                      .toDouble());
-                                },
+                                onJump: onJump,
                               ),
                             ),
                           ],
