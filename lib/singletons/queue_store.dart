@@ -39,6 +39,9 @@ class QueueStore {
 
   bool _restoring = false;
   bool _started = false;
+  // True once the live queue has been non-empty this session — gates the
+  // empty-queue snapshot delete in saveNow (see there).
+  bool _hadQueue = false;
   Timer? _debounceTimer;
   Timer? _ticker;
   final List<StreamSubscription> _subs = [];
@@ -60,8 +63,13 @@ class QueueStore {
     } catch (e) {
       // A corrupt / incompatible file must never block startup.
       appLog('[queue] restore failed: $e');
+    } finally {
+      _restoring = false;
+      // Settled either way (restored / nothing to restore / failed) — a
+      // cold-boot transport command gates on this, and an error here must
+      // release it, not wedge play forever.
+      MediaManager().audioHandler.markQueueRestoreSettled();
     }
-    _restoring = false;
     _attachListeners();
   }
 
@@ -88,23 +96,66 @@ class QueueStore {
   /// instead of a dead loopback port (the default stays the selected server).
   /// Cheap: reads + parses the file but builds no MediaItems.
   Future<String?> peekResumeServer() async {
+    final entry = await _peekCurrentEntry();
+    if (entry == null) return null;
+    final extras = entry['extras'];
+    return (extras is Map) ? extras['server'] as String? : null;
+  }
+
+  /// The saved queue's current item as DISPLAY metadata (title/artist/album/
+  /// artUrl) for the Android 11+ playback-resumption chip. Served straight
+  /// from the snapshot so a cold headless bind can answer the system's
+  /// recent-root query before — and without — the full restore. No server
+  /// resolution, no URL rebuild: the id is display-only (playback goes through
+  /// the browse tree's 'resume' command), and an iroh artUrl may carry a dead
+  /// loopback port, in which case the chip just renders without artwork.
+  Future<MediaItem?> peekResumeItem() async {
+    return resumeItemFromSnapshot(await _peekCurrentEntry());
+  }
+
+  // Read + parse the snapshot down to its current-index item entry. Null when
+  // the feature is off or the file is missing/incompatible/corrupt — never
+  // throws (startup and the resumption chip both ride on this).
+  Future<Map<String, dynamic>?> _peekCurrentEntry() async {
     if (!SettingsManager().resumeQueue) return null;
     try {
       final file = await _file;
       if (!await file.exists()) return null;
-      final dynamic raw = jsonDecode(await file.readAsString());
-      if (raw is! Map || raw['version'] != _schemaVersion) return null;
-      final dynamic items = raw['items'];
-      if (items is! List || items.isEmpty) return null;
-      int index = (raw['index'] is int) ? raw['index'] as int : 0;
-      if (index < 0 || index >= items.length) index = 0;
-      final entry = items[index];
-      if (entry is! Map) return null;
-      final extras = entry['extras'];
-      return (extras is Map) ? extras['server'] as String? : null;
+      return currentEntryFromSnapshot(jsonDecode(await file.readAsString()));
     } catch (_) {
-      return null; // a corrupt/unreadable file must never block startup
+      return null;
     }
+  }
+
+  /// The snapshot's current-index item entry (index clamped like restore
+  /// does), or null when the shape is wrong. Pure; unit-tested.
+  static Map<String, dynamic>? currentEntryFromSnapshot(dynamic raw) {
+    if (raw is! Map || raw['version'] != _schemaVersion) return null;
+    final dynamic items = raw['items'];
+    if (items is! List || items.isEmpty) return null;
+    int index = (raw['index'] is int) ? raw['index'] as int : 0;
+    if (index < 0 || index >= items.length) index = 0;
+    final entry = items[index];
+    return entry is Map ? Map<String, dynamic>.from(entry) : null;
+  }
+
+  /// Build the resumption-chip [MediaItem] from a saved item entry. Display
+  /// fields only — see [peekResumeItem]. Pure; unit-tested.
+  static MediaItem? resumeItemFromSnapshot(Map<String, dynamic>? entry) {
+    if (entry == null) return null;
+    final extras = entry['extras'];
+    final artUrl = (extras is Map) ? extras['artUrl'] : null;
+    final title = (entry['title'] as String?) ??
+        ((extras is Map) ? (extras['path'] as String?) : null)?.split('/').last;
+    if (title == null || title.isEmpty) return null;
+    return MediaItem(
+      id: 'resume-peek', // display-only; never handed to a backend
+      title: title,
+      artist: entry['artist'] as String?,
+      album: entry['album'] as String?,
+      playable: true,
+      extras: {if (artUrl is String) 'artUrl': artUrl},
+    );
   }
 
   Future<void> _restore() async {
@@ -191,9 +242,16 @@ class QueueStore {
       final handler = MediaManager().audioHandler;
       final queue = handler.queue.value;
       if (queue.isEmpty) {
-        if (await file.exists()) await file.delete();
+        // Delete only after a queue actually existed this session (a real,
+        // user-visible clear). Without the guard, the listener attach right
+        // after init REPLAYS the current (empty) queue, so a restore that
+        // whiffed — transient server-list read failure, no resolvable items —
+        // would destroy the very snapshot the resumption chip serves, turning
+        // a recoverable hiccup into permanent loss.
+        if (_hadQueue && await file.exists()) await file.delete();
         return;
       }
+      _hadQueue = true;
       final state = handler.playbackState.value;
       final snapshot = <String, dynamic>{
         'version': _schemaVersion,

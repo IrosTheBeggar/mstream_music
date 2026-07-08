@@ -18,6 +18,7 @@
 //      mirrors the same endpoints + parsing and returns plain DisplayItems
 //      (so playback can reuse queue_actions.playFromHere unchanged).
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:audio_service/audio_service.dart';
@@ -31,6 +32,7 @@ import '../objects/metadata.dart';
 import '../objects/server.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
+import '../singletons/queue_store.dart';
 import '../singletons/server_list.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
@@ -140,19 +142,23 @@ class AutoBrowse {
   /// server / network failure it returns a single non-playable notice row.
   static Future<List<MediaItem>> children(String parentMediaId) async {
     try {
-      await ServerManager().ensureLoaded();
-      final Server? server = ServerManager().currentServer;
-      if (server == null) {
-        return [
-          _notice('Open mStream on your phone',
-              'Add a server there to browse it here'),
-        ];
-      }
-
-      // Android 11 playback resumption requests the 'recent' root: surface the
-      // now-playing item (when the queue is warm) as a playable 'resume' entry.
+      // Android 11+ playback resumption requests the 'recent' root: surface
+      // the last-played item as a playable 'resume' entry. Answered BEFORE
+      // the ensureLoaded await below — on a cold headless bind the system
+      // asks within moments, and loadServerList can legitimately spend
+      // 30-45s dialing an iroh tunnel; nothing here needs a server (the live
+      // mediaItem and the snapshot peek are both server-free, and a
+      // local-files queue has no server at all). The restore chain is kicked
+      // in the background (both calls idempotent) so the subsequent tap
+      // finds the queue warm.
       if (parentMediaId == AudioService.recentRootId) {
-        final cur = MediaManager().audioHandler.mediaItem.value;
+        unawaited(ServerManager()
+            .ensureLoaded()
+            .then((_) => QueueStore().init())
+            .catchError(
+                (Object e) => appLog('[auto] restore kick failed: $e')));
+        final cur = MediaManager().audioHandler.mediaItem.value ??
+            await QueueStore().peekResumeItem();
         if (cur == null) return const [];
         final art = cur.extras?['artUrl'];
         return [
@@ -164,6 +170,21 @@ class AutoBrowse {
             artUri: art is String ? Uri.parse(_artContentUri(art)) : null,
             playable: true,
           ),
+        ];
+      }
+
+      await ServerManager().ensureLoaded();
+      // A browse bind may be the process's only entry point (media-resumption
+      // chip, Android Auto cold start — no widget ever builds, so main.dart's
+      // initState trigger never runs). Kick the queue restore here so a
+      // following play/'resume' finds the queue warm. Idempotent + guarded.
+      unawaited(QueueStore().init());
+
+      final Server? server = ServerManager().currentServer;
+      if (server == null) {
+        return [
+          _notice('Open mStream on your phone',
+              'Add a server there to browse it here'),
         ];
       }
 
@@ -316,9 +337,14 @@ class AutoBrowse {
       final qp = u.queryParameters;
       final handler = MediaManager().audioHandler;
 
-      // Resume the restored queue (no-op if there's nothing to resume).
+      // Resume the saved queue. handler.play() gates itself on the launch
+      // restore settling (cold headless bind: the tap can beat QueueStore),
+      // and no-ops safely when there's nothing to resume. Fire-and-forget:
+      // just_audio's play() future completes only when playback later
+      // pauses/stops, so awaiting it here would hang this callback.
       if (u.host == 'resume') {
-        if (handler.queue.value.isNotEmpty) await handler.play();
+        unawaited(handler.play().catchError(
+            (Object e) => appLog('[auto] resume play failed: $e')));
         return;
       }
 

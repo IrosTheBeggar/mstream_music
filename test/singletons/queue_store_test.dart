@@ -163,4 +163,84 @@ void main() {
       expect(QueueStore.clampResumePositionMs(0, 240000), 0);
     });
   });
+
+  group('QueueStore snapshot peeks (resumption chip)', () {
+    Map<String, dynamic> snapshot({int index = 1, int version = 1}) => {
+          'version': version,
+          'index': index,
+          'positionMs': 1000,
+          'shuffle': false,
+          'repeat': 'none',
+          'items': [
+            {
+              'title': 'First',
+              'extras': {'server': 's1', 'path': '/a.mp3'},
+            },
+            {
+              'title': 'Second',
+              'artist': 'Artist',
+              'album': 'Album',
+              'extras': {
+                'server': 's1',
+                'path': '/b.mp3',
+                'artUrl': 'http://host/album-art/b.jpg',
+              },
+            },
+          ],
+        };
+
+    test('currentEntryFromSnapshot returns the saved-index entry', () {
+      final entry = QueueStore.currentEntryFromSnapshot(snapshot());
+      expect(entry, isNotNull);
+      expect(entry!['title'], 'Second');
+    });
+
+    test('out-of-range index clamps to the first item (like restore)', () {
+      expect(QueueStore.currentEntryFromSnapshot(snapshot(index: 7))!['title'],
+          'First');
+      expect(QueueStore.currentEntryFromSnapshot(snapshot(index: -2))!['title'],
+          'First');
+    });
+
+    test('wrong schema version / shape / empty items -> null', () {
+      expect(QueueStore.currentEntryFromSnapshot(snapshot(version: 2)), isNull);
+      expect(QueueStore.currentEntryFromSnapshot('junk'), isNull);
+      expect(QueueStore.currentEntryFromSnapshot(null), isNull);
+      expect(
+          QueueStore.currentEntryFromSnapshot(
+              {'version': 1, 'index': 0, 'items': <dynamic>[]}),
+          isNull);
+    });
+
+    test('resumeItemFromSnapshot builds display metadata + carries artUrl', () {
+      final item = QueueStore.resumeItemFromSnapshot(
+          QueueStore.currentEntryFromSnapshot(snapshot()));
+      expect(item, isNotNull);
+      expect(item!.title, 'Second');
+      expect(item.artist, 'Artist');
+      expect(item.album, 'Album');
+      expect(item.playable, isTrue);
+      expect(item.extras!['artUrl'], 'http://host/album-art/b.jpg');
+    });
+
+    test('missing title falls back to the path basename', () {
+      final item = QueueStore.resumeItemFromSnapshot({
+        'extras': {'path': '/music/deep/track.flac'},
+      });
+      expect(item, isNotNull);
+      expect(item!.title, 'track.flac');
+    });
+
+    test('no title and no path -> null (nothing worth a chip)', () {
+      expect(QueueStore.resumeItemFromSnapshot({'extras': {}}), isNull);
+      expect(QueueStore.resumeItemFromSnapshot(null), isNull);
+    });
+
+    test('the peeked item survives a JSON text round-trip of the snapshot', () {
+      final raw = jsonDecode(jsonEncode(snapshot()));
+      final item = QueueStore.resumeItemFromSnapshot(
+          QueueStore.currentEntryFromSnapshot(raw));
+      expect(item!.title, 'Second');
+    });
+  });
 }
