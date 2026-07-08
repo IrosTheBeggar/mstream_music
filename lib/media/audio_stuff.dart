@@ -591,6 +591,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       } else {
         _showPlaybackErrorToast(
             "Can't play these tracks — check the files or server.");
+        _intentionalStop = true;
         await _localBackend.stop();
       }
       _broadcastState();
@@ -611,6 +612,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         await _localBackend.pause();
         _networkStalled = true;
       } else {
+        _intentionalStop = true;
         await _localBackend.stop();
       }
       _broadcastState();
@@ -785,6 +787,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // own setSources(), so the two don't issue concurrent loads on the player
     // (which abort each other → "Loading interrupted", losing the restore).
     await _initialized.future;
+    _intentionalStop = false;
     queue.add(items.toList());
     await _backend.setSources(items);
     final int i = index.clamp(0, items.length - 1);
@@ -817,6 +820,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> play() {
     appLog('[play] play');
     _playIntent = true;
+    _intentionalStop = false;
     return _backend.play();
   }
 
@@ -840,10 +844,19 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> seek(Duration position) => _backend.seek(position);
 
+  // True while the handler itself is tearing playback down (user stop, cleared
+  // queue, unplayable-queue give-up), so _broadcastState can tell a deliberate
+  // idle apart from just_audio's error-induced idle. Cleared only at the
+  // explicit restart entry points (play / restoreQueue) — NOT from observed
+  // backend states, where a straggler ready event racing a stop could clear it
+  // early and turn the stop's own idle into a bogus 'error' broadcast.
+  bool _intentionalStop = false;
+
   @override
   Future<void> stop() async {
     appLog('[play] stop');
     _playIntent = false;
+    _intentionalStop = true;
     // Don't touch the tunnel here: it follows the QUEUE, not the play/stop state,
     // so a stopped-but-still-queued iroh song keeps its tunnel (the queue listener
     // tears it down when the iroh songs are actually removed/cleared).
@@ -946,6 +959,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     switch (name) {
       case 'clearPlaylist':
         appLog('[queue] cleared');
+        _intentionalStop = true;
         await _backend.stop();
         await super.stop();
         await _backend.clearSources();
@@ -1152,6 +1166,35 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  /// The processing state to publish for the backend's [state]. A deliberate
+  /// teardown (intentional stop, or nothing queued) passes `idle` through —
+  /// audio_service stops the Android service on every published
+  /// non-idle→idle transition, which is exactly right there. But just_audio
+  /// also flips to `idle` on ANY playback error; publishing that would let
+  /// audio_service stopSelf() while the UI activity is unbound (backgrounded /
+  /// swiped away), destroying the FlutterEngine before the error recovery in
+  /// _onPlaybackError can run. An unintentional idle with tracks still queued
+  /// publishes `error` instead, keeping the service (and notification) alive.
+  static AudioProcessingState publishProcessingState(
+      BackendProcessingState state,
+      {required bool intentionalStop,
+      required bool queueEmpty}) {
+    switch (state) {
+      case BackendProcessingState.idle:
+        return (intentionalStop || queueEmpty)
+            ? AudioProcessingState.idle
+            : AudioProcessingState.error;
+      case BackendProcessingState.loading:
+        return AudioProcessingState.loading;
+      case BackendProcessingState.buffering:
+        return AudioProcessingState.buffering;
+      case BackendProcessingState.ready:
+        return AudioProcessingState.ready;
+      case BackendProcessingState.completed:
+        return AudioProcessingState.completed;
+    }
+  }
+
   /// Broadcasts the current state to all clients.
   void _broadcastState() {
     final playing = _backend.playing;
@@ -1181,13 +1224,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       shuffleMode: shuffle,
       repeatMode: repeat,
       androidCompactActionIndices: [0, 1, 3],
-      processingState: const {
-        BackendProcessingState.idle: AudioProcessingState.idle,
-        BackendProcessingState.loading: AudioProcessingState.loading,
-        BackendProcessingState.buffering: AudioProcessingState.buffering,
-        BackendProcessingState.ready: AudioProcessingState.ready,
-        BackendProcessingState.completed: AudioProcessingState.completed,
-      }[_backend.processingState]!,
+      processingState: publishProcessingState(_backend.processingState,
+          intentionalStop: _intentionalStop,
+          queueEmpty: queue.value.isEmpty),
       playing: playing,
       updatePosition: _backend.position,
       bufferedPosition: _backend.bufferedPosition,
