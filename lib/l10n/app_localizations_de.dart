@@ -1343,6 +1343,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Speichert die Wiedergabeliste und deine Position und stellt sie beim erneuten Öffnen der App wieder her.';
 
   @override
+  String get settingsOfflineQueue => 'Warteschlange offline verfügbar halten';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Lädt Titel in der Warteschlange automatisch auf dieses Gerät herunter, damit die Wiedergabe einen Verbindungsverlust übersteht.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Nur über WLAN herunterladen';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Wartet mit dem Herunterladen von Titeln in der Warteschlange auf eine WLAN-Verbindung.';
+
+  @override
+  String get downloadWaitingWifi => 'Wartet auf WLAN';
+
+  @override
   String get settingsRatingHalf => 'Halbe-Sterne-Bewertungen';
 
   @override

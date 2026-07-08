@@ -1342,6 +1342,23 @@ class AppLocalizationsIt extends AppLocalizations {
       'Salva la coda di riproduzione e la tua posizione e le ripristina alla riapertura dell\'app.';
 
   @override
+  String get settingsOfflineQueue => 'Mantieni la coda disponibile offline';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Scarica automaticamente i brani in coda su questo dispositivo così la riproduzione sopravvive alla perdita di connessione.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Scarica solo tramite Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Attende una connessione Wi-Fi prima di scaricare i brani in coda.';
+
+  @override
+  String get downloadWaitingWifi => 'In attesa del Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Valutazioni a mezza stella';
 
   @override

@@ -67,9 +67,15 @@ class DownloadScreen extends StatelessWidget {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  l.downloadProgress(
-                                      (dList[index].progress * 100)
-                                          .toStringAsFixed(0)),
+                                  // A Wi-Fi-gated task that hasn't moved yet
+                                  // is OS-held, not stalled — say so instead
+                                  // of showing a frozen 0%.
+                                  dList[index].requiresWiFi &&
+                                          dList[index].progress == 0
+                                      ? l.downloadWaitingWifi
+                                      : l.downloadProgress(
+                                          (dList[index].progress * 100)
+                                              .toStringAsFixed(0)),
                                   style: TextStyle(
                                     color: VelvetColors.textPrimary,
                                   ),

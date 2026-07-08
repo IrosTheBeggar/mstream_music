@@ -1342,6 +1342,23 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guarda la cola de reproducción y tu posición y las restaura al volver a abrir la app.';
 
   @override
+  String get settingsOfflineQueue => 'Mantener la cola disponible sin conexión';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Descarga automáticamente las pistas de la cola en este dispositivo para que la reproducción sobreviva a la pérdida de conexión.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Descargar solo con Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Espera a tener Wi-Fi antes de descargar las pistas de la cola.';
+
+  @override
+  String get downloadWaitingWifi => 'Esperando Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Valoraciones de media estrella';
 
   @override

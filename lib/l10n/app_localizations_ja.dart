@@ -1285,6 +1285,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsResumeQueueSubtitle => '再生キューと再生位置を保存し、アプリを再び開いたときに復元します。';
 
   @override
+  String get settingsOfflineQueue => 'キューをオフラインで利用可能にする';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'キュー内の曲を自動的にこの端末にダウンロードし、接続が切れても再生を続けられるようにします。';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Wi-Fi接続時のみダウンロード';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'キュー内の曲のダウンロードをWi-Fi接続まで待機します。';
+
+  @override
+  String get downloadWaitingWifi => 'Wi-Fi接続を待機中';
+
+  @override
   String get settingsRatingHalf => '半星評価';
 
   @override

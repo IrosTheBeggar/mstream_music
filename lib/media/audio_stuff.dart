@@ -24,6 +24,7 @@ import '../objects/metadata.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/app_messenger.dart';
+import '../singletons/downloads.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
@@ -174,6 +175,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
       }
       ServerManager().setQueueIrohServer(iroh);
+      // Keep-queue-offline: sweep every queue change for tracks to download.
+      // No-op unless the setting is on; DownloadManager dedupes (in-flight,
+      // once-per-session, already-on-disk). Lives here — not main.dart — so
+      // headless sessions (Android Auto + Auto-DJ top-ups) sweep too.
+      unawaited(DownloadManager().autoDownloadQueue(items));
     });
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
@@ -739,6 +745,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     _httpRetries = 0;
     _recoveringPlayback = true;
     appLog('[play] connectivity back — resuming after network stall');
+    // Keep-queue-offline: failed auto-downloads un-mark themselves, and this
+    // is exactly the moment a retry can succeed — re-sweep (cheap no-op when
+    // the setting is off or nothing needs fetching).
+    unawaited(DownloadManager().autoDownloadQueue(queue.value));
     _switchChain = _switchChain
         .then((_) => _reseedLocalAtSpot())
         .catchError((Object e) {
@@ -809,6 +819,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     _lastRecoveryByServer[server.localname] = now;
     _recoveringPlayback = true;
     appLog('[play] iroh tunnel back — resuming parked playback');
+    // Keep-queue-offline: same retry moment as onNetworkRegained — a queued
+    // iroh track's download URL only works while the tunnel serves.
+    unawaited(DownloadManager().autoDownloadQueue(queue.value));
     _switchChain = _switchChain.then((_) async {
       // Re-check the park under the chain: something queued ahead of us (a
       // backend switch, a user play) may already have revived the player.

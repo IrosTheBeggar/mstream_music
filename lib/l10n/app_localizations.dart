@@ -2328,6 +2328,36 @@ abstract class AppLocalizations {
   /// **'Save the play queue and your place, and restore them when you reopen the app.'**
   String get settingsResumeQueueSubtitle;
 
+  /// No description provided for @settingsOfflineQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep queue available offline'**
+  String get settingsOfflineQueue;
+
+  /// No description provided for @settingsOfflineQueueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically download queued tracks to this device so playback survives losing the connection.'**
+  String get settingsOfflineQueueSubtitle;
+
+  /// No description provided for @settingsOfflineQueueWifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Download on Wi-Fi only'**
+  String get settingsOfflineQueueWifiOnly;
+
+  /// No description provided for @settingsOfflineQueueWifiOnlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait for Wi-Fi before downloading queued tracks.'**
+  String get settingsOfflineQueueWifiOnlySubtitle;
+
+  /// No description provided for @downloadWaitingWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Wi-Fi'**
+  String get downloadWaitingWifi;
+
   /// No description provided for @settingsRatingHalf.
   ///
   /// In en, this message translates to:

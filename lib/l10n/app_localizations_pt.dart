@@ -1338,6 +1338,23 @@ class AppLocalizationsPt extends AppLocalizations {
       'Salva a fila de reprodução e sua posição e as restaura ao reabrir o app.';
 
   @override
+  String get settingsOfflineQueue => 'Manter a fila disponível offline';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Baixa automaticamente as faixas da fila para este dispositivo, para que a reprodução sobreviva à perda de conexão.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Baixar somente por Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Aguarda uma conexão Wi-Fi antes de baixar as faixas da fila.';
+
+  @override
+  String get downloadWaitingWifi => 'Aguardando Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Avaliações de meia estrela';
 
   @override
