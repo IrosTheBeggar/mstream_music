@@ -522,7 +522,16 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             // RepaintBoundary isolates the playing scrubber/waveform's per-frame
             // repaints so they don't redraw the browser list painted behind it.
             Positioned.fill(
-              child: RepaintBoundary(child: PlayerPanel(key: _panelKey)),
+              // Hidden on the first-run (no-servers) view — there's nothing to
+              // play, so the bar would just be dead chrome.
+              child: StreamBuilder<List<Server>>(
+                stream: ServerManager().serverListStream,
+                initialData: ServerManager().serverList,
+                builder: (context, snap) =>
+                    (snap.data ?? const <Server>[]).isEmpty
+                        ? const SizedBox.shrink()
+                        : RepaintBoundary(child: PlayerPanel(key: _panelKey)),
+              ),
             ),
           ]),
         ));

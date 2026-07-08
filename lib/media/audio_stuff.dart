@@ -1093,6 +1093,33 @@ class AudioPlayerHandler extends BaseAudioHandler
         queue.add(queue.value..clear());
         _broadcastState();
         break;
+      case 'removeServerFromQueue':
+        // A server was deleted — drop every queued track that streamed from it
+        // (matched by the localname stored in extras['server']); they're no
+        // longer playable.
+        final gone = extras?['server'] as String?;
+        if (gone != null) {
+          final q = queue.value;
+          final victims = <int>[
+            for (var i = 0; i < q.length; i++)
+              if (q[i].extras?['server'] == gone) i
+          ];
+          if (victims.isNotEmpty) {
+            if (victims.length == q.length) {
+              // The whole queue was from that server — clear + stop.
+              await customAction('clearPlaylist');
+            } else {
+              // Remove high->low so earlier indices stay valid (reuses the
+              // single-item path; see removeQueueItemAt).
+              for (final i in victims.reversed) {
+                await removeQueueItemAt(i);
+              }
+            }
+            appLog('[queue] dropped ${victims.length} track(s) from '
+                'removed server "$gone"');
+          }
+        }
+        break;
       case 'moveQueueItem':
         // Drag-to-reorder. [to] is the post-removal target index
         // (ReorderableListView convention). Reorder the queue list first, then

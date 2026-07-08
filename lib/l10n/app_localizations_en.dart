@@ -37,7 +37,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguage => 'Language';
 
   @override
-  String get languageSystemDefault => 'System default';
+  String get languageSystemDefault => 'Default';
 
   @override
   String get settingsLanguageSubtitle =>
@@ -115,6 +115,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lyricsRetry => 'Retry';
+
+  @override
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
 
   @override
   String get eqTitle => 'Equalizer';
@@ -221,11 +227,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapSubtitleAddToQueue =>
-      'Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.';
+      'Append the song to the end of the queue. For Spotify-like behavior, use \'Play from here\'.';
 
   @override
   String get tapSubtitlePlayFromHere =>
-      'Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.';
+      'Replaces the queue with the songs in the current view and plays from the tapped song.';
 
   @override
   String get tapSubtitleAppendAndJump =>
@@ -249,12 +255,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsVisualizerSource => 'Visualizer audio source';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'Default. Visualizer reacts to playback timing only — no microphone permission required.';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.';
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
 
   @override
   String get settingsAlbumGrid => 'Album grid view';

@@ -13,6 +13,7 @@ import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
+import '../widgets/settings_controls.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../singletons/media.dart';
@@ -625,6 +626,99 @@ class _BrowserState extends State<Browser> {
   }
 
   // ── Default browser landing: section shortcuts as a modern card grid ──
+  // First-run welcome state: the lone "Welcome to mStream" (addServer) tile,
+  // shown with the key first-run preferences below it. No bordered card — the
+  // controls run edge-to-edge to save horizontal space — split into a Theme
+  // section (accent colour) and a Config section (language / tap / visualizer).
+  Widget _welcomeView(BuildContext context, List<DisplayItem> items) {
+    final l = AppLocalizations.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _welcomeButton(context, l, items),
+          _quickSetupHeader(l.quickSetupTheme),
+          const AccentColorSettingTile(),
+          _quickSetupHeader(l.quickSetupConfig),
+          const LanguageSettingTile(compact: true),
+          const TapBehaviorSettingTile(),
+          const VisualizerSourceSettingTile(),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickSetupHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          color: VelvetColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.6,
+        ),
+      ),
+    );
+  }
+
+  // The first-run call to action: a bold gradient "Welcome to mStream" button so
+  // the primary action stands out. Taps route to Add Server via the addServer
+  // DisplayItem's handleTap (items[0]).
+  Widget _welcomeButton(
+      BuildContext context, AppLocalizations l, List<DisplayItem> items) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+          onTap: () => handleTap(items, 0, context),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [VelvetColors.primaryHover, VelvetColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              boxShadow: [
+                BoxShadow(
+                  color: VelvetColors.primaryGlow,
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            child: Row(
+              children: [
+                Icon(Icons.add_circle_outline,
+                    color: VelvetColors.onPrimary, size: 30),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    l.browserWelcomeSubtitle,
+                    style: TextStyle(
+                      color: VelvetColors.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: VelvetColors.onPrimary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _homeView(BuildContext context, List<DisplayItem> items) {
     final l = AppLocalizations.of(context);
     return GridView.builder(
@@ -933,6 +1027,14 @@ class _BrowserState extends State<Browser> {
                                 BrowserManager().listName == 'Playlists');
                     if (isPlaylistView) {
                       return _playlistsView(context, browserList);
+                    }
+
+                    // First run: the lone "Welcome to mStream" (addServer) tile.
+                    // Render it with a Quick-setup card of the key first-run prefs
+                    // below — so a brand-new user sees them before adding a server.
+                    if (browserList.length == 1 &&
+                        browserList[0].type == 'addServer') {
+                      return _welcomeView(context, browserList);
                     }
 
                     // If the whole list is albums and the user has the

@@ -115,6 +115,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get lyricsRetry => 'Retry';
 
   @override
+  String get quickSetupTheme => 'Theme';
+
+  @override
+  String get quickSetupConfig => 'Config';
+
+  @override
   String get eqTitle => 'イコライザー';
 
   @override
@@ -245,12 +251,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsVisualizerSource => 'ビジュアライザーの音声ソース';
 
   @override
-  String get visualizerSourceSubtitleSynthesized =>
-      'デフォルト。ビジュアライザーは再生タイミングのみに反応します — マイクの権限は不要です。';
-
-  @override
-  String get visualizerSourceSubtitleReal =>
-      'ビジュアライザーが実際の音声出力に反応します。Android では RECORD_AUDIO 権限が必要です。';
+  String get visualizerSourcePermission =>
+      'Real Audio requires the RECORD_AUDIO permission.';
 
   @override
   String get settingsAlbumGrid => 'アルバムのグリッド表示';

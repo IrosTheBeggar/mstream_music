@@ -33,7 +33,7 @@
   "@settingsLanguage": {
     "description": "Settings row label for the language picker."
   },
-  "languageSystemDefault": "System default",
+  "languageSystemDefault": "Default",
   "@languageSystemDefault": {
     "description": "First entry in the language picker: follow the OS locale."
   },
@@ -118,6 +118,14 @@
   "@lyricsRetry": {
     "description": "Button to retry loading lyrics after an error."
   },
+  "quickSetupTheme": "Theme",
+  "@quickSetupTheme": {
+    "description": "Section header in the first-run Quick setup (accent colour)."
+  },
+  "quickSetupConfig": "Config",
+  "@quickSetupConfig": {
+    "description": "Section header in the first-run Quick setup (language / tap / visualizer)."
+  },
   "eqTitle": "Equalizer",
   "@eqTitle": {
     "description": "Equalizer screen title / switch label."
@@ -190,8 +198,8 @@
   "settingsTapBehavior": "When you tap a song",
   "settingsStartupPage": "Startup page",
   "settingsStartupPageSubtitle": "Open the app to this browser view; Back returns to the browser.",
-  "tapSubtitleAddToQueue": "Tapping a song appends it to the queue. If the queue is empty, playback starts automatically.",
-  "tapSubtitlePlayFromHere": "Tapping a song replaces the queue with the songs in the current view and starts playback at the tapped song.",
+  "tapSubtitleAddToQueue": "Append the song to the end of the queue. For Spotify-like behavior, use 'Play from here'.",
+  "tapSubtitlePlayFromHere": "Replaces the queue with the songs in the current view and plays from the tapped song.",
   "tapSubtitleAppendAndJump": "Tapping a song appends it to the queue and jumps playback to it, interrupting whatever was playing.",
   "@settingsTapBehavior": {
     "description": "Tap-behavior picker row label + per-mode subtitles."
@@ -207,10 +215,9 @@
     "description": "Visualizer-engine picker row label + per-engine subtitles."
   },
   "settingsVisualizerSource": "Visualizer audio source",
-  "visualizerSourceSubtitleSynthesized": "Default. Visualizer reacts to playback timing only — no microphone permission required.",
-  "visualizerSourceSubtitleReal": "Visualizer reacts to actual audio output. Requires the RECORD_AUDIO permission on Android.",
+  "visualizerSourcePermission": "Real Audio requires the RECORD_AUDIO permission.",
   "@settingsVisualizerSource": {
-    "description": "Visualizer audio-source picker row label + per-source subtitles."
+    "description": "Visualizer audio-source picker row label."
   },
   "settingsAlbumGrid": "Album grid view",
   "settingsAlbumGridSubtitle": "Show albums as a grid of cards with cover art instead of a plain list.",

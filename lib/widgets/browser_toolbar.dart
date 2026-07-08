@@ -272,6 +272,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   Widget _content(BuildContext context, AppLocalizations l, _Tb s) {
+    // First run (no servers): the list is a single "add server" tile. Show just
+    // the welcome title — there's nothing to search / download / add yet.
+    if (s.list.length == 1 && s.list[0].type == 'addServer') {
+      return Row(children: [
+        const SizedBox(width: 12),
+        _title(l.browserWelcomeTitle),
+      ]);
+    }
+
     // Album detail: back · name · download · add-all (Play/Shuffle stay in the
     // banner). Acts on the album's loaded songs.
     if (s.album != null) {
