@@ -144,8 +144,35 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
 
   void _noteRendererEvent() => _lastRendererEvent = DateTime.now();
 
+  // Real POSITION events specifically (status events don't move the bar).
+  // Drives both the optimistic extrapolation below and the post-adopt nudge.
+  DateTime _lastPositionEventAt = DateTime.now();
+  static const Duration _kExtrapolateAfter = Duration(seconds: 2);
+
+  // Optimistic progress while position events are starved: a sender-side
+  // blip stops the progress stream but the receiver KEEPS playing, so a
+  // frozen bar (then a jump at the next track) is wrong twice. While the
+  // last known state is actively playing, advance the position by the tick
+  // cadence; real events overwrite it the moment they resume. Clamped to the
+  // known duration so it can't run past the track end.
+  void _extrapolatePosition() {
+    if (!playing || processingState != BackendProcessingState.ready) return;
+    if (DateTime.now().difference(_lastPositionEventAt) < _kExtrapolateAfter) {
+      return;
+    }
+    final d = duration;
+    final next = position + const Duration(seconds: 1);
+    if (d != null && d > Duration.zero && next >= d) return;
+    position = next;
+    emitPos(position);
+    change();
+  }
+
   Future<void> _checkStale() async {
     if (_disposing || rendererLostEmitted) return;
+    // Runs even while recovery is live — the receiver is presumed playing
+    // through a sender-side loss, and the bar should say so.
+    _extrapolatePosition();
     if (_sessionLossGrace != null || _lossBusy) return; // recovery already live
     final loading = _loadingSince;
     if (loading != null &&
@@ -178,11 +205,14 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   }
 
   void _ensureListeners() {
+    // 1s cadence: drives the position extrapolation smoothly; the staleness
+    // and stuck-loading checks are just DateTime math per tick.
     _staleTicker ??=
-        Timer.periodic(const Duration(seconds: 5), (_) => _checkStale());
+        Timer.periodic(const Duration(seconds: 1), (_) => _checkStale());
     _statusSub ??= _client.mediaStatusStream.listen(_onStatus);
     _positionSub ??= _client.playerPositionStream.listen((pos) {
       _noteRendererEvent();
+      _lastPositionEventAt = DateTime.now();
       position = pos;
       emitPos(pos);
       change();
@@ -374,6 +404,24 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
       if (dead()) return false;
       final alive = fresh?.playerState == CastMediaPlayerState.playing ||
           fresh?.playerState == CastMediaPlayerState.buffering;
+      if (alive) {
+        // Adopted the still-playing receiver. The SDK's progress listener
+        // often stays quiet on a JOINED session until the next load, which
+        // froze the bar until the following track. If real position events
+        // don't resume shortly, nudge with a same-position seek — the round
+        // trip re-establishes the status/progress pipeline, and the target
+        // is the extrapolated live position, so the audible skip is ~0.
+        final before = _lastPositionEventAt;
+        await Future<void>.delayed(const Duration(milliseconds: 2500));
+        if (dead()) return true; // adopted; a successor owns any nudging
+        if (_lastPositionEventAt == before) {
+          appLog('[cast] adopted session is not reporting progress — '
+              'nudging with a same-position seek');
+          try {
+            await _client.seek(GoogleCastMediaSeekOption(position: position));
+          } catch (_) {}
+        }
+      }
       if (!alive) {
         if (_sessions.hasConnectedSession) {
           // The session claims connected but delivers nothing — a half-dead
@@ -551,6 +599,7 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     // A load (visualizer warm-up especially) legitimately produces no renderer
     // events for many seconds — restart the staleness and stuck-loading clocks.
     _noteRendererEvent();
+    _lastPositionEventAt = DateTime.now();
     _loadingSince = DateTime.now();
     setProcessingState(BackendProcessingState.loading);
     try {
