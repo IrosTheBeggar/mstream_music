@@ -407,8 +407,16 @@ class ServerManager {
         // cast backends re-resolve each track against the live tunnel at load
         // time (irohProxyUri), and a mid-session reload clobbers the Cast SDK's
         // own suspend/resume recovery.
-        unawaited(MediaManager().audioHandler.customAction(
-            'rebuildTranscodeUrls', const {'upcomingOnly': false, 'auto': true}));
+        unawaited(MediaManager()
+            .audioHandler
+            .customAction('rebuildTranscodeUrls',
+                const {'upcomingOnly': false, 'auto': true})
+            .catchError((Object e) {
+          // A concurrent serialized load (restore, re-seed) can interrupt this
+          // reload ("Loading interrupted") — benign, the newer load already
+          // carries the fresh tunnel URLs; just don't let it hit the zone.
+          appLog('[iroh] auto URL rebuild after tunnel bind failed: $e');
+        }));
       } catch (e) {
         s.tunnelPort = null;
         s.tunnelToken = null;
