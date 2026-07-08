@@ -59,8 +59,12 @@
     <!-- allowBackup=false: servers.json holds credentials (JWT, password, and the
          iroh pairing code's connect secret), so keep it out of adb / cloud backups
          where another process could exfiltrate it. -->
+    <!-- MainApplication (not the Flutter default ${applicationName}):
+         process-wide native init (IrohNative/ndk_context) that must also run
+         on HEADLESS service binds — media-resumption chip, Bluetooth media
+         key, Android Auto — where MainActivity never exists. -->
     <application
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:label="mStream Music"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
