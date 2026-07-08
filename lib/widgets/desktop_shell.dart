@@ -47,9 +47,9 @@ import 'media_shortcuts.dart';
 import 'playlist_name_dialog.dart';
 import 'queue_list.dart';
 
-// Width of the fixed left navigation rail and the right queue panel.
+// Width of the fixed left navigation rail. The right queue panel's width is
+// computed at build time to match the now-playing view (see _DesktopShellState).
 const double _kSidebarWidth = 248;
-const double _kQueueWidth = 320;
 const double _kNowPlayingHeight = 88;
 
 class DesktopShell extends StatefulWidget {
@@ -152,6 +152,12 @@ class _DesktopShellState extends State<DesktopShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Match the queue panel's width to the now-playing view — the bar's right
+    // third (Expanded flex 1 of the flex-2 center + flex-1 now-playing split).
+    // When the queue opens it then covers exactly that region and the transport
+    // doesn't shift. -1 accounts for the divider between the content and queue.
+    final queueWidth =
+        (MediaQuery.sizeOf(context).width - _kSidebarWidth - 1) / 3 - 1;
     final shell = Scaffold(
       backgroundColor: VelvetColors.bg,
       body: Row(
@@ -195,7 +201,7 @@ class _DesktopShellState extends State<DesktopShell> {
           if (_queueOpen) ...[
             VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
             SizedBox(
-              width: _kQueueWidth,
+              width: queueWidth,
               child: _DesktopQueuePanel(
                   onClose: () => setState(() => _queueOpen = false)),
             ),
@@ -639,7 +645,7 @@ class _DesktopQueuePanel extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: VelvetColors.border),
-          const Expanded(child: QueueList()),
+          const Expanded(child: QueueList(showItemMenu: true)),
           Divider(height: 1, color: VelvetColors.border),
           // The expanded now-playing lives at the foot of the queue — this is
           // what the bar's compact now-playing "grows into" when opened.
@@ -729,6 +735,8 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const _SeekBar(),
+                const SizedBox(height: 2),
                 Row(
                   children: [
                     const _DesktopTransport(),
@@ -736,8 +744,6 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                     _controls(),
                   ],
                 ),
-                const SizedBox(height: 2),
-                const _SeekBar(),
               ],
             ),
           ),
@@ -898,8 +904,7 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
 }
 
 // Elapsed · slider · duration, driven by its own combined item+position stream
-// so a per-second position tick repaints only the slider. Shared by the Now
-// Playing bar and the expanded now-playing at the foot of the queue.
+// so a per-second position tick repaints only the slider.
 class _SeekBar extends StatefulWidget {
   const _SeekBar();
   @override
