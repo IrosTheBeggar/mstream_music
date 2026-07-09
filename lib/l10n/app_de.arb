@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "Starte einen Song, um den Equalizer einzurichten.\n\nAndroids nativer Equalizer wird mit der Audiositzung initialisiert, daher muss die Wiedergabe aktiv sein, bevor wir das Band-Layout auslesen können.",
   "eqInitFailed": "Equalizer konnte nicht initialisiert werden:\n{error}",
   "eqNoBands": "Der Audiotreiber dieses Geräts meldet keine Equalizer-Bänder.",
+  "eqDisabledHint": "Schalte den Equalizer ein, um die Bänder anzupassen.",
   "eqEnabledOn": "Ein – Verstärkung auf Wiedergabe angewendet",
   "eqEnabledOff": "Aus – Bypass-Modus",
   "cancel": "Abbrechen",

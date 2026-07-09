@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "Lancez un morceau pour configurer l'égaliseur.\n\nL'égaliseur natif d'Android s'initialise avec la session audio ; la lecture doit donc être active avant que nous puissions lire la disposition des bandes.",
   "eqInitFailed": "Impossible d'initialiser l'égaliseur :\n{error}",
   "eqNoBands": "Aucune bande d'égaliseur signalée par le pilote audio de cet appareil.",
+  "eqDisabledHint": "Active l'égaliseur pour régler les bandes.",
   "eqEnabledOn": "Activé — gains appliqués à la lecture",
   "eqEnabledOff": "Désactivé — mode contournement",
   "cancel": "Annuler",

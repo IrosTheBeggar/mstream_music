@@ -143,6 +143,7 @@
   "@eqNoBands": {
     "description": "Shown when the device reports zero EQ bands."
   },
+  "eqDisabledHint": "Turn on the equalizer to adjust the bands.",
   "eqEnabledOn": "On — gains applied to playback",
   "eqEnabledOff": "Off — bypass mode",
   "@eqEnabledOn": {

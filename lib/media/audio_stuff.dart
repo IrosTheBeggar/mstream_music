@@ -29,6 +29,7 @@ import '../singletons/log_manager.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
+import '../singletons/visualizer_audio.dart';
 import '../util/camelot.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
@@ -46,7 +47,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   // backend swaps (see positionStream and _init). The local just_audio backend
   // is persistent (reused when switching back from a cast device); remote
   // backends are built per-session and disposed on switch-away.
-  final LocalPlaybackBackend _localBackend = LocalPlaybackBackend();
+  // Build the EQ pipeline only if the user has it enabled — a plain player is
+  // the default (see LocalPlaybackBackend). SettingsManager().load() runs
+  // before this handler is constructed (main.dart), so eqEnabled is populated.
+  late final LocalPlaybackBackend _localBackend =
+      LocalPlaybackBackend(withEqualizer: SettingsManager().eqEnabled);
   late final BehaviorSubject<PlaybackBackend> _backendSubject =
       BehaviorSubject<PlaybackBackend>.seeded(_localBackend);
   PlaybackBackend get _backend => _backendSubject.value;
@@ -150,7 +155,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
       // otherwise dragging the playing track to the last slot would append a
       // spurious Auto-DJ track.
-      if (_reordering) return;
+      if (_reordering || _rebuilding) return;
       if (index == queue.value.length - 1) {
         autoDJ();
       }
@@ -233,6 +238,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
         _restoreSpot = null;
+        // Saved EQ gains can only be pushed once a source has loaded (the
+        // equalizer's parameters resolve on activation), so apply them here
+        // on the first ready after init/restore or an EQ-toggle rebuild.
+        if (_eqGainsPending && equalizer != null) unawaited(_pushSavedGains());
       }
       // Any fresh load re-resolves its source from the current extras
       // (_uriFor), so the loaded-source-predates-download-patch marker is
@@ -258,28 +267,140 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _applySavedEqualizer();
   }
 
-  // Apply persisted EQ state to the native equalizer. Best-effort: if
-  // the saved gains array is shorter than the device's actual band
-  // count, leftover bands are left at device default. Wrapped in
-  // try/catch so a flaky audio session never blocks player init.
-  Future<void> _applySavedEqualizer() async {
-    final eq = equalizer;
+  // Apply persisted EQ state. setEnabled is immediate; band gains can only be
+  // pushed once a source has loaded (the equalizer's parameters resolve on
+  // activation), so we just arm _eqGainsPending here and the processingState
+  // 'ready' handler pushes them on first load. This never blocks _init or the
+  // _switchChain toggle on an idle player (where parameters never resolves).
+  Future<void> _applySavedEqualizer([AndroidEqualizer? target]) async {
+    final eq = target ?? equalizer;
     if (eq == null) return;
     try {
       await eq.setEnabled(SettingsManager().eqEnabled);
-      final saved = SettingsManager().eqBandGains;
-      if (saved.isEmpty) return;
-      final params = await eq.parameters;
+    } catch (e) {
+      appLog('[eq] enable error: $e');
+    }
+    _eqGainsPending =
+        SettingsManager().eqEnabled && SettingsManager().eqBandGains.isNotEmpty;
+  }
+
+  // Push saved band gains onto the active equalizer once a source has loaded
+  // (driven by the 'ready' handler, where parameters resolves immediately —
+  // the timeout is only a safety net). Leaves _eqGainsPending set if it can't
+  // apply yet (no equalizer / not loaded), so a later ready retries.
+  bool _eqGainsPending = false;
+  Future<void> _pushSavedGains() async {
+    final eq = equalizer;
+    if (eq == null) return;
+    final saved = SettingsManager().eqBandGains;
+    if (saved.isEmpty) {
+      _eqGainsPending = false;
+      return;
+    }
+    try {
+      final params = await eq.parameters.timeout(const Duration(seconds: 3));
       for (var i = 0; i < params.bands.length && i < saved.length; i++) {
         await params.bands[i].setGain(saved[i]);
       }
+      _eqGainsPending = false;
     } catch (e) {
-      appLog('[eq] apply error: $e');
+      appLog('[eq] gain apply error: $e');
     }
   }
 
+  /// Toggle the native EQ on or off. just_audio fixes the audio pipeline at
+  /// player construction, so this rebuilds the local player WITH or WITHOUT
+  /// the EQ effect (LocalPlaybackBackend.rebuildPlayer) and carries playback
+  /// across at the same spot. Serialized through _switchChain so it can't
+  /// interleave with a cast switch, error recovery, or the launch restore.
+  /// Called by the EQ screen.
+  Future<void> setEqEnabled(bool enabled) {
+    _switchChain = _switchChain
+        .then((_) => _doSetEqEnabled(enabled))
+        .catchError((Object e) => appLog('[eq] toggle failed: $e'));
+    return _switchChain;
+  }
+
+  Future<void> _doSetEqEnabled(bool enabled) async {
+    // Don't race _init's seed/EQ on the single player (the same gate
+    // restoreQueue waits on). Runs serialized on _switchChain — see above.
+    await _initialized.future;
+
+    // Casting: the local backend is inactive. Rebuild it so it's correct when
+    // the user returns to the phone, but leave the active (cast) backend
+    // untouched. No re-seed here — _switchBackend re-seeds the local backend
+    // with fresh URLs on every return-to-local anyway, and loading sources
+    // now would just bake soon-stale tunnel ports into a parked player.
+    if (!identical(_backend, _localBackend)) {
+      await _localBackend.rebuildPlayer(withEqualizer: enabled);
+      await SettingsManager().setEqEnabled(enabled);
+      if (enabled) await _applySavedEqualizer(_localBackend.equalizer);
+      return;
+    }
+
+    // Local backend active — carry position / index / play + shuffle/repeat
+    // across the rebuild (the new player starts empty). _reviveSpot: a parked
+    // failed-restore spot must survive the rebuild, not be replaced by the
+    // never-loaded player's index 0.
+    final spot = _reviveSpot();
+    final wasShuffle = _localBackend.shuffleEnabled;
+    final wasRepeat = _localBackend.repeat;
+
+    // _rebuilding suppresses the currentIndexStream Auto-DJ top-up, the
+    // now-playing re-emit, and state broadcasts while the swap is mid-flight:
+    // the old player's dispose-time events would otherwise be read through
+    // the NEW empty player and publish a transient bogus `error` state (queue
+    // non-empty + idle + no intentional stop) to the media session.
+    _rebuilding = true;
+    try {
+      await _localBackend.pause();
+      await _localBackend.rebuildPlayer(withEqualizer: enabled);
+      // Re-emit IMMEDIATELY (same instance): the switchMap-derived streams
+      // must rebind to the NEW player before its first load — a failed
+      // re-seed below would otherwise leave the handler deaf forever on the
+      // disposed player's closed streams, and the re-seed's 'loading' event
+      // (which clears the WifiLock predates-patch marker) would go
+      // unobserved. Player streams replay current state on subscribe, so the
+      // early rebind loses nothing.
+      _backendSubject.add(_localBackend);
+      // Persist only after the rebuild succeeds, so a thrown rebuild can't
+      // leave the setting saying "on" with no pipeline attached.
+      await SettingsManager().setEqEnabled(enabled);
+      // Enable EQ + arm the saved-gains apply BEFORE the re-seed, so the
+      // gains are already pending when the new source's first 'ready' fires.
+      if (enabled) await _applySavedEqualizer();
+      await _localBackend.setShuffleEnabled(wasShuffle);
+      await _localBackend.setRepeat(wasRepeat);
+      try {
+        final fresh = _queueWithFreshUrls();
+        if (fresh.isNotEmpty) {
+          await _localBackend.setSources(fresh);
+          // Live _playIntent, not a captured wasPlaying: a pause (or play)
+          // landing during the network-bound load must win — the same
+          // post-await doctrine as every revive path.
+          await _localBackend.seek(spot.position,
+              index: spot.index.clamp(0, fresh.length - 1),
+              play: _playIntent);
+        }
+      } catch (e) {
+        // Same park as a failed launch restore: the new player is empty, so
+        // without this the next revive / snapshot save would land on
+        // track 1 / 0:00 instead of the user's spot.
+        _restoreSpot = (index: spot.index, position: spot.position);
+        appLog('[eq] re-seed after EQ toggle failed — spot parked: $e');
+      }
+      // The rebuilt player has a new audio-session id — re-point the
+      // visualizer's real-audio capture (no-op unless actively tapping).
+      unawaited(VisualizerAudio().reattachSession());
+    } finally {
+      _rebuilding = false;
+    }
+    _broadcastState();
+    _emitCurrentMediaItem();
+  }
+
   void _emitCurrentMediaItem() {
-    if (_reordering) return;
+    if (_reordering || _rebuilding) return;
     if (queue.value.isEmpty) return;
     // A failed launch restore parks a spot the backend never reached — show
     // THAT track as now-playing, not track 1. Spot FIRST: the failed load
@@ -906,6 +1027,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   // playing track never changes during a reorder, so we hold the last good
   // MediaItem instead.
   bool _reordering = false;
+  // True only while _doSetEqEnabled rebuilds the local player; suppresses the
+  // currentIndexStream Auto-DJ top-up during the re-emit's index replay.
+  bool _rebuilding = false;
 
   // Last item id logged by the [play] track-change diagnostic, so repeated
   // currentIndex emits for the same track don't spam the log.
@@ -1614,6 +1738,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void _broadcastState() {
+    // Mid-rebuild reads go through the NEW empty player and would publish a
+    // bogus transient `error`; _doSetEqEnabled broadcasts once it's done.
+    if (_rebuilding) return;
     _updateWifiLock();
     final playing = _backend.playing;
     final AudioServiceShuffleMode shuffle = _backend.shuffleEnabled == true

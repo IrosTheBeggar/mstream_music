@@ -136,6 +136,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Nenhuma banda de equalização informada pelo driver de áudio deste dispositivo.';
 
   @override
+  String get eqDisabledHint => 'Ative o equalizador para ajustar as bandas.';
+
+  @override
   String get eqEnabledOn => 'Ligado — ganhos aplicados à reprodução';
 
   @override

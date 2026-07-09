@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "Inicia una canción para configurar el ecualizador.\n\nEl ecualizador nativo de Android se inicializa con la sesión de audio, así que necesitamos que la reproducción esté activa antes de poder leer la distribución de bandas.",
   "eqInitFailed": "No se pudo inicializar el ecualizador:\n{error}",
   "eqNoBands": "El controlador de audio de este dispositivo no reporta bandas de ecualización.",
+  "eqDisabledHint": "Activa el ecualizador para ajustar las bandas.",
   "eqEnabledOn": "Activado — ganancias aplicadas a la reproducción",
   "eqEnabledOff": "Desactivado — modo de derivación",
   "cancel": "Cancelar",

@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "Rozpocznij odtwarzanie utworu, aby skonfigurować korektor.\n\nNatywny korektor Androida inicjuje się wraz z sesją audio, dlatego do odczytania układu pasm potrzebne jest aktywne odtwarzanie.",
   "eqInitFailed": "Nie można zainicjować korektora:\n{error}",
   "eqNoBands": "Sterownik audio tego urządzenia nie zgłasza żadnych pasm korektora.",
+  "eqDisabledHint": "Włącz korektor, aby dostosować pasma.",
   "eqEnabledOn": "Włączony — wzmocnienia stosowane do odtwarzania",
   "eqEnabledOff": "Wyłączony — tryb obejścia",
   "cancel": "Anuluj",

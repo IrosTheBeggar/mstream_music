@@ -132,6 +132,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eqNoBands => '此设备的音频驱动未报告任何均衡器频段。';
 
   @override
+  String get eqDisabledHint => '开启均衡器以调整频段。';
+
+  @override
   String get eqEnabledOn => '开启 — 增益已应用到播放';
 
   @override
