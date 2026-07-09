@@ -1,9 +1,12 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/player_layout.dart';
+import '../singletons/downloads.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
@@ -202,6 +205,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await QueueStore().saveNow();
               setState(() {});
             },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          SwitchListTile(
+            title: Text(l.settingsOfflineQueue),
+            subtitle: Text(
+              l.settingsOfflineQueueSubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().offlineQueue,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setOfflineQueue(v);
+              if (v) {
+                // Act now, not on the next queue edit: sweep the current
+                // queue (also clears the once-per-session attempt guard so
+                // earlier failures get a fresh chance).
+                unawaited(DownloadManager().sweepQueueNow());
+              } else {
+                // Wi-Fi-held tasks would otherwise sit in WorkManager
+                // indefinitely (they survive restarts) and fire long after
+                // the user said stop. Running transfers finish normally.
+                unawaited(DownloadManager().cancelWifiHeld());
+              }
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          SwitchListTile(
+            title: Text(l.settingsOfflineQueueWifiOnly),
+            subtitle: Text(
+              l.settingsOfflineQueueWifiOnlySubtitle,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            value: SettingsManager().offlineQueueWifiOnly,
+            // Only meaningful while keep-queue-offline is on (existing
+            // transfers keep the constraint they were enqueued with).
+            onChanged: !SettingsManager().offlineQueue
+                ? null
+                : (v) async {
+                    setState(() {});
+                    await SettingsManager().setOfflineQueueWifiOnly(v);
+                    setState(() {});
+                  },
             activeThumbColor: VelvetColors.primary,
           ),
           SwitchListTile(

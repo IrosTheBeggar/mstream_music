@@ -169,6 +169,14 @@ class SettingsManager {
   // Whether the play queue + position are persisted and restored on the next
   // launch (see QueueStore). On by default.
   bool resumeQueue = true;
+  // Keep-queue-offline: auto-download every queued server track so the queue
+  // keeps playing when the connection is lost (DownloadManager
+  // .autoDownloadQueue, swept on every queue change). Off by default — the
+  // files land in the normal per-server download store and accumulate until
+  // deleted there. [offlineQueueWifiOnly] defers the transfers to Wi-Fi
+  // (background_downloader holds them until it's available).
+  bool offlineQueue = false;
+  bool offlineQueueWifiOnly = true;
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
@@ -282,6 +290,8 @@ class SettingsManager {
       accentColor = accent is int ? accent : null;
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
+      offlineQueue = m['offlineQueue'] ?? false;
+      offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
@@ -463,6 +473,8 @@ class SettingsManager {
       'accentColor': accentColor,
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
+      'offlineQueue': offlineQueue,
+      'offlineQueueWifiOnly': offlineQueueWifiOnly,
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
@@ -576,6 +588,16 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setOfflineQueue(bool v) async {
+    offlineQueue = v;
+    await _save();
+  }
+
+  Future<void> setOfflineQueueWifiOnly(bool v) async {
+    offlineQueueWifiOnly = v;
+    await _save();
+  }
+
   Future<void> setDiagnosticsLogging(bool v) async {
     diagnosticsLogging = v;
     await _save();
@@ -652,6 +674,8 @@ class SettingsManager {
     accentColor = null;
     eqEnabled = false;
     resumeQueue = true;
+    offlineQueue = false;
+    offlineQueueWifiOnly = true;
     diagnosticsLogging = true;
     verboseLogging = false;
     eqBandGains = const [];

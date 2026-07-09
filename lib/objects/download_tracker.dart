@@ -20,6 +20,9 @@ class DownloadTracker {
   // completion could race a storage-location change). On completion this is
   // what queued copies of the track get patched to play from.
   String? localPath;
+  // Wi-Fi-only constraint of the original task, carried so an iroh re-enqueue
+  // (fresh task) keeps honoring the keep-queue-offline setting.
+  bool requiresWiFi = false;
   // Times this download has been re-resolved onto a fresh iroh tunnel URL; bounds
   // the re-enqueue so a repeatedly-rotating tunnel / dead source can't loop.
   int reResolves = 0;

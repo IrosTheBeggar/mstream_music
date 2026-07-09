@@ -87,6 +87,11 @@ Future<void> _startApp() async {
   // so Android Auto cover art works on any build (not just VARIANT=play ones).
   await initAutoArt();
   await MediaManager().start();
+  // Download status/progress listener. Here — not the widget's initState — so
+  // HEADLESS boots (media resumption, Android Auto) also track completions:
+  // the keep-queue-offline sweep runs from the handler's queue listener in
+  // those sessions, and a completed download must still patch the queue.
+  DownloadManager().initDownloader();
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,
@@ -174,7 +179,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
     });
-    DownloadManager().initDownloader();
+    // (DownloadManager().initDownloader() moved to _startApp so headless
+    // boots track download completions too — a second call here would attach
+    // a duplicate updates listener.)
     // Resume a storage move that was interrupted by an app restart.
     MigrationManager().resumeIfNeeded();
     // Android 13+ (targetSdk >= 33): OS no longer auto-prompts; audio_service

@@ -1360,6 +1360,23 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zapisuje kolejkę odtwarzania i pozycję oraz przywraca je po ponownym otwarciu aplikacji.';
 
   @override
+  String get settingsOfflineQueue => 'Zachowaj kolejkę dostępną offline';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Automatycznie pobiera utwory z kolejki na to urządzenie, aby odtwarzanie przetrwało utratę połączenia.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Pobieraj tylko przez Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Czeka na połączenie Wi-Fi przed pobraniem utworów z kolejki.';
+
+  @override
+  String get downloadWaitingWifi => 'Oczekiwanie na Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Oceny w połówkach gwiazdek';
 
   @override
