@@ -1364,6 +1364,23 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.';
 
   @override
+  String get settingsOfflineQueue => 'Держать очередь доступной офлайн';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Автоматически загружает треки из очереди на это устройство, чтобы воспроизведение продолжалось при потере соединения.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Загружать только по Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Ожидает подключения к Wi-Fi перед загрузкой треков из очереди.';
+
+  @override
+  String get downloadWaitingWifi => 'Ожидание Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Оценки с половиной звезды';
 
   @override

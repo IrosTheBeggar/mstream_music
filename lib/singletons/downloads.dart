@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:mstream_music/singletons/file_explorer.dart';
 import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/app_messenger.dart';
 import 'package:mstream_music/singletons/migration_manager.dart';
+import 'package:mstream_music/singletons/log_manager.dart';
+import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -41,12 +44,45 @@ class DownloadManager {
   // Cap on how many times a single download is re-resolved onto a fresh iroh
   // tunnel URL after a hard rebuild, so a repeatedly-rotating tunnel can't loop.
   static const int _kMaxReResolves = 2;
+  // Files the keep-queue-offline sweep has already enqueued once this session
+  // (keyed serverName+filepath), so a failing source can't re-enqueue on every
+  // queue emission. Manual downloads bypass this — user-driven retries stay
+  // possible — and flipping the setting ON clears it (sweepQueueNow).
+  final Set<String> _autoAttempted = {};
 
   Future<void> initDownloader() async {
     // background_downloader delivers status + progress for every task on a
     // single stream, so the old flutter_downloader background-isolate /
     // SendPort plumbing is no longer needed.
     _updatesSub = FileDownloader().updates.listen(_onUpdate);
+    // Rehydrate tasks that survived a process death in WorkManager (a
+    // Wi-Fi-held keep-queue-offline transfer routinely does). Without this a
+    // relaunch sweep re-enqueues DUPLICATES of every held task — the guards
+    // below are in-memory only — and the survivors' completions would be
+    // dropped (no tracker → no queue patch, downloads invisible on the
+    // Downloads screen).
+    try {
+      for (final t in await FileDownloader().allTasks()) {
+        if (t is! DownloadTask) continue;
+        // downloadTo is '<base>/media/<serverName><filepath>' — recover the
+        // dedupe key (serverName+filepath) from the path under /media/.
+        final marker = t.directory.indexOf('/media/');
+        if (marker < 0) continue;
+        final key = '${t.directory.substring(marker + 7)}/${t.filename}';
+        final slash = key.indexOf('/');
+        if (slash <= 0) continue;
+        _inFlight.add(key);
+        _autoAttempted.add(key);
+        downloadMap[t.taskId] = DownloadTracker(t.url, key)
+          ..serverName = key.substring(0, slash)
+          ..dataPath = key.substring(slash)
+          ..localPath = '${t.directory}/${t.filename}'
+          ..requiresWiFi = t.requiresWiFi;
+      }
+      if (downloadMap.isNotEmpty) _downloadStream.add(downloadMap);
+    } catch (e) {
+      appLog('[dl] task rehydration failed: $e');
+    }
   }
 
   Future<void> _onUpdate(TaskUpdate update) async {
@@ -82,12 +118,14 @@ class DownloadManager {
           if (await _reEnqueueOnLiveTunnel(dt, update.task)) return;
           dt.progress = 0;
           terminal = true;
+          _unmarkAutoAttempt(dt);
           _warnDownloadFailed();
           break;
         case TaskStatus.notFound:
           // 404 — the source is genuinely gone; re-resolving wouldn't help.
           dt.progress = 0;
           terminal = true;
+          _unmarkAutoAttempt(dt);
           _warnDownloadFailed();
           break;
         case TaskStatus.canceled:
@@ -125,7 +163,28 @@ class DownloadManager {
     _downloadStream.add(downloadMap);
   }
 
+  // A terminally-failed download must not eat the once-per-session sweep
+  // guard: the keep-queue-offline retry pressure comes from the NEXT sweep
+  // (queue change / connectivity- or tunnel-regained re-sweep), and each
+  // attempt already costs background_downloader's full retries:5 backoff —
+  // stranding the key until an app restart is what actually hurt.
+  void _unmarkAutoAttempt(DownloadTracker dt) {
+    final name = dt.serverName;
+    final path = dt.dataPath;
+    if (name != null && path != null) _autoAttempted.remove(name + path);
+  }
+
+  // Throttled like _warnFatSkip: a burst of terminal failures (dead server ×
+  // whole-queue sweep) must not queue one snackbar per track — snackbars show
+  // sequentially for ~4s each, so an unthrottled burst toasts for minutes.
+  DateTime? _lastFailWarn;
   void _warnDownloadFailed() {
+    final now = DateTime.now();
+    if (_lastFailWarn != null &&
+        now.difference(_lastFailWarn!) < const Duration(seconds: 3)) {
+      return;
+    }
+    _lastFailWarn = now;
     final ctx = rootMessengerKey.currentContext;
     // Reset the row (handled by the caller) and tell the user it didn't work.
     showGlobalSnack(ctx != null
@@ -167,7 +226,12 @@ class DownloadManager {
     downloadMap.remove(failed.taskId);
     _inFlight.remove(dt.filePath);
     await downloadOneFile(freshUrl, name, dataPath,
-        referenceItem: dt.referenceDisplayItem, reResolves: dt.reResolves + 1);
+        referenceItem: dt.referenceDisplayItem,
+        reResolves: dt.reResolves + 1,
+        requiresWiFi: dt.requiresWiFi,
+        // This path already avoids toasts (see caller); a re-enqueue that
+        // ultimately fails lands in the throttled terminal-failure warn.
+        quiet: true);
     return true;
   }
 
@@ -231,9 +295,84 @@ class DownloadManager {
     }
   }
 
+  /// The queued items the offline sweep should enqueue: server tracks whose
+  /// file isn't on disk and that weren't attempted before (marks them in
+  /// [attempted], so repeat sweeps and same-track duplicates are skipped).
+  /// [fileExists] probes a localPath — a queued copy whose downloaded file
+  /// was deleted (folder cleaned, SD ejected) carries a DEAD localPath and
+  /// must be a candidate again, mirroring how every playback consumer of
+  /// localPath probes before using it. Pure over the inputs; unit-tested.
+  static List<MediaItem> autoDownloadCandidates(
+      List<MediaItem> items, Set<String> attempted,
+      {required bool Function(String path) fileExists}) {
+    final out = <MediaItem>[];
+    for (final m in items) {
+      final server = m.extras?['server'] as String?;
+      final path = m.extras?['path'] as String?;
+      if (server == null || path == null) continue;
+      final localPath = m.extras?['localPath'] as String?;
+      if (localPath != null && fileExists(localPath)) continue;
+      if (!attempted.add(server + path)) continue;
+      out.add(m);
+    }
+    return out;
+  }
+
+  /// Keep-queue-offline sweep: enqueue a download for every queued server
+  /// track not yet on disk. Fired on every queue change (audio_stuff._init)
+  /// and on connectivity/tunnel recovery, and cheap when there's nothing to
+  /// do — completed tracks carry localPath (patched on completion), in-flight
+  /// ones are deduped by [_inFlight], and each file is attempted once per
+  /// session (terminal failures un-mark themselves so a recovery re-sweep
+  /// retries them). Quiet: no per-file snackbars — the user didn't tap
+  /// anything, and a whole-queue sweep can fail dozens of times at once.
+  Future<void> autoDownloadQueue(List<MediaItem> items) async {
+    if (!SettingsManager().offlineQueue) return;
+    final wifiOnly = SettingsManager().offlineQueueWifiOnly;
+    for (final m in autoDownloadCandidates(items, _autoAttempted,
+        fileExists: (p) => File(p).existsSync())) {
+      await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
+          requiresWiFi: wifiOnly, quiet: true);
+    }
+  }
+
+  /// Re-sweep the current queue immediately — used when the user flips the
+  /// keep-queue-offline setting ON, so it acts now instead of on the next
+  /// queue edit. Clears the once-per-session guard so earlier failures get a
+  /// fresh chance.
+  Future<void> sweepQueueNow() async {
+    _autoAttempted.clear();
+    await autoDownloadQueue(MediaManager().audioHandler.queue.value);
+  }
+
+  /// Cancel keep-queue-offline transfers still waiting on Wi-Fi. Called when
+  /// the setting turns OFF: those tasks would otherwise sit held in
+  /// WorkManager indefinitely (surviving restarts) and fire long after the
+  /// user said stop. Already-running transfers finish — they still patch the
+  /// queue on completion, which is what the user asked for when they were
+  /// enqueued.
+  Future<void> cancelWifiHeld() async {
+    final ids = [
+      for (final e in downloadMap.entries)
+        if (e.value.requiresWiFi) e.key,
+    ];
+    if (ids.isEmpty) return;
+    try {
+      await FileDownloader().cancelTasksWithIds(ids);
+    } catch (e) {
+      appLog('[dl] cancel of Wi-Fi-held tasks failed: $e');
+    }
+  }
+
   Future<void> downloadOneFile(String downloadUrl, String serverName,
       String filepath,
-      {DisplayItem? referenceItem, int reResolves = 0}) async {
+      {DisplayItem? referenceItem,
+      int reResolves = 0,
+      bool requiresWiFi = false,
+      // Suppress the per-call snackbars — the keep-queue-offline sweep passes
+      // true (nothing user-initiated, and a whole-queue sweep can hit the
+      // same error dozens of times); manual downloads keep their feedback.
+      bool quiet = false}) async {
     String downloadDirectory = serverName + filepath;
 
     // The originating server may have been removed while this track lingered
@@ -242,6 +381,7 @@ class DownloadManager {
     try {
       server = ServerManager().lookupServer(serverName);
     } catch (_) {
+      if (quiet) return;
       final ctx = rootMessengerKey.currentContext;
       showGlobalSnack(ctx != null
           ? AppLocalizations.of(ctx).dlServerGone
@@ -254,6 +394,7 @@ class DownloadManager {
     if (dir == null) {
       // Storage location unavailable (e.g. SD card removed / chosen folder
       // deleted). Tell the user instead of silently doing nothing.
+      if (quiet) return;
       final ctx = rootMessengerKey.currentContext;
       showGlobalSnack(ctx != null && ctx.mounted
           ? AppLocalizations.of(ctx).dlStorageUnavailable
@@ -312,6 +453,9 @@ class DownloadManager {
         // terminal `failed` once exhausted; the intermediate `waitingToRetry`
         // status is already treated as non-terminal in _onUpdate.
         retries: 5,
+        // Keep-queue-offline honors its Wi-Fi-only setting: the OS holds the
+        // transfer until Wi-Fi is available instead of failing it.
+        requiresWiFi: requiresWiFi,
       );
 
       _inFlight.add(downloadDirectory);
@@ -321,6 +465,7 @@ class DownloadManager {
             ..serverName = serverName
             ..dataPath = filepath
             ..localPath = downloadTo
+            ..requiresWiFi = requiresWiFi
             ..reResolves = reResolves;
       _downloadStream.add(downloadMap);
 
@@ -328,6 +473,7 @@ class DownloadManager {
     } catch (e) {
       // The volume could vanish between the null-check and the write.
       _inFlight.remove(downloadDirectory);
+      if (quiet) return;
       final ctx = rootMessengerKey.currentContext;
       showGlobalSnack(ctx != null && ctx.mounted
           ? AppLocalizations.of(ctx).dlCouldNotStart

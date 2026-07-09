@@ -1340,6 +1340,24 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistre la file de lecture et votre position, puis les restaure à la réouverture de l\'application.';
 
   @override
+  String get settingsOfflineQueue =>
+      'Garder la file d\'attente disponible hors ligne';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Télécharge automatiquement les pistes de la file d\'attente sur cet appareil pour que la lecture survive à une perte de connexion.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Télécharger uniquement en Wi-Fi';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Attend une connexion Wi-Fi avant de télécharger les pistes de la file d\'attente.';
+
+  @override
+  String get downloadWaitingWifi => 'En attente du Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Notes en demi-étoiles';
 
   @override

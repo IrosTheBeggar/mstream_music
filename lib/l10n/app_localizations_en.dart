@@ -1326,6 +1326,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save the play queue and your place, and restore them when you reopen the app.';
 
   @override
+  String get settingsOfflineQueue => 'Keep queue available offline';
+
+  @override
+  String get settingsOfflineQueueSubtitle =>
+      'Automatically download queued tracks to this device so playback survives losing the connection.';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => 'Download on Wi-Fi only';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle =>
+      'Wait for Wi-Fi before downloading queued tracks.';
+
+  @override
+  String get downloadWaitingWifi => 'Waiting for Wi-Fi';
+
+  @override
   String get settingsRatingHalf => 'Half-star ratings';
 
   @override

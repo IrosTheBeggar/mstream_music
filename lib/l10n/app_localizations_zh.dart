@@ -1259,6 +1259,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResumeQueueSubtitle => '保存播放队列和当前播放位置，并在重新打开应用时恢复。';
 
   @override
+  String get settingsOfflineQueue => '保持队列离线可用';
+
+  @override
+  String get settingsOfflineQueueSubtitle => '自动将队列中的曲目下载到此设备，即使断开连接也能继续播放。';
+
+  @override
+  String get settingsOfflineQueueWifiOnly => '仅在 Wi-Fi 下下载';
+
+  @override
+  String get settingsOfflineQueueWifiOnlySubtitle => '等待连接 Wi-Fi 后再下载队列中的曲目。';
+
+  @override
+  String get downloadWaitingWifi => '等待 Wi-Fi';
+
+  @override
   String get settingsRatingHalf => '半星评分';
 
   @override
