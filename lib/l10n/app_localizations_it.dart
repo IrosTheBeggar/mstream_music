@@ -1338,6 +1338,33 @@ class AppLocalizationsIt extends AppLocalizations {
   String get accentCustom => 'Personalizzato';
 
   @override
+  String get lanOnYourNetwork => 'Sulla tua rete';
+
+  @override
+  String get lanSearching => 'Ricerca server…';
+
+  @override
+  String get lanRefresh => 'Aggiorna';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Accedi a $name';
+  }
+
+  @override
+  String get lanUnreachable =>
+      'Impossibile raggiungere questo server sulla rete.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect è attivo su questo server, ma non ha condiviso un codice di associazione. Accedi come amministratore o chiedi all\'operatore di attivare la condivisione del codice.';
+
+  @override
   String get settingsResumeQueue => 'Riprendi la coda all\'avvio';
 
   @override

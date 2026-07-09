@@ -1340,6 +1340,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get accentCustom => 'Benutzerdefiniert';
 
   @override
+  String get lanOnYourNetwork => 'In deinem Netzwerk';
+
+  @override
+  String get lanSearching => 'Suche nach Servern…';
+
+  @override
+  String get lanRefresh => 'Aktualisieren';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Bei $name anmelden';
+  }
+
+  @override
+  String get lanUnreachable =>
+      'Dieser Server ist im Netzwerk nicht erreichbar.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect ist auf diesem Server aktiviert, aber es wurde kein Kopplungscode geteilt. Melde dich als Admin an oder bitte den Betreiber, die Code-Freigabe zu aktivieren.';
+
+  @override
   String get settingsResumeQueue => 'Warteschlange beim Start fortsetzen';
 
   @override

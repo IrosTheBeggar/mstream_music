@@ -1338,6 +1338,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get accentCustom => 'Personalizado';
 
   @override
+  String get lanOnYourNetwork => 'En tu red';
+
+  @override
+  String get lanSearching => 'Buscando servidores…';
+
+  @override
+  String get lanRefresh => 'Actualizar';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Inicia sesión en $name';
+  }
+
+  @override
+  String get lanUnreachable =>
+      'No se pudo contactar con este servidor en la red.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect está activado en este servidor, pero no compartió un código de emparejamiento. Inicia sesión como administrador o pide al operador que active el uso compartido del código.';
+
+  @override
   String get settingsResumeQueue => 'Reanudar la cola al iniciar';
 
   @override

@@ -1356,6 +1356,32 @@ class AppLocalizationsPl extends AppLocalizations {
   String get accentCustom => 'Niestandardowy';
 
   @override
+  String get lanOnYourNetwork => 'W twojej sieci';
+
+  @override
+  String get lanSearching => 'Wyszukiwanie serwerów…';
+
+  @override
+  String get lanRefresh => 'Odśwież';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Zaloguj się do $name';
+  }
+
+  @override
+  String get lanUnreachable => 'Nie można połączyć się z tym serwerem w sieci.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect jest włączony na tym serwerze, ale nie udostępniono kodu parowania. Zaloguj się jako administrator lub poproś operatora o włączenie udostępniania kodu.';
+
+  @override
   String get settingsResumeQueue => 'Wznów kolejkę po uruchomieniu';
 
   @override

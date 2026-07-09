@@ -2322,6 +2322,48 @@ abstract class AppLocalizations {
   /// **'Custom'**
   String get accentCustom;
 
+  /// No description provided for @lanOnYourNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'On your network'**
+  String get lanOnYourNetwork;
+
+  /// No description provided for @lanSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for servers…'**
+  String get lanSearching;
+
+  /// No description provided for @lanRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get lanRefresh;
+
+  /// No description provided for @lanServerVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream v{version}'**
+  String lanServerVersion(String version);
+
+  /// No description provided for @lanLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to {name}'**
+  String lanLoginTitle(String name);
+
+  /// No description provided for @lanUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach this server on the network.'**
+  String get lanUnreachable;
+
+  /// No description provided for @lanNoCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Connect is on for this server, but it didn\'t share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.'**
+  String get lanNoCode;
+
   /// No description provided for @settingsResumeQueue.
   ///
   /// In en, this message translates to:

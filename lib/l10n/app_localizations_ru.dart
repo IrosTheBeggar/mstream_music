@@ -1360,6 +1360,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accentCustom => 'Свой';
 
   @override
+  String get lanOnYourNetwork => 'В вашей сети';
+
+  @override
+  String get lanSearching => 'Поиск серверов…';
+
+  @override
+  String get lanRefresh => 'Обновить';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Вход на $name';
+  }
+
+  @override
+  String get lanUnreachable => 'Не удалось связаться с этим сервером по сети.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect включён на этом сервере, но код сопряжения не был опубликован. Войдите как администратор или попросите оператора включить публикацию кода.';
+
+  @override
   String get settingsResumeQueue => 'Восстанавливать очередь при запуске';
 
   @override

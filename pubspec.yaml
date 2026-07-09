@@ -56,6 +56,11 @@ dependencies:
   # Package name (applicationId) lookup so the album-art ContentProvider
   # authority always matches the manifest, regardless of --dart-define flags.
   package_info_plus: ^10.2.0
+  # LAN discovery of mStream servers (_mstream._tcp) for Quick Connect.
+  # NsdManager/Bonjour under the hood; bonsoir manages its own multicast, so
+  # no MulticastLock is needed; the manifest already declares
+  # CHANGE_WIFI_MULTICAST_STATE (shared with DLNA discovery).
+  bonsoir: ^7.1.4
   # In-repo Android WifiLock shim (the Wi-Fi half of ExoPlayer's
   # WAKE_MODE_NETWORK, which just_audio doesn't expose) — held while audio
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
