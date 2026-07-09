@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:mstream_music/singletons/file_explorer.dart';
+import 'package:mstream_music/singletons/media.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/app_messenger.dart';
@@ -62,9 +63,15 @@ class DownloadManager {
         case TaskStatus.complete:
           dt.progress = 1.0;
           terminal = true;
-          // TODO: patch matching queue MediaItems' localPath so an
-          // already-queued track switches from streaming to the fresh
-          // local copy without a queue rebuild.
+          // Flip already-queued copies of this track from streaming to the
+          // fresh local file (extras patch + upcoming-source swap; the
+          // playing track is never interrupted). Cheap no-op if not queued.
+          if (dt.localPath != null &&
+              dt.serverName != null &&
+              dt.dataPath != null) {
+            MediaManager().audioHandler.onTrackDownloaded(
+                dt.serverName!, dt.dataPath!, dt.localPath!);
+          }
           break;
         case TaskStatus.failed:
           // An iroh download's URL bakes in the loopback port + __lt token, and a
@@ -270,7 +277,13 @@ class DownloadManager {
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 
     if (File(downloadTo).existsSync() == true) {
-      return; // already cached on disk
+      // Already on disk — still patch any queued copies (self-healing: covers
+      // a track downloaded before it was queued, and a patch lost to a rare
+      // publish race — every later download attempt re-lands it).
+      MediaManager()
+          .audioHandler
+          .onTrackDownloaded(serverName, filepath, downloadTo);
+      return;
     }
     if (_inFlight.contains(downloadDirectory)) {
       return; // a download for this exact file is already running
@@ -307,6 +320,7 @@ class DownloadManager {
             ..referenceDisplayItem = referenceItem
             ..serverName = serverName
             ..dataPath = filepath
+            ..localPath = downloadTo
             ..reResolves = reResolves;
       _downloadStream.add(downloadMap);
 

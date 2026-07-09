@@ -16,6 +16,10 @@ class DownloadTracker {
   // be re-resolved against the live tunnel and re-enqueued (see DownloadManager).
   String? serverName;
   String? dataPath;
+  // Absolute destination file, captured at enqueue (re-deriving it at
+  // completion could race a storage-location change). On completion this is
+  // what queued copies of the track get patched to play from.
+  String? localPath;
   // Times this download has been re-resolved onto a fresh iroh tunnel URL; bounds
   // the re-enqueue so a repeatedly-rotating tunnel / dead source can't loop.
   int reResolves = 0;

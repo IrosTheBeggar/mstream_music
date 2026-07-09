@@ -221,6 +221,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         _httpRetries = 0;
         _networkStalled = false;
       }
+      // Any fresh load re-resolves its source from the current extras
+      // (_uriFor), so the loaded-source-predates-download-patch marker is
+      // done (see onTrackDownloaded / _updateWifiLock).
+      if (state == BackendProcessingState.loading) {
+        _currentSourcePredatesPatch = false;
+      }
     });
     // A remote backend that loses its renderer mid-cast (TV off, Wi-Fi drop)
     // emits here; fall back to local playback at the same spot + a toast.
@@ -1338,6 +1344,72 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  /// The queue with every copy of [serverName]+[path] patched to play from
+  /// [localPath], or null when nothing needed patching (not queued, or every
+  /// copy already carries this exact path). A copy holding a DIFFERENT
+  /// localPath is re-patched — after a storage-location change the old path
+  /// is stale and the re-download landed somewhere new. Untouched items keep
+  /// their instances. Pure; unit-tested.
+  static List<MediaItem>? patchDownloadedTrack(List<MediaItem> queue,
+      {required String serverName,
+      required String path,
+      required String localPath}) {
+    var changed = false;
+    final patched = queue.map((m) {
+      final e = m.extras;
+      if (e == null ||
+          e['server'] != serverName ||
+          e['path'] != path ||
+          e['localPath'] == localPath) {
+        return m;
+      }
+      changed = true;
+      return m.copyWith(extras: {...e, 'localPath': localPath});
+    }).toList();
+    return changed ? patched : null;
+  }
+
+  /// A finished download for [serverName]+[path] landed at [localPath]: mark
+  /// the queued copies of that track as local. Extras-only ON PURPOSE — no
+  /// live source surgery (removing/re-adding loaded sources mid-play races
+  /// un-serialized queue edits, re-rolls shuffle order, and can trip the
+  /// completed→stop teardown). The patched extras are what every fresh LOAD
+  /// reads (LocalPlaybackBackend._uriFor at setSources; resolveRendererUri
+  /// when a cast session (re)seeds), so: the badge lights up now, the
+  /// snapshot persists it, restores / re-seeds / return-to-local reloads and
+  /// the next cast session play from disk — and if an already-loaded
+  /// streaming source dies offline, the retry re-seed lands on the file
+  /// within seconds. Sources already loaded (local playlist, live cast item
+  /// list) simply finish their session streaming. Synchronous — no awaits
+  /// between reading and publishing the queue, so it can't interleave with
+  /// anything.
+  void onTrackDownloaded(String serverName, String path, String localPath) {
+    final patched = patchDownloadedTrack(queue.value,
+        serverName: serverName, path: path, localPath: localPath);
+    if (patched == null) return;
+    appLog('[queue] download landed — queued copies of '
+        '${path.split('/').last} marked local');
+    // The PLAYING track keeps streaming its already-loaded source until the
+    // next load, but its extras now say "local" — hold the WifiLock until a
+    // fresh load actually reads the file (cleared on `loading`), or the
+    // screen-off power-save stall the lock prevents comes right back.
+    if (identical(_backend, _localBackend) &&
+        _backend.processingState != BackendProcessingState.idle) {
+      final q = queue.value;
+      final cur = _backend.currentIndex ?? 0;
+      if (cur >= 0 && cur < q.length && !identical(patched[cur], q[cur])) {
+        _currentSourcePredatesPatch = true;
+      }
+    }
+    queue.add(patched);
+    _updateWifiLock();
+  }
+
+  // True while the CURRENT item's extras say "local" but its loaded source
+  // was created before the download landed and still streams. Only consulted
+  // by the WifiLock heuristics; cleared when any fresh load starts.
+  bool _currentSourcePredatesPatch = false;
+
   /// The processing state to publish for the backend's [state]. A deliberate
   /// teardown (intentional stop, or nothing queued) passes `idle` through —
   /// audio_service stops the Android service on every published
@@ -1436,7 +1508,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       playing: _backend.playing,
       onLocalBackend: onLocal,
       processingState: _backend.processingState,
-      itemIsNetworkSource: item != null && _streamsFromNetwork(item),
+      // _currentSourcePredatesPatch: extras say "local" but the loaded source
+      // still streams (download landed mid-track) — keep the lock honest.
+      itemIsNetworkSource: item != null &&
+          (_streamsFromNetwork(item) || _currentSourcePredatesPatch),
       castRelaysViaPhone: !onLocal &&
           item != null &&
           (_castVisualizer || _phoneIsCastOrigin(item)),
