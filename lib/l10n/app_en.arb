@@ -866,7 +866,7 @@
   "settingsAccentColorSubtitle": "The highlight color used across the app.",
   "accentThemeDefault": "Theme default",
   "accentCustom": "Custom",
-  "lanOnYourNetwork": "On your network",
+  "lanOnYourNetwork": "Servers on your local network",
   "lanSearching": "Searching for servers…",
   "lanRefresh": "Refresh",
   "lanServerVersion": "mStream v{version}",
@@ -969,11 +969,19 @@
   },
   "irohConnectHeader": "Connect peer-to-peer",
   "@irohConnectHeader": {
-    "description": "Header of the iroh tab on the add-server form."
+    "description": "Title at the top of the Quick Connect tab."
   },
-  "irohConnectBody": "Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.",
+  "irohPairingHeader": "Connect with a pairing code",
+  "@irohPairingHeader": {
+    "description": "Header of the manual pairing-code section on the Quick Connect tab."
+  },
+  "irohConnectBody": "Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.",
   "@irohConnectBody": {
-    "description": "Explainer under the iroh tab header on the add-server form."
+    "description": "Explainer under the Quick Connect tab title."
+  },
+  "irohPairingBody": "Enable Remote Access on the server, then paste its pairing code or scan the QR.",
+  "@irohPairingBody": {
+    "description": "Explainer under the pairing-code section header on the Quick Connect tab."
   },
   "irohOneServerLimit": "Only one peer-to-peer (iroh) server is supported. Remove the existing one to connect a different server.",
   "@irohOneServerLimit": {

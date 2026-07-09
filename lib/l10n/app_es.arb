@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "El color de resalte que se usa en toda la aplicación.",
   "accentThemeDefault": "Predeterminado del tema",
   "accentCustom": "Personalizado",
-  "lanOnYourNetwork": "En tu red",
+  "lanOnYourNetwork": "Servidores en tu red local",
   "lanSearching": "Buscando servidores…",
   "lanRefresh": "Actualizar",
   "lanServerVersion": "mStream v{version}",
