@@ -113,11 +113,22 @@ class LanDiscovery {
   /// tab's StreamBuilder subscribes later (tab switch) — a resolve landing in
   /// that window was emitted with no listener and a broadcast stream never
   /// replays, so the tile stayed on "Searching…" until a manual refresh
-  /// (verified on-device). The yielded snapshot closes that window.
-  Stream<List<DiscoveredServer>> get stream async* {
-    yield current;
-    yield* _controller.stream;
-  }
+  /// (verified on-device). The snapshot-on-listen closes that window.
+  ///
+  /// Stream.multi, NOT async*: a generator is single-subscription, and the
+  /// tab's StreamBuilder widget (created once per screen build) re-listens to
+  /// the SAME stream object when TabBarView remounts the tab — leaving and
+  /// re-entering Quick Connect then threw "Stream has already been listened
+  /// to". Stream.multi runs this callback per listener instead.
+  Stream<List<DiscoveredServer>> get stream => Stream.multi((listener) {
+        listener.add(current);
+        final sub = _controller.stream.listen(
+          listener.add,
+          onError: listener.addError,
+          onDone: listener.close,
+        );
+        listener.onCancel = sub.cancel;
+      });
 
   /// Snapshot for seeding a StreamBuilder before the first event.
   List<DiscoveredServer> get current => _servers.values.toList();
