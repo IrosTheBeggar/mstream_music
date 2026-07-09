@@ -1557,8 +1557,8 @@ class MyCustomFormState extends State<MyCustomForm> {
       _showIrohResult(false, l.irohAndroidOnly);
       return;
     }
-    final base = server.baseUrl;
-    if (base == null) {
+    final candidates = server.baseUrls;
+    if (candidates.isEmpty) {
       _showIrohResult(false, l.lanUnreachable);
       return;
     }
@@ -1569,16 +1569,18 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohPort = null;
     }
 
-    final baseUri = Uri.parse(base);
-    // Full flavor: trust this LAN host's self-signed cert for the bootstrap
-    // HTTP calls only (it isn't in serverList yet; the saved server talks
-    // over the loopback tunnel). Removed in the finally below — an
-    // unauthenticated mDNS advert must not leave blanket TLS trust behind
-    // for a host the user merely tapped.
-    var pendingTrust = false;
+    // Full flavor: trust each candidate host's self-signed cert for the
+    // bootstrap HTTP probes only (none is in serverList yet; the saved server
+    // talks over the loopback tunnel). All removed in the finally — an
+    // unauthenticated mDNS advert must not leave blanket TLS trust behind for
+    // a host the user merely tapped.
+    final trusted = <String>{};
     if (!isPlayBuild && server.scheme == 'https') {
-      ServerManager().addPendingSelfSigned(baseUri.host);
-      pendingTrust = true;
+      for (final c in candidates) {
+        final h = Uri.parse(c).host;
+        ServerManager().addPendingSelfSigned(h);
+        trusted.add(h);
+      }
     }
 
     setState(() {
@@ -1591,19 +1593,28 @@ class MyCustomFormState extends State<MyCustomForm> {
     // Only tear the tunnel down on failure if THIS flow dialed it — a
     // code-fetch failure must not stop a tunnel it never started.
     var dialed = false;
+    Uri? baseUri;
     try {
-      // 1) Public server? An unauthenticated ping that returns 200 means no
-      //    login is needed; any other STATUS means the auth wall answered.
-      //    A ping that can't connect at all means the advert is stale (the
-      //    server just went away / changed IP) — say so instead of showing a
-      //    login sheet whose submit can only fail confusingly.
+      // 1) Find a reachable address and detect public mode. A multi-homed
+      //    host advertises addresses that don't all route from the phone
+      //    (a WSL/Docker/VPN virtual adapter's IP), so probe each until one
+      //    ANSWERS; 200 means public (no login), any other status means the
+      //    auth wall replied. If NONE connect the advert is stale (server
+      //    left / changed IP) — say so rather than show a doomed login sheet.
       bool isPublic = false;
-      try {
-        final ping = await http
-            .get(baseUri.resolve('/api/v1/ping'))
-            .timeout(Duration(seconds: 6));
-        isPublic = ping.statusCode == 200;
-      } catch (_) {
+      for (final c in candidates) {
+        try {
+          final ping = await http
+              .get(Uri.parse(c).resolve('/api/v1/ping'))
+              .timeout(Duration(seconds: 6));
+          baseUri = Uri.parse(c);
+          isPublic = ping.statusCode == 200;
+          break;
+        } catch (_) {
+          // Try the next advertised address.
+        }
+      }
+      if (baseUri == null) {
         _showIrohResult(false, l.lanUnreachable);
         return;
       }
@@ -1677,8 +1688,8 @@ class MyCustomFormState extends State<MyCustomForm> {
       if (dialed) IrohTunnel.instance.stop();
       _showIrohResult(false, l.irohTunnelTestFailed('$e'));
     } finally {
-      if (pendingTrust) {
-        ServerManager().removePendingSelfSigned(baseUri.host);
+      for (final h in trusted) {
+        ServerManager().removePendingSelfSigned(h);
       }
       if (mounted) setState(() => _connectingId = null);
     }

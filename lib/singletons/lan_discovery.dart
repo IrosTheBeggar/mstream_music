@@ -39,18 +39,26 @@ class DiscoveredServer {
     required this.hostAddresses,
   });
 
-  /// LAN origin to bootstrap against, e.g. `http://192.168.1.50:3000`. Null when
-  /// no usable address resolved yet.
-  String? get baseUrl {
-    final host = hostAddresses.isNotEmpty ? hostAddresses.first : null;
-    if (host == null) return null;
+  static String _origin(String scheme, String host, int port) {
     // An IPv6 literal must be bracketed in a URL, and Android reports
     // link-local addresses with a %zone suffix no URL parser accepts —
-    // strip it (the ping simply fails on an unroutable address and the
-    // tile reports unreachable instead of crashing the flow).
+    // strip it (an unroutable address just fails its probe and the next
+    // candidate is tried).
     final h = host.contains(':') ? '[${host.split('%').first}]' : host;
     return '$scheme://$h:$port';
   }
+
+  /// LAN origin to bootstrap against, e.g. `http://192.168.1.50:3000`. Null
+  /// when no usable address resolved yet. The FIRST of [baseUrls]; connect via
+  /// that whole list so a multi-homed host (a WSL/Docker/VPN virtual adapter
+  /// advertises its own unroutable IP too) is reached on whichever address
+  /// actually answers.
+  String? get baseUrl => baseUrls.isEmpty ? null : baseUrls.first;
+
+  /// Every advertised address as a candidate origin, IPv4 first (the loopback
+  /// tunnel bootstrap and most LANs are v4). Probe them in order.
+  List<String> get baseUrls =>
+      hostAddresses.map((h) => _origin(scheme, h, port)).toList();
 }
 
 /// Browses the LAN for iroh-capable mStream servers so the Quick Connect screen
