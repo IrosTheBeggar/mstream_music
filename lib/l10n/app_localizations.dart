@@ -2741,6 +2741,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.'**
   String get irohShareUnavailable;
+
+  /// Header above the list of mStream servers discovered on the LAN via mDNS, in the Quick Connect tab.
+  ///
+  /// In en, this message translates to:
+  /// **'On your network'**
+  String get lanOnYourNetwork;
+
+  /// Shown under the 'On your network' header while no mDNS-discovered servers have been found yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for servers…'**
+  String get lanSearching;
+
+  /// Tooltip on the button that restarts LAN discovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get lanRefresh;
+
+  /// Subtitle of a discovered-server tile showing the server version; {version} is the version string.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream v{version}'**
+  String lanServerVersion(String version);
+
+  /// Title of the login sheet shown when connecting to a discovered private server; {name} is the server's friendly name.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to {name}'**
+  String lanLoginTitle(String name);
+
+  /// Shown when a discovered server has no usable address to connect to.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach this server on the network.'**
+  String get lanUnreachable;
+
+  /// Shown when a discovered iroh server is reachable and the user logged in, but the server returned no pairing code (not an admin and code sharing is off).
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Connect is on for this server, but it didn\'t share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.'**
+  String get lanNoCode;
 }
 
 class _AppLocalizationsDelegate

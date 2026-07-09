@@ -56,6 +56,11 @@ dependencies:
   # Package name (applicationId) lookup so the album-art ContentProvider
   # authority always matches the manifest, regardless of --dart-define flags.
   package_info_plus: ^8.0.0
+  # mDNS/DNS-SD browsing (Android NsdManager / Apple Bonjour) used by the
+  # Quick Connect screen to discover `_mstream._tcp` servers on the LAN. NSD
+  # manages its own multicast, so no MulticastLock is needed; the manifest
+  # already declares CHANGE_WIFI_MULTICAST_STATE (shared with DLNA discovery).
+  bonsoir: ^7.1.4
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

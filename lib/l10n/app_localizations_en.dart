@@ -1563,4 +1563,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get lanOnYourNetwork => 'On your network';
+
+  @override
+  String get lanSearching => 'Searching for servers…';
+
+  @override
+  String get lanRefresh => 'Refresh';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Sign in to $name';
+  }
+
+  @override
+  String get lanUnreachable => 'Couldn\'t reach this server on the network.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect is on for this server, but it didn\'t share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.';
 }

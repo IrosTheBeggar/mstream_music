@@ -16,6 +16,7 @@ import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
+import '../singletons/lan_discovery.dart';
 import '../singletons/server_list.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/app_messenger.dart';
@@ -127,6 +128,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool _irohSaving = false;
   // Set once the server is saved, so dispose() won't stop the now-active tunnel.
   bool _irohSaved = false;
+  // id of the mDNS-discovered server currently being paired (spinner on its
+  // tile + blocks re-taps); null when idle.
+  String? _connectingId;
 
   @override
   @protected
@@ -171,6 +175,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     _urlCtrl.addListener(_clearTestResult);
     // Auto-name the download folder from the URL (new servers only).
     _urlCtrl.addListener(_maybeAutofillFolder);
+
+    // Add mode only: browse the LAN for iroh-capable servers so the Quick
+    // Connect tab can offer them. No-op on builds without the native tunnel.
+    if (!isEdit && LanDiscovery().isSupported) {
+      LanDiscovery().start();
+    }
   }
 
   void _clearTestResult() {
@@ -448,6 +458,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     // A tunnel left running from a test that was never saved is torn down here.
     if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
     ServerManager().clearPendingSelfSigned();
+    LanDiscovery().stop();
 
     super.dispose();
   }
@@ -1523,6 +1534,305 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (mounted) Navigator.pop(context);
   }
 
+  // --- mDNS-discovered Quick Connect ---
+  // Bootstrap a roaming iroh connection from a server found on the LAN: log in
+  // over plain LAN HTTP, fetch the server's iroh pairing code over that
+  // authenticated connection, then start the tunnel and save it as an iroh
+  // server (so it keeps working away from home). The connect secret never rides
+  // the mDNS broadcast — it comes back over the authenticated HTTP fetch.
+  Future<void> _connectDiscovered(DiscoveredServer server) async {
+    final l = AppLocalizations.of(context);
+    if (_connectingId != null) return; // one pairing at a time
+    if (ServerManager().hasIrohServer) {
+      _showIrohResult(false, l.irohOneServerLimit);
+      return;
+    }
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, l.irohAndroidOnly);
+      return;
+    }
+    final base = server.baseUrl;
+    if (base == null) {
+      _showIrohResult(false, l.lanUnreachable);
+      return;
+    }
+    // A leftover tunnel from a paste/scan test would collide (single native
+    // tunnel) — drop it first.
+    if (_irohPort != null && !_irohSaved) {
+      IrohTunnel.instance.stop();
+      _irohPort = null;
+    }
+
+    final baseUri = Uri.parse(base);
+    // Full flavor: trust this LAN host's self-signed cert for the bootstrap HTTP
+    // calls (it isn't in serverList yet). Play build ignores the flag.
+    if (!isPlayBuild && server.scheme == 'https') {
+      ServerManager().addPendingSelfSigned(baseUri.host);
+    }
+
+    setState(() {
+      _connectingId = server.id;
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+    });
+
+    (String, String)? creds;
+    try {
+      // 1) Public server? An unauthenticated ping that returns 200 means no
+      //    login is needed.
+      bool isPublic = false;
+      try {
+        final ping = await http
+            .get(baseUri.resolve('/api/v1/ping'))
+            .timeout(Duration(seconds: 6));
+        isPublic = ping.statusCode == 200;
+      } catch (_) {
+        // Fall through to the login form rather than wrongly assuming public.
+      }
+
+      String jwt = '';
+      if (!isPublic) {
+        creds = await _promptDiscoveredLogin(server);
+        if (creds == null) {
+          if (mounted) setState(() => _connectingId = null);
+          return; // user cancelled
+        }
+        final login = await http.post(
+          baseUri.resolve('/api/v1/auth/login'),
+          body: {'username': creds.$1, 'password': creds.$2},
+        ).timeout(Duration(seconds: 8));
+        if (login.statusCode != 200) {
+          _showIrohResult(false, l.irohSignInFailedHttp(login.statusCode));
+          return;
+        }
+        jwt = (jsonDecode(login.body)['token'] ?? '').toString();
+      }
+
+      // 2) Fetch the pairing code over the now-authenticated LAN connection.
+      final codeResp = await http.get(
+        baseUri.resolve('/api/v1/iroh/code'),
+        headers: {'x-access-token': jwt},
+      ).timeout(Duration(seconds: 8));
+      String? code;
+      if (codeResp.statusCode == 200) {
+        try {
+          final body = jsonDecode(codeResp.body) as Map<String, dynamic>;
+          if (body['available'] == true && body['code'] is String) {
+            code = body['code'] as String;
+          }
+        } catch (_) {}
+      }
+      if (code == null) {
+        _showIrohResult(false, l.lanNoCode);
+        return;
+      }
+
+      // 3) Start the tunnel from the code and prove it carries HTTP, mirroring
+      //    _testIrohConnection.
+      final port = await IrohTunnel.instance.start(code);
+      final lt = IrohTunnel.instance.localToken ?? '';
+      await http
+          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
+          .timeout(Duration(seconds: 10));
+      if (!mounted) {
+        IrohTunnel.instance.stop();
+        return;
+      }
+
+      // 4) Save as an iroh server (adopts the tunnel as the active connection).
+      //    _saveIrohServer reads these fields for the stored credentials.
+      _irohPublic = isPublic;
+      _irohUserCtrl.text = isPublic ? '' : creds!.$1;
+      _irohPassCtrl.text = isPublic ? '' : creds!.$2;
+      showGlobalSnack(l.connectionSuccessful);
+      await _saveIrohServer(code: code, port: port, jwt: jwt);
+    } on IrohTunnelException catch (e) {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, e.message);
+    } on TimeoutException {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTimeout);
+    } catch (e) {
+      IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTestFailed('$e'));
+    } finally {
+      if (mounted) setState(() => _connectingId = null);
+    }
+  }
+
+  // Modal sheet collecting credentials for a discovered private server.
+  // Returns (username, password), or null if cancelled.
+  Future<(String, String)?> _promptDiscoveredLogin(DiscoveredServer server) {
+    final l = AppLocalizations.of(context);
+    final userCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    return showModalBottomSheet<(String, String)>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VelvetColors.surface,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.lanLoginTitle(server.name),
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+            SizedBox(height: 16),
+            TextField(
+              controller: userCtrl,
+              autofocus: true,
+              autocorrect: false,
+              keyboardType: TextInputType.emailAddress,
+              style: TextStyle(color: VelvetColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: l.fieldUsername,
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: passCtrl,
+              obscureText: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              onSubmitted: (_) =>
+                  Navigator.of(ctx).pop((userCtrl.text, passCtrl.text)),
+              style: TextStyle(color: VelvetColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: l.fieldPassword,
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: VelvetColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: Icon(Icons.login),
+              label: Text(l.irohSignInSave),
+              onPressed: () =>
+                  Navigator.of(ctx).pop((userCtrl.text, passCtrl.text)),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      userCtrl.dispose();
+      passCtrl.dispose();
+    });
+  }
+
+  // "On your network": live list of mDNS-discovered iroh servers. Always shows
+  // the header + a searching hint so the user knows discovery is running.
+  Widget _discoveredSection() {
+    final l = AppLocalizations.of(context);
+    return StreamBuilder<List<DiscoveredServer>>(
+      stream: LanDiscovery().stream,
+      initialData: LanDiscovery().current,
+      builder: (context, snap) {
+        final servers = snap.data ?? const <DiscoveredServer>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(l.lanOnYourNetwork,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh, color: VelvetColors.textSecondary),
+                  tooltip: l.lanRefresh,
+                  onPressed: () => LanDiscovery().refresh(),
+                ),
+              ],
+            ),
+            if (servers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(VelvetColors.textTertiary),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(l.lanSearching,
+                        style: TextStyle(
+                            color: VelvetColors.textTertiary, fontSize: 13)),
+                  ],
+                ),
+              )
+            else
+              ...servers.map(_discoveredTile),
+            const SizedBox(height: 20),
+            Divider(color: VelvetColors.border2),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _discoveredTile(DiscoveredServer server) {
+    final l = AppLocalizations.of(context);
+    final busy = _connectingId == server.id;
+    final blocked = _connectingId != null && !busy;
+    final subtitle = server.version != null
+        ? l.lanServerVersion(server.version!)
+        : (server.hostAddresses.isNotEmpty ? server.hostAddresses.first : '');
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: VelvetColors.border2),
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        ),
+        child: ListTile(
+          enabled: !blocked,
+          leading: Icon(Icons.dns_outlined, color: VelvetColors.primary),
+          title: Text(server.name,
+              style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis),
+          subtitle: subtitle.isEmpty
+              ? null
+              : Text(subtitle,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                  overflow: TextOverflow.ellipsis),
+          trailing: busy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(VelvetColors.primary),
+                  ),
+                )
+              : Icon(Icons.chevron_right, color: VelvetColors.textSecondary),
+          onTap: (busy || blocked) ? null : () => _connectDiscovered(server),
+        ),
+      ),
+    );
+  }
+
   Widget _buildIrohTab(BuildContext context) {
     final l = AppLocalizations.of(context);
     // No native tunnel lib on this device/ABI (e.g. 32-bit armeabi-v7a, which ships
@@ -1578,6 +1888,10 @@ class MyCustomFormState extends State<MyCustomForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Servers found on the LAN (mDNS). Tapping one bootstraps an iroh
+            // connection over the network; the manual paste/scan below is the
+            // fallback (and the only path away from home).
+            _discoveredSection(),
             Text(l.irohConnectHeader,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,

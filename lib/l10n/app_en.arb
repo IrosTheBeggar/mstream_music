@@ -1102,5 +1102,35 @@
   "irohShareUnavailable": "Sharing isn't available for peer-to-peer (iroh) servers — they have no public URL to link to.",
   "@irohShareUnavailable": {
     "description": "Shown when trying to share tracks from an iroh (peer-to-peer) server."
+  },
+  "lanOnYourNetwork": "On your network",
+  "@lanOnYourNetwork": {
+    "description": "Header above the list of mStream servers discovered on the LAN via mDNS, in the Quick Connect tab."
+  },
+  "lanSearching": "Searching for servers…",
+  "@lanSearching": {
+    "description": "Shown under the 'On your network' header while no mDNS-discovered servers have been found yet."
+  },
+  "lanRefresh": "Refresh",
+  "@lanRefresh": {
+    "description": "Tooltip on the button that restarts LAN discovery."
+  },
+  "lanServerVersion": "mStream v{version}",
+  "@lanServerVersion": {
+    "description": "Subtitle of a discovered-server tile showing the server version; {version} is the version string.",
+    "placeholders": { "version": { "type": "String" } }
+  },
+  "lanLoginTitle": "Sign in to {name}",
+  "@lanLoginTitle": {
+    "description": "Title of the login sheet shown when connecting to a discovered private server; {name} is the server's friendly name.",
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "lanUnreachable": "Couldn't reach this server on the network.",
+  "@lanUnreachable": {
+    "description": "Shown when a discovered server has no usable address to connect to."
+  },
+  "lanNoCode": "Quick Connect is on for this server, but it didn't share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.",
+  "@lanNoCode": {
+    "description": "Shown when a discovered iroh server is reachable and the user logged in, but the server returned no pairing code (not an admin and code sharing is off)."
   }
 }
