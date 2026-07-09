@@ -16,6 +16,7 @@ import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/file_explorer.dart';
+import '../singletons/lan_discovery.dart';
 import '../singletons/server_list.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/app_messenger.dart';
@@ -127,6 +128,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool _irohSaving = false;
   // Set once the server is saved, so dispose() won't stop the now-active tunnel.
   bool _irohSaved = false;
+  // id of the mDNS-discovered server currently being paired (spinner on its
+  // tile + blocks re-taps); null when idle.
+  String? _connectingId;
 
   @override
   @protected
@@ -171,6 +175,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     _urlCtrl.addListener(_clearTestResult);
     // Auto-name the download folder from the URL (new servers only).
     _urlCtrl.addListener(_maybeAutofillFolder);
+
+    // Add mode only: browse the LAN for iroh-capable servers so the Quick
+    // Connect tab can offer them. No-op on builds without the native tunnel.
+    if (!isEdit && LanDiscovery().isSupported) {
+      LanDiscovery().start();
+    }
   }
 
   void _clearTestResult() {
@@ -448,6 +458,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     // A tunnel left running from a test that was never saved is torn down here.
     if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
     ServerManager().clearPendingSelfSigned();
+    LanDiscovery().stop();
 
     super.dispose();
   }
@@ -1145,32 +1156,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   Future<void> _createSubfolder(BuildContext sheetCtx, String parent,
       void Function(String) onCreated) async {
     final l = AppLocalizations.of(context);
-    final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: sheetCtx,
-      builder: (dctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.storageNewFolder,
-            style: TextStyle(color: VelvetColors.textPrimary)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          autocorrect: false,
-          style: TextStyle(color: VelvetColors.textPrimary),
-          decoration: InputDecoration(hintText: l.storageFolderNameHint),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(dctx).pop(),
-              child: Text(l.cancel,
-                  style: TextStyle(color: VelvetColors.textSecondary))),
-          TextButton(
-              onPressed: () => Navigator.of(dctx).pop(ctrl.text.trim()),
-              child: Text(l.create)),
-        ],
-      ),
+      builder: (dctx) => const _NewFolderDialog(),
     );
-    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     // Single safe path segment so a name can't escape the current directory.
     final safe = _sanitizeFolderName(name);
@@ -1362,6 +1351,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
     // Re-test: drop any tunnel left from a previous test (the code may differ).
     if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    if (_connectingId != null) return; // a discovered pairing is mid-flight
     setState(() {
       _irohTesting = true;
       _irohTestResult = null;
@@ -1523,6 +1513,281 @@ class MyCustomFormState extends State<MyCustomForm> {
     if (mounted) Navigator.pop(context);
   }
 
+  // --- mDNS-discovered Quick Connect ---
+  // Bootstrap a roaming iroh connection from a server found on the LAN: log in
+  // over plain LAN HTTP, fetch the server's iroh pairing code over that
+  // authenticated connection, then start the tunnel and save it as an iroh
+  // server (so it keeps working away from home). The connect secret never rides
+  // the mDNS broadcast — it comes back over the authenticated HTTP fetch.
+  Future<void> _connectDiscovered(DiscoveredServer server) async {
+    final l = AppLocalizations.of(context);
+    if (_connectingId != null) return; // one pairing at a time
+    // The manual paste/scan Test dials the SAME single native tunnel; two
+    // concurrent dials hand one flow the other's port and it silently binds
+    // the wrong server. The tiles and the Test button also disable while the
+    // sibling flow runs — this is the backstop.
+    if (_irohTesting) return;
+    if (ServerManager().hasIrohServer) {
+      _showIrohResult(false, l.irohOneServerLimit);
+      return;
+    }
+    if (!IrohTunnel.isSupported) {
+      _showIrohResult(false, l.irohAndroidOnly);
+      return;
+    }
+    final candidates = server.baseUrls;
+    if (candidates.isEmpty) {
+      _showIrohResult(false, l.lanUnreachable);
+      return;
+    }
+    // A leftover tunnel from a paste/scan test would collide (single native
+    // tunnel) — drop it first.
+    if (_irohPort != null && !_irohSaved) {
+      IrohTunnel.instance.stop();
+      _irohPort = null;
+    }
+
+    // Full flavor: trust each candidate host's self-signed cert for the
+    // bootstrap HTTP probes only (none is in serverList yet; the saved server
+    // talks over the loopback tunnel). All removed in the finally — an
+    // unauthenticated mDNS advert must not leave blanket TLS trust behind for
+    // a host the user merely tapped.
+    final trusted = <String>{};
+    if (!isPlayBuild && server.scheme == 'https') {
+      for (final c in candidates) {
+        final h = Uri.parse(c).host;
+        ServerManager().addPendingSelfSigned(h);
+        trusted.add(h);
+      }
+    }
+
+    setState(() {
+      _connectingId = server.id;
+      _irohTestResult = null;
+      _irohTestSuccess = null;
+    });
+
+    (String, String)? creds;
+    // Only tear the tunnel down on failure if THIS flow dialed it — a
+    // code-fetch failure must not stop a tunnel it never started.
+    var dialed = false;
+    Uri? baseUri;
+    try {
+      // 1) Find a reachable address and detect public mode. A multi-homed
+      //    host advertises addresses that don't all route from the phone
+      //    (a WSL/Docker/VPN virtual adapter's IP), so probe each until one
+      //    ANSWERS; 200 means public (no login), any other status means the
+      //    auth wall replied. If NONE connect the advert is stale (server
+      //    left / changed IP) — say so rather than show a doomed login sheet.
+      bool isPublic = false;
+      for (final c in candidates) {
+        try {
+          final ping = await http
+              .get(Uri.parse(c).resolve('/api/v1/ping'))
+              .timeout(Duration(seconds: 6));
+          baseUri = Uri.parse(c);
+          isPublic = ping.statusCode == 200;
+          break;
+        } catch (_) {
+          // Try the next advertised address.
+        }
+      }
+      if (baseUri == null) {
+        _showIrohResult(false, l.lanUnreachable);
+        return;
+      }
+      if (!mounted) return; // backed out during the ping
+
+      String jwt = '';
+      if (!isPublic) {
+        creds = await _promptDiscoveredLogin(server);
+        if (creds == null) {
+          if (mounted) setState(() => _connectingId = null);
+          return; // user cancelled
+        }
+        final login = await http.post(
+          baseUri.resolve('/api/v1/auth/login'),
+          body: {'username': creds.$1, 'password': creds.$2},
+        ).timeout(Duration(seconds: 8));
+        if (!mounted) return;
+        if (login.statusCode != 200) {
+          _showIrohResult(false, l.irohSignInFailedHttp(login.statusCode));
+          return;
+        }
+        jwt = (jsonDecode(login.body)['token'] ?? '').toString();
+      }
+
+      // 2) Fetch the pairing code over the now-authenticated LAN connection.
+      final codeResp = await http.get(
+        baseUri.resolve('/api/v1/iroh/code'),
+        headers: {'x-access-token': jwt},
+      ).timeout(Duration(seconds: 8));
+      String? code;
+      if (codeResp.statusCode == 200) {
+        try {
+          final body = jsonDecode(codeResp.body) as Map<String, dynamic>;
+          if (body['available'] == true && body['code'] is String) {
+            code = body['code'] as String;
+          }
+        } catch (_) {}
+      }
+      if (code == null) {
+        _showIrohResult(false, l.lanNoCode);
+        return;
+      }
+
+      // 3) Start the tunnel from the code and prove it carries HTTP, mirroring
+      //    _testIrohConnection.
+      dialed = true;
+      final port = await IrohTunnel.instance.start(code);
+      final lt = IrohTunnel.instance.localToken ?? '';
+      await http
+          .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
+          .timeout(Duration(seconds: 10));
+      if (!mounted) {
+        IrohTunnel.instance.stop();
+        return;
+      }
+
+      // 4) Save as an iroh server (adopts the tunnel as the active connection).
+      //    _saveIrohServer reads these fields for the stored credentials.
+      _irohPublic = isPublic;
+      _irohUserCtrl.text = isPublic ? '' : creds!.$1;
+      _irohPassCtrl.text = isPublic ? '' : creds!.$2;
+      showGlobalSnack(l.connectionSuccessful);
+      await _saveIrohServer(code: code, port: port, jwt: jwt);
+    } on IrohTunnelException catch (e) {
+      if (dialed) IrohTunnel.instance.stop();
+      _showIrohResult(false, e.message);
+    } on TimeoutException {
+      if (dialed) IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTimeout);
+    } catch (e) {
+      if (dialed) IrohTunnel.instance.stop();
+      _showIrohResult(false, l.irohTunnelTestFailed('$e'));
+    } finally {
+      for (final h in trusted) {
+        ServerManager().removePendingSelfSigned(h);
+      }
+      if (mounted) setState(() => _connectingId = null);
+    }
+  }
+
+  // Modal sheet collecting credentials for a discovered private server.
+  // Returns (username, password), or null if cancelled.
+  Future<(String, String)?> _promptDiscoveredLogin(DiscoveredServer server) {
+    return showModalBottomSheet<(String, String)>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VelvetColors.surface,
+      builder: (ctx) => _LanLoginSheet(serverName: server.name),
+    );
+  }
+
+  // "On your network": live list of mDNS-discovered iroh servers. Always shows
+  // the header + a searching hint so the user knows discovery is running.
+  Widget _discoveredSection() {
+    final l = AppLocalizations.of(context);
+    return StreamBuilder<List<DiscoveredServer>>(
+      stream: LanDiscovery().stream,
+      initialData: LanDiscovery().current,
+      builder: (context, snap) {
+        final servers = snap.data ?? const <DiscoveredServer>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(l.lanOnYourNetwork,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh, color: VelvetColors.textSecondary),
+                  tooltip: l.lanRefresh,
+                  onPressed: () => LanDiscovery().refresh(),
+                ),
+              ],
+            ),
+            if (servers.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(VelvetColors.textTertiary),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(l.lanSearching,
+                        style: TextStyle(
+                            color: VelvetColors.textTertiary, fontSize: 13)),
+                  ],
+                ),
+              )
+            else
+              ...servers.map(_discoveredTile),
+            const SizedBox(height: 20),
+            Divider(color: VelvetColors.border2),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _discoveredTile(DiscoveredServer server) {
+    final l = AppLocalizations.of(context);
+    final busy = _connectingId == server.id;
+    final blocked = (_connectingId != null && !busy) || _irohTesting;
+    final subtitle = server.version != null
+        ? l.lanServerVersion(server.version!)
+        : (server.hostAddresses.isNotEmpty ? server.hostAddresses.first : '');
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: VelvetColors.border2),
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        ),
+        child: ListTile(
+          enabled: !blocked,
+          leading: Icon(Icons.dns_outlined, color: VelvetColors.primary),
+          title: Text(server.name,
+              style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis),
+          subtitle: subtitle.isEmpty
+              ? null
+              : Text(subtitle,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                  overflow: TextOverflow.ellipsis),
+          trailing: busy
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(VelvetColors.primary),
+                  ),
+                )
+              : Icon(Icons.chevron_right, color: VelvetColors.textSecondary),
+          onTap: (busy || blocked) ? null : () => _connectDiscovered(server),
+        ),
+      ),
+    );
+  }
+
   Widget _buildIrohTab(BuildContext context) {
     final l = AppLocalizations.of(context);
     // No native tunnel lib on this device/ABI (e.g. 32-bit armeabi-v7a, which ships
@@ -1578,6 +1843,10 @@ class MyCustomFormState extends State<MyCustomForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Servers found on the LAN (mDNS). Tapping one bootstraps an iroh
+            // connection over the network; the manual paste/scan below is the
+            // fallback (and the only path away from home).
+            _discoveredSection(),
             Text(l.irohConnectHeader,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
@@ -1620,7 +1889,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                     ),
                     icon: Icon(Icons.qr_code_scanner, size: 18),
                     label: Text(l.irohScanQr),
-                    onPressed: _irohTesting ? null : _scanQr,
+                    onPressed: (_irohTesting || _connectingId != null)
+                        ? null
+                        : _scanQr,
                   ),
                 ),
                 SizedBox(width: 8),
@@ -1637,7 +1908,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                     ),
                     icon: Icon(Icons.content_paste, size: 18),
                     label: Text(l.irohPaste),
-                    onPressed: _irohTesting ? null : _pasteIrohCode,
+                    onPressed: (_irohTesting || _connectingId != null)
+                        ? null
+                        : _pasteIrohCode,
                   ),
                 ),
               ],
@@ -1664,7 +1937,9 @@ class MyCustomFormState extends State<MyCustomForm> {
                     )
                   : Icon(Icons.network_check),
               label: Text(_irohTesting ? l.irohTesting : l.irohTestConnection),
-              onPressed: _irohTesting ? null : _testIrohConnection,
+              onPressed: (_irohTesting || _connectingId != null)
+                  ? null
+                  : _testIrohConnection,
             ),
             if (_irohTestResult != null) ...[
               SizedBox(height: 12),
@@ -2091,3 +2366,135 @@ class MyCustomFormState extends State<MyCustomForm> {
 
 // The QR scanner page moved to lib/widgets/iroh_scanner.dart (IrohScannerPage),
 // shared with the re-pair sheet.
+
+// Login sheet for a discovered private server; pops with (username, password).
+// A StatefulWidget so the TextEditingControllers live until the route is fully
+// gone: disposing them in whenComplete() runs when the pop STARTS, but the
+// closing sheet keeps rebuilding through its exit animation (the collapsing
+// keyboard changes viewInsets), and a TextField building with a disposed
+// controller throws — a full-screen error page over the still-running flow.
+class _LanLoginSheet extends StatefulWidget {
+  final String serverName;
+
+  const _LanLoginSheet({required this.serverName});
+
+  @override
+  State<_LanLoginSheet> createState() => _LanLoginSheetState();
+}
+
+class _LanLoginSheetState extends State<_LanLoginSheet> {
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() =>
+      Navigator.of(context).pop((_userCtrl.text, _passCtrl.text));
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.lanLoginTitle(widget.serverName),
+              style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700)),
+          SizedBox(height: 16),
+          TextField(
+            controller: _userCtrl,
+            autofocus: true,
+            autocorrect: false,
+            keyboardType: TextInputType.emailAddress,
+            style: TextStyle(color: VelvetColors.textPrimary),
+            decoration: InputDecoration(
+              labelText: l.fieldUsername,
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+          ),
+          SizedBox(height: 12),
+          TextField(
+            controller: _passCtrl,
+            obscureText: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            onSubmitted: (_) => _submit(),
+            style: TextStyle(color: VelvetColors.textPrimary),
+            decoration: InputDecoration(
+              labelText: l.fieldPassword,
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+          ),
+          SizedBox(height: 16),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: VelvetColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 14),
+            ),
+            icon: Icon(Icons.login),
+            label: Text(l.irohSignInSave),
+            onPressed: _submit,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// "New folder" prompt for the download-folder browser; pops with the trimmed
+// name. Stateful for the same reason as _LanLoginSheet: the controller must
+// outlive the dialog's exit animation.
+class _NewFolderDialog extends StatefulWidget {
+  const _NewFolderDialog();
+
+  @override
+  State<_NewFolderDialog> createState() => _NewFolderDialogState();
+}
+
+class _NewFolderDialogState extends State<_NewFolderDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text(l.storageNewFolder,
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        autocorrect: false,
+        style: TextStyle(color: VelvetColors.textPrimary),
+        decoration: InputDecoration(hintText: l.storageFolderNameHint),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.textSecondary))),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+            child: Text(l.create)),
+      ],
+    );
+  }
+}

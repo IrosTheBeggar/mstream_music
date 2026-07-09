@@ -9,7 +9,7 @@ Play. This is guidance — the developer owns the final declarations.
 
 | Permission | Why | Optional? |
 | --- | --- | --- |
-| `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` | Reach the user's mStream server; DLNA/Chromecast discovery uses Wi-Fi multicast | — |
+| `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE` | Reach the user's mStream server; DLNA/Chromecast and mStream (`_mstream._tcp`, Quick Connect) discovery use Wi-Fi multicast | — |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `FOREGROUND_SERVICE_DATA_SYNC`, `WAKE_LOCK` | Background audio playback + background downloads | — |
 | `POST_NOTIFICATIONS` | Now-playing / download notifications | — |
 | `RECEIVE_BOOT_COMPLETED` | Resume/restore playback state | — |

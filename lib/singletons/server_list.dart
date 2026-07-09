@@ -662,6 +662,12 @@ class ServerManager {
 
   void clearPendingSelfSigned() => _pendingSelfSignedHosts.clear();
 
+  /// Drop a single pending trust once its bootstrap is over — blanket trust
+  /// must not outlive the flow that needed it (mDNS adverts are
+  /// unauthenticated, so a tapped-but-never-saved host keeps no trust).
+  void removePendingSelfSigned(String host) =>
+      _pendingSelfSignedHosts.remove(host);
+
   /// True if [host] belongs to a configured server that opted into accepting a
   /// self-signed cert — SelfSignedHttpOverrides bypasses validation for just
   /// that host — or a host the add/edit screen is currently testing/saving with

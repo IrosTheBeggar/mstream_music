@@ -1282,6 +1282,32 @@ class AppLocalizationsJa extends AppLocalizations {
   String get accentCustom => 'カスタム';
 
   @override
+  String get lanOnYourNetwork => 'ネットワーク上のサーバー';
+
+  @override
+  String get lanSearching => 'サーバーを検索中…';
+
+  @override
+  String get lanRefresh => '更新';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return '$name にサインイン';
+  }
+
+  @override
+  String get lanUnreachable => 'ネットワーク上でこのサーバーに接続できませんでした。';
+
+  @override
+  String get lanNoCode =>
+      'このサーバーではQuick Connectが有効ですが、ペアリングコードが共有されていません。管理者としてサインインするか、運営者にコード共有の有効化を依頼してください。';
+
+  @override
   String get settingsResumeQueue => '起動時にキューを復元';
 
   @override

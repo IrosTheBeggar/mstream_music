@@ -1322,6 +1322,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accentCustom => 'Custom';
 
   @override
+  String get lanOnYourNetwork => 'On your network';
+
+  @override
+  String get lanSearching => 'Searching for servers…';
+
+  @override
+  String get lanRefresh => 'Refresh';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return 'Sign in to $name';
+  }
+
+  @override
+  String get lanUnreachable => 'Couldn\'t reach this server on the network.';
+
+  @override
+  String get lanNoCode =>
+      'Quick Connect is on for this server, but it didn\'t share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.';
+
+  @override
   String get settingsResumeQueue => 'Resume queue on launch';
 
   @override

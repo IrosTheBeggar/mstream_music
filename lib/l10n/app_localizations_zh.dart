@@ -1256,6 +1256,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accentCustom => '自定义';
 
   @override
+  String get lanOnYourNetwork => '你的网络中';
+
+  @override
+  String get lanSearching => '正在搜索服务器…';
+
+  @override
+  String get lanRefresh => '刷新';
+
+  @override
+  String lanServerVersion(String version) {
+    return 'mStream v$version';
+  }
+
+  @override
+  String lanLoginTitle(String name) {
+    return '登录 $name';
+  }
+
+  @override
+  String get lanUnreachable => '无法在网络中连接到此服务器。';
+
+  @override
+  String get lanNoCode =>
+      '此服务器已启用 Quick Connect，但未共享配对码。请以管理员身份登录，或请服务器运营者启用配对码共享。';
+
+  @override
   String get settingsResumeQueue => '启动时恢复播放队列';
 
   @override
