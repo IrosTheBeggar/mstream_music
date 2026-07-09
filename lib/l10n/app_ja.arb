@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "アプリ全体で使用される強調表示の色。",
   "accentThemeDefault": "テーマの既定",
   "accentCustom": "カスタム",
-  "lanOnYourNetwork": "ネットワーク上のサーバー",
+  "lanOnYourNetwork": "ローカルネットワーク上のサーバー",
   "lanSearching": "サーバーを検索中…",
   "lanRefresh": "更新",
   "lanServerVersion": "mStream v{version}",

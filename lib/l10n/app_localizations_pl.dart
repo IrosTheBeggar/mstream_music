@@ -1356,7 +1356,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get accentCustom => 'Niestandardowy';
 
   @override
-  String get lanOnYourNetwork => 'W twojej sieci';
+  String get lanOnYourNetwork => 'Serwery w twojej sieci lokalnej';
 
   @override
   String get lanSearching => 'Wyszukiwanie serwerów…';
@@ -1520,8 +1520,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get irohConnectHeader => 'Connect peer-to-peer';
 
   @override
+  String get irohPairingHeader => 'Connect with a pairing code';
+
+  @override
   String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.';
+      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
+
+  @override
+  String get irohPairingBody =>
+      'Enable Remote Access on the server, then paste its pairing code or scan the QR.';
 
   @override
   String get irohOneServerLimit =>

@@ -2325,7 +2325,7 @@ abstract class AppLocalizations {
   /// No description provided for @lanOnYourNetwork.
   ///
   /// In en, this message translates to:
-  /// **'On your network'**
+  /// **'Servers on your local network'**
   String get lanOnYourNetwork;
 
   /// No description provided for @lanSearching.
@@ -2604,17 +2604,29 @@ abstract class AppLocalizations {
   /// **'Quick Connect'**
   String get addServerTabQuickConnect;
 
-  /// Header of the iroh tab on the add-server form.
+  /// Title at the top of the Quick Connect tab.
   ///
   /// In en, this message translates to:
   /// **'Connect peer-to-peer'**
   String get irohConnectHeader;
 
-  /// Explainer under the iroh tab header on the add-server form.
+  /// Header of the manual pairing-code section on the Quick Connect tab.
   ///
   /// In en, this message translates to:
-  /// **'Reach your server from anywhere — no port-forwarding or public IP. Enable Remote Access on the server, then paste its pairing code or scan the QR.'**
+  /// **'Connect with a pairing code'**
+  String get irohPairingHeader;
+
+  /// Explainer under the Quick Connect tab title.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.'**
   String get irohConnectBody;
+
+  /// Explainer under the pairing-code section header on the Quick Connect tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Remote Access on the server, then paste its pairing code or scan the QR.'**
+  String get irohPairingBody;
 
   /// Shown on the iroh add-server tab when an iroh server already exists (only one is allowed).
   ///

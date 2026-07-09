@@ -1843,10 +1843,9 @@ class MyCustomFormState extends State<MyCustomForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Servers found on the LAN (mDNS). Tapping one bootstraps an iroh
-            // connection over the network; the manual paste/scan below is the
-            // fallback (and the only path away from home).
-            _discoveredSection(),
+            // Tab title + the p2p pitch: everything below connects
+            // peer-to-peer, whether via a discovered LAN server or a manually
+            // entered pairing code.
             Text(l.irohConnectHeader,
                 style: TextStyle(
                     color: VelvetColors.textPrimary,
@@ -1855,6 +1854,21 @@ class MyCustomFormState extends State<MyCustomForm> {
             SizedBox(height: 6),
             Text(
               l.irohConnectBody,
+              style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 16),
+            // Servers found on the LAN (mDNS). Tapping one bootstraps an iroh
+            // connection over the network; the manual paste/scan below is the
+            // fallback (and the only path away from home).
+            _discoveredSection(),
+            Text(l.irohPairingHeader,
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+            SizedBox(height: 6),
+            Text(
+              l.irohPairingBody,
               style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
             ),
             SizedBox(height: 16),

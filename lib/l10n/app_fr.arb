@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "La couleur de mise en évidence utilisée dans toute l'application.",
   "accentThemeDefault": "Par défaut du thème",
   "accentCustom": "Personnalisé",
-  "lanOnYourNetwork": "Sur votre réseau",
+  "lanOnYourNetwork": "Serveurs sur votre réseau local",
   "lanSearching": "Recherche de serveurs…",
   "lanRefresh": "Actualiser",
   "lanServerVersion": "mStream v{version}",

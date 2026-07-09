@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "整个应用中使用的高亮颜色。",
   "accentThemeDefault": "主题默认",
   "accentCustom": "自定义",
-  "lanOnYourNetwork": "你的网络中",
+  "lanOnYourNetwork": "本地网络中的服务器",
   "lanSearching": "正在搜索服务器…",
   "lanRefresh": "刷新",
   "lanServerVersion": "mStream v{version}",

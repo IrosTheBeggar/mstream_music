@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "Цвет выделения, используемый во всём приложении.",
   "accentThemeDefault": "Из темы",
   "accentCustom": "Свой",
-  "lanOnYourNetwork": "В вашей сети",
+  "lanOnYourNetwork": "Серверы в вашей локальной сети",
   "lanSearching": "Поиск серверов…",
   "lanRefresh": "Обновить",
   "lanServerVersion": "mStream v{version}",

@@ -353,7 +353,7 @@
   "settingsAccentColorSubtitle": "Kolor wyróżnienia używany w całej aplikacji.",
   "accentThemeDefault": "Domyślny motywu",
   "accentCustom": "Niestandardowy",
-  "lanOnYourNetwork": "W twojej sieci",
+  "lanOnYourNetwork": "Serwery w twojej sieci lokalnej",
   "lanSearching": "Wyszukiwanie serwerów…",
   "lanRefresh": "Odśwież",
   "lanServerVersion": "mStream v{version}",
