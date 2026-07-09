@@ -136,6 +136,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'El controlador de audio de este dispositivo no reporta bandas de ecualización.';
 
   @override
+  String get eqDisabledHint => 'Activa el ecualizador para ajustar las bandas.';
+
+  @override
   String get eqEnabledOn => 'Activado — ganancias aplicadas a la reproducción';
 
   @override

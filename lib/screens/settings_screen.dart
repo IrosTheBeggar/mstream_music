@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/player_layout.dart';
 import '../singletons/downloads.dart';
+import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
@@ -512,7 +513,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
             onTap: () async {
+              // resetAll flips eqEnabled by direct field write; the pipelined
+              // player would keep coloring audio while the EQ screen says
+              // Off. Route the audible half through the handler (rebuilds to
+              // a plain player) — only when EQ was actually on.
+              final eqWasOn = SettingsManager().eqEnabled;
               await SettingsManager().resetAll();
+              if (eqWasOn) {
+                unawaited(MediaManager().audioHandler.setEqEnabled(false));
+              }
               if (mounted) setState(() {});
               // App-wide messenger so the toast doesn't depend on this screen's
               // context surviving the await.

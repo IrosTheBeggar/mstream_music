@@ -138,6 +138,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Аудиодрайвер этого устройства не сообщает о полосах эквалайзера.';
 
   @override
+  String get eqDisabledHint => 'Включите эквалайзер, чтобы настроить полосы.';
+
+  @override
   String get eqEnabledOn => 'Включён — усиление применяется к воспроизведению';
 
   @override

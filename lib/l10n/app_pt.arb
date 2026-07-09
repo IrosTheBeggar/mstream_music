@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "Inicie uma música para configurar o equalizador.\n\nO equalizador nativo do Android é inicializado junto com a sessão de áudio, então é preciso ter a reprodução ativa antes de conseguir ler o layout das bandas.",
   "eqInitFailed": "Não foi possível inicializar o equalizador:\n{error}",
   "eqNoBands": "Nenhuma banda de equalização informada pelo driver de áudio deste dispositivo.",
+  "eqDisabledHint": "Ative o equalizador para ajustar as bandas.",
   "eqEnabledOn": "Ligado — ganhos aplicados à reprodução",
   "eqEnabledOff": "Desligado — modo bypass",
   "cancel": "Cancelar",

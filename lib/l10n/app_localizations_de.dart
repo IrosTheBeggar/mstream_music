@@ -136,6 +136,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Audiotreiber dieses Geräts meldet keine Equalizer-Bänder.';
 
   @override
+  String get eqDisabledHint =>
+      'Schalte den Equalizer ein, um die Bänder anzupassen.';
+
+  @override
   String get eqEnabledOn => 'Ein – Verstärkung auf Wiedergabe angewendet';
 
   @override

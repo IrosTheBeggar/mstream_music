@@ -32,6 +32,7 @@
   "eqNeedsPlayback": "请先播放一首歌曲以配置均衡器。\n\nAndroid 的原生均衡器会随音频会话一起初始化，因此需要正在播放时才能读取频段布局。",
   "eqInitFailed": "无法初始化均衡器：\n{error}",
   "eqNoBands": "此设备的音频驱动未报告任何均衡器频段。",
+  "eqDisabledHint": "开启均衡器以调整频段。",
   "eqEnabledOn": "开启 — 增益已应用到播放",
   "eqEnabledOff": "关闭 — 旁路模式",
   "cancel": "取消",

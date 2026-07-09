@@ -330,6 +330,12 @@ abstract class AppLocalizations {
   /// **'No EQ bands reported by this device\'s audio driver.'**
   String get eqNoBands;
 
+  /// No description provided for @eqDisabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the equalizer to adjust the bands.'**
+  String get eqDisabledHint;
+
   /// EQ enable switch subtitle when on.
   ///
   /// In en, this message translates to:
