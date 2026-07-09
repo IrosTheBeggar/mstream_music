@@ -253,11 +253,21 @@ class QueueStore {
       }
       _hadQueue = true;
       final state = handler.playbackState.value;
+      // A launch restore whose LOAD failed (offline / dead tunnel) parks the
+      // intended spot on the handler — the never-loaded player reads index
+      // null / position 0, and saving those would persist track-1/0:00 over
+      // the user's real place. Clamp against the SPOT track's own duration
+      // (mediaItem may describe a different row).
+      final spot = handler.restoreSpot;
+      final int idx = spot?.index ?? state.queueIndex ?? 0;
+      final Duration pos = spot?.position ?? handler.position;
+      final int? durMs = spot != null
+          ? (idx < queue.length ? queue[idx].duration?.inMilliseconds : null)
+          : handler.mediaItem.value?.duration?.inMilliseconds;
       final snapshot = <String, dynamic>{
         'version': _schemaVersion,
-        'index': state.queueIndex ?? 0,
-        'positionMs': clampResumePositionMs(handler.position.inMilliseconds,
-            handler.mediaItem.value?.duration?.inMilliseconds),
+        'index': idx,
+        'positionMs': clampResumePositionMs(pos.inMilliseconds, durMs),
         'shuffle': state.shuffleMode == AudioServiceShuffleMode.all,
         'repeat': _repeatName(state.repeatMode),
         'items': queue.map(itemToJson).toList(),

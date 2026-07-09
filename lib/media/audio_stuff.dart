@@ -86,6 +86,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   dynamic jsonAutoDJIgnoreList;
 
+  // One toast per session for an Auto-DJ auth failure (401/403) — every
+  // queue-end retriggers autoDJ, and each would re-toast otherwise.
+  bool _autoDJAuthWarned = false;
+
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
   // subsequent pick uses the anchor's 6 Camelot neighbours, keeping
@@ -226,6 +230,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         _failedSkips = 0;
         _httpRetries = 0;
         _networkStalled = false;
+        // A track actually loaded — the live player state is the truth now;
+        // stop overriding reads with the failed-restore park.
+        _restoreSpot = null;
       }
       // Any fresh load re-resolves its source from the current extras
       // (_uriFor), so the loaded-source-predates-download-patch marker is
@@ -274,7 +281,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _emitCurrentMediaItem() {
     if (_reordering) return;
     if (queue.value.isEmpty) return;
-    final i = (index ?? 0).clamp(0, queue.value.length - 1);
+    // A failed launch restore parks a spot the backend never reached — show
+    // THAT track as now-playing, not track 1. Spot FIRST: the failed load
+    // leaves the backend's currentIndex at 0 (not null), so an index-first
+    // read never falls through. Cleared on ready / user navigation.
+    final i = (_restoreSpot?.index ?? index ?? 0)
+        .clamp(0, queue.value.length - 1);
     final item = queue.value[i];
     final dur = _backend.duration;
     mediaItem.add(dur != null ? item.copyWith(duration: dur) : item);
@@ -323,6 +335,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     final pos = prev.position;
     final idx = prev.currentIndex ?? 0;
     final wasPlaying = prev.playing;
+    // The switch carries the AUDIBLE state, so the intent must follow it:
+    // playback started from a renderer's own remote never went through
+    // handler.play(), and a stale intent=false would make every intent-gated
+    // resume (skip-after-error, recoveries) land paused mid-listen after
+    // returning to the phone.
+    _playIntent = wasPlaying;
 
     await prev.pause();
 
@@ -556,8 +574,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // queued, so it's already the target); just wait for it and re-seed.
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
-      final pos = _localBackend.position;
-      final idx = _localBackend.currentIndex ?? 0;
+      // _reviveSpot: a launch-restore whose load failed parks at the SAVED
+      // spot — the never-loaded backend would report track 1 / 0:00.
+      final spot = _reviveSpot();
+      final pos = spot.position;
+      final idx = spot.index;
       final ready = await ServerManager().awaitTunnelReady(server: server);
       if (!ready) return; // tunnel didn't come up; the banner shows why
       // Rebuild URLs against the now-live tunnel ourselves rather than reusing
@@ -650,7 +671,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       _broadcastState();
       return;
     }
-    unawaited(_localBackend.play());
+    // Resume only if the user still wants playback: an upcoming track can
+    // fail while PAUSED (preload), and the skip must not blast audio over a
+    // deliberate pause.
+    if (_playIntent) unawaited(_localBackend.play());
   }
 
   void _showPlaybackErrorToast(String message, {bool debounce = false}) {
@@ -718,9 +742,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
         // Read the spot AFTER the backoff so a skip/seek during the wait is
         // honoured, and load DIRECTLY at it (initialIndex/Position) so the
-        // now-playing UI doesn't flash track 0 on the reload.
-        final pos = _localBackend.position;
-        final idx = _localBackend.currentIndex ?? 0;
+        // now-playing UI doesn't flash track 0 on the reload. _reviveSpot: a
+        // failed launch restore parks at the SAVED spot, not the backend's 0.
+        final spot = _reviveSpot();
+        final pos = spot.position;
+        final idx = spot.index;
         appLog('[play] network error — retry $attempt/$_kMaxHttpRetries');
         await _localBackend.setSources(queue.value,
             initialIndex: idx, initialPosition: pos);
@@ -769,12 +795,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!identical(_backend, _localBackend)) return;
     final fresh = _queueWithFreshUrls();
     if (fresh.isEmpty) return;
-    final pos = _localBackend.position;
-    final idx = (_localBackend.currentIndex ?? 0).clamp(0, fresh.length - 1);
+    final spot = _reviveSpot();
+    final idx = spot.index.clamp(0, fresh.length - 1);
     // Load DIRECTLY at the spot (initialIndex/Position) so the now-playing UI
     // doesn't flash track 0 on the reload.
     await _localBackend.setSources(fresh,
-        initialIndex: idx, initialPosition: pos);
+        initialIndex: idx, initialPosition: spot.position);
     if (_playIntent) unawaited(_localBackend.play());
   }
 
@@ -803,7 +829,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_localBackend.processingState != BackendProcessingState.idle) return;
     final q = queue.value;
     if (q.isEmpty) return;
-    final idx = _localBackend.currentIndex ?? 0;
+    // _reviveSpot: after a failed launch restore the backend reads index 0 --
+    // a mixed queue whose track 1 isn't iroh would never pass the gate below
+    // even though the PARKED track's server just healed.
+    final idx = _reviveSpot().index;
     final item = (idx >= 0 && idx < q.length) ? q[idx] : null;
     final server = item == null ? null : _serverFor(item);
     if (server == null || !server.isIroh) return;
@@ -887,6 +916,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Then default implementations of skipToNext and skipToPrevious provided by
     // the [QueueHandler] mixin will delegate to this method.
     if (index < 0 || index > queue.value.length) return;
+    // Explicit navigation supersedes a failed-restore park -- without this a
+    // stale spot would hijack the next re-seed back to the old track.
+    _restoreSpot = null;
     // This jumps to the beginning of the queue item at newIndex.
     _backend.seek(Duration.zero, index: index);
   }
@@ -909,11 +941,25 @@ class AudioPlayerHandler extends BaseAudioHandler
     // heal) chain their loads there, and an un-serialized restore load racing
     // one of them makes the two setSources abort each other ("Loading
     // interrupted"), losing the saved spot.
+    final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
-      await _backend.setSources(items);
-      final int i = index.clamp(0, items.length - 1);
-      // play: false → load paused at the saved spot (don't blast audio on open).
-      await _backend.seek(position, index: i, play: false);
+      try {
+        await _backend.setSources(items);
+        // play: false → load paused at the saved spot (don't blast audio on
+        // open).
+        await _backend.seek(position, index: i, play: false);
+      } catch (e) {
+        // A dead-server cold start (offline, stale tunnel loopback) makes the
+        // load throw AFTER the queue is published — the player never reaches
+        // the saved track, so its live index/position read 0. Don't lose the
+        // user's spot: park it in _restoreSpot so the revive paths re-seed
+        // THERE (not at track 1) and the next snapshot save doesn't persist
+        // the loss. Repeat/shuffle below are player-level flags and still
+        // apply without sources.
+        _restoreSpot = (index: i, position: position);
+        appLog('[queue] restore load failed — spot parked '
+            '(track ${i + 1} @ ${position.inSeconds}s): $e');
+      }
       _repeatMode = repeat;
       await _backend.setRepeat(_backendRepeat(repeat));
       if (shuffle) await _backend.setShuffleEnabled(true);
@@ -922,6 +968,31 @@ class AudioPlayerHandler extends BaseAudioHandler
     await done;
     _emitCurrentMediaItem();
     _broadcastState();
+  }
+
+  // Where a FAILED launch-restore load intended to park. Read by the revive
+  // paths (they load here instead of the never-loaded backend's index 0) and
+  // by QueueStore's snapshot writes (so a background save can't persist
+  // track-1/0:00 over the real spot); cleared once any track reaches ready —
+  // from then on the live player state is the truth.
+  ({int index, Duration position})? _restoreSpot;
+  ({int index, Duration position})? get restoreSpot => _restoreSpot;
+
+  // The spot a revive/retry should load at: the parked failed-restore spot
+  // when one is pending, else the backend's live position. The parked index
+  // is clamped against the LIVE queue -- edits while parked can shrink it,
+  // and an out-of-range index kills a reload (media3 throws on setSources'
+  // initialIndex and silently no-ops the seek).
+  ({int index, Duration position}) _reviveSpot() {
+    final s = _restoreSpot;
+    if (s == null) {
+      return (
+        index: _localBackend.currentIndex ?? 0,
+        position: _localBackend.position
+      );
+    }
+    final n = queue.value.length;
+    return n == 0 ? s : (index: s.index.clamp(0, n - 1), position: s.position);
   }
 
   @override
@@ -1024,16 +1095,23 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> skipToNext() async {
+    _restoreSpot = null; // user navigation supersedes a failed-restore park
     _backend.seekToNext();
   }
 
   @override
   Future<void> skipToPrevious() async {
+    _restoreSpot = null; // user navigation supersedes a failed-restore park
     _backend.seekToPrevious();
   }
 
   @override
-  Future<void> seek(Duration position) => _backend.seek(position);
+  Future<void> seek(Duration position) {
+    // A manual scrub supersedes the parked position (keep nothing: the next
+    // re-seed should read the live player, which this seek just updated).
+    _restoreSpot = null;
+    return _backend.seek(position);
+  }
 
   // True while the handler itself is tearing playback down (user stop, cleared
   // queue, unplayable-queue give-up), so _broadcastState can tell a deliberate
@@ -1134,6 +1212,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> removeQueueItemAt(int index) async {
+    _restoreSpot = null; // row indices shift -- a parked index would lie
     await super.removeQueueItemAt(index);
     // Update the queue BEFORE the backend. removeSourceAt makes the backend emit
     // its new currentIndex, and the currentIndexStream listener re-derives the
@@ -1150,6 +1229,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     switch (name) {
       case 'clearPlaylist':
         appLog('[queue] cleared');
+        _restoreSpot = null; // the queue the spot described is gone
         _intentionalStop = true;
         await _backend.stop();
         await super.stop();
@@ -1162,6 +1242,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // (ReorderableListView convention). Reorder the queue list first, then
         // the backend's source list, so the backend's current-index emit lands
         // against the already-updated queue.
+        _restoreSpot = null; // row indices shift -- a parked index would lie
         final from = extras?['from'];
         final to = extras?['to'];
         if (from is int && to is int) {
@@ -1232,6 +1313,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
           jsonAutoDJIgnoreList = null;
           _camelotAnchor = null;
+          _autoDJAuthWarned = false; // fresh server, fresh warning budget
         }
         autoDJServer = extras?['autoDJServer'];
 
@@ -1659,10 +1741,29 @@ class AudioPlayerHandler extends BaseAudioHandler
           },
           body: jsonEncode(payload),
         ).timeout(const Duration(seconds: 15));
-        if (res.statusCode > 299) return; // server error → bail silently
+        if (res.statusCode > 299) {
+          appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
+          // An expired/rotated JWT kills Auto DJ permanently and used to do it
+          // in total silence — infinite play just stopped. Tell the user once.
+          if ((res.statusCode == 401 || res.statusCode == 403) &&
+              !_autoDJAuthWarned) {
+            _autoDJAuthWarned = true;
+            _showPlaybackErrorToast(
+                'Auto DJ stopped — the server session expired. '
+                'Re-login in Manage Servers.');
+          }
+          return;
+        }
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
-      } catch (_) {
-        return; // network error → bail silently (matches old behaviour)
+        // A working pick re-arms the auth warning: the once-per-session flag
+        // exists to collapse queue-end retrigger spam of ONE expiry episode,
+        // not to silence a NEW expiry after a recovery.
+        _autoDJAuthWarned = false;
+      } catch (e) {
+        // Network error → bail without a toast (an offline queue-end is
+        // normal), but leave a trace for Diagnostics.
+        appLog('[dj] random-songs failed: $e');
+        return;
       }
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
@@ -1712,6 +1813,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       album: meta.album,
       artist: meta.artist,
       genre: meta.genreLabel,
+      // Duration from the server payload (browse-added parity). Without it a
+      // restore of an Auto-DJ track can't clamp a saved at-the-end position
+      // (see QueueStore.clampResumePositionMs) — reopening then seeks past
+      // the end, completes, and playback "won't start".
+      duration: meta.duration,
       // Artwork for the notification / lock screen / Android Auto (see
       // buildServerFileMediaItem — artUri mirrors extras['artUrl']).
       artUri: artUrl == null ? null : Uri.parse(artUrl),
