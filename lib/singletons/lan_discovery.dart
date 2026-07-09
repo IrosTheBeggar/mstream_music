@@ -77,6 +77,29 @@ class LanDiscovery {
   BonsoirDiscovery? _discovery;
   StreamSubscription<BonsoirDiscoveryEvent>? _sub;
 
+  // Services found but not yet resolved, keyed by name+type. Android's NSD
+  // resolver is a single system-wide slot shared with every other app, so a
+  // resolve request routinely fails with BUSY. bonsoir reports the failure
+  // (sans service — upstream drops it) but keeps the service in its found
+  // list, so simply asking again works. Without a retry the tile silently
+  // never appears until the user hits refresh.
+  final Map<String, BonsoirService> _pendingResolves = {};
+  final Map<String, int> _resolveAttempts = {};
+  static const int _maxResolveAttempts = 5;
+
+  // Android's NSD resolve can also HANG outright (observed on-device: the
+  // system's resolve request sat active for 2+ minutes, no callback), and
+  // bonsoir's resolve queue only drains on a callback — so one hung resolve
+  // wedges discovery until it's torn down. The watchdog does automatically
+  // what the user's refresh button does: if anything found stays unresolved
+  // past _resolveTimeout, restart discovery (bounded by _maxAutoRestarts,
+  // reset on the next manual start/refresh).
+  final Map<String, DateTime> _pendingSince = {};
+  Timer? _watchdog;
+  int _autoRestarts = 0;
+  static const int _maxAutoRestarts = 3;
+  static const Duration _resolveTimeout = Duration(seconds: 7);
+
   // Keyed by DiscoveredServer.id so a server re-announcing (or changing IP)
   // updates in place instead of duplicating.
   final Map<String, DiscoveredServer> _servers = {};
@@ -84,7 +107,17 @@ class LanDiscovery {
       StreamController<List<DiscoveredServer>>.broadcast();
 
   /// Live list of discovered iroh servers; emits on every change.
-  Stream<List<DiscoveredServer>> get stream => _controller.stream;
+  ///
+  /// Replays the current snapshot to every new subscriber before the live
+  /// events. Discovery starts when the screen opens but the Quick Connect
+  /// tab's StreamBuilder subscribes later (tab switch) — a resolve landing in
+  /// that window was emitted with no listener and a broadcast stream never
+  /// replays, so the tile stayed on "Searching…" until a manual refresh
+  /// (verified on-device). The yielded snapshot closes that window.
+  Stream<List<DiscoveredServer>> get stream async* {
+    yield current;
+    yield* _controller.stream;
+  }
 
   /// Snapshot for seeding a StreamBuilder before the first event.
   List<DiscoveredServer> get current => _servers.values.toList();
@@ -94,6 +127,12 @@ class LanDiscovery {
 
   /// Begin browsing. Idempotent; a no-op on unsupported builds.
   Future<void> start() async {
+    if (!isSupported || _discovery != null) return;
+    _autoRestarts = 0; // a fresh user-driven start earns a new restart budget
+    await _startInternal();
+  }
+
+  Future<void> _startInternal() async {
     if (!isSupported || _discovery != null) return;
     try {
       final discovery = BonsoirDiscovery(type: _serviceType);
@@ -118,6 +157,11 @@ class LanDiscovery {
     } catch (_) {
       // Already stopped / platform teardown — nothing to recover.
     }
+    _watchdog?.cancel();
+    _watchdog = null;
+    _pendingResolves.clear();
+    _resolveAttempts.clear();
+    _pendingSince.clear();
     if (_servers.isNotEmpty) {
       _servers.clear();
       _emit();
@@ -130,11 +174,27 @@ class LanDiscovery {
     await start();
   }
 
+  // The watchdog's restart: same teardown, but keeps the bounded
+  // auto-restart count (start() resets it; this must not).
+  Future<void> _autoRestart() async {
+    appLog('[lan-discovery] resolve stuck ${_resolveTimeout.inSeconds}s — '
+        'restarting discovery (${_autoRestarts + 1}/$_maxAutoRestarts)');
+    _autoRestarts++;
+    await stop();
+    await _startInternal();
+  }
+
   void _onEvent(BonsoirDiscoveryEvent event) {
     // A found service carries no host/port/TXT yet — ask the platform to resolve
     // it; the resolved event below has the details.
     if (event is BonsoirDiscoveryServiceFoundEvent) {
-      event.service.resolve(_discovery!.serviceResolver);
+      appLog('[lan-discovery] found: ${event.service.name}');
+      final key = _resolveKey(event.service);
+      _pendingResolves[key] = event.service;
+      _resolveAttempts[key] = 1;
+      _pendingSince[key] = DateTime.now();
+      _armWatchdog();
+      _requestResolve(event.service);
       return;
     }
     // Updated fires when a resolved service's address/port/TXT change (DHCP
@@ -145,6 +205,13 @@ class LanDiscovery {
         event is BonsoirDiscoveryServiceUpdatedEvent) {
       final s = event.service; // base-class getter is nullable
       if (s == null) return;
+      appLog('[lan-discovery] ${event is BonsoirDiscoveryServiceResolvedEvent ? "resolved" : "updated"}: '
+          '${s.name} port=${s.port} hosts=${s.hostAddresses} attrs=${s.attributes}');
+      final key = _resolveKey(s);
+      _pendingResolves.remove(key);
+      _resolveAttempts.remove(key);
+      _pendingSince.remove(key);
+      _autoRestarts = 0; // discovery is demonstrably healthy again
       final server = _fromService(s);
       if (server != null) {
         _servers[server.id] = server;
@@ -154,11 +221,74 @@ class LanDiscovery {
       }
       return;
     }
+    // The failed event doesn't say WHICH service failed (upstream constructs
+    // it without the service), so retry every still-pending one — on this
+    // screen that's essentially always the one server just found.
+    if (event is BonsoirDiscoveryServiceResolveFailedEvent) {
+      appLog('[lan-discovery] resolve failed (${_pendingResolves.length} pending)');
+      _retryPendingResolves();
+      return;
+    }
     if (event is BonsoirDiscoveryServiceLostEvent) {
+      final key = _resolveKey(event.service);
+      _pendingResolves.remove(key);
+      _resolveAttempts.remove(key);
+      _pendingSince.remove(key);
       final id = _idFor(event.service);
       if (_servers.remove(id) != null) _emit();
     }
   }
+
+  // Fires while anything is pending; a pending entry older than
+  // _resolveTimeout means the platform resolve hung — restart discovery.
+  void _armWatchdog() {
+    _watchdog ??= Timer.periodic(Duration(seconds: 3), (_) {
+      if (_pendingSince.isEmpty) {
+        _watchdog?.cancel();
+        _watchdog = null;
+        return;
+      }
+      if (_autoRestarts >= _maxAutoRestarts) return;
+      final now = DateTime.now();
+      final stuck = _pendingSince.values
+          .any((t) => now.difference(t) > _resolveTimeout);
+      if (stuck) unawaited(_autoRestart());
+    });
+  }
+
+  // Ask the platform to resolve, tolerating a torn-down discovery (a late
+  // event can arrive while stop() is mid-flight).
+  void _requestResolve(BonsoirService s) {
+    final discovery = _discovery;
+    if (discovery == null) return;
+    try {
+      s.resolve(discovery.serviceResolver);
+    } catch (e) {
+      appLog('[lan-discovery] resolve request failed: $e');
+    }
+  }
+
+  // Re-request resolution for everything still pending, with backoff
+  // (500ms, 1s, 2s, 4s) and an attempt cap so a permanently hogged system
+  // resolver can't loop forever. Guarded on the discovery generation: a
+  // stop()/refresh() in the meantime invalidates the scheduled retry.
+  void _retryPendingResolves() {
+    final discovery = _discovery;
+    if (discovery == null) return;
+    for (final entry in _pendingResolves.entries.toList()) {
+      final attempts = _resolveAttempts[entry.key] ?? 0;
+      if (attempts >= _maxResolveAttempts) continue;
+      _resolveAttempts[entry.key] = attempts + 1;
+      final delay = Duration(milliseconds: 500 * (1 << (attempts - 1)));
+      Timer(delay, () {
+        if (_discovery != discovery) return; // stopped/refreshed meanwhile
+        if (!_pendingResolves.containsKey(entry.key)) return; // resolved already
+        _requestResolve(entry.value);
+      });
+    }
+  }
+
+  String _resolveKey(BonsoirService s) => '${s.name}.${s.type}';
 
   // bonsoir surfaces native NSD failures as STREAM errors (a failed discovery
   // start even self-disposes on the native side). Without a handler they're

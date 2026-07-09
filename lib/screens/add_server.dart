@@ -1156,32 +1156,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   Future<void> _createSubfolder(BuildContext sheetCtx, String parent,
       void Function(String) onCreated) async {
     final l = AppLocalizations.of(context);
-    final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: sheetCtx,
-      builder: (dctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.storageNewFolder,
-            style: TextStyle(color: VelvetColors.textPrimary)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          autocorrect: false,
-          style: TextStyle(color: VelvetColors.textPrimary),
-          decoration: InputDecoration(hintText: l.storageFolderNameHint),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(dctx).pop(),
-              child: Text(l.cancel,
-                  style: TextStyle(color: VelvetColors.textSecondary))),
-          TextButton(
-              onPressed: () => Navigator.of(dctx).pop(ctrl.text.trim()),
-              child: Text(l.create)),
-        ],
-      ),
+      builder: (dctx) => const _NewFolderDialog(),
     );
-    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     // Single safe path segment so a name can't escape the current directory.
     final safe = _sanitizeFolderName(name);
@@ -1698,70 +1676,12 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Modal sheet collecting credentials for a discovered private server.
   // Returns (username, password), or null if cancelled.
   Future<(String, String)?> _promptDiscoveredLogin(DiscoveredServer server) {
-    final l = AppLocalizations.of(context);
-    final userCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
     return showModalBottomSheet<(String, String)>(
       context: context,
       isScrollControlled: true,
       backgroundColor: VelvetColors.surface,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l.lanLoginTitle(server.name),
-                style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700)),
-            SizedBox(height: 16),
-            TextField(
-              controller: userCtrl,
-              autofocus: true,
-              autocorrect: false,
-              keyboardType: TextInputType.emailAddress,
-              style: TextStyle(color: VelvetColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: l.fieldUsername,
-                prefixIcon: Icon(Icons.person_outline),
-              ),
-            ),
-            SizedBox(height: 12),
-            TextField(
-              controller: passCtrl,
-              obscureText: true,
-              autocorrect: false,
-              enableSuggestions: false,
-              onSubmitted: (_) =>
-                  Navigator.of(ctx).pop((userCtrl.text, passCtrl.text)),
-              style: TextStyle(color: VelvetColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: l.fieldPassword,
-                prefixIcon: Icon(Icons.lock_outline),
-              ),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: VelvetColors.primary,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: Icon(Icons.login),
-              label: Text(l.irohSignInSave),
-              onPressed: () =>
-                  Navigator.of(ctx).pop((userCtrl.text, passCtrl.text)),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() {
-      userCtrl.dispose();
-      passCtrl.dispose();
-    });
+      builder: (ctx) => _LanLoginSheet(serverName: server.name),
+    );
   }
 
   // "On your network": live list of mDNS-discovered iroh servers. Always shows
@@ -2446,3 +2366,135 @@ class MyCustomFormState extends State<MyCustomForm> {
 
 // The QR scanner page moved to lib/widgets/iroh_scanner.dart (IrohScannerPage),
 // shared with the re-pair sheet.
+
+// Login sheet for a discovered private server; pops with (username, password).
+// A StatefulWidget so the TextEditingControllers live until the route is fully
+// gone: disposing them in whenComplete() runs when the pop STARTS, but the
+// closing sheet keeps rebuilding through its exit animation (the collapsing
+// keyboard changes viewInsets), and a TextField building with a disposed
+// controller throws — a full-screen error page over the still-running flow.
+class _LanLoginSheet extends StatefulWidget {
+  final String serverName;
+
+  const _LanLoginSheet({required this.serverName});
+
+  @override
+  State<_LanLoginSheet> createState() => _LanLoginSheetState();
+}
+
+class _LanLoginSheetState extends State<_LanLoginSheet> {
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() =>
+      Navigator.of(context).pop((_userCtrl.text, _passCtrl.text));
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.lanLoginTitle(widget.serverName),
+              style: TextStyle(
+                  color: VelvetColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700)),
+          SizedBox(height: 16),
+          TextField(
+            controller: _userCtrl,
+            autofocus: true,
+            autocorrect: false,
+            keyboardType: TextInputType.emailAddress,
+            style: TextStyle(color: VelvetColors.textPrimary),
+            decoration: InputDecoration(
+              labelText: l.fieldUsername,
+              prefixIcon: Icon(Icons.person_outline),
+            ),
+          ),
+          SizedBox(height: 12),
+          TextField(
+            controller: _passCtrl,
+            obscureText: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            onSubmitted: (_) => _submit(),
+            style: TextStyle(color: VelvetColors.textPrimary),
+            decoration: InputDecoration(
+              labelText: l.fieldPassword,
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+          ),
+          SizedBox(height: 16),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: VelvetColors.primary,
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(vertical: 14),
+            ),
+            icon: Icon(Icons.login),
+            label: Text(l.irohSignInSave),
+            onPressed: _submit,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// "New folder" prompt for the download-folder browser; pops with the trimmed
+// name. Stateful for the same reason as _LanLoginSheet: the controller must
+// outlive the dialog's exit animation.
+class _NewFolderDialog extends StatefulWidget {
+  const _NewFolderDialog();
+
+  @override
+  State<_NewFolderDialog> createState() => _NewFolderDialogState();
+}
+
+class _NewFolderDialogState extends State<_NewFolderDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text(l.storageNewFolder,
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        autocorrect: false,
+        style: TextStyle(color: VelvetColors.textPrimary),
+        decoration: InputDecoration(hintText: l.storageFolderNameHint),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.textSecondary))),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+            child: Text(l.create)),
+      ],
+    );
+  }
+}
