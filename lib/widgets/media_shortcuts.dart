@@ -1,10 +1,12 @@
 // media_shortcuts.dart — standard desktop media-player keyboard shortcuts.
 //
 // MediaShortcuts wraps the desktop shell and binds the conventional keys to the
-// shared AudioPlayerHandler. A focused text field consumes its own keys first
-// (Flutter routes the event to the focused node and only bubbles unhandled keys
-// up to CallbackShortcuts), so typing in the search / server fields never
-// triggers playback control.
+// shared AudioPlayerHandler. Crucially it does NOT hijack keys while a text field
+// is focused: the bare-letter media keys (M/S/R) and Space are printable
+// characters, which Flutter's shortcut layer would otherwise eat before they
+// reach the search / server fields (a focused field does NOT consume printable
+// key-down events at the raw-key level). So the handler no-ops whenever an
+// EditableText holds focus, letting every character type normally.
 //
 // Volume has no getter on the handler, so the UI volume lives in [playbackVolume]
 // — a shared notifier the Now Playing bar's slider and the Up/Down/Mute keys both
@@ -101,38 +103,58 @@ class MediaShortcuts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.space): _togglePlay,
-        const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
-            _seekBy(_kSeekStep),
-        const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
-            _seekBy(-_kSeekStep),
-        // Previous / next — Ctrl on Windows/Linux, ⌘ on macOS.
-        const SingleActivator(LogicalKeyboardKey.arrowRight, control: true):
-            _next,
-        const SingleActivator(LogicalKeyboardKey.arrowLeft, control: true):
-            _previous,
-        const SingleActivator(LogicalKeyboardKey.arrowRight, meta: true): _next,
-        const SingleActivator(LogicalKeyboardKey.arrowLeft, meta: true):
-            _previous,
-        const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-            _nudgeVolume(_kVolumeStep),
-        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-            _nudgeVolume(-_kVolumeStep),
-        const SingleActivator(LogicalKeyboardKey.keyM): togglePlaybackMute,
-        const SingleActivator(LogicalKeyboardKey.keyS): _toggleShuffle,
-        const SingleActivator(LogicalKeyboardKey.keyR): _cycleRepeat,
-        // Hardware media keys — best-effort (depends on the OS delivering them).
-        const SingleActivator(LogicalKeyboardKey.mediaPlayPause): _togglePlay,
-        const SingleActivator(LogicalKeyboardKey.mediaTrackNext): _next,
-        const SingleActivator(LogicalKeyboardKey.mediaTrackPrevious): _previous,
-        const SingleActivator(LogicalKeyboardKey.mediaStop): _stop,
+    final bindings = <ShortcutActivator, VoidCallback>{
+      const SingleActivator(LogicalKeyboardKey.space): _togglePlay,
+      const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+          _seekBy(_kSeekStep),
+      const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+          _seekBy(-_kSeekStep),
+      // Previous / next — Ctrl on Windows/Linux, ⌘ on macOS.
+      const SingleActivator(LogicalKeyboardKey.arrowRight, control: true): _next,
+      const SingleActivator(LogicalKeyboardKey.arrowLeft, control: true):
+          _previous,
+      const SingleActivator(LogicalKeyboardKey.arrowRight, meta: true): _next,
+      const SingleActivator(LogicalKeyboardKey.arrowLeft, meta: true): _previous,
+      const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+          _nudgeVolume(_kVolumeStep),
+      const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+          _nudgeVolume(-_kVolumeStep),
+      const SingleActivator(LogicalKeyboardKey.keyM): togglePlaybackMute,
+      const SingleActivator(LogicalKeyboardKey.keyS): _toggleShuffle,
+      const SingleActivator(LogicalKeyboardKey.keyR): _cycleRepeat,
+      // Hardware media keys — best-effort (depends on the OS delivering them).
+      const SingleActivator(LogicalKeyboardKey.mediaPlayPause): _togglePlay,
+      const SingleActivator(LogicalKeyboardKey.mediaTrackNext): _next,
+      const SingleActivator(LogicalKeyboardKey.mediaTrackPrevious): _previous,
+      const SingleActivator(LogicalKeyboardKey.mediaStop): _stop,
+    };
+    // autofocus so the shell holds focus (and the shortcuts work) before the
+    // user clicks anything; descendant text fields / buttons take focus normally.
+    // We match the activators ourselves rather than via CallbackShortcuts so we
+    // can bail out entirely while a text field is focused — otherwise the
+    // bare-letter keys (M/S/R) and Space would never reach the search box.
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (_isEditingText()) return KeyEventResult.ignored;
+        for (final entry in bindings.entries) {
+          if (entry.key.accepts(event, HardwareKeyboard.instance)) {
+            entry.value();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
       },
-      // A focused node is needed for key events to route here; autofocus makes the
-      // shell the default holder so the shortcuts work before the user clicks
-      // anything. Descendant text fields / buttons still take focus normally.
-      child: Focus(autofocus: true, child: child),
+      child: child,
     );
   }
+}
+
+// True when the primary focus is (or is inside) a text field, so the media keys
+// step aside and let the character type.
+bool _isEditingText() {
+  final ctx = FocusManager.instance.primaryFocus?.context;
+  if (ctx == null) return false;
+  return ctx.widget is EditableText ||
+      ctx.findAncestorWidgetOfExactType<EditableText>() != null;
 }
