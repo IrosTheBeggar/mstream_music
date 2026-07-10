@@ -67,6 +67,24 @@ class LetterStrip extends StatefulWidget {
     this.axis = Axis.vertical,
   });
 
+  /// The uppercase '#'/A–Z index bucket for [item] — mirrors DisplayItem.getText's
+  /// fallback chain so the bucket matches the row's visible text. Public so the
+  /// browser's type-to-jump shares the strip's letter logic.
+  static String indexLetter(DisplayItem item) {
+    String text;
+    if (item.metadata?.title != null) {
+      text = item.metadata!.title!;
+    } else if (item.type == 'file' || item.type == 'localFile') {
+      text = item.data?.split('/').last ?? item.name;
+    } else {
+      text = item.name;
+    }
+    if (text.isEmpty) return '#';
+    final c = text[0].toUpperCase();
+    final code = c.codeUnitAt(0);
+    return (code >= 0x41 && code <= 0x5A) ? c : '#';
+  }
+
   @override
   State<LetterStrip> createState() => _LetterStripState();
 }
@@ -120,27 +138,10 @@ class _LetterStripState extends State<LetterStrip> {
   static Map<String, int> _buildIndex(List<DisplayItem> items) {
     final map = <String, int>{};
     for (var i = 0; i < items.length; i++) {
-      final letter = _firstLetter(items[i]);
+      final letter = LetterStrip.indexLetter(items[i]);
       map.putIfAbsent(letter, () => i);
     }
     return map;
-  }
-
-  // Mirrors DisplayItem.getText's fallback chain so the letter the
-  // strip indexes by matches what the user actually sees on the row.
-  static String _firstLetter(DisplayItem item) {
-    String text;
-    if (item.metadata?.title != null) {
-      text = item.metadata!.title!;
-    } else if (item.type == 'file' || item.type == 'localFile') {
-      text = item.data?.split('/').last ?? item.name;
-    } else {
-      text = item.name;
-    }
-    if (text.isEmpty) return '#';
-    final c = text[0].toUpperCase();
-    final code = c.codeUnitAt(0);
-    return (code >= 0x41 && code <= 0x5A) ? c : '#';
   }
 
   int? _nearestIndex(String letter) {
@@ -235,7 +236,7 @@ class _LetterStripState extends State<LetterStrip> {
     // Derive the snapped letter from the actual landed item rather
     // than re-running the nearest-letter search — keeps strip and
     // bubble guaranteed consistent with the scroll target.
-    final snapped = _firstLetter(widget.items[itemIndex]);
+    final snapped = LetterStrip.indexLetter(widget.items[itemIndex]);
 
     _fingerGlobalPos = globalPos;
     final snappedChanged = snapped != _snapped;
