@@ -28,9 +28,25 @@ class LocalSearchBar extends StatefulWidget {
 
 class _LocalSearchBarState extends State<LocalSearchBar> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Explicitly grab focus when the bar appears. `autofocus` alone is
+    // suppressed when another node in the scope already holds focus (e.g. the
+    // desktop browser's type-to-jump handler), which left the field unfocused
+    // on open — requestFocus overrides that.
+    if (widget.autofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focus.requestFocus();
+      });
+    }
+  }
 
   @override
   void dispose() {
+    _focus.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -46,6 +62,7 @@ class _LocalSearchBarState extends State<LocalSearchBar> {
     final l = AppLocalizations.of(context);
     return TextField(
       controller: _controller,
+      focusNode: _focus,
       autofocus: widget.autofocus,
       textInputAction: TextInputAction.search,
       style: TextStyle(color: VelvetColors.textPrimary, fontSize: 15),
