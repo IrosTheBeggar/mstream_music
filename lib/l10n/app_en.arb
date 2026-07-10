@@ -881,6 +881,30 @@
   "settingsOfflineQueueSubtitle": "Automatically download queued tracks to this device so playback survives losing the connection.",
   "settingsOfflineQueueWifiOnly": "Download on Wi-Fi only",
   "settingsOfflineQueueWifiOnlySubtitle": "Wait for Wi-Fi before downloading queued tracks.",
+  "settingsAutoDownloadCap": "Auto-download limit",
+  "@settingsAutoDownloadCap": {
+    "description": "Title of the keep-queue-offline retention-cap setting."
+  },
+  "settingsAutoDownloadCapSubtitle": "Keep the newest this many auto-downloads; older ones no longer in your queue are removed.",
+  "@settingsAutoDownloadCapSubtitle": {
+    "description": "Subtitle when a finite auto-download cap is set."
+  },
+  "settingsAutoDownloadCapSubtitleUnlimited": "Keep every auto-downloaded track (no limit).",
+  "@settingsAutoDownloadCapSubtitleUnlimited": {
+    "description": "Subtitle when the auto-download cap is unlimited (0)."
+  },
+  "settingsAutoDownloadCapUnlimited": "Unlimited",
+  "@settingsAutoDownloadCapUnlimited": {
+    "description": "Shown as the auto-download cap value when there's no limit."
+  },
+  "settingsAutoDownloadCapField": "Number of tracks",
+  "@settingsAutoDownloadCapField": {
+    "description": "Text field label in the auto-download limit dialog."
+  },
+  "settingsAutoDownloadCapDialogBody": "Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren't in your queue are deleted. Set to 0 to keep everything.",
+  "@settingsAutoDownloadCapDialogBody": {
+    "description": "Explainer in the auto-download limit dialog."
+  },
   "downloadWaitingWifi": "Waiting for Wi-Fi",
   "settingsRatingHalf": "Half-star ratings",
   "settingsRatingHalfSubtitle": "Rate songs in half-star steps (long-press a star).",

@@ -1369,6 +1369,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wait for Wi-Fi before downloading queued tracks.';
 
   @override
+  String get settingsAutoDownloadCap => 'Auto-download limit';
+
+  @override
+  String get settingsAutoDownloadCapSubtitle =>
+      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+
+  @override
+  String get settingsAutoDownloadCapSubtitleUnlimited =>
+      'Keep every auto-downloaded track (no limit).';
+
+  @override
+  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+
+  @override
+  String get settingsAutoDownloadCapField => 'Number of tracks';
+
+  @override
+  String get settingsAutoDownloadCapDialogBody =>
+      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+
+  @override
   String get downloadWaitingWifi => 'Waiting for Wi-Fi';
 
   @override

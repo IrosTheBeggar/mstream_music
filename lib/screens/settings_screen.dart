@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
@@ -252,6 +253,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() {});
                   },
             activeThumbColor: VelvetColors.primary,
+          ),
+          ListTile(
+            enabled: SettingsManager().offlineQueue,
+            title: Text(l.settingsAutoDownloadCap),
+            subtitle: Text(
+              _autoDownloadCapSubtitle(l, SettingsManager().autoDownloadCap),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: Text(
+              SettingsManager().autoDownloadCap <= 0
+                  ? l.settingsAutoDownloadCapUnlimited
+                  : '${SettingsManager().autoDownloadCap}',
+              style: TextStyle(
+                  color: SettingsManager().offlineQueue
+                      ? VelvetColors.primary
+                      : VelvetColors.textTertiary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600),
+            ),
+            onTap: !SettingsManager().offlineQueue
+                ? null
+                : () => _editAutoDownloadCap(l),
           ),
           SwitchListTile(
             title: Text(l.settingsRatingHalf),
@@ -680,6 +704,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case TapBehavior.appendAndJump:
         return l.tapSubtitleAppendAndJump;
     }
+  }
+
+  String _autoDownloadCapSubtitle(AppLocalizations l, int cap) =>
+      cap <= 0 ? l.settingsAutoDownloadCapSubtitleUnlimited : l.settingsAutoDownloadCapSubtitle;
+
+  // Prompt for the auto-download retention limit. 0 (or empty) = unlimited.
+  // Applying a lower value evicts down to it immediately — a deliberate,
+  // user-initiated moment, the only place besides a fresh auto-download where
+  // eviction is allowed to run.
+  Future<void> _editAutoDownloadCap(AppLocalizations l) async {
+    final current = SettingsManager().autoDownloadCap;
+    final ctrl = TextEditingController(text: current <= 0 ? '' : '$current');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (dctx) => AlertDialog(
+        backgroundColor: VelvetColors.surface,
+        title: Text(l.settingsAutoDownloadCap,
+            style: TextStyle(color: VelvetColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l.settingsAutoDownloadCapDialogBody,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 13)),
+            SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: TextStyle(color: VelvetColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: l.settingsAutoDownloadCapField,
+                hintText: l.settingsAutoDownloadCapUnlimited,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dctx).pop(),
+              child: Text(l.cancel,
+                  style: TextStyle(color: VelvetColors.textSecondary))),
+          TextButton(
+              onPressed: () {
+                final v = int.tryParse(ctrl.text.trim()) ?? 0;
+                Navigator.of(dctx).pop(v < 0 ? 0 : v);
+              },
+              child: Text(l.save)),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (result == null) return;
+    final lowered = result != 0 &&
+        (current == 0 || result < current); // 0 = unlimited (never lower)
+    await SettingsManager().setAutoDownloadCap(result);
+    if (lowered) unawaited(DownloadManager().enforceAutoDownloadCap());
+    if (mounted) setState(() {});
   }
 
   Widget _sectionHeader(String label) {

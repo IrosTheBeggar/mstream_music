@@ -177,6 +177,11 @@ class SettingsManager {
   // (background_downloader holds them until it's available).
   bool offlineQueue = false;
   bool offlineQueueWifiOnly = true;
+  // Cap on how many auto-downloaded (keep-queue-offline) tracks to retain. When
+  // the total grows past this, the oldest orphans (auto-downloads no longer in
+  // the queue) are deleted, newest kept. 0 = keep everything. Only auto-
+  // downloads count; user-initiated downloads are never evicted. Default 50.
+  int autoDownloadCap = 50;
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
@@ -292,6 +297,10 @@ class SettingsManager {
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
       offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
+      // Clamp: a corrupt/negative stored value falls back to "keep everything"
+      // rather than evicting unpredictably.
+      final cap = m['autoDownloadCap'];
+      autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
@@ -475,6 +484,7 @@ class SettingsManager {
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
+      'autoDownloadCap': autoDownloadCap,
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
@@ -598,6 +608,11 @@ class SettingsManager {
     await _save();
   }
 
+  Future<void> setAutoDownloadCap(int v) async {
+    autoDownloadCap = v < 0 ? 0 : v;
+    await _save();
+  }
+
   Future<void> setDiagnosticsLogging(bool v) async {
     diagnosticsLogging = v;
     await _save();
@@ -676,6 +691,7 @@ class SettingsManager {
     resumeQueue = true;
     offlineQueue = false;
     offlineQueueWifiOnly = true;
+    autoDownloadCap = 50;
     diagnosticsLogging = true;
     verboseLogging = false;
     eqBandGains = const [];
