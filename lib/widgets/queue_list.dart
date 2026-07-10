@@ -140,6 +140,41 @@ class QueueList extends StatelessWidget {
               }
             }
 
+            // RepaintBoundary so a highlight flip repaints only this row's
+            // layer — the panel wraps QueueList in one RepaintBoundary, so
+            // without this every advance would re-raster all visible rows.
+            final row = RepaintBoundary(
+              child: StreamBuilder<({bool active, bool playing})>(
+                initialData: activeNow == null
+                    ? (active: false, playing: false)
+                    : rowState(activeNow),
+                stream: _activeStream.map(rowState).distinct(),
+                builder: (context, snap) {
+                  final st = snap.data ?? (active: false, playing: false);
+                  return _QueueRow(
+                    item: item,
+                    index: index,
+                    active: st.active,
+                    playing: st.playing,
+                    downloaded: downloaded,
+                    showMenu: showItemMenu,
+                    onRemove: removeItem,
+                    onTap: () {
+                      MediaManager().audioHandler.skipToQueueItem(index);
+                      MediaManager().audioHandler.play();
+                    },
+                  );
+                },
+              ),
+            );
+
+            // Desktop: no swipe actions — the per-row ⋮ menu handles info /
+            // download / remove and the grip still reorders. ReorderableListView
+            // needs a keyed child, hence the KeyedSubtree.
+            if (showItemMenu) {
+              return KeyedSubtree(key: ObjectKey(item), child: row);
+            }
+
             return Slidable(
               // Identity key (also the ReorderableListView item key): follows
               // the *item* across reorders; distinct MediaItem instances avoid a
@@ -185,33 +220,7 @@ class QueueList extends StatelessWidget {
                   ),
                 ],
               ),
-              // RepaintBoundary so a highlight flip repaints only this row's
-              // layer — the panel wraps QueueList in one RepaintBoundary, so
-              // without this every advance would re-raster all visible rows.
-              child: RepaintBoundary(
-                child: StreamBuilder<({bool active, bool playing})>(
-                  initialData: activeNow == null
-                      ? (active: false, playing: false)
-                      : rowState(activeNow),
-                  stream: _activeStream.map(rowState).distinct(),
-                  builder: (context, snap) {
-                    final st = snap.data ?? (active: false, playing: false);
-                    return _QueueRow(
-                      item: item,
-                      index: index,
-                      active: st.active,
-                      playing: st.playing,
-                      downloaded: downloaded,
-                      showMenu: showItemMenu,
-                      onRemove: removeItem,
-                      onTap: () {
-                        MediaManager().audioHandler.skipToQueueItem(index);
-                        MediaManager().audioHandler.play();
-                      },
-                    );
-                  },
-                ),
-              ),
+              child: row,
             );
           },
         );
