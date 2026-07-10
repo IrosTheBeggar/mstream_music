@@ -192,6 +192,7 @@ class _DesktopShellState extends State<DesktopShell> {
                 DesktopNowPlayingBar(
                   queueOpen: _queueOpen,
                   onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
+                  nowPlayingWidth: queueWidth + 1,
                 ),
               ],
             ),
@@ -704,10 +705,16 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
 class DesktopNowPlayingBar extends StatefulWidget {
   final bool queueOpen;
   final VoidCallback onToggleQueue;
+  // Fixed width for the now-playing view = the queue's reserved right region
+  // (queueWidth + 1 divider). Fixed (not Expanded/flex) so the transport keeps
+  // the EXACT same width whether the queue is open or closed — a flex split
+  // rounds differently than the queue's fixed SizedBox and shifts by ~1px.
+  final double nowPlayingWidth;
   const DesktopNowPlayingBar({
     super.key,
     required this.queueOpen,
     required this.onToggleQueue,
+    required this.nowPlayingWidth,
   });
 
   @override
@@ -747,9 +754,12 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
               ],
             ),
           ),
-          // Right: now-playing info — click to open the queue.
+          // Right: now-playing info — click to open the queue. Fixed width (=
+          // the queue's reserved region) so the transport doesn't shift when the
+          // queue opens and this is dropped.
           if (!widget.queueOpen)
-            Expanded(
+            SizedBox(
+              width: widget.nowPlayingWidth,
               child: _NowPlayingTab(
                   onTap: widget.onToggleQueue, child: _trackInfo()),
             ),
