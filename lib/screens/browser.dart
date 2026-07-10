@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
@@ -1025,21 +1026,37 @@ class _BrowserState extends State<Browser> {
                               .toDouble());
                         }
 
-                        // Desktop: a clickable letter row above the list.
+                        // Jump to the first item in a letter's section — the
+                        // shared target for the letter row and type-to-jump.
+                        void onLetter(String letter) {
+                          for (var k = 0; k < browserList.length; k++) {
+                            if (LetterStrip.indexLetter(browserList[k]) ==
+                                letter) {
+                              onJump(k);
+                              return;
+                            }
+                          }
+                        }
+
+                        // Desktop: a clickable letter row above the list, plus
+                        // type-to-jump (press a letter to jump to its section).
                         // Mobile: the vertical strip overlaid on the right edge
                         // (finger-drag).
                         if (Platform.isWindows ||
                             Platform.isLinux ||
                             Platform.isMacOS) {
-                          return Column(
-                            children: [
-                              LetterStrip(
-                                items: browserList,
-                                axis: Axis.horizontal,
-                                onJump: onJump,
-                              ),
-                              Expanded(child: content),
-                            ],
+                          return _TypeToJump(
+                            onLetter: onLetter,
+                            child: Column(
+                              children: [
+                                LetterStrip(
+                                  items: browserList,
+                                  axis: Axis.horizontal,
+                                  onJump: onJump,
+                                ),
+                                Expanded(child: content),
+                              ],
+                            ),
                           );
                         }
                         return Stack(
@@ -1068,5 +1085,71 @@ class _BrowserState extends State<Browser> {
         child: _searchScopePreview(context, l),
       ),
     ]);
+  }
+}
+
+// Desktop type-to-jump: while the browse list holds focus, pressing a letter (or
+// digit → '#') jumps to that A–Z section — the keyboard companion to the letter
+// row. Requests focus on mount; typing in the search field (which isn't a
+// descendant) keeps its own focus, so letters there type normally.
+class _TypeToJump extends StatefulWidget {
+  final Widget child;
+  final void Function(String letter) onLetter;
+  const _TypeToJump({required this.child, required this.onLetter});
+
+  @override
+  State<_TypeToJump> createState() => _TypeToJumpState();
+}
+
+class _TypeToJumpState extends State<_TypeToJump> {
+  final FocusNode _node = FocusNode(debugLabel: 'browserTypeToJump');
+
+  @override
+  void initState() {
+    super.initState();
+    // Arm type-to-jump on mount, but DON'T steal focus from an active text
+    // field — notably the search box, which remounts this widget when cleared
+    // back to empty (filtering → browse). Only grab focus when nothing specific
+    // is focused yet, so clearing the search keeps its caret until you click away.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final focused = FocusManager.instance.primaryFocus;
+      if (focused == null || focused is FocusScopeNode) {
+        _node.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    // Leave modifier chords (Ctrl+F, ⌘A, …) to their shortcuts.
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
+    final ch = event.character;
+    if (ch == null || ch.isEmpty) return KeyEventResult.ignored;
+    final code = ch.toUpperCase().codeUnitAt(0);
+    if (code >= 0x41 && code <= 0x5A) {
+      widget.onLetter(ch.toUpperCase());
+      return KeyEventResult.handled;
+    }
+    if (code >= 0x30 && code <= 0x39) {
+      widget.onLetter('#');
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(focusNode: _node, onKeyEvent: _onKey, child: widget.child);
   }
 }
