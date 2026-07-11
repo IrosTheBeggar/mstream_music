@@ -211,10 +211,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-  // Set while we're waiting for the bundled server to finish booting so we can
+  // Set while we're watching the bundled server to finish booting so we can
   // retry the startup-view load once it's ready (see _armEmbeddedStartupRetry).
   VoidCallback? _startupRetryListener;
-  Timer? _startupRetryTimeout;
 
   @override
   void initState() {
@@ -281,26 +280,36 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       _clearAwaitingStartupView();
       return;
     }
-    await loadStartupSection(view, server);
+    try {
+      // Bound the load so an offline / unreachable server surfaces the
+      // placeholder promptly. A non-iroh browse call has no timeout of its own,
+      // so a dead host would otherwise wait out the OS TCP timeout (tens of
+      // seconds) on a spinner before the failure is even detectable.
+      await loadStartupSection(view, server)
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // The section loaders swallow their own errors (returning without pushing
+      // a frame); this also catches the timeout above. Either way the failure is
+      // detected below by the browser still sitting on its home menu.
+    }
     // Loaded? On success the loader pushed a section frame; on failure the
-    // browser is still sitting on its home menu (browserCache.length == 1).
+    // browser is still on its home menu (browserCache.length == 1).
     if (BrowserManager().browserCache.length > 1) {
       _clearAwaitingStartupView();
       return;
     }
-    // Cold-start race: the current server is the app's bundled server, whose
-    // boot is fire-and-forget (main()) and may not have finished when we fired
-    // the first load. Keep the spinner up and retry once it signals ready, so a
-    // cold launch still lands on the configured section instead of the offline
-    // placeholder. Any other server — or a bundled server that fails to boot —
-    // falls through to the placeholder now.
+    // The default-page load failed — reveal the offline placeholder now instead
+    // of holding the spinner, so an offline server gives immediate feedback.
+    _clearAwaitingStartupView();
+    // The bundled server may just be mid-boot (its start is fire-and-forget), so
+    // keep a background retry armed: when it reaches `running` it swaps the real
+    // page in over the placeholder. Skipped once it's errored out, and for any
+    // non-bundled server (a remote offline server just stays on the placeholder).
     if (_isEmbeddedServer(server) &&
         ServerController.instance.status.value.phase != ServerRunPhase.error) {
-      appLog('[startup] ${view.name} load failed; bundled server still '
-          'booting — holding for it to become ready');
+      appLog('[startup] ${view.name} load failed; watching the bundled server '
+          'to retry once it is ready');
       _armEmbeddedStartupRetry(view, server);
-    } else {
-      _clearAwaitingStartupView();
     }
   }
 
@@ -325,9 +334,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     return loopback && u.port == ServerController.instance.port;
   }
 
-  // Hold the spinner and retry the startup-view load when the bundled server
-  // reaches `running`; give up to the placeholder if it errors, and cap the wait
-  // so a wedged boot (e.g. a stalled first-run download) can't spin forever.
+  // Background auto-recovery: the offline placeholder is already showing, so
+  // just watch the bundled server and, once it reaches `running`, retry the
+  // startup-view load to swap the real page in over it. Detaches on the first
+  // terminal transition (running / error); dispose() is the backstop if the boot
+  // wedges and neither ever arrives.
   void _armEmbeddedStartupRetry(StartupView view, Server server) {
     final ctl = ServerController.instance;
     void detach() {
@@ -335,8 +346,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         ctl.status.removeListener(_startupRetryListener!);
         _startupRetryListener = null;
       }
-      _startupRetryTimeout?.cancel();
-      _startupRetryTimeout = null;
     }
 
     void onStatus() {
@@ -347,24 +356,18 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           unawaited(_retryStartupSection(view, server));
           break;
         case ServerRunPhase.error:
-          detach();
-          appLog('[startup] bundled server failed to boot — showing placeholder');
-          _clearAwaitingStartupView(); // boot failed — reveal the placeholder
+          detach(); // boot failed — leave the placeholder up
           break;
         case ServerRunPhase.stopped:
         case ServerRunPhase.preparing:
         case ServerRunPhase.starting:
-          break; // still coming up — keep the spinner
+          break; // still coming up — keep watching
       }
     }
 
+    detach(); // drop any prior watcher before arming a fresh one
     _startupRetryListener = onStatus;
     ctl.status.addListener(onStatus);
-    _startupRetryTimeout = Timer(const Duration(seconds: 60), () {
-      detach();
-      appLog('[startup] bundled server not ready after 60s — showing placeholder');
-      _clearAwaitingStartupView();
-    });
     onStatus(); // it may already be running/errored
   }
 
@@ -419,7 +422,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     if (_startupRetryListener != null) {
       ServerController.instance.status.removeListener(_startupRetryListener!);
     }
-    _startupRetryTimeout?.cancel();
     DownloadManager().dispose();
     super.dispose();
   }
