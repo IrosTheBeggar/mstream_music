@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
+import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
@@ -895,6 +896,16 @@ class _BrowserState extends State<Browser> {
                               color: VelvetColors.primary),
                         );
                       }
+                      // Desktop: the home grid just duplicates the sidebar, so
+                      // it's suppressed. We only land here when the startup
+                      // section couldn't load (typically the current server is
+                      // offline) — show a panel pointing at the sidebar instead
+                      // of the redundant menu.
+                      if (Platform.isWindows ||
+                          Platform.isLinux ||
+                          Platform.isMacOS) {
+                        return const _DesktopBrowsePlaceholder();
+                      }
                       return _homeView(context, browserList);
                     }
 
@@ -1151,5 +1162,47 @@ class _TypeToJumpState extends State<_TypeToJump> {
   @override
   Widget build(BuildContext context) {
     return Focus(focusNode: _node, onKeyEvent: _onKey, child: widget.child);
+  }
+}
+
+// Desktop stand-in for the browser home grid (which duplicates the sidebar). Shown
+// when nothing is loaded — usually because the current server is offline and the
+// startup section couldn't load. Points at the sidebar rather than the old menu.
+class _DesktopBrowsePlaceholder extends StatelessWidget {
+  const _DesktopBrowsePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final noServer = ServerManager().currentServer == null;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(noServer ? Icons.dns_outlined : Icons.travel_explore_outlined,
+                size: 48, color: VelvetColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              noServer ? 'No server connected' : 'Nothing loaded',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              noServer
+                  ? 'Add or select a server from the sidebar to start browsing.'
+                  : 'The current server may be offline. Pick a section — or a '
+                      'different server — from the sidebar.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

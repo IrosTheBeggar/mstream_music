@@ -551,6 +551,16 @@ class SettingsManager {
     await _save();
   }
 
+  /// The startup view resolved for the current platform. On desktop the plain
+  /// "browser" home grid is disabled — it just duplicates the sidebar's
+  /// navigation — so it falls back to the file explorer. Any explicit choice
+  /// persists as-is; only the browser default is platform-dependent.
+  StartupView get effectiveStartupView =>
+      (startupView == StartupView.browser &&
+              (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
+          ? StartupView.fileExplorer
+          : startupView;
+
   /// Toggle whether [c] is one of the searched categories. Keeps at least one
   /// category selected (see [applyToggle]); persists only when it changed.
   Future<void> toggleSearchCategory(SearchCategory c) async {

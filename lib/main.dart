@@ -230,7 +230,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // browser shows a loading state until the chosen section loads. Set before
     // loadServerList so it's already true before the home grid first renders.
     BrowserManager().awaitingStartupView =
-        SettingsManager().startupView != StartupView.browser;
+        SettingsManager().effectiveStartupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
@@ -272,7 +272,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // keeps the browser on a spinner instead of the home grid, so the app lands
   // directly on the section. Skipped on first run (no server configured).
   Future<void> _maybeOpenStartupView() async {
-    final view = SettingsManager().startupView;
+    final view = SettingsManager().effectiveStartupView;
     final server = ServerManager().currentServer;
     if (view == StartupView.browser || server == null) {
       BrowserManager().awaitingStartupView = false;
