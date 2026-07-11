@@ -869,6 +869,19 @@ class _BrowserState extends State<Browser> {
                         ? rawList.where((it) => it.matchesQuery(q)).toList()
                         : rawList;
 
+                    // A configured startup view is still loading (launch → first
+                    // content). Hold a spinner even before the home menu has been
+                    // populated: the raw list is briefly empty then, and the
+                    // spinner used to be gated behind isHome (false while empty) —
+                    // which left the pane BLANK in that gap instead of showing a
+                    // spinner. Now it covers the empty-list window too.
+                    if (BrowserManager().awaitingStartupView) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                            color: VelvetColors.primary),
+                      );
+                    }
+
                     if (filtering && browserList.isEmpty) {
                       return Center(
                         child: Padding(
@@ -884,29 +897,30 @@ class _BrowserState extends State<Browser> {
                       );
                     }
 
-                    // The default browser landing (section shortcuts) gets a
-                    // modern card grid instead of plain list rows.
+                    final bool isDesktop = Platform.isWindows ||
+                        Platform.isLinux ||
+                        Platform.isMacOS;
+
+                    // The default browser landing (section shortcuts). On desktop
+                    // the home grid just duplicates the sidebar, so show the
+                    // placeholder (which points at the sidebar) instead — this is
+                    // also where an offline current server lands once its startup
+                    // section fails to load.
                     if (isHome) {
-                      // While a configured "startup view" loads on launch, show
-                      // a spinner instead of the home grid so the app lands
-                      // straight on the chosen section (no home-grid flash).
-                      if (BrowserManager().awaitingStartupView) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                              color: VelvetColors.primary),
-                        );
-                      }
-                      // Desktop: the home grid just duplicates the sidebar, so
-                      // it's suppressed. We only land here when the startup
-                      // section couldn't load (typically the current server is
-                      // offline) — show a panel pointing at the sidebar instead
-                      // of the redundant menu.
-                      if (Platform.isWindows ||
-                          Platform.isLinux ||
-                          Platform.isMacOS) {
-                        return const _DesktopBrowsePlaceholder();
-                      }
-                      return _homeView(context, browserList);
+                      return isDesktop
+                          ? const _DesktopBrowsePlaceholder()
+                          : _homeView(context, browserList);
+                    }
+
+                    // Desktop: a root-level empty pane (browserCache <= 1) means no
+                    // section is loaded — typically the current server is offline —
+                    // so show the placeholder rather than a blank list. An empty
+                    // list *inside* a loaded folder (browserCache > 1) is a real
+                    // empty folder and falls through to the normal list below.
+                    if (isDesktop &&
+                        browserList.isEmpty &&
+                        BrowserManager().browserCache.length <= 1) {
+                      return const _DesktopBrowsePlaceholder();
                     }
 
                     // The server "Playlists" view gets its own layout: a New-
