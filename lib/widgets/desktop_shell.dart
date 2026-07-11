@@ -10,6 +10,8 @@
 // as the mobile UI and drives the same AudioPlayerHandler — no playback or
 // business logic lives here.
 
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
@@ -34,11 +36,13 @@ import '../singletons/browser_list.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../singletons/settings.dart';
 import '../native/projectm_controller.dart';
 import '../native/projectm_desktop.dart';
 import '../theme/velvet_theme.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
+import '../util/startup_view.dart';
 import '../visualizer/projectm_screen.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
@@ -113,6 +117,39 @@ class _DesktopShellState extends State<DesktopShell> {
     _NavItem('about', Icons.info_outline, (l) => l.aboutTitle,
         (_) => AboutScreen()),
   ];
+
+  // Sidebar highlight for the startup section: the launch loader and a server
+  // switch open a section directly (bypassing _openCategory), so mirror it here.
+  static const Map<StartupView, String> _startupSectionKeys = {
+    StartupView.fileExplorer: 'files',
+    StartupView.playlists: 'playlists',
+    StartupView.albums: 'albums',
+    StartupView.artists: 'artists',
+    StartupView.recent: 'recent',
+    StartupView.rated: 'rated',
+  };
+  String get _startupKey =>
+      _startupSectionKeys[SettingsManager().effectiveStartupView] ?? '';
+
+  StreamSubscription<Server?>? _serverSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Highlight the startup section on launch, and re-sync whenever the current
+    // server switches — both load their section directly, so _openCategory
+    // (which normally sets the highlight) never runs.
+    _active = _startupKey;
+    _serverSub = ServerManager().currentServerStream.distinct().listen((_) {
+      if (mounted) setState(() => _active = _startupKey);
+    });
+  }
+
+  @override
+  void dispose() {
+    _serverSub?.cancel();
+    super.dispose();
+  }
 
   // Reset to the browse root so destinations never stack on each other.
   void _showBrowse() => _contentNav.currentState?.popUntil((r) => r.isFirst);
@@ -425,6 +462,10 @@ class _SidebarServer extends StatelessWidget {
       await ServerManager()
           .getServerPaths(ServerManager().currentServer!, throwErr: true);
       await ServerManager().callAfterEditServer();
+      // Land on the configured default page for the newly-selected server
+      // instead of the suppressed home grid / offline placeholder.
+      await loadStartupSection(SettingsManager().effectiveStartupView,
+          ServerManager().currentServer!);
     } catch (_) {
       showGlobalSnack(failedMsg);
     }
