@@ -297,7 +297,7 @@ class SettingsManager {
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
       offlineQueueWifiOnly = m['offlineQueueWifiOnly'] ?? true;
-      // Clamp: a corrupt/negative stored value falls back to "keep everything"
+      // A corrupt/negative stored value falls back to the default (50)
       // rather than evicting unpredictably.
       final cap = m['autoDownloadCap'];
       autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;

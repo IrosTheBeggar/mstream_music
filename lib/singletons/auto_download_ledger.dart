@@ -21,7 +21,7 @@ class AutoDownloadLedger {
 
   // Oldest first, newest last — the FIFO eviction order.
   final List<AutoDownloadEntry> _entries = [];
-  bool _loaded = false;
+  Future<void>? _loading;
 
   Future<File> _file() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -29,10 +29,11 @@ class AutoDownloadLedger {
   }
 
   /// Read the ledger from disk once. Idempotent; safe to call on every entry
-  /// point that needs it.
-  Future<void> load() async {
-    if (_loaded) return;
-    _loaded = true;
+  /// point that needs it — concurrent callers await the same in-flight read
+  /// instead of proceeding against a half-loaded list.
+  Future<void> load() => _loading ??= _load();
+
+  Future<void> _load() async {
     try {
       final f = await _file();
       if (!await f.exists()) return;
