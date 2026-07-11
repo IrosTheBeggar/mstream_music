@@ -17,8 +17,6 @@ import 'screens/about_screen.dart';
 import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
-import 'singletons/api.dart';
-import 'singletons/file_explorer.dart';
 import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
@@ -36,6 +34,7 @@ import 'build_variant.dart';
 import 'desktop/desktop_integration.dart';
 import 'server/server_controller.dart';
 import 'util/self_signed_overrides.dart';
+import 'util/startup_view.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -279,31 +278,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       return;
     }
     try {
-      switch (view) {
-        case StartupView.browser:
-          break;
-        case StartupView.fileExplorer:
-          await ApiManager().getFileList('~', useThisServer: server);
-          break;
-        case StartupView.playlists:
-          await ApiManager().getPlaylists(useThisServer: server);
-          break;
-        case StartupView.albums:
-          await ApiManager().getAlbums(useThisServer: server);
-          break;
-        case StartupView.artists:
-          await ApiManager().getArtists(useThisServer: server);
-          break;
-        case StartupView.rated:
-          await ApiManager().getRated(useThisServer: server);
-          break;
-        case StartupView.recent:
-          await ApiManager().getRecentlyAdded(useThisServer: server);
-          break;
-        case StartupView.localFiles:
-          await FileExplorer().getPathForServer(server);
-          break;
-      }
+      await loadStartupSection(view, server);
     } finally {
       // Stop suppressing the home grid. On success the section is already
       // showing; on failure (nothing pushed) re-emit so the home grid renders
