@@ -208,11 +208,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
             trailing: DropdownButton<StartupView>(
-              value: SettingsManager().startupView,
+              // Desktop: the plain "browser" home grid duplicates the sidebar,
+              // so it's hidden here and effectiveStartupView surfaces the file
+              // explorer fallback as the current value.
+              value: SettingsManager().effectiveStartupView,
               underline: SizedBox.shrink(),
               dropdownColor: VelvetColors.surface,
               style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
               items: StartupView.values
+                  .where((v) =>
+                      !DesktopIntegration.isDesktop ||
+                      v != StartupView.browser)
                   .map((v) => DropdownMenuItem(
                         value: v,
                         child: Text(v.label(l)),
