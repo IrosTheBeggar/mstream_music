@@ -10,6 +10,7 @@ import 'package:mstream_music/singletons/app_messenger.dart';
 import 'package:mstream_music/singletons/migration_manager.dart';
 import 'package:mstream_music/singletons/log_manager.dart';
 import 'package:mstream_music/singletons/settings.dart';
+import 'package:mstream_music/singletons/auto_download_ledger.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -55,6 +56,8 @@ class DownloadManager {
     // single stream, so the old flutter_downloader background-isolate /
     // SendPort plumbing is no longer needed.
     _updatesSub = FileDownloader().updates.listen(_onUpdate);
+    // Load the auto-download ledger before any sweep records into it.
+    await AutoDownloadLedger().load();
     // Rehydrate tasks that survived a process death in WorkManager (a
     // Wi-Fi-held keep-queue-offline transfer routinely does). Without this a
     // relaunch sweep re-enqueues DUPLICATES of every held task — the guards
@@ -77,7 +80,11 @@ class DownloadManager {
           ..serverName = key.substring(0, slash)
           ..dataPath = key.substring(slash)
           ..localPath = '${t.directory}/${t.filename}'
-          ..requiresWiFi = t.requiresWiFi;
+          ..requiresWiFi = t.requiresWiFi
+          // A Wi-Fi-held survivor is a keep-queue-offline transfer — manual
+          // downloads never set requiresWiFi — so recovering its auto flag from
+          // that can't mislabel a user download as evictable.
+          ..auto = t.requiresWiFi;
       }
       if (downloadMap.isNotEmpty) _downloadStream.add(downloadMap);
     } catch (e) {
@@ -107,6 +114,15 @@ class DownloadManager {
               dt.dataPath != null) {
             MediaManager().audioHandler.onTrackDownloaded(
                 dt.serverName!, dt.dataPath!, dt.localPath!);
+            // Record auto-downloads in the ledger and enforce the cap. Only
+            // here (a fresh auto-download landing, i.e. online) — never on
+            // startup or a connectivity change, so waking up offline can't
+            // trigger a sweep that deletes what you're about to play.
+            if (dt.auto) {
+              await AutoDownloadLedger()
+                  .record(dt.serverName!, dt.dataPath!, dt.localPath!);
+              await _enforceAutoDownloadCap();
+            }
           }
           break;
         case TaskStatus.failed:
@@ -229,6 +245,8 @@ class DownloadManager {
         referenceItem: dt.referenceDisplayItem,
         reResolves: dt.reResolves + 1,
         requiresWiFi: dt.requiresWiFi,
+        auto: dt.auto, // keep it evictable across a tunnel re-resolve
+
         // This path already avoids toasts (see caller); a re-enqueue that
         // ultimately fails lands in the throttled terminal-failure warn.
         quiet: true);
@@ -332,8 +350,48 @@ class DownloadManager {
     for (final m in autoDownloadCandidates(items, _autoAttempted,
         fileExists: (p) => File(p).existsSync())) {
       await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
-          requiresWiFi: wifiOnly, quiet: true);
+          requiresWiFi: wifiOnly, auto: true, quiet: true);
     }
+  }
+
+  /// Delete auto-downloads over the user's cap, oldest orphans first. Runs
+  /// after a fresh auto-download lands and when the user lowers the cap — both
+  /// deliberate, online-ish moments; never from startup or a connectivity
+  /// change. Tracks still in the queue (incl. the playing one) are protected,
+  /// so the queue stays fully offline-available and only the extra cache is
+  /// trimmed. cap 0 = keep everything.
+  Future<void> enforceAutoDownloadCap() => _enforceAutoDownloadCap();
+
+  Future<void> _enforceAutoDownloadCap() async {
+    final cap = SettingsManager().autoDownloadCap;
+    if (cap <= 0) return;
+    // Protected = anything in the current queue, keyed serverName+path (the
+    // same key the ledger and the queue's extras share).
+    final queued = <String>{};
+    for (final m in MediaManager().audioHandler.queue.value) {
+      final s = m.extras?['server'], p = m.extras?['path'];
+      if (s is String && p is String) queued.add(s + p);
+    }
+    final victims =
+        AutoDownloadLedger().evictionsFor(cap, (s, p) => queued.contains(s + p));
+    if (victims.isEmpty) return;
+    for (final v in victims) {
+      try {
+        final f = File(v.localPath);
+        if (f.existsSync()) f.deleteSync();
+      } catch (e) {
+        appLog('[auto-dl] evict delete failed: $e');
+      }
+      // Drop the once-per-session sweep guard so the track can auto-download
+      // again if it later re-enters the queue, and drop it from the ledger.
+      _autoAttempted.remove(v.key);
+      await AutoDownloadLedger().forget(v.server, v.path);
+    }
+    appLog('[auto-dl] evicted ${victims.length} over cap $cap');
+    // The "downloaded" badge is file-existence derived; refresh any visible
+    // rows so a deleted orphan stops claiming a local copy. Evicted tracks are
+    // never in the queue, so no queue source needs reversing.
+    unawaited(BrowserManager().refreshAllDownloadStatus());
   }
 
   /// Re-sweep the current queue immediately — used when the user flips the
@@ -369,11 +427,31 @@ class DownloadManager {
       {DisplayItem? referenceItem,
       int reResolves = 0,
       bool requiresWiFi = false,
+      // The keep-queue-offline sweep passes true: the download is tracked in
+      // the ledger and eligible for cap eviction. A user-initiated download
+      // (false) instead FORGETS the track from the ledger — an explicit
+      // download promotes it to manual permanently, so the cap never deletes it.
+      bool auto = false,
       // Suppress the per-call snackbars — the keep-queue-offline sweep passes
       // true (nothing user-initiated, and a whole-queue sweep can hit the
       // same error dozens of times); manual downloads keep their feedback.
       bool quiet = false}) async {
     String downloadDirectory = serverName + filepath;
+
+    // Manual wins: an explicit download of a track removes it from the auto
+    // ledger so it can never be evicted (forget is a cheap no-op when it isn't
+    // tracked). Done up front so it applies whether or not the file already
+    // exists below. Also demote any in-flight auto-download of the same track,
+    // so when it completes it records as manual (i.e. isn't re-added to the
+    // ledger) instead of racing the forget.
+    if (!auto) {
+      unawaited(AutoDownloadLedger().forget(serverName, filepath));
+      for (final t in downloadMap.values) {
+        if (t.serverName == serverName && t.dataPath == filepath) {
+          t.auto = false;
+        }
+      }
+    }
 
     // The originating server may have been removed while this track lingered
     // in the queue — lookupServer is a bare firstWhere that would throw.
@@ -466,7 +544,8 @@ class DownloadManager {
             ..dataPath = filepath
             ..localPath = downloadTo
             ..requiresWiFi = requiresWiFi
-            ..reResolves = reResolves;
+            ..reResolves = reResolves
+            ..auto = auto;
       _downloadStream.add(downloadMap);
 
       await FileDownloader().enqueue(task);

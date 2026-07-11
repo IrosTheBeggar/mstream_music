@@ -2400,6 +2400,42 @@ abstract class AppLocalizations {
   /// **'Wait for Wi-Fi before downloading queued tracks.'**
   String get settingsOfflineQueueWifiOnlySubtitle;
 
+  /// Title of the keep-queue-offline retention-cap setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download limit'**
+  String get settingsAutoDownloadCap;
+
+  /// Subtitle when a finite auto-download cap is set.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.'**
+  String get settingsAutoDownloadCapSubtitle;
+
+  /// Subtitle when the auto-download cap is unlimited (0).
+  ///
+  /// In en, this message translates to:
+  /// **'Keep every auto-downloaded track (no limit).'**
+  String get settingsAutoDownloadCapSubtitleUnlimited;
+
+  /// Shown as the auto-download cap value when there's no limit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get settingsAutoDownloadCapUnlimited;
+
+  /// Text field label in the auto-download limit dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of tracks'**
+  String get settingsAutoDownloadCapField;
+
+  /// Explainer in the auto-download limit dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.'**
+  String get settingsAutoDownloadCapDialogBody;
+
   /// No description provided for @downloadWaitingWifi.
   ///
   /// In en, this message translates to:

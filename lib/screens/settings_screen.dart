@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
@@ -252,6 +253,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() {});
                   },
             activeThumbColor: VelvetColors.primary,
+          ),
+          ListTile(
+            enabled: SettingsManager().offlineQueue,
+            title: Text(l.settingsAutoDownloadCap),
+            subtitle: Text(
+              _autoDownloadCapSubtitle(l, SettingsManager().autoDownloadCap),
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            trailing: Text(
+              SettingsManager().autoDownloadCap <= 0
+                  ? l.settingsAutoDownloadCapUnlimited
+                  : '${SettingsManager().autoDownloadCap}',
+              style: TextStyle(
+                  color: SettingsManager().offlineQueue
+                      ? VelvetColors.primary
+                      : VelvetColors.textTertiary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600),
+            ),
+            onTap: !SettingsManager().offlineQueue
+                ? null
+                : () => _editAutoDownloadCap(),
           ),
           SwitchListTile(
             title: Text(l.settingsRatingHalf),
@@ -682,6 +706,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _autoDownloadCapSubtitle(AppLocalizations l, int cap) =>
+      cap <= 0 ? l.settingsAutoDownloadCapSubtitleUnlimited : l.settingsAutoDownloadCapSubtitle;
+
+  // Prompt for the auto-download retention limit. 0 (or empty) = unlimited.
+  // Applying a lower value evicts down to it immediately — a deliberate,
+  // user-initiated moment, the only place besides a fresh auto-download where
+  // eviction is allowed to run.
+  Future<void> _editAutoDownloadCap() async {
+    final current = SettingsManager().autoDownloadCap;
+    final result = await showDialog<int>(
+      context: context,
+      builder: (_) => _AutoDownloadCapDialog(current: current),
+    );
+    if (result == null) return;
+    final lowered = result != 0 &&
+        (current == 0 || result < current); // 0 = unlimited (never lower)
+    await SettingsManager().setAutoDownloadCap(result);
+    if (lowered) unawaited(DownloadManager().enforceAutoDownloadCap());
+    if (mounted) setState(() {});
+  }
+
   Widget _sectionHeader(String label) {
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
@@ -694,6 +739,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
           letterSpacing: 1.6,
         ),
       ),
+    );
+  }
+}
+
+// Number prompt for the auto-download retention limit; pops with the parsed
+// value (empty or 0 = unlimited), null on cancel. Stateful for the same reason
+// as add_server's _NewFolderDialog: the controller must outlive the dialog's
+// exit animation.
+class _AutoDownloadCapDialog extends StatefulWidget {
+  final int current;
+  const _AutoDownloadCapDialog({required this.current});
+
+  @override
+  State<_AutoDownloadCapDialog> createState() => _AutoDownloadCapDialogState();
+}
+
+class _AutoDownloadCapDialogState extends State<_AutoDownloadCapDialog> {
+  late final _ctrl = TextEditingController(
+      text: widget.current <= 0 ? '' : '${widget.current}');
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text(l.settingsAutoDownloadCap,
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.settingsAutoDownloadCapDialogBody,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13)),
+          SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: TextStyle(color: VelvetColors.textPrimary),
+            decoration: InputDecoration(
+              labelText: l.settingsAutoDownloadCapField,
+              hintText: l.settingsAutoDownloadCapUnlimited,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.textSecondary))),
+        TextButton(
+            onPressed: () {
+              final v = int.tryParse(_ctrl.text.trim()) ?? 0;
+              Navigator.of(context).pop(v < 0 ? 0 : v);
+            },
+            child: Text(l.save)),
+      ],
     );
   }
 }
