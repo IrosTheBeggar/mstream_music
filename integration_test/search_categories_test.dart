@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:mstream_music/singletons/media.dart';
+import 'package:mstream_music/singletons/settings.dart' show SearchCategory;
 
 import 'helpers/test_helpers.dart';
 
@@ -59,10 +60,13 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune));
       await tester.pumpAndSettle();
 
-      // One checkbox per category. 'Songs' and 'Files' are unique to the menu
-      // (the home grid has Albums/Artists cards too, so assert on the
+      // One checkbox per category — derive the count from the enum so a new
+      // category (e.g. Lyrics, added after this test was written) can't
+      // silently stale the assertion. 'Songs' and 'Files' are unique to the
+      // menu (the home grid has Albums/Artists cards too, so assert on the
       // menu-only labels to avoid matching those).
-      expect(find.byType(CheckboxListTile), findsNWidgets(4));
+      final categoryCount = SearchCategory.values.length;
+      expect(find.byType(CheckboxListTile), findsNWidgets(categoryCount));
       expect(find.text('Songs'), findsOneWidget);
       expect(find.text('Files'), findsOneWidget);
 
@@ -70,7 +74,7 @@ void main() {
       // is picking several without reopening. Tap 'Files'; the menu stays up.
       await tester.tap(find.text('Files'));
       await tester.pumpAndSettle();
-      expect(find.byType(CheckboxListTile), findsNWidgets(4),
+      expect(find.byType(CheckboxListTile), findsNWidgets(categoryCount),
           reason: 'menu stayed open after toggling a checkbox');
       expect(find.text('Songs'), findsOneWidget);
     },
