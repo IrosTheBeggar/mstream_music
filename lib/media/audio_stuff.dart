@@ -1561,6 +1561,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     return sameStreamUrl(newId, m.id) ? m : m.copyWith(id: newId);
   }
 
+  /// The URI the CURRENT item actually plays from: the downloaded file when
+  /// one exists (mirroring LocalPlaybackBackend's source resolution), else the
+  /// stream URL re-derived against the live tunnel / transcode state —
+  /// `mediaItem.value.id` can carry a stale loopback port/token after a tunnel
+  /// restart. Used by the visualizer's audio sidecar to decode what's playing.
+  Uri? currentPlayableUri() {
+    final m = mediaItem.value;
+    if (m == null) return null;
+    final localPath = m.extras?['localPath'] as String?;
+    if (localPath != null && File(localPath).existsSync()) {
+      return Uri.file(localPath);
+    }
+    return Uri.tryParse(_withRebuiltUrl(m).id);
+  }
+
   /// Rebuild queue stream URLs after a transcode-setting change ([auto] false)
   /// or a tunnel (re)connect ([auto] true, fired by ServerManager).
   ///

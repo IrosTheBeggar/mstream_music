@@ -1,0 +1,6 @@
+# Rust build output (rebuilt via cargo / build-ios.sh)
+/target
+
+# Re-include Cargo.lock (repo root .gitignore has *.lock); commit it for
+# reproducible builds of this application/cdylib crate.
+!Cargo.lock

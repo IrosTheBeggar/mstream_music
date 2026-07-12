@@ -1,0 +1,29 @@
+[package]
+name = "viz_decoder"
+version = "0.1.0"
+edition = "2021"
+description = "mStream visualizer audio sidecar: decodes the playing source (file / HTTP Range) and serves position-keyed mono PCM windows to the Flutter visualizer"
+license = "MIT"
+
+[lib]
+# cdylib → the iOS framework binary (see build-ios.sh); rlib → host tests.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Pure-Rust demux + decode. Defaults cover flac/ogg-vorbis/wav/pcm/adpcm/mkv;
+# the extras below add mp3, aac(LC)/m4a, alac, caf and aiff. No opus decoder
+# exists in symphonia — opus sources fail open to the synthesized signal.
+symphonia = { version = "0.5", features = ["mp3", "aac", "isomp4", "alac", "caf", "aiff"] }
+# Blocking HTTP client for the Range-seekable media source. rustls (ring — the
+# same crypto core the iroh tunnel already ships) + bundled webpki roots; a
+# self-signed HTTPS server fails the handshake and the visualizer falls back
+# to the synthesized signal rather than skipping verification.
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+# Size-optimized release, matching rust/iroh_tunnel. rustc strips cdylibs with
+# `strip -x`, which keeps the exported C symbols.
+[profile.release]
+opt-level = "z"
+lto = "thin"
+strip = true
+codegen-units = 1

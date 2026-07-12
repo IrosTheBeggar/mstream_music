@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../native/audio_capture.dart';
+import '../native/viz_decoder.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import 'spectrum_source.dart';
@@ -85,13 +88,53 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   double _time = 0;
   String? _error;
 
+  StreamSubscription<MediaItem?>? _trackSub;
+
   @override
   void initState() {
     super.initState();
-    // Capture real playback audio (WASAPI loopback) while the visualizer is
-    // open; SpectrumSource prefers it and falls back to synth when unavailable.
+    // Capture real playback audio while the visualizer is open; SpectrumSource
+    // prefers it and falls back to synth when unavailable. Two sources:
+    //  - Windows: WASAPI loopback capture of the render endpoint.
+    //  - iOS: the decode sidecar re-decodes the current track (downloaded file
+    //    or the same stream URL the player uses), keyed to the playback
+    //    position — mediaItem is a behavior subject, so the listener fires
+    //    once immediately and then per track change.
     AudioCapture.instance.start();
+    if (VizDecoder.isSupported) {
+      _spectrum.positionMs = _playbackPositionMs;
+      _trackSub = MediaManager()
+          .audioHandler
+          .mediaItem
+          .distinct((a, b) => a?.id == b?.id)
+          .listen((_) => _retargetDecoder());
+    }
     _load();
+  }
+
+  /// Point the decode sidecar at whatever is now playing (start replaces any
+  /// previous session). No current item → stop, and the spectrum synthesizes.
+  void _retargetDecoder() {
+    final uri = MediaManager().audioHandler.currentPlayableUri();
+    if (uri == null) {
+      VizDecoder.instance.stop();
+      return;
+    }
+    VizDecoder.instance
+        .start(uri.scheme == 'file' ? uri.toFilePath() : uri.toString());
+  }
+
+  /// Playback position now, extrapolated from the last broadcast state (the
+  /// position field only refreshes on transitions; while playing, wall time
+  /// since [PlaybackState.updateTime] scaled by speed fills the gap).
+  int _playbackPositionMs() {
+    final st = MediaManager().audioHandler.playbackState.value;
+    var pos = st.position;
+    if (st.playing) {
+      pos += DateTime.now().difference(st.updateTime) * st.speed;
+    }
+    final ms = pos.inMilliseconds;
+    return ms < 0 ? 0 : ms;
   }
 
   Future<void> _load() async {
@@ -147,6 +190,8 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
 
   @override
   void dispose() {
+    _trackSub?.cancel();
+    VizDecoder.instance.stop();
     AudioCapture.instance.stop();
     _ticker.dispose();
     for (final r in _renderers) {

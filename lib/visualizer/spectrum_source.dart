@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import '../native/audio_capture.dart';
+import '../native/viz_decoder.dart';
 
 /// Produces the Shadertoy-style audio texture (`iChannel0`) the desktop shader
 /// visualizer samples: an RGBA image, [texWidth]×[texHeight] (512×2), where
@@ -32,6 +33,11 @@ class SpectrumSource {
   /// Amplitude follows playback: full when playing, quiet (not dead) when paused.
   bool playing = true;
 
+  /// Current playback position provider (ms), set by the screen. Keys the
+  /// playback-decode path ([VizDecoder]) to what the listener actually hears;
+  /// null (or an idle decoder) keeps the capture/synth behavior unchanged.
+  int Function()? positionMs;
+
   double _phaseBass = 0, _phaseMid = 0, _phaseTreble = 0;
   int _frame = 0;
 
@@ -47,12 +53,22 @@ class SpectrumSource {
     _frame++;
   }
 
-  /// Pull the most recent real playback samples (desktop WASAPI loopback) into
-  /// [_samples]. Returns false — so [advance] falls back to [_synth] — until the
-  /// capture ring holds a full window (the first ~20 ms after the visualizer
-  /// opens) and on platforms / states without capture. Silence reads back as a
-  /// full window of zeros, which the FFT turns into a calm (not frozen) display.
+  /// Pull real playback samples into [_samples], preferring the decode
+  /// sidecar (iOS: the window ending at the playback position) over the
+  /// desktop WASAPI loopback capture. Returns false — so [advance] falls back
+  /// to [_synth] — until a source holds a full window (sidecar priming /
+  /// scrubs, the capture ring's first ~20 ms) and on platforms / states with
+  /// neither. Silence reads back as a full window of zeros, which the FFT
+  /// turns into a calm (not frozen) display.
   bool _readReal() {
+    final dec = VizDecoder.instance;
+    final pos = positionMs;
+    if (dec.isRunning && pos != null) {
+      if (dec.read(_samples, _fftSize, pos()) >= _fftSize) return true;
+      // Not buffered yet (or just died): synth for this frame; a dead session
+      // stays quiet (isRunning flips false) instead of re-asking every frame.
+      return false;
+    }
     final cap = AudioCapture.instance;
     if (!cap.isRunning) return false;
     return cap.read(_samples, _fftSize) >= _fftSize;
