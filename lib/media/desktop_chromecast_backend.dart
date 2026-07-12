@@ -97,31 +97,40 @@ class DesktopChromecastPlaybackBackend extends EmulatedPlaylistBackend {
 
   // ── EmulatedPlaylistBackend hooks ──
   @override
-  Future<void> loadIndex(int i, {required bool play}) async {
-    if (i < 0 || i >= items.length) return;
+  Future<bool> loadIndex(int i, {required bool play}) async {
+    if (i < 0 || i >= items.length) return false;
     final sender = await _ensureConnected();
-    if (sender == null) return;
+    if (sender == null) return false;
     final item = items[i];
     final url = item.id;
     if (!url.startsWith('http')) {
       // Local/downloaded file — not yet served to the device on desktop.
       castLog('Desktop Chromecast: skipping non-HTTP source ${item.title}');
       emitRendererLost('Local files can’t be cast from desktop yet');
-      return;
+      return false;
     }
     loadedIndex = i;
     setProcessingState(BackendProcessingState.loading);
     playing = play;
-    await sender.load(
-      url: url,
-      contentType: _audioMime(url),
-      title: item.title,
-      artist: item.artist,
-      album: item.album,
-      artUrl: item.extras?['artUrl'] as String? ?? item.artUri?.toString(),
-      autoplay: play,
-    );
+    try {
+      await sender.load(
+        url: url,
+        contentType: _audioMime(url),
+        title: item.title,
+        artist: item.artist,
+        album: item.album,
+        artUrl: item.extras?['artUrl'] as String? ?? item.artUri?.toString(),
+        autoplay: play,
+      );
+    } catch (e) {
+      // Contract: loadIndex never throws — a false feeds the base class's
+      // bounded auto-advance failure walk.
+      castLog('Desktop Chromecast load failed', error: e);
+      change();
+      return false;
+    }
     change();
+    return true;
   }
 
   @override
