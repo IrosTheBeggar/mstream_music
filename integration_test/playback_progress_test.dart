@@ -47,7 +47,10 @@ void main() {
   testWidgets(
     'mini-player progress bar advances during playback',
     (WidgetTester tester) async {
-      final wavBytes = buildSilentWav(seconds: 5);
+      // Long enough that playback is still running when the assertions
+      // sample the bar — iOS's first AVPlayer spin-up plus the settle
+      // waits below can eat ~5s before the first sample.
+      final wavBytes = buildSilentWav(seconds: 30);
 
       mockServer = await MockServer.start(
         {

@@ -78,6 +78,8 @@ flutter_icons:
   ios: true
   image_path_android: "graphics/icon/icon.png"
   image_path_ios: "graphics/icon/mstream.png"
+  # The App Store rejects icons with an alpha channel.
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

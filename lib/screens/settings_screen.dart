@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
@@ -321,122 +322,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
-          ListTile(
-            leading: Icon(Icons.equalizer, color: VelvetColors.textSecondary),
-            title: Text(l.eqTitle),
-            subtitle: Text(
-              l.settingsEqSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => EqScreen()),
-              );
-            },
-          ),
-          ListTile(
-            title: Text(l.settingsVisualizerEngine),
-            subtitle: Text(
-              _visualizerEngineSubtitle(l, SettingsManager().visualizerEngine),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<VisualizerEngine>(
-              value: SettingsManager().visualizerEngine,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: VisualizerEngine.values
-                  .map((e) => DropdownMenuItem(
-                        value: e,
-                        child: Text(e.label(l)),
-                      ))
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                await SettingsManager().setVisualizerEngine(v);
-                if (mounted) setState(() {});
+          // The EQ, visualizer, imported-shaders and cast-quality tiles
+          // are Android-only features (AndroidEqualizer, projectM/EGL
+          // visualizer, Chromecast/DLNA casting).
+          if (Platform.isAndroid) ...[
+            ListTile(
+              leading: Icon(Icons.equalizer, color: VelvetColors.textSecondary),
+              title: Text(l.eqTitle),
+              subtitle: Text(
+                l.settingsEqSubtitle,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => EqScreen()),
+                );
               },
             ),
-          ),
-          ListTile(
-            title: Text(l.settingsVisualizerSource),
-            subtitle: Text(
-              _visualizerSourceSubtitle(
-                  l, SettingsManager().visualizerAudioSource),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
+            ListTile(
+              title: Text(l.settingsVisualizerEngine),
+              subtitle: Text(
+                _visualizerEngineSubtitle(l, SettingsManager().visualizerEngine),
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              trailing: DropdownButton<VisualizerEngine>(
+                value: SettingsManager().visualizerEngine,
+                underline: SizedBox.shrink(),
+                dropdownColor: VelvetColors.surface,
+                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+                items: VisualizerEngine.values
+                    .map((e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e.label(l)),
+                        ))
+                    .toList(),
+                onChanged: (v) async {
+                  if (v == null) return;
+                  await SettingsManager().setVisualizerEngine(v);
+                  if (mounted) setState(() {});
+                },
+              ),
             ),
-            trailing: DropdownButton<VisualizerAudioSource>(
-              value: SettingsManager().visualizerAudioSource,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: VisualizerAudioSource.values
-                  .map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s.label(l)),
-                      ))
-                  .toList(),
-              onChanged: (v) => _onVisualizerSourceChanged(v),
+            ListTile(
+              title: Text(l.settingsVisualizerSource),
+              subtitle: Text(
+                _visualizerSourceSubtitle(
+                    l, SettingsManager().visualizerAudioSource),
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              trailing: DropdownButton<VisualizerAudioSource>(
+                value: SettingsManager().visualizerAudioSource,
+                underline: SizedBox.shrink(),
+                dropdownColor: VelvetColors.surface,
+                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+                items: VisualizerAudioSource.values
+                    .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(s.label(l)),
+                        ))
+                    .toList(),
+                onChanged: (v) => _onVisualizerSourceChanged(v),
+              ),
             ),
-          ),
-          SwitchListTile(
-            title: Text(l.settingsVisualizerKnobs),
-            subtitle: Text(
-              l.settingsVisualizerKnobsSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            value: SettingsManager().showVisualizerKnobs,
-            onChanged: (v) async {
-              setState(() {});
-              await SettingsManager().setShowVisualizerKnobs(v);
-              setState(() {});
-            },
-            activeThumbColor: VelvetColors.primary,
-          ),
-          ListTile(
-            leading:
-                Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-            title: Text(l.importedShadersTitle),
-            subtitle: Text(
-              l.importedShadersSettingsSubtitle,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ImportedShadersScreen()),
-              );
-            },
-          ),
-          ListTile(
-            title: Text(l.settingsCastQuality),
-            subtitle: Text(
-              _castQualitySubtitle(l, SettingsManager().castVisualizerQuality),
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 12),
-            ),
-            trailing: DropdownButton<CastVisualizerQuality>(
-              value: SettingsManager().castVisualizerQuality,
-              underline: SizedBox.shrink(),
-              dropdownColor: VelvetColors.surface,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-              items: CastVisualizerQuality.values
-                  .map((q) => DropdownMenuItem(
-                        value: q,
-                        child: Text(q.label),
-                      ))
-                  .toList(),
+            SwitchListTile(
+              title: Text(l.settingsVisualizerKnobs),
+              subtitle: Text(
+                l.settingsVisualizerKnobsSubtitle,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              value: SettingsManager().showVisualizerKnobs,
               onChanged: (v) async {
-                if (v == null) return;
-                await SettingsManager().setCastVisualizerQuality(v);
-                if (mounted) setState(() {});
+                setState(() {});
+                await SettingsManager().setShowVisualizerKnobs(v);
+                setState(() {});
+              },
+              activeThumbColor: VelvetColors.primary,
+            ),
+            ListTile(
+              leading:
+                  Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
+              title: Text(l.importedShadersTitle),
+              subtitle: Text(
+                l.importedShadersSettingsSubtitle,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ImportedShadersScreen()),
+                );
               },
             ),
-          ),
+            ListTile(
+              title: Text(l.settingsCastQuality),
+              subtitle: Text(
+                _castQualitySubtitle(l, SettingsManager().castVisualizerQuality),
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              trailing: DropdownButton<CastVisualizerQuality>(
+                value: SettingsManager().castVisualizerQuality,
+                underline: SizedBox.shrink(),
+                dropdownColor: VelvetColors.surface,
+                style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+                items: CastVisualizerQuality.values
+                    .map((q) => DropdownMenuItem(
+                          value: q,
+                          child: Text(q.label),
+                        ))
+                    .toList(),
+                onChanged: (v) async {
+                  if (v == null) return;
+                  await SettingsManager().setCastVisualizerQuality(v);
+                  if (mounted) setState(() {});
+                },
+              ),
+            ),
+          ],
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionBrowse),
           SwitchListTile(
