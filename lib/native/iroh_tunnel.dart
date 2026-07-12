@@ -1,7 +1,11 @@
 // Dart FFI binding for the iroh remote-access tunnel (rust/iroh_tunnel).
 //
-// Talks to the C ABI in `rust/iroh_tunnel/src/c_api.rs` via the prebuilt
-// `libiroh_tunnel.so` (packaged into android/app/src/main/jniLibs/<abi>/).
+// Talks to the C ABI in `rust/iroh_tunnel/src/c_api.rs` via a prebuilt
+// native library:
+//   - Android: `libiroh_tunnel.so` (android/app/src/main/jniLibs/<abi>/,
+//     built by rust/iroh_tunnel/build-android.sh)
+//   - iOS: `iroh_tunnel.framework` embedded in the app bundle (vended by
+//     packages/iroh_tunnel_native, built by rust/iroh_tunnel/build-ios.sh)
 //
 // Usage (M3 wires this into the connection model):
 //   final port = await IrohTunnel.instance.start(pairingCode);
@@ -41,6 +45,19 @@ class IrohTunnelException implements Exception {
   String toString() => 'IrohTunnelException: $message';
 }
 
+// Opens the platform's copy of the native tunnel library.
+//  - Android: jniLibs places libiroh_tunnel.so on the loader path under its
+//    SONAME.
+//  - iOS: the dynamic framework embedded at Runner.app/Frameworks/ (vended by
+//    packages/iroh_tunnel_native via SwiftPM); dlopen resolves the
+//    bundle-relative framework path — the standard Flutter FFI pattern.
+DynamicLibrary _openNativeLib() {
+  if (Platform.isIOS) {
+    return DynamicLibrary.open('iroh_tunnel.framework/iroh_tunnel');
+  }
+  return DynamicLibrary.open('libiroh_tunnel.so');
+}
+
 class _Bindings {
   final _StartDart start;
   final _VoidDart stop;
@@ -53,8 +70,7 @@ class _Bindings {
   final _LastErrNative localTokenPtr;
 
   factory _Bindings.open() {
-    // jniLibs places the .so on the loader path under its SONAME on Android.
-    final lib = DynamicLibrary.open('libiroh_tunnel.so');
+    final lib = _openNativeLib();
     return _Bindings._(
       lib.lookupFunction<_StartNative, _StartDart>('mstream_iroh_start'),
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_stop'),
@@ -93,26 +109,28 @@ class _Bindings {
   }
 }
 
-/// Thin Dart wrapper over the native tunnel. Available only where the native lib
-/// (`libiroh_tunnel.so`, built for arm64-v8a / x86_64) is actually loadable —
-/// see [isSupported].
+/// Thin Dart wrapper over the native tunnel. Available only where the native
+/// lib (Android `libiroh_tunnel.so`, iOS `iroh_tunnel.framework`) is actually
+/// loadable — see [isSupported].
 class IrohTunnel {
   IrohTunnel._();
   static final IrohTunnel instance = IrohTunnel._();
 
-  /// True only when `libiroh_tunnel.so` is present and loadable. It's bundled for
-  /// arm64-v8a / x86_64 only; on a 32-bit armeabi-v7a device (which we still ship
-  /// for broad Play device coverage, without native libs) the .so is absent, so
-  /// iroh is unavailable there too — not just on non-Android platforms. Probed
-  /// once and cached. Every FFI entry point below is gated on this, so a missing
-  /// lib degrades to "unavailable" instead of crashing (mirrors
-  /// ProjectMBindings.isAvailable).
+  /// True only when the native tunnel library is present and loadable. On
+  /// Android it's bundled for arm64-v8a / x86_64 only; on a 32-bit
+  /// armeabi-v7a device (which we still ship for broad Play device coverage,
+  /// without native libs) the .so is absent, so iroh is unavailable there —
+  /// not just on unsupported platforms. On iOS it's the embedded
+  /// iroh_tunnel.framework. Probed once and cached. Every FFI entry point
+  /// below is gated on this, so a missing lib degrades to "unavailable"
+  /// instead of crashing (mirrors ProjectMBindings.isAvailable).
   static bool get isSupported => _isSupported ??= _probeSupport();
   static bool? _isSupported;
   static bool _probeSupport() {
-    if (!Platform.isAndroid) return false;
+    // Desktop stays unsupported (no native lib is shipped there).
+    if (!Platform.isAndroid && !Platform.isIOS) return false;
     try {
-      DynamicLibrary.open('libiroh_tunnel.so');
+      _openNativeLib();
       return true;
     } catch (_) {
       return false;
@@ -127,7 +145,7 @@ class IrohTunnel {
   /// isolate. Throws [IrohTunnelException] on failure.
   Future<int> start(String pairingCode, {int localPort = 0}) async {
     if (!isSupported) {
-      throw IrohTunnelException('iroh tunnel is only supported on Android');
+      throw IrohTunnelException('iroh tunnel is not supported on this device');
     }
     // The blocking native call runs on a background isolate; on failure it throws
     // IrohTunnelException, which Isolate.run rethrows here.

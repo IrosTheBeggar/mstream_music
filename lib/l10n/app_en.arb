@@ -1041,11 +1041,11 @@
   },
   "irohQrAndroidOnly": "QR scanning isn't available on this device.",
   "@irohQrAndroidOnly": {
-    "description": "Shown when QR scanning is attempted where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so)."
+    "description": "Shown when QR scanning is attempted where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so)."
   },
   "irohAndroidOnly": "Quick Connect isn't available on this device.",
   "@irohAndroidOnly": {
-    "description": "Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so)."
+    "description": "Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so)."
   },
   "irohCameraPermission": "Camera permission is needed to scan a code.",
   "@irohCameraPermission": {

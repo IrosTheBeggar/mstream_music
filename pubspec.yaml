@@ -66,6 +66,11 @@ dependencies:
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
   wifi_lock_shim:
     path: packages/wifi_lock_shim
+  # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM binaryTarget
+  # that links/embeds the committed iroh_tunnel.xcframework into Runner
+  # (built by rust/iroh_tunnel/build-ios.sh). Android is unchanged (jniLibs).
+  iroh_tunnel_native:
+    path: packages/iroh_tunnel_native
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

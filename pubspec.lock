@@ -388,6 +388,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.20.2"
+  iroh_tunnel_native:
+    dependency: "direct main"
+    description:
+      path: "packages/iroh_tunnel_native"
+      relative: true
+    source: path
+    version: "0.1.0"
   jni:
     dependency: transitive
     description:
