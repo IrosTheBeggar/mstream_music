@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -8,6 +10,7 @@ import '../singletons/server_list.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../visualizer/shader_visualizer_screen.dart';
 import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
@@ -113,7 +116,12 @@ class MoreActionsSheet extends StatelessWidget {
             onTap: () {
               Navigator.of(context).pop();
               Navigator.of(parentContext).push(
-                MaterialPageRoute(builder: (_) => VisualizerScreen()),
+                MaterialPageRoute(
+                    // iOS has no native visualizer host; it gets the
+                    // pure-Flutter shader engine (same module as desktop).
+                    builder: (_) => Platform.isAndroid
+                        ? VisualizerScreen()
+                        : const ShaderVisualizerScreen()),
               );
             },
           ),
