@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 import '../native/audio_capture.dart';
 import '../native/viz_decoder.dart';
@@ -93,6 +95,18 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
   @override
   void initState() {
     super.initState();
+    // The presets are composed for wide (Shadertoy-canvas) aspect — run the
+    // visualizer in landscape on phones. Desktop aspect is window-controlled.
+    if (Platform.isAndroid || Platform.isIOS) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      // Render offscreen at logical resolution instead of per device pixel —
+      // ~devicePixelRatio² less fragment work (9× on a 3× phone), invisible
+      // on visualizer content. See VizRenderer.pixelScale.
+      VizRenderer.pixelScale = 1.0;
+    }
     // Capture real playback audio while the visualizer is open; SpectrumSource
     // prefers it and falls back to synth when unavailable. Two sources:
     //  - Windows: WASAPI loopback capture of the render endpoint.
@@ -190,6 +204,11 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
 
   @override
   void dispose() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Empty list = hand orientation control back to the app/system default.
+      SystemChrome.setPreferredOrientations(const []);
+      VizRenderer.pixelScale = null;
+    }
     _trackSub?.cancel();
     VizDecoder.instance.stop();
     AudioCapture.instance.stop();
