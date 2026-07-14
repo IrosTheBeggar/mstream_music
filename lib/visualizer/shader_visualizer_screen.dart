@@ -191,8 +191,41 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
                 repaint: _repaint,
               ),
             ),
+            _closeButton(),
             _controls(),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Explicit exit — mobile has no window chrome to close the screen with, and
+  // the fullscreen tap gesture is taken by preset cycling. SafeArea keeps the
+  // button clear of the notch.
+  Widget _closeButton() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              icon: const Icon(Icons.close),
+              color: Colors.white70,
+              tooltip: 'Close visualizer',
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+          ),
         ),
       ),
     );
@@ -212,31 +245,35 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
             colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent],
           ),
         ),
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              color: Colors.white70,
-              tooltip: 'Previous preset',
-              onPressed: _prev,
-            ),
-            Expanded(
-              child: Text(
-                '${_presets[_index].name}   ${_index + 1}/${_presets.length}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600),
+        // SafeArea: keep the preset row above the iPhone home indicator.
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                color: Colors.white70,
+                tooltip: 'Previous preset',
+                onPressed: _prev,
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              color: Colors.white70,
-              tooltip: 'Next preset',
-              onPressed: _next,
-            ),
-          ],
+              Expanded(
+                child: Text(
+                  '${_presets[_index].name}   ${_index + 1}/${_presets.length}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                color: Colors.white70,
+                tooltip: 'Next preset',
+                onPressed: _next,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -85,7 +85,10 @@ class MultiPassRenderer implements VizRenderer {
     final rec = ui.PictureRecorder();
     Canvas(rec).drawRect(const Rect.fromLTWH(0, 0, 1, 1),
         Paint()..color = const Color(0xFF000000));
-    return rec.endRecording().toImageSync(1, 1);
+    final pic = rec.endRecording();
+    final img = pic.toImageSync(1, 1);
+    pic.dispose();
+    return img;
   }
 
   @override
@@ -114,7 +117,14 @@ class MultiPassRenderer implements VizRenderer {
       } else {
         final rec = ui.PictureRecorder();
         Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..shader = sh);
-        final img = rec.endRecording().toImageSync(w.ceil(), h.ceil());
+        final pic = rec.endRecording();
+        final img = pic.toImageSync(w.ceil(), h.ceil());
+        // Dispose the picture NOW: an undisposed picture pins its recorded
+        // shader state (including the full-size feedback buffers it samples)
+        // until a GC finalizer runs, and the Dart GC can't feel that native
+        // weight — at 60 fps that leaks to the iOS per-process jetsam limit
+        // in minutes (seen on iPhone X).
+        pic.dispose();
         final old = _buffers[p.name];
         if (old != null) pending.add(old);
         _buffers[p.name] = img;
