@@ -91,10 +91,34 @@ class MockServer {
       if (body == null) {
         req.response.statusCode = 404;
       } else if (body is List<int>) {
-        req.response.statusCode = 200;
-        req.response.headers.contentType = ContentType('audio', 'wav');
-        req.response.headers.contentLength = body.length;
-        req.response.add(body);
+        // Serve byte ranges. AVPlayer (just_audio on iOS) probes with
+        // Range requests and refuses to stream from a server that
+        // answers them with a plain 200 (error -11850 "Operation
+        // Stopped"); ExoPlayer on Android doesn't care. Real mStream
+        // servers support ranges, so mirror that here.
+        final rangeHeader = req.headers.value(HttpHeaders.rangeHeader);
+        final range = rangeHeader == null
+            ? null
+            : RegExp(r'^bytes=(\d+)-(\d*)$').firstMatch(rangeHeader);
+        req.response.headers
+          ..contentType = ContentType('audio', 'wav')
+          ..set(HttpHeaders.acceptRangesHeader, 'bytes');
+        if (range != null) {
+          final start = int.parse(range.group(1)!);
+          final endStr = range.group(2)!;
+          var end = endStr.isEmpty ? body.length - 1 : int.parse(endStr);
+          if (end > body.length - 1) end = body.length - 1;
+          req.response.statusCode = HttpStatus.partialContent;
+          req.response.headers
+            ..contentLength = end - start + 1
+            ..set(HttpHeaders.contentRangeHeader,
+                'bytes $start-$end/${body.length}');
+          req.response.add(body.sublist(start, end + 1));
+        } else {
+          req.response.statusCode = 200;
+          req.response.headers.contentLength = body.length;
+          req.response.add(body);
+        }
       } else {
         req.response.statusCode = 200;
         req.response.headers.contentType = ContentType.json;

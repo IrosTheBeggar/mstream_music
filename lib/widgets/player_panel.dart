@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
+import '../visualizer/shader_visualizer_screen.dart';
 import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'queue_list.dart';
@@ -392,8 +394,12 @@ class _DiscoveryButtons extends StatelessWidget {
       children: [
         btn(
           Icons.auto_awesome,
-          () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => VisualizerScreen())),
+          // iOS has no native visualizer host; it gets the pure-Flutter
+          // shader engine (same module as desktop).
+          () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => Platform.isAndroid
+                  ? VisualizerScreen()
+                  : const ShaderVisualizerScreen())),
           tooltip: l.visualizerTitle,
         ),
         StreamBuilder<CastTarget>(

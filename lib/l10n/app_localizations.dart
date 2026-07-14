@@ -2712,13 +2712,13 @@ abstract class AppLocalizations {
   /// **'Scan pairing QR'**
   String get irohScannerTitle;
 
-  /// Shown when QR scanning is attempted where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so).
+  /// Shown when QR scanning is attempted where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so).
   ///
   /// In en, this message translates to:
   /// **'QR scanning isn\'t available on this device.'**
   String get irohQrAndroidOnly;
 
-  /// Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (non-Android, or a 32-bit Android device without libiroh_tunnel.so).
+  /// Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so).
   ///
   /// In en, this message translates to:
   /// **'Quick Connect isn\'t available on this device.'**

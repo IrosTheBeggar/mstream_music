@@ -1,0 +1,50 @@
+{
+  "pins" : [
+    {
+      "identity" : "cocoaasyncsocket",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/robbiehanson/CocoaAsyncSocket.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "5ddba5e72f38e56010dbfac08b44478ee5000c0c"
+      }
+    },
+    {
+      "identity" : "google-cast-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SRGSSR/google-cast-sdk.git",
+      "state" : {
+        "revision" : "516f7111116bc412230309636842d3bbf77efdd8",
+        "version" : "4.8.4"
+      }
+    },
+    {
+      "identity" : "swifter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/httpswift/swifter.git",
+      "state" : {
+        "branch" : "stable",
+        "revision" : "1e4f51c92d7ca486242d8bf0722b99de2c3531aa"
+      }
+    },
+    {
+      "identity" : "swiftupnp",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/katoemba/SwiftUPnP.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "333d651502a793e8484437d1f6108850cbdf4658"
+      }
+    },
+    {
+      "identity" : "xmlcoder",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CoreOffice/XMLCoder.git",
+      "state" : {
+        "revision" : "42f62383dbcd074440cb1f6a750b9c02df9e7325",
+        "version" : "0.18.2"
+      }
+    }
+  ],
+  "version" : 2
+}

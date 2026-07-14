@@ -1348,6 +1348,84 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _backend.removeSourceAt(index);
   }
 
+  /// The queue without [localname]'s items, plus the backend index playback
+  /// should land on afterwards: the current item's new position when it
+  /// survives, else the first survivor after it, else the last survivor.
+  /// Returns null when no queued item belongs to [localname]. Pure; unit-tested.
+  static ({List<MediaItem> keep, int newIndex, bool currentSurvives})?
+      queueWithoutServer(
+          List<MediaItem> queue, String localname, int currentIndex) {
+    final keep = <MediaItem>[];
+    int? newIndex;
+    var currentSurvives = false;
+    for (var i = 0; i < queue.length; i++) {
+      final m = queue[i];
+      if (m.extras?['server'] == localname) continue;
+      if (i == currentIndex) {
+        currentSurvives = true;
+        newIndex = keep.length;
+      } else if (i > currentIndex && !currentSurvives) {
+        newIndex ??= keep.length;
+      }
+      keep.add(m);
+    }
+    if (keep.length == queue.length) return null;
+    return (
+      keep: keep,
+      newIndex: keep.isEmpty ? 0 : (newIndex ?? keep.length - 1),
+      currentSurvives: currentSurvives,
+    );
+  }
+
+  /// Drop every queue item belonging to [localname] — its server was deleted.
+  /// Downloaded copies stay on disk but leave the queue with the rest: their
+  /// server context (ratings, art, URL re-resolution) went with the server.
+  /// If the playing track was the server's, playback moves to the next
+  /// surviving track (its stream URL just died with the server anyway).
+  Future<void> removeServerQueueItems(String localname) async {
+    if (autoDJServer?.localname == localname) {
+      // Auto-DJ would keep topping the queue back up from the deleted server.
+      autoDJServer = null;
+      customState.add(CustomEvent(autoDJServer));
+    }
+    final q = queue.value;
+    if (q.isEmpty) return;
+    final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
+    final plan = queueWithoutServer(q, localname, cur);
+    if (plan == null) return;
+    appLog('[queue] server $localname removed — dropping '
+        '${q.length - plan.keep.length} of its queued track(s)');
+    _restoreSpot = null; // row indices shift — a parked index would lie
+    if (plan.keep.isEmpty) {
+      // The whole queue belonged to it: same teardown as clearPlaylist.
+      _intentionalStop = true;
+      await _backend.stop();
+      await super.stop();
+      await _backend.clearSources();
+      queue.add(queue.value..clear());
+      _broadcastState();
+      return;
+    }
+    final pos = plan.currentSurvives ? _backend.position : Duration.zero;
+    final wasPlaying = _backend.playing;
+    final wasShuffle = _backend.shuffleEnabled;
+    final wasRepeat = _backend.repeat;
+    _reordering = true;
+    try {
+      queue.add(plan.keep);
+      await _backend.setSources(plan.keep);
+      await _backend.seek(pos, index: plan.newIndex, play: wasPlaying);
+      // setSources rebuilds the playlist; re-apply shuffle/repeat so the
+      // removal doesn't silently drop them (mirrors the transcode reload).
+      await _backend.setShuffleEnabled(wasShuffle);
+      await _backend.setRepeat(wasRepeat);
+    } finally {
+      _reordering = false;
+    }
+    _emitCurrentMediaItem();
+    _broadcastState();
+  }
+
   @override
   customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {

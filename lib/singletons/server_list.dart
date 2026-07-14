@@ -442,9 +442,53 @@ class ServerManager {
   Future<void> handleNetworkChange() async {
     // Nudge whichever server the tunnel serves (a background playback server, not
     // just the browsed one) so a Wi-Fi/cellular switch re-probes the live tunnel.
-    if (!IrohTunnel.isSupported || _tunnelTargetServer() == null) return;
+    final s = _tunnelTargetServer();
+    if (!IrohTunnel.isSupported || s == null) return;
     IrohTunnel.instance.networkChanged();
+    // A suspension thaw can leave the native side REPORTING connected on a
+    // dead QUIC connection — nothing has exercised it yet, so the supervisor
+    // hasn't noticed (observed on iPhone: pause, background a few minutes,
+    // resume → streaming dead, status still "connected"). That stale status
+    // makes verify's is-it-down check a no-op, so probe ground truth through
+    // the loopback and hard-drop the tunnel when the path is dead —
+    // ensureActiveTunnel below then rebuilds it and re-derives the queue's
+    // stream URLs on the fresh bind.
+    if (_activeTunnelCode != null &&
+        s.isIroh &&
+        s.tunnelPort != null &&
+        !await _probeTunnel(s)) {
+      appLog('[iroh] resume probe failed — rebuilding the tunnel');
+      final drop = _tunnelChain.then((_) {
+        IrohTunnel.instance.stop();
+        _activeTunnelCode = null;
+      });
+      _tunnelChain = drop.catchError((_) {});
+      await drop;
+    }
     await ensureActiveTunnel(verify: true);
+  }
+
+  /// Ground-truth tunnel liveness: one HTTP round-trip through the loopback
+  /// (listener → QUIC stream → server → back). Any HTTP response — even an
+  /// error status — proves the path; only a connect failure/timeout means
+  /// dead. A FRESH client per probe is load-bearing: the shim authenticates
+  /// per TCP connection, and a pooled socket would test yesterday's
+  /// connection instead of the tunnel.
+  Future<bool> _probeTunnel(Server s) async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 4);
+    try {
+      final req = await client
+          .getUrl(s.apiUri('/api/v1/ping'))
+          .timeout(const Duration(seconds: 4));
+      final resp = await req.close().timeout(const Duration(seconds: 6));
+      await resp.drain<void>();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
   }
 
   // ── iroh tunnel status (drives the reconnecting / re-pair banner) ──
@@ -583,6 +627,13 @@ class ServerManager {
       Server removeThisServer, bool removeSyncedFiles) async {
     serverList.remove(removeThisServer);
     _serverListStream.sink.add(serverList);
+    // Deleting a server also deletes its queued tracks — they can't stream
+    // anymore and their metadata context (ratings, art, URL re-resolution)
+    // went with it. Done before ensureActiveTunnel so no tunnel is kept
+    // alive for tracks that are about to disappear.
+    await MediaManager()
+        .audioHandler
+        .removeServerQueueItems(removeThisServer.localname);
     // Drop a stale queue-tunnel pointer to the removed server so ensureActiveTunnel
     // below doesn't try to keep its tunnel up (the queue listener would clear it on
     // the next edit, but do it now).

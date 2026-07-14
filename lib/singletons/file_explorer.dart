@@ -161,6 +161,10 @@ class FileExplorer {
   // listings empty) instead of throwing on an unmounted volume.
   Future<Directory?> getDownloadDir(
       String storageMode, String? storageBasePath) async {
+    // Every mode other than 'appLocal' is an Android storage concept (external
+    // volumes, SD cards, all-files access). On iOS the picker never offers
+    // them, and any legacy value resolves to the app documents dir.
+    if (!Platform.isAndroid) return getApplicationDocumentsDirectory();
     switch (storageMode) {
       case 'permanent':
       case 'sdCard':

@@ -2188,7 +2188,10 @@ class MyCustomFormState extends State<MyCustomForm> {
               // permission, but cleared on uninstall). Full build offers the
               // app-local / external / permanent / SD modes via a dropdown. Either
               // way the download folder is auto-named (the field below).
-              if (isPlayBuild) ...[
+              if (!Platform.isAndroid) ...[
+                // iOS: downloads always live in the app sandbox ('appLocal');
+                // no SD cards or shared-storage modes, so no picker at all.
+              ] else if (isPlayBuild) ...[
                 if (_hasSdCard) ...[
                   SizedBox(height: 16),
                   SwitchListTile(

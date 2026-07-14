@@ -436,6 +436,18 @@ class DownloadManager {
       // true (nothing user-initiated, and a whole-queue sweep can hit the
       // same error dozens of times); manual downloads keep their feedback.
       bool quiet = false}) async {
+    // Normalize the URL before it reaches native code: callers build it by
+    // string concatenation, so paths with spaces (routine in artist/album
+    // names) arrive unencoded. Android's HTTP stack tolerates that, but iOS's
+    // URL(string:) rejects the whole task ("Invalid url", silent no-op —
+    // found on-device). Dart's Uri normalization percent-encodes exactly
+    // what's needed and is idempotent on already-encoded URLs — the same
+    // treatment stream URLs get via Uri.parse when the player loads them.
+    try {
+      downloadUrl = Uri.parse(downloadUrl).toString();
+    } on FormatException catch (e) {
+      appLog('[dl] unparseable download URL ($e)');
+    }
     String downloadDirectory = serverName + filepath;
 
     // Manual wins: an explicit download of a track removes it from the auto
@@ -548,7 +560,15 @@ class DownloadManager {
             ..auto = auto;
       _downloadStream.add(downloadMap);
 
-      await FileDownloader().enqueue(task);
+      if (!await FileDownloader().enqueue(task)) {
+        // The native side refused the task (e.g. a URL its stricter parser
+        // rejects). Without this check the failure is a SILENT no-op: the
+        // tracker sits in the map forever and nothing transfers.
+        appLog('[dl] enqueue rejected for $filename');
+        downloadMap.remove(task.taskId);
+        _downloadStream.add(downloadMap);
+        throw StateError('download task rejected');
+      }
     } catch (e) {
       // The volume could vanish between the null-check and the write.
       _inFlight.remove(downloadDirectory);

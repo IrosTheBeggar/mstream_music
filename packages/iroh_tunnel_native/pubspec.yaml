@@ -1,0 +1,23 @@
+name: iroh_tunnel_native
+description: >-
+  In-repo iOS packaging for the Rust iroh tunnel (rust/iroh_tunnel): vends the
+  prebuilt iroh_tunnel.xcframework to Runner via Swift Package Manager so it
+  is linked and embedded automatically. No Dart code — the FFI bindings live
+  in the app at lib/native/iroh_tunnel.dart. Android is unchanged (committed
+  jniLibs .so, see rust/iroh_tunnel/build-android.sh).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.24.0" # SwiftPM plugin support
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        ffiPlugin: true

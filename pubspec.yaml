@@ -66,6 +66,11 @@ dependencies:
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
   wifi_lock_shim:
     path: packages/wifi_lock_shim
+  # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM binaryTarget
+  # that links/embeds the committed iroh_tunnel.xcframework into Runner
+  # (built by rust/iroh_tunnel/build-ios.sh). Android is unchanged (jniLibs).
+  iroh_tunnel_native:
+    path: packages/iroh_tunnel_native
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -78,6 +83,8 @@ flutter_icons:
   ios: true
   image_path_android: "graphics/icon/icon.png"
   image_path_ios: "graphics/icon/mstream.png"
+  # The App Store rejects icons with an alpha channel.
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -97,6 +104,24 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Runtime GLSL fragment shaders (compiled by the Flutter build) — the
+  # pure-Flutter shader visualizer presets (Shadertoy shaders ported to
+  # Flutter's dialect), used on platforms without the native Android
+  # visualizer (iOS; desktop uses the same module). See lib/visualizer/.
+  shaders:
+    - shaders/visualizer/01-spectrum-bars.frag
+    - shaders/visualizer/02-audio-tunnel.frag
+    - shaders/visualizer/03-plasma-pulse.frag
+    - shaders/visualizer/04-cyber-fuji-buffera.frag
+    - shaders/visualizer/04-cyber-fuji-image.frag
+    - shaders/visualizer/05-hex-buffera.frag
+    - shaders/visualizer/05-hex-bufferb.frag
+    - shaders/visualizer/05-hex-bufferc.frag
+    - shaders/visualizer/05-hex-image.frag
+    - shaders/visualizer/06-4d-beats.frag
+    - shaders/visualizer/07-neonwave-sunrise.frag
+    - shaders/visualizer/08-neonwave-sunset.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:
