@@ -20,6 +20,10 @@
 pub mod c_api;
 pub mod ffi;
 
+// iOS-only dyld shim: netdev hard-links an iOS 18+ Network.framework symbol,
+// which aborts the app at launch on iOS 15–17. See apple_compat.rs.
+mod apple_compat;
+
 // Android-only JNI entry point that registers the app Context with ndk_context
 // (iroh needs it for network monitoring; without it the first call panics).
 #[cfg(target_os = "android")]
