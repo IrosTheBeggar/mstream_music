@@ -9,6 +9,16 @@ abstract class VizRenderer {
   Future<void> load();
   void render(Canvas canvas, Size size, double time, ui.Image music);
   void dispose();
+
+  /// Offscreen pixels per LOGICAL pixel for screen-filling shader passes, or
+  /// null to draw straight to the canvas at device resolution. A fullscreen
+  /// drawRect runs its fragment shader once per DEVICE pixel — logical size ×
+  /// devicePixelRatio², ~2.7M invocations per pass on a 3× phone — which is
+  /// what tanks the multi-pass presets on mobile GPUs. With a scale set, each
+  /// pass renders offscreen at scale×logical and the GPU bilinear-upscales:
+  /// ~devicePixelRatio²/scale² less fragment work, visually free on
+  /// visualizer content. Set by the mobile screen; desktop leaves it null.
+  static double? pixelScale;
 }
 
 // Standard float uniforms shared by every ported shader: iResolution (vec3,
@@ -18,6 +28,35 @@ void _stdUniforms(ui.FragmentShader sh, double w, double h, double time) {
   sh.setFloat(1, h);
   sh.setFloat(2, 1.0);
   sh.setFloat(3, time);
+}
+
+// Draw one screen-filling pass of [sh] onto [canvas]: direct at device
+// resolution when [VizRenderer.pixelScale] is null, else offscreen at
+// scale×logical + bilinear upscale. Sets the std uniforms (they must match
+// the surface the shader actually rasterizes to); samplers are bound by the
+// caller beforehand.
+void _drawPass(Canvas canvas, Size size, double time, ui.FragmentShader sh) {
+  final scale = VizRenderer.pixelScale;
+  if (scale == null) {
+    _stdUniforms(sh, size.width, size.height, time);
+    canvas.drawRect(Offset.zero & size, Paint()..shader = sh);
+    return;
+  }
+  final w = (size.width * scale).ceilToDouble();
+  final h = (size.height * scale).ceilToDouble();
+  _stdUniforms(sh, w, h, time);
+  final rec = ui.PictureRecorder();
+  Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..shader = sh);
+  final pic = rec.endRecording();
+  final img = pic.toImageSync(w.toInt(), h.toInt());
+  // Dispose the picture NOW: an undisposed picture pins its recorded shader
+  // state (including every sampled image) until a GC finalizer runs, and the
+  // Dart GC can't feel that native weight — at 60 fps that leaks to the iOS
+  // per-process jetsam limit in minutes (seen on iPhone X).
+  pic.dispose();
+  canvas.drawImageRect(img, Rect.fromLTWH(0, 0, w, h), Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.low);
+  img.dispose();
 }
 
 /// One shader, one draw, iChannel0 = the audio texture.
@@ -36,9 +75,8 @@ class SinglePassRenderer implements VizRenderer {
   void render(Canvas canvas, Size size, double time, ui.Image music) {
     final sh = _shader;
     if (sh == null) return;
-    _stdUniforms(sh, size.width, size.height, time);
     sh.setImageSampler(0, music);
-    canvas.drawRect(Offset.zero & size, Paint()..shader = sh);
+    _drawPass(canvas, size, time, sh);
   }
 
   @override
@@ -103,27 +141,28 @@ class MultiPassRenderer implements VizRenderer {
     // freed after the whole frame's passes are done.
     final pending = <ui.Image>[];
 
+    // Buffer passes honor pixelScale too (null = today's logical-size path).
+    final bufScale = VizRenderer.pixelScale ?? 1.0;
+
     for (final p in passes) {
       final sh = _shaders[p.name];
       if (sh == null) continue;
-      final w = p.fixed1x1 ? 1.0 : size.width;
-      final h = p.fixed1x1 ? 1.0 : size.height;
-      _stdUniforms(sh, w, h, time);
       for (var i = 0; i < p.channels.length; i++) {
         sh.setImageSampler(i, chan(p.channels[i]));
       }
       if (p.name == 'image') {
-        canvas.drawRect(Offset.zero & size, Paint()..shader = sh);
+        _drawPass(canvas, size, time, sh);
       } else {
+        final w = p.fixed1x1 ? 1.0 : size.width * bufScale;
+        final h = p.fixed1x1 ? 1.0 : size.height * bufScale;
+        _stdUniforms(sh, w, h, time);
         final rec = ui.PictureRecorder();
         Canvas(rec).drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..shader = sh);
         final pic = rec.endRecording();
         final img = pic.toImageSync(w.ceil(), h.ceil());
-        // Dispose the picture NOW: an undisposed picture pins its recorded
-        // shader state (including the full-size feedback buffers it samples)
-        // until a GC finalizer runs, and the Dart GC can't feel that native
-        // weight — at 60 fps that leaks to the iOS per-process jetsam limit
-        // in minutes (seen on iPhone X).
+        // See _drawPass: undisposed pictures pin their sampled images (here:
+        // full-size feedback buffers, every frame) until a lagging finalizer
+        // runs — that leak jetsams the app on phones.
         pic.dispose();
         final old = _buffers[p.name];
         if (old != null) pending.add(old);

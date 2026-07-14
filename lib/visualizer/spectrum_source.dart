@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import '../native/audio_capture.dart';
+import '../native/viz_decoder.dart';
 
 /// Produces the Shadertoy-style audio texture (`iChannel0`) the desktop shader
 /// visualizer samples: an RGBA image, [texWidth]×[texHeight] (512×2), where
@@ -32,6 +33,11 @@ class SpectrumSource {
   /// Amplitude follows playback: full when playing, quiet (not dead) when paused.
   bool playing = true;
 
+  /// Current playback position provider (ms), set by the screen. Keys the
+  /// playback-decode path ([VizDecoder]) to what the listener actually hears;
+  /// null (or an idle decoder) keeps the capture/synth behavior unchanged.
+  int Function()? positionMs;
+
   double _phaseBass = 0, _phaseMid = 0, _phaseTreble = 0;
   int _frame = 0;
 
@@ -41,18 +47,42 @@ class SpectrumSource {
   /// Fill a window (real playback PCM if captured, else synthesized), FFT it,
   /// and refresh [textureBytes].
   void advance() {
-    if (!_readReal()) _synth();
+    _real = _readReal();
+    if (!_real) _synth();
     _fft();
     _writeTexture();
     _frame++;
   }
 
-  /// Pull the most recent real playback samples (desktop WASAPI loopback) into
-  /// [_samples]. Returns false — so [advance] falls back to [_synth] — until the
-  /// capture ring holds a full window (the first ~20 ms after the visualizer
-  /// opens) and on platforms / states without capture. Silence reads back as a
-  /// full window of zeros, which the FFT turns into a calm (not frozen) display.
+  /// Whether the current window came from real playback audio (decode sidecar
+  /// or WASAPI capture) — those get spectrum auto-gain in [_writeTexture].
+  bool _real = false;
+
+  // Spectrum auto-gain for real audio: music spreads energy across the whole
+  // spectrum, so its per-bin magnitudes sit far below the synthesized
+  // carriers the shaders were tuned on and the bars barely register. The
+  // running peak rises instantly and decays slowly; the floor caps the gain
+  // (1/_agcFloor) so near-silence isn't amplified into a wall of noise.
+  static const double _agcDecay = 0.995; // ≈halves in 2.3 s at 60 fps
+  static const double _agcFloor = 0.02; // gain cap 42×
+  double _agcPeak = _agcFloor;
+
+  /// Pull real playback samples into [_samples], preferring the decode
+  /// sidecar (iOS: the window ending at the playback position) over the
+  /// desktop WASAPI loopback capture. Returns false — so [advance] falls back
+  /// to [_synth] — until a source holds a full window (sidecar priming /
+  /// scrubs, the capture ring's first ~20 ms) and on platforms / states with
+  /// neither. Silence reads back as a full window of zeros, which the FFT
+  /// turns into a calm (not frozen) display.
   bool _readReal() {
+    final dec = VizDecoder.instance;
+    final pos = positionMs;
+    if (dec.isRunning && pos != null) {
+      if (dec.read(_samples, _fftSize, pos()) >= _fftSize) return true;
+      // Not buffered yet (or just died): synth for this frame; a dead session
+      // stays quiet (isRunning flips false) instead of re-asking every frame.
+      return false;
+    }
     final cap = AudioCapture.instance;
     if (!cap.isRunning) return false;
     return cap.read(_samples, _fftSize) >= _fftSize;
@@ -142,8 +172,19 @@ class SpectrumSource {
     // Normalize a Hann-windowed magnitude (a pure tone peaks near fftSize/4) and
     // perceptually spread it with sqrt so quiet content still shows.
     const norm = 1.0 / (_fftSize * 0.25);
+    var gain = 1.0;
+    if (_real) {
+      var peak = 0.0;
+      for (var x = 0; x < bins; x++) {
+        final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm;
+        if (mag > peak) peak = mag;
+      }
+      _agcPeak = max(peak, max(_agcPeak * _agcDecay, _agcFloor));
+      // Aim the loudest bin at ~0.85 of full scale, headroom for transients.
+      gain = 0.85 / _agcPeak;
+    }
     for (var x = 0; x < bins; x++) {
-      final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm;
+      final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm * gain;
       final v = (sqrt(mag.clamp(0.0, 1.0)) * 255).round();
       final o = x * 4; // row 0
       textureBytes[o] = v;

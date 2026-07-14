@@ -1,0 +1,23 @@
+name: viz_decoder_native
+description: >-
+  In-repo iOS packaging for the Rust visualizer audio sidecar
+  (rust/viz_decoder): vends the prebuilt viz_decoder.xcframework to Runner via
+  Swift Package Manager so it is linked and embedded automatically. No Dart
+  code — the FFI bindings live in the app at lib/native/viz_decoder.dart.
+  Same model as iroh_tunnel_native.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.24.0" # SwiftPM plugin support
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      ios:
+        ffiPlugin: true

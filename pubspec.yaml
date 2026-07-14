@@ -71,6 +71,12 @@ dependencies:
   # (built by rust/iroh_tunnel/build-ios.sh). Android is unchanged (jniLibs).
   iroh_tunnel_native:
     path: packages/iroh_tunnel_native
+  # In-repo iOS packaging for the Rust visualizer audio sidecar: decodes the
+  # playing track (file / HTTP Range) so the shader visualizer reacts to the
+  # real audio instead of the synthesized signal. Same committed-xcframework
+  # model (built by rust/viz_decoder/build-ios.sh).
+  viz_decoder_native:
+    path: packages/viz_decoder_native
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
