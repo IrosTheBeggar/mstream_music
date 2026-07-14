@@ -8,6 +8,10 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>mStream Music</string>
+	<!-- Only standard OS crypto (HTTPS/QUIC) — exempt from export compliance.
+	     Declaring it skips the manual question on every App Store upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
