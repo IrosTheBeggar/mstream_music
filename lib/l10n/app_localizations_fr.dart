@@ -1222,6 +1222,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'Effacer';
 
   @override

@@ -1224,6 +1224,9 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'Cancella';
 
   @override
