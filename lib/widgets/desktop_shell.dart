@@ -686,6 +686,17 @@ class _DesktopQueuePanel extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: VelvetColors.textPrimary)),
                 const Spacer(),
+                // Clear is the most-reached-for queue action, so it gets its
+                // own button (same no-confirm behavior as the phone queue
+                // header) instead of hiding in the ⋮ menu.
+                IconButton(
+                  icon: const Icon(Icons.delete_sweep, size: 20),
+                  color: VelvetColors.textSecondary,
+                  tooltip: l.mainClearQueue,
+                  onPressed: () => MediaManager()
+                      .audioHandler
+                      .customAction('clearPlaylist'),
+                ),
                 // Queue actions (act on the queue, so they live here): save the
                 // queue as a playlist, download it, or share it.
                 PopupMenuButton<String>(
