@@ -1890,6 +1890,12 @@ abstract class AppLocalizations {
   /// **'No matches for \"{query}\"'**
   String browserNoMatches(String query);
 
+  /// Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured).
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get browserEmptyList;
+
   /// No description provided for @clear.
   ///
   /// In en, this message translates to:
