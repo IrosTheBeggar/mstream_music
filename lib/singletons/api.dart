@@ -14,7 +14,9 @@ import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'dart:convert';
+import 'dart:io' show HttpClient;
 
 class ApiManager {
   ApiManager._privateConstructor();
@@ -123,7 +125,16 @@ class ApiManager {
     // just run to completion. The finally balances the in-flight set and closes
     // the client on every path (throw / HTTP error / cancel) so a socket is
     // never leaked.
-    final client = http.Client();
+    //
+    // The TCP connect is bounded (an offline/unreachable server — powered-off
+    // box, dropped SYNs — otherwise waits out the OS timeout, 20s+), so a dead
+    // server fails fast and the browser can show its offline state promptly:
+    // at startup that's the difference between the error page appearing in
+    // seconds and a long bare spinner. Only the CONNECT is bounded — slow
+    // responses on a live connection are unaffected. HttpClient() picks up
+    // HttpOverrides.global, so the self-signed-cert override still applies.
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
     final int loadToken = BrowserManager()
         .beginLoading(onCancel: cancelable ? client.close : null);
     try {
