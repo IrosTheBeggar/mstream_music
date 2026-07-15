@@ -673,13 +673,12 @@ class ServerManager {
     serverList.insert(0, s);
     _serverListStream.sink.add(serverList);
 
-    // Switch the active server to it right away (not just on next launch)
-    // and reset the browser onto the new server — mirrors
-    // changeCurrentServer().
-    currentServer = s;
-    _currentServerStream.sink.add(currentServer);
-    await ensureActiveTunnel();
-    BrowserManager().goToNavScreen();
+    // Deliberately does NOT touch [currentServer]: the default only decides
+    // which server loads on the next launch (serverList[0]). It used to also
+    // switch the active server and reset the browser — but that yanked the
+    // selection (and the browse pane) out from under the user mid-session,
+    // leaving the pane showing the previous server's data with a different
+    // server selected. Switching servers is the sidebar/app-bar picker's job.
 
     // Persist the new order so serverList[0] — the default loaded on the
     // next launch — is this server. Without this the choice was lost on
