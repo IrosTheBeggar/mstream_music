@@ -13,6 +13,7 @@ import '../singletons/settings.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
+import '../widgets/desktop_toast.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
@@ -427,10 +428,15 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  // Floating so it clears the docked mini-player overlay (a plain bottom
-  // snackbar renders behind it).
+  // Desktop shell up → corner toast (the browser has no Scaffold of its own
+  // there). Phone → floating SnackBar so it clears the docked mini-player
+  // overlay (a plain bottom snackbar renders behind it).
   void _playlistError(BuildContext context) {
     final l = AppLocalizations.of(context);
+    if (DesktopToasts.instance.hasHost) {
+      DesktopToasts.instance.show(l.playlistActionFailed);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(l.playlistActionFailed),
       behavior: SnackBarBehavior.floating,

@@ -250,9 +250,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     Permission.notification.request();
     // Surface cast failures (renderer unreachable / session won't connect) as a
     // toast; the handler has already fallen back to local playback.
-    _castErrorSub = CastManager().castErrorStream.listen((msg) {
-      rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
-    });
+    // showGlobalSnack routes to the desktop corner toast when the desktop
+    // shell is up, else a SnackBar.
+    _castErrorSub = CastManager().castErrorStream.listen(showGlobalSnack);
     // An iroh tunnel is a long-lived QUIC connection; unlike fresh per-request
     // HTTP sockets it needs an explicit kick when the device network changes.
     // Nudge it on every connectivity transition that has a usable network.
@@ -769,13 +769,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                                 throwErr: true);
                             await ServerManager().callAfterEditServer();
                           } catch (err) {
-                            // Use the app-wide messenger key, not
+                            // Use the app-wide helper, not
                             // ScaffoldMessenger.of(context): this runs
                             // after two awaits, by which point the
                             // captured context may be unmounted (the
                             // StreamBuilder rebuilt / the menu closed).
-                            rootMessengerKey.currentState?.showSnackBar(
-                                SnackBar(content: Text(l.mainFailedToConnect)));
+                            showGlobalSnack(l.mainFailedToConnect);
                           }
                         } else if (selectedServerIndex == -1) {
                           Navigator.push(

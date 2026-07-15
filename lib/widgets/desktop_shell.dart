@@ -40,6 +40,7 @@ import '../singletons/settings.dart';
 import '../native/projectm_controller.dart';
 import '../native/projectm_desktop.dart';
 import '../theme/velvet_theme.dart';
+import 'desktop_toast.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
 import '../util/startup_view.dart';
@@ -195,9 +196,15 @@ class _DesktopShellState extends State<DesktopShell> {
     // doesn't shift. -1 accounts for the divider between the content and queue.
     final queueWidth =
         (MediaQuery.sizeOf(context).width - _kSidebarWidth - 1) / 3 - 1;
-    final shell = Scaffold(
-      backgroundColor: VelvetColors.bg,
-      body: Row(
+    // Material, not Scaffold, on purpose: a Scaffold here would register with
+    // the root ScaffoldMessenger and render every SnackBar full-width across
+    // the window bottom — over the Now Playing bar. Desktop notifications go
+    // through the corner-toast layer below instead (see DesktopToasts); pushed
+    // screens with their own Scaffolds still show their local SnackBars within
+    // the content pane, which ends above the bar.
+    final shell = Material(
+      color: VelvetColors.bg,
+      child: Row(
         children: [
           // Sidebar runs the full window height down the left edge (like the
           // queue on the right); the Now Playing bar begins where it ends, so
@@ -248,8 +255,25 @@ class _DesktopShellState extends State<DesktopShell> {
       ),
     );
     // Wrap the whole shell so the media keys work regardless of which pane has
-    // focus (text fields still consume their own keys first).
-    return MediaShortcuts(child: shell);
+    // focus (text fields still consume their own keys first). The toast layer
+    // sits bottom-right just above the Now Playing bar — the standard desktop
+    // notification corner (Windows / VS Code / Slack) — so toasts never cover
+    // the transport controls.
+    return MediaShortcuts(
+      child: Stack(
+        children: [
+          shell,
+          Positioned(
+            // Hug the content pane's bottom-right: when the queue panel is
+            // open, shift left past it (+ its divider) so toasts float over
+            // the main page, not the queue.
+            right: (_queueOpen ? queueWidth + 1 : 0) + 16,
+            bottom: _kNowPlayingHeight + 16,
+            child: const DesktopToastHost(),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -714,7 +738,6 @@ PopupMenuItem<String> _queueMenuItem(
 /// paths, prompt for a name, then POST /playlist/save. Local-only / no-server
 /// items (which can't live in a server playlist) are skipped.
 Future<void> _saveQueueAsPlaylist(BuildContext context) async {
-  final messenger = ScaffoldMessenger.of(context);
   final paths = MediaManager()
       .audioHandler
       .queue
@@ -723,8 +746,7 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
       .whereType<String>()
       .toList();
   if (paths.isEmpty) {
-    messenger.showSnackBar(
-        const SnackBar(content: Text('Nothing in the queue to save')));
+    showGlobalSnack('Nothing in the queue to save');
     return;
   }
   final name = await PlaylistNameDialog.show(context,
@@ -732,10 +754,9 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
   if (name == null || name.isEmpty) return;
   try {
     await ApiManager().savePlaylist(name, paths);
-    messenger.showSnackBar(SnackBar(content: Text('Saved “$name”')));
+    showGlobalSnack('Saved “$name”');
   } catch (_) {
-    messenger.showSnackBar(
-        const SnackBar(content: Text('Couldn’t save the playlist')));
+    showGlobalSnack('Couldn’t save the playlist');
   }
 }
 
