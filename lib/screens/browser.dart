@@ -875,13 +875,14 @@ class _BrowserState extends State<Browser> {
                         ? rawList.where((it) => it.matchesQuery(q)).toList()
                         : rawList;
 
-                    // A configured startup view is still loading (launch → first
-                    // content). Hold a spinner even before the home menu has been
-                    // populated: the raw list is briefly empty then, and the
-                    // spinner used to be gated behind isHome (false while empty) —
-                    // which left the pane BLANK in that gap instead of showing a
-                    // spinner. Now it covers the empty-list window too.
-                    if (BrowserManager().awaitingStartupView) {
+                    // A section load is pending (launch startup view, or a
+                    // desktop server switch): hold a spinner over every interim
+                    // state — empty list, home menu, placeholder — until the
+                    // setter clears the flag. First so nothing below can flash
+                    // mid-load; whoever set the flag re-emits on completion and
+                    // the pane settles on the loaded section, the empty state,
+                    // or (after a failure) the offline placeholder.
+                    if (BrowserManager().awaitingSectionLoad) {
                       return Center(
                         child: CircularProgressIndicator(
                             color: VelvetColors.primary),

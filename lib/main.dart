@@ -231,7 +231,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // Suppress the home-grid flash when a non-browser startup view is set: the
     // browser shows a loading state until the chosen section loads. Set before
     // loadServerList so it's already true before the home grid first renders.
-    BrowserManager().awaitingStartupView =
+    BrowserManager().awaitingSectionLoad =
         SettingsManager().effectiveStartupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
@@ -270,14 +270,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // browser section on top of the home grid once servers have loaded — firing
   // the same loader the matching home-grid tile does. The section is pushed
   // onto the browser stack, so the system Back button returns to the browser
-  // home. While it loads, BrowserManager.awaitingStartupView (set in initState)
+  // home. While it loads, BrowserManager.awaitingSectionLoad (set in initState)
   // keeps the browser on a spinner instead of the home grid, so the app lands
   // directly on the section. Skipped on first run (no server configured).
   Future<void> _maybeOpenStartupView() async {
     final view = SettingsManager().effectiveStartupView;
     final server = ServerManager().currentServer;
     if (view == StartupView.browser || server == null) {
-      _clearAwaitingStartupView();
+      _clearAwaitingSectionLoad();
       return;
     }
     try {
@@ -295,12 +295,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // Loaded? On success the loader pushed a section frame; on failure the
     // browser is still on its home menu (browserCache.length == 1).
     if (BrowserManager().browserCache.length > 1) {
-      _clearAwaitingStartupView();
+      _clearAwaitingSectionLoad();
       return;
     }
     // The default-page load failed — reveal the offline placeholder now instead
     // of holding the spinner, so an offline server gives immediate feedback.
-    _clearAwaitingStartupView();
+    _clearAwaitingSectionLoad();
     // The bundled server may just be mid-boot (its start is fire-and-forget), so
     // keep a background retry armed: when it reaches `running` it swaps the real
     // page in over the placeholder. Skipped once it's errored out, and for any
@@ -316,9 +316,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // Stop suppressing the home grid so the browser re-renders (the section on
   // success, else the desktop placeholder / mobile home grid). No-op if already
   // cleared, so the retry path can call it freely.
-  void _clearAwaitingStartupView() {
-    if (BrowserManager().awaitingStartupView) {
-      BrowserManager().awaitingStartupView = false;
+  void _clearAwaitingSectionLoad() {
+    if (BrowserManager().awaitingSectionLoad) {
+      BrowserManager().awaitingSectionLoad = false;
       BrowserManager().updateStream();
     }
   }
@@ -374,14 +374,16 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   Future<void> _retryStartupSection(StartupView view, Server server) async {
     if (!mounted) return;
     // Bail if the user moved on during the wait — switched servers, or opened a
-    // section / folder (browserCache grew past the home menu).
+    // section / folder (browserCache grew past the home menu). No flag work in
+    // either path: the launch flow already cleared awaitingSectionLoad before
+    // arming this watcher (the placeholder shows while we wait), and if the
+    // user is mid-switch the switch flow owns the flag — clearing it here
+    // would drop their spinner early.
     if (!identical(ServerManager().currentServer, server) ||
         BrowserManager().browserCache.length > 1) {
-      _clearAwaitingStartupView();
       return;
     }
     await loadStartupSection(view, server);
-    _clearAwaitingStartupView();
   }
 
   @override

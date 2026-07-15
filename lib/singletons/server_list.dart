@@ -189,7 +189,9 @@ class ServerManager {
     // switching to HTTP) before the browser queries it.
     await ensureActiveTunnel();
     BrowserManager().goToNavScreen();
-    unawaited(getServerPaths(currentServer!));
+    // No ping here on purpose: every caller (desktop sidebar, phone picker,
+    // add-server) follows up with its own getServerPaths — a second
+    // fire-and-forget ping just doubled the request on every switch.
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
