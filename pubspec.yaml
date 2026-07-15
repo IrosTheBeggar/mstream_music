@@ -98,6 +98,16 @@ dependencies:
   # model (built by rust/viz_decoder/build-ios.sh).
   viz_decoder_native:
     path: packages/viz_decoder_native
+  # Desktop window/tray/startup integration (leanflutter). Desktop-only plugins
+  # (no Android/iOS native impl, so they're skipped there); all calls are gated
+  # to desktop in lib/desktop/desktop_integration.dart. window_manager =
+  # sized window + close-to-tray; tray_manager = tray icon + menu;
+  # launch_at_startup = boot-on-login (toggled from Settings).
+  window_manager: ^0.5.1
+  tray_manager: ^0.5.3
+  launch_at_startup: ^0.5.1
+  crypto: ^3.0.7
+  archive: ^4.0.9
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -112,6 +122,14 @@ flutter_icons:
   image_path_ios: "graphics/icon/mstream.png"
   # The App Store rejects icons with an alpha channel.
   remove_alpha_ios: true
+  # Desktop (Windows) app icon — same mStream mark as mobile so the exe / window
+  # / taskbar icon matches the rest of the app instead of the default Flutter
+  # logo. Regenerates windows/runner/resources/app_icon.ico via
+  # `dart run flutter_launcher_icons`.
+  windows:
+    generate: true
+    image_path: "graphics/icon/mstream.png"
+    icon_size: 256
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -127,6 +145,8 @@ flutter:
     - graphics/default.png
     - assets/presets/
     - assets/shaders/
+    # System-tray icon for the desktop build (tray_manager).
+    - assets/tray_icon.ico
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
