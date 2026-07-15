@@ -481,8 +481,15 @@ class _SidebarServer extends StatelessWidget {
     // the time the connect fails, and we surface it through the app-wide
     // messenger (like the phone picker) rather than this element's context.
     final failedMsg = AppLocalizations.of(context).mainFailedToConnect;
-    ServerManager().changeCurrentServer(index);
+    // Hold the browse pane on a spinner for the whole switch (connect + the
+    // default section load). Without this the pane renders its interim states
+    // mid-switch — the home-menu reset reads as a flash of the offline
+    // placeholder before the section lands. Cleared in finally: on success the
+    // loaded section renders; on failure the home menu is in place, so the
+    // pane settles on the offline placeholder alongside the toast.
+    BrowserManager().awaitingSectionLoad = true;
     try {
+      await ServerManager().changeCurrentServer(index);
       await ServerManager()
           .getServerPaths(ServerManager().currentServer!, throwErr: true);
       await ServerManager().callAfterEditServer();
@@ -492,6 +499,9 @@ class _SidebarServer extends StatelessWidget {
           ServerManager().currentServer!);
     } catch (_) {
       showGlobalSnack(failedMsg);
+    } finally {
+      BrowserManager().awaitingSectionLoad = false;
+      BrowserManager().updateStream();
     }
   }
 
