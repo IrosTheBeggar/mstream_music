@@ -1,11 +1,19 @@
 name: Release
 
-# Tag-driven Android release pipeline. Pushing a tag like `v0.15.0`:
+# Tag-driven release pipeline. Pushing a tag like `v0.15.0`:
 #   1. builds the `full` APK (sideload) + the `play` AAB,
 #   2. creates a GitHub Release with both attached,
 #   3. uploads the AAB to Google Play's `internal` track — but ONLY once the
 #      PLAY_SERVICE_ACCOUNT_JSON secret is set (otherwise that step is skipped,
-#      so the GitHub Release still publishes regardless).
+#      so the GitHub Release still publishes regardless),
+#   4. builds an UNSIGNED iOS .ipa on a macOS runner and appends it to the
+#      same release (build-ios-unsigned job below) — for sideloaders
+#      (AltStore/SideStore re-sign on install) and as CI proof the iOS
+#      target builds from a clean checkout. App Store / TestFlight uploads
+#      stay a local step (flutter build ipa + Transporter): automating them
+#      here needs a distribution cert (.p12), an App Store provisioning
+#      profile, and an App Store Connect API key wired up as secrets —
+#      worth doing once release cadence justifies the setup ritual.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   ANDROID_KEYSTORE_BASE64    base64-encoded contents of the .jks file
@@ -167,3 +175,69 @@ jobs:
           releaseFiles: build/app/outputs/bundle/playRelease/mstream_music-play-${{ github.ref_name }}.aab
           track: internal
           status: completed
+
+  build-ios-unsigned:
+    # Appends the UNSIGNED iOS .ipa to the release the Android job created
+    # (`needs` guarantees the release exists — softprops upserts by tag, so
+    # this append can't race the creation). Unsigned because signing secrets
+    # aren't wired up (see header); sideloaders re-sign on install anyway.
+    # Like the Android job, this runner has no Rust toolchain: the native
+    # transports ship as COMMITTED xcframeworks.
+    runs-on: macos-15
+    needs: build-and-release
+    permissions:
+      contents: write   # append the .ipa to the release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select newest stable Xcode
+        # Flutter 3.44 needs a current Xcode; the runner image ships several
+        # side by side and the default can lag.
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Setup Flutter
+        # Same pin as the Android job — see the comment there.
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+          cache: true
+
+      - name: Build iOS (release, unsigned)
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign
+
+      - name: Verify native frameworks + privacy manifest are bundled
+        # Same spirit as the Android job's jniLibs check: fail loudly if a
+        # committed xcframework vanished from the bundle (a dropped framework
+        # would ship a release with no remote access / no visualizer audio),
+        # or if the App-Store-required privacy manifest went missing.
+        run: |
+          set -euo pipefail
+          app=build/ios/iphoneos/Runner.app
+          for fw in iroh_tunnel viz_decoder; do
+            [ -f "$app/Frameworks/$fw.framework/$fw" ] \
+              || { echo "::error::$fw.framework missing from Runner.app"; exit 1; }
+          done
+          [ -f "$app/PrivacyInfo.xcprivacy" ] \
+            || { echo "::error::PrivacyInfo.xcprivacy missing from Runner.app"; exit 1; }
+          echo "OK: iroh_tunnel + viz_decoder frameworks and privacy manifest present"
+
+      - name: Package unsigned .ipa
+        # An .ipa is just Payload/Runner.app zipped. -y keeps the framework
+        # symlinks as symlinks instead of duplicating binaries.
+        run: |
+          mkdir -p build/ios/ipa-unsigned/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios/ipa-unsigned/Payload/
+          cd build/ios/ipa-unsigned
+          zip -qry "mstream_music-${{ github.ref_name }}-ios-unsigned.ipa" Payload
+
+      - name: Attach unsigned .ipa to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: build/ios/ipa-unsigned/mstream_music-*-ios-unsigned.ipa
