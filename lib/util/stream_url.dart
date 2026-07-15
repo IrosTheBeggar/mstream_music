@@ -1,8 +1,44 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
 import '../singletons/transcode.dart';
+
+/// Containers/codecs AVPlayer — iOS's only audio engine — cannot decode.
+/// ExoPlayer (Android) and media_kit (desktop) play them natively, so this
+/// list only matters behind the iOS gate below. Extension-based, matching the
+/// server's file-path-centric model.
+const Set<String> _avPlayerUnplayable = {
+  'ogg', 'oga', 'opus', 'spx', // Xiph containers (vorbis/opus/speex)
+  'wma', // Windows Media
+  'ape', 'mpc', 'wv', 'tta', 'shn', // exotic lossless/lossy
+  'mka', // Matroska audio
+  'dsf', 'dff', // DSD
+};
+
+/// Whether [path] must be transcoded to play on iOS: AVPlayer can't decode
+/// its format and the server isn't known to lack ffmpeg (null = not pinged
+/// yet → optimistic, matching [buildServerStreamUrl]'s existing policy).
+/// Pure; unit-tested — callers pass `Platform.isIOS` for [isIOS].
+bool needsIosTranscodeFallback(String path,
+    {required bool isIOS, required bool? transcodeAvailable}) {
+  if (!isIOS || transcodeAvailable == false) return false;
+  final dot = path.lastIndexOf('.');
+  if (dot < 0) return false;
+  return _avPlayerUnplayable.contains(path.substring(dot + 1).toLowerCase());
+}
+
+/// The transcode codec actually sent: iOS pins everything except aac to mp3,
+/// because AVPlayer can't decode opus — honoring an explicit opus choice (or
+/// a null that lets a server configured for opus pick) would swap one
+/// unplayable stream for another. Other platforms pass the user's choice
+/// through untouched. Pure; unit-tested.
+String? effectiveTranscodeCodec(String? userCodec, {required bool isIOS}) {
+  if (!isIOS) return userCodec;
+  return userCodec == 'aac' ? 'aac' : 'mp3';
+}
 
 /// Single source of truth for a server file's streaming URL.
 ///
@@ -26,22 +62,33 @@ String buildServerStreamUrl(Server server, String path) {
   }
   final tm = TranscodeManager();
   final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
+  // iOS codec fallback: formats AVPlayer can't decode (ogg/opus & co) stream
+  // through /transcode even with the user's transcode setting OFF — the
+  // alternative is a track that silently fails. Device-verified that AVPlayer
+  // plays the endpoint's chunked no-Range transport. Android/desktop never
+  // take this branch (their players decode these formats natively).
+  final iosFallback = tm.transcodeOn != true &&
+      needsIosTranscodeFallback(path,
+          isIOS: Platform.isIOS,
+          transcodeAvailable: server.transcodeAvailable);
   // Use /transcode only when the user enabled it AND this server isn't known to
   // lack ffmpeg. transcodeAvailable: true = confirmed capable; false = confirmed
   // incapable (stream the original, never 500); null = not pinged yet →
   // optimistic (use /transcode) so a capable server works immediately at launch
   // without waiting for the ping. A queue mixing capable + incapable servers
   // resolves to the right endpoint per track once each server is pinged.
-  if (tm.transcodeOn != true || server.transcodeAvailable == false) {
+  if ((tm.transcodeOn != true || server.transcodeAvailable == false) &&
+      !iosFallback) {
     return '${server.effectiveBaseUrl}/media$p?app_uuid=${Uuid().v4()}$token${server.localTokenQuery}';
   }
+  final codec = effectiveTranscodeCodec(tm.codec, isIOS: Platform.isIOS);
   final sb = StringBuffer(server.effectiveBaseUrl)
     ..write('/transcode')
     ..write(p)
     ..write('?app_uuid=')
     ..write(Uuid().v4())
     ..write(token);
-  if (tm.codec != null) sb.write('&codec=${tm.codec!}');
+  if (codec != null) sb.write('&codec=$codec');
   if (tm.bitrate != null) sb.write('&bitrate=${tm.bitrate!}');
   sb.write(server.localTokenQuery);
   return sb.toString();
