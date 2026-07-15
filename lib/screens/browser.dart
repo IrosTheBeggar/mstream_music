@@ -941,6 +941,26 @@ class _BrowserState extends State<Browser> {
                       return _playlistsView(context, browserList);
                     }
 
+                    // A loaded but EMPTY listing — e.g. the File Explorer root
+                    // of a server with no music folders configured yet (the
+                    // bundled server before setup), or an empty directory. An
+                    // explicit empty state instead of a blank pane; the server
+                    // answered, so the offline placeholder would be wrong here.
+                    if (browserList.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            l.browserEmptyList,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
                     // If the whole list is albums and the user has the
                     // album-grid setting on, show a grid of album cards
                     // instead of the plain list.

@@ -1037,6 +1037,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'クリア';
 
   @override

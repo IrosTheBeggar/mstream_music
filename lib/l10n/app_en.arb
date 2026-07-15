@@ -767,6 +767,10 @@
       }
     }
   },
+  "browserEmptyList": "Nothing here yet",
+  "@browserEmptyList": {
+    "description": "Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured)."
+  },
   "clear": "Clear",
   "dlLocationUnavailable": "Download location unavailable",
   "dlLocationUnavailableServer": "Download location unavailable for this server.",
