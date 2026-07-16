@@ -1546,6 +1546,17 @@ class AppLocalizationsEs extends AppLocalizations {
       'Paste the code from the server Remote Access panel';
 
   @override
+  String get irohShowPairingCode => 'Show pairing code';
+
+  @override
+  String get irohQrBody =>
+      'Scan with the mStream app on another device to connect it to this server, or copy the code and paste it there.';
+
+  @override
+  String get irohQrCaution =>
+      'Anyone with this code can connect to your server.';
+
+  @override
   String get irohScanQr => 'Scan QR';
 
   @override

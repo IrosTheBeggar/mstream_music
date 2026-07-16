@@ -1019,6 +1019,18 @@
   "@irohPairingCodeHint": {
     "description": "Hint text inside the iroh pairing-code field."
   },
+  "irohShowPairingCode": "Show pairing code",
+  "@irohShowPairingCode": {
+    "description": "Server ⋮ menu action that displays the stored iroh pairing code as a QR."
+  },
+  "irohQrBody": "Scan with the mStream app on another device to connect it to this server, or copy the code and paste it there.",
+  "@irohQrBody": {
+    "description": "Body text of the pairing-code QR sheet."
+  },
+  "irohQrCaution": "Anyone with this code can connect to your server.",
+  "@irohQrCaution": {
+    "description": "Caution line under the pairing QR — the code is a credential."
+  },
   "irohScanQr": "Scan QR",
   "@irohScanQr": {
     "description": "Button that opens the camera to scan an iroh pairing QR code."
