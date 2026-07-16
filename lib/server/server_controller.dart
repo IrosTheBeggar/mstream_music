@@ -56,9 +56,13 @@ class ServerController {
       ValueNotifier<ServerRunStatus>(const ServerRunStatus(ServerRunPhase.stopped));
 
   Process? _process;
+  // Pid of a pre-existing server we ADOPTED instead of spawning (a previous
+  // app instance's child that outlived a force-kill or crash — only a graceful
+  // Quit reaps the process tree). Tracked so stop() can still reap it.
+  int? _adoptedPid;
   bool _starting = false;
 
-  bool get isRunning => _process != null;
+  bool get isRunning => _process != null || _adoptedPid != null;
 
   void _log(String m) => debugPrint('[server-ctl] $m');
   void _set(ServerRunStatus s) => status.value = s;
@@ -81,14 +85,6 @@ class ServerController {
     _starting = true;
     try {
       _set(const ServerRunStatus(ServerRunPhase.preparing));
-      final exe = await ServerBinaryManager.instance.ensureReady();
-      if (exe == null) {
-        _set(const ServerRunStatus(ServerRunPhase.error,
-            error: 'server binary unavailable'));
-        return;
-      }
-
-      _set(const ServerRunStatus(ServerRunPhase.starting));
       final dataDir = await _dataDir();
       // mStream resolves its storage dirs relative to the BINARY (appRoot), not
       // the working dir — so a db left there would be wiped when the binary
@@ -97,6 +93,31 @@ class ServerController {
       // the rest (secrets, iroh keys) and maintains the file from there.
       final (:configPath, :port) = await _ensureConfig(dataDir);
       _port = port;
+
+      // A healthy mStream may already be serving our port: the child of a
+      // previous app instance that was force-killed or crashed (only a
+      // graceful Quit reaps the process tree). Spawning over it just crashes
+      // the new child on the taken port — adopt it instead. Same config/data
+      // dir, so it's equivalent; Quit still reaps it via the resolved pid.
+      // Trade-offs: its console isn't piped into ServerLog, and the binary
+      // auto-update check is skipped until a boot with no adoptable server.
+      final existingPid = await _findExistingServer(port);
+      if (existingPid != null) {
+        _adoptedPid = existingPid > 0 ? existingPid : null;
+        _set(ServerRunStatus(ServerRunPhase.running, baseUrl: baseUrl));
+        _log('adopted running server at $baseUrl'
+            '${_adoptedPid != null ? ' (pid $_adoptedPid)' : ' (pid unknown)'}');
+        return;
+      }
+
+      final exe = await ServerBinaryManager.instance.ensureReady();
+      if (exe == null) {
+        _set(const ServerRunStatus(ServerRunPhase.error,
+            error: 'server binary unavailable'));
+        return;
+      }
+
+      _set(const ServerRunStatus(ServerRunPhase.starting));
       final proc = await Process.start(exe, ['-j', configPath],
           workingDirectory: dataDir.path);
       _process = proc;
@@ -133,14 +154,48 @@ class ServerController {
     }
   }
 
-  /// Stop the server (and its sidecar children). Called on app Quit.
+  /// Stop the server (and its sidecar children). Called on app Quit. Reaps an
+  /// adopted server too — it's this app's child from a previous run, so its
+  /// lifecycle follows this instance once adopted.
   Future<void> stop() async {
-    final proc = _process;
+    final pid = _process?.pid ?? _adoptedPid;
     _process = null;
-    if (proc == null) return;
-    _log('stopping (pid ${proc.pid})');
-    await _killTree(proc.pid);
+    _adoptedPid = null;
+    if (pid == null) return;
+    _log('stopping (pid $pid)');
+    await _killTree(pid);
     _set(const ServerRunStatus(ServerRunPhase.stopped));
+  }
+
+  /// A compatible mStream already answering on [port], or null. Returns its
+  /// pid, or -1 when the process can't be resolved (adopted anyway — it just
+  /// can't be reaped on Quit). Fingerprinted on the ping payload so a random
+  /// non-mStream process squatting the port isn't adopted.
+  Future<int?> _findExistingServer(int port) async {
+    try {
+      final r = await http
+          .get(Uri.parse('http://127.0.0.1:$port/api/v1/ping'))
+          .timeout(const Duration(seconds: 2));
+      if (r.statusCode != 200 || !r.body.contains('"vpaths"')) return null;
+    } catch (_) {
+      return null; // nothing listening (or not answering like an mStream)
+    }
+    return await _listenerPid(port) ?? -1;
+  }
+
+  /// Owning pid of the LISTENING socket on [port] (netstat parse), so an
+  /// adopted server can still be reaped on Quit. Null when unresolved.
+  Future<int?> _listenerPid(int port) async {
+    if (!Platform.isWindows) return null;
+    try {
+      final r = await Process.run('netstat', ['-ano', '-p', 'TCP']);
+      for (final line in (r.stdout as String).split('\n')) {
+        if (!line.contains('LISTENING') || !line.contains(':$port ')) continue;
+        final pid = int.tryParse(line.trim().split(RegExp(r'\s+')).last);
+        if (pid != null && pid > 0) return pid;
+      }
+    } catch (_) {}
+    return null;
   }
 
   void _onProcessExit(int code) {
