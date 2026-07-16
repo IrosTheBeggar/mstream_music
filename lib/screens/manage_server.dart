@@ -8,6 +8,7 @@ import '../singletons/server_list.dart';
 import '../native/iroh_tunnel.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/iroh_pairing_qr_sheet.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
@@ -84,9 +85,11 @@ class ManageServersScreen extends StatelessWidget {
     );
   }
 
-  // The per-row ⋮ overflow menu (Make Default / Info / Edit / Delete).
+  // The per-row ⋮ overflow menu (Make Default / Info / Pairing code / Edit /
+  // Delete).
   Widget _overflowMenu(BuildContext context, int index) {
     final l = AppLocalizations.of(context);
+    final Server server = ServerManager().serverList[index];
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
       color: VelvetColors.surface,
@@ -102,6 +105,9 @@ class ManageServersScreen extends StatelessWidget {
           case 'info':
             _showServerInfo(context, index);
             break;
+          case 'pairingCode':
+            showIrohPairingQrSheet(context, server.irohPairingCode!);
+            break;
           case 'delete':
             _showDeleteDialog(context, index);
             break;
@@ -112,6 +118,9 @@ class ManageServersScreen extends StatelessWidget {
         if (index != 0)
           _menuItem('default', Icons.arrow_upward_rounded, l.makeDefault),
         _menuItem('info', Icons.info_outline, l.info),
+        // Re-share this iroh server's pairing QR so another device can pair.
+        if (server.isIroh && server.irohPairingCode != null)
+          _menuItem('pairingCode', Icons.qr_code_2, l.irohShowPairingCode),
         _menuItem('edit', Icons.edit_outlined, l.edit),
         _menuItem('delete', Icons.delete_outline, l.delete,
             color: VelvetColors.error),

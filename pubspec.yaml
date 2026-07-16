@@ -41,6 +41,9 @@ dependencies:
   # QR scanning for iroh pairing codes (CameraX/ML Kit). Replaces the
   # long-removed flutter_barcode_scanner.
   mobile_scanner: ^7.2.0
+  # QR rendering (pure Dart) — shows an iroh server's stored pairing code so
+  # another device can scan it without opening the server admin panel.
+  qr_flutter: ^4.1.0
   # Network-change signal that kicks the iroh tunnel's reconnect — iroh can't
   # self-detect interface changes (Wi-Fi<->cellular) on Android.
   connectivity_plus: ^7.2.0

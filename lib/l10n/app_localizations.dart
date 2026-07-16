@@ -2682,6 +2682,24 @@ abstract class AppLocalizations {
   /// **'Paste the code from the server Remote Access panel'**
   String get irohPairingCodeHint;
 
+  /// Server ⋮ menu action that displays the stored iroh pairing code as a QR.
+  ///
+  /// In en, this message translates to:
+  /// **'Show pairing code'**
+  String get irohShowPairingCode;
+
+  /// Body text of the pairing-code QR sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with the mStream app on another device to connect it to this server, or copy the code and paste it there.'**
+  String get irohQrBody;
+
+  /// Caution line under the pairing QR — the code is a credential.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone with this code can connect to your server.'**
+  String get irohQrCaution;
+
   /// Button that opens the camera to scan an iroh pairing QR code.
   ///
   /// In en, this message translates to:
