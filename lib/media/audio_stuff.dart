@@ -1405,7 +1405,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         '${q.length - plan.keep.length} of its queued track(s)');
     _restoreSpot = null; // row indices shift — a parked index would lie
     if (plan.keep.isEmpty) {
-      // The whole queue belonged to it: same teardown as clearPlaylist.
+      // The whole queue belonged to it: same teardown as clearPlaylist,
+      // including the top-of-queue park (see there for why).
+      _restoreSpot = (index: 0, position: Duration.zero);
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
@@ -1439,7 +1441,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     switch (name) {
       case 'clearPlaylist':
         appLog('[queue] cleared');
-        _restoreSpot = null; // the queue the spot described is gone
+        // Park the revive spot at top-of-queue rather than just dropping it:
+        // the deactivated just_audio platform keeps the LAST loaded index and
+        // position through the clear, so a play() on tracks added to the
+        // emptied queue would re-seed at that stale spot — clamped to the END
+        // of the new queue ("add all starts on the last song"). The park is
+        // superseded by user navigation and cleared once a track loads.
+        _restoreSpot = (index: 0, position: Duration.zero);
         _intentionalStop = true;
         await _backend.stop();
         await super.stop();
