@@ -242,6 +242,51 @@ class ServerController {
     }
   }
 
+  /// First-run quick setup (desktop onboarding, Server Mode): write a music
+  /// folder + the first user + the port into the server config, then (re)start
+  /// the server on it. [passwordHash]/[salt] arrive pre-hashed in mStream's
+  /// own scheme (see util/mstream_auth.dart) so the server accepts logins for
+  /// them directly from the config file.
+  Future<void> quickSetup({
+    required String folderName,
+    required String folderRoot,
+    required String username,
+    required String passwordHash,
+    required String salt,
+    required int port,
+  }) async {
+    await stop();
+    final dataDir = await _dataDir();
+    final confDir = Directory(p.join(dataDir.path, 'conf'));
+    await confDir.create(recursive: true);
+    final configFile = File(p.join(confDir.path, 'default.json'));
+    Map<String, dynamic> cfg = <String, dynamic>{};
+    if (await configFile.exists()) {
+      try {
+        cfg = jsonDecode(await configFile.readAsString())
+            as Map<String, dynamic>;
+      } catch (_) {/* corrupt — rebuilt below */}
+    }
+    cfg['port'] = port;
+    final folders =
+        (cfg['folders'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    folders[folderName] = {'root': folderRoot, 'type': 'music'};
+    cfg['folders'] = folders;
+    final users =
+        (cfg['users'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    users[username] = {
+      'password': passwordHash,
+      'salt': salt,
+      'admin': true,
+      'vpaths': [folderName],
+    };
+    cfg['users'] = users;
+    await configFile
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(cfg));
+    _log('quick setup: folder "$folderName" + user "$username" (port $port)');
+    await start();
+  }
+
   /// Resolve the boot config + port. Seeds the config when needed with (a) the
   /// five appRoot-relative storage dirs redirected into [dataDir] (else they'd
   /// sit in the binary's version folder and be pruned on update) and (b) a chosen
