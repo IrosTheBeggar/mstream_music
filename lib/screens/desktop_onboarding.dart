@@ -11,7 +11,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:isolate';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +21,6 @@ import '../objects/server.dart';
 import '../server/server_controller.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
-import '../util/mstream_auth.dart';
 import 'add_server.dart';
 
 class DesktopOnboardingScreen extends StatefulWidget {
@@ -295,27 +293,34 @@ class _ServerModeScreenState extends State<_ServerModeScreen> {
 
     setState(() => _busy = true);
     try {
-      // 1) Hash the password mStream's way (PBKDF2, off the UI thread).
-      setState(() => _status = 'Securing your login…');
-      final creds = await Isolate.run(() => hashServerPassword(password));
-
-      // 2) Write folder+user+port into the server config and restart it.
+      // 1) Start the server (usually already up — it boots with the app) and
+      //    create the library + first admin user through the admin API. A
+      //    server that already has users throws ServerHasUsersException — then
+      //    the submitted credentials must MATCH an existing login (attach).
+      var attaching = false;
       setState(() => _status = 'Configuring and starting the server…');
-      await ServerController.instance.quickSetup(
-        folderName: p.basename(folder).isEmpty ? 'music' : p.basename(folder),
-        folderRoot: folder,
-        username: username,
-        passwordHash: creds.hash,
-        salt: creds.salt,
-        port: port,
-      );
-      final phase = ServerController.instance.status.value;
-      if (phase.phase != ServerRunPhase.running) {
-        throw Exception(phase.error ?? 'the server did not start');
+      // mStream's directory vpath is a name, not a path — sanitize the
+      // folder's basename to its accepted alphabet.
+      var vpath = p
+          .basename(folder)
+          .replaceAll(RegExp(r'[^a-zA-Z0-9-]'), '-')
+          .replaceAll(RegExp(r'-+'), '-')
+          .replaceAll(RegExp(r'^-|-$'), '');
+      if (vpath.isEmpty) vpath = 'music';
+      try {
+        await ServerController.instance.quickSetup(
+          folderName: vpath,
+          folderRoot: folder,
+          username: username,
+          password: password,
+          port: port,
+        );
+      } on ServerHasUsersException {
+        attaching = true;
       }
 
-      // 3) Sign in against the fresh server (also proves the config user
-      //    round-trips) and register it as this app's server.
+      // 2) Sign in (proves the created login round-trips; for the attach case
+      //    this is the actual gate) and register it as this app's server.
       setState(() => _status = 'Signing in…');
       final base = Uri.parse(ServerController.instance.baseUrl);
       final login = await http
@@ -325,7 +330,11 @@ class _ServerModeScreenState extends State<_ServerModeScreen> {
           )
           .timeout(const Duration(seconds: 8));
       if (login.statusCode != 200) {
-        throw Exception('sign-in failed (HTTP ${login.statusCode})');
+        throw Exception(attaching
+            ? 'this PC\'s server already has a login configured, and these '
+                'credentials don\'t match it — sign in with the existing '
+                'login, or use Client Mode'
+            : 'sign-in failed (HTTP ${login.statusCode})');
       }
       final jwt =
           (jsonDecode(login.body) as Map<String, dynamic>)['token'] as String?;
@@ -337,16 +346,25 @@ class _ServerModeScreenState extends State<_ServerModeScreen> {
         jwt,
         '__local__',
       );
+      // Mark it as the app-managed embedded server — the UI keys its
+      // management affordances (status/restart/logs/admin) off this flag.
+      server.isAttachedServer = true;
       await ServerManager().getServerPaths(server);
-      // 4) addServer lands the first server on its configured startup section
+      // 3) addServer lands the first server on its configured startup section
       //    (the desktop path inside it); the onboarding cover pops itself when
       //    the server-list emission arrives.
       await ServerManager().addServer(server);
     } catch (e) {
+      // Curated errors arrive as Exception('reason') — show the reason, not
+      // the exception wrapper.
+      var msg = '$e';
+      if (msg.startsWith('Exception: ')) {
+        msg = msg.substring('Exception: '.length);
+      }
       setState(() {
         _busy = false;
         _status = null;
-        _error = 'Setup failed: $e';
+        _error = 'Setup failed: $msg';
       });
       return;
     }

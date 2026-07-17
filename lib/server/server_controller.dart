@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -24,6 +26,11 @@ enum ServerStartTrigger { appStart, firstLocalFolder, manual }
 const ServerStartTrigger kServerStartTrigger = ServerStartTrigger.appStart;
 
 enum ServerRunPhase { stopped, preparing, starting, running, error }
+
+/// Thrown by [ServerController.quickSetup] when the server already has users
+/// configured — first-run setup can't run, but the caller can attach by
+/// signing in with the existing credentials instead.
+class ServerHasUsersException implements Exception {}
 
 @immutable
 class ServerRunStatus {
@@ -56,15 +63,40 @@ class ServerController {
       ValueNotifier<ServerRunStatus>(const ServerRunStatus(ServerRunPhase.stopped));
 
   Process? _process;
-  // Pid of a pre-existing server we ADOPTED instead of spawning (a previous
-  // app instance's child that outlived a force-kill or crash — only a graceful
-  // Quit reaps the process tree). Tracked so stop() can still reap it.
-  int? _adoptedPid;
   bool _starting = false;
 
-  bool get isRunning => _process != null || _adoptedPid != null;
+  bool get isRunning => _process != null;
 
-  void _log(String m) => debugPrint('[server-ctl] $m');
+  // Last-run log on disk (logs/server-run.log, truncated each start): the
+  // server's console + this controller's decisions. The in-app log buffers die
+  // with the process, so this is what makes a failed boot diagnosable after
+  // the fact.
+  File? _runLogFile;
+
+  void _log(String m) {
+    debugPrint('[server-ctl] $m');
+    _logFile('[server-ctl] $m');
+  }
+
+  void _logFile(String line) {
+    try {
+      _runLogFile?.writeAsStringSync('$line\n', mode: FileMode.append);
+    } catch (_) {/* diagnostics must never break the server flow */}
+  }
+
+  Future<void> _openRunLog(Directory dataDir) async {
+    try {
+      final dir = Directory(p.join(dataDir.path, 'logs'));
+      await dir.create(recursive: true);
+      final f = File(p.join(dir.path, 'server-run.log'));
+      await f.writeAsString(''); // describes the LAST run only
+      _runLogFile = f;
+      _logFile('run started ${DateTime.now().toUtc().toIso8601String()}');
+    } catch (e) {
+      debugPrint('[server-ctl] run log unavailable: $e');
+    }
+  }
+
   void _set(ServerRunStatus s) => status.value = s;
 
   /// Start the server only if [trigger] matches the configured
@@ -86,6 +118,7 @@ class ServerController {
     try {
       _set(const ServerRunStatus(ServerRunPhase.preparing));
       final dataDir = await _dataDir();
+      await _openRunLog(dataDir);
       // mStream resolves its storage dirs relative to the BINARY (appRoot), not
       // the working dir — so a db left there would be wiped when the binary
       // updates and the old version dir is pruned. Pass `-j <config>` with the
@@ -94,19 +127,57 @@ class ServerController {
       final (:configPath, :port) = await _ensureConfig(dataDir);
       _port = port;
 
-      // A healthy mStream may already be serving our port: the child of a
-      // previous app instance that was force-killed or crashed (only a
-      // graceful Quit reaps the process tree). Spawning over it just crashes
-      // the new child on the taken port — adopt it instead. Same config/data
-      // dir, so it's equivalent; Quit still reaps it via the resolved pid.
-      // Trade-offs: its console isn't piped into ServerLog, and the binary
-      // auto-update check is skipped until a boot with no adoptable server.
+      // An mStream may already hold our port: a leftover child of a previous
+      // app run, another live app instance's child, or someone else's install.
+      // Spawning over any of them just crashes the new child on the taken
+      // port, so sort out who it is first.
       final existingPid = await _findExistingServer(port);
-      if (existingPid != null) {
-        _adoptedPid = existingPid > 0 ? existingPid : null;
-        _set(ServerRunStatus(ServerRunPhase.running, baseUrl: baseUrl));
-        _log('adopted running server at $baseUrl'
-            '${_adoptedPid != null ? ' (pid $_adoptedPid)' : ' (pid unknown)'}');
+      if (existingPid != null && existingPid > 0) {
+        if (!await _isOurServerExe(existingPid)) {
+          // A user's separate mStream install — never touch its lifecycle.
+          _log('port $port held by a foreign mStream (pid $existingPid) — '
+              'not touching it');
+          _set(ServerRunStatus(ServerRunPhase.error,
+              error: 'port $port is in use by another mStream server'));
+          return;
+        }
+        if (await _isChildOfLiveApp(existingPid)) {
+          // Another RUNNING app instance owns it. Use it without owning it —
+          // killing it would yank the server out from under that instance,
+          // and reaping it on our Quit would do the same later.
+          _set(ServerRunStatus(ServerRunPhase.running, baseUrl: baseUrl));
+          _log('sharing server (pid $existingPid) owned by another running '
+              'app instance');
+          return;
+        }
+        // Our own leftover with a DEAD parent. Do NOT adopt it: its
+        // stdout/stderr still pipe to the dead parent, so its next console
+        // write EPIPE-crashes it (observed: the fingerprint probe above is
+        // often what kills it). Recycle instead — kill the tree and fall
+        // through to spawn a fresh child with live pipes.
+        _log('recycling leftover server (pid $existingPid) on port $port');
+        await _killTree(existingPid);
+        if (!await _waitPortFree(port)) {
+          _set(ServerRunStatus(ServerRunPhase.error,
+              error: 'port $port did not free up after stopping the old '
+                  'server'));
+          return;
+        }
+      } else if (existingPid == -1) {
+        // An mStream answered but the listening pid can't be resolved —
+        // usually a broken-pipe zombie that our own probe just killed. Give
+        // the port a moment to free, then spawn; if it's still held, we can't
+        // safely kill what we can't identify.
+        if (!await _waitPortFree(port, tries: 8)) {
+          _set(ServerRunStatus(ServerRunPhase.error,
+              error: 'port $port is in use by an unidentifiable server'));
+          return;
+        }
+      } else if (!await _isPortFree(port)) {
+        // Held, but not by anything answering like an mStream.
+        _log('port $port is in use by a non-mStream process — not starting');
+        _set(ServerRunStatus(ServerRunPhase.error,
+            error: 'port $port is already in use by another program'));
         return;
       }
 
@@ -129,6 +200,7 @@ class ServerController {
           .listen((l) {
         ServerLog().add(l);
         debugPrint('[mstream] $l');
+        _logFile(l);
       });
       proc.stderr
           .transform(utf8.decoder)
@@ -136,6 +208,7 @@ class ServerController {
           .listen((l) {
         ServerLog().add(l);
         debugPrint('[mstream:err] $l');
+        _logFile('[err] $l');
       });
       unawaited(proc.exitCode.then(_onProcessExit));
 
@@ -154,13 +227,12 @@ class ServerController {
     }
   }
 
-  /// Stop the server (and its sidecar children). Called on app Quit. Reaps an
-  /// adopted server too — it's this app's child from a previous run, so its
-  /// lifecycle follows this instance once adopted.
+  /// Stop the server (and its sidecar children). Called on app Quit. Only
+  /// kills a child THIS instance spawned — a server shared from another live
+  /// app instance stays theirs.
   Future<void> stop() async {
-    final pid = _process?.pid ?? _adoptedPid;
+    final pid = _process?.pid;
     _process = null;
-    _adoptedPid = null;
     if (pid == null) return;
     _log('stopping (pid $pid)');
     await _killTree(pid);
@@ -168,23 +240,30 @@ class ServerController {
   }
 
   /// A compatible mStream already answering on [port], or null. Returns its
-  /// pid, or -1 when the process can't be resolved (adopted anyway — it just
-  /// can't be reaped on Quit). Fingerprinted on the ping payload so a random
-  /// non-mStream process squatting the port isn't adopted.
+  /// pid, or -1 when the process can't be resolved. Fingerprinted on the ping
+  /// payload so a random process squatting the port isn't matched. Two mStream
+  /// shapes exist: a user-less server answers 200 with `"vpaths"`, and a
+  /// server WITH users answers the unauthenticated ping 401
+  /// `{"error":"Authentication Error"}` — after first-run setup creates a
+  /// user, the 401 shape is the one every leftover server presents.
   Future<int?> _findExistingServer(int port) async {
     try {
       final r = await http
           .get(Uri.parse('http://127.0.0.1:$port/api/v1/ping'))
           .timeout(const Duration(seconds: 2));
-      if (r.statusCode != 200 || !r.body.contains('"vpaths"')) return null;
+      final looksLikeMstream =
+          (r.statusCode == 200 && r.body.contains('"vpaths"')) ||
+              (r.statusCode == 401 && r.body.contains('Authentication Error'));
+      if (!looksLikeMstream) return null;
     } catch (_) {
       return null; // nothing listening (or not answering like an mStream)
     }
     return await _listenerPid(port) ?? -1;
   }
 
-  /// Owning pid of the LISTENING socket on [port] (netstat parse), so an
-  /// adopted server can still be reaped on Quit. Null when unresolved.
+  /// Owning pid of the LISTENING socket on [port] (netstat parse), so the
+  /// recycle/share/foreign decision can identify the holder. Null when
+  /// unresolved.
   Future<int?> _listenerPid(int port) async {
     if (!Platform.isWindows) return null;
     try {
@@ -209,6 +288,7 @@ class ServerController {
 
   Future<bool> _waitForHealth() async {
     final client = http.Client();
+    final childPid = _process?.pid;
     try {
       // ~30s — the HTTP server comes up well before first-run ffmpeg fetch.
       for (var i = 0; i < 60; i++) {
@@ -217,7 +297,14 @@ class ServerController {
           final r = await client
               .get(Uri.parse('$baseUrl/'))
               .timeout(const Duration(seconds: 2));
-          if (r.statusCode > 0) return true; // any response = listening
+          if (r.statusCode > 0) {
+            // An answer alone isn't proof: a stale/foreign server could hold
+            // the port while our child dies behind it (then sign-in fails
+            // against a server running someone else's config). Require the
+            // LISTENING socket to belong to the child we spawned.
+            if (childPid == null) return true;
+            if (await _listenerPid(_port) == childPid) return true;
+          }
         } catch (_) {
           // connection refused / not up yet — retry
         }
@@ -242,20 +329,92 @@ class ServerController {
     }
   }
 
-  /// First-run quick setup (desktop onboarding, Server Mode): write a music
-  /// folder + the first user + the port into the server config, then (re)start
-  /// the server on it. [passwordHash]/[salt] arrive pre-hashed in mStream's
-  /// own scheme (see util/mstream_auth.dart) so the server accepts logins for
-  /// them directly from the config file.
+  /// First-run quick setup (desktop onboarding, Server Mode): make sure the
+  /// server is running on [port], then create the music library + the first
+  /// admin user THROUGH THE ADMIN API. Writing them into the config file does
+  /// NOT work on an existing install — mStream ingests config users/folders
+  /// into SQLite exactly once (a marker file gates the migration), so config
+  /// entries added later are silently ignored and sign-in 401s. The API path
+  /// works on both a virgin server (no users → API is open) and is the same
+  /// mechanism the webapp admin panel uses. `PUT /api/v1/admin/directory`
+  /// also kicks off the library scan.
+  ///
+  /// Throws [ServerHasUsersException] when the server already has users — the
+  /// caller decides whether to attach with existing credentials instead.
   Future<void> quickSetup({
     required String folderName,
     required String folderRoot,
     required String username,
-    required String passwordHash,
-    required String salt,
+    required String password,
     required int port,
   }) async {
-    await stop();
+    // Make sure the server is up on the requested port. Common path: it's
+    // already running there (booted with the app) — reuse it. A different
+    // port means a config write + restart.
+    if (!isRunning || status.value.phase != ServerRunPhase.running) {
+      await start();
+    }
+    if (status.value.phase != ServerRunPhase.running) {
+      throw Exception(status.value.error ?? 'the server did not start');
+    }
+    if (_port != port) {
+      await stop();
+      await _freePortForTakeover(port);
+      await _writeConfigPort(port);
+      await start();
+      if (status.value.phase != ServerRunPhase.running) {
+        throw Exception(status.value.error ?? 'the server did not start');
+      }
+    }
+
+    // No-users servers answer the unauthenticated ping 200 (public mode);
+    // configured ones answer 401. Decides between first-run setup and attach.
+    final ping = await http
+        .get(Uri.parse('$baseUrl/api/v1/ping'))
+        .timeout(const Duration(seconds: 5));
+    if (ping.statusCode != 200) {
+      throw ServerHasUsersException();
+    }
+
+    _log('quick setup: adding library "$folderName" -> $folderRoot');
+    final dirResp = await http
+        .put(
+          Uri.parse('$baseUrl/api/v1/admin/directory'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'directory': folderRoot,
+            'vpath': folderName,
+            'autoAccess': false,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (dirResp.statusCode != 200) {
+      throw Exception(
+          'adding the music folder failed (HTTP ${dirResp.statusCode})');
+    }
+
+    _log('quick setup: creating admin user "$username"');
+    final userResp = await http
+        .put(
+          Uri.parse('$baseUrl/api/v1/admin/users'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'username': username,
+            'password': password,
+            'vpaths': [folderName],
+            'admin': true,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (userResp.statusCode != 200) {
+      throw Exception(
+          'creating your login failed (HTTP ${userResp.statusCode})');
+    }
+  }
+
+  /// Persist [port] into the server config (mStream owns the rest of the
+  /// file; see [_ensureConfig] for why storage/port are the app's keys).
+  Future<void> _writeConfigPort(int port) async {
     final dataDir = await _dataDir();
     final confDir = Directory(p.join(dataDir.path, 'conf'));
     await confDir.create(recursive: true);
@@ -265,26 +424,11 @@ class ServerController {
       try {
         cfg = jsonDecode(await configFile.readAsString())
             as Map<String, dynamic>;
-      } catch (_) {/* corrupt — rebuilt below */}
+      } catch (_) {/* corrupt — reseeded by _ensureConfig on start */}
     }
     cfg['port'] = port;
-    final folders =
-        (cfg['folders'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-    folders[folderName] = {'root': folderRoot, 'type': 'music'};
-    cfg['folders'] = folders;
-    final users =
-        (cfg['users'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-    users[username] = {
-      'password': passwordHash,
-      'salt': salt,
-      'admin': true,
-      'vpaths': [folderName],
-    };
-    cfg['users'] = users;
     await configFile
         .writeAsString(const JsonEncoder.withIndent('  ').convert(cfg));
-    _log('quick setup: folder "$folderName" + user "$username" (port $port)');
-    await start();
   }
 
   /// Resolve the boot config + port. Seeds the config when needed with (a) the
@@ -327,6 +471,64 @@ class ServerController {
     return (configPath: configFile.path, port: port);
   }
 
+  /// Ensure [port] is free before a takeover start: kill-tree a leftover of
+  /// OUR bundled server when one holds it (waiting for the socket to release),
+  /// and fail fast when a foreign process does — killing someone else's server
+  /// is never on the table.
+  Future<void> _freePortForTakeover(int port) async {
+    if (await _isPortFree(port)) return;
+    final pid = await _listenerPid(port);
+    if (pid == null || !await _isOurServerExe(pid)) {
+      throw Exception(
+          'port $port is in use by another program — choose a different port');
+    }
+    _log('reaping leftover server (pid $pid) to free port $port');
+    await _killTree(pid);
+    if (!await _waitPortFree(port)) {
+      throw Exception(
+          'port $port did not free up after stopping the old server');
+    }
+  }
+
+  /// Poll until [port] is bindable (250ms x [tries]); true when it freed.
+  Future<bool> _waitPortFree(int port, {int tries = 20}) async {
+    for (var i = 0; i < tries; i++) {
+      if (await _isPortFree(port)) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    return false;
+  }
+
+  /// Whether [pid]'s parent process is a LIVE instance of this app — i.e. the
+  /// server belongs to another running copy of mstream_music, not to a dead
+  /// run. One PowerShell CIM query; only reached on the rare
+  /// port-already-held boot path.
+  Future<bool> _isChildOfLiveApp(int pid) async {
+    if (!Platform.isWindows) return false;
+    try {
+      final r = await Process.run('powershell', [
+        '-NoProfile',
+        '-Command',
+        "\$p = (Get-CimInstance Win32_Process -Filter 'ProcessId=$pid')"
+            ".ParentProcessId; "
+            "(Get-Process -Id \$p -ErrorAction SilentlyContinue).ProcessName",
+      ]);
+      return (r.stdout as String).trim().toLowerCase() == 'mstream_music';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Whether [pid] runs one of OUR managed server binaries (exe path under the
+  /// binary manager's install root). Gates recycling and takeover reaping —
+  /// a user's separate mStream install must never be killed.
+  Future<bool> _isOurServerExe(int pid) async {
+    final exe = _exeOfPid(pid);
+    if (exe == null) return false;
+    final root = await ServerBinaryManager.instance.installRootPath();
+    return p.isWithin(root, exe);
+  }
+
   /// A free loopback port, preferring 3000; falls back to an OS-assigned one.
   /// (Small TOCTOU window before mStream binds — acceptable for a local server.)
   Future<int> _pickPort() async {
@@ -339,8 +541,15 @@ class ServerController {
   }
 
   Future<bool> _isPortFree(int port) async {
+    // netstat's LISTENING table is the truth; bind probes lie on Windows in
+    // two ways (both observed with a python http.server squatting 3000): a
+    // loopback probe coexists with another process's wildcard socket, and any
+    // probe binds "successfully" over an SO_REUSEADDR listener. The spawned
+    // child then EADDRINUSE-crashes on a port we called free.
+    if (await _listenerPid(port) != null) return false;
     try {
-      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      // netstat unavailable/unparsable → fall back to a wildcard bind probe.
+      final s = await ServerSocket.bind(InternetAddress.anyIPv4, port);
       await s.close();
       return true;
     } catch (_) {
@@ -355,5 +564,49 @@ class ServerController {
     final dir = Directory(p.join(support.path, 'mstream-server-data'));
     await dir.create(recursive: true);
     return _dataDirCache = dir;
+  }
+}
+
+// ── pid → executable path (Windows) ──
+
+typedef _OpenProcessC = IntPtr Function(Uint32, Int32, Uint32);
+typedef _OpenProcessD = int Function(int, int, int);
+typedef _CloseHandleC = Int32 Function(IntPtr);
+typedef _CloseHandleD = int Function(int);
+typedef _QueryImageNameC = Int32 Function(
+    IntPtr, Uint32, Pointer<Utf16>, Pointer<Uint32>);
+typedef _QueryImageNameD = int Function(
+    int, int, Pointer<Utf16>, Pointer<Uint32>);
+
+/// Full executable path of [pid] via kernel32 (OpenProcess +
+/// QueryFullProcessImageNameW), or null when it can't be resolved (process
+/// gone, access denied, non-Windows). No subprocess — cheap enough for the
+/// recycle/takeover paths.
+String? _exeOfPid(int pid) {
+  if (!Platform.isWindows) return null;
+  try {
+    final k32 = DynamicLibrary.open('kernel32.dll');
+    final openProcess =
+        k32.lookupFunction<_OpenProcessC, _OpenProcessD>('OpenProcess');
+    final closeHandle =
+        k32.lookupFunction<_CloseHandleC, _CloseHandleD>('CloseHandle');
+    final queryName = k32.lookupFunction<_QueryImageNameC, _QueryImageNameD>(
+        'QueryFullProcessImageNameW');
+    const processQueryLimitedInformation = 0x1000;
+    final handle = openProcess(processQueryLimitedInformation, 0, pid);
+    if (handle == 0) return null;
+    final buf = malloc<Uint16>(1024);
+    final len = malloc<Uint32>(1)..value = 1024;
+    try {
+      final ok = queryName(handle, 0, buf.cast<Utf16>(), len);
+      if (ok == 0) return null;
+      return buf.cast<Utf16>().toDartString(length: len.value);
+    } finally {
+      malloc.free(buf);
+      malloc.free(len);
+      closeHandle(handle);
+    }
+  } catch (_) {
+    return null;
   }
 }
