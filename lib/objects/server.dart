@@ -85,6 +85,13 @@ class Server {
   // exposes the toggle and ignores the flag.
   bool allowSelfSigned = false;
 
+  // True for the entry that points at THIS app's embedded mStream server —
+  // created by the desktop onboarding's Server Mode (fresh setup, or attaching
+  // to the local server's existing login). The UI keys management affordances
+  // off it (server status/restart/logs/admin) that make no sense for a remote
+  // server. At most one entry should carry it.
+  bool isAttachedServer = false;
+
   // Auto DJ
   int? autoDJminRating;
   Map<String, bool> autoDJPaths = {};
@@ -158,7 +165,11 @@ class Server {
         serverVersion = json['serverVersion'] as String?,
         versionCheckedAt = json['versionCheckedAt'] is int
             ? DateTime.fromMillisecondsSinceEpoch(json['versionCheckedAt'])
-            : null;
+            : null,
+        // Backfill: embedded-server entries predating the flag are recognized
+        // by the '__local__' localname onboarding has always stamped on them.
+        isAttachedServer =
+            json['isAttachedServer'] == true || json['localname'] == '__local__';
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -182,6 +193,7 @@ class Server {
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode,
         'serverVersion': serverVersion,
-        'versionCheckedAt': versionCheckedAt?.millisecondsSinceEpoch
+        'versionCheckedAt': versionCheckedAt?.millisecondsSinceEpoch,
+        'isAttachedServer': isAttachedServer
       };
 }
