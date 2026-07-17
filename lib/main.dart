@@ -49,6 +49,7 @@ import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
+import 'screens/desktop_onboarding.dart';
 import 'widgets/desktop_shell.dart';
 
 void main() {
@@ -211,6 +212,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  // True once the persisted server list has been read — before that, an empty
+  // list just means "still loading", not "fresh install".
+  bool _serversLoaded = false;
   // Set while we're watching the bundled server to finish booting so we can
   // retry the startup-view load once it's ready (see _armEmbeddedStartupRetry).
   VoidCallback? _startupRetryListener;
@@ -236,6 +240,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
+      // Desktop first-run: only after the list has actually LOADED can "no
+      // servers" mean "fresh install" (and not "still reading the file") —
+      // gate the onboarding cover on this. See build().
+      if (mounted) setState(() => _serversLoaded = true);
     });
     // (DownloadManager().initDownloader() moved to _startApp so headless
     // boots track download completions too — a second call here would attach
@@ -615,7 +623,23 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     final useDesktop =
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
             MediaQuery.sizeOf(context).width >= 900;
-    if (useDesktop) return const DesktopShell();
+    if (useDesktop) {
+      // First run (no servers configured): a full-window mode chooser —
+      // Client Mode (connect to an existing server) or Server Mode (set this
+      // PC up as one). Swaps back to the shell the moment a server exists;
+      // also reappears if the user ever deletes every server.
+      return StreamBuilder<List<Server>>(
+        stream: ServerManager().serverListStream,
+        initialData: ServerManager().serverList,
+        builder: (context, snap) {
+          final servers = snap.data ?? ServerManager().serverList;
+          if (_serversLoaded && servers.isEmpty) {
+            return const DesktopOnboardingScreen();
+          }
+          return const DesktopShell();
+        },
+      );
+    }
     return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {

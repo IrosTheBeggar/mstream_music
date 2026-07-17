@@ -108,6 +108,9 @@ dependencies:
   launch_at_startup: ^0.5.1
   crypto: ^3.0.7
   archive: ^4.0.9
+  # Native folder picker for the desktop onboarding's Server Mode (choose the
+  # music library folder). Official flutter.dev package; Windows/macOS/Linux.
+  file_selector: ^1.0.3
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
