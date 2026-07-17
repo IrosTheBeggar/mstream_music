@@ -117,6 +117,12 @@ class ServerBinaryManager {
     return _rootCache = dir;
   }
 
+  /// Absolute root every managed server binary lives under (per-version
+  /// subdirs). Lets the controller verify that a process holding our port is
+  /// one of OUR binaries before adopting or reaping it — a user's separate
+  /// mStream install must be neither.
+  Future<String> installRootPath() async => (await _root()).path;
+
   Directory _versionDir(Directory root, String version) =>
       Directory(p.join(root.path, version));
 
