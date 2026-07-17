@@ -2526,6 +2526,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       // longer exists.
       _resetAutoDJSession();
       unawaited(AutoDJManager().clearSonicSeed());
+      // Park the revive spot at top-of-queue (see _doClearPlaylist for why
+      // the park exists).
+      _restoreSpot = (index: 0, position: Duration.zero);
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
@@ -2576,7 +2579,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     // one used to hijack any later empty-queue setAutoDJ (Android Auto's
     // Shuffle All replayed the last seed song instead of shuffling).
     unawaited(AutoDJManager().clearSonicSeed());
-    _restoreSpot = null; // the queue the spot described is gone
+    // Park the revive spot at top-of-queue rather than just dropping it:
+    // the deactivated just_audio platform keeps the LAST loaded index and
+    // position through the clear, so a play() on tracks added to the
+    // emptied queue would re-seed at that stale spot — clamped to the END
+    // of the new queue ("add all starts on the last song"). The park is
+    // superseded by user navigation and cleared once a track loads.
+    _restoreSpot = (index: 0, position: Duration.zero);
     _intentionalStop = true;
     await _backend.stop();
     await super.stop();
