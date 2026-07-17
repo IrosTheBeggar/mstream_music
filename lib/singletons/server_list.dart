@@ -4,9 +4,12 @@ import 'dart:convert';
 import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
+import '../l10n/app_localizations.dart';
+import '../util/startup_view.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
 import './log_manager.dart';
+import './settings.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../native/iroh_tunnel.dart';
@@ -133,6 +136,28 @@ class ServerManager {
   /// single native tunnel), so the add-server flow gates a second one.
   bool get hasIrohServer => serverList.any((s) => s.isIroh);
 
+  static final bool _isDesktop =
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
+  // Desktop landing after a programmatic server switch (first add, deleting
+  // the current server): load the configured startup section with the browse
+  // pane held on the spinner; on failure clear it so the offline placeholder
+  // + toast take over. Mirrors the sidebar switcher's flow — without this the
+  // pane sits on the "home" placeholder even though the server is healthy.
+  Future<void> _openStartupSectionFor(Server s) async {
+    try {
+      await loadStartupSection(SettingsManager().effectiveStartupView, s);
+    } catch (_) {
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null && ctx.mounted
+          ? AppLocalizations.of(ctx).mainFailedToConnect
+          : 'Failed to connect to server.');
+    } finally {
+      BrowserManager().awaitingSectionLoad = false;
+      BrowserManager().updateStream();
+    }
+  }
+
   Future<void> addServer(Server newServer) async {
     // One iroh server max (single tunnel). The add-server UI blocks this; this is
     // the code-level backstop so no other path can add a second.
@@ -145,7 +170,15 @@ class ServerManager {
     if (currentServer == null) {
       currentServer = newServer;
       _currentServerStream.sink.add(currentServer);
+      // Desktop's browser "home" is the offline placeholder (there's no nav
+      // grid there), so a first add would land on "nothing found" with a
+      // healthy server. Hold the spinner and load the configured startup
+      // section instead — same landing the sidebar switcher gives. The phone
+      // keeps its nav grid. Fire-and-forget so the add flow (and its screen
+      // pop) isn't held behind the section fetch.
+      if (_isDesktop) BrowserManager().awaitingSectionLoad = true;
       BrowserManager().goToNavScreen();
+      if (_isDesktop) unawaited(_openStartupSectionFor(newServer));
     }
 
     // Create server directory (for downloads)
@@ -651,9 +684,12 @@ class ServerManager {
       _currentServerStream.sink.add(currentServer);
     } else if (removeThisServer == currentServer) {
       currentServer = serverList[0];
-      // clear the browser
+      // clear the browser; on desktop land on the fallback server's startup
+      // section (its "home" is the offline placeholder — see addServer).
+      if (_isDesktop) BrowserManager().awaitingSectionLoad = true;
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
+      if (_isDesktop) unawaited(_openStartupSectionFor(currentServer!));
     }
 
     // Start/stop the tunnel to match the (possibly changed) active server.
