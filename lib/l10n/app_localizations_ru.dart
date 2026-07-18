@@ -1600,6 +1600,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'QR scanning isn\'t available on this device.';
 
   @override
+  String get serverBadgeBuiltIn => 'Built-in';
+
+  @override
   String get irohAndroidOnly =>
       'Quick Connect isn\'t available on this device.';
 
