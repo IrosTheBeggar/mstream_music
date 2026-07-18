@@ -307,6 +307,11 @@ class VelvetColors {
   // Theme-independent.
   static const radiusSmall = 7.0;
   static const radiusLarge = 12.0;
+
+  /// Height of every top bar in the desktop shell (sidebar header, browse
+  /// toolbar, queue header) so their bottom dividers form one continuous line
+  /// across the three columns.
+  static const desktopTopBarHeight = 56.0;
 }
 
 ThemeData buildAppTheme(VelvetPalette p) {
