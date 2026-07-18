@@ -49,13 +49,13 @@ class AlbumGrid extends StatelessWidget {
   /// derived from row height, which moves as soon as the usable width does.
   /// Threading it through all three keeps the two in agreement.
   ///
-  /// Phones keep their 2/3 columns; wider panes scale by a ~220px target tile
+  /// Phones keep their 2/3 columns; wider panes scale by a ~240px target tile
   /// so album cards don't balloon on a desktop window.
   static int columnsFor(double width, [double gutter = 0]) {
     final w = width - gutter;
     if (w <= 400) return 2;
     if (w <= 600) return 3;
-    return (w ~/ 220).clamp(4, 12);
+    return (w ~/ 240).clamp(4, 12);
   }
 
   static double itemWidthFor(double width, [double gutter = 0]) {
@@ -141,7 +141,9 @@ class _AlbumCardState extends State<_AlbumCard> {
   Widget _card(Widget image) {
     return Material(
       color: _hover ? VelvetColors.raised : VelvetColors.card,
-      elevation: _hover ? 8 : 0,
+      // A little resting depth so cards read as cards on the dark bg; hover
+      // lifts further.
+      elevation: _hover ? 8 : 2,
       shadowColor: Colors.black54,
       borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
       clipBehavior: Clip.antiAlias,
@@ -163,7 +165,7 @@ class _AlbumCardState extends State<_AlbumCard> {
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(8, 6, 8, 8),
+                padding: EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -176,7 +178,7 @@ class _AlbumCardState extends State<_AlbumCard> {
                         style: TextStyle(
                           color: VelvetColors.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -184,14 +186,14 @@ class _AlbumCardState extends State<_AlbumCard> {
                         widget.item.subtext!.isNotEmpty)
                       Flexible(
                         child: Padding(
-                          padding: EdgeInsets.only(top: 1),
+                          padding: EdgeInsets.only(top: 2),
                           child: Text(
                             widget.item.subtext!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: VelvetColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 11,
                             ),
                           ),
                         ),
