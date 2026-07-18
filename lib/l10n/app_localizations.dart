@@ -2724,6 +2724,12 @@ abstract class AppLocalizations {
   /// **'QR scanning isn\'t available on this device.'**
   String get irohQrAndroidOnly;
 
+  /// Chip on a Manage Servers row marking the server that is bundled with and managed by this app (desktop Server Mode).
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get serverBadgeBuiltIn;
+
   /// Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so).
   ///
   /// In en, this message translates to:

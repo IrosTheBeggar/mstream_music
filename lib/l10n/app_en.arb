@@ -1047,6 +1047,10 @@
   "@irohQrAndroidOnly": {
     "description": "Shown when QR scanning is attempted where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so)."
   },
+  "serverBadgeBuiltIn": "Built-in",
+  "@serverBadgeBuiltIn": {
+    "description": "Chip on a Manage Servers row marking the server that is bundled with and managed by this app (desktop Server Mode)."
+  },
   "irohAndroidOnly": "Quick Connect isn't available on this device.",
   "@irohAndroidOnly": {
     "description": "Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so)."
