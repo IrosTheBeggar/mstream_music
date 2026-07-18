@@ -1730,6 +1730,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'QR-Scan ist auf diesem Gerät nicht verfügbar.';
 
   @override
+  String get serverBadgeBuiltIn => 'Built-in';
+
+  @override
   String get irohAndroidOnly =>
       'Schnellverbindung ist auf diesem Gerät nicht verfügbar.';
 

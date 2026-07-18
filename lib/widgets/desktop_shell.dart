@@ -507,6 +507,23 @@ class _SidebarServer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<List<Server>>(
+      stream: ServerManager().serverListStream,
+      initialData: ServerManager().serverList,
+      builder: (context, listSnap) {
+        // With a single server (the common desktop case: just the built-in
+        // one) a switcher is noise — hide the whole row. Adding servers stays
+        // reachable via Manage Servers, and the dropdown reappears as soon as
+        // a second server exists.
+        if ((listSnap.data ?? const <Server>[]).length <= 1) {
+          return const SizedBox.shrink();
+        }
+        return _dropdown(context);
+      },
+    );
+  }
+
+  Widget _dropdown(BuildContext context) {
     return StreamBuilder<Server?>(
       stream: ServerManager().currentServerStream,
       initialData: ServerManager().currentServer,

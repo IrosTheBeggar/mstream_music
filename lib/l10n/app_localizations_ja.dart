@@ -1654,6 +1654,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get irohQrAndroidOnly => 'この端末では QR スキャンを利用できません。';
 
   @override
+  String get serverBadgeBuiltIn => 'Built-in';
+
+  @override
   String get irohAndroidOnly => 'この端末ではクイック接続を利用できません。';
 
   @override
