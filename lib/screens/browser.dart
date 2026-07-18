@@ -8,7 +8,10 @@ import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
+import '../server/server_binary_manager.dart';
+import '../server/server_controller.dart';
 import '../singletons/server_list.dart';
+import '../widgets/eq_bars_spinner.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
@@ -1214,7 +1217,65 @@ class _DesktopBrowsePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final noServer = ServerManager().currentServer == null;
+    final server = ServerManager().currentServer;
+    // The attached (built-in) server boots WITH the app, so at launch this
+    // pane's "offline" reading is usually just the seconds before the child
+    // process answers — confusing. Render the live controller state instead:
+    // a booting spinner until it's up (the startup retry then loads the
+    // section and this placeholder unmounts), and the offline text only on a
+    // real startup error.
+    if (server != null && server.isAttachedServer) {
+      return ValueListenableBuilder<ServerRunStatus>(
+        valueListenable: ServerController.instance.status,
+        builder: (context, run, _) => run.phase == ServerRunPhase.error
+            ? _offline(noServer: false)
+            : _booting(),
+      );
+    }
+    return _offline(noServer: server == null);
+  }
+
+  Widget _booting() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const EqBarsSpinner(width: 68, height: 44),
+            const SizedBox(height: 20),
+            Text(
+              'Starting your server…',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            // First run downloads the server binary — surface its progress
+            // instead of a silent spinner (the one moment this takes minutes).
+            ValueListenableBuilder<ServerStatus>(
+              valueListenable: ServerBinaryManager.instance.status,
+              builder: (context, bin, _) {
+                final label = bin.phase == ServerPhase.downloading
+                    ? 'Downloading the built-in mStream server… '
+                        '${(bin.progress * 100).round()}%'
+                    : 'The built-in mStream server is booting up.';
+                return Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13, color: VelvetColors.textSecondary),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _offline({required bool noServer}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
