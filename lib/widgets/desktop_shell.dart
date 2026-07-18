@@ -200,8 +200,14 @@ class _DesktopShellState extends State<DesktopShell> {
     super.dispose();
   }
 
-  // Reset to the browse root so destinations never stack on each other.
-  void _showBrowse() => _contentNav.currentState?.popUntil((r) => r.isFirst);
+  // Reset to the browse root so destinations never stack on each other. Also
+  // dismisses an open album detail: it's an overlay ABOVE the browse pane
+  // (IndexedStack in _DesktopBrowseView), so without this a sidebar jump
+  // loads the new section underneath while the album panel stays up.
+  void _showBrowse() {
+    BrowserManager().closeAlbumDetail();
+    _contentNav.currentState?.popUntil((r) => r.isFirst);
+  }
 
   void _openCategory(_Category cat) {
     _showBrowse();
