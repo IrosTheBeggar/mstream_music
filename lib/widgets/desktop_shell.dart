@@ -84,39 +84,87 @@ class _DesktopShellState extends State<DesktopShell> {
   // MUSIC section: direct browse destinations. Each loads its view into the
   // shared browse pane via the same ApiManager calls the phone browser uses.
   late final List<_Category> _categories = [
-    _Category('files', Icons.folder_outlined, 'File Explorer',
-        () => ApiManager().getFileList('~', useThisServer: _server)),
-    _Category('playlists', Icons.queue_music, 'Playlists',
-        () => ApiManager().getPlaylists(useThisServer: _server)),
-    _Category('albums', Icons.album_outlined, 'Albums',
-        () => ApiManager().getAlbums(useThisServer: _server)),
-    _Category('artists', Icons.person_outline, 'Artists',
-        () => ApiManager().getArtists(useThisServer: _server)),
-    _Category('recent', Icons.fiber_new_outlined, 'Recently Added',
-        () => ApiManager().getRecentlyAdded(useThisServer: _server)),
-    _Category('rated', Icons.star_outline, 'Rated',
-        () => ApiManager().getRated(useThisServer: _server)),
+    _Category(
+      'files',
+      Icons.folder_outlined,
+      'File Explorer',
+      () => ApiManager().getFileList('~', useThisServer: _server),
+    ),
+    _Category(
+      'playlists',
+      Icons.queue_music,
+      'Playlists',
+      () => ApiManager().getPlaylists(useThisServer: _server),
+    ),
+    _Category(
+      'albums',
+      Icons.album_outlined,
+      'Albums',
+      () => ApiManager().getAlbums(useThisServer: _server),
+    ),
+    _Category(
+      'artists',
+      Icons.person_outline,
+      'Artists',
+      () => ApiManager().getArtists(useThisServer: _server),
+    ),
+    _Category(
+      'recent',
+      Icons.fiber_new_outlined,
+      'Recently Added',
+      () => ApiManager().getRecentlyAdded(useThisServer: _server),
+    ),
+    _Category(
+      'rated',
+      Icons.star_outline,
+      'Rated',
+      () => ApiManager().getRated(useThisServer: _server),
+    ),
   ];
 
   // TOOLS section: screens pushed into the content pane.
   late final List<_NavItem> _tools = [
-    _NavItem('autodj', Icons.album_outlined, (l) => l.autoDjTitle,
-        (_) => AutoDJScreen()),
-    _NavItem('transcode', Icons.transform, (l) => l.transcodeTitle,
-        (_) => TranscodeScreen()),
+    _NavItem(
+      'autodj',
+      Icons.album_outlined,
+      (l) => l.autoDjTitle,
+      (_) => AutoDJScreen(),
+    ),
+    _NavItem(
+      'transcode',
+      Icons.transform,
+      (l) => l.transcodeTitle,
+      (_) => TranscodeScreen(),
+    ),
   ];
 
   // Bottom gear overflow: settings / admin, kept out of the primary nav per
   // desktop convention.
   late final List<_NavItem> _gearItems = [
-    _NavItem('manageServers', Icons.dns_outlined, (l) => l.manageServersTitle,
-        (_) => ManageServersScreen()),
-    _NavItem('settings', Icons.settings_outlined, (l) => l.settingsTitle,
-        (_) => SettingsScreen()),
-    _NavItem('diagnostics', Icons.bug_report_outlined,
-        (l) => l.diagnosticsTitle, (_) => DiagnosticsScreen()),
-    _NavItem('about', Icons.info_outline, (l) => l.aboutTitle,
-        (_) => AboutScreen()),
+    _NavItem(
+      'manageServers',
+      Icons.dns_outlined,
+      (l) => l.manageServersTitle,
+      (_) => ManageServersScreen(),
+    ),
+    _NavItem(
+      'settings',
+      Icons.settings_outlined,
+      (l) => l.settingsTitle,
+      (_) => SettingsScreen(),
+    ),
+    _NavItem(
+      'diagnostics',
+      Icons.bug_report_outlined,
+      (l) => l.diagnosticsTitle,
+      (_) => DiagnosticsScreen(),
+    ),
+    _NavItem(
+      'about',
+      Icons.info_outline,
+      (l) => l.aboutTitle,
+      (_) => AboutScreen(),
+    ),
   ];
 
   // Sidebar highlight for the startup section: the launch loader and a server
@@ -169,22 +217,25 @@ class _DesktopShellState extends State<DesktopShell> {
 
   void _openTool(_NavItem tool) {
     _showBrowse();
-    _contentNav.currentState
-        ?.push(MaterialPageRoute(builder: (_) => tool.build(context)));
+    _contentNav.currentState?.push(
+      MaterialPageRoute(builder: (_) => tool.build(context)),
+    );
     setState(() => _active = tool.key);
   }
 
   void _openVisualizer() {
     _showBrowse();
     _contentNav.currentState?.push(
-        MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()));
+      MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()),
+    );
     setState(() => _active = 'visualizer');
   }
 
   void _openProjectM() {
     _showBrowse();
-    _contentNav.currentState
-        ?.push(MaterialPageRoute(builder: (_) => const ProjectMScreen()));
+    _contentNav.currentState?.push(
+      MaterialPageRoute(builder: (_) => const ProjectMScreen()),
+    );
     setState(() => _active = 'milkdrop');
   }
 
@@ -230,7 +281,8 @@ class _DesktopShellState extends State<DesktopShell> {
                   child: Navigator(
                     key: _contentNav,
                     onGenerateRoute: (_) => MaterialPageRoute(
-                        builder: (_) => const _DesktopBrowseView()),
+                      builder: (_) => const _DesktopBrowseView(),
+                    ),
                   ),
                 ),
                 DesktopNowPlayingBar(
@@ -248,7 +300,8 @@ class _DesktopShellState extends State<DesktopShell> {
             SizedBox(
               width: queueWidth,
               child: _DesktopQueuePanel(
-                  onClose: () => setState(() => _queueOpen = false)),
+                onClose: () => setState(() => _queueOpen = false),
+              ),
             ),
           ],
         ],
@@ -302,14 +355,17 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.label);
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                letterSpacing: 1.2,
-                fontWeight: FontWeight.w700,
-                color: VelvetColors.textTertiary)),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        letterSpacing: 1.2,
+        fontWeight: FontWeight.w700,
+        color: VelvetColors.textTertiary,
+      ),
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -347,9 +403,16 @@ class _DesktopSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SidebarLogo(),
-          const _SidebarServer(),
+          // Header pinned to the shared top-bar height so the divider below is
+          // continuous with the browse toolbar's and the queue header's.
+          const SizedBox(
+            height: VelvetColors.desktopTopBarHeight,
+            child: _SidebarLogo(),
+          ),
           Divider(height: 1, color: VelvetColors.border),
+          // Server switcher (hidden with a single server) sits under the
+          // aligned header line rather than stretching the header.
+          const _SidebarServer(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -405,26 +468,42 @@ class _DesktopSidebar extends StatelessWidget {
                 for (final g in gearItems)
                   PopupMenuItem<_NavItem>(
                     value: g,
-                    child: Row(children: [
-                      Icon(g.icon, size: 18, color: VelvetColors.textSecondary),
-                      const SizedBox(width: 12),
-                      Text(g.label(l)),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(
+                          g.icon,
+                          size: 18,
+                          color: VelvetColors.textSecondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(g.label(l)),
+                      ],
+                    ),
                   ),
               ],
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                child: Row(children: [
-                  Icon(Icons.settings_outlined,
-                      size: 20, color: VelvetColors.textSecondary),
-                  const SizedBox(width: 14),
-                  Text('Settings',
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 11,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings_outlined,
+                      size: 20,
+                      color: VelvetColors.textSecondary,
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Settings',
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: VelvetColors.textSecondary)),
-                ]),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: VelvetColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -440,24 +519,30 @@ class _SidebarLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Icon(Icons.graphic_eq, color: VelvetColors.primary, size: 26),
           const SizedBox(width: 10),
           Text.rich(
-            TextSpan(children: [
-              TextSpan(
+            TextSpan(
+              children: [
+                TextSpan(
                   text: 'm',
                   style: TextStyle(
-                      fontWeight: FontWeight.w300,
-                      color: VelvetColors.textSecondary)),
-              TextSpan(
+                    fontWeight: FontWeight.w300,
+                    color: VelvetColors.textSecondary,
+                  ),
+                ),
+                TextSpan(
                   text: 'Stream',
                   style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: VelvetColors.textPrimary)),
-            ]),
+                    fontWeight: FontWeight.w700,
+                    color: VelvetColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
             style: const TextStyle(fontSize: 20, letterSpacing: -0.3),
           ),
         ],
@@ -473,8 +558,9 @@ class _SidebarServer extends StatelessWidget {
 
   Future<void> _switchTo(BuildContext context, int index) async {
     if (index == -1) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => AddServerScreen()));
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => AddServerScreen()));
       return;
     }
     // Capture the localized error before any await — the context may be gone by
@@ -490,13 +576,17 @@ class _SidebarServer extends StatelessWidget {
     BrowserManager().awaitingSectionLoad = true;
     try {
       await ServerManager().changeCurrentServer(index);
-      await ServerManager()
-          .getServerPaths(ServerManager().currentServer!, throwErr: true);
+      await ServerManager().getServerPaths(
+        ServerManager().currentServer!,
+        throwErr: true,
+      );
       await ServerManager().callAfterEditServer();
       // Land on the configured default page for the newly-selected server
       // instead of the suppressed home grid / offline placeholder.
-      await loadStartupSection(SettingsManager().effectiveStartupView,
-          ServerManager().currentServer!);
+      await loadStartupSection(
+        SettingsManager().effectiveStartupView,
+        ServerManager().currentServer!,
+      );
     } catch (_) {
       showGlobalSnack(failedMsg);
     } finally {
@@ -537,28 +627,36 @@ class _SidebarServer extends StatelessWidget {
             for (final s in ServerManager().serverList)
               PopupMenuItem(
                 value: ServerManager().serverList.indexOf(s),
-                child: Text(s.url,
-                    style: TextStyle(
-                        color: s == ServerManager().currentServer
-                            ? VelvetColors.primary
-                            : VelvetColors.textPrimary)),
+                child: Text(
+                  s.url,
+                  style: TextStyle(
+                    color: s == ServerManager().currentServer
+                        ? VelvetColors.primary
+                        : VelvetColors.textPrimary,
+                  ),
+                ),
               ),
             const PopupMenuDivider(),
             PopupMenuItem(
               value: -1,
-              child: Row(children: [
-                Icon(Icons.add, size: 18, color: VelvetColors.textSecondary),
-                const SizedBox(width: 8),
-                const Text('Add server'),
-              ]),
+              child: Row(
+                children: [
+                  Icon(Icons.add, size: 18, color: VelvetColors.textSecondary),
+                  const SizedBox(width: 8),
+                  const Text('Add server'),
+                ],
+              ),
             ),
           ],
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+            padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
             child: Row(
               children: [
-                Icon(Icons.dns_outlined,
-                    size: 18, color: VelvetColors.textSecondary),
+                Icon(
+                  Icons.dns_outlined,
+                  size: 18,
+                  color: VelvetColors.textSecondary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -566,11 +664,16 @@ class _SidebarServer extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 13, color: VelvetColors.textSecondary),
+                      fontSize: 13,
+                      color: VelvetColors.textSecondary,
+                    ),
                   ),
                 ),
-                Icon(Icons.unfold_more,
-                    size: 18, color: VelvetColors.textTertiary),
+                Icon(
+                  Icons.unfold_more,
+                  size: 18,
+                  color: VelvetColors.textTertiary,
+                ),
               ],
             ),
           ),
@@ -614,16 +717,18 @@ class _SidebarTile extends StatelessWidget {
                 Icon(icon, size: 20, color: color),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                          color: selected
-                              ? VelvetColors.textPrimary
-                              : VelvetColors.textSecondary)),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected
+                          ? VelvetColors.textPrimary
+                          : VelvetColors.textSecondary,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -649,9 +754,17 @@ class _DesktopBrowseView extends StatelessWidget {
       child: Column(
         children: [
           // The consolidated browse chrome (back · label · search · download ·
-          // add-all). It's a PreferredSizeWidget; give it its intrinsic height
-          // since it's not in an AppBar's bottom slot here.
-          const SizedBox(height: 50, child: BrowserToolbar()),
+          // add-all), constrained to the shared top-bar height so its divider
+          // lines up with the sidebar's and the queue's. The toolbar carries a
+          // 6px bottom pad tuned for its phone AppBar slot — cancel it with a
+          // matching top pad so the content centers in the taller bar.
+          const SizedBox(
+            height: VelvetColors.desktopTopBarHeight,
+            child: Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: BrowserToolbar(),
+            ),
+          ),
           Divider(height: 1, color: VelvetColors.border),
           Expanded(
             child: StreamBuilder<DisplayItem?>(
@@ -693,59 +806,78 @@ class _DesktopQueuePanel extends StatelessWidget {
       color: VelvetColors.surface,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 8, 10),
-            child: Row(
-              children: [
-                Text('Queue',
+          // Same fixed height as the sidebar header and browse toolbar so the
+          // divider below continues their line across the window.
+          SizedBox(
+            height: VelvetColors.desktopTopBarHeight,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Queue',
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: VelvetColors.textPrimary)),
-                const Spacer(),
-                // Clear is the most-reached-for queue action, so it gets its
-                // own button (same no-confirm behavior as the phone queue
-                // header) instead of hiding in the ⋮ menu.
-                IconButton(
-                  icon: const Icon(Icons.delete_sweep, size: 20),
-                  color: VelvetColors.textSecondary,
-                  tooltip: l.mainClearQueue,
-                  onPressed: () => MediaManager()
-                      .audioHandler
-                      .customAction('clearPlaylist'),
-                ),
-                // Queue actions (act on the queue, so they live here): save the
-                // queue as a playlist, download it, or share it.
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  color: VelvetColors.surface,
-                  tooltip: l.mainMore,
-                  onSelected: (v) {
-                    switch (v) {
-                      case 'save':
-                        _saveQueueAsPlaylist(context);
-                        break;
-                      case 'download':
-                        downloadQueue(context);
-                        break;
-                      case 'share':
-                        showSharePlaylistDialog(context);
-                        break;
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    _queueMenuItem('save', Icons.playlist_add, 'Save as playlist'),
-                    _queueMenuItem(
-                        'download', Icons.download_for_offline, l.queueDownloadAll),
-                    _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  color: VelvetColors.textSecondary,
-                  onPressed: onClose,
-                ),
-              ],
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: VelvetColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Clear is the most-reached-for queue action, so it gets its
+                  // own button (same no-confirm behavior as the phone queue
+                  // header) instead of hiding in the ⋮ menu.
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep, size: 20),
+                    color: VelvetColors.textSecondary,
+                    tooltip: l.mainClearQueue,
+                    onPressed: () => MediaManager().audioHandler.customAction(
+                      'clearPlaylist',
+                    ),
+                  ),
+                  // Queue actions (act on the queue, so they live here): save the
+                  // queue as a playlist, download it, or share it.
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    color: VelvetColors.surface,
+                    tooltip: l.mainMore,
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'save':
+                          _saveQueueAsPlaylist(context);
+                          break;
+                        case 'download':
+                          downloadQueue(context);
+                          break;
+                        case 'share':
+                          showSharePlaylistDialog(context);
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      _queueMenuItem(
+                        'save',
+                        Icons.playlist_add,
+                        'Save as playlist',
+                      ),
+                      _queueMenuItem(
+                        'download',
+                        Icons.download_for_offline,
+                        l.queueDownloadAll,
+                      ),
+                      _queueMenuItem(
+                        'share',
+                        Icons.share_outlined,
+                        l.shareTitle,
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    color: VelvetColors.textSecondary,
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
             ),
           ),
           Divider(height: 1, color: VelvetColors.border),
@@ -761,14 +893,19 @@ class _DesktopQueuePanel extends StatelessWidget {
 }
 
 PopupMenuItem<String> _queueMenuItem(
-    String value, IconData icon, String label) {
+  String value,
+  IconData icon,
+  String label,
+) {
   return PopupMenuItem<String>(
     value: value,
-    child: Row(children: [
-      Icon(icon, size: 18, color: VelvetColors.textSecondary),
-      const SizedBox(width: 12),
-      Text(label),
-    ]),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: VelvetColors.textSecondary),
+        const SizedBox(width: 12),
+        Text(label),
+      ],
+    ),
   );
 }
 
@@ -776,10 +913,7 @@ PopupMenuItem<String> _queueMenuItem(
 /// paths, prompt for a name, then POST /playlist/save. Local-only / no-server
 /// items (which can't live in a server playlist) are skipped.
 Future<void> _saveQueueAsPlaylist(BuildContext context) async {
-  final paths = MediaManager()
-      .audioHandler
-      .queue
-      .value
+  final paths = MediaManager().audioHandler.queue.value
       .map((m) => m.extras?['path'])
       .whereType<String>()
       .toList();
@@ -787,8 +921,11 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
     showGlobalSnack('Nothing in the queue to save');
     return;
   }
-  final name = await PlaylistNameDialog.show(context,
-      title: 'Save as playlist', action: 'Save');
+  final name = await PlaylistNameDialog.show(
+    context,
+    title: 'Save as playlist',
+    action: 'Save',
+  );
   if (name == null || name.isEmpty) return;
   try {
     await ApiManager().savePlaylist(name, paths);
@@ -861,7 +998,9 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
             SizedBox(
               width: widget.nowPlayingWidth,
               child: _NowPlayingTab(
-                  onTap: widget.onToggleQueue, child: _trackInfo()),
+                onTap: widget.onToggleQueue,
+                child: _trackInfo(),
+              ),
             ),
         ],
       ),
@@ -874,9 +1013,10 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
       builder: (context, snap) {
         final item = snap.data;
         final url = item?.extras?['artUrl'] as String?;
-        final subtitle = [item?.artist, item?.album]
-            .where((s) => s != null && s.isNotEmpty)
-            .join(' — ');
+        final subtitle = [
+          item?.artist,
+          item?.album,
+        ].where((s) => s != null && s.isNotEmpty).join(' — ');
         return Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -885,24 +1025,31 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(item == null ? 'Nothing playing' : item.title,
+                  Text(
+                    item == null ? 'Nothing playing' : item.title,
+                    maxLines: 1,
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: item == null
+                          ? VelvetColors.textTertiary
+                          : VelvetColors.textPrimary,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
                       maxLines: 1,
                       textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: item == null
-                              ? VelvetColors.textTertiary
-                              : VelvetColors.textPrimary)),
-                  if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 1,
-                        textAlign: TextAlign.right,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12, color: VelvetColors.textSecondary)),
+                        fontSize: 12,
+                        color: VelvetColors.textSecondary,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -915,11 +1062,13 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                 height: 56,
                 child: url == null
                     ? albumArtFallback(iconSize: 22)
-                    : Image.network(url,
+                    : Image.network(
+                        url,
                         fit: BoxFit.cover,
                         cacheWidth: artCacheSize(56),
                         errorBuilder: (_, _, _) =>
-                            albumArtFallback(iconSize: 22)),
+                            albumArtFallback(iconSize: 22),
+                      ),
               ),
             ),
           ],
@@ -955,10 +1104,12 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                   child: SliderTheme(
                     data: SliderThemeData(
                       trackHeight: 3,
-                      overlayShape:
-                          const RoundSliderOverlayShape(overlayRadius: 10),
-                      thumbShape:
-                          const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 10,
+                      ),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 5,
+                      ),
                       activeTrackColor: VelvetColors.textSecondary,
                       inactiveTrackColor: VelvetColors.border2,
                       thumbColor: VelvetColors.textSecondary,
@@ -988,8 +1139,9 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
               icon: Icon(casting ? Icons.cast_connected : Icons.cast),
               iconSize: 22,
               tooltip: 'Cast',
-              color:
-                  casting ? VelvetColors.primary : VelvetColors.textSecondary,
+              color: casting
+                  ? VelvetColors.primary
+                  : VelvetColors.textSecondary,
               onPressed: () => showModalBottomSheet(
                 context: context,
                 backgroundColor: VelvetColors.surface,
@@ -1036,19 +1188,21 @@ class _SeekBarState extends State<_SeekBar> {
         final pos = snap.data?.position ?? Duration.zero;
         final dur = snap.data?.item?.duration;
         final ms = dur?.inMilliseconds ?? 0;
-        final ratio =
-            ms == 0 ? 0.0 : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
+        final ratio = ms == 0 ? 0.0 : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
         return Row(
           children: [
             SizedBox(
               width: 44,
-              child: Text(formatDuration(pos),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      // Elapsed in the accent colour, like the phone player.
-                      color: VelvetColors.primary)),
+              child: Text(
+                formatDuration(pos),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  // Elapsed in the accent colour, like the phone player.
+                  color: VelvetColors.primary,
+                ),
+              ),
             ),
             Expanded(
               // Bound the slider's height so it can't push the transport+seek
@@ -1059,10 +1213,12 @@ class _SeekBarState extends State<_SeekBar> {
                 child: SliderTheme(
                   data: SliderThemeData(
                     trackHeight: 3,
-                    overlayShape:
-                        const RoundSliderOverlayShape(overlayRadius: 10),
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 10,
+                    ),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
                     activeTrackColor: VelvetColors.primary,
                     inactiveTrackColor: VelvetColors.border2,
                     thumbColor: VelvetColors.primary,
@@ -1071,21 +1227,24 @@ class _SeekBarState extends State<_SeekBar> {
                     value: ratio,
                     onChanged: dur == null
                         ? null
-                        : (f) => MediaManager()
-                            .audioHandler
-                            .seek(Duration(milliseconds: (ms * f).round())),
+                        : (f) => MediaManager().audioHandler.seek(
+                            Duration(milliseconds: (ms * f).round()),
+                          ),
                   ),
                 ),
               ),
             ),
             SizedBox(
               width: 44,
-              child: Text(dur == null ? '--:--' : formatDuration(dur),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                      color: VelvetColors.textTertiary)),
+              child: Text(
+                dur == null ? '--:--' : formatDuration(dur),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: VelvetColors.textTertiary,
+                ),
+              ),
             ),
           ],
         );
@@ -1150,9 +1309,10 @@ class _ExpandedNowPlaying extends StatelessWidget {
             builder: (context, snap) {
               final item = snap.data;
               final url = item?.extras?['artUrl'] as String?;
-              final subtitle = [item?.artist, item?.album]
-                  .where((s) => s != null && s.isNotEmpty)
-                  .join(' — ');
+              final subtitle = [
+                item?.artist,
+                item?.album,
+              ].where((s) => s != null && s.isNotEmpty).join(' — ');
               return Row(
                 children: [
                   ClipRRect(
@@ -1162,11 +1322,13 @@ class _ExpandedNowPlaying extends StatelessWidget {
                       height: 72,
                       child: url == null
                           ? albumArtFallback(iconSize: 28)
-                          : Image.network(url,
+                          : Image.network(
+                              url,
                               fit: BoxFit.cover,
                               cacheWidth: artCacheSize(72),
                               errorBuilder: (_, _, _) =>
-                                  albumArtFallback(iconSize: 28)),
+                                  albumArtFallback(iconSize: 28),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -1175,23 +1337,29 @@ class _ExpandedNowPlaying extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item == null ? 'Nothing playing' : item.title,
+                        Text(
+                          item == null ? 'Nothing playing' : item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: item == null
+                                ? VelvetColors.textTertiary
+                                : VelvetColors.textPrimary,
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: item == null
-                                    ? VelvetColors.textTertiary
-                                    : VelvetColors.textPrimary)),
-                        if (subtitle.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: VelvetColors.textSecondary)),
+                              fontSize: 13,
+                              color: VelvetColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -1223,9 +1391,9 @@ class _DesktopTransport extends StatelessWidget {
             icon: const Icon(Icons.shuffle, size: 18),
             tooltip: 'Shuffle (S)',
             color: on ? VelvetColors.primary : VelvetColors.textTertiary,
-            onPressed: () => handler.setShuffleMode(on
-                ? AudioServiceShuffleMode.none
-                : AudioServiceShuffleMode.all),
+            onPressed: () => handler.setShuffleMode(
+              on ? AudioServiceShuffleMode.none : AudioServiceShuffleMode.all,
+            ),
           );
         },
       ),
@@ -1250,9 +1418,10 @@ class _DesktopTransport extends StatelessWidget {
               // Accent glow, matching the phone player's play button.
               boxShadow: [
                 BoxShadow(
-                    color: VelvetColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4)),
+                  color: VelvetColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: IconButton(
@@ -1280,18 +1449,19 @@ class _DesktopTransport extends StatelessWidget {
           final on = mode != AudioServiceRepeatMode.none;
           return IconButton(
             icon: Icon(
-                mode == AudioServiceRepeatMode.one
-                    ? Icons.repeat_one
-                    : Icons.repeat,
-                size: 18),
+              mode == AudioServiceRepeatMode.one
+                  ? Icons.repeat_one
+                  : Icons.repeat,
+              size: 18,
+            ),
             tooltip: 'Repeat (R)',
             color: on ? VelvetColors.primary : VelvetColors.textTertiary,
             onPressed: () {
               final next = mode == AudioServiceRepeatMode.none
                   ? AudioServiceRepeatMode.all
                   : mode == AudioServiceRepeatMode.all
-                      ? AudioServiceRepeatMode.one
-                      : AudioServiceRepeatMode.none;
+                  ? AudioServiceRepeatMode.one
+                  : AudioServiceRepeatMode.none;
               handler.setRepeatMode(next);
             },
           );
