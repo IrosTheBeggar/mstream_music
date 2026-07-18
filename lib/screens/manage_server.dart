@@ -139,7 +139,11 @@ class ManageServersScreen extends StatelessWidget {
               ? _menuItem('show', Icons.visibility_outlined, l.federatedShow)
               : _menuItem(
                   'hide', Icons.visibility_off_outlined, l.federatedHide),
-        if (!server.isFederated)
+        // The app-managed embedded server can't be removed from the UI: the
+        // app runs it, so deleting the entry would just strand the running
+        // server (Server Mode reconfigures it instead).
+        if (!server.isFederated &&
+            !ServerManager().serverList[index].isAttachedServer)
           _menuItem('delete', Icons.delete_outline, l.delete,
               color: VelvetColors.error),
         if (server.isFederated && server.federationMissing)
@@ -191,6 +195,26 @@ class ManageServersScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  // "Built-in" chip for the app-managed embedded server (isAttachedServer) so
+  // it's obvious which entry IS this PC's own server. Same visual language as
+  // the Direct/Relay chip.
+  Widget _builtInChip(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: VelvetColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.computer, size: 13, color: VelvetColors.primary),
+        const SizedBox(width: 4),
+        Text(l.serverBadgeBuiltIn,
+            style: TextStyle(fontSize: 11, color: VelvetColors.primary)),
+      ]),
     );
   }
 
@@ -279,6 +303,11 @@ class ManageServersScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (server.isAttachedServer)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: _builtInChip(context),
+                ),
               if (server.isIroh && server == ServerManager().currentServer)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
