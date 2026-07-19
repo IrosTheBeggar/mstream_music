@@ -72,9 +72,15 @@ class ServerRelease {
     return k == null ? null : 'mStream-$version-$k';
   }
 
-  /// The Bun-compiled executable's filename within [archiveRootDir].
-  static String get executableName =>
-      Platform.isWindows ? 'mStream.exe' : 'mStream';
+  /// The Bun-compiled executable's path within [archiveRootDir]. Windows/Linux
+  /// zips place the bare binary at the archive root; the darwin zips wrap the
+  /// server in an app bundle, with the binary (and its bin/ sidecars + webapp/,
+  /// which it resolves relative to itself) under Contents/MacOS.
+  static String get executableName => Platform.isWindows
+      ? 'mStream.exe'
+      : Platform.isMacOS
+          ? 'mStream.app/Contents/MacOS/mStream'
+          : 'mStream';
 
   /// Pinned hash for the current platform, if any.
   String? get expectedSha256 {
