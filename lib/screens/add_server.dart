@@ -487,7 +487,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         // after an await and saveServer pops the form, so a context-bound
         // SnackBar would be lost / unsafe.
         showGlobalSnack(l.connectionSuccessful);
-        saveServer(lol);
+        await _saveServerGuarded(lol);
         return;
       }
     } catch (err) {
@@ -524,7 +524,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       var res = jsonDecode(response.body);
 
       // Save
-      saveServer(lol, res['token']);
+      await _saveServerGuarded(lol, res['token']);
     } catch (err) {
       appLog('[add-server] login failed: $err');
       try {
@@ -741,6 +741,21 @@ class MyCustomFormState extends State<MyCustomForm> {
         .replaceAll(RegExp(r'[\s._-]+$'), '');
   }
 
+  // saveServer does real work that can fail — disk writes (servers.json),
+  // download-dir creation, migrations — so run it guarded: a failure must
+  // reset the button and SAY what went wrong. Un-awaited and unguarded, a
+  // throw (e.g. macOS denying file access) was swallowed by the zone handler
+  // and left the form stuck on "Connecting…" forever.
+  Future<void> _saveServerGuarded(Uri url, [String jwt = '']) async {
+    try {
+      await saveServer(url, jwt);
+    } catch (e) {
+      appLog('[add-server] save failed: $e');
+      if (mounted) setState(() => submitPending = false);
+      showGlobalSnack('Could not save the server: $e');
+    }
+  }
+
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
     // Permanent / SD card need a folder the app can actually write to. If the
     // mode was selected but no (writable) folder was picked, _storageBasePath
@@ -873,7 +888,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       // URL and would always fail. The pairing already validated the connection,
       // so persist the edited credentials/folder directly (URL stays unchanged).
       setState(() => submitPending = true);
-      saveServer(Uri.parse(_urlCtrl.text));
+      _saveServerGuarded(Uri.parse(_urlCtrl.text));
       return;
     }
     checkServer();

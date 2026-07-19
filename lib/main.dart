@@ -33,6 +33,7 @@ import 'app_version.dart';
 import 'build_variant.dart';
 import 'desktop/desktop_integration.dart';
 import 'server/server_controller.dart';
+import 'util/app_data_dir.dart';
 import 'util/self_signed_overrides.dart';
 import 'util/startup_view.dart';
 import 'singletons/playlists.dart';
@@ -59,6 +60,10 @@ void main() {
   // console / logcat. Uncaught async errors are captured here too; Flutter
   // framework errors reach the buffer via their default debugPrint path.
   runZonedGuarded(_startApp, (Object error, StackTrace stack) {
+    // debugPrint too, not just the in-app buffer: an uncaught error that only
+    // lands in Diagnostics is invisible on a dev console — a add-server hang
+    // shipped because its root-cause exception never printed anywhere.
+    debugPrint('[uncaught] $error\n$stack');
     LogManager().add('Uncaught: $error\n$stack');
   }, zoneSpecification: ZoneSpecification(
     print: (self, parent, zone, String line) {
@@ -70,6 +75,10 @@ void main() {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Move any app data an earlier desktop build left in ~/Documents into
+  // Application Support — BEFORE anything reads servers.json / queue.json.
+  // No-op on mobile and once migrated; failures are logged and skipped.
+  await migrateLegacyDesktopData();
   // Desktop window + system tray + launch-at-startup (sized window, close-to-
   // tray so the app keeps running). No-op on mobile (the plugins have no
   // Android/iOS implementation); must run before runApp shows the window.
@@ -255,7 +264,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // silently fails. Fire-and-forget — first call shows the system dialog,
     // subsequent calls are no-ops once granted. Must run after runApp so the
     // permission_handler plugin has an Activity to attach the dialog to.
-    Permission.notification.request();
+    // Android-only: permission_handler has no desktop implementation, so the
+    // call throws MissingPluginException there (async + uncaught).
+    if (Platform.isAndroid) Permission.notification.request();
     // Surface cast failures (renderer unreachable / session won't connect) as a
     // toast; the handler has already fallen back to local playback.
     // showGlobalSnack routes to the desktop corner toast when the desktop
