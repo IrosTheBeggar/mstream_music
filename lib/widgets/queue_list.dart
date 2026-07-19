@@ -257,6 +257,8 @@ class _QueueRow extends StatelessWidget {
         : (downloaded ? VelvetColors.success : Colors.transparent);
 
     return Material(
+      // Queue rows sit flat on the panel field (web-app style — only the
+      // BROWSE content rises); the active row keeps its accent wash.
       color: active ? VelvetColors.active : Colors.transparent,
       child: InkWell(
         onTap: onTap,

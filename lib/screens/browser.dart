@@ -257,6 +257,21 @@ class _BrowserState extends State<Browser> {
     return scaled > base ? scaled : base;
   }
 
+  // Full box border for a browse row (web-app style: every item is a bordered
+  // box on the flat field). Vertical edges + bottom on every row; top only on
+  // the list's first row, so stacked rows share single hairlines instead of
+  // doubling up.
+  BoxDecoration _rowBoxDecoration(int i) => BoxDecoration(
+        border: Border(
+          top: i == 0
+              ? BorderSide(color: VelvetColors.border2)
+              : BorderSide.none,
+          left: BorderSide(color: VelvetColors.border2),
+          right: BorderSide(color: VelvetColors.border2),
+          bottom: BorderSide(color: VelvetColors.border2),
+        ),
+      );
+
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     return Material(
@@ -266,10 +281,7 @@ class _BrowserState extends State<Browser> {
       child: InkWell(
         onTap: () => handleTap(b, i, c),
         child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide(color: VelvetColors.border, width: 0.5)),
-          ),
+          decoration: _rowBoxDecoration(i),
           padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
           child: Row(
             children: [
@@ -460,10 +472,12 @@ class _BrowserState extends State<Browser> {
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].icon,
             title: b[i].getText(truncate: !allowWrap),
             subtitle: b[i].getSubText(),
@@ -508,16 +522,18 @@ class _BrowserState extends State<Browser> {
             ),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].icon,
             title: b[i].getText(truncate: !allowWrap),
             subtitle: b[i].getSubText(),
@@ -540,7 +556,7 @@ class _BrowserState extends State<Browser> {
             ),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -549,10 +565,12 @@ class _BrowserState extends State<Browser> {
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].icon,
             title: b[i].getText(truncate: !allowWrap),
             subtitle: b[i].getSubText(),
@@ -572,7 +590,7 @@ class _BrowserState extends State<Browser> {
             ),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
@@ -582,30 +600,34 @@ class _BrowserState extends State<Browser> {
   // misaligns the text.
   Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].getAlbumThumb(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].getImage(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   // ── Default browser landing: section shortcuts as a modern card grid ──
@@ -678,8 +700,7 @@ class _BrowserState extends State<Browser> {
     // get to show in full.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
+        decoration: _rowBoxDecoration(i),
         child: Material(
             // Rows sit one tone above the pane backdrop (card > bg) so the
             // content zone gets its own hierarchy, dark-theme-style, instead
