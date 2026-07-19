@@ -10,6 +10,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
+import '../util/app_data_dir.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
 
@@ -173,7 +174,7 @@ class FileExplorer {
         final dir = Directory(storageBasePath);
         return dir.existsSync() ? dir : null;
       }
-      return getApplicationDocumentsDirectory();
+      return appDataDir();
     }
     switch (storageMode) {
       case 'permanent':
@@ -198,7 +199,7 @@ class FileExplorer {
         return (dirs != null && dirs.length > 1) ? dirs[1] : null;
       case 'appLocal':
       default:
-        return getApplicationDocumentsDirectory();
+        return appDataDir();
     }
   }
 }
