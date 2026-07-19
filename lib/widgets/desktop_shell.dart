@@ -259,10 +259,10 @@ class _DesktopShellState extends State<DesktopShell> {
     // third (Expanded flex 1 of the flex-2 center + flex-1 now-playing split).
     // When the queue opens it then covers exactly that region and the transport
     // doesn't shift. -1 accounts for the divider between the content and queue.
-    // (No divider between the sidebar and content — the chrome/content tone
-    // change is the boundary now.)
+    // (No dividers off this width: sidebar↔content is a tone boundary and
+    // browse↔queue share one flat field.)
     final queueWidth =
-        (MediaQuery.sizeOf(context).width - _kSidebarWidth) / 3 - 1;
+        (MediaQuery.sizeOf(context).width - _kSidebarWidth) / 3;
     // Material, not Scaffold, on purpose: a Scaffold here would register with
     // the root ScaffoldMessenger and render every SnackBar full-width across
     // the window bottom — over the Now Playing bar. Desktop notifications go
@@ -305,14 +305,10 @@ class _DesktopShellState extends State<DesktopShell> {
                           ),
                         ),
                       ),
-                      // Queue column: now-playing card on top, then the list;
-                      // its actions dock in the bar below.
-                      if (_queueOpen) ...[
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1,
-                          color: VelvetColors.border,
-                        ),
+                      // Queue column (header + list) — no divider against
+                      // the browse pane: both sit on one flat field, web-app
+                      // style, and only their content rows rise above it.
+                      if (_queueOpen)
                         SizedBox(
                           width: queueWidth,
                           child: _DesktopQueuePanel(
@@ -320,14 +316,13 @@ class _DesktopShellState extends State<DesktopShell> {
                                 setState(() => _queueOpen = false),
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),
                 DesktopNowPlayingBar(
                   queueOpen: _queueOpen,
                   onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
-                  nowPlayingWidth: queueWidth + 1,
+                  nowPlayingWidth: queueWidth,
                 ),
               ],
             ),
@@ -353,7 +348,7 @@ class _DesktopShellState extends State<DesktopShell> {
           // with no waveform available the band draws the slim line there.
           Positioned(
             left: _kSidebarWidth,
-            right: queueWidth + 1,
+            right: queueWidth,
             bottom: _kControlsHeight,
             height: _kSeekStripHeight,
             child: const _SeekBar(),
@@ -362,7 +357,7 @@ class _DesktopShellState extends State<DesktopShell> {
             // Hug the content pane's bottom-right: when the queue panel is
             // open, shift left past it (+ its divider) so toasts float over
             // the main page, not the queue.
-            right: (_queueOpen ? queueWidth + 1 : 0) + 16,
+            right: (_queueOpen ? queueWidth : 0) + 16,
             bottom: _kNowPlayingHeight + 16,
             child: const DesktopToastHost(),
           ),
@@ -811,14 +806,13 @@ class _DesktopBrowseView extends StatelessWidget {
           // lines up with the sidebar's and the queue's. The toolbar carries a
           // 6px bottom pad tuned for its phone AppBar slot — cancel it with a
           // matching top pad so the content centers in the taller bar.
-          ColoredBox(
-            color: VelvetColors.appBarBg,
-            child: const SizedBox(
-              height: VelvetColors.desktopTopBarHeight,
-              child: Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: BrowserToolbar(),
-              ),
+          // The toolbar sits directly on the content field (no chrome band) —
+          // web-app style: one flat background, only content rows rise.
+          const SizedBox(
+            height: VelvetColors.desktopTopBarHeight,
+            child: Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: BrowserToolbar(),
             ),
           ),
           Expanded(
@@ -867,10 +861,8 @@ class _DesktopQueuePanel extends StatelessWidget {
           // "Queue" header carrying the queue's actions — no now-playing card
           // up here (the bar's full-height tab shows the playing track), so
           // the column reads header → list. 56 matches the content panes'
-          // top bars, and the chrome tone keeps the three top bars one band.
-          ColoredBox(
-            color: VelvetColors.appBarBg,
-            child: SizedBox(
+          // top bars; like them it sits directly on the flat content field.
+          SizedBox(
             height: 56,
             child: Padding(
               padding: const EdgeInsets.only(left: 16, right: 8),
@@ -933,7 +925,6 @@ class _DesktopQueuePanel extends StatelessWidget {
               ),
             ),
           ),
-          ),
           const Expanded(child: QueueList(showItemMenu: true)),
         ],
       ),
@@ -991,10 +982,10 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
 class DesktopNowPlayingBar extends StatefulWidget {
   final bool queueOpen;
   final VoidCallback onToggleQueue;
-  // Fixed width for the now-playing view = the queue's reserved right region
-  // (queueWidth + 1 divider). Fixed (not Expanded/flex) so the transport keeps
-  // the EXACT same width whether the queue is open or closed — a flex split
-  // rounds differently than the queue's fixed SizedBox and shifts by ~1px.
+  // Fixed width for the now-playing view = the queue column's width. Fixed
+  // (not Expanded/flex) so the transport keeps the EXACT same width whether
+  // the queue is open or closed — a flex split rounds differently than the
+  // queue's fixed SizedBox and shifts by ~1px.
   final double nowPlayingWidth;
   const DesktopNowPlayingBar({
     super.key,
