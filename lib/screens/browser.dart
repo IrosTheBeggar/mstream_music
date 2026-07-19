@@ -260,7 +260,9 @@ class _BrowserState extends State<Browser> {
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     return Material(
-      color: Colors.transparent,
+      // Same card tone as the file rows — playlists render in the same browse
+      // pane, so a transparent row here would read as a different list.
+      color: VelvetColors.card,
       child: InkWell(
         onTap: () => handleTap(b, i, c),
         child: Container(
@@ -625,7 +627,7 @@ class _BrowserState extends State<Browser> {
         final item = items[i];
         final iconData = item.icon?.icon ?? Icons.chevron_right;
         return Material(
-          color: VelvetColors.surface,
+          color: VelvetColors.card,
           borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -679,7 +681,10 @@ class _BrowserState extends State<Browser> {
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
         child: Material(
-            color: VelvetColors.bg,
+            // Rows sit one tone above the pane backdrop (card > bg) so the
+            // content zone gets its own hierarchy, dark-theme-style, instead
+            // of leaning on the hairline borders alone.
+            color: VelvetColors.card,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
                 child: IntrinsicHeight(
