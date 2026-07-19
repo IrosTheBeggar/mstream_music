@@ -19,8 +19,8 @@ import 'cast_manager.dart';
 import './media.dart';
 import './queue_store.dart';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import '../util/app_data_dir.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
 
@@ -47,7 +47,8 @@ class ServerManager {
   }
 
   Future<File> get _serverFile async {
-    final directory = await getApplicationDocumentsDirectory();
+    // App Support on desktop, documents dir on mobile — see appDataDir().
+    final directory = await appDataDir();
     final path = directory.path;
     return File('$path/servers.json');
   }
