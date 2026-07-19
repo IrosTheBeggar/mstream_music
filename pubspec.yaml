@@ -36,9 +36,13 @@ dependencies:
   # Desktop playback backend: just_audio has no native Windows/Linux
   # implementation, so route it through media_kit (libmpv) on those platforms.
   # Initialized in main() for Windows/Linux only — Android/iOS/macOS keep
-  # just_audio's native backend.
+  # just_audio's native backend. Depend on the per-platform libmpv packages
+  # (not the media_kit_libs_audio umbrella): the umbrella drags libmpv into the
+  # Android/iOS/macOS bundles where the backend is never used, and its macOS
+  # pod is CocoaPods-only, which breaks the otherwise all-SPM macOS build.
   just_audio_media_kit: ^2.0.6
-  media_kit_libs_audio: ^1.0.4
+  media_kit_libs_windows_audio: ^1.0.9
+  media_kit_libs_linux: ^1.2.1
   flutter_slidable: ^4.0.3
   background_downloader: ^9.4.4
   flutter_launcher_icons: ^0.14.2
