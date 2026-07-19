@@ -54,8 +54,16 @@ import 'queue_list.dart';
 
 // Width of the fixed left navigation rail. The right queue panel's width is
 // computed at build time to match the now-playing view (see _DesktopShellState).
-const double _kSidebarWidth = 248;
-const double _kNowPlayingHeight = 64;
+const double _kSidebarWidth = 208;
+// Now Playing bar, top to bottom: breathing room, the elapsed/duration row,
+// the waveform seek strip, then the controls row (which keeps the original
+// 64px it was designed at).
+const double _kBarTopPad = 8;
+const double _kTimeRowHeight = 16;
+const double _kSeekStripHeight = 32;
+const double _kControlsHeight = 64;
+const double _kNowPlayingHeight =
+    _kBarTopPad + _kTimeRowHeight + _kSeekStripHeight + _kControlsHeight;
 
 class DesktopShell extends StatefulWidget {
   const DesktopShell({super.key});
@@ -251,8 +259,10 @@ class _DesktopShellState extends State<DesktopShell> {
     // third (Expanded flex 1 of the flex-2 center + flex-1 now-playing split).
     // When the queue opens it then covers exactly that region and the transport
     // doesn't shift. -1 accounts for the divider between the content and queue.
+    // (No divider between the sidebar and content — the chrome/content tone
+    // change is the boundary now.)
     final queueWidth =
-        (MediaQuery.sizeOf(context).width - _kSidebarWidth - 1) / 3 - 1;
+        (MediaQuery.sizeOf(context).width - _kSidebarWidth) / 3 - 1;
     // Material, not Scaffold, on purpose: a Scaffold here would register with
     // the root ScaffoldMessenger and render every SnackBar full-width across
     // the window bottom — over the Now Playing bar. Desktop notifications go
@@ -277,7 +287,6 @@ class _DesktopShellState extends State<DesktopShell> {
             onVisualizer: _openVisualizer,
             onProjectM: _projectMAvailable ? _openProjectM : null,
           ),
-          VerticalDivider(width: 1, thickness: 1, color: VelvetColors.border),
           // Everything right of the sidebar: content (+ the queue column when
           // open) stacked ABOVE a full-width Now Playing bar — so the bar and
           // its top-edge scrub line always run to the screen's right edge,
@@ -306,7 +315,10 @@ class _DesktopShellState extends State<DesktopShell> {
                         ),
                         SizedBox(
                           width: queueWidth,
-                          child: const _DesktopQueuePanel(),
+                          child: _DesktopQueuePanel(
+                            onClose: () =>
+                                setState(() => _queueOpen = false),
+                          ),
                         ),
                       ],
                     ],
@@ -332,15 +344,18 @@ class _DesktopShellState extends State<DesktopShell> {
       child: Stack(
         children: [
           shell,
-          // The scrub line rides ON the content/bar boundary — one line
-          // straddling the edge (the hover thumb pokes both sides), spanning
-          // sidebar → screen edge in both queue states, and costing the bar
-          // no interior height.
+          // The scrub strip is the TOP BAND of the Now Playing bar itself —
+          // the bar reserves _kSeekStripHeight for it (see
+          // DesktopNowPlayingBar), and the strip floats over that band,
+          // spanning sidebar → the bar's now-playing tab (which owns the
+          // bar's full-height right corner) in both queue states. The
+          // waveform bars rise and reflect around the band's center line;
+          // with no waveform available the band draws the slim line there.
           Positioned(
-            left: _kSidebarWidth + 1,
-            right: 0,
-            bottom: _kNowPlayingHeight - 7,
-            height: 14,
+            left: _kSidebarWidth,
+            right: queueWidth + 1,
+            bottom: _kControlsHeight,
+            height: _kSeekStripHeight,
             child: const _SeekBar(),
           ),
           Positioned(
@@ -426,17 +441,28 @@ class _DesktopSidebar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Container(
       width: _kSidebarWidth,
-      color: VelvetColors.surface,
+      // Chrome tone: the sidebar, the Now Playing bar, and the three aligned
+      // top bars share the darker appBarBg so they read as one frame around
+      // the lighter content zone (Spotify-style tonal zoning). The light
+      // right-edge hairline (with its twin on the bar's top edge) is one of
+      // the two structural lines dividing nav | content | player — drawn
+      // inside the sidebar's width, so nothing shifts.
+      decoration: BoxDecoration(
+        color: VelvetColors.appBarBg,
+        border: Border(
+          right: BorderSide(color: VelvetColors.border2, width: 1),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header pinned to the shared top-bar height so the divider below is
-          // continuous with the browse toolbar's and the queue header's.
+          // Header pinned to the shared top-bar height so it stays one band
+          // with the browse toolbar and the queue header (no divider — the
+          // chrome/content tone shift marks the band's edge in those panes).
           const SizedBox(
             height: VelvetColors.desktopTopBarHeight,
             child: _SidebarLogo(),
           ),
-          Divider(height: 1, color: VelvetColors.border),
           // Server switcher (hidden with a single server) sits under the
           // aligned header line rather than stretching the header.
           const _SidebarServer(),
@@ -785,14 +811,16 @@ class _DesktopBrowseView extends StatelessWidget {
           // lines up with the sidebar's and the queue's. The toolbar carries a
           // 6px bottom pad tuned for its phone AppBar slot — cancel it with a
           // matching top pad so the content centers in the taller bar.
-          const SizedBox(
-            height: VelvetColors.desktopTopBarHeight,
-            child: Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: BrowserToolbar(),
+          ColoredBox(
+            color: VelvetColors.appBarBg,
+            child: const SizedBox(
+              height: VelvetColors.desktopTopBarHeight,
+              child: Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: BrowserToolbar(),
+              ),
             ),
           ),
-          Divider(height: 1, color: VelvetColors.border),
           Expanded(
             child: StreamBuilder<DisplayItem?>(
               stream: BrowserManager().albumDetailStream,
@@ -823,19 +851,89 @@ class _DesktopBrowseView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _DesktopQueuePanel extends StatelessWidget {
-  const _DesktopQueuePanel();
+  const _DesktopQueuePanel({required this.onClose});
+
+  /// Collapses the panel — the header's ✕ (the bar's now-playing tab stays
+  /// put in both queue states, so the close affordance lives up here).
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       color: VelvetColors.surface,
       child: Column(
         children: [
-          // Now-playing card leads the panel; the queue's actions live in the
-          // bar below (DesktopNowPlayingBar._queueActions), so the column
-          // reads card → list → controls, all controls along the bottom.
-          const _ExpandedNowPlaying(),
-          Divider(height: 1, color: VelvetColors.border),
+          // "Queue" header carrying the queue's actions — no now-playing card
+          // up here (the bar's full-height tab shows the playing track), so
+          // the column reads header → list. 56 matches the content panes'
+          // top bars, and the chrome tone keeps the three top bars one band.
+          ColoredBox(
+            color: VelvetColors.appBarBg,
+            child: SizedBox(
+            height: 56,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Queue',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: VelvetColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Clear is the most-reached-for queue action, so it gets
+                  // its own button (same no-confirm behavior as the phone
+                  // queue header).
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep, size: 20),
+                    color: VelvetColors.textSecondary,
+                    tooltip: l.mainClearQueue,
+                    onPressed: () => MediaManager()
+                        .audioHandler
+                        .customAction('clearPlaylist'),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    color: VelvetColors.surface,
+                    tooltip: l.mainMore,
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'save':
+                          _saveQueueAsPlaylist(context);
+                          break;
+                        case 'download':
+                          downloadQueue(context);
+                          break;
+                        case 'share':
+                          showSharePlaylistDialog(context);
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      _queueMenuItem(
+                          'save', Icons.playlist_add, 'Save as playlist'),
+                      _queueMenuItem(
+                        'download',
+                        Icons.download_for_offline,
+                        l.queueDownloadAll,
+                      ),
+                      _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    color: VelvetColors.textSecondary,
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ),
           const Expanded(child: QueueList(showItemMenu: true)),
         ],
       ),
@@ -914,105 +1012,96 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
   Widget build(BuildContext context) {
     return Container(
       height: _kNowPlayingHeight,
-      // No top border and no in-bar seek strip: the scrub line IS the
-      // boundary — it floats on the shell's Stack, straddling this bar's top
-      // edge (see _DesktopShellState.build), so it costs the bar no interior
-      // height and there's exactly one line, not a border + track pair.
-      color: VelvetColors.surface,
+      // Chrome tone — frames the lighter content zone (see _DesktopSidebar).
+      // The light top hairline is the second of the two structural lines
+      // (the sidebar's right edge is the other), dividing player from
+      // content; it draws inside the bar's height, above the top pad.
+      decoration: BoxDecoration(
+        color: VelvetColors.appBarBg,
+        border: Border(
+          top: BorderSide(color: VelvetColors.border2, width: 1),
+        ),
+      ),
+      // Left portion, top to bottom: breathing room, the elapsed/duration
+      // row, the waveform band, the controls. The waveform seek strip itself
+      // floats over its band from the shell's root Stack (see
+      // _DesktopShellState.build) — it must overlay the Slider across panes,
+      // so it can't be a plain child here; the SizedBox only reserves its
+      // space. The now-playing tab owns the bar's FULL height on the right
+      // (the waveform band stops where it begins) and stays put in both
+      // queue states — the queue's actions live in the panel's header.
       child: Row(
         children: [
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
+            child: Column(
+              children: [
+                const SizedBox(height: _kBarTopPad),
+                const _TimeEndsRow(),
+                const SizedBox(height: _kSeekStripHeight),
+                Expanded(
+                  child: Padding(
+                    // Left-only: the right edge runs open so the cast button's
+                    // own internal padding + the now-playing pill's padding
+                    // supply the gap to the folded queue glyph — the same
+                    // rhythm as the gaps between the other buttons.
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Row(
+                      children: [
+                        const _DesktopTransport(),
+                        const Spacer(),
+                        _controls(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Fixed right region (= the queue column's width, so the transport
+          // never shifts and the queue column lands exactly on it when open).
+          SizedBox(
+            width: widget.nowPlayingWidth,
+            child: _NowPlayingTab(
+              onTap: widget.onToggleQueue,
+              // The bar's edge padding lives in the transport row (the
+              // waveform band needs flush edges), so the tab carries its own.
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  const _DesktopTransport(),
-                  const SizedBox(width: 14),
-                  const _TimeReadout(),
-                  const Spacer(),
-                  _controls(),
+                  Padding(
+                    // Left inset clears the folded queue glyph below.
+                    padding: const EdgeInsets.only(left: 34, right: 16),
+                    child: _trackInfo(),
+                  ),
+                  // The queue affordance, folded into the tab — the tab and
+                  // the old queue button did the same thing, so the glyph now
+                  // just marks the tab's corner. Its center sits on the
+                  // controls row's axis so it reads in line with the
+                  // volume/cast icons to its left; the -12 cancels the tab
+                  // pill's vertical margin (this Stack lives inside it).
+                  Positioned(
+                    // left 0 within the pill's 10px pad: with the controls
+                    // row's right padding removed, cast's ~13px internal pad
+                    // + the pill pad ≈ the button row's glyph-to-glyph gap.
+                    left: 0,
+                    bottom: (_kControlsHeight - 22) / 2 - 12,
+                    child: Icon(
+                      Icons.queue_music,
+                      size: 22,
+                      color: widget.queueOpen
+                          ? VelvetColors.primary
+                          : VelvetColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          // Fixed right region (= the queue column's width, so the
-          // transport never shifts): the queue's actions while it's
-          // open — every control lives down here — or the compact
-          // now-playing tab when it's closed.
-          SizedBox(
-            width: widget.nowPlayingWidth,
-            child: widget.queueOpen
-                ? _queueActions()
-                : _NowPlayingTab(
-                    onTap: widget.onToggleQueue,
-                    // The bar's edge padding lives in the transport row
-                    // (the scrub line needs flush edges), so the tab
-                    // carries its own.
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _trackInfo(),
-                    ),
-                  ),
           ),
         ],
       ),
     );
   }
 
-  // The queue panel's actions, docked in the bar under the queue column while
-  // it's open (the panel itself is just the now-playing card + the list).
-  Widget _queueActions() {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Clear is the most-reached-for queue action, so it gets its own
-          // button (same no-confirm behavior as the phone queue header).
-          IconButton(
-            icon: const Icon(Icons.delete_sweep, size: 20),
-            color: VelvetColors.textSecondary,
-            tooltip: l.mainClearQueue,
-            onPressed: () =>
-                MediaManager().audioHandler.customAction('clearPlaylist'),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 20),
-            color: VelvetColors.surface,
-            tooltip: l.mainMore,
-            onSelected: (v) {
-              switch (v) {
-                case 'save':
-                  _saveQueueAsPlaylist(context);
-                  break;
-                case 'download':
-                  downloadQueue(context);
-                  break;
-                case 'share':
-                  showSharePlaylistDialog(context);
-                  break;
-              }
-            },
-            itemBuilder: (_) => [
-              _queueMenuItem('save', Icons.playlist_add, 'Save as playlist'),
-              _queueMenuItem(
-                'download',
-                Icons.download_for_offline,
-                l.queueDownloadAll,
-              ),
-              _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 20),
-            color: VelvetColors.textSecondary,
-            onPressed: widget.onToggleQueue,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _trackInfo() {
     return StreamBuilder<MediaItem?>(
@@ -1020,10 +1109,11 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
       builder: (context, snap) {
         final item = snap.data;
         final url = item?.extras?['artUrl'] as String?;
-        final subtitle = [
-          item?.artist,
-          item?.album,
-        ].where((s) => s != null && s.isNotEmpty).join(' — ');
+        final artist = item?.artist ?? '';
+        final album = item?.album ?? '';
+        // Three text lines (title / artist / album) beside near-full-height
+        // art — the tab owns the bar's whole 120px, so it can carry a real
+        // now-playing card's worth of metadata instead of a strip's.
         return Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -1045,10 +1135,10 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                           : VelvetColors.textPrimary,
                     ),
                   ),
-                  if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                  if (artist.isNotEmpty) ...[
+                    const SizedBox(height: 3),
                     Text(
-                      subtitle,
+                      artist,
                       maxLines: 1,
                       textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
@@ -1058,23 +1148,36 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                       ),
                     ),
                   ],
+                  if (album.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      album,
+                      maxLines: 1,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: VelvetColors.textTertiary,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             ClipRRect(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                width: 56,
-                height: 56,
+                width: 88,
+                height: 88,
                 child: url == null
-                    ? albumArtFallback(iconSize: 22)
+                    ? albumArtFallback(iconSize: 32)
                     : Image.network(
                         url,
                         fit: BoxFit.cover,
-                        cacheWidth: artCacheSize(56),
+                        cacheWidth: artCacheSize(88),
                         errorBuilder: (_, _, _) =>
-                            albumArtFallback(iconSize: 22),
+                            albumArtFallback(iconSize: 32),
                       ),
               ),
             ),
@@ -1158,32 +1261,23 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
             );
           },
         ),
-        IconButton(
-          icon: const Icon(Icons.queue_music),
-          iconSize: 22,
-          tooltip: 'Queue',
-          color: widget.queueOpen
-              ? VelvetColors.primary
-              : VelvetColors.textSecondary,
-          onPressed: widget.onToggleQueue,
-        ),
       ],
     );
   }
 }
 
-// Elapsed · slider · duration, driven by its own combined item+position stream
-// so a per-second position tick repaints only the slider.
-/// Elapsed / total readout for the transport row — the slim top-edge seek
-/// line has no room for labels.
-class _TimeReadout extends StatefulWidget {
-  const _TimeReadout();
+/// Elapsed (left) and total duration (right) riding just above the waveform
+/// band, at its two ends — replaces the old inline "elapsed / total" readout
+/// that sat next to the transport. Its own combined item+position stream so
+/// the per-second tick repaints only this row.
+class _TimeEndsRow extends StatefulWidget {
+  const _TimeEndsRow();
 
   @override
-  State<_TimeReadout> createState() => _TimeReadoutState();
+  State<_TimeEndsRow> createState() => _TimeEndsRowState();
 }
 
-class _TimeReadoutState extends State<_TimeReadout> {
+class _TimeEndsRowState extends State<_TimeEndsRow> {
   late final Stream<_MediaPos> _mediaPos = Rx.combineLatest2(
     MediaManager().audioHandler.mediaItem,
     MediaManager().audioHandler.positionStream,
@@ -1192,28 +1286,33 @@ class _TimeReadoutState extends State<_TimeReadout> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<_MediaPos>(
-      stream: _mediaPos,
-      builder: (context, snap) {
-        final pos = snap.data?.position ?? Duration.zero;
-        final dur = snap.data?.item?.duration;
-        return Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: formatDuration(pos),
-                // Elapsed in the accent colour, like the phone player.
-                style: TextStyle(color: VelvetColors.primary),
-              ),
-              TextSpan(
-                text: ' / ${dur == null ? '--:--' : formatDuration(dur)}',
-                style: TextStyle(color: VelvetColors.textTertiary),
-              ),
-            ],
-          ),
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-        );
-      },
+    const style = TextStyle(fontFamily: 'monospace', fontSize: 11);
+    return SizedBox(
+      height: _kTimeRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: StreamBuilder<_MediaPos>(
+          stream: _mediaPos,
+          builder: (context, snap) {
+            final pos = snap.data?.position ?? Duration.zero;
+            final dur = snap.data?.item?.duration;
+            return Row(
+              children: [
+                Text(
+                  formatDuration(pos),
+                  // Elapsed in the accent colour, like the phone player.
+                  style: style.copyWith(color: VelvetColors.primary),
+                ),
+                const Spacer(),
+                Text(
+                  dur == null ? '--:--' : formatDuration(dur),
+                  style: style.copyWith(color: VelvetColors.textTertiary),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -1241,6 +1340,96 @@ class _EdgeToEdgeTrackShape extends RoundedRectSliderTrackShape {
   }
 }
 
+/// SoundCloud-style waveform track: amplitude bars mirrored around the
+/// content/bar boundary (the strip's vertical center) — the main bars rise
+/// above the line, a dimmed reflection dips into the bar's top padding.
+/// Played bars take the active (accent) colour, upcoming ones the inactive
+/// grey, split at the thumb exactly like the plain track. Peaks are bucketed
+/// per ~3px bar (max within the bucket, so short transients survive) and the
+/// whole strip repaints only on position ticks / hover / drag.
+class _WaveformTrackShape extends SliderTrackShape {
+  const _WaveformTrackShape(this.peaks);
+
+  final List<int> peaks;
+
+  static const double _barWidth = 2;
+  static const double _barGap = 1;
+  // Reflection: height fraction of the main bar, and its opacity.
+  static const double _mirror = 0.5;
+  static const double _mirrorAlpha = 0.35;
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) =>
+      Rect.fromLTWH(
+          offset.dx, offset.dy, parentBox.size.width, parentBox.size.height);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    if (peaks.isEmpty) return;
+    final rect = getPreferredRect(
+        parentBox: parentBox, offset: offset, sliderTheme: sliderTheme);
+    final active = (isEnabled
+            ? sliderTheme.activeTrackColor
+            : sliderTheme.disabledActiveTrackColor) ??
+        VelvetColors.primary;
+    final inactive = (isEnabled
+            ? sliderTheme.inactiveTrackColor
+            : sliderTheme.disabledInactiveTrackColor) ??
+        VelvetColors.border2;
+
+    final canvas = context.canvas;
+    final baseline = rect.center.dy; // the content/bar boundary line
+    final maxUp = rect.height / 2 - 1;
+    const step = _barWidth + _barGap;
+    final n = (rect.width / step).floor();
+    if (n <= 0) return;
+    final bar = Paint();
+    for (var i = 0; i < n; i++) {
+      final x = rect.left + i * step;
+      final from = (i * peaks.length / n).floor();
+      final to =
+          ((i + 1) * peaks.length / n).ceil().clamp(from + 1, peaks.length);
+      var v = 0;
+      for (var j = from; j < to; j++) {
+        if (peaks[j] > v) v = peaks[j];
+      }
+      final h = (v / 255 * maxUp).clamp(1.0, maxUp);
+      final color =
+          x + _barWidth / 2 <= thumbCenter.dx ? active : inactive;
+      bar.color = color;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, baseline - h, _barWidth, h),
+          const Radius.circular(1),
+        ),
+        bar,
+      );
+      bar.color = color.withValues(alpha: _mirrorAlpha);
+      canvas.drawRect(
+        Rect.fromLTWH(x, baseline, _barWidth, h * _mirror),
+        bar,
+      );
+    }
+  }
+}
+
 class _SeekBar extends StatefulWidget {
   const _SeekBar();
   @override
@@ -1259,46 +1448,112 @@ class _SeekBarState extends State<_SeekBar> {
   // scrubber (the queue foot has none), so the hover/hit zone is generous.
   bool _hover = false;
 
+  // Waveform peaks (0–255) for the CURRENT track, from the server's
+  // /api/v1/db/waveform endpoint (the same one the web app's seek bar uses),
+  // fetched on track change. null → the plain line (still loading, no
+  // matching server, or the server can't provide peaks). Keyed by
+  // server|path so a late response can't paint another track's waveform;
+  // the small static cache keeps queue back-and-forth from refetching.
+  List<int>? _peaks;
+  String? _peaksKey;
+  static final Map<String, List<int>> _peaksCache = {};
+  StreamSubscription<MediaItem?>? _itemSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // BehaviorSubject: replays the current item on listen, so the initial
+    // track loads without a separate seed call.
+    _itemSub = MediaManager().audioHandler.mediaItem.listen(_loadPeaksFor);
+  }
+
+  @override
+  void dispose() {
+    _itemSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadPeaksFor(MediaItem? item) async {
+    final path = item?.extras?['path'] as String?;
+    final serverName = item?.extras?['server'] as String?;
+    final server = ServerManager().byLocalname(serverName);
+    if (item == null || path == null || server == null) {
+      // Local files / no resolvable server: nothing to ask the server for.
+      _peaksKey = null;
+      if (mounted && _peaks != null) setState(() => _peaks = null);
+      return;
+    }
+    final key = '$serverName|$path';
+    if (key == _peaksKey) return;
+    _peaksKey = key;
+    final cached = _peaksCache[key];
+    if (cached != null) {
+      if (mounted) setState(() => _peaks = cached);
+      return;
+    }
+    if (mounted && _peaks != null) setState(() => _peaks = null);
+    final wf = await ApiManager().getWaveform(path, useThisServer: server);
+    // Stale guard: the track may have changed while the server generated.
+    if (!mounted || _peaksKey != key || wf == null) return;
+    _peaksCache[key] = wf;
+    if (_peaksCache.length > 24) {
+      _peaksCache.remove(_peaksCache.keys.first);
+    }
+    setState(() => _peaks = wf);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: StreamBuilder<_MediaPos>(
-        stream: _mediaPos,
-        builder: (context, snap) {
-          final pos = snap.data?.position ?? Duration.zero;
-          final dur = snap.data?.item?.duration;
-          final ms = dur?.inMilliseconds ?? 0;
-          final ratio = ms == 0
-              ? 0.0
-              : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
-          return SliderTheme(
-            data: SliderThemeData(
-              trackHeight: _hover ? 4 : 3,
-              trackShape: const _EdgeToEdgeTrackShape(),
-              overlayShape: SliderComponentShape.noOverlay,
-              thumbShape: _hover
-                  ? const RoundSliderThumbShape(enabledThumbRadius: 6)
-                  : SliderComponentShape.noThumb,
-              activeTrackColor: VelvetColors.primary,
-              inactiveTrackColor: VelvetColors.border2,
-              // Idle (nothing loaded): a quiet uniform line, no grey defaults.
-              disabledActiveTrackColor: VelvetColors.border2,
-              disabledInactiveTrackColor: VelvetColors.border2,
-              disabledThumbColor: Colors.transparent,
-              thumbColor: VelvetColors.primary,
-            ),
-            child: Slider(
-              value: ratio,
-              onChanged: dur == null
-                  ? null
-                  : (f) => MediaManager().audioHandler.seek(
-                      Duration(milliseconds: (ms * f).round()),
-                    ),
-            ),
-          );
-        },
+    // The seek line floats in the shell's root Stack, above the Scaffold, so
+    // it has no Material ancestor — which Slider requires (debug builds paint
+    // an error banner over the bar without one). Transparent, so it adds the
+    // Material contract without painting over the content/bar boundary.
+    return Material(
+      type: MaterialType.transparency,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: StreamBuilder<_MediaPos>(
+          stream: _mediaPos,
+          builder: (context, snap) {
+            final pos = snap.data?.position ?? Duration.zero;
+            final dur = snap.data?.item?.duration;
+            final ms = dur?.inMilliseconds ?? 0;
+            final ratio = ms == 0
+                ? 0.0
+                : (pos.inMilliseconds / ms).clamp(0.0, 1.0);
+            final peaks = _peaks;
+            return SliderTheme(
+              data: SliderThemeData(
+                trackHeight: _hover ? 4 : 3,
+                // Amplitude bars when the server has peaks for this track;
+                // the original slim boundary line otherwise.
+                trackShape: peaks == null
+                    ? const _EdgeToEdgeTrackShape()
+                    : _WaveformTrackShape(peaks),
+                overlayShape: SliderComponentShape.noOverlay,
+                thumbShape: _hover
+                    ? const RoundSliderThumbShape(enabledThumbRadius: 6)
+                    : SliderComponentShape.noThumb,
+                activeTrackColor: VelvetColors.primary,
+                inactiveTrackColor: VelvetColors.border2,
+                // Idle (nothing loaded): a quiet uniform line, no grey defaults.
+                disabledActiveTrackColor: VelvetColors.border2,
+                disabledInactiveTrackColor: VelvetColors.border2,
+                disabledThumbColor: Colors.transparent,
+                thumbColor: VelvetColors.primary,
+              ),
+              child: Slider(
+                value: ratio,
+                onChanged: dur == null
+                    ? null
+                    : (f) => MediaManager().audioHandler.seek(
+                        Duration(milliseconds: (ms * f).round()),
+                      ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1336,90 +1591,6 @@ class _NowPlayingTabState extends State<_NowPlayingTab> {
           ),
           child: widget.child,
         ),
-      ),
-    );
-  }
-}
-
-// Larger now-playing block at the foot of the queue panel: art + title/artist
-// over the same seek bar as the main Now Playing bar.
-class _ExpandedNowPlaying extends StatelessWidget {
-  const _ExpandedNowPlaying();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: VelvetColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StreamBuilder<MediaItem?>(
-            stream: MediaManager().audioHandler.mediaItem,
-            builder: (context, snap) {
-              final item = snap.data;
-              final url = item?.extras?['artUrl'] as String?;
-              final subtitle = [
-                item?.artist,
-                item?.album,
-              ].where((s) => s != null && s.isNotEmpty).join(' — ');
-              return Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      width: 72,
-                      height: 72,
-                      child: url == null
-                          ? albumArtFallback(iconSize: 28)
-                          : Image.network(
-                              url,
-                              fit: BoxFit.cover,
-                              cacheWidth: artCacheSize(72),
-                              errorBuilder: (_, _, _) =>
-                                  albumArtFallback(iconSize: 28),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item == null ? 'Nothing playing' : item.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: item == null
-                                ? VelvetColors.textTertiary
-                                : VelvetColors.textPrimary,
-                          ),
-                        ),
-                        if (subtitle.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: VelvetColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
       ),
     );
   }
