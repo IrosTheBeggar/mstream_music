@@ -1829,4 +1829,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get autoDjSonicAnchorLockedHint =>
       'Каждый трек остаётся близким к стартовому треку всю сессию.';
+
+  @override
+  String get trackAddToPlaylist => 'Добавить в плейлист';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Не удалось добавить в плейлист.';
 }

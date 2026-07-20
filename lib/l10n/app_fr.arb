@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Suivre l'ambiance",
   "autoDjSonicAnchorLocked": "Rester sur le titre de départ",
   "autoDjSonicAnchorRollingHint": "Chaque titre suit le son récent de la session — elle peut évoluer lentement.",
-  "autoDjSonicAnchorLockedHint": "Chaque titre reste proche du titre de départ pendant toute la session."
+  "autoDjSonicAnchorLockedHint": "Chaque titre reste proche du titre de départ pendant toute la session.",
+  "trackAddToPlaylist": "Ajouter à la playlist",
+  "trackAddToPlaylistFailed": "Impossible d'ajouter à la playlist."
 }

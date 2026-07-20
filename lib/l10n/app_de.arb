@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Der Stimmung folgen",
   "autoDjSonicAnchorLocked": "Beim Ausgangssong bleiben",
   "autoDjSonicAnchorRollingHint": "Jeder Titel folgt dem aktuellen Klang der Session — sie kann sich langsam entwickeln.",
-  "autoDjSonicAnchorLockedHint": "Jeder Titel bleibt die ganze Session über nah am Ausgangssong."
+  "autoDjSonicAnchorLockedHint": "Jeder Titel bleibt die ganze Session über nah am Ausgangssong.",
+  "trackAddToPlaylist": "Zur Wiedergabeliste hinzufügen",
+  "trackAddToPlaylistFailed": "Konnte nicht zur Wiedergabeliste hinzugefügt werden."
 }

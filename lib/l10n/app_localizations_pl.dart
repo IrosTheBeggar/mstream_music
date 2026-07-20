@@ -1826,4 +1826,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get autoDjSonicAnchorLockedHint =>
       'Każdy utwór pozostaje blisko utworu startowego przez całą sesję.';
+
+  @override
+  String get trackAddToPlaylist => 'Dodaj do playlisty';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Nie udało się dodać do playlisty.';
 }

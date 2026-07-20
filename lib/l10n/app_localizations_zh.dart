@@ -1705,4 +1705,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjSonicAnchorLockedHint => '整个会话中每首歌都保持接近种子歌曲。';
+
+  @override
+  String get trackAddToPlaylist => '添加到播放列表';
+
+  @override
+  String get trackAddToPlaylistFailed => '无法添加到播放列表。';
 }

@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Seguir el ambiente",
   "autoDjSonicAnchorLocked": "Mantener la semilla",
   "autoDjSonicAnchorRollingHint": "Cada canción sigue el sonido reciente de la sesión — puede evolucionar poco a poco.",
-  "autoDjSonicAnchorLockedHint": "Cada canción se mantiene cerca de la canción semilla durante toda la sesión."
+  "autoDjSonicAnchorLockedHint": "Cada canción se mantiene cerca de la canción semilla durante toda la sesión.",
+  "trackAddToPlaylist": "Añadir a la lista de reproducción",
+  "trackAddToPlaylistFailed": "No se pudo añadir a la lista de reproducción."
 }

@@ -1335,5 +1335,13 @@
   "autoDjSonicAnchorLockedHint": "Every pick stays close to the seed song for the whole session.",
   "@autoDjSonicAnchorLockedHint": {
     "description": "Explanation under the anchor selector while locked mode is selected."
+  },
+  "trackAddToPlaylist": "Add to playlist",
+  "@trackAddToPlaylist": {
+    "description": "Track context sheet action + playlist-picker title: append this track to a server playlist."
+  },
+  "trackAddToPlaylistFailed": "Couldn't add to the playlist.",
+  "@trackAddToPlaylistFailed": {
+    "description": "Toast when the playlist add-song request fails."
   }
 }

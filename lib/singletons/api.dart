@@ -264,6 +264,31 @@ class ApiManager {
     await refreshPlaylists();
   }
 
+  /// POST /api/v1/playlist/add-song — appends the track at [filepath] to
+  /// [playlist] on [server], which creates the playlist server-side when it
+  /// doesn't exist yet (so "new playlist" needs no separate create call).
+  /// [server] is explicit so a mixed-server context adds to the track's own
+  /// server. The endpoint stores the vpath-relative filepath — the same form
+  /// playlist/load returns — so the client's leading slash is stripped
+  /// ([rateSong] convention). Throws on failure so callers can surface it.
+  Future<void> addSongToPlaylist(
+      Server server, String playlist, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    final response = await http
+        .post(
+          server.apiUri('/api/v1/playlist/add-song'),
+          body: jsonEncode({'playlist': playlist, 'song': fp}),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode > 299) {
+      throw Exception('Add to playlist failed (HTTP ${response.statusCode})');
+    }
+  }
+
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
   Future<void> renamePlaylist(String oldName, String newName) async {
     await makeServerCall(null, '/api/v1/playlist/rename',

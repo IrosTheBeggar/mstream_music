@@ -1811,4 +1811,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get autoDjSonicAnchorLockedHint =>
       'Cada canción se mantiene cerca de la canción semilla durante toda la sesión.';
+
+  @override
+  String get trackAddToPlaylist => 'Añadir a la lista de reproducción';
+
+  @override
+  String get trackAddToPlaylistFailed =>
+      'No se pudo añadir a la lista de reproducción.';
 }

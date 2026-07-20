@@ -1741,4 +1741,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjSonicAnchorLockedHint => 'セッション中はすべての曲がシード曲に近いサウンドになります。';
+
+  @override
+  String get trackAddToPlaylist => 'プレイリストに追加';
+
+  @override
+  String get trackAddToPlaylistFailed => 'プレイリストに追加できませんでした。';
 }

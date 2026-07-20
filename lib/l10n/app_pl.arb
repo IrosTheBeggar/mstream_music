@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Podążaj za klimatem",
   "autoDjSonicAnchorLocked": "Trzymaj się utworu startowego",
   "autoDjSonicAnchorRollingHint": "Każdy utwór podąża za ostatnim brzmieniem sesji — może powoli ewoluować.",
-  "autoDjSonicAnchorLockedHint": "Każdy utwór pozostaje blisko utworu startowego przez całą sesję."
+  "autoDjSonicAnchorLockedHint": "Każdy utwór pozostaje blisko utworu startowego przez całą sesję.",
+  "trackAddToPlaylist": "Dodaj do playlisty",
+  "trackAddToPlaylistFailed": "Nie udało się dodać do playlisty."
 }

@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Следовать настроению",
   "autoDjSonicAnchorLocked": "Держаться стартового трека",
   "autoDjSonicAnchorRollingHint": "Каждый трек следует недавнему звучанию сессии — она может медленно меняться.",
-  "autoDjSonicAnchorLockedHint": "Каждый трек остаётся близким к стартовому треку всю сессию."
+  "autoDjSonicAnchorLockedHint": "Каждый трек остаётся близким к стартовому треку всю сессию.",
+  "trackAddToPlaylist": "Добавить в плейлист",
+  "trackAddToPlaylistFailed": "Не удалось добавить в плейлист."
 }

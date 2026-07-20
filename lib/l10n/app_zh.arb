@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "跟随氛围",
   "autoDjSonicAnchorLocked": "固定在种子歌曲",
   "autoDjSonicAnchorRollingHint": "每首歌都跟随会话最近的声音 — 会缓慢演变。",
-  "autoDjSonicAnchorLockedHint": "整个会话中每首歌都保持接近种子歌曲。"
+  "autoDjSonicAnchorLockedHint": "整个会话中每首歌都保持接近种子歌曲。",
+  "trackAddToPlaylist": "添加到播放列表",
+  "trackAddToPlaylistFailed": "无法添加到播放列表。"
 }

@@ -3143,6 +3143,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every pick stays close to the seed song for the whole session.'**
   String get autoDjSonicAnchorLockedHint;
+
+  /// Track context sheet action + playlist-picker title: append this track to a server playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to playlist'**
+  String get trackAddToPlaylist;
+
+  /// Toast when the playlist add-song request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add to the playlist.'**
+  String get trackAddToPlaylistFailed;
 }
 
 class _AppLocalizationsDelegate

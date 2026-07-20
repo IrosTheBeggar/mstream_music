@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "Segui l'atmosfera",
   "autoDjSonicAnchorLocked": "Resta sul brano di partenza",
   "autoDjSonicAnchorRollingHint": "Ogni brano segue il suono recente della sessione — può evolvere lentamente.",
-  "autoDjSonicAnchorLockedHint": "Ogni brano resta vicino al brano di partenza per tutta la sessione."
+  "autoDjSonicAnchorLockedHint": "Ogni brano resta vicino al brano di partenza per tutta la sessione.",
+  "trackAddToPlaylist": "Aggiungi alla playlist",
+  "trackAddToPlaylistFailed": "Impossibile aggiungere alla playlist."
 }

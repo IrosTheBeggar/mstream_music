@@ -1791,4 +1791,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get autoDjSonicAnchorLockedHint =>
       'Every pick stays close to the seed song for the whole session.';
+
+  @override
+  String get trackAddToPlaylist => 'Add to playlist';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Couldn\'t add to the playlist.';
 }

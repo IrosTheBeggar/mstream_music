@@ -1813,4 +1813,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get autoDjSonicAnchorLockedHint =>
       'Jeder Titel bleibt die ganze Session über nah am Ausgangssong.';
+
+  @override
+  String get trackAddToPlaylist => 'Zur Wiedergabeliste hinzufügen';
+
+  @override
+  String get trackAddToPlaylistFailed =>
+      'Konnte nicht zur Wiedergabeliste hinzugefügt werden.';
 }

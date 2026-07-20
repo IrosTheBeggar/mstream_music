@@ -429,5 +429,7 @@
   "autoDjSonicAnchorRolling": "流れに任せる",
   "autoDjSonicAnchorLocked": "シード曲に固定",
   "autoDjSonicAnchorRollingHint": "各曲はセッションの最近のサウンドに従います — 徐々に変化することがあります。",
-  "autoDjSonicAnchorLockedHint": "セッション中はすべての曲がシード曲に近いサウンドになります。"
+  "autoDjSonicAnchorLockedHint": "セッション中はすべての曲がシード曲に近いサウンドになります。",
+  "trackAddToPlaylist": "プレイリストに追加",
+  "trackAddToPlaylistFailed": "プレイリストに追加できませんでした。"
 }
