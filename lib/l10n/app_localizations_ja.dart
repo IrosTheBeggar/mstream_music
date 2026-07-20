@@ -1712,4 +1712,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => '似ている曲を探す';
+
+  @override
+  String get discoverStartSession => 'ソニックセッションを開始';
+
+  @override
+  String get discoverStartSessionSubtitle => 'この曲に似た音楽をエンドレス再生 — キューは置き換えられます。';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'ランダムな曲から始まるエンドレス再生 — キューは置き換えられます。';
+
+  @override
+  String get discoverSessionStarted => 'ソニックセッションを開始しました — Auto DJ がオンです。';
 }

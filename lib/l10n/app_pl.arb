@@ -420,5 +420,9 @@
   "autoDjSonicSeedRandom": "Losowy utwór",
   "autoDjSonicSeedRemove": "Usuń utwór startowy",
   "autoDjSonicSeedFailed": "Nie udało się pobrać utworu z serwera.",
-  "discoverFindSimilar": "Znajdź podobne"
+  "discoverFindSimilar": "Znajdź podobne",
+  "discoverStartSession": "Rozpocznij sesję dźwiękową",
+  "discoverStartSessionSubtitle": "Niekończąca się muzyka brzmiąca jak ta — zastępuje kolejkę.",
+  "discoverStartSessionSubtitleRandom": "Niekończąca się muzyka od losowego utworu startowego — zastępuje kolejkę.",
+  "discoverSessionStarted": "Sesja dźwiękowa rozpoczęta — Auto DJ włączony."
 }

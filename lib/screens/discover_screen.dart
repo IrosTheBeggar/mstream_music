@@ -10,6 +10,7 @@ import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
+import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
@@ -88,6 +89,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _peersLoading = false;
   bool _peersDisabled = false;
   DiscoveryLeads? _peers;
+
+  // "Start a sonic session" card — guards double-taps while the seed is
+  // being set up / the first DJ pick is fetched.
+  bool _startingSession = false;
 
   @override
   void initState() {
@@ -344,16 +349,161 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _noSeed(AppLocalizations l) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(
-            l.discoverNoSeed,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: VelvetColors.textSecondary, fontSize: 14),
+  Widget _noSeed(AppLocalizations l) {
+    // Even without a playing track the screen can still be useful: start a
+    // session from a RANDOM seed on the current server (when it has
+    // discovery data).
+    final canRandom =
+        ServerManager().currentServer?.discoveryAvailable == true;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l.discoverNoSeed,
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 14),
+            ),
+            if (canRandom) ...[
+              const SizedBox(height: 12),
+              _sessionCard(l, random: true),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// One-tap endless radio: seeds the sonic Auto DJ (from the screen's seed,
+  /// or a random song in the no-seed state), REPLACES the queue — standard
+  /// "start radio" semantics, and the subtitle says so — and hands off to
+  /// the player.
+  Future<void> _startSonicSession() async {
+    if (_startingSession) return;
+    setState(() => _startingSession = true);
+    final l = AppLocalizations.of(context);
+    // Root messenger — survives the pop below, unlike this route's scaffold.
+    final messenger = ScaffoldMessenger.of(context);
+
+    Server? server = _seedServer;
+    String? path = _seedPath;
+    String? title = _seedTitle;
+    String? artist = _seedArtist;
+    if (server == null || path == null) {
+      final target = ServerManager().currentServer;
+      if (target == null || target.discoveryAvailable != true) {
+        setState(() => _startingSession = false);
+        return;
+      }
+      final item = await ApiManager().fetchRandomSong(target);
+      if (!mounted) return;
+      if (item == null || item.data == null) {
+        messenger
+            .showSnackBar(SnackBar(content: Text(l.autoDjSonicSeedFailed)));
+        setState(() => _startingSession = false);
+        return;
+      }
+      server = target;
+      path = item.data!;
+      title = item.metadata?.title ?? item.name;
+      artist = item.metadata?.artist;
+    }
+
+    final seedTitle = [
+      if ((title ?? '').trim().isNotEmpty) title!.trim(),
+      if ((artist ?? '').trim().isNotEmpty) artist!.trim(),
+    ].join(' · ');
+
+    final mgr = AutoDJManager();
+    if (!mgr.sonicSimilarityEnabled) {
+      await mgr.setSonicSimilarityEnabled(true);
+    }
+    await mgr.setSonicSeed(
+        path: path,
+        title: seedTitle.isEmpty ? path.split('/').last : seedTitle,
+        server: server.localname);
+
+    final handler = MediaManager().audioHandler;
+    // New lane + fresh queue, then (re)arm the DJ — with an empty queue the
+    // setAutoDJ handler makes the first (seed-anchored) pick and plays it.
+    await handler.customAction('clearSonicHistory');
+    await handler.customAction('clearPlaylist');
+    await handler.customAction('setAutoDJ', {'autoDJServer': server});
+    if (!mounted) return;
+    messenger
+        .showSnackBar(SnackBar(content: Text(l.discoverSessionStarted)));
+    Navigator.of(context).pop();
+  }
+
+  Widget _sessionCard(AppLocalizations l, {required bool random}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Material(
+        color: VelvetColors.raised,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+          onTap: _startingSession ? null : _startSonicSession,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: VelvetColors.primaryDim,
+                    shape: BoxShape.circle,
+                  ),
+                  child: _startingSession
+                      ? Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: VelvetColors.primary,
+                          ),
+                        )
+                      : Icon(Icons.radio,
+                          color: VelvetColors.primary, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.discoverStartSession,
+                        style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        random
+                            ? l.discoverStartSessionSubtitleRandom
+                            : l.discoverStartSessionSubtitle,
+                        style: TextStyle(
+                          color: VelvetColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.play_arrow, color: VelvetColors.primary),
+              ],
+            ),
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _sections(AppLocalizations l) {
     final server = _seedServer!;
@@ -379,6 +529,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ),
       ),
     ];
+
+    // One-tap endless radio anchored on this seed. Hidden while the seed is
+    // known to be unanalyzed — starting a session would clear the queue and
+    // then fail loud with nothing playing.
+    if (server.discoveryAvailable == true && _tracks?.notAnalyzed != true) {
+      children.add(_sessionCard(l, random: false));
+    }
 
     if (showTracks) children.addAll(_tracksSection(l));
     if (showArtists) children.addAll(_artistsSection(l));

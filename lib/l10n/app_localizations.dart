@@ -3089,6 +3089,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Find similar'**
   String get discoverFindSimilar;
+
+  /// Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a sonic session'**
+  String get discoverStartSession;
+
+  /// Session card subtitle when the screen has a seed track. Must warn that the queue is replaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless music that sounds like this — replaces your queue.'**
+  String get discoverStartSessionSubtitle;
+
+  /// Session card subtitle in the no-seed state (nothing playing): a random library song seeds the session.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless music from a random starting song — replaces your queue.'**
+  String get discoverStartSessionSubtitleRandom;
+
+  /// Toast after the session card starts playback (sonic Auto DJ was enabled and seeded).
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic session started — Auto DJ is on.'**
+  String get discoverSessionStarted;
 }
 
 class _AppLocalizationsDelegate

@@ -1797,4 +1797,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => 'Найти похожие';
+
+  @override
+  String get discoverStartSession => 'Запустить звуковую сессию';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Бесконечная музыка, звучащая как этот трек — заменит вашу очередь.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Бесконечная музыка со случайного стартового трека — заменит вашу очередь.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Звуковая сессия запущена — Auto DJ включён.';
 }

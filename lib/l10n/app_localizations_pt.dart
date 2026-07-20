@@ -1776,4 +1776,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => 'Encontrar semelhantes';
+
+  @override
+  String get discoverStartSession => 'Iniciar uma sessão sonora';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Música sem fim que soa como esta — substitui sua fila.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Música sem fim a partir de uma música inicial aleatória — substitui sua fila.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Sessão sonora iniciada — Auto DJ ativado.';
 }

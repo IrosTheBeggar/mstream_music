@@ -420,5 +420,9 @@
   "autoDjSonicSeedRandom": "Canción aleatoria",
   "autoDjSonicSeedRemove": "Quitar canción semilla",
   "autoDjSonicSeedFailed": "No se pudo obtener una canción del servidor.",
-  "discoverFindSimilar": "Buscar similares"
+  "discoverFindSimilar": "Buscar similares",
+  "discoverStartSession": "Iniciar una sesión sonora",
+  "discoverStartSessionSubtitle": "Música sin fin que suena como esta — reemplaza tu cola.",
+  "discoverStartSessionSubtitleRandom": "Música sin fin desde una canción inicial aleatoria — reemplaza tu cola.",
+  "discoverSessionStarted": "Sesión sonora iniciada — Auto DJ activado."
 }

@@ -1779,4 +1779,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => 'Buscar similares';
+
+  @override
+  String get discoverStartSession => 'Iniciar una sesión sonora';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Música sin fin que suena como esta — reemplaza tu cola.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Música sin fin desde una canción inicial aleatoria — reemplaza tu cola.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Sesión sonora iniciada — Auto DJ activado.';
 }

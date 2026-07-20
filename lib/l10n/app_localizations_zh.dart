@@ -1678,4 +1678,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => '查找相似歌曲';
+
+  @override
+  String get discoverStartSession => '开始声音会话';
+
+  @override
+  String get discoverStartSessionSubtitle => '无尽播放与此相似的音乐 — 将替换当前队列。';
+
+  @override
+  String get discoverStartSessionSubtitleRandom => '从随机歌曲开始无尽播放 — 将替换当前队列。';
+
+  @override
+  String get discoverSessionStarted => '声音会话已开始 — Auto DJ 已开启。';
 }

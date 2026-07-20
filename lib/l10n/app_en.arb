@@ -1299,5 +1299,21 @@
   "discoverFindSimilar": "Find similar",
   "@discoverFindSimilar": {
     "description": "Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track."
+  },
+  "discoverStartSession": "Start a sonic session",
+  "@discoverStartSession": {
+    "description": "Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback."
+  },
+  "discoverStartSessionSubtitle": "Endless music that sounds like this — replaces your queue.",
+  "@discoverStartSessionSubtitle": {
+    "description": "Session card subtitle when the screen has a seed track. Must warn that the queue is replaced."
+  },
+  "discoverStartSessionSubtitleRandom": "Endless music from a random starting song — replaces your queue.",
+  "@discoverStartSessionSubtitleRandom": {
+    "description": "Session card subtitle in the no-seed state (nothing playing): a random library song seeds the session."
+  },
+  "discoverSessionStarted": "Sonic session started — Auto DJ is on.",
+  "@discoverSessionStarted": {
+    "description": "Toast after the session card starts playback (sonic Auto DJ was enabled and seeded)."
   }
 }

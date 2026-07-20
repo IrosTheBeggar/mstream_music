@@ -420,5 +420,9 @@
   "autoDjSonicSeedRandom": "ランダムな曲",
   "autoDjSonicSeedRemove": "シード曲を削除",
   "autoDjSonicSeedFailed": "サーバーから曲を取得できませんでした。",
-  "discoverFindSimilar": "似ている曲を探す"
+  "discoverFindSimilar": "似ている曲を探す",
+  "discoverStartSession": "ソニックセッションを開始",
+  "discoverStartSessionSubtitle": "この曲に似た音楽をエンドレス再生 — キューは置き換えられます。",
+  "discoverStartSessionSubtitleRandom": "ランダムな曲から始まるエンドレス再生 — キューは置き換えられます。",
+  "discoverSessionStarted": "ソニックセッションを開始しました — Auto DJ がオンです。"
 }

@@ -1760,4 +1760,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get discoverFindSimilar => 'Find similar';
+
+  @override
+  String get discoverStartSession => 'Start a sonic session';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Endless music that sounds like this — replaces your queue.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Endless music from a random starting song — replaces your queue.';
+
+  @override
+  String get discoverSessionStarted => 'Sonic session started — Auto DJ is on.';
 }

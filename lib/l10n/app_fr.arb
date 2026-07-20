@@ -420,5 +420,9 @@
   "autoDjSonicSeedRandom": "Titre aléatoire",
   "autoDjSonicSeedRemove": "Retirer le titre de départ",
   "autoDjSonicSeedFailed": "Impossible de récupérer un titre depuis le serveur.",
-  "discoverFindSimilar": "Titres similaires"
+  "discoverFindSimilar": "Titres similaires",
+  "discoverStartSession": "Lancer une session sonore",
+  "discoverStartSessionSubtitle": "De la musique sans fin qui sonne comme ce titre — remplace votre file d'attente.",
+  "discoverStartSessionSubtitleRandom": "De la musique sans fin à partir d'un titre de départ aléatoire — remplace votre file d'attente.",
+  "discoverSessionStarted": "Session sonore lancée — Auto DJ activé."
 }
