@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
+import '../screens/discover_screen.dart';
 import '../screens/metadata_screen.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
@@ -39,6 +40,15 @@ Widget _artFallback() => albumArtFallback(iconSize: 20);
 
 String _fmtDur(Duration? d) =>
     d == null ? '' : formatDuration(d, padMinutes: false);
+
+/// Whether a queue item can seed Discover: a server track whose server
+/// advertised discovery on ping. Local files (no server path) and older
+/// servers get no Find-similar action — never probed.
+bool _canFindSimilar(MediaItem item) {
+  final server =
+      ServerManager().byLocalname(item.extras?['server'] as String?);
+  return server?.discoveryAvailable == true && item.extras?['path'] is String;
+}
 
 /// The "Up Next" queue list (design Variant B rows). Reads/writes the queue
 /// purely through `MediaManager().audioHandler`, so it works identically
@@ -145,12 +155,15 @@ class QueueList extends StatelessWidget {
               // the *item* across reorders; distinct MediaItem instances avoid a
               // duplicate-key clash.
               key: ObjectKey(item),
-              // RIGHT swipe (or a grip tap, see _QueueRow) → Info.
+              // RIGHT swipe (or a grip tap, see _QueueRow) → Info, plus Find
+              // similar when this track's server has discovery data (the pane
+              // widens to fit the second action; hidden on older servers and
+              // for local files, never probed).
               startActionPane: ActionPane(
                 motion: const DrawerMotion(),
-                extentRatio: 0.25,
-                // A full right-swipe past Info also removes the track, so a full
-                // swipe in EITHER direction removes.
+                extentRatio: _canFindSimilar(item) ? 0.5 : 0.25,
+                // A full right-swipe past the actions also removes the track,
+                // so a full swipe in EITHER direction removes.
                 dismissible: DismissiblePane(onDismissed: removeItem),
                 children: [
                   SlidableAction(
@@ -167,6 +180,27 @@ class QueueList extends StatelessWidget {
                       );
                     },
                   ),
+                  if (_canFindSimilar(item))
+                    SlidableAction(
+                      backgroundColor: VelvetColors.raised,
+                      foregroundColor: VelvetColors.primary,
+                      icon: Icons.explore,
+                      label: l.discoverFindSimilar,
+                      onPressed: (context) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DiscoverScreen(
+                              seedServer: ServerManager().byLocalname(
+                                  item.extras?['server'] as String?),
+                              seedPath: item.extras?['path'] as String?,
+                              seedTitle: item.title,
+                              seedArtist: item.artist,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
               // LEFT swipe → Remove; a full left-swipe also removes (the
