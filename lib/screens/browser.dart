@@ -14,7 +14,7 @@ import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'discover_screen.dart';
+import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
 import '../util/queue_actions.dart';
@@ -542,6 +542,10 @@ class _BrowserState extends State<Browser> {
                       Slidable.of(context)?.openEndActionPane();
                     },
                   ),
+                  // Same long-press context sheet as server rows — the queue
+                  // actions apply to local files too (Find similar hides
+                  // itself: a local path can't seed the similarity index).
+                  onLongPress: () => _showTrackActions(b[i], c),
                   onTap: () {
                     handleTap(b, i, c);
                   }),
@@ -686,26 +690,16 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  // "Find similar" via long-press on a server track row: opens Discover
-  // pinned to that track. Requires the row's server to have advertised
-  // discovery on ping — otherwise (and for local files) it's a no-op.
-  void _findSimilarFromRow(DisplayItem item, BuildContext c) {
-    final server = item.server;
-    final path = item.data;
-    if (item.type != 'file' ||
-        server == null ||
-        path == null ||
-        server.discoveryAvailable != true) {
-      return;
-    }
-    Navigator.of(c).push(MaterialPageRoute(
-      builder: (_) => DiscoverScreen(
-        seedServer: server,
-        seedPath: path,
-        seedTitle: item.metadata?.title ?? path.split('/').last,
-        seedArtist: item.metadata?.artist,
-      ),
-    ));
+  // Long-press context sheet for track rows: the album-detail queue actions
+  // (Add next / Play now / Add to end) plus Find similar when the track's
+  // server supports discovery. Long-press = item context menu is the
+  // convention everywhere (Apple Music / Spotify / Symfonium).
+  void _showTrackActions(DisplayItem item, BuildContext c) {
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      builder: (_) => TrackActionsSheet(item: item, parentContext: c),
+    );
   }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -720,10 +714,7 @@ class _BrowserState extends State<Browser> {
             color: VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
-                // Long-press a server track → Discover pinned to it ("Find
-                // similar"). Silent no-op when the track's server has no
-                // discovery data, so the gesture is safe on older servers.
-                onLongPress: () => _findSimilarFromRow(b[i], c),
+                onLongPress: () => _showTrackActions(b[i], c),
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
