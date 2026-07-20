@@ -1619,4 +1619,58 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'ディスカバー';
+
+  @override
+  String get discoverMatchedBySound => 'サウンドでマッチ';
+
+  @override
+  String get discoverSimilarTracks => '似ている曲';
+
+  @override
+  String get discoverSimilarArtists => '似ているアーティスト';
+
+  @override
+  String get discoverFromNetwork => 'ネットワークから';
+
+  @override
+  String get discoverFromPeers => 'ピアから';
+
+  @override
+  String get discoverQueueAll => 'すべてキューに追加';
+
+  @override
+  String get discoverNewArtistsOnly => '新しいアーティストのみ';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'この曲はまだ解析されていません — ディスカバリースキャンが到達すると、似ている曲が表示されます。';
+
+  @override
+  String get discoverNothingFound => '一致する曲が見つかりませんでした。';
+
+  @override
+  String get discoverNoSeed => '曲を再生すると、似ている音楽を発見できます。';
+
+  @override
+  String get discoverLeadCopied => 'コピーしました — 探してみましょう！';
+
+  @override
+  String get discoverOpenMusicBrainz => 'MusicBrainz で開く';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドでダウンロードされます。';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'この曲に新しい発見はありません — ネットワークに未知の一致はありません。';
+
+  @override
+  String get discoverPeersUnreachable => 'ピアから応答がありません — 現在オフラインの可能性があります。';
+
+  @override
+  String get discoverPeersNothingNew => 'ピアのサーバーには、この曲の新しい一致はありません。';
 }

@@ -391,5 +391,22 @@
   "importedShadersRemove": "Usuń",
   "importedShadersEmptyTitle": "Brak shaderów w folderze",
   "importedShadersEmptyBody": "Skopiuj pliki .glsl w stylu Shadertoy do powyższego folderu, a następnie dotknij Przeskanuj ponownie.",
-  "importedShadersInvalid": "Może nie być prawidłowym shaderem — brak punktu wejścia mainImage/main."
+  "importedShadersInvalid": "Może nie być prawidłowym shaderem — brak punktu wejścia mainImage/main.",
+  "discoverTitle": "Odkrywaj",
+  "discoverMatchedBySound": "Dopasowane brzmieniem",
+  "discoverSimilarTracks": "Podobne utwory",
+  "discoverSimilarArtists": "Podobni artyści",
+  "discoverFromNetwork": "Z sieci",
+  "discoverFromPeers": "Od twoich peerów",
+  "discoverQueueAll": "Dodaj wszystko do kolejki",
+  "discoverNewArtistsOnly": "Tylko nowi artyści",
+  "discoverNotAnalyzed": "Ten utwór nie został jeszcze przeanalizowany — podobne utwory pojawią się, gdy skan odkrywania do niego dotrze.",
+  "discoverNothingFound": "Nie znaleziono dopasowań.",
+  "discoverNoSeed": "Odtwórz utwór, aby odkryć podobną muzykę.",
+  "discoverLeadCopied": "Skopiowano — idź i znajdź!",
+  "discoverOpenMusicBrainz": "Otwórz w MusicBrainz",
+  "discoverNetworkWarmingUp": "Brak danych z sieci — biblioteki peerów pobierają się w tle, gdy tylko zostaną wykryte inne serwery.",
+  "discoverNetworkNothingNew": "Nic nowego dla tego utworu — sieć nie ma nieznanych dopasowań.",
+  "discoverPeersUnreachable": "Twoje peery nie odpowiedziały — mogą być teraz offline.",
+  "discoverPeersNothingNew": "Nic nowego dla tego utworu na serwerach twoich peerów."
 }

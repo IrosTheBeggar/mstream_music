@@ -1589,4 +1589,55 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => '发现';
+
+  @override
+  String get discoverMatchedBySound => '按声音匹配';
+
+  @override
+  String get discoverSimilarTracks => '相似歌曲';
+
+  @override
+  String get discoverSimilarArtists => '相似艺术家';
+
+  @override
+  String get discoverFromNetwork => '来自网络';
+
+  @override
+  String get discoverFromPeers => '来自伙伴服务器';
+
+  @override
+  String get discoverQueueAll => '全部加入队列';
+
+  @override
+  String get discoverNewArtistsOnly => '仅新艺术家';
+
+  @override
+  String get discoverNotAnalyzed => '这首歌尚未分析 — 发现扫描处理后会显示相似歌曲。';
+
+  @override
+  String get discoverNothingFound => '未找到匹配项。';
+
+  @override
+  String get discoverNoSeed => '播放一首歌曲以发现相似音乐。';
+
+  @override
+  String get discoverLeadCopied => '已复制 — 去找找吧！';
+
+  @override
+  String get discoverOpenMusicBrainz => '在 MusicBrainz 中打开';
+
+  @override
+  String get discoverNetworkWarmingUp => '暂无网络数据 — 发现其他服务器后，伙伴音乐库会在后台下载。';
+
+  @override
+  String get discoverNetworkNothingNew => '这首歌没有新发现 — 网络中没有陌生的匹配项。';
+
+  @override
+  String get discoverPeersUnreachable => '伙伴服务器没有响应 — 它们现在可能离线。';
+
+  @override
+  String get discoverPeersNothingNew => '伙伴服务器上没有这首歌的新发现。';
 }

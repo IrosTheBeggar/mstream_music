@@ -1701,4 +1701,60 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Открытия';
+
+  @override
+  String get discoverMatchedBySound => 'Подобрано по звучанию';
+
+  @override
+  String get discoverSimilarTracks => 'Похожие треки';
+
+  @override
+  String get discoverSimilarArtists => 'Похожие исполнители';
+
+  @override
+  String get discoverFromNetwork => 'Из сети';
+
+  @override
+  String get discoverFromPeers => 'От ваших пиров';
+
+  @override
+  String get discoverQueueAll => 'Добавить все в очередь';
+
+  @override
+  String get discoverNewArtistsOnly => 'Только новые исполнители';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'Этот трек ещё не проанализирован — похожие треки появятся, когда сканирование дойдёт до него.';
+
+  @override
+  String get discoverNothingFound => 'Совпадений не найдено.';
+
+  @override
+  String get discoverNoSeed => 'Включите трек, чтобы открыть похожую музыку.';
+
+  @override
+  String get discoverLeadCopied => 'Скопировано — идите искать!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Открыть на MusicBrainz';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'Данных из сети пока нет — библиотеки пиров загружаются в фоне, как только обнаружены другие серверы.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Ничего нового для этого трека — в сети нет незнакомых совпадений.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Ваши пиры не ответили — возможно, они сейчас офлайн.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Ничего нового для этого трека на серверах ваших пиров.';
 }

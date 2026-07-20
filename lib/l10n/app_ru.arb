@@ -391,5 +391,22 @@
   "importedShadersRemove": "Удалить",
   "importedShadersEmptyTitle": "В папке пока нет шейдеров",
   "importedShadersEmptyBody": "Скопируйте файлы .glsl в стиле Shadertoy в папку выше, затем нажмите «Пересканировать».",
-  "importedShadersInvalid": "Возможно, это недопустимый шейдер — нет точки входа mainImage/main."
+  "importedShadersInvalid": "Возможно, это недопустимый шейдер — нет точки входа mainImage/main.",
+  "discoverTitle": "Открытия",
+  "discoverMatchedBySound": "Подобрано по звучанию",
+  "discoverSimilarTracks": "Похожие треки",
+  "discoverSimilarArtists": "Похожие исполнители",
+  "discoverFromNetwork": "Из сети",
+  "discoverFromPeers": "От ваших пиров",
+  "discoverQueueAll": "Добавить все в очередь",
+  "discoverNewArtistsOnly": "Только новые исполнители",
+  "discoverNotAnalyzed": "Этот трек ещё не проанализирован — похожие треки появятся, когда сканирование дойдёт до него.",
+  "discoverNothingFound": "Совпадений не найдено.",
+  "discoverNoSeed": "Включите трек, чтобы открыть похожую музыку.",
+  "discoverLeadCopied": "Скопировано — идите искать!",
+  "discoverOpenMusicBrainz": "Открыть на MusicBrainz",
+  "discoverNetworkWarmingUp": "Данных из сети пока нет — библиотеки пиров загружаются в фоне, как только обнаружены другие серверы.",
+  "discoverNetworkNothingNew": "Ничего нового для этого трека — в сети нет незнакомых совпадений.",
+  "discoverPeersUnreachable": "Ваши пиры не ответили — возможно, они сейчас офлайн.",
+  "discoverPeersNothingNew": "Ничего нового для этого трека на серверах ваших пиров."
 }

@@ -41,6 +41,18 @@ class Server {
   String? transcodeDefaultCodec;
   String? transcodeDefaultBitrate;
 
+  // Discovery (sonic-similarity) capability flags from /api/v1/ping, refreshed
+  // on each ping and PERSISTED like [transcodeAvailable]. Unlike transcoding
+  // these are gated STRICTLY on `== true` (no optimistic-null window): the
+  // webapp never calls a /discovery endpoint unless the ping advertised it,
+  // and the app follows the same rule. Older servers omit the keys → false.
+  //   discoveryAvailable           — local similar tracks/artists
+  //   discoveryP2pAvailable        — "From the network" (P2P snapshot leads)
+  //   federationDiscoveryAvailable — "From your peers" (federation leads)
+  bool? discoveryAvailable;
+  bool? discoveryP2pAvailable;
+  bool? federationDiscoveryAvailable;
+
   // authentication is optional (mstream servers can be public OR private)
   String? username;
   String? password;
@@ -116,6 +128,15 @@ class Server {
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
         transcodeDefaultBitrate = json['transcodeDefaultBitrate'] as String?,
+        discoveryAvailable =
+            json['discoveryAvailable'] is bool ? json['discoveryAvailable'] : null,
+        discoveryP2pAvailable = json['discoveryP2pAvailable'] is bool
+            ? json['discoveryP2pAvailable']
+            : null,
+        federationDiscoveryAvailable =
+            json['federationDiscoveryAvailable'] is bool
+                ? json['federationDiscoveryAvailable']
+                : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?;
 
@@ -134,6 +155,9 @@ class Server {
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
         'transcodeDefaultBitrate': transcodeDefaultBitrate,
+        'discoveryAvailable': discoveryAvailable,
+        'discoveryP2pAvailable': discoveryP2pAvailable,
+        'federationDiscoveryAvailable': federationDiscoveryAvailable,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode
       };

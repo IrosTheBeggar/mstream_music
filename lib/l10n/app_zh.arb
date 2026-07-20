@@ -391,5 +391,22 @@
   "importedShadersRemove": "移除",
   "importedShadersEmptyTitle": "文件夹中还没有着色器",
   "importedShadersEmptyBody": "将 Shadertoy 风格的 .glsl 文件复制到上方文件夹，然后点击重新扫描。",
-  "importedShadersInvalid": "可能不是有效的着色器 — 没有 mainImage/main 入口点。"
+  "importedShadersInvalid": "可能不是有效的着色器 — 没有 mainImage/main 入口点。",
+  "discoverTitle": "发现",
+  "discoverMatchedBySound": "按声音匹配",
+  "discoverSimilarTracks": "相似歌曲",
+  "discoverSimilarArtists": "相似艺术家",
+  "discoverFromNetwork": "来自网络",
+  "discoverFromPeers": "来自伙伴服务器",
+  "discoverQueueAll": "全部加入队列",
+  "discoverNewArtistsOnly": "仅新艺术家",
+  "discoverNotAnalyzed": "这首歌尚未分析 — 发现扫描处理后会显示相似歌曲。",
+  "discoverNothingFound": "未找到匹配项。",
+  "discoverNoSeed": "播放一首歌曲以发现相似音乐。",
+  "discoverLeadCopied": "已复制 — 去找找吧！",
+  "discoverOpenMusicBrainz": "在 MusicBrainz 中打开",
+  "discoverNetworkWarmingUp": "暂无网络数据 — 发现其他服务器后，伙伴音乐库会在后台下载。",
+  "discoverNetworkNothingNew": "这首歌没有新发现 — 网络中没有陌生的匹配项。",
+  "discoverPeersUnreachable": "伙伴服务器没有响应 — 它们现在可能离线。",
+  "discoverPeersNothingNew": "伙伴服务器上没有这首歌的新发现。"
 }

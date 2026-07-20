@@ -3,6 +3,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
+import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
@@ -591,6 +592,112 @@ class ApiManager {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Shared plumbing for the discovery (sonic-similarity) endpoints: POST
+  /// [body] to [location] on [server] and classify the outcome per
+  /// [DiscoveryFetchResult]. Direct http (like [fetchTrackMetadata]) so these
+  /// stay off the browser loading bar; never throws. A 403 means the feature
+  /// is switched off server-side — reported distinctly so the section hides
+  /// itself for the session. Anything else that fails (including the server's
+  /// uniform 404 for an unknown / not-yet-embedded seed) is a plain error and
+  /// the caller just skips that refresh.
+  Future<DiscoveryFetchResult<T>> _postDiscovery<T>(
+      Server server,
+      String location,
+      Map<String, dynamic> body,
+      T Function(Map) parse) async {
+    try {
+      final response = await http
+          .post(
+            server.apiUri(location),
+            body: jsonEncode(body),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 403) {
+        return DiscoveryFetchResult<T>.disabled();
+      }
+      if (response.statusCode > 299) return DiscoveryFetchResult<T>.error();
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return DiscoveryFetchResult<T>.error();
+      return DiscoveryFetchResult.ok(parse(decoded));
+    } catch (err) {
+      verboseLog('[api] discovery $location failed: $err');
+      return DiscoveryFetchResult<T>.error();
+    }
+  }
+
+  /// POST /api/v1/discovery/local/similar/tracks — library tracks sonically
+  /// similar to the seed at [filepath]. The endpoint wants the vpath-form path
+  /// WITHOUT the client's leading slash (same convention as [rateSong]).
+  /// Results carry standard library filepaths, so they queue/play like any
+  /// browse row. Only call when the server advertised `discovery` on ping.
+  Future<DiscoveryFetchResult<DiscoverySimilarTracks>>
+      fetchDiscoverySimilarTracks(Server server, String filepath,
+          {int limit = 10,
+          bool excludeSameArtist = false,
+          bool excludeSameAlbum = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/similar/tracks',
+      {
+        'filePath': fp,
+        'limit': limit,
+        if (excludeSameArtist) 'excludeSameArtist': true,
+        if (excludeSameAlbum) 'excludeSameAlbum': true,
+      },
+      (m) => DiscoverySimilarTracks.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/local/similar/artists — artists whose overall
+  /// sound (centroid of their analyzed tracks) is closest to [artist]'s, each
+  /// with up to two playable entry-point tracks.
+  Future<DiscoveryFetchResult<DiscoverySimilarArtists>>
+      fetchDiscoverySimilarArtists(Server server, String artist,
+          {int limit = 5}) {
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/similar/artists',
+      {'artist': artist, 'limit': limit},
+      (m) => DiscoverySimilarArtists.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/p2p/similar — "From the network": similar tracks
+  /// from fetched snapshots of public P2P peers. Metadata-only leads (nothing
+  /// playable). Gated on the ping's `discoveryP2p` flag.
+  Future<DiscoveryFetchResult<DiscoveryLeads>> fetchDiscoveryP2pSimilar(
+      Server server, String filepath,
+      {int limit = 10, bool newArtistsOnly = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/p2p/similar',
+      {'filePath': fp, 'limit': limit, 'newArtistsOnly': newArtistsOnly},
+      (m) => DiscoveryLeads.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/federation/similar — "From your peers": live
+  /// similarity queries against paired federation peers. Leads only at this
+  /// server version (peer-stream playback landed later upstream). Gated on
+  /// the ping's `federationDiscovery` flag. Server caps limit at 50.
+  Future<DiscoveryFetchResult<DiscoveryLeads>> fetchDiscoveryFederationSimilar(
+      Server server, String filepath,
+      {int limit = 10, bool newArtistsOnly = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/federation/similar',
+      {'filePath': fp, 'limit': limit, 'newArtistsOnly': newArtistsOnly},
+      (m) => DiscoveryLeads.fromServerMap(m),
+    );
   }
 
   Future<void> getArtists({Server? useThisServer}) async {

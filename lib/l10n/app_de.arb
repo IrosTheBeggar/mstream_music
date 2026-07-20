@@ -391,5 +391,22 @@
   "importedShadersRemove": "Entfernen",
   "importedShadersEmptyTitle": "Noch keine Shader im Ordner",
   "importedShadersEmptyBody": "Kopiere .glsl-Dateien im Shadertoy-Stil in den Ordner oben und tippe dann auf Neu scannen.",
-  "importedShadersInvalid": "Ist möglicherweise kein gültiger Shader — kein mainImage/main-Einstiegspunkt."
+  "importedShadersInvalid": "Ist möglicherweise kein gültiger Shader — kein mainImage/main-Einstiegspunkt.",
+  "discoverTitle": "Entdecken",
+  "discoverMatchedBySound": "Nach Klang gefunden",
+  "discoverSimilarTracks": "Ähnliche Titel",
+  "discoverSimilarArtists": "Ähnliche Künstler",
+  "discoverFromNetwork": "Aus dem Netzwerk",
+  "discoverFromPeers": "Von deinen Peers",
+  "discoverQueueAll": "Alle einreihen",
+  "discoverNewArtistsOnly": "Nur neue Künstler",
+  "discoverNotAnalyzed": "Dieser Titel wurde noch nicht analysiert — ähnliche Titel erscheinen, sobald der Discovery-Scan ihn erreicht.",
+  "discoverNothingFound": "Keine Treffer gefunden.",
+  "discoverNoSeed": "Spiele einen Titel ab, um ähnliche Musik zu entdecken.",
+  "discoverLeadCopied": "Kopiert — viel Erfolg beim Suchen!",
+  "discoverOpenMusicBrainz": "Auf MusicBrainz öffnen",
+  "discoverNetworkWarmingUp": "Noch keine Netzwerkdaten — Peer-Bibliotheken werden im Hintergrund geladen, sobald andere Server gefunden werden.",
+  "discoverNetworkNothingNew": "Nichts Neues für diesen Titel — das Netzwerk hat keine unbekannten Treffer.",
+  "discoverPeersUnreachable": "Deine Peers haben nicht geantwortet — sie sind möglicherweise gerade offline.",
+  "discoverPeersNothingNew": "Nichts Neues für diesen Titel auf den Servern deiner Peers."
 }

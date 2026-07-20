@@ -1682,4 +1682,61 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Entdecken';
+
+  @override
+  String get discoverMatchedBySound => 'Nach Klang gefunden';
+
+  @override
+  String get discoverSimilarTracks => 'Ähnliche Titel';
+
+  @override
+  String get discoverSimilarArtists => 'Ähnliche Künstler';
+
+  @override
+  String get discoverFromNetwork => 'Aus dem Netzwerk';
+
+  @override
+  String get discoverFromPeers => 'Von deinen Peers';
+
+  @override
+  String get discoverQueueAll => 'Alle einreihen';
+
+  @override
+  String get discoverNewArtistsOnly => 'Nur neue Künstler';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'Dieser Titel wurde noch nicht analysiert — ähnliche Titel erscheinen, sobald der Discovery-Scan ihn erreicht.';
+
+  @override
+  String get discoverNothingFound => 'Keine Treffer gefunden.';
+
+  @override
+  String get discoverNoSeed =>
+      'Spiele einen Titel ab, um ähnliche Musik zu entdecken.';
+
+  @override
+  String get discoverLeadCopied => 'Kopiert — viel Erfolg beim Suchen!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Auf MusicBrainz öffnen';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'Noch keine Netzwerkdaten — Peer-Bibliotheken werden im Hintergrund geladen, sobald andere Server gefunden werden.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Nichts Neues für diesen Titel — das Netzwerk hat keine unbekannten Treffer.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Deine Peers haben nicht geantwortet — sie sind möglicherweise gerade offline.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Nichts Neues für diesen Titel auf den Servern deiner Peers.';
 }

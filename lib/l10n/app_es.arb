@@ -391,5 +391,22 @@
   "importedShadersRemove": "Quitar",
   "importedShadersEmptyTitle": "Aún no hay shaders en la carpeta",
   "importedShadersEmptyBody": "Copia archivos .glsl al estilo Shadertoy en la carpeta de arriba y luego toca Volver a escanear.",
-  "importedShadersInvalid": "Puede que no sea un shader válido — sin punto de entrada mainImage/main."
+  "importedShadersInvalid": "Puede que no sea un shader válido — sin punto de entrada mainImage/main.",
+  "discoverTitle": "Descubrir",
+  "discoverMatchedBySound": "Coincidencias por sonido",
+  "discoverSimilarTracks": "Canciones similares",
+  "discoverSimilarArtists": "Artistas similares",
+  "discoverFromNetwork": "De la red",
+  "discoverFromPeers": "De tus pares",
+  "discoverQueueAll": "Añadir todo a la cola",
+  "discoverNewArtistsOnly": "Solo artistas nuevos",
+  "discoverNotAnalyzed": "Esta canción aún no se ha analizado — las canciones similares aparecerán cuando el análisis de descubrimiento la procese.",
+  "discoverNothingFound": "No se encontraron coincidencias.",
+  "discoverNoSeed": "Reproduce una canción para descubrir música similar.",
+  "discoverLeadCopied": "Copiado — ¡ve a buscarla!",
+  "discoverOpenMusicBrainz": "Abrir en MusicBrainz",
+  "discoverNetworkWarmingUp": "Aún no hay datos de la red — las bibliotecas de los pares se descargan en segundo plano cuando se detectan otros servidores.",
+  "discoverNetworkNothingNew": "Nada nuevo para esta canción — la red no tiene coincidencias desconocidas.",
+  "discoverPeersUnreachable": "Tus pares no respondieron — puede que estén desconectados ahora mismo.",
+  "discoverPeersNothingNew": "Nada nuevo para esta canción en los servidores de tus pares."
 }

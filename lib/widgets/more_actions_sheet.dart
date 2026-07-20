@@ -1,9 +1,11 @@
 import 'dart:io' show Platform;
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
+import '../screens/discover_screen.dart';
 import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
@@ -75,6 +77,36 @@ class MoreActionsSheet extends StatelessWidget {
                 value: on,
                 activeThumbColor: VelvetColors.primary,
                 onChanged: (_) => _toggleAutoDJ(context, autoDJState),
+              );
+            },
+          ),
+          // Discover — sonic-similarity recommendations seeded by the playing
+          // track. Shown only when that track's server advertised a discovery
+          // capability on ping (older servers: hidden, never probed).
+          StreamBuilder<MediaItem?>(
+            stream: MediaManager().audioHandler.mediaItem,
+            initialData: MediaManager().audioHandler.mediaItem.valueOrNull,
+            builder: (context, snap) {
+              final extras = snap.data?.extras;
+              final server =
+                  ServerManager().byLocalname(extras?['server'] as String?);
+              final available = extras?['path'] is String &&
+                  server != null &&
+                  (server.discoveryAvailable == true ||
+                      server.discoveryP2pAvailable == true ||
+                      server.federationDiscoveryAvailable == true);
+              if (!available) return const SizedBox.shrink();
+              return ListTile(
+                leading:
+                    Icon(Icons.explore, color: VelvetColors.textSecondary),
+                title: Text(l.discoverTitle,
+                    style: TextStyle(color: VelvetColors.textPrimary)),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(parentContext).push(
+                    MaterialPageRoute(builder: (_) => const DiscoverScreen()),
+                  );
+                },
               );
             },
           ),

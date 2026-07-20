@@ -2915,6 +2915,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.'**
   String get irohShareUnavailable;
+
+  /// Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get discoverTitle;
+
+  /// Subtitle under the Discover screen title: results are audio-similarity matches, not genre-tag matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched by sound'**
+  String get discoverMatchedBySound;
+
+  /// Discover section header: library tracks that sound like the playing one.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar tracks'**
+  String get discoverSimilarTracks;
+
+  /// Discover section header: library artists whose sound is closest to the playing track's artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar artists'**
+  String get discoverSimilarArtists;
+
+  /// Discover section header: leads from public P2P peers' libraries (not playable).
+  ///
+  /// In en, this message translates to:
+  /// **'From the network'**
+  String get discoverFromNetwork;
+
+  /// Discover section header: leads from paired federation servers (not playable).
+  ///
+  /// In en, this message translates to:
+  /// **'From your peers'**
+  String get discoverFromPeers;
+
+  /// Button in the Similar tracks section header: append every listed track to the play queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue all'**
+  String get discoverQueueAll;
+
+  /// Switch above the network/peers sections: only show artists not already in the library.
+  ///
+  /// In en, this message translates to:
+  /// **'New artists only'**
+  String get discoverNewArtistsOnly;
+
+  /// Hint when the playing track has no audio embedding yet (server-side analysis still pending).
+  ///
+  /// In en, this message translates to:
+  /// **'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.'**
+  String get discoverNotAnalyzed;
+
+  /// Empty state for a Discover section that returned no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches found.'**
+  String get discoverNothingFound;
+
+  /// Discover screen body when nothing is playing (recommendations are seeded by the current track).
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song to discover similar music.'**
+  String get discoverNoSeed;
+
+  /// Snackbar after tapping a network/peer lead: "Artist - Title" was copied to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied — go find it!'**
+  String get discoverLeadCopied;
+
+  /// Tooltip on a lead row's link icon: open the recording's MusicBrainz page in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on MusicBrainz'**
+  String get discoverOpenMusicBrainz;
+
+  /// Empty state for the network section when no P2P peer snapshots have been fetched yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No network data yet — peer libraries download in the background once other servers are heard.'**
+  String get discoverNetworkWarmingUp;
+
+  /// Empty state for the network section when the new-artists-only filter removed every match.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new for this song — the network has no unfamiliar matches.'**
+  String get discoverNetworkNothingNew;
+
+  /// Empty state for the peers section when every federation peer was unreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your peers didn\'t answer — they may be offline right now.'**
+  String get discoverPeersUnreachable;
+
+  /// Empty state for the peers section when peers answered but had no (new) matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new for this song on your peers\' servers.'**
+  String get discoverPeersNothingNew;
 }
 
 class _AppLocalizationsDelegate

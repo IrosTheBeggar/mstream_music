@@ -391,5 +391,22 @@
   "importedShadersRemove": "Retirer",
   "importedShadersEmptyTitle": "Aucun shader dans le dossier pour l’instant",
   "importedShadersEmptyBody": "Copiez des fichiers .glsl de style Shadertoy dans le dossier ci-dessus, puis touchez Réanalyser.",
-  "importedShadersInvalid": "N’est peut-être pas un shader valide — aucun point d’entrée mainImage/main."
+  "importedShadersInvalid": "N’est peut-être pas un shader valide — aucun point d’entrée mainImage/main.",
+  "discoverTitle": "Découvrir",
+  "discoverMatchedBySound": "Correspondances sonores",
+  "discoverSimilarTracks": "Titres similaires",
+  "discoverSimilarArtists": "Artistes similaires",
+  "discoverFromNetwork": "Depuis le réseau",
+  "discoverFromPeers": "De vos pairs",
+  "discoverQueueAll": "Tout ajouter à la file",
+  "discoverNewArtistsOnly": "Nouveaux artistes uniquement",
+  "discoverNotAnalyzed": "Ce titre n'a pas encore été analysé — les titres similaires apparaîtront quand l'analyse de découverte l'aura traité.",
+  "discoverNothingFound": "Aucune correspondance trouvée.",
+  "discoverNoSeed": "Lancez un titre pour découvrir de la musique similaire.",
+  "discoverLeadCopied": "Copié — bonne recherche !",
+  "discoverOpenMusicBrainz": "Ouvrir sur MusicBrainz",
+  "discoverNetworkWarmingUp": "Pas encore de données réseau — les bibliothèques des pairs se téléchargent en arrière-plan dès que d'autres serveurs sont détectés.",
+  "discoverNetworkNothingNew": "Rien de nouveau pour ce titre — le réseau n'a aucune correspondance inconnue.",
+  "discoverPeersUnreachable": "Vos pairs n'ont pas répondu — ils sont peut-être hors ligne en ce moment.",
+  "discoverPeersNothingNew": "Rien de nouveau pour ce titre sur les serveurs de vos pairs."
 }

@@ -391,5 +391,22 @@
   "importedShadersRemove": "削除",
   "importedShadersEmptyTitle": "フォルダにはまだシェーダーがありません",
   "importedShadersEmptyBody": "Shadertoy スタイルの .glsl ファイルを上のフォルダにコピーし、再スキャンをタップしてください。",
-  "importedShadersInvalid": "有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。"
+  "importedShadersInvalid": "有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。",
+  "discoverTitle": "ディスカバー",
+  "discoverMatchedBySound": "サウンドでマッチ",
+  "discoverSimilarTracks": "似ている曲",
+  "discoverSimilarArtists": "似ているアーティスト",
+  "discoverFromNetwork": "ネットワークから",
+  "discoverFromPeers": "ピアから",
+  "discoverQueueAll": "すべてキューに追加",
+  "discoverNewArtistsOnly": "新しいアーティストのみ",
+  "discoverNotAnalyzed": "この曲はまだ解析されていません — ディスカバリースキャンが到達すると、似ている曲が表示されます。",
+  "discoverNothingFound": "一致する曲が見つかりませんでした。",
+  "discoverNoSeed": "曲を再生すると、似ている音楽を発見できます。",
+  "discoverLeadCopied": "コピーしました — 探してみましょう！",
+  "discoverOpenMusicBrainz": "MusicBrainz で開く",
+  "discoverNetworkWarmingUp": "ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドでダウンロードされます。",
+  "discoverNetworkNothingNew": "この曲に新しい発見はありません — ネットワークに未知の一致はありません。",
+  "discoverPeersUnreachable": "ピアから応答がありません — 現在オフラインの可能性があります。",
+  "discoverPeersNothingNew": "ピアのサーバーには、この曲の新しい一致はありません。"
 }
