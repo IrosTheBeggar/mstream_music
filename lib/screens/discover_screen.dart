@@ -31,7 +31,23 @@ import '../util/queue_actions.dart';
 /// lifetime, `notAnalyzed` renders a hint rather than an error, and a
 /// transient failure keeps whatever rows are already shown.
 class DiscoverScreen extends StatefulWidget {
-  const DiscoverScreen({super.key});
+  /// Explicit seed — the "Find similar" entry points (track menus, Song
+  /// Info) pass the track they were invoked on and the screen stays pinned
+  /// to it. When null (the player's ⋮ entry) the screen follows the
+  /// now-playing track and refreshes on track change.
+  final Server? seedServer;
+  final String? seedPath;
+  final String? seedTitle;
+  final String? seedArtist;
+
+  const DiscoverScreen(
+      {super.key,
+      this.seedServer,
+      this.seedPath,
+      this.seedTitle,
+      this.seedArtist});
+
+  bool get hasExplicitSeed => seedServer != null && seedPath != null;
 
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
@@ -77,18 +93,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _refresh();
-    // BehaviorSubject → fires immediately with the current item; the seed
-    // comparison below swallows that first echo.
-    _sub = MediaManager().audioHandler.mediaItem.listen((item) {
-      final extras = item?.extras;
-      if (extras?['path'] == _seedPath && extras?['server'] == _seedServer?.localname) {
-        return;
-      }
-      _debounce?.cancel();
-      _debounce = Timer(const Duration(milliseconds: 500), () {
-        if (mounted) _refresh();
+    // An explicit seed is pinned — no reason to watch playback. Otherwise
+    // follow track changes; the BehaviorSubject fires immediately with the
+    // current item and the seed comparison below swallows that first echo.
+    if (!widget.hasExplicitSeed) {
+      _sub = MediaManager().audioHandler.mediaItem.listen((item) {
+        final extras = item?.extras;
+        if (extras?['path'] == _seedPath &&
+            extras?['server'] == _seedServer?.localname) {
+          return;
+        }
+        _debounce?.cancel();
+        _debounce = Timer(const Duration(milliseconds: 500), () {
+          if (mounted) _refresh();
+        });
       });
-    });
+    }
   }
 
   @override
@@ -102,21 +122,37 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   /// section ([leadsOnly] skips the local ones — used by the new-artists-only
   /// toggle so the library sections don't flicker).
   void _refresh({bool leadsOnly = false}) {
-    final item = MediaManager().audioHandler.mediaItem.value;
-    final extras = item?.extras;
-    final path = extras?['path'] as String?;
-    final server = ServerManager().byLocalname(extras?['server'] as String?);
+    final Server? server;
+    final String? path;
+    final String? title;
+    final String? artist;
+    if (widget.hasExplicitSeed) {
+      server = widget.seedServer;
+      path = widget.seedPath;
+      title = widget.seedTitle;
+      artist = widget.seedArtist;
+    } else {
+      final item = MediaManager().audioHandler.mediaItem.value;
+      final extras = item?.extras;
+      path = extras?['path'] as String?;
+      server = ServerManager().byLocalname(extras?['server'] as String?);
+      title = item?.title;
+      artist = item?.artist;
+    }
 
     if (!leadsOnly) {
       _seedServer = server;
       _seedPath = path;
-      _seedTitle = item?.title;
-      _seedArtist = item?.artist;
+      _seedTitle = title;
+      _seedArtist = artist;
     }
     if (server == null || path == null) {
       setState(() {});
       return;
     }
+    // A branch-assigned local doesn't stay promoted inside the fetch
+    // closures below; bind a non-null copy for them.
+    final Server seedServer = server;
 
     final newArtistsOnly = SettingsManager().discoverNewArtistsOnly;
 
@@ -134,12 +170,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               _tracksDisabled = true;
             } else if (r.data != null) {
               _tracks = r.data;
-              _trackRows = _rowsFor(server, r.data!.results);
+              _trackRows = _rowsFor(seedServer, r.data!.results);
             }
           });
         });
       }
-      final artist = item?.artist;
       if (server.discoveryAvailable == true &&
           !_artistsDisabled &&
           artist != null &&
@@ -156,7 +191,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             } else if (r.data != null) {
               _artists = r.data;
               _artistEntryRows = r.data!.results
-                  .map((a) => _rowsFor(server, a.entryPoints))
+                  .map((a) => _rowsFor(seedServer, a.entryPoints))
                   .toList();
             }
           });

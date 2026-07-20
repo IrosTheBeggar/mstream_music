@@ -1778,4 +1778,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'Es konnte kein Titel vom Server geladen werden.';
+
+  @override
+  String get discoverFindSimilar => 'Ähnliches finden';
 }

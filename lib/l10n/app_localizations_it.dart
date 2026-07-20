@@ -1776,4 +1776,7 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'Impossibile recuperare un brano dal server.';
+
+  @override
+  String get discoverFindSimilar => 'Trova simili';
 }

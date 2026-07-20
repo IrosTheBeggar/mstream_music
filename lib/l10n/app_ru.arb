@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Найти трек…",
   "autoDjSonicSeedRandom": "Случайный трек",
   "autoDjSonicSeedRemove": "Убрать стартовый трек",
-  "autoDjSonicSeedFailed": "Не удалось получить трек с сервера."
+  "autoDjSonicSeedFailed": "Не удалось получить трек с сервера.",
+  "discoverFindSimilar": "Найти похожие"
 }

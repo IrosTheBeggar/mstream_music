@@ -1675,4 +1675,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
+
+  @override
+  String get discoverFindSimilar => '查找相似歌曲';
 }

@@ -14,6 +14,7 @@ import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'discover_screen.dart';
 
 import '../singletons/media.dart';
 import '../util/queue_actions.dart';
@@ -685,6 +686,28 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  // "Find similar" via long-press on a server track row: opens Discover
+  // pinned to that track. Requires the row's server to have advertised
+  // discovery on ping — otherwise (and for local files) it's a no-op.
+  void _findSimilarFromRow(DisplayItem item, BuildContext c) {
+    final server = item.server;
+    final path = item.data;
+    if (item.type != 'file' ||
+        server == null ||
+        path == null ||
+        server.discoveryAvailable != true) {
+      return;
+    }
+    Navigator.of(c).push(MaterialPageRoute(
+      builder: (_) => DiscoverScreen(
+        seedServer: server,
+        seedPath: path,
+        seedTitle: item.metadata?.title ?? path.split('/').last,
+        seedArtist: item.metadata?.artist,
+      ),
+    ));
+  }
+
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
@@ -697,6 +720,10 @@ class _BrowserState extends State<Browser> {
             color: VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
+                // Long-press a server track → Discover pinned to it ("Find
+                // similar"). Silent no-op when the track's server has no
+                // discovery data, so the gesture is safe on older servers.
+                onLongPress: () => _findSimilarFromRow(b[i], c),
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,

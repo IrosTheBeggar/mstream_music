@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "搜索歌曲…",
   "autoDjSonicSeedRandom": "随机歌曲",
   "autoDjSonicSeedRemove": "移除种子歌曲",
-  "autoDjSonicSeedFailed": "无法从服务器获取歌曲。"
+  "autoDjSonicSeedFailed": "无法从服务器获取歌曲。",
+  "discoverFindSimilar": "查找相似歌曲"
 }

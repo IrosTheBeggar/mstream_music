@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Cerca un brano…",
   "autoDjSonicSeedRandom": "Brano casuale",
   "autoDjSonicSeedRemove": "Rimuovi brano di partenza",
-  "autoDjSonicSeedFailed": "Impossibile recuperare un brano dal server."
+  "autoDjSonicSeedFailed": "Impossibile recuperare un brano dal server.",
+  "discoverFindSimilar": "Trova simili"
 }

@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Buscar uma música…",
   "autoDjSonicSeedRandom": "Música aleatória",
   "autoDjSonicSeedRemove": "Remover música semente",
-  "autoDjSonicSeedFailed": "Não foi possível obter uma música do servidor."
+  "autoDjSonicSeedFailed": "Não foi possível obter uma música do servidor.",
+  "discoverFindSimilar": "Encontrar semelhantes"
 }

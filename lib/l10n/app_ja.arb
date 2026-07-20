@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "曲を検索…",
   "autoDjSonicSeedRandom": "ランダムな曲",
   "autoDjSonicSeedRemove": "シード曲を削除",
-  "autoDjSonicSeedFailed": "サーバーから曲を取得できませんでした。"
+  "autoDjSonicSeedFailed": "サーバーから曲を取得できませんでした。",
+  "discoverFindSimilar": "似ている曲を探す"
 }

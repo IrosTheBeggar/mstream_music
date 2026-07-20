@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Rechercher un titre…",
   "autoDjSonicSeedRandom": "Titre aléatoire",
   "autoDjSonicSeedRemove": "Retirer le titre de départ",
-  "autoDjSonicSeedFailed": "Impossible de récupérer un titre depuis le serveur."
+  "autoDjSonicSeedFailed": "Impossible de récupérer un titre depuis le serveur.",
+  "discoverFindSimilar": "Titres similaires"
 }

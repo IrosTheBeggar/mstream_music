@@ -1794,4 +1794,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'Не удалось получить трек с сервера.';
+
+  @override
+  String get discoverFindSimilar => 'Найти похожие';
 }

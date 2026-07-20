@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Szukaj utworu…",
   "autoDjSonicSeedRandom": "Losowy utwór",
   "autoDjSonicSeedRemove": "Usuń utwór startowy",
-  "autoDjSonicSeedFailed": "Nie udało się pobrać utworu z serwera."
+  "autoDjSonicSeedFailed": "Nie udało się pobrać utworu z serwera.",
+  "discoverFindSimilar": "Znajdź podobne"
 }

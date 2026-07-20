@@ -419,5 +419,6 @@
   "autoDjSonicSeedSearchHint": "Nach einem Titel suchen…",
   "autoDjSonicSeedRandom": "Zufälliger Titel",
   "autoDjSonicSeedRemove": "Ausgangssong entfernen",
-  "autoDjSonicSeedFailed": "Es konnte kein Titel vom Server geladen werden."
+  "autoDjSonicSeedFailed": "Es konnte kein Titel vom Server geladen werden.",
+  "discoverFindSimilar": "Ähnliches finden"
 }

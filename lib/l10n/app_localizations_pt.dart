@@ -1773,4 +1773,7 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'Não foi possível obter uma música do servidor.';
+
+  @override
+  String get discoverFindSimilar => 'Encontrar semelhantes';
 }

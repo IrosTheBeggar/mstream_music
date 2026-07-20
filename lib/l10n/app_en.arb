@@ -1295,5 +1295,9 @@
   "autoDjSonicSeedFailed": "Couldn't fetch a song from the server.",
   "@autoDjSonicSeedFailed": {
     "description": "Error when the random-seed request fails."
+  },
+  "discoverFindSimilar": "Find similar",
+  "@discoverFindSimilar": {
+    "description": "Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track."
   }
 }

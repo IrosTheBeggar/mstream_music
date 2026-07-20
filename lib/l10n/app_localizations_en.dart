@@ -1757,4 +1757,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'Couldn\'t fetch a song from the server.';
+
+  @override
+  String get discoverFindSimilar => 'Find similar';
 }

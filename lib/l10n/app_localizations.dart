@@ -3083,6 +3083,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t fetch a song from the server.'**
   String get autoDjSonicSeedFailed;
+
+  /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
+  ///
+  /// In en, this message translates to:
+  /// **'Find similar'**
+  String get discoverFindSimilar;
 }
 
 class _AppLocalizationsDelegate

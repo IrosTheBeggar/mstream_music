@@ -1709,4 +1709,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'サーバーから曲を取得できませんでした。';
+
+  @override
+  String get discoverFindSimilar => '似ている曲を探す';
 }
