@@ -408,5 +408,8 @@
   "discoverNetworkWarmingUp": "ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドでダウンロードされます。",
   "discoverNetworkNothingNew": "この曲に新しい発見はありません — ネットワークに未知の一致はありません。",
   "discoverPeersUnreachable": "ピアから応答がありません — 現在オフラインの可能性があります。",
-  "discoverPeersNothingNew": "ピアのサーバーには、この曲の新しい一致はありません。"
+  "discoverPeersNothingNew": "ピアのサーバーには、この曲の新しい一致はありません。",
+  "autoDjSonicTitle": "サウンドの類似性",
+  "autoDjSonicSubtitle": "サーバーの音声解析を使って、再生中の曲に似た曲を選びます。一致がない場合はランダム選曲に戻ります。",
+  "autoDjSonicUnavailable": "このサーバーにはディスカバリーデータがありません — 選曲はランダムのままです。"
 }

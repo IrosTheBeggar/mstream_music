@@ -1246,5 +1246,17 @@
   "discoverPeersNothingNew": "Nothing new for this song on your peers' servers.",
   "@discoverPeersNothingNew": {
     "description": "Empty state for the peers section when peers answered but had no (new) matches."
+  },
+  "autoDjSonicTitle": "Sonic similarity",
+  "@autoDjSonicTitle": {
+    "description": "Auto DJ continuity toggle: pick the next track by audio similarity to the playing one."
+  },
+  "autoDjSonicSubtitle": "Pick tracks that sound like the one playing, using the server's audio analysis. Falls back to random when there's no match.",
+  "@autoDjSonicSubtitle": {
+    "description": "Subtitle under the sonic similarity toggle when the server supports it."
+  },
+  "autoDjSonicUnavailable": "This server doesn't have discovery data — picks stay random.",
+  "@autoDjSonicUnavailable": {
+    "description": "Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability."
   }
 }

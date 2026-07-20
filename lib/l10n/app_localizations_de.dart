@@ -1739,4 +1739,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get discoverPeersNothingNew =>
       'Nichts Neues für diesen Titel auf den Servern deiner Peers.';
+
+  @override
+  String get autoDjSonicTitle => 'Klangliche Ähnlichkeit';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Wählt Titel, die wie der laufende klingen — auf Basis der Audio-Analyse des Servers. Ohne Treffer wird zufällig gewählt.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'Dieser Server hat keine Discovery-Daten — die Auswahl bleibt zufällig.';
 }

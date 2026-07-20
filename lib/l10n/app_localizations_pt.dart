@@ -1734,4 +1734,15 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverPeersNothingNew =>
       'Nada de novo para esta música nos servidores dos seus pares.';
+
+  @override
+  String get autoDjSonicTitle => 'Semelhança sonora';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Escolhe músicas que soam como a atual, usando a análise de áudio do servidor. Sem correspondências, volta ao modo aleatório.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'Este servidor não tem dados de descoberta — a seleção continua aleatória.';
 }

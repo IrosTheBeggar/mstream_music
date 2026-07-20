@@ -1673,4 +1673,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverPeersNothingNew => 'ピアのサーバーには、この曲の新しい一致はありません。';
+
+  @override
+  String get autoDjSonicTitle => 'サウンドの類似性';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'サーバーの音声解析を使って、再生中の曲に似た曲を選びます。一致がない場合はランダム選曲に戻ります。';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'このサーバーにはディスカバリーデータがありません — 選曲はランダムのままです。';
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -1908,6 +1909,23 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (seed != null) _camelotAnchor = seed;
     }
 
+    // Sonic similarity: seed the pick from the playing track's audio
+    // embedding rather than the random rotation. Any miss — no usable seed,
+    // capability gone, seed not analyzed yet, every candidate filtered out,
+    // network error — falls through to the random-songs path below, so
+    // infinite play never stalls on this mode.
+    if (mgr.sonicSimilarityEnabled &&
+        autoDJServer!.discoveryAvailable == true) {
+      if (await _autoDJSonicPick(
+          currentItem: currentItem,
+          ignoreVPaths: ignoreVPaths,
+          currentBpm: currentBpm,
+          autoPlay: autoPlay,
+          incrementIndex: incrementIndex)) {
+        return;
+      }
+    }
+
     // Keyword filter is client-side (the server doesn't see it).
     // Retry up to 5 times if responses get blocked, using the
     // updated ignoreList from the server so we don't pick the same
@@ -2078,6 +2096,187 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (autoPlay == true) {
       play();
     }
+  }
+
+  /// One sonic-similarity DJ pick: seed from [currentItem]'s embedding via
+  /// POST /api/v1/discovery/local/similar/tracks and queue the best surviving
+  /// candidate. Returns false whenever the random-songs path should run
+  /// instead — the caller treats false as "fall back", never as an error.
+  Future<bool> _autoDJSonicPick({
+    required MediaItem? currentItem,
+    required List<String> ignoreVPaths,
+    required int? currentBpm,
+    required bool autoPlay,
+    required bool incrementIndex,
+  }) async {
+    final server = autoDJServer!;
+
+    // The seed must be a track FROM the DJ server — similarity filepaths are
+    // meaningless across libraries. Local files / other servers → no seed
+    // (e.g. the cold-start pick of an empty-queue DJ session).
+    final seedPath = currentItem?.extras?['path'] as String?;
+    if (seedPath == null ||
+        currentItem?.extras?['server'] != server.localname) {
+      return false;
+    }
+
+    Map<String, dynamic> decoded;
+    try {
+      final res = await http
+          .post(
+            server.apiUri('/api/v1/discovery/local/similar/tracks'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+            body: jsonEncode({
+              'filePath': seedPath.startsWith('/')
+                  ? seedPath.substring(1)
+                  : seedPath,
+              'limit': 30,
+              // Same-album neighbours make the DJ feel like album playback.
+              'excludeSameAlbum': true,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode > 299) {
+        // Includes 403 (feature toggled off since the last ping) and the
+        // uniform 404 for an unknown seed — all just mean "use random".
+        appLog('[dj] sonic similar-tracks HTTP ${res.statusCode} — '
+            'falling back to random');
+        return false;
+      }
+      final body = jsonDecode(res.body);
+      if (body is! Map<String, dynamic>) return false;
+      decoded = body;
+    } catch (e) {
+      appLog('[dj] sonic similar-tracks failed: $e — falling back to random');
+      return false;
+    }
+
+    // DJ turned off / switched servers while the request was in flight —
+    // drop the stale pick without falling through to random.
+    if (autoDJServer?.localname != server.localname) return true;
+
+    if (decoded['notAnalyzed'] == true) return false;
+    final rows = decoded['results'];
+    if (rows is! List || rows.isEmpty) return false;
+
+    // Everything already queued this session (played or pending) is off the
+    // table — the discovery route has no server-side ignoreList equivalent
+    // (random-songs' ignoreList entries are rotation indices, not paths).
+    final queuePaths = <String>{};
+    for (final item in queue.value) {
+      final p = item.extras?['path'];
+      if (p is String) {
+        queuePaths.add(p.startsWith('/') ? p.substring(1) : p);
+      }
+    }
+
+    final mgr = AutoDJManager();
+    final candidates = filterSonicCandidates(
+      rows,
+      queuePaths: queuePaths,
+      ignoreVPaths: ignoreVPaths,
+      minRating: server.autoDJminRating,
+      isBlocked: mgr.isKeywordBlocked,
+      genreValues: (mgr.genreFilterEnabled && mgr.genreFilterValues.isNotEmpty)
+          ? mgr.genreFilterValues
+          : null,
+      genreMode: mgr.genreFilterMode,
+      bpmWindows:
+          (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0)
+              ? _bpmWindows(currentBpm, mgr.bpmTolerance)
+              : null,
+      allowedKeys: (mgr.harmonicMixingEnabled && _camelotAnchor != null)
+          ? camelotNeighbours(_camelotAnchor!).toSet()
+          : null,
+      avoidArtist: currentItem?.artist,
+    );
+    if (candidates.isEmpty) return false;
+
+    // Random among the top few (results arrive similarity-sorted): similar
+    // enough to flow, varied enough that replaying a song doesn't reproduce
+    // the identical session.
+    final pick = candidates[
+        Random().nextInt(candidates.length < 5 ? candidates.length : 5)];
+    verboseLog('[dj] sonic pick ${pick['filepath']} '
+        '(sim ${pick['similarity']}, ${candidates.length} candidates)');
+    _queueAutoDJSong({
+      'songs': [pick]
+    }, autoPlay: autoPlay, incrementIndex: incrementIndex);
+    return true;
+  }
+
+  /// Applies the AutoDJ constraint set to raw similar-track rows
+  /// (`{filepath, similarity, metadata, genreTags}`) and returns the
+  /// survivors in their incoming (similarity-sorted) order. Pure;
+  /// unit-tested.
+  ///
+  /// [queuePaths] must be normalized without a leading slash. A null
+  /// [genreValues] / [bpmWindows] / [allowedKeys] means that constraint is
+  /// off. [avoidArtist] is a soft preference: candidates by other artists
+  /// win, but when EVERY survivor is by that artist they're kept — variety
+  /// must never starve the queue.
+  static List<Map<String, dynamic>> filterSonicCandidates(
+    List rows, {
+    required Set<String> queuePaths,
+    List<String> ignoreVPaths = const [],
+    int? minRating,
+    bool Function(Map<String, dynamic>)? isBlocked,
+    List<String>? genreValues,
+    String genreMode = 'whitelist',
+    List<Map<String, int>>? bpmWindows,
+    Set<String>? allowedKeys,
+    String? avoidArtist,
+  }) {
+    final out = <Map<String, dynamic>>[];
+    for (final raw in rows) {
+      if (raw is! Map<String, dynamic>) continue;
+      final fp = raw['filepath'];
+      if (fp is! String || fp.isEmpty) continue;
+      final norm = fp.startsWith('/') ? fp.substring(1) : fp;
+      if (queuePaths.contains(norm)) continue;
+      if (ignoreVPaths.contains(norm.split('/').first)) continue;
+
+      final meta = (raw['metadata'] as Map?) ?? const {};
+      if (minRating != null) {
+        // Mirrors random-songs' minRating: unrated tracks don't qualify.
+        final rating = meta['rating'];
+        if (rating is! num || rating < minRating) continue;
+      }
+      if (isBlocked != null && isBlocked(raw)) continue;
+      if (genreValues != null) {
+        final genres = meta['genres'];
+        final have = genres is List
+            ? genres.map((g) => g.toString().toLowerCase()).toSet()
+            : const <String>{};
+        final hit =
+            genreValues.any((g) => have.contains(g.toLowerCase()));
+        if (genreMode == 'blacklist' ? hit : !hit) continue;
+      }
+      if (bpmWindows != null) {
+        final bpm = meta['bpm'];
+        final inWindow = bpm is num &&
+            bpmWindows.any((w) => bpm >= w['min']! && bpm <= w['max']!);
+        if (!inWindow) continue;
+      }
+      if (allowedKeys != null) {
+        final rawKey = meta['musical-key'];
+        final code = toCamelotCode(rawKey is String ? rawKey : null);
+        if (code == null || !allowedKeys.contains(code)) continue;
+      }
+      out.add(raw);
+    }
+
+    if (avoidArtist != null && avoidArtist.trim().isNotEmpty) {
+      final varied = out
+          .where((r) =>
+              ((r['metadata'] as Map?) ?? const {})['artist'] != avoidArtist)
+          .toList();
+      if (varied.isNotEmpty) return varied;
+    }
+    return out;
   }
 
   // BPM continuity windows: one centered on the current tempo, one

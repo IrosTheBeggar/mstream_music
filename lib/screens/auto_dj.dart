@@ -157,6 +157,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Divider(color: VelvetColors.border, height: 1),
           ],
           _sectionHeader(l.autoDjSectionContinuity),
+          _sonicSimilaritySection(),
           _bpmContinuitySection(),
           _harmonicMixingSection(),
           Divider(color: VelvetColors.border, height: 1),
@@ -170,7 +171,49 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  // ── Continuity: BPM + harmonic mixing ───────────────────────────
+  // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
+
+  Widget _sonicSimilaritySection() {
+    final l = AppLocalizations.of(context);
+    final mgr = AutoDJManager();
+    // Capability of the server that would serve the picks (the DJ server
+    // when one is running, otherwise the current server as a preview).
+    // Without discovery data the toggle is inert, so show it disabled with
+    // an explanation instead of letting it silently do nothing.
+    final target = _autoDJServer ?? ServerManager().currentServer;
+    final supported = target?.discoveryAvailable == true;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.autoDjSonicTitle,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary, fontSize: 15)),
+                SizedBox(height: 2),
+                Text(
+                  supported
+                      ? l.autoDjSonicSubtitle
+                      : l.autoDjSonicUnavailable,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: mgr.sonicSimilarityEnabled && supported,
+            onChanged:
+                supported ? (v) => mgr.setSonicSimilarityEnabled(v) : null,
+            activeThumbColor: VelvetColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _bpmContinuitySection() {
     final l = AppLocalizations.of(context);

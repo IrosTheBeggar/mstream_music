@@ -54,6 +54,14 @@ class AutoDJManager {
   // `musicalKeys` (anchor + 5 neighbours).
   bool harmonicMixingEnabled = false;
 
+  // Sonic similarity — seed each pick from the playing track's audio
+  // embedding via POST /api/v1/discovery/local/similar/tracks instead
+  // of the random rotation. Client-side re-application of the other
+  // constraints + fallback to random-songs live in audio_stuff.dart's
+  // autoDJ(). Only effective when the DJ server advertised `discovery`
+  // on ping (Server.discoveryAvailable).
+  bool sonicSimilarityEnabled = false;
+
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
   // for the small surface area here.
@@ -85,6 +93,7 @@ class AutoDJManager {
       bpmContinuityEnabled = m['bpmContinuityEnabled'] ?? false;
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
+      sonicSimilarityEnabled = m['sonicSimilarityEnabled'] ?? false;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -102,6 +111,7 @@ class AutoDJManager {
       'bpmContinuityEnabled': bpmContinuityEnabled,
       'bpmTolerance': bpmTolerance,
       'harmonicMixingEnabled': harmonicMixingEnabled,
+      'sonicSimilarityEnabled': sonicSimilarityEnabled,
     }));
   }
 
@@ -176,6 +186,12 @@ class AutoDJManager {
 
   Future<void> setHarmonicMixingEnabled(bool v) async {
     harmonicMixingEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicSimilarityEnabled(bool v) async {
+    sonicSimilarityEnabled = v;
     _notify();
     await _save();
   }

@@ -1757,4 +1757,15 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get discoverPeersNothingNew =>
       'Ничего нового для этого трека на серверах ваших пиров.';
+
+  @override
+  String get autoDjSonicTitle => 'Похожее звучание';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Выбирает треки, звучащие как текущий, по аудио-анализу сервера. Если совпадений нет — возвращается к случайному выбору.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'На этом сервере нет данных для открытий — выбор останется случайным.';
 }

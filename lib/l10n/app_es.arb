@@ -408,5 +408,8 @@
   "discoverNetworkWarmingUp": "Aún no hay datos de la red — las bibliotecas de los pares se descargan en segundo plano cuando se detectan otros servidores.",
   "discoverNetworkNothingNew": "Nada nuevo para esta canción — la red no tiene coincidencias desconocidas.",
   "discoverPeersUnreachable": "Tus pares no respondieron — puede que estén desconectados ahora mismo.",
-  "discoverPeersNothingNew": "Nada nuevo para esta canción en los servidores de tus pares."
+  "discoverPeersNothingNew": "Nada nuevo para esta canción en los servidores de tus pares.",
+  "autoDjSonicTitle": "Similitud sonora",
+  "autoDjSonicSubtitle": "Elige canciones que suenan como la actual, usando el análisis de audio del servidor. Si no hay coincidencias, vuelve al modo aleatorio.",
+  "autoDjSonicUnavailable": "Este servidor no tiene datos de descubrimiento — la selección seguirá siendo aleatoria."
 }

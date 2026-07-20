@@ -408,5 +408,8 @@
   "discoverNetworkWarmingUp": "暂无网络数据 — 发现其他服务器后，伙伴音乐库会在后台下载。",
   "discoverNetworkNothingNew": "这首歌没有新发现 — 网络中没有陌生的匹配项。",
   "discoverPeersUnreachable": "伙伴服务器没有响应 — 它们现在可能离线。",
-  "discoverPeersNothingNew": "伙伴服务器上没有这首歌的新发现。"
+  "discoverPeersNothingNew": "伙伴服务器上没有这首歌的新发现。",
+  "autoDjSonicTitle": "声音相似度",
+  "autoDjSonicSubtitle": "利用服务器的音频分析，挑选与当前播放歌曲声音相似的歌曲。没有匹配时回退到随机选曲。",
+  "autoDjSonicUnavailable": "此服务器没有发现数据 — 选曲保持随机。"
 }

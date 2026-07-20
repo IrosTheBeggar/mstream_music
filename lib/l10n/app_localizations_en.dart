@@ -1719,4 +1719,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get discoverPeersNothingNew =>
       'Nothing new for this song on your peers\' servers.';
+
+  @override
+  String get autoDjSonicTitle => 'Sonic similarity';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Pick tracks that sound like the one playing, using the server\'s audio analysis. Falls back to random when there\'s no match.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'This server doesn\'t have discovery data — picks stay random.';
 }

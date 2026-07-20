@@ -3017,6 +3017,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing new for this song on your peers\' servers.'**
   String get discoverPeersNothingNew;
+
+  /// Auto DJ continuity toggle: pick the next track by audio similarity to the playing one.
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic similarity'**
+  String get autoDjSonicTitle;
+
+  /// Subtitle under the sonic similarity toggle when the server supports it.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick tracks that sound like the one playing, using the server\'s audio analysis. Falls back to random when there\'s no match.'**
+  String get autoDjSonicSubtitle;
+
+  /// Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t have discovery data — picks stay random.'**
+  String get autoDjSonicUnavailable;
 }
 
 class _AppLocalizationsDelegate

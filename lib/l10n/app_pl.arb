@@ -408,5 +408,8 @@
   "discoverNetworkWarmingUp": "Brak danych z sieci — biblioteki peerów pobierają się w tle, gdy tylko zostaną wykryte inne serwery.",
   "discoverNetworkNothingNew": "Nic nowego dla tego utworu — sieć nie ma nieznanych dopasowań.",
   "discoverPeersUnreachable": "Twoje peery nie odpowiedziały — mogą być teraz offline.",
-  "discoverPeersNothingNew": "Nic nowego dla tego utworu na serwerach twoich peerów."
+  "discoverPeersNothingNew": "Nic nowego dla tego utworu na serwerach twoich peerów.",
+  "autoDjSonicTitle": "Podobieństwo brzmienia",
+  "autoDjSonicSubtitle": "Wybiera utwory brzmiące jak ten odtwarzany, na podstawie analizy dźwięku na serwerze. Bez dopasowań wraca do losowania.",
+  "autoDjSonicUnavailable": "Ten serwer nie ma danych odkrywania — wybór pozostaje losowy."
 }
