@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "サーバーの音声解析を使って、セッションに似た響きの曲だけを選びます。",
   "autoDjSonicUnavailable": "このサーバーにはディスカバリーデータがありません — 選曲はランダムのままです。",
   "autoDjSonicStrictness": "類似度のしきい値",
-  "autoDjSonicStrictnessValue": "{pct}% 以上の類似"
+  "autoDjSonicStrictnessValue": "{pct}% 以上の類似",
+  "autoDjSonicSeedLabel": "シード曲",
+  "autoDjSonicSeedNone": "シードなし — 再生中の曲がセッションの基準になります。",
+  "autoDjSonicSeedSearchHint": "曲を検索…",
+  "autoDjSonicSeedRandom": "ランダムな曲",
+  "autoDjSonicSeedRemove": "シード曲を削除",
+  "autoDjSonicSeedFailed": "サーバーから曲を取得できませんでした。"
 }

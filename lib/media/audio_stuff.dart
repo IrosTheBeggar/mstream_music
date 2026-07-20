@@ -1520,6 +1520,12 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;
+      case 'clearSonicHistory':
+        // "New lane": setting/clearing the explicit sonic seed restarts the
+        // rolling session, so the next pick anchors on the new seed rather
+        // than on stale history (webapp resetAnchors semantics).
+        _sonicHistory = const [];
+        break;
       case 'setAutoDJ':
         if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
           jsonAutoDJIgnoreList = null;
@@ -1931,6 +1937,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       enabled: mgr.sonicSimilarityEnabled &&
           autoDJServer!.discoveryAvailable == true,
       history: _sonicHistory,
+      // The explicit seed ("start the session here") only counts when it
+      // was picked from the DJ server — filepaths are per-library.
+      seedPath: mgr.sonicSeedServer == autoDJServer!.localname
+          ? mgr.sonicSeedPath
+          : null,
       currentPath: currentItem?.extras?['server'] == autoDJServer!.localname
           ? (currentItem?.extras?['path'] as String?)
           : null,
@@ -2156,14 +2167,15 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   /// The `similarTo`/`minSimilarity` fields for a random-songs body, or
   /// null when sonic mode is off / no anchor is resolvable (cold start on
-  /// an empty queue — the pick stays plain random and then seeds the
-  /// session). Rolling-anchor policy, mirroring the webapp's
-  /// auto-dj.js buildSonicParams: the recent DJ picks (server averages
-  /// them into a session centroid), else the playing track. Pure;
-  /// unit-tested.
+  /// an empty queue with no seed — the pick stays plain random and then
+  /// seeds the session). Rolling-anchor policy, mirroring the webapp's
+  /// auto-dj.js buildSonicParams: the recent DJ picks first (server
+  /// averages them into a session centroid), else the explicit seed song,
+  /// else the playing track. Pure; unit-tested.
   static Map<String, dynamic>? sonicParams({
     required bool enabled,
     required List<String> history,
+    String? seedPath,
     String? currentPath,
     required double minSimilarity,
   }) {
@@ -2174,10 +2186,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         'minSimilarity': minSimilarity,
       };
     }
-    final cur = _normSonicPath(currentPath);
-    if (cur == null) return null;
+    final anchor = _normSonicPath(seedPath) ?? _normSonicPath(currentPath);
+    if (anchor == null) return null;
     return {
-      'similarTo': [cur],
+      'similarTo': [anchor],
       'minSimilarity': minSimilarity,
     };
   }

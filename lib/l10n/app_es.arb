@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Elige solo canciones que suenan como la sesión, usando el análisis de audio del servidor.",
   "autoDjSonicUnavailable": "Este servidor no tiene datos de descubrimiento — la selección seguirá siendo aleatoria.",
   "autoDjSonicStrictness": "Umbral de similitud",
-  "autoDjSonicStrictnessValue": "{pct} % o más parecido"
+  "autoDjSonicStrictnessValue": "{pct} % o más parecido",
+  "autoDjSonicSeedLabel": "Canción semilla",
+  "autoDjSonicSeedNone": "Sin semilla — la canción en reproducción ancla la sesión.",
+  "autoDjSonicSeedSearchHint": "Buscar una canción…",
+  "autoDjSonicSeedRandom": "Canción aleatoria",
+  "autoDjSonicSeedRemove": "Quitar canción semilla",
+  "autoDjSonicSeedFailed": "No se pudo obtener una canción del servidor."
 }

@@ -1753,4 +1753,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct% ou mais próximo';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Música semente';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Sem semente — a música em reprodução ancora a sessão.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Buscar uma música…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Música aleatória';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Remover música semente';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'Não foi possível obter uma música do servidor.';
 }

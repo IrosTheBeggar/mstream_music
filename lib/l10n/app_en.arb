@@ -1271,5 +1271,29 @@
         "type": "int"
       }
     }
+  },
+  "autoDjSonicSeedLabel": "Seed song",
+  "@autoDjSonicSeedLabel": {
+    "description": "Label for the sonic seed row and the seed-picker sheet title: the song the session starts from."
+  },
+  "autoDjSonicSeedNone": "No seed — the playing song anchors the session.",
+  "@autoDjSonicSeedNone": {
+    "description": "Seed row value when no explicit seed is set."
+  },
+  "autoDjSonicSeedSearchHint": "Search for a song…",
+  "@autoDjSonicSeedSearchHint": {
+    "description": "Hint in the seed-picker sheet's search field."
+  },
+  "autoDjSonicSeedRandom": "Random song",
+  "@autoDjSonicSeedRandom": {
+    "description": "Seed-picker action (and dice-button tooltip): use a random library song as the seed."
+  },
+  "autoDjSonicSeedRemove": "Remove seed song",
+  "@autoDjSonicSeedRemove": {
+    "description": "Tooltip on the clear button next to a set seed."
+  },
+  "autoDjSonicSeedFailed": "Couldn't fetch a song from the server.",
+  "@autoDjSonicSeedFailed": {
+    "description": "Error when the random-seed request fails."
   }
 }

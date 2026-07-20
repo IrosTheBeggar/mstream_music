@@ -1758,4 +1758,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct % oder ähnlicher';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Ausgangssong';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Kein Ausgangssong — der laufende Titel verankert die Session.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Nach einem Titel suchen…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Zufälliger Titel';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Ausgangssong entfernen';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'Es konnte kein Titel vom Server geladen werden.';
 }

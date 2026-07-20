@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Выбирает только треки, звучащие как сессия, по аудио-анализу сервера.",
   "autoDjSonicUnavailable": "На этом сервере нет данных для открытий — выбор останется случайным.",
   "autoDjSonicStrictness": "Порог похожести",
-  "autoDjSonicStrictnessValue": "{pct}% и ближе"
+  "autoDjSonicStrictnessValue": "{pct}% и ближе",
+  "autoDjSonicSeedLabel": "Стартовый трек",
+  "autoDjSonicSeedNone": "Не задан — сессию задаёт играющий трек.",
+  "autoDjSonicSeedSearchHint": "Найти трек…",
+  "autoDjSonicSeedRandom": "Случайный трек",
+  "autoDjSonicSeedRemove": "Убрать стартовый трек",
+  "autoDjSonicSeedFailed": "Не удалось получить трек с сервера."
 }

@@ -65,6 +65,17 @@ class AutoDJManager {
   // webapp default 0.55). The Auto DJ screen's slider exposes 0.30–0.80.
   double sonicMinSimilarity = 0.55;
 
+  // Explicit sonic seed — "start the session from THIS song" (webapp
+  // sonicSeed parity). It wins over the playing track for a session's
+  // first pick; the rolling history takes over after that. Tied to the
+  // server it was picked from ([sonicSeedServer], a Server.localname) —
+  // audio_stuff only sends it when the DJ runs on that server. Setting or
+  // clearing it is a "new lane": the screen also asks the audio handler to
+  // clear its rolling history (customAction 'clearSonicHistory').
+  String? sonicSeedPath; // vpath-form, no leading slash
+  String? sonicSeedTitle; // display only
+  String? sonicSeedServer;
+
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
   // for the small surface area here.
@@ -100,6 +111,11 @@ class AutoDJManager {
       final sonicSim = m['sonicMinSimilarity'];
       sonicMinSimilarity =
           sonicSim is num ? sonicSim.toDouble().clamp(0.0, 1.0) : 0.55;
+      sonicSeedPath = m['sonicSeedPath'] is String ? m['sonicSeedPath'] : null;
+      sonicSeedTitle =
+          m['sonicSeedTitle'] is String ? m['sonicSeedTitle'] : null;
+      sonicSeedServer =
+          m['sonicSeedServer'] is String ? m['sonicSeedServer'] : null;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -119,6 +135,9 @@ class AutoDJManager {
       'harmonicMixingEnabled': harmonicMixingEnabled,
       'sonicSimilarityEnabled': sonicSimilarityEnabled,
       'sonicMinSimilarity': sonicMinSimilarity,
+      'sonicSeedPath': sonicSeedPath,
+      'sonicSeedTitle': sonicSeedTitle,
+      'sonicSeedServer': sonicSeedServer,
     }));
   }
 
@@ -205,6 +224,27 @@ class AutoDJManager {
 
   Future<void> setSonicMinSimilarity(double v) async {
     sonicMinSimilarity = v.clamp(0.0, 1.0);
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicSeed(
+      {required String path,
+      required String title,
+      required String server}) async {
+    final norm = path.startsWith('/') ? path.substring(1) : path;
+    if (norm.isEmpty) return;
+    sonicSeedPath = norm;
+    sonicSeedTitle = title;
+    sonicSeedServer = server;
+    _notify();
+    await _save();
+  }
+
+  Future<void> clearSonicSeed() async {
+    sonicSeedPath = null;
+    sonicSeedTitle = null;
+    sonicSeedServer = null;
     _notify();
     await _save();
   }

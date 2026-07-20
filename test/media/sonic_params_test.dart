@@ -84,6 +84,43 @@ void main() {
       });
     });
 
+    test('explicit seed beats the playing track, loses to history', () {
+      // First pick of a session: the user-picked seed defines the vibe,
+      // not whatever happens to be playing. Normalized like every seed.
+      final first = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        history: const [],
+        seedPath: '/music/seed.mp3',
+        currentPath: '/music/current.mp3',
+        minSimilarity: 0.55,
+      );
+      expect(first?['similarTo'], ['music/seed.mp3']);
+
+      // Once the session has picks, the rolling centroid takes over.
+      final later = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        history: const ['music/pick1.mp3'],
+        seedPath: '/music/seed.mp3',
+        currentPath: '/music/current.mp3',
+        minSimilarity: 0.55,
+      );
+      expect(later?['similarTo'], ['music/pick1.mp3']);
+    });
+
+    test('explicit seed alone can start an empty-queue session', () {
+      final p = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        history: const [],
+        seedPath: 'music/seed.mp3',
+        currentPath: null,
+        minSimilarity: 0.4,
+      );
+      expect(p, {
+        'similarTo': ['music/seed.mp3'],
+        'minSimilarity': 0.4,
+      });
+    });
+
     test('null on a cold start with no anchor at all', () {
       expect(
         AudioPlayerHandler.sonicParams(

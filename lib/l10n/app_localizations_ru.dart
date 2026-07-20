@@ -1776,4 +1776,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct% и ближе';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Стартовый трек';
+
+  @override
+  String get autoDjSonicSeedNone => 'Не задан — сессию задаёт играющий трек.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Найти трек…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Случайный трек';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Убрать стартовый трек';
+
+  @override
+  String get autoDjSonicSeedFailed => 'Не удалось получить трек с сервера.';
 }

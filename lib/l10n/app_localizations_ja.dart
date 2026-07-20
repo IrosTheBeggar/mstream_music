@@ -1691,4 +1691,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct% 以上の類似';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'シード曲';
+
+  @override
+  String get autoDjSonicSeedNone => 'シードなし — 再生中の曲がセッションの基準になります。';
+
+  @override
+  String get autoDjSonicSeedSearchHint => '曲を検索…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'ランダムな曲';
+
+  @override
+  String get autoDjSonicSeedRemove => 'シード曲を削除';
+
+  @override
+  String get autoDjSonicSeedFailed => 'サーバーから曲を取得できませんでした。';
 }

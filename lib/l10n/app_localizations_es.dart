@@ -1756,4 +1756,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct % o más parecido';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Canción semilla';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Sin semilla — la canción en reproducción ancla la sesión.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Buscar una canción…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Canción aleatoria';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Quitar canción semilla';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'No se pudo obtener una canción del servidor.';
 }

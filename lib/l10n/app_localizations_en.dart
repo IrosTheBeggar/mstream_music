@@ -1738,4 +1738,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct% or closer';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Seed song';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'No seed — the playing song anchors the session.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Search for a song…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Random song';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Remove seed song';
+
+  @override
+  String get autoDjSonicSeedFailed => 'Couldn\'t fetch a song from the server.';
 }

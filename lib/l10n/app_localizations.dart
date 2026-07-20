@@ -3047,6 +3047,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{pct}% or closer'**
   String autoDjSonicStrictnessValue(int pct);
+
+  /// Label for the sonic seed row and the seed-picker sheet title: the song the session starts from.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed song'**
+  String get autoDjSonicSeedLabel;
+
+  /// Seed row value when no explicit seed is set.
+  ///
+  /// In en, this message translates to:
+  /// **'No seed — the playing song anchors the session.'**
+  String get autoDjSonicSeedNone;
+
+  /// Hint in the seed-picker sheet's search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a song…'**
+  String get autoDjSonicSeedSearchHint;
+
+  /// Seed-picker action (and dice-button tooltip): use a random library song as the seed.
+  ///
+  /// In en, this message translates to:
+  /// **'Random song'**
+  String get autoDjSonicSeedRandom;
+
+  /// Tooltip on the clear button next to a set seed.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove seed song'**
+  String get autoDjSonicSeedRemove;
+
+  /// Error when the random-seed request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t fetch a song from the server.'**
+  String get autoDjSonicSeedFailed;
 }
 
 class _AppLocalizationsDelegate

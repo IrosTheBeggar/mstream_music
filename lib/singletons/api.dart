@@ -684,6 +684,105 @@ class ApiManager {
     );
   }
 
+  /// POST /api/v1/db/search, titles only — data-returning song search for
+  /// pickers (the Auto DJ sonic-seed sheet). Returns up to [limit] playable
+  /// file rows with lite metadata attached; empty list on any error
+  /// (best-effort, direct http like [fetchTrackMetadata], off the browser
+  /// loading bar).
+  Future<List<DisplayItem>> fetchSongSearch(Server server, String search,
+      {int limit = 25}) async {
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/search'),
+            body: jsonEncode({
+              'search': search,
+              'noArtists': true,
+              'noAlbums': true,
+              'noTitles': false,
+              'noFiles': true,
+              'noLyrics': true,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return const [];
+      final decoded = jsonDecode(response.body);
+      final hits = decoded is Map ? decoded['title'] : null;
+      if (hits is! List) return const [];
+      final out = <DisplayItem>[];
+      for (final e in hits) {
+        if (e is! Map) continue;
+        final fp = e['filepath'];
+        if (fp is! String || fp.isEmpty) continue;
+        final md = e['metadata'];
+        final item = DisplayItem(
+            server,
+            (e['name'] ?? fp.split('/').last).toString(),
+            'file',
+            '/$fp',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            null);
+        item.altAlbumArt =
+            e['album_art_file'] is String ? e['album_art_file'] : null;
+        item.metadata = md is Map ? MusicMetadata.fromServerMap(md) : null;
+        item.partialMetadata = true;
+        out.add(item);
+        if (out.length >= limit) break;
+      }
+      return out;
+    } catch (err) {
+      verboseLog('[api] song search failed: $err');
+      return const [];
+    }
+  }
+
+  /// POST /api/v1/db/random-songs — one random pick, for "surprise me"
+  /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
+  /// min rating) so a random seed can't come from an excluded library.
+  /// Null on any error.
+  Future<DisplayItem?> fetchRandomSong(Server server) async {
+    final ignoreVPaths = <String>[
+      for (final e in server.autoDJPaths.entries)
+        if (e.value == false) e.key,
+    ];
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/random-songs'),
+            body: jsonEncode({
+              if (ignoreVPaths.isNotEmpty) 'ignoreVPaths': ignoreVPaths,
+              if (server.autoDJminRating != null)
+                'minRating': server.autoDJminRating,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      final songs = decoded is Map ? decoded['songs'] : null;
+      if (songs is! List || songs.isEmpty) return null;
+      final song = songs.first;
+      if (song is! Map) return null;
+      final fp = song['filepath'];
+      if (fp is! String || fp.isEmpty) return null;
+      final md = song['metadata'];
+      final item = DisplayItem(server, fp.split('/').last, 'file', '/$fp',
+          Icon(Icons.music_note, color: VelvetColors.accent), null);
+      item.metadata = md is Map ? MusicMetadata.fromServerMap(md) : null;
+      return item;
+    } catch (err) {
+      verboseLog('[api] random-song seed failed: $err');
+      return null;
+    }
+  }
+
   /// POST /api/v1/discovery/federation/similar — "From your peers": live
   /// similarity queries against paired federation peers. Leads only at this
   /// server version (peer-stream playback landed later upstream). Gated on

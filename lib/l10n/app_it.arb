@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Sceglie solo brani che suonano come la sessione, usando l'analisi audio del server.",
   "autoDjSonicUnavailable": "Questo server non ha dati di scoperta — la selezione resta casuale.",
   "autoDjSonicStrictness": "Soglia di somiglianza",
-  "autoDjSonicStrictnessValue": "{pct} % o più simile"
+  "autoDjSonicStrictnessValue": "{pct} % o più simile",
+  "autoDjSonicSeedLabel": "Brano di partenza",
+  "autoDjSonicSeedNone": "Nessun brano di partenza — il brano in riproduzione àncora la sessione.",
+  "autoDjSonicSeedSearchHint": "Cerca un brano…",
+  "autoDjSonicSeedRandom": "Brano casuale",
+  "autoDjSonicSeedRemove": "Rimuovi brano di partenza",
+  "autoDjSonicSeedFailed": "Impossibile recuperare un brano dal server."
 }

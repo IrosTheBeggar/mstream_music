@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Wählt nur Titel, die wie die Session klingen — auf Basis der Audio-Analyse des Servers.",
   "autoDjSonicUnavailable": "Dieser Server hat keine Discovery-Daten — die Auswahl bleibt zufällig.",
   "autoDjSonicStrictness": "Ähnlichkeitsschwelle",
-  "autoDjSonicStrictnessValue": "{pct} % oder ähnlicher"
+  "autoDjSonicStrictnessValue": "{pct} % oder ähnlicher",
+  "autoDjSonicSeedLabel": "Ausgangssong",
+  "autoDjSonicSeedNone": "Kein Ausgangssong — der laufende Titel verankert die Session.",
+  "autoDjSonicSeedSearchHint": "Nach einem Titel suchen…",
+  "autoDjSonicSeedRandom": "Zufälliger Titel",
+  "autoDjSonicSeedRemove": "Ausgangssong entfernen",
+  "autoDjSonicSeedFailed": "Es konnte kein Titel vom Server geladen werden."
 }

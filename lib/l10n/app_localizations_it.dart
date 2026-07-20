@@ -1756,4 +1756,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct % o più simile';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Brano di partenza';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Nessun brano di partenza — il brano in riproduzione àncora la sessione.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Cerca un brano…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Brano casuale';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Rimuovi brano di partenza';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'Impossibile recuperare un brano dal server.';
 }

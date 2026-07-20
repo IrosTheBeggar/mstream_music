@@ -1657,4 +1657,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct% 或更相似';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => '种子歌曲';
+
+  @override
+  String get autoDjSonicSeedNone => '未设置 — 以正在播放的歌曲作为会话基准。';
+
+  @override
+  String get autoDjSonicSeedSearchHint => '搜索歌曲…';
+
+  @override
+  String get autoDjSonicSeedRandom => '随机歌曲';
+
+  @override
+  String get autoDjSonicSeedRemove => '移除种子歌曲';
+
+  @override
+  String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
 }

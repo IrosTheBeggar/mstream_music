@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "利用服务器的音频分析，只挑选与本次会话声音相似的歌曲。",
   "autoDjSonicUnavailable": "此服务器没有发现数据 — 选曲保持随机。",
   "autoDjSonicStrictness": "相似度门槛",
-  "autoDjSonicStrictnessValue": "{pct}% 或更相似"
+  "autoDjSonicStrictnessValue": "{pct}% 或更相似",
+  "autoDjSonicSeedLabel": "种子歌曲",
+  "autoDjSonicSeedNone": "未设置 — 以正在播放的歌曲作为会话基准。",
+  "autoDjSonicSeedSearchHint": "搜索歌曲…",
+  "autoDjSonicSeedRandom": "随机歌曲",
+  "autoDjSonicSeedRemove": "移除种子歌曲",
+  "autoDjSonicSeedFailed": "无法从服务器获取歌曲。"
 }

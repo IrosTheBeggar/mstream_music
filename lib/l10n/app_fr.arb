@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Ne choisit que des titres qui sonnent comme la session, grâce à l'analyse audio du serveur.",
   "autoDjSonicUnavailable": "Ce serveur n'a pas de données de découverte — la sélection reste aléatoire.",
   "autoDjSonicStrictness": "Seuil de similarité",
-  "autoDjSonicStrictnessValue": "{pct} % ou plus proche"
+  "autoDjSonicStrictnessValue": "{pct} % ou plus proche",
+  "autoDjSonicSeedLabel": "Titre de départ",
+  "autoDjSonicSeedNone": "Aucun titre de départ — le titre en cours ancre la session.",
+  "autoDjSonicSeedSearchHint": "Rechercher un titre…",
+  "autoDjSonicSeedRandom": "Titre aléatoire",
+  "autoDjSonicSeedRemove": "Retirer le titre de départ",
+  "autoDjSonicSeedFailed": "Impossible de récupérer un titre depuis le serveur."
 }

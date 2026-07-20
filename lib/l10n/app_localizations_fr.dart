@@ -1756,4 +1756,24 @@ class AppLocalizationsFr extends AppLocalizations {
   String autoDjSonicStrictnessValue(int pct) {
     return '$pct % ou plus proche';
   }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Titre de départ';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Aucun titre de départ — le titre en cours ancre la session.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Rechercher un titre…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Titre aléatoire';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Retirer le titre de départ';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'Impossible de récupérer un titre depuis le serveur.';
 }

@@ -413,5 +413,11 @@
   "autoDjSonicSubtitle": "Wybiera tylko utwory brzmiące jak sesja, na podstawie analizy dźwięku na serwerze.",
   "autoDjSonicUnavailable": "Ten serwer nie ma danych odkrywania — wybór pozostaje losowy.",
   "autoDjSonicStrictness": "Próg podobieństwa",
-  "autoDjSonicStrictnessValue": "{pct}% lub bliżej"
+  "autoDjSonicStrictnessValue": "{pct}% lub bliżej",
+  "autoDjSonicSeedLabel": "Utwór startowy",
+  "autoDjSonicSeedNone": "Brak utworu startowego — sesję zakotwicza odtwarzany utwór.",
+  "autoDjSonicSeedSearchHint": "Szukaj utworu…",
+  "autoDjSonicSeedRandom": "Losowy utwór",
+  "autoDjSonicSeedRemove": "Usuń utwór startowy",
+  "autoDjSonicSeedFailed": "Nie udało się pobrać utworu z serwera."
 }
