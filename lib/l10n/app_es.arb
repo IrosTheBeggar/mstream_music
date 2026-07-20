@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "Cada canción sigue el sonido reciente de la sesión — puede evolucionar poco a poco.",
   "autoDjSonicAnchorLockedHint": "Cada canción se mantiene cerca de la canción semilla durante toda la sesión.",
   "trackAddToPlaylist": "Añadir a la lista de reproducción",
-  "trackAddToPlaylistFailed": "No se pudo añadir a la lista de reproducción."
+  "trackAddToPlaylistFailed": "No se pudo añadir a la lista de reproducción.",
+  "discoverPlayPathTo": "Reproducir un camino hacia…",
+  "pathScreenTitle": "Camino sonoro",
+  "pathStartNotAnalyzed": "La canción inicial aún no se ha analizado — espera al análisis de descubrimiento o elige otra.",
+  "pathEndNotAnalyzed": "La canción de destino aún no se ha analizado — espera al análisis de descubrimiento o elige otra."
 }

@@ -3155,6 +3155,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t add to the playlist.'**
   String get trackAddToPlaylistFailed;
+
+  /// Discover screen action + destination-picker title: build a queue that gradually morphs from the seed track's sound to a chosen destination song.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a path to…'**
+  String get discoverPlayPathTo;
+
+  /// Title of the sonic path preview screen (the ordered journey between two tracks).
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic path'**
+  String get pathScreenTitle;
+
+  /// Path screen hint when the start seed has no embedding yet.
+  ///
+  /// In en, this message translates to:
+  /// **'The starting song hasn\'t been analyzed yet — wait for the discovery scan or pick another.'**
+  String get pathStartNotAnalyzed;
+
+  /// Path screen hint when the destination seed has no embedding yet.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination song hasn\'t been analyzed yet — wait for the discovery scan or pick another.'**
+  String get pathEndNotAnalyzed;
 }
 
 class _AppLocalizationsDelegate

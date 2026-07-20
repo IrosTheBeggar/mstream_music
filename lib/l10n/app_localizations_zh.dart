@@ -1711,4 +1711,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trackAddToPlaylistFailed => '无法添加到播放列表。';
+
+  @override
+  String get discoverPlayPathTo => '播放一条通往…的路径';
+
+  @override
+  String get pathScreenTitle => '声音路径';
+
+  @override
+  String get pathStartNotAnalyzed => '起始歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+
+  @override
+  String get pathEndNotAnalyzed => '目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
 }

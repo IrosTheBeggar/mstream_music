@@ -1343,5 +1343,21 @@
   "trackAddToPlaylistFailed": "Couldn't add to the playlist.",
   "@trackAddToPlaylistFailed": {
     "description": "Toast when the playlist add-song request fails."
+  },
+  "discoverPlayPathTo": "Play a path to…",
+  "@discoverPlayPathTo": {
+    "description": "Discover screen action + destination-picker title: build a queue that gradually morphs from the seed track's sound to a chosen destination song."
+  },
+  "pathScreenTitle": "Sonic path",
+  "@pathScreenTitle": {
+    "description": "Title of the sonic path preview screen (the ordered journey between two tracks)."
+  },
+  "pathStartNotAnalyzed": "The starting song hasn't been analyzed yet — wait for the discovery scan or pick another.",
+  "@pathStartNotAnalyzed": {
+    "description": "Path screen hint when the start seed has no embedding yet."
+  },
+  "pathEndNotAnalyzed": "The destination song hasn't been analyzed yet — wait for the discovery scan or pick another.",
+  "@pathEndNotAnalyzed": {
+    "description": "Path screen hint when the destination seed has no embedding yet."
   }
 }

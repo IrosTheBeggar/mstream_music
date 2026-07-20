@@ -16,6 +16,8 @@ import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
+import '../widgets/song_picker_sheet.dart';
+import 'sonic_path_screen.dart';
 
 /// Discover — sonic-similarity recommendations seeded by the NOW-PLAYING
 /// track, the mobile counterpart of the webapp's Discover panel. Up to four
@@ -438,6 +440,73 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     Navigator.of(context).pop();
   }
 
+  /// "Play a path to…" — destination picked via the shared song sheet, then
+  /// the preview screen fetches and shows the journey.
+  Future<void> _pickPathDestination() async {
+    final server = _seedServer;
+    final path = _seedPath;
+    if (server == null || path == null) return;
+    final l = AppLocalizations.of(context);
+    final dest = await showModalBottomSheet<DisplayItem>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) =>
+          SongPickerSheet(server: server, title: l.discoverPlayPathTo),
+    );
+    final destPath = dest?.data;
+    if (dest == null || destPath == null || !mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SonicPathScreen(
+        server: server,
+        startPath: path,
+        startTitle: _seedTitle,
+        startArtist: _seedArtist,
+        endPath: destPath,
+        endTitle: dest.metadata?.title ?? destPath.split('/').last,
+        endArtist: dest.metadata?.artist,
+      ),
+    ));
+  }
+
+  Widget _pathRow(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Material(
+        color: VelvetColors.raised,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+          onTap: _pickPathDestination,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(Icons.route, color: VelvetColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l.discoverPlayPathTo,
+                    style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right,
+                    color: VelvetColors.textSecondary, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _sessionCard(AppLocalizations l, {required bool random}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -535,6 +604,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     // then fail loud with nothing playing.
     if (server.discoveryAvailable == true && _tracks?.notAnalyzed != true) {
       children.add(_sessionCard(l, random: false));
+    }
+    // Sonic path: pick a destination, get a queue that morphs from this
+    // seed's sound to it. Needs the newer server route (discoveryPath flag).
+    if (server.discoveryPathAvailable == true && _tracks?.notAnalyzed != true) {
+      children.add(_pathRow(l));
     }
 
     if (showTracks) children.addAll(_tracksSection(l));

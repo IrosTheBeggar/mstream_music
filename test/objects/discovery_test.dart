@@ -230,6 +230,63 @@ void main() {
     });
   });
 
+  group('DiscoveryPath.fromServerMap', () {
+    test('parses an ordered journey with seeds included', () {
+      final p = DiscoveryPath.fromServerMap({
+        'start': {'filepath': 'music/a.mp3'},
+        'end': {'filepath': 'music/z.mp3'},
+        'model': {'id': 'effnet-discogs', 'version': '1'},
+        'notAnalyzed': {'start': false, 'end': false},
+        'results': [
+          {
+            'filepath': 'music/a.mp3',
+            'similarity': 1,
+            't': 0,
+            'metadata': {'title': 'Start', 'artist': 'A'},
+            'genreTags': null,
+          },
+          {
+            'filepath': 'music/way.mp3',
+            'similarity': 0.9912,
+            't': 0.5,
+            'metadata': {'title': 'Waypoint', 'artist': 'W'},
+            'genreTags': ['Rock---Indie'],
+          },
+          {
+            'filepath': 'music/z.mp3',
+            'similarity': 1,
+            't': 1,
+            'metadata': {'title': 'End', 'artist': 'Z'},
+            'genreTags': null,
+          },
+        ],
+      });
+      expect(p.notAnalyzed, isFalse);
+      expect(p.results, hasLength(3));
+      expect(p.results.map((t) => t.filepath),
+          ['music/a.mp3', 'music/way.mp3', 'music/z.mp3']);
+      expect(p.results[1].similarity, closeTo(0.9912, 1e-9));
+      expect(p.results[1].genreTags, ['Rock---Indie']);
+      // The wire's `t` is implied by order — DiscoveryTrack ignores it.
+      expect(p.results.first.metadata?.title, 'Start');
+    });
+
+    test('flags which end is unanalyzed; tolerates missing keys', () {
+      final p = DiscoveryPath.fromServerMap({
+        'notAnalyzed': {'start': true, 'end': false},
+        'results': [],
+      });
+      expect(p.notAnalyzedStart, isTrue);
+      expect(p.notAnalyzedEnd, isFalse);
+      expect(p.notAnalyzed, isTrue);
+      expect(p.results, isEmpty);
+
+      final empty = DiscoveryPath.fromServerMap({});
+      expect(empty.notAnalyzed, isFalse);
+      expect(empty.results, isEmpty);
+    });
+  });
+
   group('genreTagLabel', () {
     test('keeps the leaf of the hierarchy, capped at max, dot-joined', () {
       expect(

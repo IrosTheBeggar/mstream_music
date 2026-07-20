@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "各曲はセッションの最近のサウンドに従います — 徐々に変化することがあります。",
   "autoDjSonicAnchorLockedHint": "セッション中はすべての曲がシード曲に近いサウンドになります。",
   "trackAddToPlaylist": "プレイリストに追加",
-  "trackAddToPlaylistFailed": "プレイリストに追加できませんでした。"
+  "trackAddToPlaylistFailed": "プレイリストに追加できませんでした。",
+  "discoverPlayPathTo": "この曲からパスを再生…",
+  "pathScreenTitle": "ソニックパス",
+  "pathStartNotAnalyzed": "開始曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。",
+  "pathEndNotAnalyzed": "目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。"
 }

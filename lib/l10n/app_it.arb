@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "Ogni brano segue il suono recente della sessione — può evolvere lentamente.",
   "autoDjSonicAnchorLockedHint": "Ogni brano resta vicino al brano di partenza per tutta la sessione.",
   "trackAddToPlaylist": "Aggiungi alla playlist",
-  "trackAddToPlaylistFailed": "Impossibile aggiungere alla playlist."
+  "trackAddToPlaylistFailed": "Impossibile aggiungere alla playlist.",
+  "discoverPlayPathTo": "Riproduci un percorso verso…",
+  "pathScreenTitle": "Percorso sonoro",
+  "pathStartNotAnalyzed": "Il brano di partenza non è ancora stato analizzato — attendi la scansione di scoperta o scegline un altro.",
+  "pathEndNotAnalyzed": "Il brano di destinazione non è ancora stato analizzato — attendi la scansione di scoperta o scegline un altro."
 }

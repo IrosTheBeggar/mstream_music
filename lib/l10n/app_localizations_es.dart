@@ -1818,4 +1818,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get trackAddToPlaylistFailed =>
       'No se pudo añadir a la lista de reproducción.';
+
+  @override
+  String get discoverPlayPathTo => 'Reproducir un camino hacia…';
+
+  @override
+  String get pathScreenTitle => 'Camino sonoro';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'La canción inicial aún no se ha analizado — espera al análisis de descubrimiento o elige otra.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'La canción de destino aún no se ha analizado — espera al análisis de descubrimiento o elige otra.';
 }

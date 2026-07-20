@@ -1832,4 +1832,18 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get trackAddToPlaylistFailed => 'Nie udało się dodać do playlisty.';
+
+  @override
+  String get discoverPlayPathTo => 'Odtwórz ścieżkę do…';
+
+  @override
+  String get pathScreenTitle => 'Ścieżka dźwiękowa';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'Utwór startowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'Utwór docelowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
 }

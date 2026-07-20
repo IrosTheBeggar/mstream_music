@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "Каждый трек следует недавнему звучанию сессии — она может медленно меняться.",
   "autoDjSonicAnchorLockedHint": "Каждый трек остаётся близким к стартовому треку всю сессию.",
   "trackAddToPlaylist": "Добавить в плейлист",
-  "trackAddToPlaylistFailed": "Не удалось добавить в плейлист."
+  "trackAddToPlaylistFailed": "Не удалось добавить в плейлист.",
+  "discoverPlayPathTo": "Проиграть путь к…",
+  "pathScreenTitle": "Звуковой путь",
+  "pathStartNotAnalyzed": "Стартовый трек ещё не проанализирован — дождитесь сканирования или выберите другой.",
+  "pathEndNotAnalyzed": "Конечный трек ещё не проанализирован — дождитесь сканирования или выберите другой."
 }

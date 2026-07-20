@@ -197,6 +197,38 @@ class DiscoveryLeads {
   }
 }
 
+/// `POST /api/v1/discovery/local/path` response (mStream #762+): an ordered,
+/// playable "journey" from a start track to an end track — seeds included
+/// (first and last rows), so [results] queues as-is. Rows reuse the
+/// [DiscoveryTrack] shape; the wire's extra `t` (arc position) is implied by
+/// list order and not modeled.
+class DiscoveryPath {
+  /// Per-end "seed exists but isn't embedded yet" — transient, the client
+  /// can hint WHICH end is waiting on the discovery worker.
+  final bool notAnalyzedStart;
+  final bool notAnalyzedEnd;
+  final List<DiscoveryTrack> results;
+
+  DiscoveryPath(this.notAnalyzedStart, this.notAnalyzedEnd, this.results);
+
+  factory DiscoveryPath.fromServerMap(Map m) {
+    final na = m['notAnalyzed'];
+    final raw = m['results'];
+    return DiscoveryPath(
+      na is Map && na['start'] == true,
+      na is Map && na['end'] == true,
+      raw is List
+          ? raw
+              .map(DiscoveryTrack.fromServerMap)
+              .whereType<DiscoveryTrack>()
+              .toList()
+          : const [],
+    );
+  }
+
+  bool get notAnalyzed => notAnalyzedStart || notAnalyzedEnd;
+}
+
 /// Parses a `genreTags` wire value (string list or null) without throwing.
 List<String> parseGenreTags(dynamic value) {
   if (value is! List) return const [];

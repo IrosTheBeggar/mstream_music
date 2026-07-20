@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "每首歌都跟随会话最近的声音 — 会缓慢演变。",
   "autoDjSonicAnchorLockedHint": "整个会话中每首歌都保持接近种子歌曲。",
   "trackAddToPlaylist": "添加到播放列表",
-  "trackAddToPlaylistFailed": "无法添加到播放列表。"
+  "trackAddToPlaylistFailed": "无法添加到播放列表。",
+  "discoverPlayPathTo": "播放一条通往…的路径",
+  "pathScreenTitle": "声音路径",
+  "pathStartNotAnalyzed": "起始歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。",
+  "pathEndNotAnalyzed": "目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。"
 }

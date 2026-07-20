@@ -52,6 +52,10 @@ class Server {
   bool? discoveryAvailable;
   bool? discoveryP2pAvailable;
   bool? federationDiscoveryAvailable;
+  //   discoveryPathAvailable       — sonic path between two tracks; the
+  //                                  flag's real payload is "this server
+  //                                  VERSION has the route" (mStream #762)
+  bool? discoveryPathAvailable;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
@@ -137,6 +141,9 @@ class Server {
             json['federationDiscoveryAvailable'] is bool
                 ? json['federationDiscoveryAvailable']
                 : null,
+        discoveryPathAvailable = json['discoveryPathAvailable'] is bool
+            ? json['discoveryPathAvailable']
+            : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?;
 
@@ -158,6 +165,7 @@ class Server {
         'discoveryAvailable': discoveryAvailable,
         'discoveryP2pAvailable': discoveryP2pAvailable,
         'federationDiscoveryAvailable': federationDiscoveryAvailable,
+        'discoveryPathAvailable': discoveryPathAvailable,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode
       };

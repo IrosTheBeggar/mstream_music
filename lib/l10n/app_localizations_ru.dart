@@ -1835,4 +1835,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get trackAddToPlaylistFailed => 'Не удалось добавить в плейлист.';
+
+  @override
+  String get discoverPlayPathTo => 'Проиграть путь к…';
+
+  @override
+  String get pathScreenTitle => 'Звуковой путь';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'Стартовый трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'Конечный трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
 }

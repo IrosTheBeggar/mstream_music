@@ -709,6 +709,28 @@ class ApiManager {
     );
   }
 
+  /// POST /api/v1/discovery/local/path — an ordered, playable "journey" from
+  /// [startPath] to [endPath]: waypoints along the arc between the two
+  /// tracks' embeddings, snapped to real library tracks. Seeds are included
+  /// in the results, and [length] counts the TOTAL rows (server clamps
+  /// 4..32). Only call when the server advertised `discoveryPath` on ping —
+  /// the flag means "this server version has the route" (mStream #762).
+  Future<DiscoveryFetchResult<DiscoveryPath>> fetchDiscoveryPath(
+      Server server, String startPath, String endPath,
+      {int length = 14}) {
+    String norm(String p) => p.startsWith('/') ? p.substring(1) : p;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/path',
+      {
+        'startFilePath': norm(startPath),
+        'endFilePath': norm(endPath),
+        'length': length,
+      },
+      (m) => DiscoveryPath.fromServerMap(m),
+    );
+  }
+
   /// POST /api/v1/db/search, titles only — data-returning song search for
   /// pickers (the Auto DJ sonic-seed sheet). Returns up to [limit] playable
   /// file rows with lite metadata attached; empty list on any error

@@ -1820,4 +1820,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get trackAddToPlaylistFailed =>
       'Konnte nicht zur Wiedergabeliste hinzugefügt werden.';
+
+  @override
+  String get discoverPlayPathTo => 'Einen Pfad spielen zu…';
+
+  @override
+  String get pathScreenTitle => 'Sonic-Pfad';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'Der Starttitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'Der Zieltitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen.';
 }

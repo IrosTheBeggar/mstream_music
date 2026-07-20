@@ -1797,4 +1797,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackAddToPlaylistFailed => 'Couldn\'t add to the playlist.';
+
+  @override
+  String get discoverPlayPathTo => 'Play a path to…';
+
+  @override
+  String get pathScreenTitle => 'Sonic path';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'The starting song hasn\'t been analyzed yet — wait for the discovery scan or pick another.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'The destination song hasn\'t been analyzed yet — wait for the discovery scan or pick another.';
 }

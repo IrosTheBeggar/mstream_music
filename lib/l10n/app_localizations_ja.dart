@@ -1747,4 +1747,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trackAddToPlaylistFailed => 'プレイリストに追加できませんでした。';
+
+  @override
+  String get discoverPlayPathTo => 'この曲からパスを再生…';
+
+  @override
+  String get pathScreenTitle => 'ソニックパス';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      '開始曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      '目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
 }

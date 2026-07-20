@@ -431,5 +431,9 @@
   "autoDjSonicAnchorRollingHint": "Chaque titre suit le son récent de la session — elle peut évoluer lentement.",
   "autoDjSonicAnchorLockedHint": "Chaque titre reste proche du titre de départ pendant toute la session.",
   "trackAddToPlaylist": "Ajouter à la playlist",
-  "trackAddToPlaylistFailed": "Impossible d'ajouter à la playlist."
+  "trackAddToPlaylistFailed": "Impossible d'ajouter à la playlist.",
+  "discoverPlayPathTo": "Jouer un chemin vers…",
+  "pathScreenTitle": "Chemin sonore",
+  "pathStartNotAnalyzed": "Le titre de départ n'a pas encore été analysé — attendez l'analyse de découverte ou choisissez-en un autre.",
+  "pathEndNotAnalyzed": "Le titre de destination n'a pas encore été analysé — attendez l'analyse de découverte ou choisissez-en un autre."
 }

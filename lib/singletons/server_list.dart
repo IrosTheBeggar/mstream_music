@@ -283,9 +283,11 @@ class ServerManager {
       final bool? prevDiscovery = server.discoveryAvailable;
       final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
+      final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       server.discoveryAvailable = res['discovery'] == true;
       server.discoveryP2pAvailable = res['discoveryP2p'] == true;
       server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
+      server.discoveryPathAvailable = res['discoveryPath'] == true;
 
       // Persist the capabilities so the NEXT launch knows them before the queue
       // is restored — otherwise restore races the ping and bakes in /media URLs.
@@ -294,7 +296,8 @@ class ServerManager {
           server.transcodeDefaultBitrate != prevBitrate ||
           server.discoveryAvailable != prevDiscovery ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
-          server.federationDiscoveryAvailable != prevFedDiscovery) {
+          server.federationDiscoveryAvailable != prevFedDiscovery ||
+          server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
       }
     } catch (err) {
