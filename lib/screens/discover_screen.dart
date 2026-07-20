@@ -473,7 +473,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
             ),
-      trailing: _MatchMeter(similarity: track.similarity),
+      trailing: MatchMeter(similarity: track.similarity),
       onTap: () => _tapTrack(index),
     );
   }
@@ -648,7 +648,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               tooltip: l.discoverOpenMusicBrainz,
               onPressed: () => _openMusicBrainz(lead),
             ),
-          _MatchMeter(similarity: lead.similarity),
+          MatchMeter(similarity: lead.similarity),
         ],
       ),
       onTap: () => _copyLead(lead),
@@ -703,10 +703,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 }
 
 /// The webapp's vertical "match meter": a slim bar filled bottom-up to the
-/// similarity fraction, with the percentage underneath.
-class _MatchMeter extends StatelessWidget {
+/// similarity fraction, with the percentage underneath. Public — also used
+/// by the queue's compact Discover bar (widgets/discover_queue_bar.dart).
+class MatchMeter extends StatelessWidget {
   final double similarity;
-  const _MatchMeter({required this.similarity});
+  const MatchMeter({super.key, required this.similarity});
 
   @override
   Widget build(BuildContext context) {
