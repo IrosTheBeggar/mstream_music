@@ -868,31 +868,43 @@ class MatchMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: Container(
-            width: 4,
-            height: 28,
-            color: VelvetColors.raised,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: FractionallySizedBox(
-                heightFactor: similarity,
-                child: Container(color: VelvetColors.primary),
+    // scaleDown: tight parents (the queue bar's compact list rows give the
+    // trailing slot a few px less than the full screen's rows) shrink the
+    // meter to fit instead of overflowing its bottom.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: Container(
+              width: 4,
+              height: 28,
+              color: VelvetColors.raised,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: FractionallySizedBox(
+                  heightFactor: similarity,
+                  child: Container(color: VelvetColors.primary),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '${(similarity * 100).round()}',
-          style: TextStyle(color: VelvetColors.textSecondary, fontSize: 9),
-        ),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            '${(similarity * 100).round()}',
+            style: TextStyle(
+              color: VelvetColors.textSecondary,
+              fontSize: 9,
+              // Trim the line box to the glyphs — the default line height
+              // is most of the few pixels the compact rows are short by.
+              height: 1.0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

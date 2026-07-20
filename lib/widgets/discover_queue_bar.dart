@@ -179,7 +179,11 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
       curve: Curves.easeOutCubic,
       alignment: Alignment.topCenter,
       child: Container(
-        height: _expanded ? panelHeight : 44,
+        // +1: Container folds the decoration's border widths into padding,
+        // so the top hairline insets the content box by a pixel — without
+        // accounting for it the fixed-height header overflows by exactly
+        // 1.00px while collapsed.
+        height: 1 + (_expanded ? panelHeight : 44),
         decoration: BoxDecoration(
           color: VelvetColors.surface,
           border: Border(top: BorderSide(color: VelvetColors.border)),
