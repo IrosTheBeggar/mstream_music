@@ -1812,4 +1812,21 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get discoverSessionStarted =>
       'Звуковая сессия запущена — Auto DJ включён.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Якорь';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Следовать настроению';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Держаться стартового трека';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Каждый трек следует недавнему звучанию сессии — она может медленно меняться.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Каждый трек остаётся близким к стартовому треку всю сессию.';
 }

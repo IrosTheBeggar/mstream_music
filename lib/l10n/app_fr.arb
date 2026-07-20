@@ -424,5 +424,10 @@
   "discoverStartSession": "Lancer une session sonore",
   "discoverStartSessionSubtitle": "De la musique sans fin qui sonne comme ce titre — remplace votre file d'attente.",
   "discoverStartSessionSubtitleRandom": "De la musique sans fin à partir d'un titre de départ aléatoire — remplace votre file d'attente.",
-  "discoverSessionStarted": "Session sonore lancée — Auto DJ activé."
+  "discoverSessionStarted": "Session sonore lancée — Auto DJ activé.",
+  "autoDjSonicAnchorLabel": "Ancre",
+  "autoDjSonicAnchorRolling": "Suivre l'ambiance",
+  "autoDjSonicAnchorLocked": "Rester sur le titre de départ",
+  "autoDjSonicAnchorRollingHint": "Chaque titre suit le son récent de la session — elle peut évoluer lentement.",
+  "autoDjSonicAnchorLockedHint": "Chaque titre reste proche du titre de départ pendant toute la session."
 }

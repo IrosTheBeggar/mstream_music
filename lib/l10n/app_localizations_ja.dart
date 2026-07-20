@@ -1725,4 +1725,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverSessionStarted => 'ソニックセッションを開始しました — Auto DJ がオンです。';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'アンカー';
+
+  @override
+  String get autoDjSonicAnchorRolling => '流れに任せる';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'シード曲に固定';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      '各曲はセッションの最近のサウンドに従います — 徐々に変化することがあります。';
+
+  @override
+  String get autoDjSonicAnchorLockedHint => 'セッション中はすべての曲がシード曲に近いサウンドになります。';
 }

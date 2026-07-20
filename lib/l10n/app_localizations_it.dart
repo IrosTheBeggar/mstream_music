@@ -1794,4 +1794,21 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get discoverSessionStarted =>
       'Sessione sonora avviata — Auto DJ attivo.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Ancora';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Segui l\'atmosfera';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Resta sul brano di partenza';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Ogni brano segue il suono recente della sessione — può evolvere lentamente.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Ogni brano resta vicino al brano di partenza per tutta la sessione.';
 }

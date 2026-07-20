@@ -1809,4 +1809,21 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get discoverSessionStarted =>
       'Sesja dźwiękowa rozpoczęta — Auto DJ włączony.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Kotwica';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Podążaj za klimatem';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Trzymaj się utworu startowego';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Każdy utwór podąża za ostatnim brzmieniem sesji — może powoli ewoluować.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Każdy utwór pozostaje blisko utworu startowego przez całą sesję.';
 }

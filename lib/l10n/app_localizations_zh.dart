@@ -1690,4 +1690,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverSessionStarted => '声音会话已开始 — Auto DJ 已开启。';
+
+  @override
+  String get autoDjSonicAnchorLabel => '锚点';
+
+  @override
+  String get autoDjSonicAnchorRolling => '跟随氛围';
+
+  @override
+  String get autoDjSonicAnchorLocked => '固定在种子歌曲';
+
+  @override
+  String get autoDjSonicAnchorRollingHint => '每首歌都跟随会话最近的声音 — 会缓慢演变。';
+
+  @override
+  String get autoDjSonicAnchorLockedHint => '整个会话中每首歌都保持接近种子歌曲。';
 }

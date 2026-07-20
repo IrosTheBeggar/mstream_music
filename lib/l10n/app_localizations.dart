@@ -3113,6 +3113,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sonic session started — Auto DJ is on.'**
   String get discoverSessionStarted;
+
+  /// Label above the sonic anchor-mode selector (rolling vs locked).
+  ///
+  /// In en, this message translates to:
+  /// **'Anchor'**
+  String get autoDjSonicAnchorLabel;
+
+  /// Rolling anchor mode: sonic seeds are the session's recent DJ picks.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the vibe'**
+  String get autoDjSonicAnchorRolling;
+
+  /// Locked anchor mode: one pinned song seeds every pick for the whole session.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay on seed'**
+  String get autoDjSonicAnchorLocked;
+
+  /// Explanation under the anchor selector while rolling mode is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Each pick follows the session\'s recent sound — it can slowly evolve.'**
+  String get autoDjSonicAnchorRollingHint;
+
+  /// Explanation under the anchor selector while locked mode is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Every pick stays close to the seed song for the whole session.'**
+  String get autoDjSonicAnchorLockedHint;
 }
 
 class _AppLocalizationsDelegate

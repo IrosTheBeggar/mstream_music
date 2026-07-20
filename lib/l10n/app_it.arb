@@ -424,5 +424,10 @@
   "discoverStartSession": "Avvia una sessione sonora",
   "discoverStartSessionSubtitle": "Musica senza fine che suona come questa — sostituisce la coda.",
   "discoverStartSessionSubtitleRandom": "Musica senza fine da un brano iniziale casuale — sostituisce la coda.",
-  "discoverSessionStarted": "Sessione sonora avviata — Auto DJ attivo."
+  "discoverSessionStarted": "Sessione sonora avviata — Auto DJ attivo.",
+  "autoDjSonicAnchorLabel": "Ancora",
+  "autoDjSonicAnchorRolling": "Segui l'atmosfera",
+  "autoDjSonicAnchorLocked": "Resta sul brano di partenza",
+  "autoDjSonicAnchorRollingHint": "Ogni brano segue il suono recente della sessione — può evolvere lentamente.",
+  "autoDjSonicAnchorLockedHint": "Ogni brano resta vicino al brano di partenza per tutta la sessione."
 }

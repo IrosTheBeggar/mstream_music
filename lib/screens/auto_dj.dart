@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
@@ -211,7 +212,17 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               Switch(
                 value: mgr.sonicSimilarityEnabled && supported,
                 onChanged: supported
-                    ? (v) => mgr.setSonicSimilarityEnabled(v)
+                    ? (v) async {
+                        await mgr.setSonicSimilarityEnabled(v);
+                        // Webapp parity (clearSonicAnchors): toggling the
+                        // feature off drops the session anchors — rolling
+                        // history + locked pin. The explicit seed survives.
+                        if (!v) {
+                          MediaManager()
+                              .audioHandler
+                              .customAction('clearSonicSession');
+                        }
+                      }
                     : null,
                 activeThumbColor: VelvetColors.primary,
               ),
@@ -310,6 +321,35 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 ),
               ],
             ),
+            // Anchor policy: follow the session's own picks (rolling) or
+            // stay pinned to the seed for the whole session (locked).
+            SizedBox(height: 8),
+            Text(
+              l.autoDjSonicAnchorLabel,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 6),
+            SegmentedButton<SonicAnchorMode>(
+              segments: [
+                for (final mode in SonicAnchorMode.values)
+                  ButtonSegment(value: mode, label: Text(mode.label(l))),
+              ],
+              selected: {mgr.sonicAnchorMode},
+              onSelectionChanged: (set) {
+                if (set.isNotEmpty) mgr.setSonicAnchorMode(set.first);
+              },
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              mgr.sonicAnchorMode.hint(l),
+              style:
+                  TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
+            ),
           ],
         ],
       ),
@@ -335,12 +375,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         .setSonicSeed(path: path, title: title, server: server.localname);
     // New lane: restart the rolling sonic session so the next pick anchors
     // on this seed instead of the previous picks.
-    MediaManager().audioHandler.customAction('clearSonicHistory');
+    MediaManager().audioHandler.customAction('clearSonicSession');
   }
 
   Future<void> _clearSonicSeed() async {
     await AutoDJManager().clearSonicSeed();
-    MediaManager().audioHandler.customAction('clearSonicHistory');
+    MediaManager().audioHandler.customAction('clearSonicSession');
   }
 
   Future<void> _pickRandomSonicSeed() async {

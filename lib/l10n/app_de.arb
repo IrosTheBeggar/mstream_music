@@ -424,5 +424,10 @@
   "discoverStartSession": "Sonic-Session starten",
   "discoverStartSessionSubtitle": "Endlos Musik, die so klingt wie dieser Titel — ersetzt deine Warteschlange.",
   "discoverStartSessionSubtitleRandom": "Endlos Musik ab einem zufälligen Starttitel — ersetzt deine Warteschlange.",
-  "discoverSessionStarted": "Sonic-Session gestartet — Auto DJ ist an."
+  "discoverSessionStarted": "Sonic-Session gestartet — Auto DJ ist an.",
+  "autoDjSonicAnchorLabel": "Anker",
+  "autoDjSonicAnchorRolling": "Der Stimmung folgen",
+  "autoDjSonicAnchorLocked": "Beim Ausgangssong bleiben",
+  "autoDjSonicAnchorRollingHint": "Jeder Titel folgt dem aktuellen Klang der Session — sie kann sich langsam entwickeln.",
+  "autoDjSonicAnchorLockedHint": "Jeder Titel bleibt die ganze Session über nah am Ausgangssong."
 }

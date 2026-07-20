@@ -424,5 +424,10 @@
   "discoverStartSession": "Запустить звуковую сессию",
   "discoverStartSessionSubtitle": "Бесконечная музыка, звучащая как этот трек — заменит вашу очередь.",
   "discoverStartSessionSubtitleRandom": "Бесконечная музыка со случайного стартового трека — заменит вашу очередь.",
-  "discoverSessionStarted": "Звуковая сессия запущена — Auto DJ включён."
+  "discoverSessionStarted": "Звуковая сессия запущена — Auto DJ включён.",
+  "autoDjSonicAnchorLabel": "Якорь",
+  "autoDjSonicAnchorRolling": "Следовать настроению",
+  "autoDjSonicAnchorLocked": "Держаться стартового трека",
+  "autoDjSonicAnchorRollingHint": "Каждый трек следует недавнему звучанию сессии — она может медленно меняться.",
+  "autoDjSonicAnchorLockedHint": "Каждый трек остаётся близким к стартовому треку всю сессию."
 }

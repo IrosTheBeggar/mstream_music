@@ -100,6 +100,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   // session's own recent sound (webapp auto-dj.js parity). Reset alongside
   // the ignoreList on setAutoDJ off / server switch.
   List<String> _sonicHistory = const [];
+  // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
+  // lazily locked on the session's first pick (explicit seed, else the
+  // playing track; same pattern as [_camelotAnchor]) and reused for every
+  // subsequent similarTo. Cleared with the history on new-lane events, and
+  // dropped when the server reports it unanalyzed/unknown so a dead pin
+  // can't wedge the whole session.
+  String? _sonicLockedAnchor;
   // One toast per session for a sonic fail-loud (pool empty / seed not
   // analyzed) — same retrigger-spam collapse as [_autoDJAuthWarned].
   bool _sonicWarned = false;
@@ -1520,11 +1527,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;
-      case 'clearSonicHistory':
-        // "New lane": setting/clearing the explicit sonic seed restarts the
-        // rolling session, so the next pick anchors on the new seed rather
-        // than on stale history (webapp resetAnchors semantics).
+      case 'clearSonicSession':
+        // "New lane": setting/clearing the explicit sonic seed (or toggling
+        // the feature off) restarts the sonic session — rolling history AND
+        // the locked pin — so the next pick anchors fresh rather than on
+        // stale state (webapp resetAnchors/clearSonicAnchors semantics).
         _sonicHistory = const [];
+        _sonicLockedAnchor = null;
         break;
       case 'setAutoDJ':
         if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
@@ -1532,6 +1541,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
           _sonicHistory = const []; // fresh server, fresh sonic session
+          _sonicLockedAnchor = null;
           _sonicWarned = false;
         }
         autoDJServer = extras?['autoDJServer'];
@@ -1933,18 +1943,34 @@ class AudioPlayerHandler extends BaseAudioHandler
     // anchor: the last few DJ picks (session centroid), else the playing
     // track; a cold start on an empty queue has no anchor and stays plain
     // random until the first pick seeds the session.
+    final sonicEnabled = mgr.sonicSimilarityEnabled &&
+        autoDJServer!.discoveryAvailable == true;
+    // The explicit seed ("start the session here") only counts when it was
+    // picked from the DJ server — filepaths are per-library. Same rule for
+    // the playing track.
+    final explicitSeed = mgr.sonicSeedServer == autoDJServer!.localname
+        ? mgr.sonicSeedPath
+        : null;
+    final sonicCurrent =
+        currentItem?.extras?['server'] == autoDJServer!.localname
+            ? (currentItem?.extras?['path'] as String?)
+            : null;
+    // Locked mode pins its anchor on the session's first pick — the explicit
+    // seed, else the playing track (the same lazy-lock pattern as the
+    // Camelot anchor above). A cold start with neither stays plain random
+    // and pins on the next call via the then-playing pick.
+    if (sonicEnabled &&
+        mgr.sonicAnchorMode == SonicAnchorMode.locked &&
+        _sonicLockedAnchor == null) {
+      _sonicLockedAnchor = _normSonicPath(explicitSeed ?? sonicCurrent);
+    }
     final sonic = sonicParams(
-      enabled: mgr.sonicSimilarityEnabled &&
-          autoDJServer!.discoveryAvailable == true,
+      enabled: sonicEnabled,
+      mode: mgr.sonicAnchorMode,
+      lockedAnchor: _sonicLockedAnchor,
       history: _sonicHistory,
-      // The explicit seed ("start the session here") only counts when it
-      // was picked from the DJ server — filepaths are per-library.
-      seedPath: mgr.sonicSeedServer == autoDJServer!.localname
-          ? mgr.sonicSeedPath
-          : null,
-      currentPath: currentItem?.extras?['server'] == autoDJServer!.localname
-          ? (currentItem?.extras?['path'] as String?)
-          : null,
+      seedPath: explicitSeed,
+      currentPath: sonicCurrent,
       minSimilarity: mgr.sonicMinSimilarity,
     );
 
@@ -2016,6 +2042,15 @@ class AudioPlayerHandler extends BaseAudioHandler
               if (b is Map && b['error'] is String) serverMsg = b['error'];
             } catch (_) {}
             final lower = serverMsg.toLowerCase();
+            // Self-heal a dead locked pin (hardening the webapp lacks): a
+            // pinned anchor the server can't use — not analyzed yet (400) or
+            // moved/deleted (the uniform 404) — would wedge EVERY future
+            // pick, since locked mode never re-derives on its own. Dropping
+            // it lets the next attempt re-pin from the playing track.
+            if (mgr.sonicAnchorMode == SonicAnchorMode.locked &&
+                (res.statusCode == 404 || lower.contains('analyzed'))) {
+              _sonicLockedAnchor = null;
+            }
             if (lower.contains('similarity range')) {
               if (!_sonicWarned) {
                 _sonicWarned = true;
@@ -2186,12 +2221,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// else the playing track. Pure; unit-tested.
   static Map<String, dynamic>? sonicParams({
     required bool enabled,
+    SonicAnchorMode mode = SonicAnchorMode.rolling,
+    String? lockedAnchor,
     required List<String> history,
     String? seedPath,
     String? currentPath,
     required double minSimilarity,
   }) {
     if (!enabled) return null;
+    if (mode == SonicAnchorMode.locked) {
+      // The caller pins [lockedAnchor] lazily (see autoDJ); before a pin
+      // resolves, the pick stays plain random — history/seed/current are
+      // the ROLLING policy's inputs and deliberately ignored here.
+      final anchor = _normSonicPath(lockedAnchor);
+      if (anchor == null) return null;
+      return {
+        'similarTo': [anchor],
+        'minSimilarity': minSimilarity,
+      };
+    }
     if (history.isNotEmpty) {
       return {
         'similarTo': List<String>.of(history),

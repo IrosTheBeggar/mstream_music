@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/media/audio_stuff.dart';
+import 'package:mstream_music/singletons/auto_dj_manager.dart';
 
 // The pure helpers behind Auto DJ's sonic-similarity mode: the rolling
 // anchor ring buffer and the `similarTo`/`minSimilarity` fields it turns
@@ -131,6 +132,52 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('locked mode returns the pin, ignoring history / seed / current',
+        () {
+      final p = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        mode: SonicAnchorMode.locked,
+        lockedAnchor: '/music/pin.mp3', // normalized like every seed
+        history: const ['music/pick.mp3'],
+        seedPath: 'music/seed.mp3',
+        currentPath: '/music/current.mp3',
+        minSimilarity: 0.5,
+      );
+      expect(p, {
+        'similarTo': ['music/pin.mp3'],
+        'minSimilarity': 0.5,
+      });
+    });
+
+    test('locked mode without a pin sends no sonic constraint', () {
+      // The caller pins lazily; until it resolves the pick stays plain
+      // random (and the next call pins to it via the playing track).
+      expect(
+        AudioPlayerHandler.sonicParams(
+          enabled: true,
+          mode: SonicAnchorMode.locked,
+          lockedAnchor: null,
+          history: const ['music/pick.mp3'],
+          seedPath: 'music/seed.mp3',
+          currentPath: '/music/current.mp3',
+          minSimilarity: 0.5,
+        ),
+        isNull,
+      );
+    });
+
+    test('rolling mode ignores a stale locked pin', () {
+      final p = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        // mode defaults to rolling.
+        lockedAnchor: 'music/stale-pin.mp3',
+        history: const ['music/pick.mp3'],
+        currentPath: '/music/current.mp3',
+        minSimilarity: 0.5,
+      );
+      expect(p?['similarTo'], ['music/pick.mp3']);
     });
 
     test('returned similarTo is a copy — later history pushes cannot mutate '

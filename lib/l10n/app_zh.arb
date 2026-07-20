@@ -424,5 +424,10 @@
   "discoverStartSession": "开始声音会话",
   "discoverStartSessionSubtitle": "无尽播放与此相似的音乐 — 将替换当前队列。",
   "discoverStartSessionSubtitleRandom": "从随机歌曲开始无尽播放 — 将替换当前队列。",
-  "discoverSessionStarted": "声音会话已开始 — Auto DJ 已开启。"
+  "discoverSessionStarted": "声音会话已开始 — Auto DJ 已开启。",
+  "autoDjSonicAnchorLabel": "锚点",
+  "autoDjSonicAnchorRolling": "跟随氛围",
+  "autoDjSonicAnchorLocked": "固定在种子歌曲",
+  "autoDjSonicAnchorRollingHint": "每首歌都跟随会话最近的声音 — 会缓慢演变。",
+  "autoDjSonicAnchorLockedHint": "整个会话中每首歌都保持接近种子歌曲。"
 }

@@ -1315,5 +1315,25 @@
   "discoverSessionStarted": "Sonic session started — Auto DJ is on.",
   "@discoverSessionStarted": {
     "description": "Toast after the session card starts playback (sonic Auto DJ was enabled and seeded)."
+  },
+  "autoDjSonicAnchorLabel": "Anchor",
+  "@autoDjSonicAnchorLabel": {
+    "description": "Label above the sonic anchor-mode selector (rolling vs locked)."
+  },
+  "autoDjSonicAnchorRolling": "Follow the vibe",
+  "@autoDjSonicAnchorRolling": {
+    "description": "Rolling anchor mode: sonic seeds are the session's recent DJ picks."
+  },
+  "autoDjSonicAnchorLocked": "Stay on seed",
+  "@autoDjSonicAnchorLocked": {
+    "description": "Locked anchor mode: one pinned song seeds every pick for the whole session."
+  },
+  "autoDjSonicAnchorRollingHint": "Each pick follows the session's recent sound — it can slowly evolve.",
+  "@autoDjSonicAnchorRollingHint": {
+    "description": "Explanation under the anchor selector while rolling mode is selected."
+  },
+  "autoDjSonicAnchorLockedHint": "Every pick stays close to the seed song for the whole session.",
+  "@autoDjSonicAnchorLockedHint": {
+    "description": "Explanation under the anchor selector while locked mode is selected."
   }
 }

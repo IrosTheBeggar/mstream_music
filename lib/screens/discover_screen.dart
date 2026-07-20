@@ -429,7 +429,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final handler = MediaManager().audioHandler;
     // New lane + fresh queue, then (re)arm the DJ — with an empty queue the
     // setAutoDJ handler makes the first (seed-anchored) pick and plays it.
-    await handler.customAction('clearSonicHistory');
+    await handler.customAction('clearSonicSession');
     await handler.customAction('clearPlaylist');
     await handler.customAction('setAutoDJ', {'autoDJServer': server});
     if (!mounted) return;
