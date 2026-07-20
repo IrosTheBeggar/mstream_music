@@ -2074,7 +2074,9 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       if (!mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) {
         _queueAutoDJSong(decoded,
-            autoPlay: autoPlay, incrementIndex: incrementIndex);
+            autoPlay: autoPlay,
+            incrementIndex: incrementIndex,
+            sonicPick: sonic != null);
         return;
       }
       // Otherwise loop — the updated ignoreList means the next call
@@ -2083,12 +2085,16 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     if (lastDecoded != null) {
       _queueAutoDJSong(lastDecoded,
-          autoPlay: autoPlay, incrementIndex: incrementIndex);
+          autoPlay: autoPlay,
+          incrementIndex: incrementIndex,
+          sonicPick: sonic != null);
     }
   }
 
   void _queueAutoDJSong(Map<String, dynamic> decoded,
-      {bool autoPlay = false, bool incrementIndex = false}) {
+      {bool autoPlay = false,
+      bool incrementIndex = false,
+      bool sonicPick = false}) {
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String?;
@@ -2138,6 +2144,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         // consistency with browser-added items.
         'bpm': meta.bpm,
         'musicalKey': meta.musicalKey,
+        // Queue-transparency badge (persisted with the queue): this row was
+        // chosen by Auto DJ, and whether the sonic pool shaped the pick —
+        // the queue row renders the matching icon so DJ additions are
+        // distinguishable from user-queued tracks.
+        'djPick': true,
+        'djSonic': sonicPick,
       },
     );
 

@@ -27,29 +27,6 @@ class MoreActionsSheet extends StatelessWidget {
   final BuildContext parentContext;
   const MoreActionsSheet({super.key, required this.parentContext});
 
-  void _toggleAutoDJ(BuildContext context, Server? autoDJState) {
-    final l = AppLocalizations.of(context);
-    final current = ServerManager().currentServer;
-    if (current == null) return;
-    final handler = MediaManager().audioHandler;
-    final messenger = ScaffoldMessenger.of(context);
-    if (autoDJState == null) {
-      handler.customAction('setAutoDJ', {'autoDJServer': current});
-      messenger.showSnackBar(SnackBar(
-          content: Text(ServerManager().serverList.length == 1
-              ? l.autoDjEnabled
-              : l.autoDjEnabledFor(current.url))));
-    } else if (current == autoDJState) {
-      handler.customAction('setAutoDJ', {'autoDJServer': null});
-      messenger
-          .showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
-    } else {
-      handler.customAction('setAutoDJ', {'autoDJServer': current});
-      messenger.showSnackBar(
-          SnackBar(content: Text(l.autoDjEnabledFor(current.url))));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -76,7 +53,8 @@ class MoreActionsSheet extends StatelessWidget {
                     style: TextStyle(color: VelvetColors.textSecondary)),
                 value: on,
                 activeThumbColor: VelvetColors.primary,
-                onChanged: (_) => _toggleAutoDJ(context, autoDJState),
+                // Shared with the queue header's DJ button (queue_list.dart).
+                onChanged: (_) => toggleAutoDJ(context),
               );
             },
           ),

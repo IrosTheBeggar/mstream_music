@@ -5,9 +5,12 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
+import '../objects/server.dart';
 import '../screens/metadata_screen.dart';
+import '../singletons/auto_dj_manager.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
+import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
@@ -291,17 +294,39 @@ class _QueueRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w500,
-                        color: active
-                            ? VelvetColors.primary
-                            : VelvetColors.textPrimary,
-                      ),
+                    Row(
+                      children: [
+                        // DJ-pick badge (Finamp's radio-icon / Spotify's
+                        // sparkle pattern): explore = sonic-pool pick,
+                        // album = classic random DJ pick. User-queued rows
+                        // carry no badge.
+                        if (item.extras?['djPick'] == true) ...[
+                          Icon(
+                            item.extras?['djSonic'] == true
+                                ? Icons.explore
+                                : Icons.album,
+                            size: 12,
+                            color: active
+                                ? VelvetColors.primary
+                                : VelvetColors.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w500,
+                              color: active
+                                  ? VelvetColors.primary
+                                  : VelvetColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     if (item.artist != null) ...[
                       const SizedBox(height: 1),
@@ -405,17 +430,20 @@ class QueueHeader extends StatelessWidget {
                 );
               },
             ),
-            if (showOptions)
-              IconButton(
-                icon: const Icon(Icons.more_vert, size: 20),
-                color: VelvetColors.textSecondary,
-                tooltip: l.mainMore,
-                onPressed: onOptions,
-              )
-            else
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Auto DJ at a glance + one-tap toggle (the queue-header
+                // autoplay-control pattern) — lit while the DJ runs.
+                _DjHeaderButton(),
+                if (showOptions)
+                  IconButton(
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    color: VelvetColors.textSecondary,
+                    tooltip: l.mainMore,
+                    onPressed: onOptions,
+                  )
+                else ...[
                   IconButton(
                     icon: const Icon(Icons.download_for_offline, size: 20),
                     color: VelvetColors.textSecondary,
@@ -431,7 +459,8 @@ class QueueHeader extends StatelessWidget {
                         .customAction('clearPlaylist'),
                   ),
                 ],
-              ),
+              ],
+            ),
           ],
         ),
       ),
@@ -490,4 +519,58 @@ void downloadQueue(BuildContext context) {
         ],
       ),
     );
+}
+
+/// Toggle Auto DJ for the current server — off when it's already driving it,
+/// on (or switched over) otherwise — with the standard confirmation
+/// snackbars. Shared by the queue header's DJ button and the player sheet's
+/// Auto DJ switch.
+Future<void> toggleAutoDJ(BuildContext context) async {
+  final l = AppLocalizations.of(context);
+  final current = ServerManager().currentServer;
+  if (current == null) return;
+  final handler = MediaManager().audioHandler;
+  final messenger = ScaffoldMessenger.of(context);
+  final Server? state = handler.customState.valueOrNull?.autoDJState as Server?;
+  if (state == null) {
+    handler.customAction('setAutoDJ', {'autoDJServer': current});
+    messenger.showSnackBar(SnackBar(
+        content: Text(ServerManager().serverList.length == 1
+            ? l.autoDjEnabled
+            : l.autoDjEnabledFor(current.url))));
+  } else if (current == state) {
+    handler.customAction('setAutoDJ', {'autoDJServer': null});
+    messenger.showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
+  } else {
+    handler.customAction('setAutoDJ', {'autoDJServer': current});
+    messenger.showSnackBar(
+        SnackBar(content: Text(l.autoDjEnabledFor(current.url))));
+  }
+}
+
+/// Auto DJ state at a glance in the queue header (the ∞-icon-on-the-queue
+/// pattern): lit while the DJ runs — explore icon when sonic similarity is
+/// shaping picks, album icon for the classic random DJ — dim when off.
+/// Tapping toggles the DJ for the current server.
+class _DjHeaderButton extends StatelessWidget {
+  const _DjHeaderButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return StreamBuilder<dynamic>(
+      stream: MediaManager().audioHandler.customState,
+      builder: (context, snap) {
+        final Server? djServer = snap.data?.autoDJState as Server?;
+        final on = djServer != null;
+        final sonic = on && AutoDJManager().sonicSimilarityEnabled;
+        return IconButton(
+          icon: Icon(sonic ? Icons.explore : Icons.album, size: 20),
+          color: on ? VelvetColors.primary : VelvetColors.textSecondary,
+          tooltip: l.autoDjTitle,
+          onPressed: () => toggleAutoDJ(context),
+        );
+      },
+    );
+  }
 }
