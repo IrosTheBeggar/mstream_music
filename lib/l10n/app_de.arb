@@ -410,6 +410,8 @@
   "discoverPeersUnreachable": "Deine Peers haben nicht geantwortet — sie sind möglicherweise gerade offline.",
   "discoverPeersNothingNew": "Nichts Neues für diesen Titel auf den Servern deiner Peers.",
   "autoDjSonicTitle": "Klangliche Ähnlichkeit",
-  "autoDjSonicSubtitle": "Wählt Titel, die wie der laufende klingen — auf Basis der Audio-Analyse des Servers. Ohne Treffer wird zufällig gewählt.",
-  "autoDjSonicUnavailable": "Dieser Server hat keine Discovery-Daten — die Auswahl bleibt zufällig."
+  "autoDjSonicSubtitle": "Wählt nur Titel, die wie die Session klingen — auf Basis der Audio-Analyse des Servers.",
+  "autoDjSonicUnavailable": "Dieser Server hat keine Discovery-Daten — die Auswahl bleibt zufällig.",
+  "autoDjSonicStrictness": "Ähnlichkeitsschwelle",
+  "autoDjSonicStrictnessValue": "{pct} % oder ähnlicher"
 }

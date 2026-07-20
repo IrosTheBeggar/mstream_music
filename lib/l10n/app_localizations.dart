@@ -3024,10 +3024,10 @@ abstract class AppLocalizations {
   /// **'Sonic similarity'**
   String get autoDjSonicTitle;
 
-  /// Subtitle under the sonic similarity toggle when the server supports it.
+  /// Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback.
   ///
   /// In en, this message translates to:
-  /// **'Pick tracks that sound like the one playing, using the server\'s audio analysis. Falls back to random when there\'s no match.'**
+  /// **'Only pick songs that sound like the session, using the server\'s audio analysis.'**
   String get autoDjSonicSubtitle;
 
   /// Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability.
@@ -3035,6 +3035,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This server doesn\'t have discovery data — picks stay random.'**
   String get autoDjSonicUnavailable;
+
+  /// Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity).
+  ///
+  /// In en, this message translates to:
+  /// **'Match strictness'**
+  String get autoDjSonicStrictness;
+
+  /// Value readout next to the strictness slider: picks must match at least this percentage.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% or closer'**
+  String autoDjSonicStrictnessValue(int pct);
 }
 
 class _AppLocalizationsDelegate

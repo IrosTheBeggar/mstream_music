@@ -54,13 +54,16 @@ class AutoDJManager {
   // `musicalKeys` (anchor + 5 neighbours).
   bool harmonicMixingEnabled = false;
 
-  // Sonic similarity — seed each pick from the playing track's audio
-  // embedding via POST /api/v1/discovery/local/similar/tracks instead
-  // of the random rotation. Client-side re-application of the other
-  // constraints + fallback to random-songs live in audio_stuff.dart's
-  // autoDJ(). Only effective when the DJ server advertised `discovery`
-  // on ping (Server.discoveryAvailable).
+  // Sonic similarity — constrain picks to the session's vibe, server-side
+  // via the `similarTo` + `minSimilarity` fields on POST
+  // /api/v1/db/random-songs (the sonic pool is a hard base constraint the
+  // BPM/key waterfall relaxes within). Seeds are the rolling anchor kept in
+  // audio_stuff.dart. Only effective when the DJ server advertised
+  // `discovery` on ping (Server.discoveryAvailable).
   bool sonicSimilarityEnabled = false;
+  // Raw cosine threshold 0..1 for the sonic pool (server default contract;
+  // webapp default 0.55). The Auto DJ screen's slider exposes 0.30–0.80.
+  double sonicMinSimilarity = 0.55;
 
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
@@ -94,6 +97,9 @@ class AutoDJManager {
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
       sonicSimilarityEnabled = m['sonicSimilarityEnabled'] ?? false;
+      final sonicSim = m['sonicMinSimilarity'];
+      sonicMinSimilarity =
+          sonicSim is num ? sonicSim.toDouble().clamp(0.0, 1.0) : 0.55;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -112,6 +118,7 @@ class AutoDJManager {
       'bpmTolerance': bpmTolerance,
       'harmonicMixingEnabled': harmonicMixingEnabled,
       'sonicSimilarityEnabled': sonicSimilarityEnabled,
+      'sonicMinSimilarity': sonicMinSimilarity,
     }));
   }
 
@@ -192,6 +199,12 @@ class AutoDJManager {
 
   Future<void> setSonicSimilarityEnabled(bool v) async {
     sonicSimilarityEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicMinSimilarity(double v) async {
+    sonicMinSimilarity = v.clamp(0.0, 1.0);
     _notify();
     await _save();
   }

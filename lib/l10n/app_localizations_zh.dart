@@ -1645,8 +1645,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicTitle => '声音相似度';
 
   @override
-  String get autoDjSonicSubtitle => '利用服务器的音频分析，挑选与当前播放歌曲声音相似的歌曲。没有匹配时回退到随机选曲。';
+  String get autoDjSonicSubtitle => '利用服务器的音频分析，只挑选与本次会话声音相似的歌曲。';
 
   @override
   String get autoDjSonicUnavailable => '此服务器没有发现数据 — 选曲保持随机。';
+
+  @override
+  String get autoDjSonicStrictness => '相似度门槛';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% 或更相似';
+  }
 }

@@ -1743,9 +1743,17 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get autoDjSonicSubtitle =>
-      'Sceglie brani che suonano come quello in riproduzione, usando l\'analisi audio del server. Senza corrispondenze si torna alla scelta casuale.';
+      'Sceglie solo brani che suonano come la sessione, usando l\'analisi audio del server.';
 
   @override
   String get autoDjSonicUnavailable =>
       'Questo server non ha dati di scoperta — la selezione resta casuale.';
+
+  @override
+  String get autoDjSonicStrictness => 'Soglia di somiglianza';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct % o più simile';
+  }
 }

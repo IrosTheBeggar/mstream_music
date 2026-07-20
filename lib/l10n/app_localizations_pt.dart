@@ -1740,9 +1740,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get autoDjSonicSubtitle =>
-      'Escolhe músicas que soam como a atual, usando a análise de áudio do servidor. Sem correspondências, volta ao modo aleatório.';
+      'Escolhe apenas músicas que soam como a sessão, usando a análise de áudio do servidor.';
 
   @override
   String get autoDjSonicUnavailable =>
       'Este servidor não tem dados de descoberta — a seleção continua aleatória.';
+
+  @override
+  String get autoDjSonicStrictness => 'Limite de semelhança';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% ou mais próximo';
+  }
 }

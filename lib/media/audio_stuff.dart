@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
-import 'dart:math' show Random;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -95,6 +94,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   // One toast per session for an Auto-DJ auth failure (401/403) — every
   // queue-end retriggers autoDJ, and each would re-toast otherwise.
   bool _autoDJAuthWarned = false;
+
+  // Session-only: rolling sonic anchor — the last few DJ-picked filepaths,
+  // sent as random-songs' `similarTo` seeds so the server centroids the
+  // session's own recent sound (webapp auto-dj.js parity). Reset alongside
+  // the ignoreList on setAutoDJ off / server switch.
+  List<String> _sonicHistory = const [];
+  // One toast per session for a sonic fail-loud (pool empty / seed not
+  // analyzed) — same retrigger-spam collapse as [_autoDJAuthWarned].
+  bool _sonicWarned = false;
 
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
@@ -1517,6 +1525,8 @@ class AudioPlayerHandler extends BaseAudioHandler
           jsonAutoDJIgnoreList = null;
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
+          _sonicHistory = const []; // fresh server, fresh sonic session
+          _sonicWarned = false;
         }
         autoDJServer = extras?['autoDJServer'];
 
@@ -1909,22 +1919,23 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (seed != null) _camelotAnchor = seed;
     }
 
-    // Sonic similarity: seed the pick from the playing track's audio
-    // embedding rather than the random rotation. Any miss — no usable seed,
-    // capability gone, seed not analyzed yet, every candidate filtered out,
-    // network error — falls through to the random-songs path below, so
-    // infinite play never stalls on this mode.
-    if (mgr.sonicSimilarityEnabled &&
-        autoDJServer!.discoveryAvailable == true) {
-      if (await _autoDJSonicPick(
-          currentItem: currentItem,
-          ignoreVPaths: ignoreVPaths,
-          currentBpm: currentBpm,
-          autoPlay: autoPlay,
-          incrementIndex: incrementIndex)) {
-        return;
-      }
-    }
+    // Sonic similarity: constrain the pick pool to tracks within the
+    // session's vibe — server-side, via `similarTo` + `minSimilarity` on
+    // random-songs itself. The sonic pool is a HARD base constraint there
+    // (the BPM/key waterfall relaxes WITHIN it, and ignoreList / rating /
+    // genre filters compose as usual). Seeds follow the webapp's rolling
+    // anchor: the last few DJ picks (session centroid), else the playing
+    // track; a cold start on an empty queue has no anchor and stays plain
+    // random until the first pick seeds the session.
+    final sonic = sonicParams(
+      enabled: mgr.sonicSimilarityEnabled &&
+          autoDJServer!.discoveryAvailable == true,
+      history: _sonicHistory,
+      currentPath: currentItem?.extras?['server'] == autoDJServer!.localname
+          ? (currentItem?.extras?['path'] as String?)
+          : null,
+      minSimilarity: mgr.sonicMinSimilarity,
+    );
 
     // Keyword filter is client-side (the server doesn't see it).
     // Retry up to 5 times if responses get blocked, using the
@@ -1935,6 +1946,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     for (var attempt = 0; attempt < 5; attempt++) {
       final payload = <String, dynamic>{
         'ignoreList': jsonAutoDJIgnoreList ?? [],
+        ...?sonic,
       };
       if (autoDJServer!.autoDJminRating != null) {
         payload['minRating'] = autoDJServer!.autoDJminRating;
@@ -1981,6 +1993,43 @@ class AudioPlayerHandler extends BaseAudioHandler
         ).timeout(const Duration(seconds: 15));
         if (res.statusCode > 299) {
           appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
+          // Sonic mode fails LOUD by the server's contract: the pool is a
+          // hard promise ("only songs within X of the vibe"), so an empty
+          // pool or an unanalyzed seed stops the session with an
+          // explanation instead of silently playing outside the range
+          // (webapp parity — it discriminates on the error message too).
+          if (sonic != null) {
+            String serverMsg = '';
+            try {
+              final b = jsonDecode(res.body);
+              if (b is Map && b['error'] is String) serverMsg = b['error'];
+            } catch (_) {}
+            final lower = serverMsg.toLowerCase();
+            if (lower.contains('similarity range')) {
+              if (!_sonicWarned) {
+                _sonicWarned = true;
+                _showPlaybackErrorToast(
+                    'Auto DJ: no songs are within the similarity range. '
+                    'Loosen the match slider or adjust your filters.');
+              }
+              return;
+            }
+            if (lower.contains('analyzed')) {
+              if (!_sonicWarned) {
+                _sonicWarned = true;
+                _showPlaybackErrorToast(
+                    "Auto DJ: this song hasn't been analyzed yet — wait "
+                    'for the discovery scan or play a different song.');
+              }
+              return;
+            }
+            // requireIndex 403 ("Discovery is disabled"): the capability
+            // vanished since the last ping — NOT an expired login, so it
+            // must not fall through to the re-login toast below.
+            if (lower.contains('discovery is disabled')) {
+              return;
+            }
+          }
           // An expired/rotated JWT kills Auto DJ permanently and used to do it
           // in total silence — infinite play just stopped. Tell the user once.
           if ((res.statusCode == 401 || res.statusCode == 403) &&
@@ -1995,8 +2044,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
         // A working pick re-arms the auth warning: the once-per-session flag
         // exists to collapse queue-end retrigger spam of ONE expiry episode,
-        // not to silence a NEW expiry after a recovery.
+        // not to silence a NEW expiry after a recovery. Same for the sonic
+        // fail-loud toast.
         _autoDJAuthWarned = false;
+        _sonicWarned = false;
       } catch (e) {
         // Network error → bail without a toast (an offline queue-end is
         // normal), but leave a trace for Diagnostics.
@@ -2090,6 +2141,11 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     addQueueItem(item);
 
+    // Feed the rolling sonic anchor with every DJ pick (kept even while the
+    // mode is off, so toggling it on mid-session already has the session's
+    // recent sound to centroid on).
+    _sonicHistory = pushSonicHistory(_sonicHistory, filepath);
+
     if (incrementIndex == true && index != null) {
       _backend.seek(Duration.zero, index: index! + 1);
     }
@@ -2098,185 +2154,61 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
-  /// One sonic-similarity DJ pick: seed from [currentItem]'s embedding via
-  /// POST /api/v1/discovery/local/similar/tracks and queue the best surviving
-  /// candidate. Returns false whenever the random-songs path should run
-  /// instead — the caller treats false as "fall back", never as an error.
-  Future<bool> _autoDJSonicPick({
-    required MediaItem? currentItem,
-    required List<String> ignoreVPaths,
-    required int? currentBpm,
-    required bool autoPlay,
-    required bool incrementIndex,
-  }) async {
-    final server = autoDJServer!;
-
-    // The seed must be a track FROM the DJ server — similarity filepaths are
-    // meaningless across libraries. Local files / other servers → no seed
-    // (e.g. the cold-start pick of an empty-queue DJ session).
-    final seedPath = currentItem?.extras?['path'] as String?;
-    if (seedPath == null ||
-        currentItem?.extras?['server'] != server.localname) {
-      return false;
+  /// The `similarTo`/`minSimilarity` fields for a random-songs body, or
+  /// null when sonic mode is off / no anchor is resolvable (cold start on
+  /// an empty queue — the pick stays plain random and then seeds the
+  /// session). Rolling-anchor policy, mirroring the webapp's
+  /// auto-dj.js buildSonicParams: the recent DJ picks (server averages
+  /// them into a session centroid), else the playing track. Pure;
+  /// unit-tested.
+  static Map<String, dynamic>? sonicParams({
+    required bool enabled,
+    required List<String> history,
+    String? currentPath,
+    required double minSimilarity,
+  }) {
+    if (!enabled) return null;
+    if (history.isNotEmpty) {
+      return {
+        'similarTo': List<String>.of(history),
+        'minSimilarity': minSimilarity,
+      };
     }
-
-    Map<String, dynamic> decoded;
-    try {
-      final res = await http
-          .post(
-            server.apiUri('/api/v1/discovery/local/similar/tracks'),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
-            },
-            body: jsonEncode({
-              'filePath': seedPath.startsWith('/')
-                  ? seedPath.substring(1)
-                  : seedPath,
-              'limit': 30,
-              // Same-album neighbours make the DJ feel like album playback.
-              'excludeSameAlbum': true,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
-      if (res.statusCode > 299) {
-        // Includes 403 (feature toggled off since the last ping) and the
-        // uniform 404 for an unknown seed — all just mean "use random".
-        appLog('[dj] sonic similar-tracks HTTP ${res.statusCode} — '
-            'falling back to random');
-        return false;
-      }
-      final body = jsonDecode(res.body);
-      if (body is! Map<String, dynamic>) return false;
-      decoded = body;
-    } catch (e) {
-      appLog('[dj] sonic similar-tracks failed: $e — falling back to random');
-      return false;
-    }
-
-    // DJ turned off / switched servers while the request was in flight —
-    // drop the stale pick without falling through to random.
-    if (autoDJServer?.localname != server.localname) return true;
-
-    if (decoded['notAnalyzed'] == true) return false;
-    final rows = decoded['results'];
-    if (rows is! List || rows.isEmpty) return false;
-
-    // Everything already queued this session (played or pending) is off the
-    // table — the discovery route has no server-side ignoreList equivalent
-    // (random-songs' ignoreList entries are rotation indices, not paths).
-    final queuePaths = <String>{};
-    for (final item in queue.value) {
-      final p = item.extras?['path'];
-      if (p is String) {
-        queuePaths.add(p.startsWith('/') ? p.substring(1) : p);
-      }
-    }
-
-    final mgr = AutoDJManager();
-    final candidates = filterSonicCandidates(
-      rows,
-      queuePaths: queuePaths,
-      ignoreVPaths: ignoreVPaths,
-      minRating: server.autoDJminRating,
-      isBlocked: mgr.isKeywordBlocked,
-      genreValues: (mgr.genreFilterEnabled && mgr.genreFilterValues.isNotEmpty)
-          ? mgr.genreFilterValues
-          : null,
-      genreMode: mgr.genreFilterMode,
-      bpmWindows:
-          (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0)
-              ? _bpmWindows(currentBpm, mgr.bpmTolerance)
-              : null,
-      allowedKeys: (mgr.harmonicMixingEnabled && _camelotAnchor != null)
-          ? camelotNeighbours(_camelotAnchor!).toSet()
-          : null,
-      avoidArtist: currentItem?.artist,
-    );
-    if (candidates.isEmpty) return false;
-
-    // Random among the top few (results arrive similarity-sorted): similar
-    // enough to flow, varied enough that replaying a song doesn't reproduce
-    // the identical session.
-    final pick = candidates[
-        Random().nextInt(candidates.length < 5 ? candidates.length : 5)];
-    verboseLog('[dj] sonic pick ${pick['filepath']} '
-        '(sim ${pick['similarity']}, ${candidates.length} candidates)');
-    _queueAutoDJSong({
-      'songs': [pick]
-    }, autoPlay: autoPlay, incrementIndex: incrementIndex);
-    return true;
+    final cur = _normSonicPath(currentPath);
+    if (cur == null) return null;
+    return {
+      'similarTo': [cur],
+      'minSimilarity': minSimilarity,
+    };
   }
 
-  /// Applies the AutoDJ constraint set to raw similar-track rows
-  /// (`{filepath, similarity, metadata, genreTags}`) and returns the
-  /// survivors in their incoming (similarity-sorted) order. Pure;
+  /// Appends a DJ pick to the rolling sonic ring buffer: normalized,
+  /// deduped (a re-pick moves to the most-recent slot rather than
+  /// double-weighting the server's centroid), capped at [limit] — the
+  /// webapp keeps 5 of the up-to-8 seeds the server accepts. Pure;
   /// unit-tested.
-  ///
-  /// [queuePaths] must be normalized without a leading slash. A null
-  /// [genreValues] / [bpmWindows] / [allowedKeys] means that constraint is
-  /// off. [avoidArtist] is a soft preference: candidates by other artists
-  /// win, but when EVERY survivor is by that artist they're kept — variety
-  /// must never starve the queue.
-  static List<Map<String, dynamic>> filterSonicCandidates(
-    List rows, {
-    required Set<String> queuePaths,
-    List<String> ignoreVPaths = const [],
-    int? minRating,
-    bool Function(Map<String, dynamic>)? isBlocked,
-    List<String>? genreValues,
-    String genreMode = 'whitelist',
-    List<Map<String, int>>? bpmWindows,
-    Set<String>? allowedKeys,
-    String? avoidArtist,
-  }) {
-    final out = <Map<String, dynamic>>[];
-    for (final raw in rows) {
-      if (raw is! Map<String, dynamic>) continue;
-      final fp = raw['filepath'];
-      if (fp is! String || fp.isEmpty) continue;
-      final norm = fp.startsWith('/') ? fp.substring(1) : fp;
-      if (queuePaths.contains(norm)) continue;
-      if (ignoreVPaths.contains(norm.split('/').first)) continue;
-
-      final meta = (raw['metadata'] as Map?) ?? const {};
-      if (minRating != null) {
-        // Mirrors random-songs' minRating: unrated tracks don't qualify.
-        final rating = meta['rating'];
-        if (rating is! num || rating < minRating) continue;
-      }
-      if (isBlocked != null && isBlocked(raw)) continue;
-      if (genreValues != null) {
-        final genres = meta['genres'];
-        final have = genres is List
-            ? genres.map((g) => g.toString().toLowerCase()).toSet()
-            : const <String>{};
-        final hit =
-            genreValues.any((g) => have.contains(g.toLowerCase()));
-        if (genreMode == 'blacklist' ? hit : !hit) continue;
-      }
-      if (bpmWindows != null) {
-        final bpm = meta['bpm'];
-        final inWindow = bpm is num &&
-            bpmWindows.any((w) => bpm >= w['min']! && bpm <= w['max']!);
-        if (!inWindow) continue;
-      }
-      if (allowedKeys != null) {
-        final rawKey = meta['musical-key'];
-        final code = toCamelotCode(rawKey is String ? rawKey : null);
-        if (code == null || !allowedKeys.contains(code)) continue;
-      }
-      out.add(raw);
+  static List<String> pushSonicHistory(List<String> history, String? rawPath,
+      {int limit = 5}) {
+    final norm = _normSonicPath(rawPath);
+    if (norm == null) return history;
+    final next = [
+      for (final p in history)
+        if (p != norm) p,
+      norm,
+    ];
+    while (next.length > limit) {
+      next.removeAt(0);
     }
+    return next;
+  }
 
-    if (avoidArtist != null && avoidArtist.trim().isNotEmpty) {
-      final varied = out
-          .where((r) =>
-              ((r['metadata'] as Map?) ?? const {})['artist'] != avoidArtist)
-          .toList();
-      if (varied.isNotEmpty) return varied;
-    }
-    return out;
+  /// Seed paths on the wire never carry a leading slash (they resolve via
+  /// getVPathInfo server-side); queue extras' paths do. Normalize at every
+  /// write/build point, like the webapp's _normSonicPath.
+  static String? _normSonicPath(String? p) {
+    if (p == null) return null;
+    final s = p.startsWith('/') ? p.substring(1) : p;
+    return s.isEmpty ? null : s;
   }
 
   // BPM continuity windows: one centered on the current tempo, one

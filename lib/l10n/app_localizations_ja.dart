@@ -1678,10 +1678,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjSonicTitle => 'サウンドの類似性';
 
   @override
-  String get autoDjSonicSubtitle =>
-      'サーバーの音声解析を使って、再生中の曲に似た曲を選びます。一致がない場合はランダム選曲に戻ります。';
+  String get autoDjSonicSubtitle => 'サーバーの音声解析を使って、セッションに似た響きの曲だけを選びます。';
 
   @override
   String get autoDjSonicUnavailable =>
       'このサーバーにはディスカバリーデータがありません — 選曲はランダムのままです。';
+
+  @override
+  String get autoDjSonicStrictness => '類似度のしきい値';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% 以上の類似';
+  }
 }

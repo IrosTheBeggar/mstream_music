@@ -184,32 +184,76 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final supported = target?.discoveryAvailable == true;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.autoDjSonicTitle,
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text(
+                      supported
+                          ? l.autoDjSonicSubtitle
+                          : l.autoDjSonicUnavailable,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: mgr.sonicSimilarityEnabled && supported,
+                onChanged: supported
+                    ? (v) => mgr.setSonicSimilarityEnabled(v)
+                    : null,
+                activeThumbColor: VelvetColors.primary,
+              ),
+            ],
+          ),
+          if (supported && mgr.sonicSimilarityEnabled) ...[
+            SizedBox(height: 4),
+            Row(
               children: [
-                Text(l.autoDjSonicTitle,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary, fontSize: 15)),
-                SizedBox(height: 2),
                 Text(
-                  supported
-                      ? l.autoDjSonicSubtitle
-                      : l.autoDjSonicUnavailable,
+                  l.autoDjSonicStrictness,
                   style: TextStyle(
-                      color: VelvetColors.textSecondary, fontSize: 12),
+                      color: VelvetColors.textSecondary, fontSize: 13),
+                ),
+                Spacer(),
+                Text(
+                  l.autoDjSonicStrictnessValue(
+                      (mgr.sonicMinSimilarity * 100).round()),
+                  style: TextStyle(
+                    color: VelvetColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
-          ),
-          Switch(
-            value: mgr.sonicSimilarityEnabled && supported,
-            onChanged:
-                supported ? (v) => mgr.setSonicSimilarityEnabled(v) : null,
-            activeThumbColor: VelvetColors.primary,
-          ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: VelvetColors.primary,
+                thumbColor: VelvetColors.primary,
+                overlayColor: VelvetColors.primaryDim,
+              ),
+              // Raw cosine threshold; the useful band in practice —
+              // webapp's slider covers the same perceptual range.
+              child: Slider(
+                value: mgr.sonicMinSimilarity.clamp(0.30, 0.80),
+                min: 0.30,
+                max: 0.80,
+                divisions: 50,
+                onChanged: (v) => mgr.setSonicMinSimilarity(v),
+              ),
+            ),
+          ],
         ],
       ),
     );

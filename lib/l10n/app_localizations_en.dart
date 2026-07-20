@@ -1725,9 +1725,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoDjSonicSubtitle =>
-      'Pick tracks that sound like the one playing, using the server\'s audio analysis. Falls back to random when there\'s no match.';
+      'Only pick songs that sound like the session, using the server\'s audio analysis.';
 
   @override
   String get autoDjSonicUnavailable =>
       'This server doesn\'t have discovery data — picks stay random.';
+
+  @override
+  String get autoDjSonicStrictness => 'Match strictness';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% or closer';
+  }
 }

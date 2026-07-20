@@ -1763,9 +1763,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSonicSubtitle =>
-      'Выбирает треки, звучащие как текущий, по аудио-анализу сервера. Если совпадений нет — возвращается к случайному выбору.';
+      'Выбирает только треки, звучащие как сессия, по аудио-анализу сервера.';
 
   @override
   String get autoDjSonicUnavailable =>
       'На этом сервере нет данных для открытий — выбор останется случайным.';
+
+  @override
+  String get autoDjSonicStrictness => 'Порог похожести';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% и ближе';
+  }
 }
