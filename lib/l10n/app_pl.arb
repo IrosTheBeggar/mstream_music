@@ -435,5 +435,10 @@
   "discoverPlayPathTo": "Odtwórz ścieżkę do…",
   "pathScreenTitle": "Ścieżka dźwiękowa",
   "pathStartNotAnalyzed": "Utwór startowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.",
-  "pathEndNotAnalyzed": "Utwór docelowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny."
+  "pathEndNotAnalyzed": "Utwór docelowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.",
+  "pathStartSong": "Utwór początkowy",
+  "pathEndSong": "Utwór końcowy",
+  "pathLength": "Długość",
+  "pathRegenerate": "Wygeneruj ponownie",
+  "pathSaveAsPlaylist": "Zapisz jako playlistę"
 }

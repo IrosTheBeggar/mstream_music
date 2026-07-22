@@ -1359,5 +1359,25 @@
   "pathEndNotAnalyzed": "The destination song hasn't been analyzed yet — wait for the discovery scan or pick another.",
   "@pathEndNotAnalyzed": {
     "description": "Path screen hint when the destination seed has no embedding yet."
+  },
+  "pathStartSong": "Start song",
+  "@pathStartSong": {
+    "description": "Song-picker title when re-choosing the path start endpoint."
+  },
+  "pathEndSong": "End song",
+  "@pathEndSong": {
+    "description": "Song-picker title when re-choosing the path destination endpoint."
+  },
+  "pathLength": "Length",
+  "@pathLength": {
+    "description": "Label of the path-length slider (total songs including both endpoints)."
+  },
+  "pathRegenerate": "Regenerate",
+  "@pathRegenerate": {
+    "description": "Tooltip of the refresh button that rebuilds the path with the current endpoints and length."
+  },
+  "pathSaveAsPlaylist": "Save as playlist",
+  "@pathSaveAsPlaylist": {
+    "description": "Tooltip/toast name of the action saving the generated path as a server playlist."
   }
 }

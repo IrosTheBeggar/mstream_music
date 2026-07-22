@@ -435,5 +435,10 @@
   "discoverPlayPathTo": "Reproducir un camino hacia…",
   "pathScreenTitle": "Camino sonoro",
   "pathStartNotAnalyzed": "La canción inicial aún no se ha analizado — espera al análisis de descubrimiento o elige otra.",
-  "pathEndNotAnalyzed": "La canción de destino aún no se ha analizado — espera al análisis de descubrimiento o elige otra."
+  "pathEndNotAnalyzed": "La canción de destino aún no se ha analizado — espera al análisis de descubrimiento o elige otra.",
+  "pathStartSong": "Canción inicial",
+  "pathEndSong": "Canción final",
+  "pathLength": "Longitud",
+  "pathRegenerate": "Regenerar",
+  "pathSaveAsPlaylist": "Guardar como lista"
 }

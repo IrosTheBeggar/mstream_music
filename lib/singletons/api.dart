@@ -289,6 +289,30 @@ class ApiManager {
     }
   }
 
+  /// POST /api/v1/playlist/save — create-or-OVERWRITE [playlist] on
+  /// [server] with exactly [filepaths] (vpath form; leading slashes
+  /// stripped): the bulk, atomic counterpart of [addSongToPlaylist], used
+  /// by "Save as playlist" flows. Throws on failure.
+  Future<void> savePlaylist(
+      Server server, String playlist, List<String> filepaths) async {
+    final songs = [
+      for (final f in filepaths) f.startsWith('/') ? f.substring(1) : f,
+    ];
+    final response = await http
+        .post(
+          server.apiUri('/api/v1/playlist/save'),
+          body: jsonEncode({'title': playlist, 'songs': songs}),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode > 299) {
+      throw Exception('Playlist save failed (HTTP ${response.statusCode})');
+    }
+  }
+
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
   Future<void> renamePlaylist(String oldName, String newName) async {
     await makeServerCall(null, '/api/v1/playlist/rename',

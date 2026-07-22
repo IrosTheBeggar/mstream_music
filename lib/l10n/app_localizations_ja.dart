@@ -1761,4 +1761,19 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get pathEndNotAnalyzed =>
       '目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
+
+  @override
+  String get pathStartSong => '開始曲';
+
+  @override
+  String get pathEndSong => '終了曲';
+
+  @override
+  String get pathLength => '長さ';
+
+  @override
+  String get pathRegenerate => '再生成';
+
+  @override
+  String get pathSaveAsPlaylist => 'プレイリストとして保存';
 }

@@ -435,5 +435,10 @@
   "discoverPlayPathTo": "播放一条通往…的路径",
   "pathScreenTitle": "声音路径",
   "pathStartNotAnalyzed": "起始歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。",
-  "pathEndNotAnalyzed": "目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。"
+  "pathEndNotAnalyzed": "目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。",
+  "pathStartSong": "起始歌曲",
+  "pathEndSong": "结束歌曲",
+  "pathLength": "长度",
+  "pathRegenerate": "重新生成",
+  "pathSaveAsPlaylist": "保存为播放列表"
 }

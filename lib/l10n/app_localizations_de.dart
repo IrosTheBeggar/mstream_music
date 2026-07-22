@@ -1834,4 +1834,19 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get pathEndNotAnalyzed =>
       'Der Zieltitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen.';
+
+  @override
+  String get pathStartSong => 'Startsong';
+
+  @override
+  String get pathEndSong => 'Zielsong';
+
+  @override
+  String get pathLength => 'Länge';
+
+  @override
+  String get pathRegenerate => 'Neu generieren';
+
+  @override
+  String get pathSaveAsPlaylist => 'Als Playlist speichern';
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
-import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/downloads.dart';
@@ -11,7 +10,7 @@ import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import 'player_panel.dart';
-import 'playlist_name_dialog.dart';
+import 'playlist_picker_sheet.dart';
 
 /// Track context sheet, opened by long-pressing a browser row. Long-press on
 /// a list row conventionally opens the item's context menu (Apple Music,
@@ -63,7 +62,7 @@ class TrackActionsSheet extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _PlaylistPickerSheet(server: server),
+      builder: (_) => PlaylistPickerSheet(server: server),
     );
     final playlist = name?.trim();
     if (playlist == null || playlist.isEmpty) return;
@@ -184,81 +183,6 @@ class TrackActionsSheet extends StatelessWidget {
                 ),
               ));
             }),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-/// Playlist picker for "Add to playlist": the track's server's playlists
-/// (from the last ping) plus a "New playlist" entry — the add-song endpoint
-/// creates missing playlists on the fly, so a name is all it needs. Pops
-/// with the chosen/entered name, or null when dismissed.
-class _PlaylistPickerSheet extends StatelessWidget {
-  final Server server;
-  const _PlaylistPickerSheet({required this.server});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l.trackAddToPlaylist,
-                style: TextStyle(
-                  color: VelvetColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-          ListTile(
-            dense: true,
-            leading: Icon(Icons.add, color: VelvetColors.primary),
-            title: Text(
-              l.playlistsNew,
-              style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
-            ),
-            onTap: () async {
-              final name = await PlaylistNameDialog.show(context,
-                  title: l.playlistsNew, action: l.create);
-              if (name == null || name.trim().isEmpty) return;
-              if (context.mounted) Navigator.of(context).pop(name.trim());
-            },
-          ),
-          if (server.playlists.isNotEmpty) ...[
-            Divider(color: VelvetColors.border, height: 1),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: server.playlists.length,
-                itemBuilder: (context, i) {
-                  final name = server.playlists[i];
-                  return ListTile(
-                    dense: true,
-                    leading: Icon(Icons.queue_music,
-                        color: VelvetColors.textSecondary),
-                    title: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: VelvetColors.textPrimary, fontSize: 14),
-                    ),
-                    onTap: () => Navigator.of(context).pop(name),
-                  );
-                },
-              ),
-            ),
-          ],
           const SizedBox(height: 8),
         ],
       ),

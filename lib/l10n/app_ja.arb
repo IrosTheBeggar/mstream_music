@@ -435,5 +435,10 @@
   "discoverPlayPathTo": "この曲からパスを再生…",
   "pathScreenTitle": "ソニックパス",
   "pathStartNotAnalyzed": "開始曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。",
-  "pathEndNotAnalyzed": "目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。"
+  "pathEndNotAnalyzed": "目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。",
+  "pathStartSong": "開始曲",
+  "pathEndSong": "終了曲",
+  "pathLength": "長さ",
+  "pathRegenerate": "再生成",
+  "pathSaveAsPlaylist": "プレイリストとして保存"
 }

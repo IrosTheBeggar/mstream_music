@@ -1829,4 +1829,19 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get pathEndNotAnalyzed =>
       'A música de destino ainda não foi analisada — aguarde a análise de descoberta ou escolha outra.';
+
+  @override
+  String get pathStartSong => 'Música inicial';
+
+  @override
+  String get pathEndSong => 'Música final';
+
+  @override
+  String get pathLength => 'Comprimento';
+
+  @override
+  String get pathRegenerate => 'Gerar novamente';
+
+  @override
+  String get pathSaveAsPlaylist => 'Salvar como playlist';
 }

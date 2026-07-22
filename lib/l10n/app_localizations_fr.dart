@@ -1831,4 +1831,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get pathEndNotAnalyzed =>
       'Le titre de destination n\'a pas encore été analysé — attendez l\'analyse de découverte ou choisissez-en un autre.';
+
+  @override
+  String get pathStartSong => 'Chanson de départ';
+
+  @override
+  String get pathEndSong => 'Chanson d\'arrivée';
+
+  @override
+  String get pathLength => 'Longueur';
+
+  @override
+  String get pathRegenerate => 'Régénérer';
+
+  @override
+  String get pathSaveAsPlaylist => 'Enregistrer comme playlist';
 }

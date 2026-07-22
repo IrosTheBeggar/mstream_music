@@ -1849,4 +1849,19 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get pathEndNotAnalyzed =>
       'Конечный трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
+
+  @override
+  String get pathStartSong => 'Начальная песня';
+
+  @override
+  String get pathEndSong => 'Конечная песня';
+
+  @override
+  String get pathLength => 'Длина';
+
+  @override
+  String get pathRegenerate => 'Пересоздать';
+
+  @override
+  String get pathSaveAsPlaylist => 'Сохранить как плейлист';
 }

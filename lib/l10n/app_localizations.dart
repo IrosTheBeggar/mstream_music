@@ -3179,6 +3179,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The destination song hasn\'t been analyzed yet — wait for the discovery scan or pick another.'**
   String get pathEndNotAnalyzed;
+
+  /// Song-picker title when re-choosing the path start endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start song'**
+  String get pathStartSong;
+
+  /// Song-picker title when re-choosing the path destination endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'End song'**
+  String get pathEndSong;
+
+  /// Label of the path-length slider (total songs including both endpoints).
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get pathLength;
+
+  /// Tooltip of the refresh button that rebuilds the path with the current endpoints and length.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get pathRegenerate;
+
+  /// Tooltip/toast name of the action saving the generated path as a server playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as playlist'**
+  String get pathSaveAsPlaylist;
 }
 
 class _AppLocalizationsDelegate

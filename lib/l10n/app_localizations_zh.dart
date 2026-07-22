@@ -1723,4 +1723,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pathEndNotAnalyzed => '目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+
+  @override
+  String get pathStartSong => '起始歌曲';
+
+  @override
+  String get pathEndSong => '结束歌曲';
+
+  @override
+  String get pathLength => '长度';
+
+  @override
+  String get pathRegenerate => '重新生成';
+
+  @override
+  String get pathSaveAsPlaylist => '保存为播放列表';
 }

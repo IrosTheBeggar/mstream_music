@@ -435,5 +435,10 @@
   "discoverPlayPathTo": "Einen Pfad spielen zu…",
   "pathScreenTitle": "Sonic-Pfad",
   "pathStartNotAnalyzed": "Der Starttitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen.",
-  "pathEndNotAnalyzed": "Der Zieltitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen."
+  "pathEndNotAnalyzed": "Der Zieltitel wurde noch nicht analysiert — warte auf den Discovery-Scan oder wähle einen anderen.",
+  "pathStartSong": "Startsong",
+  "pathEndSong": "Zielsong",
+  "pathLength": "Länge",
+  "pathRegenerate": "Neu generieren",
+  "pathSaveAsPlaylist": "Als Playlist speichern"
 }
