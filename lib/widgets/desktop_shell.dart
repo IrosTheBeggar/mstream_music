@@ -11,14 +11,18 @@
 // business logic lives here.
 
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
+import 'package:flutter/services.dart' show FilteringTextInputFormatter, KeyDownEvent, LogicalKeyboardKey;
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../media/cast_target.dart';
 import '../objects/display_item.dart';
+import '../objects/lyrics.dart';
 import '../objects/server.dart';
 import '../screens/about_screen.dart';
 import '../screens/add_server.dart';
@@ -33,6 +37,7 @@ import '../screens/transcode_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/app_messenger.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
@@ -43,11 +48,13 @@ import '../theme/velvet_theme.dart';
 import 'desktop_toast.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
+import '../util/wake_guard.dart';
 import '../util/startup_view.dart';
 import '../visualizer/projectm_screen.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'browser_toolbar.dart';
 import 'cast_picker_sheet.dart';
+import 'star_rating.dart';
 import 'media_shortcuts.dart';
 import 'playlist_name_dialog.dart';
 import 'queue_list.dart';
@@ -82,6 +89,32 @@ class _DesktopShellState extends State<DesktopShell> {
   // category key ('albums', …), a tool key, 'search', or a visualizer key.
   String _active = '';
   bool _queueOpen = false;
+  // Full-screen Now Playing overlay (polish #7): opened from the bar card's
+  // album art, closed with esc / the corner chip. _npVisualizer switches its
+  // backdrop between blurred album art and the live shader visualizer.
+  bool _nowPlayingOpen = false;
+  bool _npVisualizer = false;
+  // Party mode: OS fullscreen + a soft lock that removes the exits (esc /
+  // close), holds the display awake, and disables library-affecting controls.
+  // Unlocked by hold-to-confirm, gated behind the optional PIN when one is set.
+  bool _npLocked = false;
+
+  Future<void> _setPartyMode(bool on) async {
+    setState(() => _npLocked = on);
+    if (on) {
+      await WakeGuard.instance.acquire();
+      await windowManager.setFullScreen(true);
+    } else {
+      await windowManager.setFullScreen(false);
+      WakeGuard.instance.release();
+    }
+  }
+
+  void _closeNowPlaying() {
+    // A lingering fullscreen/lock must never outlive the overlay.
+    if (_npLocked) _setPartyMode(false);
+    setState(() => _nowPlayingOpen = false);
+  }
 
   // Native Milkdrop visualizer is desktop-only and needs the engine DLL loaded.
   static final bool _projectMAvailable =
@@ -322,6 +355,8 @@ class _DesktopShellState extends State<DesktopShell> {
                 DesktopNowPlayingBar(
                   queueOpen: _queueOpen,
                   onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
+                  onOpenNowPlaying: () =>
+                      setState(() => _nowPlayingOpen = true),
                   nowPlayingWidth: queueWidth,
                 ),
               ],
@@ -361,6 +396,20 @@ class _DesktopShellState extends State<DesktopShell> {
             bottom: _kNowPlayingHeight + 16,
             child: const DesktopToastHost(),
           ),
+          // Full-screen Now Playing dwell mode — topmost, covers the whole
+          // shell (chrome included; the V2 "backdrop" design).
+          if (_nowPlayingOpen)
+            Positioned.fill(
+              child: _NowPlayingOverlay(
+                visualizer: _npVisualizer,
+                locked: _npLocked,
+                onToggleVisualizer: () =>
+                    setState(() => _npVisualizer = !_npVisualizer),
+                onLock: () => _setPartyMode(true),
+                onUnlock: () => _setPartyMode(false),
+                onClose: _closeNowPlaying,
+              ),
+            ),
         ],
       ),
     );
@@ -982,6 +1031,7 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
 class DesktopNowPlayingBar extends StatefulWidget {
   final bool queueOpen;
   final VoidCallback onToggleQueue;
+  final VoidCallback onOpenNowPlaying;
   // Fixed width for the now-playing view = the queue column's width. Fixed
   // (not Expanded/flex) so the transport keeps the EXACT same width whether
   // the queue is open or closed — a flex split rounds differently than the
@@ -991,6 +1041,7 @@ class DesktopNowPlayingBar extends StatefulWidget {
     super.key,
     required this.queueOpen,
     required this.onToggleQueue,
+    required this.onOpenNowPlaying,
     required this.nowPlayingWidth,
   });
 
@@ -1156,20 +1207,27 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
               ),
             ),
             const SizedBox(width: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: 88,
-                height: 88,
-                child: url == null
-                    ? albumArtFallback(iconSize: 32)
-                    : Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        cacheWidth: artCacheSize(88),
-                        errorBuilder: (_, _, _) =>
-                            albumArtFallback(iconSize: 32),
-                      ),
+            // The art is ALSO the door to the full-screen Now Playing (the
+            // convention every player shares): hover dims it and shows the
+            // expand glyph; its tap wins over the surrounding tab's
+            // queue-toggle tap. The rest of the card keeps toggling the queue.
+            _ExpandableArt(
+              onTap: widget.onOpenNowPlaying,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: url == null
+                      ? albumArtFallback(iconSize: 32)
+                      : Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          cacheWidth: artCacheSize(88),
+                          errorBuilder: (_, _, _) =>
+                              albumArtFallback(iconSize: 32),
+                        ),
+                ),
               ),
             ),
           ],
@@ -1701,4 +1759,844 @@ class _MediaPos {
   final MediaItem? item;
   final Duration position;
   const _MediaPos(this.item, this.position);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Full-screen Now Playing (polish #7, the V2 "backdrop" design): a dwell mode
+// that covers the whole shell. Blurred album art (or the live shader
+// visualizer) fills the window; the foreground keeps the same positions in
+// both backdrop states so toggling never reflows.
+// ───────────────────────────────────────────────────────────────────────────
+
+/// The bar card's album art as the Now Playing door: hover dims the art and
+/// reveals the expand glyph; the tap is the child GestureDetector's, so it
+/// wins over the surrounding tab's queue toggle.
+class _ExpandableArt extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _ExpandableArt({required this.child, required this.onTap});
+
+  @override
+  State<_ExpandableArt> createState() => _ExpandableArtState();
+}
+
+class _ExpandableArtState extends State<_ExpandableArt> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Stack(
+          children: [
+            widget.child,
+            if (_hover)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.open_in_full,
+                        size: 26, color: Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NowPlayingOverlay extends StatelessWidget {
+  final bool visualizer;
+  final bool locked;
+  final VoidCallback onToggleVisualizer;
+  final VoidCallback onLock;
+  final VoidCallback onUnlock;
+  final VoidCallback onClose;
+  const _NowPlayingOverlay({
+    required this.visualizer,
+    required this.locked,
+    required this.onToggleVisualizer,
+    required this.onLock,
+    required this.onUnlock,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        // Esc closes — but NOT while locked (party mode removes the exit; the
+        // lock chip's hold-to-unlock is the only way out).
+        if (!locked &&
+            event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          onClose();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Material(
+        color: const Color(0xFF0A080E),
+        child: StreamBuilder<MediaItem?>(
+          stream: MediaManager().audioHandler.mediaItem,
+          builder: (context, snap) {
+            final item = snap.data;
+            final url = item?.extras?['artUrl'] as String?;
+            final subtitle = [
+              item?.artist,
+              item?.album,
+            ].where((s) => s != null && s.isNotEmpty).join(' — ');
+            return LayoutBuilder(builder: (context, box) {
+              // Lyrics pane width: ~42% of the free span, bounded so it never
+              // crowds the meta block at min window nor balloons on ultrawide.
+              final lyricsW =
+                  ((box.maxWidth - 128) * 0.42).clamp(320.0, 560.0);
+              return Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Backdrop: live visualizer OR blurred album art ──
+                if (visualizer)
+                  const IgnorePointer(
+                    child: ShaderVisualizerScreen(backdrop: true),
+                  )
+                else if (url != null)
+                  // Scale OUTSIDE the filter: the blur fades to transparent
+                  // over ~sigma px at its layer edges, so over-scanning the
+                  // blurred result pushes that fade outside the window.
+                  Transform.scale(
+                    scale: 1.2,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 64, sigmaY: 64),
+                      child: Image.network(url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) =>
+                              const ColoredBox(color: Color(0xFF0A080E))),
+                    ),
+                  ),
+                // Scrim: keeps the foreground legible — heavier when the
+                // moving visualizer is behind it.
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: visualizer ? .8 : .72),
+                        Colors.black.withValues(alpha: visualizer ? .38 : .3),
+                        Colors.black.withValues(alpha: visualizer ? .22 : .15),
+                      ],
+                      stops: const [0, .45, 1],
+                    ),
+                  ),
+                ),
+                // ── Foreground (same geometry in both backdrop states) ──
+                Positioned(
+                  left: 64,
+                  bottom: 212,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 280,
+                      height: 280,
+                      child: url == null
+                          ? albumArtFallback(iconSize: 64)
+                          : Image.network(url,
+                              fit: BoxFit.cover,
+                              cacheWidth: artCacheSize(280),
+                              errorBuilder: (_, _, _) =>
+                                  albumArtFallback(iconSize: 64)),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 64,
+                  right: 64.0 + lyricsW + 32,
+                  bottom: 118,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item == null ? 'Nothing playing' : item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800),
+                      ),
+                      if (subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: .75),
+                              fontSize: 17),
+                        ),
+                      ],
+                      if (item != null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            // Rate the playing track in place (server write +
+                            // queue extras sync handled by the shared widget).
+                            // Suppressed while locked — guests shouldn't be
+                            // able to re-rate the host's library.
+                            if (!locked) MediaItemRating(item: item, size: 16),
+                            if (!locked &&
+                                MediaItemRating.canRate(item) &&
+                                _qualityBadge(item) != null)
+                              const SizedBox(width: 12),
+                            if (_qualityBadge(item) != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                      color: Colors.white
+                                          .withValues(alpha: .25)),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _qualityBadge(item)!,
+                                  style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: .6),
+                                      fontSize: 11,
+                                      letterSpacing: .6),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // ── Lyrics (right pane) + Up Next, over the backdrop ──
+                Positioned(
+                  top: 72,
+                  right: 64,
+                  bottom: 260,
+                  width: lyricsW,
+                  child: _NowPlayingLyrics(item: item),
+                ),
+                Positioned(
+                  right: 64,
+                  bottom: 168,
+                  width: 380,
+                  child: const _UpNextStack(),
+                ),
+                // The same waveform seek strip the bar uses (shared peaks
+                // cache, full interactivity).
+                const Positioned(
+                  left: 64,
+                  right: 64,
+                  bottom: 64,
+                  height: _kSeekStripHeight,
+                  child: _SeekBar(),
+                ),
+                const Positioned(
+                  right: 64,
+                  bottom: 110,
+                  child: _DesktopTransport(),
+                ),
+                Positioned(
+                  top: 16,
+                  right: 20,
+                  child: Row(
+                    children: [
+                      _CornerChip(
+                        label: 'ıllı',
+                        mono: true,
+                        active: visualizer,
+                        tooltip: 'Visualizer backdrop',
+                        onTap: onToggleVisualizer,
+                      ),
+                      const SizedBox(width: 10),
+                      if (locked)
+                        // The ONLY way out of party mode: hold to unlock,
+                        // gated behind the PIN when the user set one.
+                        _HoldToUnlockChip(onUnlocked: onUnlock)
+                      else ...[
+                        _CornerChip(
+                          label: 'lock',
+                          icon: Icons.lock_outline,
+                          tooltip: 'Party mode — fullscreen + locked controls',
+                          onTap: onLock,
+                        ),
+                        const SizedBox(width: 10),
+                        _CornerChip(label: 'esc ↩', onTap: onClose),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            );
+            });
+          },
+        ),
+      ),
+    );
+  }
+
+  /// "FLAC · 44.1 kHz" fidelity badge from the item's extras (Song Info's
+  /// fields); bitrate stands in when the sample rate is unknown. Null when
+  /// the item carries neither.
+  static String? _qualityBadge(MediaItem item) {
+    final fmt = (item.extras?['format'] as String?)?.toUpperCase();
+    final sr = (item.extras?['sampleRate'] as num?)?.toInt();
+    final br = (item.extras?['bitrate'] as num?)?.toInt();
+    final parts = <String>[
+      if (fmt != null && fmt.isNotEmpty) fmt,
+      if (sr != null && sr > 0)
+        '${(sr % 1000 == 0 ? (sr ~/ 1000).toString() : (sr / 1000).toStringAsFixed(1))} kHz'
+      else if (br != null && br > 0)
+        '${(br / 1000).round()} kbps',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+}
+
+class _CornerChip extends StatelessWidget {
+  final String label;
+  final bool mono;
+  final bool active;
+  final IconData? icon;
+  final String? tooltip;
+  final VoidCallback onTap;
+  const _CornerChip({
+    required this.label,
+    required this.onTap,
+    this.mono = false,
+    this.active = false,
+    this.icon,
+    this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = active
+        ? const Color(0xFF1A1200)
+        : Colors.white.withValues(alpha: .6);
+    final chip = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? VelvetColors.primary : Colors.black.withValues(alpha: .25),
+            border: Border.all(
+                color: active
+                    ? VelvetColors.primary
+                    : Colors.white.withValues(alpha: .22)),
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                        color: VelvetColors.primary.withValues(alpha: .45),
+                        blurRadius: 18)
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: fg),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: fg,
+                  fontSize: 12,
+                  fontWeight: mono ? FontWeight.w700 : FontWeight.w400,
+                  fontFamily: mono ? 'monospace' : null,
+                  letterSpacing: mono ? 1.6 : 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return tooltip == null ? chip : Tooltip(message: tooltip!, child: chip);
+  }
+}
+
+/// The party-mode exit: press and HOLD to unlock (no accidental single tap).
+/// A ring fills over the hold; releasing early cancels. On completion, if a
+/// PIN is set, it must be entered before the unlock fires — the PIN gate is
+/// the deliberate friction; the hold alone is the no-PIN default.
+class _HoldToUnlockChip extends StatefulWidget {
+  final VoidCallback onUnlocked;
+  const _HoldToUnlockChip({required this.onUnlocked});
+
+  @override
+  State<_HoldToUnlockChip> createState() => _HoldToUnlockChipState();
+}
+
+class _HoldToUnlockChipState extends State<_HoldToUnlockChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..addStatusListener((s) {
+      if (s == AnimationStatus.completed) _completeHold();
+    });
+
+  void _completeHold() async {
+    _ctrl.reset();
+    final pin = SettingsManager().partyPin;
+    if (pin == null) {
+      widget.onUnlocked();
+      return;
+    }
+    final ok = await showDialog<bool>(
+          context: context,
+          barrierColor: Colors.black.withValues(alpha: .6),
+          builder: (_) => _PinDialog(expected: pin),
+        ) ??
+        false;
+    if (ok) widget.onUnlocked();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.forward(),
+        onTapUp: (_) => _ctrl.reset(),
+        onTapCancel: () => _ctrl.reset(),
+        child: Tooltip(
+          message: 'Hold to unlock',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: .3),
+              border:
+                  Border.all(color: Colors.white.withValues(alpha: .28)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: AnimatedBuilder(
+                    animation: _ctrl,
+                    builder: (context, _) => Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (_ctrl.value > 0)
+                          CircularProgressIndicator(
+                            value: _ctrl.value,
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation(VelvetColors.primary),
+                            backgroundColor:
+                                Colors.white.withValues(alpha: .2),
+                          ),
+                        Icon(Icons.lock_outline,
+                            size: 12,
+                            color: Colors.white.withValues(alpha: .75)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Text('hold to unlock',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: .7),
+                        fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 4-digit PIN confirm for unlocking party mode. Pops true on a match,
+/// stays (shakes) on a mismatch; there's no cancel — the lock is the point.
+class _PinDialog extends StatefulWidget {
+  final String expected;
+  const _PinDialog({required this.expected});
+
+  @override
+  State<_PinDialog> createState() => _PinDialogState();
+}
+
+class _PinDialogState extends State<_PinDialog> {
+  final _ctrl = TextEditingController();
+  bool _wrong = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _check(String v) {
+    if (v.length < 4) return;
+    if (v == widget.expected) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() => _wrong = true);
+      _ctrl.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: VelvetColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter PIN to unlock',
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 160,
+              child: TextField(
+                controller: _ctrl,
+                autofocus: true,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 24,
+                    letterSpacing: 8),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  counterText: '',
+                  errorText: _wrong ? 'Incorrect PIN' : null,
+                ),
+                onChanged: _check,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One parsed LRC line: when it starts, and its text.
+class _LrcLine {
+  final Duration time;
+  final String text;
+  const _LrcLine(this.time, this.text);
+}
+
+/// The Now Playing screen's lyrics pane. Fetches per track (keyed by
+/// server|path with a stale guard + small cache, the waveform fetcher's
+/// shape), gated on the item's `hasLyrics` flag so trackless/lyricless items
+/// never even hit the network. Renders nothing when there are none.
+///
+/// Synced (LRC) lyrics highlight the active line and keep it centered via
+/// ensureVisible; tapping a line seeks there. Plain lyrics just scroll.
+class _NowPlayingLyrics extends StatefulWidget {
+  final MediaItem? item;
+  const _NowPlayingLyrics({required this.item});
+
+  @override
+  State<_NowPlayingLyrics> createState() => _NowPlayingLyricsState();
+}
+
+class _NowPlayingLyricsState extends State<_NowPlayingLyrics> {
+  static final Map<String, LyricsResult?> _cache = {};
+  String? _key;
+  LyricsResult? _result;
+  List<_LrcLine>? _lines; // parsed synced lyrics, ascending
+  List<GlobalKey>? _lineKeys;
+  int _activeLine = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _load(widget.item);
+  }
+
+  @override
+  void didUpdateWidget(_NowPlayingLyrics old) {
+    super.didUpdateWidget(old);
+    _load(widget.item);
+  }
+
+  Future<void> _load(MediaItem? item) async {
+    final path = item?.extras?['path'] as String?;
+    final serverName = item?.extras?['server'] as String?;
+    final server = ServerManager().byLocalname(serverName);
+    final hasLyrics = item?.extras?['hasLyrics'] == true;
+    if (item == null || path == null || server == null || !hasLyrics) {
+      _key = null;
+      if (_result != null && mounted) setState(_clear);
+      return;
+    }
+    final key = '$serverName|$path';
+    if (key == _key) return;
+    _key = key;
+    if (_cache.containsKey(key)) {
+      if (mounted) setState(() => _apply(_cache[key]));
+      return;
+    }
+    if (mounted && _result != null) setState(_clear);
+    LyricsResult? res;
+    try {
+      res = await ApiManager().fetchLyrics(server, path);
+    } catch (e) {
+      appLog('[lyrics] fetch failed: $e');
+    }
+    if (!mounted || _key != key) return; // track changed while fetching
+    _cache[key] = res;
+    if (_cache.length > 24) _cache.remove(_cache.keys.first);
+    setState(() => _apply(res));
+  }
+
+  void _clear() {
+    _result = null;
+    _lines = null;
+    _lineKeys = null;
+    _activeLine = -1;
+  }
+
+  void _apply(LyricsResult? res) {
+    _clear();
+    _result = res;
+    final lrc = res?.syncedLrc;
+    if (lrc != null) {
+      _lines = _parseLrc(lrc);
+      if (_lines!.isEmpty) {
+        _lines = null; // degenerate LRC — fall back to plain rendering
+      } else {
+        _lineKeys = List.generate(_lines!.length, (_) => GlobalKey());
+      }
+    }
+  }
+
+  /// `[mm:ss.xx]` (also mm:ss and h-long mm values, `.` or `:` fraction
+  /// separators; multiple tags per line) → sorted line list.
+  static List<_LrcLine> _parseLrc(String lrc) {
+    final tag = RegExp(r'\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]');
+    final out = <_LrcLine>[];
+    for (final raw in lrc.split('\n')) {
+      final tags = tag.allMatches(raw).toList();
+      if (tags.isEmpty) continue;
+      final text = raw.replaceAll(tag, '').trim();
+      if (text.isEmpty) continue;
+      for (final m in tags) {
+        final min = int.parse(m.group(1)!);
+        final sec = int.parse(m.group(2)!);
+        final fracRaw = m.group(3) ?? '0';
+        final frac = int.parse(fracRaw.padRight(3, '0').substring(0, 3));
+        out.add(_LrcLine(
+            Duration(minutes: min, seconds: sec, milliseconds: frac), text));
+      }
+    }
+    out.sort((a, b) => a.time.compareTo(b.time));
+    return out;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final res = _result;
+    if (res == null) return const SizedBox.shrink();
+
+    final Widget body;
+    if (_lines != null) {
+      body = StreamBuilder<Duration>(
+        stream: MediaManager().audioHandler.positionStream,
+        builder: (context, snap) {
+          final pos = snap.data ?? Duration.zero;
+          var active = -1;
+          for (var i = 0; i < _lines!.length; i++) {
+            if (_lines![i].time <= pos) {
+              active = i;
+            } else {
+              break;
+            }
+          }
+          if (active != _activeLine) {
+            _activeLine = active;
+            // Scroll AFTER this frame paints the new highlight.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final ctx = active >= 0 && active < _lineKeys!.length
+                  ? _lineKeys![active].currentContext
+                  : null;
+              if (ctx != null) {
+                Scrollable.ensureVisible(ctx,
+                    alignment: 0.35,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic);
+              }
+            });
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < _lines!.length; i++)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () =>
+                          MediaManager().audioHandler.seek(_lines![i].time),
+                      child: Padding(
+                        key: _lineKeys![i],
+                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        child: Text(
+                          _lines![i].text,
+                          style: i == active
+                              ? const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w700)
+                              : TextStyle(
+                                  color: Colors.white.withValues(alpha: .42),
+                                  fontSize: 15,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      final text = res.displayText;
+      if (text == null) return const SizedBox.shrink();
+      body = SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 120),
+        child: Text(
+          text,
+          style: TextStyle(
+              color: Colors.white.withValues(alpha: .68),
+              fontSize: 15,
+              height: 1.8),
+        ),
+      );
+    }
+
+    // Fade the pane's ends so lines melt into the backdrop instead of
+    // clipping — the fade IS the pane's only chrome.
+    return ShaderMask(
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          Colors.white,
+          Colors.white,
+          Colors.transparent
+        ],
+        stops: [0, .09, .91, 1],
+      ).createShader(rect),
+      blendMode: BlendMode.dstIn,
+      child: body,
+    );
+  }
+}
+
+/// The next couple of queue tracks, right-aligned above the transport —
+/// Spotify's full-screen "Up next" corner, from our local queue. Click jumps.
+class _UpNextStack extends StatelessWidget {
+  const _UpNextStack();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<MediaItem>>(
+      stream: MediaManager().audioHandler.queue,
+      builder: (context, qSnap) {
+        final queue = qSnap.data ?? const <MediaItem>[];
+        return StreamBuilder<MediaItem?>(
+          stream: MediaManager().audioHandler.mediaItem,
+          builder: (context, iSnap) {
+            final current = iSnap.data;
+            if (current == null || queue.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            final idx = queue.indexWhere((m) => m.id == current.id);
+            if (idx < 0 || idx >= queue.length - 1) {
+              return const SizedBox.shrink();
+            }
+            final next = queue.sublist(
+                idx + 1, (idx + 3).clamp(0, queue.length));
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('UP NEXT',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: .5),
+                        fontSize: 11,
+                        letterSpacing: 1.6)),
+                const SizedBox(height: 6),
+                for (var n = 0; n < next.length; n++)
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => MediaManager()
+                          .audioHandler
+                          .skipToQueueItem(idx + 1 + n),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Text(
+                          [next[n].title, next[n].artist]
+                              .whereType<String>()
+                              .where((s) => s.isNotEmpty)
+                              .join(' — '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: .8),
+                              fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 }
