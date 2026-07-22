@@ -21,3 +21,5 @@ flutter:
     platforms:
       ios:
         ffiPlugin: true
+      macos:
+        ffiPlugin: true
