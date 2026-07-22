@@ -25,6 +25,7 @@ import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
+import '../widgets/desktop_toast.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/star_rating.dart';
 
@@ -204,12 +205,17 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     _toast();
   }
 
-  // "Added to queue" confirmation. Floats above the docked mini-player — that
-  // overlay sits in a higher layer at the bottom and would otherwise hide a
-  // standard bottom snackbar (the bug this fixes).
+  // "Added to queue" confirmation. Desktop shell up → corner toast (this view
+  // has no Scaffold of its own there). Phone → floats above the docked
+  // mini-player — that overlay sits in a higher layer at the bottom and would
+  // otherwise hide a standard bottom snackbar (the bug this fixes).
   void _toast() {
     if (!mounted) return;
     final l = AppLocalizations.of(context);
+    if (DesktopToasts.instance.hasHost) {
+      DesktopToasts.instance.show(l.browserSongsAdded(1));
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(l.browserSongsAdded(1)),
       behavior: SnackBarBehavior.floating,

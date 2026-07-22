@@ -767,6 +767,10 @@
       }
     }
   },
+  "browserEmptyList": "Nothing here yet",
+  "@browserEmptyList": {
+    "description": "Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured)."
+  },
   "clear": "Clear",
   "dlLocationUnavailable": "Download location unavailable",
   "dlLocationUnavailableServer": "Download location unavailable for this server.",
@@ -1054,6 +1058,10 @@
   "irohQrAndroidOnly": "QR scanning isn't available on this device.",
   "@irohQrAndroidOnly": {
     "description": "Shown when QR scanning is attempted where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so)."
+  },
+  "serverBadgeBuiltIn": "Built-in",
+  "@serverBadgeBuiltIn": {
+    "description": "Chip on a Manage Servers row marking the server that is bundled with and managed by this app (desktop Server Mode)."
   },
   "irohAndroidOnly": "Quick Connect isn't available on this device.",
   "@irohAndroidOnly": {

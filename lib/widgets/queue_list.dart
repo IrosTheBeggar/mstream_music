@@ -41,7 +41,10 @@ String _fmtDur(Duration? d) =>
 /// purely through `MediaManager().audioHandler`, so it works identically
 /// wherever it's mounted. Swipe a row for download / remove / info.
 class QueueList extends StatelessWidget {
-  const QueueList({super.key});
+  /// Desktop only: show a per-row ⋮ menu (song info / download / remove) on the
+  /// right of each queue item. Off on mobile, which uses the swipe actions.
+  final bool showItemMenu;
+  const QueueList({super.key, this.showItemMenu = false});
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +140,41 @@ class QueueList extends StatelessWidget {
               }
             }
 
+            // RepaintBoundary so a highlight flip repaints only this row's
+            // layer — the panel wraps QueueList in one RepaintBoundary, so
+            // without this every advance would re-raster all visible rows.
+            final row = RepaintBoundary(
+              child: StreamBuilder<({bool active, bool playing})>(
+                initialData: activeNow == null
+                    ? (active: false, playing: false)
+                    : rowState(activeNow),
+                stream: _activeStream.map(rowState).distinct(),
+                builder: (context, snap) {
+                  final st = snap.data ?? (active: false, playing: false);
+                  return _QueueRow(
+                    item: item,
+                    index: index,
+                    active: st.active,
+                    playing: st.playing,
+                    downloaded: downloaded,
+                    showMenu: showItemMenu,
+                    onRemove: removeItem,
+                    onTap: () {
+                      MediaManager().audioHandler.skipToQueueItem(index);
+                      MediaManager().audioHandler.play();
+                    },
+                  );
+                },
+              ),
+            );
+
+            // Desktop: no swipe actions — the per-row ⋮ menu handles info /
+            // download / remove and the grip still reorders. ReorderableListView
+            // needs a keyed child, hence the KeyedSubtree.
+            if (showItemMenu) {
+              return KeyedSubtree(key: ObjectKey(item), child: row);
+            }
+
             return Slidable(
               // Identity key (also the ReorderableListView item key): follows
               // the *item* across reorders; distinct MediaItem instances avoid a
@@ -182,31 +220,7 @@ class QueueList extends StatelessWidget {
                   ),
                 ],
               ),
-              // RepaintBoundary so a highlight flip repaints only this row's
-              // layer — the panel wraps QueueList in one RepaintBoundary, so
-              // without this every advance would re-raster all visible rows.
-              child: RepaintBoundary(
-                child: StreamBuilder<({bool active, bool playing})>(
-                  initialData: activeNow == null
-                      ? (active: false, playing: false)
-                      : rowState(activeNow),
-                  stream: _activeStream.map(rowState).distinct(),
-                  builder: (context, snap) {
-                    final st = snap.data ?? (active: false, playing: false);
-                    return _QueueRow(
-                      item: item,
-                      index: index,
-                      active: st.active,
-                      playing: st.playing,
-                      downloaded: downloaded,
-                      onTap: () {
-                        MediaManager().audioHandler.skipToQueueItem(index);
-                        MediaManager().audioHandler.play();
-                      },
-                    );
-                  },
-                ),
-              ),
+              child: row,
             );
           },
         );
@@ -221,14 +235,18 @@ class _QueueRow extends StatelessWidget {
   final bool active;
   final bool playing;
   final bool downloaded;
+  final bool showMenu;
   final VoidCallback onTap;
+  final VoidCallback onRemove;
   const _QueueRow({
     required this.item,
     required this.index,
     required this.active,
     required this.playing,
     required this.downloaded,
+    required this.showMenu,
     required this.onTap,
+    required this.onRemove,
   });
 
   @override
@@ -239,6 +257,8 @@ class _QueueRow extends StatelessWidget {
         : (downloaded ? VelvetColors.success : Colors.transparent);
 
     return Material(
+      // Queue rows sit flat on the panel field (web-app style — only the
+      // BROWSE content rises); the active row keeps its accent wash.
       color: active ? VelvetColors.active : Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -249,9 +269,26 @@ class _QueueRow extends StatelessWidget {
               bottom: BorderSide(color: VelvetColors.border, width: 0.5),
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(14, 9, 16, 9),
+          padding: const EdgeInsets.fromLTRB(6, 9, 12, 9),
           child: Row(
             children: [
+              // Drag-to-reorder grip, left of the art. DRAG it to reorder, or
+              // TAP it to open the swipe action drawer (mobile's start pane).
+              ReorderableDragStartListener(
+                index: index,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Slidable.of(context)?.openStartActionPane(),
+                  child: SizedBox(
+                    width: 34,
+                    height: 44,
+                    child: Center(
+                      child: Icon(Icons.drag_handle,
+                          color: VelvetColors.textTertiary, size: 20),
+                    ),
+                  ),
+                ),
+              ),
               // Art + active EQ / paused badge.
               SizedBox(
                 width: 40,
@@ -328,32 +365,62 @@ class _QueueRow extends StatelessWidget {
                   color: VelvetColors.textTertiary,
                 ),
               ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
-              // (ReorderableDragStartListener) to reorder, or TAP it to open the
-              // action drawer (the start/left pane). The GestureDetector also
-              // keeps the tap from falling through to the row's play-on-tap.
-              ReorderableDragStartListener(
-                index: index,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  // Tap → open the download/info drawer; drag → reorder.
-                  onTap: () => Slidable.of(context)?.openStartActionPane(),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Center(
-                      child: Icon(Icons.drag_handle,
-                          color: VelvetColors.textTertiary, size: 20),
-                    ),
-                  ),
-                ),
-              ),
+              // Desktop only: a per-row ⋮ menu (song info / download / remove).
+              // Mobile uses the swipe actions instead.
+              if (showMenu) _rowMenu(context),
             ],
           ),
         ),
       ),
     );
   }
+
+  // Desktop per-row overflow menu: song info, download (when the track isn't
+  // already local and lives on a server), and remove from the queue.
+  Widget _rowMenu(BuildContext context) {
+    final canDownload = !downloaded &&
+        item.extras?['path'] != null &&
+        item.extras?['server'] != null;
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 18),
+      color: VelvetColors.surface,
+      tooltip: 'More',
+      padding: EdgeInsets.zero,
+      onSelected: (v) {
+        switch (v) {
+          case 'info':
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => MetadataScreen(item: item)));
+            break;
+          case 'download':
+            DownloadManager().downloadOneFile(
+                item.id, item.extras!['server'], item.extras!['path']);
+            break;
+          case 'remove':
+            onRemove();
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        _rowMenuItem('info', Icons.info_outline, 'Song info'),
+        if (canDownload)
+          _rowMenuItem('download', Icons.download_for_offline, 'Download'),
+        _rowMenuItem('remove', Icons.delete_outline, 'Remove from queue'),
+      ],
+    );
+  }
+}
+
+PopupMenuItem<String> _rowMenuItem(String value, IconData icon, String label) {
+  return PopupMenuItem<String>(
+    value: value,
+    height: 42,
+    child: Row(children: [
+      Icon(icon, size: 18, color: VelvetColors.textSecondary),
+      const SizedBox(width: 12),
+      Text(label),
+    ]),
+  );
 }
 
 /// Header strip for the queue (design "UP NEXT" framing): a label + live count

@@ -12,11 +12,7 @@
 
 import 'package:flutter/material.dart';
 
-enum AppTheme {
-  velvet,
-  dark,
-  light,
-}
+enum AppTheme { velvet, dark, light }
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
 // extension) — a getter here can't reach AppLocalizations.
@@ -25,6 +21,7 @@ class VelvetPalette {
   final Brightness brightness;
   final Color bg, surface, raised, card, border, border2;
   final Color primary, primaryHover, primaryDim, primaryGlow;
+
   /// Text/icon colour painted ON [primary] (e.g. button labels). White by
   /// default; recomputed by luminance when a custom accent is applied so a
   /// light accent doesn't end up with white-on-white text (see [withAccent]).
@@ -90,34 +87,33 @@ class VelvetPalette {
     Color? appBarBg,
     Color? appBarText,
     Color? appBarTextSecondary,
-  }) =>
-      VelvetPalette(
-        brightness: brightness ?? this.brightness,
-        bg: bg ?? this.bg,
-        surface: surface ?? this.surface,
-        raised: raised ?? this.raised,
-        card: card ?? this.card,
-        border: border ?? this.border,
-        border2: border2 ?? this.border2,
-        primary: primary ?? this.primary,
-        primaryHover: primaryHover ?? this.primaryHover,
-        primaryDim: primaryDim ?? this.primaryDim,
-        primaryGlow: primaryGlow ?? this.primaryGlow,
-        onPrimary: onPrimary ?? this.onPrimary,
-        accent: accent ?? this.accent,
-        success: success ?? this.success,
-        error: error ?? this.error,
-        warning: warning ?? this.warning,
-        textPrimary: textPrimary ?? this.textPrimary,
-        textSecondary: textSecondary ?? this.textSecondary,
-        textTertiary: textTertiary ?? this.textTertiary,
-        textDim: textDim ?? this.textDim,
-        hover: hover ?? this.hover,
-        active: active ?? this.active,
-        appBarBg: appBarBg ?? this.appBarBg,
-        appBarText: appBarText ?? this.appBarText,
-        appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
-      );
+  }) => VelvetPalette(
+    brightness: brightness ?? this.brightness,
+    bg: bg ?? this.bg,
+    surface: surface ?? this.surface,
+    raised: raised ?? this.raised,
+    card: card ?? this.card,
+    border: border ?? this.border,
+    border2: border2 ?? this.border2,
+    primary: primary ?? this.primary,
+    primaryHover: primaryHover ?? this.primaryHover,
+    primaryDim: primaryDim ?? this.primaryDim,
+    primaryGlow: primaryGlow ?? this.primaryGlow,
+    onPrimary: onPrimary ?? this.onPrimary,
+    accent: accent ?? this.accent,
+    success: success ?? this.success,
+    error: error ?? this.error,
+    warning: warning ?? this.warning,
+    textPrimary: textPrimary ?? this.textPrimary,
+    textSecondary: textSecondary ?? this.textSecondary,
+    textTertiary: textTertiary ?? this.textTertiary,
+    textDim: textDim ?? this.textDim,
+    hover: hover ?? this.hover,
+    active: active ?? this.active,
+    appBarBg: appBarBg ?? this.appBarBg,
+    appBarText: appBarText ?? this.appBarText,
+    appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
+  );
 
   /// This palette with [a] as the accent: [primary] plus its dependent shades
   /// (hover/dim/glow/active) and the on-accent text colour are all derived from
@@ -126,8 +122,9 @@ class VelvetPalette {
     final hsl = HSLColor.fromColor(a);
     return copyWith(
       primary: a,
-      primaryHover:
-          hsl.withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0)).toColor(),
+      primaryHover: hsl
+          .withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0))
+          .toColor(),
       primaryDim: a.withValues(alpha: 0.16),
       primaryGlow: a.withValues(alpha: 0.42),
       active: a.withValues(alpha: 0.18),
@@ -152,8 +149,9 @@ Color get accentInk {
   final p = VelvetColors.primary;
   if (p != _accentInkForPrimary) {
     _accentInkForPrimary = p;
-    _accentInkCache =
-        p.computeLuminance() > 0.42 ? const Color(0xFF1A1206) : Colors.white;
+    _accentInkCache = p.computeLuminance() > 0.42
+        ? const Color(0xFF1A1206)
+        : Colors.white;
   }
   return _accentInkCache!;
 }
@@ -307,6 +305,11 @@ class VelvetColors {
   // Theme-independent.
   static const radiusSmall = 7.0;
   static const radiusLarge = 12.0;
+
+  /// Height of every top bar in the desktop shell (sidebar header, browse
+  /// toolbar, queue header) so their bottom dividers form one continuous line
+  /// across the three columns.
+  static const desktopTopBarHeight = 56.0;
 }
 
 ThemeData buildAppTheme(VelvetPalette p) {
@@ -319,6 +322,9 @@ ThemeData buildAppTheme(VelvetPalette p) {
     dividerColor: p.border,
     splashColor: p.primaryDim,
     highlightColor: p.active,
+    // Desktop: every InkWell picks this up, so rows/cards/buttons get a
+    // subtle pointer-hover highlight for free. Inert on touch.
+    hoverColor: const Color(0x0FFFFFFF),
     colorScheme: ColorScheme(
       brightness: p.brightness,
       primary: p.primary,
@@ -387,13 +393,11 @@ ThemeData buildAppTheme(VelvetPalette p) {
       selectedTileColor: p.active,
     ),
     iconTheme: IconThemeData(color: p.textSecondary),
-    textTheme: (p.brightness == Brightness.dark
-            ? ThemeData.dark(useMaterial3: true).textTheme
-            : ThemeData.light(useMaterial3: true).textTheme)
-        .apply(
-      bodyColor: p.textPrimary,
-      displayColor: p.textPrimary,
-    ),
+    textTheme:
+        (p.brightness == Brightness.dark
+                ? ThemeData.dark(useMaterial3: true).textTheme
+                : ThemeData.light(useMaterial3: true).textTheme)
+            .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: p.raised,

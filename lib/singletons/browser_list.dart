@@ -30,12 +30,17 @@ class BrowserManager {
 
   final List<DisplayItem> browserList = [];
 
-  // True from launch until a configured non-browser "startup view" finishes
-  // loading. While set, the browser shows a loading spinner instead of the home
-  // grid, so the app lands directly on the chosen section without a home-grid
-  // flash. Set in MStreamApp.initState; cleared once the section loads (or the
-  // load fails). See _maybeOpenStartupView.
-  bool awaitingStartupView = false;
+  // True while a browser section load is pending and the pane should hold a
+  // loading spinner instead of rendering its interim states (home menu /
+  // offline placeholder). Two flows set it:
+  //   - launch: from MStreamApp.initState until the configured startup view
+  //     loads or fails (see _maybeOpenStartupView) — no home-grid flash;
+  //   - desktop server switch: for the whole connect + default-section load
+  //     (see _SidebarServer._switchTo) — no placeholder flash mid-switch.
+  // Whoever sets it clears it (success or failure) and re-emits the stream;
+  // after a failure the home menu is in place, so the pane then renders the
+  // offline placeholder.
+  bool awaitingSectionLoad = false;
 
   bool get isAlphabetical =>
       alphabeticalCache.isNotEmpty ? alphabeticalCache.last : false;

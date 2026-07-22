@@ -1890,6 +1890,12 @@ abstract class AppLocalizations {
   /// **'No matches for \"{query}\"'**
   String browserNoMatches(String query);
 
+  /// Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured).
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get browserEmptyList;
+
   /// No description provided for @clear.
   ///
   /// In en, this message translates to:
@@ -2735,6 +2741,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'QR scanning isn\'t available on this device.'**
   String get irohQrAndroidOnly;
+
+  /// Chip on a Manage Servers row marking the server that is bundled with and managed by this app (desktop Server Mode).
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get serverBadgeBuiltIn;
 
   /// Shown in the Quick Connect tab (and on a test-connection attempt) where the iroh native lib is unavailable (desktop, or a 32-bit Android device without libiroh_tunnel.so).
   ///

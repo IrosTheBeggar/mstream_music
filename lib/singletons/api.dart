@@ -14,7 +14,9 @@ import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'dart:convert';
+import 'dart:io' show HttpClient;
 
 class ApiManager {
   ApiManager._privateConstructor();
@@ -123,7 +125,16 @@ class ApiManager {
     // just run to completion. The finally balances the in-flight set and closes
     // the client on every path (throw / HTTP error / cancel) so a socket is
     // never leaked.
-    final client = http.Client();
+    //
+    // The TCP connect is bounded (an offline/unreachable server — powered-off
+    // box, dropped SYNs — otherwise waits out the OS timeout, 20s+), so a dead
+    // server fails fast and the browser can show its offline state promptly:
+    // at startup that's the difference between the error page appearing in
+    // seconds and a long bare spinner. Only the CONNECT is bounded — slow
+    // responses on a live connection are unaffected. HttpClient() picks up
+    // HttpOverrides.global, so the self-signed-cert override still applies.
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
     final int loadToken = BrowserManager()
         .beginLoading(onCancel: cancelable ? client.close : null);
     try {
@@ -260,6 +271,15 @@ class ApiManager {
   Future<void> createPlaylist(String title) async {
     await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST',
         cancelable: false);
+    await refreshPlaylists();
+  }
+
+  /// Saves (creates or overwrites) a playlist named [title] with [songs] —
+  /// server file paths, in order — via POST /playlist/save. Used to save the
+  /// current queue as a playlist. Throws on failure.
+  Future<void> savePlaylist(String title, List<String> songs) async {
+    await makeServerCall(null, '/api/v1/playlist/save',
+        {'title': title, 'songs': songs}, 'POST', cancelable: false);
     await refreshPlaylists();
   }
 
@@ -675,6 +695,41 @@ class ApiManager {
     });
 
     BrowserManager().addListToStack(newList);
+  }
+
+  /// Server-generated waveform peaks (0–255 per bucket) for a library file —
+  /// `GET /api/v1/db/waveform?filepath=…`, the same endpoint the web app's
+  /// waveform seek bar uses. Returns null when unavailable (no matching
+  /// server, generation failure, older server without the endpoint) so the
+  /// caller can fall back to a plain track.
+  ///
+  /// Deliberately NOT routed through [makeServerCall]: that brackets every
+  /// call with the browser's global loading bar and tap-block, and a seek-bar
+  /// backfill must never flash browse chrome. The server generates peaks on
+  /// first request (ffmpeg pass over the whole file), so the read timeout is
+  /// generous while the connect stays bounded.
+  Future<List<int>?> getWaveform(String filepath,
+      {required Server? useThisServer}) async {
+    final server = useThisServer;
+    if (server == null || filepath.startsWith('http')) return null;
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
+    try {
+      final uri = server.apiUri(
+          '/api/v1/db/waveform?filepath=${Uri.encodeQueryComponent(filepath)}');
+      final res = await client.get(uri, headers: {
+        'x-access-token': server.jwt ?? ''
+      }).timeout(const Duration(seconds: 45));
+      if (res.statusCode != 200) return null;
+      final wf = (json.decode(res.body) as Map)['waveform'];
+      if (wf is! List || wf.isEmpty) return null;
+      return wf.cast<num>().map((n) => n.toInt()).toList();
+    } catch (e) {
+      appLog('[api] waveform fetch failed for $filepath: $e');
+      return null;
+    } finally {
+      client.close();
+    }
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {

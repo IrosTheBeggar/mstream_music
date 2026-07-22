@@ -1078,6 +1078,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'Leeren';
 
   @override
@@ -1576,6 +1579,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get irohQrAndroidOnly =>
       'QR scanning isn\'t available on this device.';
+
+  @override
+  String get serverBadgeBuiltIn => 'Built-in';
 
   @override
   String get irohAndroidOnly =>

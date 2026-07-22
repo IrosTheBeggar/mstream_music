@@ -52,10 +52,12 @@ class VizDecoder {
   Pointer<Float>? _buf;
   int _bufLen = 0;
 
-  /// The sidecar framework is only bundled on iOS in this build. (The crate
-  /// itself is portable — desktop could adopt it later in place of the
-  /// Windows-only WASAPI shim.)
-  static bool get isSupported => Platform.isIOS;
+  /// Platforms whose build bundles the sidecar framework: iOS
+  /// (viz_decoder_native/ios, build-ios.sh) and macOS
+  /// (viz_decoder_native/macos, build-macos.sh) — macOS has no WASAPI-style
+  /// loopback capture, so re-decoding the playing track is its real-audio
+  /// path. Windows keeps the WASAPI shim instead.
+  static bool get isSupported => Platform.isIOS || Platform.isMacOS;
 
   /// True after a successful [start] until [stop]. The native session may
   /// still be priming or dead (bad source) — [read] reports that per call.
@@ -64,11 +66,26 @@ class VizDecoder {
   /// Decoded sample rate, 0 until the native probe finishes.
   int get sampleRate => (_lib == null || !_running) ? 0 : _sampleRate();
 
+  /// The framework is linked at launch on both platforms (SPM links the
+  /// binaryTarget product into Runner), so the process image already has the
+  /// symbols — try that first, then the explicit framework paths (iOS's
+  /// shallow layout, then macOS's versioned one) as fallbacks.
+  static DynamicLibrary _resolveLib() {
+    final process = DynamicLibrary.process();
+    if (process.providesSymbol('mstream_vizdec_start')) return process;
+    try {
+      return DynamicLibrary.open('viz_decoder.framework/viz_decoder');
+    } catch (_) {
+      return DynamicLibrary.open(
+          'viz_decoder.framework/Versions/A/viz_decoder');
+    }
+  }
+
   bool _open() {
     if (_lib != null) return true;
     if (!isSupported) return false;
     try {
-      final lib = DynamicLibrary.open('viz_decoder.framework/viz_decoder');
+      final lib = _resolveLib();
       _start = lib.lookupFunction<_StartNative, _StartDart>('mstream_vizdec_start');
       _stop = lib.lookupFunction<_VoidNative, _VoidDart>('mstream_vizdec_stop');
       _read = lib.lookupFunction<_ReadNative, _ReadDart>('mstream_vizdec_read');

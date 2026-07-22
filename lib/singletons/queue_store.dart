@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
+import '../util/app_data_dir.dart';
 import '../util/stream_url.dart';
 import 'media.dart';
 import 'server_list.dart';
@@ -47,7 +47,8 @@ class QueueStore {
   final List<StreamSubscription> _subs = [];
 
   Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
+    // App Support on desktop, documents dir on mobile — see appDataDir().
+    final dir = await appDataDir();
     return File('${dir.path}/queue.json');
   }
 

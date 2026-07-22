@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:io' show HttpOverrides;
+import 'dart:io' show HttpOverrides, Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:rxdart/rxdart.dart';
@@ -16,8 +17,6 @@ import 'screens/about_screen.dart';
 import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
-import 'singletons/api.dart';
-import 'singletons/file_explorer.dart';
 import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
@@ -32,7 +31,11 @@ import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
+import 'desktop/desktop_integration.dart';
+import 'server/server_controller.dart';
+import 'util/app_data_dir.dart';
 import 'util/self_signed_overrides.dart';
+import 'util/startup_view.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
 import 'theme/velvet_theme.dart';
@@ -42,10 +45,13 @@ import 'singletons/cast_manager.dart';
 import 'widgets/cast_picker_sheet.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'native/iroh_tunnel.dart';
+import 'native/projectm_controller.dart';
 import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/browser_toolbar.dart';
+import 'screens/desktop_onboarding.dart';
+import 'widgets/desktop_shell.dart';
 
 void main() {
   // Run the app inside a Zone whose print() handler tees every log line into
@@ -54,6 +60,10 @@ void main() {
   // console / logcat. Uncaught async errors are captured here too; Flutter
   // framework errors reach the buffer via their default debugPrint path.
   runZonedGuarded(_startApp, (Object error, StackTrace stack) {
+    // debugPrint too, not just the in-app buffer: an uncaught error that only
+    // lands in Diagnostics is invisible on a dev console — a add-server hang
+    // shipped because its root-cause exception never printed anywhere.
+    debugPrint('[uncaught] $error\n$stack');
     LogManager().add('Uncaught: $error\n$stack');
   }, zoneSpecification: ZoneSpecification(
     print: (self, parent, zone, String line) {
@@ -65,6 +75,22 @@ void main() {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Move any app data an earlier desktop build left in ~/Documents into
+  // Application Support — BEFORE anything reads servers.json / queue.json.
+  // No-op on mobile and once migrated; failures are logged and skipped.
+  await migrateLegacyDesktopData();
+  // Desktop window + system tray + launch-at-startup (sized window, close-to-
+  // tray so the app keeps running). No-op on mobile (the plugins have no
+  // Android/iOS implementation); must run before runApp shows the window.
+  await DesktopIntegration.instance.init();
+  // Desktop playback: route just_audio through media_kit (libmpv) on
+  // Windows/Linux, where just_audio has no native backend. No-op on
+  // Android/iOS/macOS (those keep just_audio's own native implementation), so
+  // gate it to the two platforms that actually need it. Must run before any
+  // AudioPlayer is constructed (MediaManager.start() below builds one).
+  if (Platform.isWindows || Platform.isLinux) {
+    JustAudioMediaKit.ensureInitialized();
+  }
   // Full flavor only: route API HTTPS through an override that accepts a
   // self-signed cert for servers the user explicitly opted in
   // (Server.allowSelfSigned). Must be set before any HttpClient is created.
@@ -74,11 +100,15 @@ Future<void> _startApp() async {
   // inherits a leftover immersive mode (e.g. the app was killed while the
   // Visualizer had the nav bar hidden) still comes up with the nav bar visible.
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  // Lock to portrait: the player panel, queue, and browser layouts are designed
-  // for a tall aspect ratio and are unusable in landscape. Also pinned in the
-  // Android manifest (android:screenOrientation) so the launch splash can't
-  // flash sideways before Flutter starts.
-  SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
+  // Lock to portrait on phones: the phone player panel, queue, and browser
+  // layouts are designed for a tall aspect ratio and are unusable in landscape.
+  // Also pinned in the Android manifest (android:screenOrientation) so the
+  // launch splash can't flash sideways before Flutter starts. Desktop windows
+  // resize freely and get the DesktopShell layout, so don't constrain them.
+  if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+    SystemChrome.setPreferredOrientations(
+        const [DeviceOrientation.portraitUp]);
+  }
   // Settings load must come before MediaManager.start() so the audio
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
@@ -99,6 +129,28 @@ Future<void> _startApp() async {
   unawaited(PlaylistManager().load());
   unawaited(AutoDJManager().load());
   appLog('[app] mStream $kAppVersion started');
+  // Whether the native iroh tunnel lib loaded for this platform/ABI — handy when
+  // diagnosing remote-access issues (false on a 32-bit Android slice or a desktop
+  // build that shipped without the bundled lib). When present, read the idle
+  // status too: it forces the FFI bindings to resolve, so an incompatible/missing
+  // symbol surfaces here at startup rather than on first tunnel use.
+  appLog('[iroh] native tunnel supported: ${IrohTunnel.isSupported}');
+  if (IrohTunnel.isSupported) {
+    appLog('[iroh] tunnel status: ${IrohTunnel.instance.status.name}');
+  }
+  // Whether libprojectM (the Milkdrop visualizer engine) loaded for this
+  // platform/ABI — Android (jniLibs) or the desktop build (bundled DLL). This
+  // only confirms the engine lib + FFI symbols resolve and the version reads;
+  // the per-frame offscreen-GL render bridge is still desktop WIP.
+  appLog('[projectm] ${ProjectMController.statusLine()}');
+
+  // Built-in mStream server (desktop): launch per the configured trigger
+  // (kServerStartTrigger in server_controller.dart — currently app-start).
+  // Fire-and-forget: ensureReady() may download the binary on first run, so we
+  // don't block first paint; watch ServerController.instance.status for progress.
+  // To start it on first local-folder add instead, flip kServerStartTrigger and
+  // call maybeStartFor(ServerStartTrigger.firstLocalFolder) from that flow.
+  ServerController.instance.maybeStartFor(ServerStartTrigger.appStart);
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
@@ -126,7 +178,7 @@ Future<void> _startApp() async {
       var palette = paletteFor(theme);
       if (accent != null) palette = palette.withAccent(Color(accent));
       VelvetColors.setActive(palette);
-      return MaterialApp(
+      final Widget app = MaterialApp(
         title: 'mStream Music',
         scaffoldMessengerKey: rootMessengerKey,
         home: MStreamApp(),
@@ -136,6 +188,19 @@ Future<void> _startApp() async {
         supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
       );
+      // Flutter's Windows/Linux accessibility bridge access-violates inside
+      // flutter_windows.dll (0xc0000005) when a large semantics update carries
+      // inconsistent node references — reproducible here on server-switch and
+      // track-skip (big widget-tree churn) once a UI Automation client is
+      // attached, preceded by a flood of accessibility_bridge "Failed to update
+      // ui::AXTree" errors. It's an upstream engine bug, so until it's fixed we
+      // suppress the semantics tree on desktop: the bridge then has nothing to
+      // diff and can't fault. Trade-off: screen-reader support is off on desktop
+      // (mobile is untouched). Revisit if a future engine fixes the crash.
+      if (Platform.isWindows || Platform.isLinux) {
+        return ExcludeSemantics(child: app);
+      }
+      return app;
     },
   ));
 }
@@ -156,6 +221,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  // True once the persisted server list has been read — before that, an empty
+  // list just means "still loading", not "fresh install".
+  bool _serversLoaded = false;
+  // Set while we're watching the bundled server to finish booting so we can
+  // retry the startup-view load once it's ready (see _armEmbeddedStartupRetry).
+  VoidCallback? _startupRetryListener;
 
   @override
   void initState() {
@@ -173,11 +244,15 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // Suppress the home-grid flash when a non-browser startup view is set: the
     // browser shows a loading state until the chosen section loads. Set before
     // loadServerList so it's already true before the home grid first renders.
-    BrowserManager().awaitingStartupView =
-        SettingsManager().startupView != StartupView.browser;
+    BrowserManager().awaitingSectionLoad =
+        SettingsManager().effectiveStartupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
+      // Desktop first-run: only after the list has actually LOADED can "no
+      // servers" mean "fresh install" (and not "still reading the file") —
+      // gate the onboarding cover on this. See build().
+      if (mounted) setState(() => _serversLoaded = true);
     });
     // (DownloadManager().initDownloader() moved to _startApp so headless
     // boots track download completions too — a second call here would attach
@@ -189,12 +264,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // silently fails. Fire-and-forget — first call shows the system dialog,
     // subsequent calls are no-ops once granted. Must run after runApp so the
     // permission_handler plugin has an Activity to attach the dialog to.
-    Permission.notification.request();
+    // Android-only: permission_handler has no desktop implementation, so the
+    // call throws MissingPluginException there (async + uncaught).
+    if (Platform.isAndroid) Permission.notification.request();
     // Surface cast failures (renderer unreachable / session won't connect) as a
     // toast; the handler has already fallen back to local playback.
-    _castErrorSub = CastManager().castErrorStream.listen((msg) {
-      rootMessengerKey.currentState?.showSnackBar(SnackBar(content: Text(msg)));
-    });
+    // showGlobalSnack routes to the desktop corner toast when the desktop
+    // shell is up, else a SnackBar.
+    _castErrorSub = CastManager().castErrorStream.listen(showGlobalSnack);
     // An iroh tunnel is a long-lived QUIC connection; unlike fresh per-request
     // HTTP sockets it needs an explicit kick when the device network changes.
     // Nudge it on every connectivity transition that has a usable network.
@@ -212,51 +289,120 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // browser section on top of the home grid once servers have loaded — firing
   // the same loader the matching home-grid tile does. The section is pushed
   // onto the browser stack, so the system Back button returns to the browser
-  // home. While it loads, BrowserManager.awaitingStartupView (set in initState)
+  // home. While it loads, BrowserManager.awaitingSectionLoad (set in initState)
   // keeps the browser on a spinner instead of the home grid, so the app lands
   // directly on the section. Skipped on first run (no server configured).
   Future<void> _maybeOpenStartupView() async {
-    final view = SettingsManager().startupView;
+    final view = SettingsManager().effectiveStartupView;
     final server = ServerManager().currentServer;
     if (view == StartupView.browser || server == null) {
-      BrowserManager().awaitingStartupView = false;
+      _clearAwaitingSectionLoad();
       return;
     }
     try {
-      switch (view) {
-        case StartupView.browser:
-          break;
-        case StartupView.fileExplorer:
-          await ApiManager().getFileList('~', useThisServer: server);
-          break;
-        case StartupView.playlists:
-          await ApiManager().getPlaylists(useThisServer: server);
-          break;
-        case StartupView.albums:
-          await ApiManager().getAlbums(useThisServer: server);
-          break;
-        case StartupView.artists:
-          await ApiManager().getArtists(useThisServer: server);
-          break;
-        case StartupView.rated:
-          await ApiManager().getRated(useThisServer: server);
-          break;
-        case StartupView.recent:
-          await ApiManager().getRecentlyAdded(useThisServer: server);
-          break;
-        case StartupView.localFiles:
-          await FileExplorer().getPathForServer(server);
-          break;
-      }
-    } finally {
-      // Stop suppressing the home grid. On success the section is already
-      // showing; on failure (nothing pushed) re-emit so the home grid renders
-      // instead of a stuck spinner.
-      if (BrowserManager().awaitingStartupView) {
-        BrowserManager().awaitingStartupView = false;
-        BrowserManager().updateStream();
+      // Bound the load so an offline / unreachable server surfaces the
+      // placeholder promptly. A non-iroh browse call has no timeout of its own,
+      // so a dead host would otherwise wait out the OS TCP timeout (tens of
+      // seconds) on a spinner before the failure is even detectable.
+      await loadStartupSection(view, server)
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // The section loaders swallow their own errors (returning without pushing
+      // a frame); this also catches the timeout above. Either way the failure is
+      // detected below by the browser still sitting on its home menu.
+    }
+    // Loaded? On success the loader pushed a section frame; on failure the
+    // browser is still on its home menu (browserCache.length == 1).
+    if (BrowserManager().browserCache.length > 1) {
+      _clearAwaitingSectionLoad();
+      return;
+    }
+    // The default-page load failed — reveal the offline placeholder now instead
+    // of holding the spinner, so an offline server gives immediate feedback.
+    _clearAwaitingSectionLoad();
+    // The bundled server may just be mid-boot (its start is fire-and-forget), so
+    // keep a background retry armed: when it reaches `running` it swaps the real
+    // page in over the placeholder. Skipped once it's errored out, and for any
+    // non-bundled server (a remote offline server just stays on the placeholder).
+    if (_isEmbeddedServer(server) &&
+        ServerController.instance.status.value.phase != ServerRunPhase.error) {
+      appLog('[startup] ${view.name} load failed; watching the bundled server '
+          'to retry once it is ready');
+      _armEmbeddedStartupRetry(view, server);
+    }
+  }
+
+  // Stop suppressing the home grid so the browser re-renders (the section on
+  // success, else the desktop placeholder / mobile home grid). No-op if already
+  // cleared, so the retry path can call it freely.
+  void _clearAwaitingSectionLoad() {
+    if (BrowserManager().awaitingSectionLoad) {
+      BrowserManager().awaitingSectionLoad = false;
+      BrowserManager().updateStream();
+    }
+  }
+
+  // True when [s] is the app's bundled loopback server — the only server the
+  // desktop app auto-starts. Matched on the controller's live port so a user's
+  // own manually-added loopback server on another port isn't mistaken for it.
+  bool _isEmbeddedServer(Server s) {
+    final u = Uri.tryParse(s.url);
+    if (u == null) return false;
+    final loopback =
+        u.host == '127.0.0.1' || u.host == 'localhost' || u.host == '::1';
+    return loopback && u.port == ServerController.instance.port;
+  }
+
+  // Background auto-recovery: the offline placeholder is already showing, so
+  // just watch the bundled server and, once it reaches `running`, retry the
+  // startup-view load to swap the real page in over it. Detaches on the first
+  // terminal transition (running / error); dispose() is the backstop if the boot
+  // wedges and neither ever arrives.
+  void _armEmbeddedStartupRetry(StartupView view, Server server) {
+    final ctl = ServerController.instance;
+    void detach() {
+      if (_startupRetryListener != null) {
+        ctl.status.removeListener(_startupRetryListener!);
+        _startupRetryListener = null;
       }
     }
+
+    void onStatus() {
+      switch (ctl.status.value.phase) {
+        case ServerRunPhase.running:
+          detach();
+          appLog('[startup] bundled server ready — retrying ${view.name} load');
+          unawaited(_retryStartupSection(view, server));
+          break;
+        case ServerRunPhase.error:
+          detach(); // boot failed — leave the placeholder up
+          break;
+        case ServerRunPhase.stopped:
+        case ServerRunPhase.preparing:
+        case ServerRunPhase.starting:
+          break; // still coming up — keep watching
+      }
+    }
+
+    detach(); // drop any prior watcher before arming a fresh one
+    _startupRetryListener = onStatus;
+    ctl.status.addListener(onStatus);
+    onStatus(); // it may already be running/errored
+  }
+
+  Future<void> _retryStartupSection(StartupView view, Server server) async {
+    if (!mounted) return;
+    // Bail if the user moved on during the wait — switched servers, or opened a
+    // section / folder (browserCache grew past the home menu). No flag work in
+    // either path: the launch flow already cleared awaitingSectionLoad before
+    // arming this watcher (the placeholder shows while we wait), and if the
+    // user is mid-switch the switch flow owns the flag — clearing it here
+    // would drop their spinner early.
+    if (!identical(ServerManager().currentServer, server) ||
+        BrowserManager().browserCache.length > 1) {
+      return;
+    }
+    await loadStartupSection(view, server);
   }
 
   @override
@@ -294,6 +440,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
+    if (_startupRetryListener != null) {
+      ServerController.instance.status.removeListener(_startupRetryListener!);
+    }
     DownloadManager().dispose();
     super.dispose();
   }
@@ -476,6 +625,32 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Desktop platforms with a wide-enough window get the traditional desktop
+    // player layout (sidebar · library · full-width Now Playing bar). Phones,
+    // tablets, and a narrowed-down desktop window fall through to the touch-first
+    // phone shell below. All the lifecycle/init in initState is shared — only
+    // this view tree differs. DesktopShell reads the same singletons, so a queue
+    // restored at launch is already there when it builds.
+    final useDesktop =
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
+            MediaQuery.sizeOf(context).width >= 900;
+    if (useDesktop) {
+      // First run (no servers configured): a full-window mode chooser —
+      // Client Mode (connect to an existing server) or Server Mode (set this
+      // PC up as one). Swaps back to the shell the moment a server exists;
+      // also reappears if the user ever deletes every server.
+      return StreamBuilder<List<Server>>(
+        stream: ServerManager().serverListStream,
+        initialData: ServerManager().serverList,
+        builder: (context, snap) {
+          final servers = snap.data ?? ServerManager().serverList;
+          if (_serversLoaded && servers.isEmpty) {
+            return const DesktopOnboardingScreen();
+          }
+          return const DesktopShell();
+        },
+      );
+    }
     return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
@@ -631,13 +806,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                                 throwErr: true);
                             await ServerManager().callAfterEditServer();
                           } catch (err) {
-                            // Use the app-wide messenger key, not
+                            // Use the app-wide helper, not
                             // ScaffoldMessenger.of(context): this runs
                             // after two awaits, by which point the
                             // captured context may be unmounted (the
                             // StreamBuilder rebuilt / the menu closed).
-                            rootMessengerKey.currentState?.showSnackBar(
-                                SnackBar(content: Text(l.mainFailedToConnect)));
+                            showGlobalSnack(l.mainFailedToConnect);
                           }
                         } else if (selectedServerIndex == -1) {
                           Navigator.push(
