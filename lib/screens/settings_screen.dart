@@ -85,6 +85,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               activeThumbColor: VelvetColors.primary,
             ),
+            ListTile(
+              title: const Text('Party mode PIN'),
+              subtitle: Text(
+                SettingsManager().partyPin == null
+                    ? 'Optional 4-digit PIN required to unlock the Now '
+                        'Playing screen lock'
+                    : 'PIN set — required to unlock party mode',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              trailing: Text(
+                  SettingsManager().partyPin == null ? 'Off' : '••••',
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 13)),
+              onTap: () async {
+                final result = await showDialog<String>(
+                  context: context,
+                  builder: (_) => const _PartyPinDialog(),
+                );
+                // null = cancelled; '' = remove; 4 digits = set.
+                if (result == null) return;
+                await SettingsManager()
+                    .setPartyPin(result.isEmpty ? null : result);
+                if (mounted) setState(() {});
+              },
+            ),
             Divider(color: VelvetColors.border, height: 1),
           ],
           _sectionHeader(l.settingsSectionAppearance),
@@ -851,6 +877,86 @@ class _AutoDownloadCapDialogState extends State<_AutoDownloadCapDialog> {
               Navigator.of(context).pop(v < 0 ? 0 : v);
             },
             child: Text(l.save)),
+      ],
+    );
+  }
+}
+
+/// Set / change / clear the optional party-mode PIN. Pops:
+///   null   → cancelled (no change)
+///   ''     → remove the PIN (revert to hold-only unlock)
+///   "1234" → set/replace the PIN
+class _PartyPinDialog extends StatefulWidget {
+  const _PartyPinDialog();
+
+  @override
+  State<_PartyPinDialog> createState() => _PartyPinDialogState();
+}
+
+class _PartyPinDialogState extends State<_PartyPinDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPin = SettingsManager().partyPin != null;
+    return AlertDialog(
+      backgroundColor: VelvetColors.surface,
+      title: Text('Party mode PIN',
+          style: TextStyle(color: VelvetColors.textPrimary)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Set a 4-digit PIN to require it when unlocking the Now Playing '
+            'lock. Leave empty and save to turn the PIN off — unlocking then '
+            'only needs the hold gesture.',
+            style:
+                TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 4,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: VelvetColors.textPrimary,
+                fontSize: 22,
+                letterSpacing: 8),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(counterText: ''),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel',
+              style: TextStyle(color: VelvetColors.textSecondary)),
+        ),
+        if (hasPin)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(''),
+            child: Text('Remove',
+                style: TextStyle(color: VelvetColors.error)),
+          ),
+        TextButton(
+          // Save is only meaningful for a complete 4-digit PIN; an empty box
+          // with an existing PIN is handled by Remove, so gate on length.
+          onPressed: _ctrl.text.length == 4
+              ? () => Navigator.of(context).pop(_ctrl.text)
+              : null,
+          child: Text('Save', style: TextStyle(color: VelvetColors.primary)),
+        ),
       ],
     );
   }
