@@ -7,6 +7,7 @@
 //
 // Call sites: `someEnum.label(AppLocalizations.of(context))`.
 
+import '../singletons/auto_dj_manager.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import 'app_localizations.dart';
@@ -95,6 +96,27 @@ extension SearchCategoryLabel on SearchCategory {
         return l.searchCategoryFiles;
       case SearchCategory.lyrics:
         return l.searchCategoryLyrics;
+    }
+  }
+}
+
+extension SonicAnchorModeLabel on SonicAnchorMode {
+  String label(AppLocalizations l) {
+    switch (this) {
+      case SonicAnchorMode.rolling:
+        return l.autoDjSonicAnchorRolling;
+      case SonicAnchorMode.locked:
+        return l.autoDjSonicAnchorLocked;
+    }
+  }
+
+  /// The one-line explanation under the anchor selector.
+  String hint(AppLocalizations l) {
+    switch (this) {
+      case SonicAnchorMode.rolling:
+        return l.autoDjSonicAnchorRollingHint;
+      case SonicAnchorMode.locked:
+        return l.autoDjSonicAnchorLockedHint;
     }
   }
 }

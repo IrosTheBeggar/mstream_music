@@ -15,6 +15,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
+import '../screens/discover_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
@@ -202,6 +203,26 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     if (songs == null || index < 0 || index >= songs.length) return;
     await addToQueueEnd(songs[index]);
     _toast();
+  }
+
+  // "Find similar" — Discover screen pinned to this row's track (only
+  // offered when the track's server advertised discovery; see the menu
+  // gating in _trackList).
+  void _rowFindSimilar(int index) {
+    final songs = _songs;
+    if (songs == null || index < 0 || index >= songs.length) return;
+    final song = songs[index];
+    final server = song.server;
+    final path = song.data;
+    if (server == null || path == null) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DiscoverScreen(
+        seedServer: server,
+        seedPath: path,
+        seedTitle: song.metadata?.title ?? path.split('/').last,
+        seedArtist: song.metadata?.artist,
+      ),
+    ));
   }
 
   // "Added to queue" confirmation. Floats above the docked mini-player — that
@@ -442,6 +463,12 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               onAddNext: () => _rowAddNext(i),
               onPlayNow: () => _rowPlayNow(i),
               onAddToEnd: () => _rowAddToEnd(i),
+              // Only when this track's server has discovery data — the menu
+              // entry hides entirely on older servers (never probed).
+              onFindSimilar: (s.server?.discoveryAvailable == true &&
+                      s.data != null)
+                  ? () => _rowFindSimilar(i)
+                  : null,
               ratingControl: _ratingControl(s),
             );
           },
@@ -465,6 +492,8 @@ class _SongRow extends StatelessWidget {
   final VoidCallback onAddNext;
   final VoidCallback onPlayNow;
   final VoidCallback onAddToEnd;
+  // Null hides the menu entry (track's server lacks discovery data).
+  final VoidCallback? onFindSimilar;
   final Widget ratingControl;
 
   const _SongRow({
@@ -476,6 +505,7 @@ class _SongRow extends StatelessWidget {
     required this.onAddNext,
     required this.onPlayNow,
     required this.onAddToEnd,
+    this.onFindSimilar,
     required this.ratingControl,
     this.duration,
   });
@@ -573,6 +603,9 @@ class _SongRow extends StatelessWidget {
                     case 'end':
                       onAddToEnd();
                       break;
+                    case 'similar':
+                      onFindSimilar?.call();
+                      break;
                   }
                 },
                 itemBuilder: (context) => [
@@ -582,6 +615,10 @@ class _SongRow extends StatelessWidget {
                       TapBehavior.playFromHere)
                     PopupMenuItem(
                         value: 'end', child: Text(l.queueAddToEnd)),
+                  if (onFindSimilar != null)
+                    PopupMenuItem(
+                        value: 'similar',
+                        child: Text(l.discoverFindSimilar)),
                 ],
               ),
             ],

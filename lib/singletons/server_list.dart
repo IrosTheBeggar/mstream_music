@@ -276,11 +276,28 @@ class ServerManager {
         server.transcodeDefaultCodec = null;
         server.transcodeDefaultBitrate = null;
       }
-      // Persist the capability so the NEXT launch knows it before the queue is
-      // restored — otherwise restore races the ping and bakes in /media URLs.
+      // Discovery (sonic-similarity) capability flags. Older servers omit the
+      // keys entirely → false. The UI gates strictly on == true — the webapp
+      // never calls a /discovery endpoint unless the ping advertised it, and
+      // the app follows the same rule (see Server.discoveryAvailable).
+      final bool? prevDiscovery = server.discoveryAvailable;
+      final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
+      final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
+      final bool? prevDiscoveryPath = server.discoveryPathAvailable;
+      server.discoveryAvailable = res['discovery'] == true;
+      server.discoveryP2pAvailable = res['discoveryP2p'] == true;
+      server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
+      server.discoveryPathAvailable = res['discoveryPath'] == true;
+
+      // Persist the capabilities so the NEXT launch knows them before the queue
+      // is restored — otherwise restore races the ping and bakes in /media URLs.
       if (server.transcodeAvailable != prevAvail ||
           server.transcodeDefaultCodec != prevCodec ||
-          server.transcodeDefaultBitrate != prevBitrate) {
+          server.transcodeDefaultBitrate != prevBitrate ||
+          server.discoveryAvailable != prevDiscovery ||
+          server.discoveryP2pAvailable != prevDiscoveryP2p ||
+          server.federationDiscoveryAvailable != prevFedDiscovery ||
+          server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
       }
     } catch (err) {

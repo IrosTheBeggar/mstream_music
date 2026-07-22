@@ -19,6 +19,7 @@ import '../util/image_cache.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
+import 'discover_queue_bar.dart';
 import 'queue_list.dart';
 import 'star_rating.dart';
 import 'waveform_progress.dart';
@@ -291,6 +292,11 @@ class _ExpandedPanel extends StatelessWidget {
                         // so a per-tick repaint up in the now-playing block
                         // can't force the whole list to re-rasterize.
                         Expanded(child: RepaintBoundary(child: QueueList())),
+                        // Collapsible Discover bar under the queue (webapp
+                        // parity: the Discover panel lives with the queue and
+                        // sends no requests until expanded). Hides itself when
+                        // the playing track's server has no discovery data.
+                        DiscoverQueueBar(),
                       ],
                     );
                   },

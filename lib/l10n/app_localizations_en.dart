@@ -1663,4 +1663,167 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Discover';
+
+  @override
+  String get discoverMatchedBySound => 'Matched by sound';
+
+  @override
+  String get discoverSimilarTracks => 'Similar tracks';
+
+  @override
+  String get discoverSimilarArtists => 'Similar artists';
+
+  @override
+  String get discoverFromNetwork => 'From the network';
+
+  @override
+  String get discoverFromPeers => 'From your peers';
+
+  @override
+  String get discoverQueueAll => 'Queue all';
+
+  @override
+  String get discoverNewArtistsOnly => 'New artists only';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.';
+
+  @override
+  String get discoverNothingFound => 'No matches found.';
+
+  @override
+  String get discoverNoSeed => 'Play a song to discover similar music.';
+
+  @override
+  String get discoverLeadCopied => 'Copied — go find it!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Open on MusicBrainz';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'No network data yet — peer libraries download in the background once other servers are heard.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Nothing new for this song — the network has no unfamiliar matches.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Your peers didn\'t answer — they may be offline right now.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Nothing new for this song on your peers\' servers.';
+
+  @override
+  String get autoDjSonicTitle => 'Sonic similarity';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Only pick songs that sound like the session, using the server\'s audio analysis.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'This server doesn\'t have discovery data — picks stay random.';
+
+  @override
+  String get autoDjSonicStrictness => 'Match strictness';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% or closer';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Seed song';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'No seed — the playing song anchors the session.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Search for a song…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Random song';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Remove seed song';
+
+  @override
+  String get autoDjSonicSeedFailed => 'Couldn\'t fetch a song from the server.';
+
+  @override
+  String get discoverFindSimilar => 'Find similar';
+
+  @override
+  String get discoverStartSession => 'Start a sonic session';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Endless music that sounds like this — replaces your queue.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Endless music from a random starting song — replaces your queue.';
+
+  @override
+  String get discoverSessionStarted => 'Sonic session started — Auto DJ is on.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Anchor';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Follow the vibe';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Stay on seed';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Each pick follows the session\'s recent sound — it can slowly evolve.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Every pick stays close to the seed song for the whole session.';
+
+  @override
+  String get trackAddToPlaylist => 'Add to playlist';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Couldn\'t add to the playlist.';
+
+  @override
+  String get discoverPlayPathTo => 'Play a path to…';
+
+  @override
+  String get pathScreenTitle => 'Sonic path';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'The starting song hasn\'t been analyzed yet — wait for the discovery scan or pick another.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'The destination song hasn\'t been analyzed yet — wait for the discovery scan or pick another.';
+
+  @override
+  String get pathStartSong => 'Start song';
+
+  @override
+  String get pathEndSong => 'End song';
+
+  @override
+  String get pathLength => 'Length';
+
+  @override
+  String get pathRegenerate => 'Regenerate';
+
+  @override
+  String get pathSaveAsPlaylist => 'Save as playlist';
 }

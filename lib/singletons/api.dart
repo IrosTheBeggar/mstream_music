@@ -3,6 +3,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
+import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
@@ -261,6 +262,55 @@ class ApiManager {
     await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST',
         cancelable: false);
     await refreshPlaylists();
+  }
+
+  /// POST /api/v1/playlist/add-song — appends the track at [filepath] to
+  /// [playlist] on [server], which creates the playlist server-side when it
+  /// doesn't exist yet (so "new playlist" needs no separate create call).
+  /// [server] is explicit so a mixed-server context adds to the track's own
+  /// server. The endpoint stores the vpath-relative filepath — the same form
+  /// playlist/load returns — so the client's leading slash is stripped
+  /// ([rateSong] convention). Throws on failure so callers can surface it.
+  Future<void> addSongToPlaylist(
+      Server server, String playlist, String filepath) async {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    final response = await http
+        .post(
+          server.apiUri('/api/v1/playlist/add-song'),
+          body: jsonEncode({'playlist': playlist, 'song': fp}),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode > 299) {
+      throw Exception('Add to playlist failed (HTTP ${response.statusCode})');
+    }
+  }
+
+  /// POST /api/v1/playlist/save — create-or-OVERWRITE [playlist] on
+  /// [server] with exactly [filepaths] (vpath form; leading slashes
+  /// stripped): the bulk, atomic counterpart of [addSongToPlaylist], used
+  /// by "Save as playlist" flows. Throws on failure.
+  Future<void> savePlaylist(
+      Server server, String playlist, List<String> filepaths) async {
+    final songs = [
+      for (final f in filepaths) f.startsWith('/') ? f.substring(1) : f,
+    ];
+    final response = await http
+        .post(
+          server.apiUri('/api/v1/playlist/save'),
+          body: jsonEncode({'title': playlist, 'songs': songs}),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode > 299) {
+      throw Exception('Playlist save failed (HTTP ${response.statusCode})');
+    }
   }
 
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
@@ -591,6 +641,233 @@ class ApiManager {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Shared plumbing for the discovery (sonic-similarity) endpoints: POST
+  /// [body] to [location] on [server] and classify the outcome per
+  /// [DiscoveryFetchResult]. Direct http (like [fetchTrackMetadata]) so these
+  /// stay off the browser loading bar; never throws. A 403 means the feature
+  /// is switched off server-side — reported distinctly so the section hides
+  /// itself for the session. Anything else that fails (including the server's
+  /// uniform 404 for an unknown / not-yet-embedded seed) is a plain error and
+  /// the caller just skips that refresh.
+  Future<DiscoveryFetchResult<T>> _postDiscovery<T>(
+      Server server,
+      String location,
+      Map<String, dynamic> body,
+      T Function(Map) parse) async {
+    try {
+      final response = await http
+          .post(
+            server.apiUri(location),
+            body: jsonEncode(body),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 403) {
+        return DiscoveryFetchResult<T>.disabled();
+      }
+      if (response.statusCode > 299) return DiscoveryFetchResult<T>.error();
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return DiscoveryFetchResult<T>.error();
+      return DiscoveryFetchResult.ok(parse(decoded));
+    } catch (err) {
+      verboseLog('[api] discovery $location failed: $err');
+      return DiscoveryFetchResult<T>.error();
+    }
+  }
+
+  /// POST /api/v1/discovery/local/similar/tracks — library tracks sonically
+  /// similar to the seed at [filepath]. The endpoint wants the vpath-form path
+  /// WITHOUT the client's leading slash (same convention as [rateSong]).
+  /// Results carry standard library filepaths, so they queue/play like any
+  /// browse row. Only call when the server advertised `discovery` on ping.
+  Future<DiscoveryFetchResult<DiscoverySimilarTracks>>
+      fetchDiscoverySimilarTracks(Server server, String filepath,
+          {int limit = 10,
+          bool excludeSameArtist = false,
+          bool excludeSameAlbum = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/similar/tracks',
+      {
+        'filePath': fp,
+        'limit': limit,
+        if (excludeSameArtist) 'excludeSameArtist': true,
+        if (excludeSameAlbum) 'excludeSameAlbum': true,
+      },
+      (m) => DiscoverySimilarTracks.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/local/similar/artists — artists whose overall
+  /// sound (centroid of their analyzed tracks) is closest to [artist]'s, each
+  /// with up to two playable entry-point tracks.
+  Future<DiscoveryFetchResult<DiscoverySimilarArtists>>
+      fetchDiscoverySimilarArtists(Server server, String artist,
+          {int limit = 5}) {
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/similar/artists',
+      {'artist': artist, 'limit': limit},
+      (m) => DiscoverySimilarArtists.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/p2p/similar — "From the network": similar tracks
+  /// from fetched snapshots of public P2P peers. Metadata-only leads (nothing
+  /// playable). Gated on the ping's `discoveryP2p` flag.
+  Future<DiscoveryFetchResult<DiscoveryLeads>> fetchDiscoveryP2pSimilar(
+      Server server, String filepath,
+      {int limit = 10, bool newArtistsOnly = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/p2p/similar',
+      {'filePath': fp, 'limit': limit, 'newArtistsOnly': newArtistsOnly},
+      (m) => DiscoveryLeads.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/discovery/local/path — an ordered, playable "journey" from
+  /// [startPath] to [endPath]: waypoints along the arc between the two
+  /// tracks' embeddings, snapped to real library tracks. Seeds are included
+  /// in the results, and [length] counts the TOTAL rows (server clamps
+  /// 4..32). Only call when the server advertised `discoveryPath` on ping —
+  /// the flag means "this server version has the route" (mStream #762).
+  Future<DiscoveryFetchResult<DiscoveryPath>> fetchDiscoveryPath(
+      Server server, String startPath, String endPath,
+      {int length = 14}) {
+    String norm(String p) => p.startsWith('/') ? p.substring(1) : p;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/local/path',
+      {
+        'startFilePath': norm(startPath),
+        'endFilePath': norm(endPath),
+        'length': length,
+      },
+      (m) => DiscoveryPath.fromServerMap(m),
+    );
+  }
+
+  /// POST /api/v1/db/search, titles only — data-returning song search for
+  /// pickers (the Auto DJ sonic-seed sheet). Returns up to [limit] playable
+  /// file rows with lite metadata attached; empty list on any error
+  /// (best-effort, direct http like [fetchTrackMetadata], off the browser
+  /// loading bar).
+  Future<List<DisplayItem>> fetchSongSearch(Server server, String search,
+      {int limit = 25}) async {
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/search'),
+            body: jsonEncode({
+              'search': search,
+              'noArtists': true,
+              'noAlbums': true,
+              'noTitles': false,
+              'noFiles': true,
+              'noLyrics': true,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return const [];
+      final decoded = jsonDecode(response.body);
+      final hits = decoded is Map ? decoded['title'] : null;
+      if (hits is! List) return const [];
+      final out = <DisplayItem>[];
+      for (final e in hits) {
+        if (e is! Map) continue;
+        final fp = e['filepath'];
+        if (fp is! String || fp.isEmpty) continue;
+        final md = e['metadata'];
+        final item = DisplayItem(
+            server,
+            (e['name'] ?? fp.split('/').last).toString(),
+            'file',
+            '/$fp',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            null);
+        item.altAlbumArt =
+            e['album_art_file'] is String ? e['album_art_file'] : null;
+        item.metadata = md is Map ? MusicMetadata.fromServerMap(md) : null;
+        item.partialMetadata = true;
+        out.add(item);
+        if (out.length >= limit) break;
+      }
+      return out;
+    } catch (err) {
+      verboseLog('[api] song search failed: $err');
+      return const [];
+    }
+  }
+
+  /// POST /api/v1/db/random-songs — one random pick, for "surprise me"
+  /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
+  /// min rating) so a random seed can't come from an excluded library.
+  /// Null on any error.
+  Future<DisplayItem?> fetchRandomSong(Server server) async {
+    final ignoreVPaths = <String>[
+      for (final e in server.autoDJPaths.entries)
+        if (e.value == false) e.key,
+    ];
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/random-songs'),
+            body: jsonEncode({
+              if (ignoreVPaths.isNotEmpty) 'ignoreVPaths': ignoreVPaths,
+              if (server.autoDJminRating != null)
+                'minRating': server.autoDJminRating,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) return null;
+      final decoded = jsonDecode(response.body);
+      final songs = decoded is Map ? decoded['songs'] : null;
+      if (songs is! List || songs.isEmpty) return null;
+      final song = songs.first;
+      if (song is! Map) return null;
+      final fp = song['filepath'];
+      if (fp is! String || fp.isEmpty) return null;
+      final md = song['metadata'];
+      final item = DisplayItem(server, fp.split('/').last, 'file', '/$fp',
+          Icon(Icons.music_note, color: VelvetColors.accent), null);
+      item.metadata = md is Map ? MusicMetadata.fromServerMap(md) : null;
+      return item;
+    } catch (err) {
+      verboseLog('[api] random-song seed failed: $err');
+      return null;
+    }
+  }
+
+  /// POST /api/v1/discovery/federation/similar — "From your peers": live
+  /// similarity queries against paired federation peers. Leads only at this
+  /// server version (peer-stream playback landed later upstream). Gated on
+  /// the ping's `federationDiscovery` flag. Server caps limit at 50.
+  Future<DiscoveryFetchResult<DiscoveryLeads>> fetchDiscoveryFederationSimilar(
+      Server server, String filepath,
+      {int limit = 10, bool newArtistsOnly = false}) {
+    final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    return _postDiscovery(
+      server,
+      '/api/v1/discovery/federation/similar',
+      {'filePath': fp, 'limit': limit, 'newArtistsOnly': newArtistsOnly},
+      (m) => DiscoveryLeads.fromServerMap(m),
+    );
   }
 
   Future<void> getArtists({Server? useThisServer}) async {

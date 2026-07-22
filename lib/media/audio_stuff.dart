@@ -95,6 +95,22 @@ class AudioPlayerHandler extends BaseAudioHandler
   // queue-end retriggers autoDJ, and each would re-toast otherwise.
   bool _autoDJAuthWarned = false;
 
+  // Session-only: rolling sonic anchor — the last few DJ-picked filepaths,
+  // sent as random-songs' `similarTo` seeds so the server centroids the
+  // session's own recent sound (webapp auto-dj.js parity). Reset alongside
+  // the ignoreList on setAutoDJ off / server switch.
+  List<String> _sonicHistory = const [];
+  // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
+  // lazily locked on the session's first pick (explicit seed, else the
+  // playing track; same pattern as [_camelotAnchor]) and reused for every
+  // subsequent similarTo. Cleared with the history on new-lane events, and
+  // dropped when the server reports it unanalyzed/unknown so a dead pin
+  // can't wedge the whole session.
+  String? _sonicLockedAnchor;
+  // One toast per session for a sonic fail-loud (pool empty / seed not
+  // analyzed) — same retrigger-spam collapse as [_autoDJAuthWarned].
+  bool _sonicWarned = false;
+
   // Session-only: the Camelot anchor for harmonic mixing. Locked on
   // the first DJ-picked song with a recognised key (after that, every
   // subsequent pick uses the anchor's 6 Camelot neighbours, keeping
@@ -1511,11 +1527,22 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 'forceAutoDJRefresh':
         customState.add(CustomEvent(autoDJServer));
         break;
+      case 'clearSonicSession':
+        // "New lane": setting/clearing the explicit sonic seed (or toggling
+        // the feature off) restarts the sonic session — rolling history AND
+        // the locked pin — so the next pick anchors fresh rather than on
+        // stale state (webapp resetAnchors/clearSonicAnchors semantics).
+        _sonicHistory = const [];
+        _sonicLockedAnchor = null;
+        break;
       case 'setAutoDJ':
         if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
           jsonAutoDJIgnoreList = null;
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
+          _sonicHistory = const []; // fresh server, fresh sonic session
+          _sonicLockedAnchor = null;
+          _sonicWarned = false;
         }
         autoDJServer = extras?['autoDJServer'];
 
@@ -1908,6 +1935,45 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (seed != null) _camelotAnchor = seed;
     }
 
+    // Sonic similarity: constrain the pick pool to tracks within the
+    // session's vibe — server-side, via `similarTo` + `minSimilarity` on
+    // random-songs itself. The sonic pool is a HARD base constraint there
+    // (the BPM/key waterfall relaxes WITHIN it, and ignoreList / rating /
+    // genre filters compose as usual). Seeds follow the webapp's rolling
+    // anchor: the last few DJ picks (session centroid), else the playing
+    // track; a cold start on an empty queue has no anchor and stays plain
+    // random until the first pick seeds the session.
+    final sonicEnabled = mgr.sonicSimilarityEnabled &&
+        autoDJServer!.discoveryAvailable == true;
+    // The explicit seed ("start the session here") only counts when it was
+    // picked from the DJ server — filepaths are per-library. Same rule for
+    // the playing track.
+    final explicitSeed = mgr.sonicSeedServer == autoDJServer!.localname
+        ? mgr.sonicSeedPath
+        : null;
+    final sonicCurrent =
+        currentItem?.extras?['server'] == autoDJServer!.localname
+            ? (currentItem?.extras?['path'] as String?)
+            : null;
+    // Locked mode pins its anchor on the session's first pick — the explicit
+    // seed, else the playing track (the same lazy-lock pattern as the
+    // Camelot anchor above). A cold start with neither stays plain random
+    // and pins on the next call via the then-playing pick.
+    if (sonicEnabled &&
+        mgr.sonicAnchorMode == SonicAnchorMode.locked &&
+        _sonicLockedAnchor == null) {
+      _sonicLockedAnchor = _normSonicPath(explicitSeed ?? sonicCurrent);
+    }
+    final sonic = sonicParams(
+      enabled: sonicEnabled,
+      mode: mgr.sonicAnchorMode,
+      lockedAnchor: _sonicLockedAnchor,
+      history: _sonicHistory,
+      seedPath: explicitSeed,
+      currentPath: sonicCurrent,
+      minSimilarity: mgr.sonicMinSimilarity,
+    );
+
     // Keyword filter is client-side (the server doesn't see it).
     // Retry up to 5 times if responses get blocked, using the
     // updated ignoreList from the server so we don't pick the same
@@ -1917,6 +1983,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     for (var attempt = 0; attempt < 5; attempt++) {
       final payload = <String, dynamic>{
         'ignoreList': jsonAutoDJIgnoreList ?? [],
+        ...?sonic,
       };
       if (autoDJServer!.autoDJminRating != null) {
         payload['minRating'] = autoDJServer!.autoDJminRating;
@@ -1963,6 +2030,52 @@ class AudioPlayerHandler extends BaseAudioHandler
         ).timeout(const Duration(seconds: 15));
         if (res.statusCode > 299) {
           appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
+          // Sonic mode fails LOUD by the server's contract: the pool is a
+          // hard promise ("only songs within X of the vibe"), so an empty
+          // pool or an unanalyzed seed stops the session with an
+          // explanation instead of silently playing outside the range
+          // (webapp parity — it discriminates on the error message too).
+          if (sonic != null) {
+            String serverMsg = '';
+            try {
+              final b = jsonDecode(res.body);
+              if (b is Map && b['error'] is String) serverMsg = b['error'];
+            } catch (_) {}
+            final lower = serverMsg.toLowerCase();
+            // Self-heal a dead locked pin (hardening the webapp lacks): a
+            // pinned anchor the server can't use — not analyzed yet (400) or
+            // moved/deleted (the uniform 404) — would wedge EVERY future
+            // pick, since locked mode never re-derives on its own. Dropping
+            // it lets the next attempt re-pin from the playing track.
+            if (mgr.sonicAnchorMode == SonicAnchorMode.locked &&
+                (res.statusCode == 404 || lower.contains('analyzed'))) {
+              _sonicLockedAnchor = null;
+            }
+            if (lower.contains('similarity range')) {
+              if (!_sonicWarned) {
+                _sonicWarned = true;
+                _showPlaybackErrorToast(
+                    'Auto DJ: no songs are within the similarity range. '
+                    'Loosen the match slider or adjust your filters.');
+              }
+              return;
+            }
+            if (lower.contains('analyzed')) {
+              if (!_sonicWarned) {
+                _sonicWarned = true;
+                _showPlaybackErrorToast(
+                    "Auto DJ: this song hasn't been analyzed yet — wait "
+                    'for the discovery scan or play a different song.');
+              }
+              return;
+            }
+            // requireIndex 403 ("Discovery is disabled"): the capability
+            // vanished since the last ping — NOT an expired login, so it
+            // must not fall through to the re-login toast below.
+            if (lower.contains('discovery is disabled')) {
+              return;
+            }
+          }
           // An expired/rotated JWT kills Auto DJ permanently and used to do it
           // in total silence — infinite play just stopped. Tell the user once.
           if ((res.statusCode == 401 || res.statusCode == 403) &&
@@ -1977,8 +2090,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
         // A working pick re-arms the auth warning: the once-per-session flag
         // exists to collapse queue-end retrigger spam of ONE expiry episode,
-        // not to silence a NEW expiry after a recovery.
+        // not to silence a NEW expiry after a recovery. Same for the sonic
+        // fail-loud toast.
         _autoDJAuthWarned = false;
+        _sonicWarned = false;
       } catch (e) {
         // Network error → bail without a toast (an offline queue-end is
         // normal), but leave a trace for Diagnostics.
@@ -1994,7 +2109,9 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       if (!mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) {
         _queueAutoDJSong(decoded,
-            autoPlay: autoPlay, incrementIndex: incrementIndex);
+            autoPlay: autoPlay,
+            incrementIndex: incrementIndex,
+            sonicPick: sonic != null);
         return;
       }
       // Otherwise loop — the updated ignoreList means the next call
@@ -2003,12 +2120,16 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     if (lastDecoded != null) {
       _queueAutoDJSong(lastDecoded,
-          autoPlay: autoPlay, incrementIndex: incrementIndex);
+          autoPlay: autoPlay,
+          incrementIndex: incrementIndex,
+          sonicPick: sonic != null);
     }
   }
 
   void _queueAutoDJSong(Map<String, dynamic> decoded,
-      {bool autoPlay = false, bool incrementIndex = false}) {
+      {bool autoPlay = false,
+      bool incrementIndex = false,
+      bool sonicPick = false}) {
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String?;
@@ -2058,6 +2179,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         // consistency with browser-added items.
         'bpm': meta.bpm,
         'musicalKey': meta.musicalKey,
+        // Queue-transparency badge (persisted with the queue): this row was
+        // chosen by Auto DJ, and whether the sonic pool shaped the pick —
+        // the queue row renders the matching icon so DJ additions are
+        // distinguishable from user-queued tracks.
+        'djPick': true,
+        'djSonic': sonicPick,
       },
     );
 
@@ -2072,12 +2199,88 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     addQueueItem(item);
 
+    // Feed the rolling sonic anchor with every DJ pick (kept even while the
+    // mode is off, so toggling it on mid-session already has the session's
+    // recent sound to centroid on).
+    _sonicHistory = pushSonicHistory(_sonicHistory, filepath);
+
     if (incrementIndex == true && index != null) {
       _backend.seek(Duration.zero, index: index! + 1);
     }
     if (autoPlay == true) {
       play();
     }
+  }
+
+  /// The `similarTo`/`minSimilarity` fields for a random-songs body, or
+  /// null when sonic mode is off / no anchor is resolvable (cold start on
+  /// an empty queue with no seed — the pick stays plain random and then
+  /// seeds the session). Rolling-anchor policy, mirroring the webapp's
+  /// auto-dj.js buildSonicParams: the recent DJ picks first (server
+  /// averages them into a session centroid), else the explicit seed song,
+  /// else the playing track. Pure; unit-tested.
+  static Map<String, dynamic>? sonicParams({
+    required bool enabled,
+    SonicAnchorMode mode = SonicAnchorMode.rolling,
+    String? lockedAnchor,
+    required List<String> history,
+    String? seedPath,
+    String? currentPath,
+    required double minSimilarity,
+  }) {
+    if (!enabled) return null;
+    if (mode == SonicAnchorMode.locked) {
+      // The caller pins [lockedAnchor] lazily (see autoDJ); before a pin
+      // resolves, the pick stays plain random — history/seed/current are
+      // the ROLLING policy's inputs and deliberately ignored here.
+      final anchor = _normSonicPath(lockedAnchor);
+      if (anchor == null) return null;
+      return {
+        'similarTo': [anchor],
+        'minSimilarity': minSimilarity,
+      };
+    }
+    if (history.isNotEmpty) {
+      return {
+        'similarTo': List<String>.of(history),
+        'minSimilarity': minSimilarity,
+      };
+    }
+    final anchor = _normSonicPath(seedPath) ?? _normSonicPath(currentPath);
+    if (anchor == null) return null;
+    return {
+      'similarTo': [anchor],
+      'minSimilarity': minSimilarity,
+    };
+  }
+
+  /// Appends a DJ pick to the rolling sonic ring buffer: normalized,
+  /// deduped (a re-pick moves to the most-recent slot rather than
+  /// double-weighting the server's centroid), capped at [limit] — the
+  /// webapp keeps 5 of the up-to-8 seeds the server accepts. Pure;
+  /// unit-tested.
+  static List<String> pushSonicHistory(List<String> history, String? rawPath,
+      {int limit = 5}) {
+    final norm = _normSonicPath(rawPath);
+    if (norm == null) return history;
+    final next = [
+      for (final p in history)
+        if (p != norm) p,
+      norm,
+    ];
+    while (next.length > limit) {
+      next.removeAt(0);
+    }
+    return next;
+  }
+
+  /// Seed paths on the wire never carry a leading slash (they resolve via
+  /// getVPathInfo server-side); queue extras' paths do. Normalize at every
+  /// write/build point, like the webapp's _normSonicPath.
+  static String? _normSonicPath(String? p) {
+    if (p == null) return null;
+    final s = p.startsWith('/') ? p.substring(1) : p;
+    return s.isEmpty ? null : s;
   }
 
   // BPM continuity windows: one centered on the current tempo, one

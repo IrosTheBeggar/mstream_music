@@ -1697,4 +1697,168 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Odkrywaj';
+
+  @override
+  String get discoverMatchedBySound => 'Dopasowane brzmieniem';
+
+  @override
+  String get discoverSimilarTracks => 'Podobne utwory';
+
+  @override
+  String get discoverSimilarArtists => 'Podobni artyści';
+
+  @override
+  String get discoverFromNetwork => 'Z sieci';
+
+  @override
+  String get discoverFromPeers => 'Od twoich peerów';
+
+  @override
+  String get discoverQueueAll => 'Dodaj wszystko do kolejki';
+
+  @override
+  String get discoverNewArtistsOnly => 'Tylko nowi artyści';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'Ten utwór nie został jeszcze przeanalizowany — podobne utwory pojawią się, gdy skan odkrywania do niego dotrze.';
+
+  @override
+  String get discoverNothingFound => 'Nie znaleziono dopasowań.';
+
+  @override
+  String get discoverNoSeed => 'Odtwórz utwór, aby odkryć podobną muzykę.';
+
+  @override
+  String get discoverLeadCopied => 'Skopiowano — idź i znajdź!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Otwórz w MusicBrainz';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'Brak danych z sieci — biblioteki peerów pobierają się w tle, gdy tylko zostaną wykryte inne serwery.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Nic nowego dla tego utworu — sieć nie ma nieznanych dopasowań.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Twoje peery nie odpowiedziały — mogą być teraz offline.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Nic nowego dla tego utworu na serwerach twoich peerów.';
+
+  @override
+  String get autoDjSonicTitle => 'Podobieństwo brzmienia';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Wybiera tylko utwory brzmiące jak sesja, na podstawie analizy dźwięku na serwerze.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'Ten serwer nie ma danych odkrywania — wybór pozostaje losowy.';
+
+  @override
+  String get autoDjSonicStrictness => 'Próg podobieństwa';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% lub bliżej';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Utwór startowy';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Brak utworu startowego — sesję zakotwicza odtwarzany utwór.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Szukaj utworu…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Losowy utwór';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Usuń utwór startowy';
+
+  @override
+  String get autoDjSonicSeedFailed => 'Nie udało się pobrać utworu z serwera.';
+
+  @override
+  String get discoverFindSimilar => 'Znajdź podobne';
+
+  @override
+  String get discoverStartSession => 'Rozpocznij sesję dźwiękową';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Niekończąca się muzyka brzmiąca jak ta — zastępuje kolejkę.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Niekończąca się muzyka od losowego utworu startowego — zastępuje kolejkę.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Sesja dźwiękowa rozpoczęta — Auto DJ włączony.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Kotwica';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Podążaj za klimatem';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Trzymaj się utworu startowego';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Każdy utwór podąża za ostatnim brzmieniem sesji — może powoli ewoluować.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Każdy utwór pozostaje blisko utworu startowego przez całą sesję.';
+
+  @override
+  String get trackAddToPlaylist => 'Dodaj do playlisty';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Nie udało się dodać do playlisty.';
+
+  @override
+  String get discoverPlayPathTo => 'Odtwórz ścieżkę do…';
+
+  @override
+  String get pathScreenTitle => 'Ścieżka dźwiękowa';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'Utwór startowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'Utwór docelowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
+
+  @override
+  String get pathStartSong => 'Utwór początkowy';
+
+  @override
+  String get pathEndSong => 'Utwór końcowy';
+
+  @override
+  String get pathLength => 'Długość';
+
+  @override
+  String get pathRegenerate => 'Wygeneruj ponownie';
+
+  @override
+  String get pathSaveAsPlaylist => 'Zapisz jako playlistę';
 }

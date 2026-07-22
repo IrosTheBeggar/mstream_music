@@ -1619,4 +1619,161 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'ディスカバー';
+
+  @override
+  String get discoverMatchedBySound => 'サウンドでマッチ';
+
+  @override
+  String get discoverSimilarTracks => '似ている曲';
+
+  @override
+  String get discoverSimilarArtists => '似ているアーティスト';
+
+  @override
+  String get discoverFromNetwork => 'ネットワークから';
+
+  @override
+  String get discoverFromPeers => 'ピアから';
+
+  @override
+  String get discoverQueueAll => 'すべてキューに追加';
+
+  @override
+  String get discoverNewArtistsOnly => '新しいアーティストのみ';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'この曲はまだ解析されていません — ディスカバリースキャンが到達すると、似ている曲が表示されます。';
+
+  @override
+  String get discoverNothingFound => '一致する曲が見つかりませんでした。';
+
+  @override
+  String get discoverNoSeed => '曲を再生すると、似ている音楽を発見できます。';
+
+  @override
+  String get discoverLeadCopied => 'コピーしました — 探してみましょう！';
+
+  @override
+  String get discoverOpenMusicBrainz => 'MusicBrainz で開く';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドでダウンロードされます。';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'この曲に新しい発見はありません — ネットワークに未知の一致はありません。';
+
+  @override
+  String get discoverPeersUnreachable => 'ピアから応答がありません — 現在オフラインの可能性があります。';
+
+  @override
+  String get discoverPeersNothingNew => 'ピアのサーバーには、この曲の新しい一致はありません。';
+
+  @override
+  String get autoDjSonicTitle => 'サウンドの類似性';
+
+  @override
+  String get autoDjSonicSubtitle => 'サーバーの音声解析を使って、セッションに似た響きの曲だけを選びます。';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'このサーバーにはディスカバリーデータがありません — 選曲はランダムのままです。';
+
+  @override
+  String get autoDjSonicStrictness => '類似度のしきい値';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% 以上の類似';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => 'シード曲';
+
+  @override
+  String get autoDjSonicSeedNone => 'シードなし — 再生中の曲がセッションの基準になります。';
+
+  @override
+  String get autoDjSonicSeedSearchHint => '曲を検索…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'ランダムな曲';
+
+  @override
+  String get autoDjSonicSeedRemove => 'シード曲を削除';
+
+  @override
+  String get autoDjSonicSeedFailed => 'サーバーから曲を取得できませんでした。';
+
+  @override
+  String get discoverFindSimilar => '似ている曲を探す';
+
+  @override
+  String get discoverStartSession => 'ソニックセッションを開始';
+
+  @override
+  String get discoverStartSessionSubtitle => 'この曲に似た音楽をエンドレス再生 — キューは置き換えられます。';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'ランダムな曲から始まるエンドレス再生 — キューは置き換えられます。';
+
+  @override
+  String get discoverSessionStarted => 'ソニックセッションを開始しました — Auto DJ がオンです。';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'アンカー';
+
+  @override
+  String get autoDjSonicAnchorRolling => '流れに任せる';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'シード曲に固定';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      '各曲はセッションの最近のサウンドに従います — 徐々に変化することがあります。';
+
+  @override
+  String get autoDjSonicAnchorLockedHint => 'セッション中はすべての曲がシード曲に近いサウンドになります。';
+
+  @override
+  String get trackAddToPlaylist => 'プレイリストに追加';
+
+  @override
+  String get trackAddToPlaylistFailed => 'プレイリストに追加できませんでした。';
+
+  @override
+  String get discoverPlayPathTo => 'この曲からパスを再生…';
+
+  @override
+  String get pathScreenTitle => 'ソニックパス';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      '開始曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      '目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
+
+  @override
+  String get pathStartSong => '開始曲';
+
+  @override
+  String get pathEndSong => '終了曲';
+
+  @override
+  String get pathLength => '長さ';
+
+  @override
+  String get pathRegenerate => '再生成';
+
+  @override
+  String get pathSaveAsPlaylist => 'プレイリストとして保存';
 }

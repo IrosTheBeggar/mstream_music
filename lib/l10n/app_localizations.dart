@@ -2915,6 +2915,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.'**
   String get irohShareUnavailable;
+
+  /// Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get discoverTitle;
+
+  /// Subtitle under the Discover screen title: results are audio-similarity matches, not genre-tag matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched by sound'**
+  String get discoverMatchedBySound;
+
+  /// Discover section header: library tracks that sound like the playing one.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar tracks'**
+  String get discoverSimilarTracks;
+
+  /// Discover section header: library artists whose sound is closest to the playing track's artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar artists'**
+  String get discoverSimilarArtists;
+
+  /// Discover section header: leads from public P2P peers' libraries (not playable).
+  ///
+  /// In en, this message translates to:
+  /// **'From the network'**
+  String get discoverFromNetwork;
+
+  /// Discover section header: leads from paired federation servers (not playable).
+  ///
+  /// In en, this message translates to:
+  /// **'From your peers'**
+  String get discoverFromPeers;
+
+  /// Button in the Similar tracks section header: append every listed track to the play queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue all'**
+  String get discoverQueueAll;
+
+  /// Switch above the network/peers sections: only show artists not already in the library.
+  ///
+  /// In en, this message translates to:
+  /// **'New artists only'**
+  String get discoverNewArtistsOnly;
+
+  /// Hint when the playing track has no audio embedding yet (server-side analysis still pending).
+  ///
+  /// In en, this message translates to:
+  /// **'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.'**
+  String get discoverNotAnalyzed;
+
+  /// Empty state for a Discover section that returned no results.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches found.'**
+  String get discoverNothingFound;
+
+  /// Discover screen body when nothing is playing (recommendations are seeded by the current track).
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song to discover similar music.'**
+  String get discoverNoSeed;
+
+  /// Snackbar after tapping a network/peer lead: "Artist - Title" was copied to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied — go find it!'**
+  String get discoverLeadCopied;
+
+  /// Tooltip on a lead row's link icon: open the recording's MusicBrainz page in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on MusicBrainz'**
+  String get discoverOpenMusicBrainz;
+
+  /// Empty state for the network section when no P2P peer snapshots have been fetched yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No network data yet — peer libraries download in the background once other servers are heard.'**
+  String get discoverNetworkWarmingUp;
+
+  /// Empty state for the network section when the new-artists-only filter removed every match.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new for this song — the network has no unfamiliar matches.'**
+  String get discoverNetworkNothingNew;
+
+  /// Empty state for the peers section when every federation peer was unreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your peers didn\'t answer — they may be offline right now.'**
+  String get discoverPeersUnreachable;
+
+  /// Empty state for the peers section when peers answered but had no (new) matches.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new for this song on your peers\' servers.'**
+  String get discoverPeersNothingNew;
+
+  /// Auto DJ continuity toggle: pick the next track by audio similarity to the playing one.
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic similarity'**
+  String get autoDjSonicTitle;
+
+  /// Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Only pick songs that sound like the session, using the server\'s audio analysis.'**
+  String get autoDjSonicSubtitle;
+
+  /// Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability.
+  ///
+  /// In en, this message translates to:
+  /// **'This server doesn\'t have discovery data — picks stay random.'**
+  String get autoDjSonicUnavailable;
+
+  /// Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity).
+  ///
+  /// In en, this message translates to:
+  /// **'Match strictness'**
+  String get autoDjSonicStrictness;
+
+  /// Value readout next to the strictness slider: picks must match at least this percentage.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% or closer'**
+  String autoDjSonicStrictnessValue(int pct);
+
+  /// Label for the sonic seed row and the seed-picker sheet title: the song the session starts from.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed song'**
+  String get autoDjSonicSeedLabel;
+
+  /// Seed row value when no explicit seed is set.
+  ///
+  /// In en, this message translates to:
+  /// **'No seed — the playing song anchors the session.'**
+  String get autoDjSonicSeedNone;
+
+  /// Hint in the seed-picker sheet's search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a song…'**
+  String get autoDjSonicSeedSearchHint;
+
+  /// Seed-picker action (and dice-button tooltip): use a random library song as the seed.
+  ///
+  /// In en, this message translates to:
+  /// **'Random song'**
+  String get autoDjSonicSeedRandom;
+
+  /// Tooltip on the clear button next to a set seed.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove seed song'**
+  String get autoDjSonicSeedRemove;
+
+  /// Error when the random-seed request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t fetch a song from the server.'**
+  String get autoDjSonicSeedFailed;
+
+  /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
+  ///
+  /// In en, this message translates to:
+  /// **'Find similar'**
+  String get discoverFindSimilar;
+
+  /// Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a sonic session'**
+  String get discoverStartSession;
+
+  /// Session card subtitle when the screen has a seed track. Must warn that the queue is replaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless music that sounds like this — replaces your queue.'**
+  String get discoverStartSessionSubtitle;
+
+  /// Session card subtitle in the no-seed state (nothing playing): a random library song seeds the session.
+  ///
+  /// In en, this message translates to:
+  /// **'Endless music from a random starting song — replaces your queue.'**
+  String get discoverStartSessionSubtitleRandom;
+
+  /// Toast after the session card starts playback (sonic Auto DJ was enabled and seeded).
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic session started — Auto DJ is on.'**
+  String get discoverSessionStarted;
+
+  /// Label above the sonic anchor-mode selector (rolling vs locked).
+  ///
+  /// In en, this message translates to:
+  /// **'Anchor'**
+  String get autoDjSonicAnchorLabel;
+
+  /// Rolling anchor mode: sonic seeds are the session's recent DJ picks.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the vibe'**
+  String get autoDjSonicAnchorRolling;
+
+  /// Locked anchor mode: one pinned song seeds every pick for the whole session.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay on seed'**
+  String get autoDjSonicAnchorLocked;
+
+  /// Explanation under the anchor selector while rolling mode is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Each pick follows the session\'s recent sound — it can slowly evolve.'**
+  String get autoDjSonicAnchorRollingHint;
+
+  /// Explanation under the anchor selector while locked mode is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Every pick stays close to the seed song for the whole session.'**
+  String get autoDjSonicAnchorLockedHint;
+
+  /// Track context sheet action + playlist-picker title: append this track to a server playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to playlist'**
+  String get trackAddToPlaylist;
+
+  /// Toast when the playlist add-song request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add to the playlist.'**
+  String get trackAddToPlaylistFailed;
+
+  /// Discover screen action + destination-picker title: build a queue that gradually morphs from the seed track's sound to a chosen destination song.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a path to…'**
+  String get discoverPlayPathTo;
+
+  /// Title of the sonic path preview screen (the ordered journey between two tracks).
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic path'**
+  String get pathScreenTitle;
+
+  /// Path screen hint when the start seed has no embedding yet.
+  ///
+  /// In en, this message translates to:
+  /// **'The starting song hasn\'t been analyzed yet — wait for the discovery scan or pick another.'**
+  String get pathStartNotAnalyzed;
+
+  /// Path screen hint when the destination seed has no embedding yet.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination song hasn\'t been analyzed yet — wait for the discovery scan or pick another.'**
+  String get pathEndNotAnalyzed;
+
+  /// Song-picker title when re-choosing the path start endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start song'**
+  String get pathStartSong;
+
+  /// Song-picker title when re-choosing the path destination endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'End song'**
+  String get pathEndSong;
+
+  /// Label of the path-length slider (total songs including both endpoints).
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get pathLength;
+
+  /// Tooltip of the refresh button that rebuilds the path with the current endpoints and length.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get pathRegenerate;
+
+  /// Tooltip/toast name of the action saving the generated path as a server playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as playlist'**
+  String get pathSaveAsPlaylist;
 }
 
 class _AppLocalizationsDelegate
