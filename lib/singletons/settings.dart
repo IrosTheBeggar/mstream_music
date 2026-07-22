@@ -188,6 +188,10 @@ class SettingsManager {
   // Custom accent colour as an ARGB int, or null to use each theme's built-in
   // primary. When set it overrides the accent across all three themes.
   int? accentColor;
+  // Optional 4-digit PIN for unlocking desktop party mode (the Now Playing
+  // lock). Null = hold-to-unlock only. Stored plainly in the settings file —
+  // this is a guests-at-the-keyboard latch, not a security boundary.
+  String? partyPin;
   // UI language. `null` means "follow the device locale" (the default);
   // a language code like 'en'/'es' forces that language regardless of
   // the OS setting. Persisted as the JSON 'language' key.
@@ -337,6 +341,8 @@ class SettingsManager {
       playerLayout = _readPlayerLayout(m);
       final accent = m['accentColor'];
       accentColor = accent is int ? accent : null;
+      final pp = m['partyPin'];
+      partyPin = (pp is String && pp.isNotEmpty) ? pp : null;
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
@@ -545,6 +551,7 @@ class SettingsManager {
       'theme': appTheme.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
+      'partyPin': partyPin,
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
@@ -688,6 +695,12 @@ class SettingsManager {
     await _save();
   }
 
+  /// Set / change / clear (null or empty) the party-mode unlock PIN.
+  Future<void> setPartyPin(String? v) async {
+    partyPin = (v == null || v.isEmpty) ? null : v;
+    await _save();
+  }
+
   /// Sets the UI language. Pass `null` to follow the device locale.
   Future<void> setLanguage(String? code) async {
     language = code;
@@ -811,6 +824,7 @@ class SettingsManager {
     visualizerGlobalParams = const [];
     visualizerShaderParams = {};
     language = null;
+    partyPin = null;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _letterStripSideStream.add(letterStripSide);
