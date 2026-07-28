@@ -7,16 +7,23 @@
 //   - iOS: `iroh_tunnel.framework` embedded in the app bundle (vended by
 //     packages/iroh_tunnel_native, built by rust/iroh_tunnel/build-ios.sh)
 //
-// Usage (M3 wires this into the connection model):
+// ABI v2: the native side keys tunnels by pairing code, so every per-tunnel
+// call here takes the code and distinct codes can run concurrently:
 //   final port = await IrohTunnel.instance.start(pairingCode);
 //   // then point the server's effective base URL at http://127.0.0.1:$port
 //   ...
-//   await IrohTunnel.instance.stop();
+//   IrohTunnel.instance.stop(pairingCode);
+//
+// Against a stale v1 binary ([abiVersion] == 1: same symbol names, no code
+// parameter — the committed iOS framework until build-ios.sh is re-run) the code
+// argument lands in an unused register and is ignored: single-tunnel semantics,
+// which match how the app drives the tunnel today. Multi-tunnel features must
+// gate on [abiVersion] >= 2.
 //
 // `start` blocks in native code (relay warmup + dial, up to ~30s), so it runs on
 // a background isolate; the tunnel's accept loop then lives on the Rust runtime.
-// The tunnel state is process-global on the Rust side, so `stop`/`isActive` can be
-// called from the main isolate regardless of where `start` ran.
+// The tunnel registry is process-global on the Rust side, so `stop`/`statusOf`
+// can be called from the main isolate regardless of where `start` ran.
 
 import 'dart:ffi';
 import 'dart:io';
@@ -26,10 +33,13 @@ import 'package:ffi/ffi.dart';
 
 typedef _StartNative = Int32 Function(Pointer<Utf8>, Uint16);
 typedef _StartDart = int Function(Pointer<Utf8>, int);
+typedef _CodeVoidNative = Void Function(Pointer<Utf8>);
+typedef _CodeVoidDart = void Function(Pointer<Utf8>);
+typedef _CodeInt32Native = Int32 Function(Pointer<Utf8>);
+typedef _CodeInt32Dart = int Function(Pointer<Utf8>);
+typedef _CodeStrNative = Pointer<Utf8> Function(Pointer<Utf8>);
 typedef _VoidNative = Void Function();
 typedef _VoidDart = void Function();
-typedef _BoolNative = Bool Function();
-typedef _BoolDart = bool Function();
 typedef _Int32Native = Int32 Function();
 typedef _Int32Dart = int Function();
 typedef _LastErrNative = Pointer<Utf8> Function();
@@ -60,33 +70,44 @@ DynamicLibrary _openNativeLib() {
 
 class _Bindings {
   final _StartDart start;
-  final _VoidDart stop;
-  final _BoolDart isActive;
-  final _Int32Dart statusCode;
-  final _Int32Dart pathKindCode;
+  final _CodeVoidDart stop;
+  final _CodeInt32Dart statusCode;
+  final _CodeInt32Dart pathKindCode;
   final _VoidDart networkChanged;
   final _LastErrNative lastError;
   final _FreeDart stringFree;
-  final _LastErrNative localTokenPtr;
+  final _CodeStrNative localTokenPtr;
+  final int abiVersion;
 
   factory _Bindings.open() {
     final lib = _openNativeLib();
+    // The version symbol is new in ABI v2; a v1 binary (stale committed iOS
+    // framework) doesn't export it — treat a failed lookup as v1.
+    int version;
+    try {
+      version =
+          lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_abi_version')();
+    } catch (_) {
+      version = 1;
+    }
     return _Bindings._(
       lib.lookupFunction<_StartNative, _StartDart>('mstream_iroh_start'),
-      lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_stop'),
-      lib.lookupFunction<_BoolNative, _BoolDart>('mstream_iroh_is_active'),
-      lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_status'),
-      lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_path_kind'),
+      lib.lookupFunction<_CodeVoidNative, _CodeVoidDart>('mstream_iroh_stop'),
+      lib.lookupFunction<_CodeInt32Native, _CodeInt32Dart>('mstream_iroh_status'),
+      lib.lookupFunction<_CodeInt32Native, _CodeInt32Dart>(
+          'mstream_iroh_path_kind'),
       lib.lookupFunction<_VoidNative, _VoidDart>('mstream_iroh_network_changed'),
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_last_error'),
       lib.lookupFunction<_FreeNative, _FreeDart>('mstream_iroh_string_free'),
-      lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_local_token'),
+      lib.lookupFunction<_CodeStrNative, _CodeStrNative>(
+          'mstream_iroh_local_token'),
+      version,
     );
   }
 
-  _Bindings._(this.start, this.stop, this.isActive, this.statusCode,
-      this.pathKindCode, this.networkChanged, this.lastError, this.stringFree,
-      this.localTokenPtr);
+  _Bindings._(this.start, this.stop, this.statusCode, this.pathKindCode,
+      this.networkChanged, this.lastError, this.stringFree, this.localTokenPtr,
+      this.abiVersion);
 
   String? takeLastError() {
     final p = lastError();
@@ -98,8 +119,18 @@ class _Bindings {
     }
   }
 
-  String? takeLocalToken() {
-    final p = localTokenPtr();
+  // Run [body] with [code] as a native UTF-8 string, freeing it after.
+  T withCode<T>(String code, T Function(Pointer<Utf8>) body) {
+    final cstr = code.toNativeUtf8();
+    try {
+      return body(cstr);
+    } finally {
+      malloc.free(cstr);
+    }
+  }
+
+  String? takeLocalToken(String code) {
+    final p = withCode(code, localTokenPtr);
     if (p == nullptr) return null;
     try {
       return p.toDartString();
@@ -109,9 +140,9 @@ class _Bindings {
   }
 }
 
-/// Thin Dart wrapper over the native tunnel. Available only where the native
-/// lib (Android `libiroh_tunnel.so`, iOS `iroh_tunnel.framework`) is actually
-/// loadable — see [isSupported].
+/// Thin Dart wrapper over the native tunnel registry (one tunnel per pairing
+/// code). Available only where the native lib (Android `libiroh_tunnel.so`, iOS
+/// `iroh_tunnel.framework`) is actually loadable — see [isSupported].
 class IrohTunnel {
   IrohTunnel._();
   static final IrohTunnel instance = IrohTunnel._();
@@ -140,9 +171,15 @@ class IrohTunnel {
   _Bindings? _bindings;
   _Bindings get _b => _bindings ??= _Bindings.open();
 
-  /// Start the tunnel for [pairingCode]; returns the loopback port to use as the
-  /// server's base URL host:port. Runs the blocking native call off the UI
-  /// isolate. Throws [IrohTunnelException] on failure.
+  /// The native library's C ABI version: 2 = pairing-code-keyed tunnels
+  /// (concurrent tunnels supported), 1 = legacy single-tunnel binary (the code
+  /// arguments are ignored natively). 0 when [isSupported] is false. Anything
+  /// that runs more than one tunnel at once must require >= 2.
+  int get abiVersion => isSupported ? _b.abiVersion : 0;
+
+  /// Start the tunnel for [pairingCode]; returns the loopback port to use as that
+  /// server's base URL host:port. Idempotent per code. Runs the blocking native
+  /// call off the UI isolate. Throws [IrohTunnelException] on failure.
   Future<int> start(String pairingCode, {int localPort = 0}) async {
     if (!isSupported) {
       throw IrohTunnelException('iroh tunnel is not supported on this device');
@@ -152,46 +189,43 @@ class IrohTunnel {
     return Isolate.run(() => _startTunnelSync(pairingCode, localPort));
   }
 
-  /// Stop the tunnel (graceful). Safe to call when nothing is running.
-  void stop() {
-    if (isSupported) _b.stop();
+  /// Stop [pairingCode]'s tunnel (graceful). Safe to call when it isn't running.
+  void stop(String pairingCode) {
+    if (isSupported) _b.withCode(pairingCode, _b.stop);
   }
 
-  /// Whether the tunnel is currently CONNECTED (honest health check — a
-  /// reconnecting/rejected/dead tunnel reports false).
-  bool get isActive => isSupported && _b.isActive();
-
-  /// Current connection status. [IrohTunnelStatus.down] when unsupported or no
-  /// tunnel is running.
-  IrohTunnelStatus get status {
+  /// [pairingCode]'s tunnel status. [IrohTunnelStatus.down] when unsupported or
+  /// that tunnel isn't running.
+  IrohTunnelStatus statusOf(String pairingCode) {
     if (!isSupported) return IrohTunnelStatus.down;
-    final code = _b.statusCode();
+    final code = _b.withCode(pairingCode, _b.statusCode);
     if (code < 0 || code >= IrohTunnelStatus.values.length) {
       return IrohTunnelStatus.down;
     }
     return IrohTunnelStatus.values[code];
   }
 
-  /// Current connection path kind (direct vs relayed) for the active tunnel.
-  /// [IrohPathKind.unknown] when unsupported, nothing is running, or no path is
-  /// selected yet. A cheap pure read — safe to poll from the main isolate.
-  IrohPathKind get pathKind {
+  /// [pairingCode]'s tunnel connection path kind (direct vs relayed).
+  /// [IrohPathKind.unknown] when unsupported, that tunnel isn't running, or no
+  /// path is selected yet. A cheap pure read — safe to poll from the main isolate.
+  IrohPathKind pathKindOf(String pairingCode) {
     if (!isSupported) return IrohPathKind.unknown;
-    final code = _b.pathKindCode();
+    final code = _b.withCode(pairingCode, _b.pathKindCode);
     if (code < 0 || code >= IrohPathKind.values.length) {
       return IrohPathKind.unknown;
     }
     return IrohPathKind.values[code];
   }
 
-  /// The active tunnel's loopback auth token (appended to loopback URLs as
-  /// `__lt=<token>`), or null when unsupported or nothing is running. Other apps
-  /// on the device can't use the proxy without it.
-  String? get localToken => isSupported ? _b.takeLocalToken() : null;
+  /// [pairingCode]'s tunnel loopback auth token (appended to loopback URLs as
+  /// `__lt=<token>`), or null when unsupported or that tunnel isn't running.
+  /// Other apps on the device can't use the proxy without it.
+  String? localTokenOf(String pairingCode) =>
+      isSupported ? _b.takeLocalToken(pairingCode) : null;
 
-  /// Notify the native tunnel that the device network changed, so iroh re-homes
-  /// the relay and re-probes paths promptly (it can't self-detect this on
-  /// Android). Cheap; safe to call when nothing is running.
+  /// Notify the native side that the device network changed, so every running
+  /// tunnel re-homes its relay and re-probes paths promptly (iroh can't
+  /// self-detect this on Android). Cheap; safe to call when nothing is running.
   void networkChanged() {
     if (isSupported) _b.networkChanged();
   }
@@ -208,7 +242,7 @@ enum IrohPathKind { unknown, direct, relay }
 
 // Top-level so it can run in a background isolate (no captured `this`). The .so
 // is process-global, so opening the bindings here and starting the tunnel leaves
-// state the main isolate can later stop()/isActive() through its own handle.
+// state the main isolate can later stop()/statusOf() through its own handle.
 int _startTunnelSync(String code, int localPort) {
   final b = _Bindings.open();
   final cstr = code.toNativeUtf8();
