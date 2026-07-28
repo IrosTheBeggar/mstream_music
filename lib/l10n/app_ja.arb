@@ -440,5 +440,16 @@
   "pathEndSong": "終了曲",
   "pathLength": "長さ",
   "pathRegenerate": "再生成",
-  "pathSaveAsPlaylist": "プレイリストとして保存"
+  "pathSaveAsPlaylist": "プレイリストとして保存",
+  "pathSetupHint": "開始曲と目的曲を選ぶと、その間の旅路が自動で埋まります。",
+  "pathNotSet": "未設定",
+  "pathUsePlaying": "再生中の曲を使う",
+  "pathSearchSong": "検索",
+  "pathBrowseLibrary": "ライブラリを見る",
+  "pathBuild": "旅路を作成",
+  "pathStartOver": "最初からやり直す",
+  "pathPickBannerStart": "開始曲を選択 — ライブラリ内の好きな曲をタップ",
+  "pathPickBannerEnd": "目的曲を選択 — ライブラリ内の好きな曲をタップ",
+  "pathNothingPlaying": "再生中の曲がありません",
+  "pathPickOnServer": "{server} の曲を選んでください"
 }

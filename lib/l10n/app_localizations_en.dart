@@ -1826,4 +1826,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => 'Save as playlist';
+
+  @override
+  String get pathSetupHint =>
+      'Pick a start and an end song — the journey between them fills itself.';
+
+  @override
+  String get pathNotSet => 'Not set';
+
+  @override
+  String get pathUsePlaying => 'Use playing song';
+
+  @override
+  String get pathSearchSong => 'Search';
+
+  @override
+  String get pathBrowseLibrary => 'Browse library';
+
+  @override
+  String get pathBuild => 'Build the journey';
+
+  @override
+  String get pathStartOver => 'Start over';
+
+  @override
+  String get pathPickBannerStart =>
+      'Pick the start song — tap a track anywhere in the library';
+
+  @override
+  String get pathPickBannerEnd =>
+      'Pick the end song — tap a track anywhere in the library';
+
+  @override
+  String get pathNothingPlaying => 'Nothing is playing';
+
+  @override
+  String pathPickOnServer(String server) {
+    return 'Pick a track on $server';
+  }
 }

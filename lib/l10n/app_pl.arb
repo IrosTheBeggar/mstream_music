@@ -440,5 +440,16 @@
   "pathEndSong": "Utwór końcowy",
   "pathLength": "Długość",
   "pathRegenerate": "Wygeneruj ponownie",
-  "pathSaveAsPlaylist": "Zapisz jako playlistę"
+  "pathSaveAsPlaylist": "Zapisz jako playlistę",
+  "pathSetupHint": "Wybierz utwór początkowy i docelowy — podróż między nimi wypełni się sama.",
+  "pathNotSet": "Nie wybrano",
+  "pathUsePlaying": "Użyj odtwarzanego utworu",
+  "pathSearchSong": "Szukaj",
+  "pathBrowseLibrary": "Przeglądaj bibliotekę",
+  "pathBuild": "Utwórz podróż",
+  "pathStartOver": "Zacznij od nowa",
+  "pathPickBannerStart": "Wybierz utwór początkowy — stuknij dowolny utwór w bibliotece",
+  "pathPickBannerEnd": "Wybierz utwór docelowy — stuknij dowolny utwór w bibliotece",
+  "pathNothingPlaying": "Nic nie jest odtwarzane",
+  "pathPickOnServer": "Wybierz utwór na {server}"
 }

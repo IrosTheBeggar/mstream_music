@@ -440,5 +440,16 @@
   "pathEndSong": "Chanson d'arrivée",
   "pathLength": "Longueur",
   "pathRegenerate": "Régénérer",
-  "pathSaveAsPlaylist": "Enregistrer comme playlist"
+  "pathSaveAsPlaylist": "Enregistrer comme playlist",
+  "pathSetupHint": "Choisis un morceau de départ et un d'arrivée — le voyage entre les deux se remplit tout seul.",
+  "pathNotSet": "Non défini",
+  "pathUsePlaying": "Utiliser le morceau en cours",
+  "pathSearchSong": "Rechercher",
+  "pathBrowseLibrary": "Parcourir la bibliothèque",
+  "pathBuild": "Créer le voyage",
+  "pathStartOver": "Recommencer",
+  "pathPickBannerStart": "Choisis le morceau de départ — touche une piste n'importe où dans la bibliothèque",
+  "pathPickBannerEnd": "Choisis le morceau d'arrivée — touche une piste n'importe où dans la bibliothèque",
+  "pathNothingPlaying": "Aucune lecture en cours",
+  "pathPickOnServer": "Choisis une piste sur {server}"
 }

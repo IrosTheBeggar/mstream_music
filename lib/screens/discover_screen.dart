@@ -14,8 +14,10 @@ import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
+import '../singletons/sonic_path_state.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
+import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
 import 'sonic_path_screen.dart';
 
@@ -459,16 +461,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
     final destPath = dest?.data;
     if (dest == null || destPath == null || !mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SonicPathScreen(
-        server: server,
-        startPath: path,
-        startTitle: _seedTitle,
-        startArtist: _seedArtist,
-        endPath: destPath,
-        endTitle: dest.metadata?.title ?? destPath.split('/').last,
-        endArtist: dest.metadata?.artist,
+    final destArt = dest.altAlbumArt ?? dest.metadata?.albumArt;
+    SonicPathState().beginJourney(
+      server,
+      SonicPathEndpoint(path, title: _seedTitle, artist: _seedArtist),
+      SonicPathEndpoint(
+        destPath,
+        title: dest.metadata?.title ?? destPath.split('/').last,
+        artist: dest.metadata?.artist,
+        artUrl: destArt == null ? null : buildAlbumArtUrl(server, destArt),
       ),
+    );
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const SonicPathScreen(autoBuild: true),
     ));
   }
 
