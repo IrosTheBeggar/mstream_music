@@ -167,6 +167,24 @@ void main() {
               const TorrentMeta('', '', '', 'none')),
           '');
     });
+    test('parenthesized empty variable is dropped, not kept as "()"', () {
+      // Seen live: a "{{ARTIST}}/({{YEAR}})" server template with no year
+      // yet rendered a junk "()" folder segment.
+      expect(
+          resolveTorrentTemplate('{{ARTIST}}/({{YEAR}})',
+              const TorrentMeta('Pink Floyd', '', '', 'high')),
+          'Pink Floyd');
+      expect(
+          resolveTorrentTemplate('{{ARTIST}}/({{YEAR}})',
+              const TorrentMeta('Pink Floyd', '', '1979', 'high')),
+          'Pink Floyd/(1979)');
+    });
+    test('unicode-only names survive the letter/digit segment check', () {
+      expect(
+          resolveTorrentTemplate('{{ARTIST}}/{{ALBUM}}',
+              const TorrentMeta('東京事変', '大人', '', 'high')),
+          '東京事変/大人');
+    });
   });
 
   group('splitTorrentPath', () {

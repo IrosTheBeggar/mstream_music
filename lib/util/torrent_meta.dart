@@ -241,7 +241,10 @@ String resolveTorrentTemplate(String template, TorrentMeta meta,
       // album -> "Artist -", or both empty -> "-") doesn't become a folder
       // name. Only ASCII separators are stripped, so unicode names survive.
       .map((s) => s.replaceAll(RegExp(r'^[\s._-]+|[\s._-]+$'), ''))
-      .where((s) => s.isNotEmpty)
+      // A segment with no letters or digits left is template punctuation
+      // wrapped around empty variables — "({{YEAR}})" with no year -> "()"
+      // — and would create a junk folder; drop it. "(1979)" survives.
+      .where((s) => RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(s))
       .toList();
   return segs.join('/');
 }
