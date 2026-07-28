@@ -26,7 +26,9 @@ class ServerManager {
 
   // The pairing code of the server the (single) iroh tunnel is currently up for,
   // or null when no tunnel is running. Drives (re)start decisions in
-  // [ensureActiveTunnel]; the shim holds one tunnel at a time, for the active server.
+  // [ensureActiveTunnel]; the app runs one tunnel at a time, for the active
+  // server (the native side keys tunnels by code and could run several — the
+  // one-at-a-time policy lives here).
   String? _activeTunnelCode;
 
   // streams
@@ -338,7 +340,9 @@ class ServerManager {
   /// True when the tunnel is assigned to [s] AND reports connected — i.e. [s]'s
   /// loopback is live right now.
   bool tunnelServes(Server s) =>
-      tunnelAssignedTo(s) && IrohTunnel.instance.status == IrohTunnelStatus.connected;
+      tunnelAssignedTo(s) &&
+      IrohTunnel.instance.statusOf(s.irohPairingCode!) ==
+          IrohTunnelStatus.connected;
 
   /// Bring the single iroh tunnel in line with the active server. With [verify],
   /// also force a rebuild when the native tunnel is fully *down* despite our
@@ -369,12 +373,15 @@ class ServerManager {
         // Already wired up. The supervisor handles transient drops itself; only
         // rebuild on a verify when it's fully down (a reconnecting/rejected
         // tunnel is left alone — restarting wouldn't help).
-        if (!verify || IrohTunnel.instance.status != IrohTunnelStatus.down) {
+        if (!verify ||
+            IrohTunnel.instance.statusOf(s.irohPairingCode!) !=
+                IrohTunnelStatus.down) {
           return;
         }
       }
-      // The shim holds one tunnel; switching servers (or rebuilding a dead one)
-      // requires dropping the old one first (start() returns the stale port otherwise).
+      // One app-level tunnel: switching servers (or rebuilding a dead one) drops
+      // the old tunnel first (start() is idempotent per code, so a same-code
+      // rebuild would otherwise get the stale port back).
       if (_activeTunnelCode != null) {
         // Switching to a DIFFERENT iroh server tears down the only tunnel, so the
         // current queue (which belongs to the outgoing server) can no longer be
@@ -384,7 +391,7 @@ class ServerManager {
         if (_activeTunnelCode != s.irohPairingCode && CastManager().isCasting) {
           unawaited(CastManager().selectTarget(CastTarget.local));
         }
-        IrohTunnel.instance.stop();
+        IrohTunnel.instance.stop(_activeTunnelCode!);
         _activeTunnelCode = null;
       }
       _tunnelStarting = true;
@@ -392,7 +399,7 @@ class ServerManager {
       try {
         final port = await IrohTunnel.instance.start(s.irohPairingCode!);
         s.tunnelPort = port;
-        s.tunnelToken = IrohTunnel.instance.localToken;
+        s.tunnelToken = IrohTunnel.instance.localTokenOf(s.irohPairingCode!);
         _activeTunnelCode = s.irohPairingCode;
         // This bind set a loopback port + token. Any queued iroh stream URL built
         // before now is stale, so rebuild them off the live effectiveBaseUrl.
@@ -428,7 +435,7 @@ class ServerManager {
       }
       _refreshTunnelStatus();
     } else if (_activeTunnelCode != null) {
-      IrohTunnel.instance.stop();
+      IrohTunnel.instance.stop(_activeTunnelCode!);
       _activeTunnelCode = null;
       _stopStatusPolling();
     } else {
@@ -459,7 +466,10 @@ class ServerManager {
         !await _probeTunnel(s)) {
       appLog('[iroh] resume probe failed — rebuilding the tunnel');
       final drop = _tunnelChain.then((_) {
-        IrohTunnel.instance.stop();
+        // Re-read under the chain: an ensure serialized ahead of us may have
+        // already switched or dropped the tunnel.
+        final code = _activeTunnelCode;
+        if (code != null) IrohTunnel.instance.stop(code);
         _activeTunnelCode = null;
       });
       _tunnelChain = drop.catchError((_) {});
@@ -510,19 +520,23 @@ class ServerManager {
 
   void _refreshTunnelStatus() {
     // Status reflects the tunnel's target (which may be a background playback
-    // server, not the browsed one).
-    final isIroh = IrohTunnel.isSupported && _tunnelTargetServer() != null;
+    // server, not the browsed one). Read the tunnel we actually run
+    // (_activeTunnelCode), falling back to the target's own code before the
+    // first start — statusOf reports down for a code never started.
+    final target = IrohTunnel.isSupported ? _tunnelTargetServer() : null;
+    final code =
+        target == null ? null : (_activeTunnelCode ?? target.irohPairingCode);
     final IrohTunnelStatus st;
-    if (!isIroh) {
+    if (code == null) {
       st = IrohTunnelStatus.down;
     } else if (_tunnelStarting) {
       st = IrohTunnelStatus.connecting;
     } else {
-      st = IrohTunnel.instance.status;
+      st = IrohTunnel.instance.statusOf(code);
     }
     if (st != _tunnelStatus.value) _tunnelStatus.add(st);
-    final pk = (isIroh && !_tunnelStarting)
-        ? IrohTunnel.instance.pathKind
+    final pk = (code != null && !_tunnelStarting)
+        ? IrohTunnel.instance.pathKindOf(code)
         : IrohPathKind.unknown;
     if (pk != _pathKind.value) _pathKind.add(pk);
   }
@@ -565,7 +579,8 @@ class ServerManager {
       // tunnel, a different server being served means s isn't reachable yet.
       if (tunnelServes(s)) return true;
       if (tunnelAssignedTo(s) &&
-          IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
+          IrohTunnel.instance.statusOf(s.irohPairingCode!) ==
+              IrohTunnelStatus.rejected) {
         return false; // this server's code was rejected (needs re-pair)
       }
       if (_tunnelStarting) deadline = DateTime.now().add(timeout);
@@ -589,7 +604,9 @@ class ServerManager {
 
     Future<void> activate(String? code) async {
       s.irohPairingCode = code;
-      IrohTunnel.instance.stop();
+      // Stop the tunnel that's actually up (the outgoing code's, not [code]'s).
+      final active = _activeTunnelCode;
+      if (active != null) IrohTunnel.instance.stop(active);
       _activeTunnelCode = null;
       s.tunnelPort = null;
       s.tunnelToken = null;
@@ -598,7 +615,7 @@ class ServerManager {
 
     // Try the new code WITHOUT persisting yet.
     await activate(newCode);
-    if (IrohTunnel.instance.status == IrohTunnelStatus.connected) {
+    if (IrohTunnel.instance.statusOf(newCode) == IrohTunnelStatus.connected) {
       await writeServerFile(); // persist only a code that actually connected
       _refreshTunnelStatus();
       return true;
@@ -612,14 +629,16 @@ class ServerManager {
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active
   /// one, so [ensureActiveTunnel] won't needlessly restart it.
   void registerActiveTunnel(Server s, int port) {
-    final token = IrohTunnel.instance.localToken;
+    final code = s.irohPairingCode;
+    if (code == null) return; // not a paired iroh server — nothing to adopt
+    final token = IrohTunnel.instance.localTokenOf(code);
     // Serialize the adopt through _tunnelChain so an in-flight (re)start can't
     // clobber these values mid-flight; the changeCurrentServer that follows chains
     // after this and observes the adopted tunnel (no needless re-dial).
     _tunnelChain = _tunnelChain.then((_) {
       s.tunnelPort = port;
       s.tunnelToken = token;
-      _activeTunnelCode = s.irohPairingCode;
+      _activeTunnelCode = code;
     }).catchError((_) {});
   }
 
