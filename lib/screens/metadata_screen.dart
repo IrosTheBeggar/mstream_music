@@ -10,6 +10,7 @@ import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import '../widgets/star_rating.dart';
+import 'discover_screen.dart';
 import 'lyrics_screen.dart';
 
 /// Song-info screen shown from the queue row's Info action: a blurred album-art
@@ -75,7 +76,8 @@ class MetadataScreen extends StatelessWidget {
       // unconditionally would force an empty chip row to render for one.
       if (MediaItemRating.canRate(item)) MediaItemRating(item: item, size: 18),
       if (extras['hasLyrics'] == true && lyricsServer != null && path != null)
-        _lyricsChip(
+        _actionChip(
+          Icons.lyrics_rounded,
           l.lyricsTitle,
           () => Navigator.push(
             context,
@@ -85,6 +87,25 @@ class MetadataScreen extends StatelessWidget {
                 path: path,
                 title: item.title,
                 artist: item.artist,
+              ),
+            ),
+          ),
+        ),
+      // Find similar — Discover screen pinned to this track. Same server
+      // resolution as the lyrics chip; only when that server advertised
+      // discovery on ping (hidden on older servers, never probed).
+      if (lyricsServer?.discoveryAvailable == true && path != null)
+        _actionChip(
+          Icons.explore_rounded,
+          l.discoverFindSimilar,
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DiscoverScreen(
+                seedServer: lyricsServer,
+                seedPath: path,
+                seedTitle: item.title,
+                seedArtist: item.artist,
               ),
             ),
           ),
@@ -309,7 +330,9 @@ class MetadataScreen extends StatelessWidget {
 
   /// Tappable sibling of [_chip] for the lyrics badge: the same pill plus an ink
   /// ripple and a trailing chevron to signal that it opens the lyrics page.
-  Widget _lyricsChip(String label, VoidCallback onTap) {
+  // Tappable action chip (lyrics, find similar) — same skin as the info
+  // chips but with a primary-tinted icon and an onTap.
+  Widget _actionChip(IconData icon, String label, VoidCallback onTap) {
     return Material(
       color: VelvetColors.raised,
       borderRadius: BorderRadius.circular(20),
@@ -325,7 +348,7 @@ class MetadataScreen extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.lyrics_rounded, size: 14, color: VelvetColors.primary),
+              Icon(icon, size: 14, color: VelvetColors.primary),
               const SizedBox(width: 6),
               Text(
                 label,

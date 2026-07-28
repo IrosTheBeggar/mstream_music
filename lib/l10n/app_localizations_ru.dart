@@ -1701,4 +1701,167 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Открытия';
+
+  @override
+  String get discoverMatchedBySound => 'Подобрано по звучанию';
+
+  @override
+  String get discoverSimilarTracks => 'Похожие треки';
+
+  @override
+  String get discoverSimilarArtists => 'Похожие исполнители';
+
+  @override
+  String get discoverFromNetwork => 'Из сети';
+
+  @override
+  String get discoverFromPeers => 'От ваших пиров';
+
+  @override
+  String get discoverQueueAll => 'Добавить все в очередь';
+
+  @override
+  String get discoverNewArtistsOnly => 'Только новые исполнители';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'Этот трек ещё не проанализирован — похожие треки появятся, когда сканирование дойдёт до него.';
+
+  @override
+  String get discoverNothingFound => 'Совпадений не найдено.';
+
+  @override
+  String get discoverNoSeed => 'Включите трек, чтобы открыть похожую музыку.';
+
+  @override
+  String get discoverLeadCopied => 'Скопировано — идите искать!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Открыть на MusicBrainz';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'Данных из сети пока нет — библиотеки пиров загружаются в фоне, как только обнаружены другие серверы.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Ничего нового для этого трека — в сети нет незнакомых совпадений.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Ваши пиры не ответили — возможно, они сейчас офлайн.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Ничего нового для этого трека на серверах ваших пиров.';
+
+  @override
+  String get autoDjSonicTitle => 'Похожее звучание';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Выбирает только треки, звучащие как сессия, по аудио-анализу сервера.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'На этом сервере нет данных для открытий — выбор останется случайным.';
+
+  @override
+  String get autoDjSonicStrictness => 'Порог похожести';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% и ближе';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Стартовый трек';
+
+  @override
+  String get autoDjSonicSeedNone => 'Не задан — сессию задаёт играющий трек.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Найти трек…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Случайный трек';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Убрать стартовый трек';
+
+  @override
+  String get autoDjSonicSeedFailed => 'Не удалось получить трек с сервера.';
+
+  @override
+  String get discoverFindSimilar => 'Найти похожие';
+
+  @override
+  String get discoverStartSession => 'Запустить звуковую сессию';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Бесконечная музыка, звучащая как этот трек — заменит вашу очередь.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Бесконечная музыка со случайного стартового трека — заменит вашу очередь.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Звуковая сессия запущена — Auto DJ включён.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Якорь';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Следовать настроению';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Держаться стартового трека';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Каждый трек следует недавнему звучанию сессии — она может медленно меняться.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Каждый трек остаётся близким к стартовому треку всю сессию.';
+
+  @override
+  String get trackAddToPlaylist => 'Добавить в плейлист';
+
+  @override
+  String get trackAddToPlaylistFailed => 'Не удалось добавить в плейлист.';
+
+  @override
+  String get discoverPlayPathTo => 'Проиграть путь к…';
+
+  @override
+  String get pathScreenTitle => 'Звуковой путь';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'Стартовый трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'Конечный трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
+
+  @override
+  String get pathStartSong => 'Начальная песня';
+
+  @override
+  String get pathEndSong => 'Конечная песня';
+
+  @override
+  String get pathLength => 'Длина';
+
+  @override
+  String get pathRegenerate => 'Пересоздать';
+
+  @override
+  String get pathSaveAsPlaylist => 'Сохранить как плейлист';
 }

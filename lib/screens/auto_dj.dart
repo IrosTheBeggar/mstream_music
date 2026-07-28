@@ -18,12 +18,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../l10n/enum_labels.dart';
+import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/song_picker_sheet.dart';
 
 class AutoDJScreen extends StatefulWidget {
   const AutoDJScreen({super.key});
@@ -157,6 +160,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Divider(color: VelvetColors.border, height: 1),
           ],
           _sectionHeader(l.autoDjSectionContinuity),
+          _sonicSimilaritySection(),
           _bpmContinuitySection(),
           _harmonicMixingSection(),
           Divider(color: VelvetColors.border, height: 1),
@@ -170,7 +174,247 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  // ── Continuity: BPM + harmonic mixing ───────────────────────────
+  // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
+
+  Widget _sonicSimilaritySection() {
+    final l = AppLocalizations.of(context);
+    final mgr = AutoDJManager();
+    // Capability of the server that would serve the picks (the DJ server
+    // when one is running, otherwise the current server as a preview).
+    // Without discovery data the toggle is inert, so show it disabled with
+    // an explanation instead of letting it silently do nothing.
+    final target = _autoDJServer ?? ServerManager().currentServer;
+    final supported = target?.discoveryAvailable == true;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.autoDjSonicTitle,
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text(
+                      supported
+                          ? l.autoDjSonicSubtitle
+                          : l.autoDjSonicUnavailable,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: mgr.sonicSimilarityEnabled && supported,
+                onChanged: supported
+                    ? (v) async {
+                        await mgr.setSonicSimilarityEnabled(v);
+                        // Webapp parity (clearSonicAnchors): toggling the
+                        // feature off drops the session anchors — rolling
+                        // history + locked pin. The explicit seed survives.
+                        if (!v) {
+                          MediaManager()
+                              .audioHandler
+                              .customAction('clearSonicSession');
+                        }
+                      }
+                    : null,
+                activeThumbColor: VelvetColors.primary,
+              ),
+            ],
+          ),
+          if (supported && mgr.sonicSimilarityEnabled) ...[
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  l.autoDjSonicStrictness,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 13),
+                ),
+                Spacer(),
+                Text(
+                  l.autoDjSonicStrictnessValue(
+                      (mgr.sonicMinSimilarity * 100).round()),
+                  style: TextStyle(
+                    color: VelvetColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: VelvetColors.primary,
+                thumbColor: VelvetColors.primary,
+                overlayColor: VelvetColors.primaryDim,
+              ),
+              // Raw cosine threshold; the useful band in practice —
+              // webapp's slider covers the same perceptual range.
+              child: Slider(
+                value: mgr.sonicMinSimilarity.clamp(0.30, 0.80),
+                min: 0.30,
+                max: 0.80,
+                divisions: 50,
+                onChanged: (v) => mgr.setSonicMinSimilarity(v),
+              ),
+            ),
+            // Explicit seed — "start the session from this song". Wins over
+            // the playing track for the first pick; the rolling history
+            // takes over afterwards. The dice picks a random library song.
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _openSonicSeedPicker,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.autoDjSonicSeedLabel,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 13),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            mgr.sonicSeedTitle ?? l.autoDjSonicSeedNone,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: mgr.sonicSeedPath != null
+                                  ? VelvetColors.textPrimary
+                                  : VelvetColors.textSecondary,
+                              fontSize: 13,
+                              fontStyle: mgr.sonicSeedPath != null
+                                  ? FontStyle.normal
+                                  : FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (mgr.sonicSeedPath != null)
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        size: 18, color: VelvetColors.textSecondary),
+                    tooltip: l.autoDjSonicSeedRemove,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _clearSonicSeed,
+                  ),
+                IconButton(
+                  icon: Icon(Icons.casino,
+                      size: 20, color: VelvetColors.primary),
+                  tooltip: l.autoDjSonicSeedRandom,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _pickRandomSonicSeed,
+                ),
+              ],
+            ),
+            // Anchor policy: follow the session's own picks (rolling) or
+            // stay pinned to the seed for the whole session (locked).
+            SizedBox(height: 8),
+            Text(
+              l.autoDjSonicAnchorLabel,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 6),
+            SegmentedButton<SonicAnchorMode>(
+              segments: [
+                for (final mode in SonicAnchorMode.values)
+                  ButtonSegment(value: mode, label: Text(mode.label(l))),
+              ],
+              selected: {mgr.sonicAnchorMode},
+              onSelectionChanged: (set) {
+                if (set.isNotEmpty) mgr.setSonicAnchorMode(set.first);
+              },
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            SizedBox(height: 6),
+            Text(
+              mgr.sonicAnchorMode.hint(l),
+              style:
+                  TextStyle(color: VelvetColors.textTertiary, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // The server a seed would be picked from / sent to: the DJ server when
+  // one is running, else the current server (same fallback as the genre
+  // picker).
+  Server? get _sonicSeedTarget => _autoDJServer ?? ServerManager().currentServer;
+
+  Future<void> _applySonicSeed(DisplayItem item) async {
+    final path = item.data;
+    final server = item.server;
+    if (path == null || server == null) return;
+    final meta = item.metadata;
+    final artist = meta?.artist?.trim() ?? '';
+    final title = [
+      meta?.title ?? item.name,
+      if (artist.isNotEmpty) artist,
+    ].join(' · ');
+    await AutoDJManager()
+        .setSonicSeed(path: path, title: title, server: server.localname);
+    // New lane: restart the rolling sonic session so the next pick anchors
+    // on this seed instead of the previous picks.
+    MediaManager().audioHandler.customAction('clearSonicSession');
+  }
+
+  Future<void> _clearSonicSeed() async {
+    await AutoDJManager().clearSonicSeed();
+    MediaManager().audioHandler.customAction('clearSonicSession');
+  }
+
+  Future<void> _pickRandomSonicSeed() async {
+    final server = _sonicSeedTarget;
+    if (server == null) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final item = await ApiManager().fetchRandomSong(server);
+    if (!mounted) return;
+    if (item == null) {
+      messenger
+          .showSnackBar(SnackBar(content: Text(l.autoDjSonicSeedFailed)));
+      return;
+    }
+    await _applySonicSeed(item);
+  }
+
+  Future<void> _openSonicSeedPicker() async {
+    final server = _sonicSeedTarget;
+    if (server == null) return;
+    final l = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<DisplayItem>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: VelvetColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) =>
+          SongPickerSheet(server: server, title: l.autoDjSonicSeedLabel),
+    );
+    if (picked != null) await _applySonicSeed(picked);
+  }
 
   Widget _bpmContinuitySection() {
     final l = AppLocalizations.of(context);

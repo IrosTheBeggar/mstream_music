@@ -1680,4 +1680,171 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => 'Descubrir';
+
+  @override
+  String get discoverMatchedBySound => 'Coincidencias por sonido';
+
+  @override
+  String get discoverSimilarTracks => 'Canciones similares';
+
+  @override
+  String get discoverSimilarArtists => 'Artistas similares';
+
+  @override
+  String get discoverFromNetwork => 'De la red';
+
+  @override
+  String get discoverFromPeers => 'De tus pares';
+
+  @override
+  String get discoverQueueAll => 'Añadir todo a la cola';
+
+  @override
+  String get discoverNewArtistsOnly => 'Solo artistas nuevos';
+
+  @override
+  String get discoverNotAnalyzed =>
+      'Esta canción aún no se ha analizado — las canciones similares aparecerán cuando el análisis de descubrimiento la procese.';
+
+  @override
+  String get discoverNothingFound => 'No se encontraron coincidencias.';
+
+  @override
+  String get discoverNoSeed =>
+      'Reproduce una canción para descubrir música similar.';
+
+  @override
+  String get discoverLeadCopied => 'Copiado — ¡ve a buscarla!';
+
+  @override
+  String get discoverOpenMusicBrainz => 'Abrir en MusicBrainz';
+
+  @override
+  String get discoverNetworkWarmingUp =>
+      'Aún no hay datos de la red — las bibliotecas de los pares se descargan en segundo plano cuando se detectan otros servidores.';
+
+  @override
+  String get discoverNetworkNothingNew =>
+      'Nada nuevo para esta canción — la red no tiene coincidencias desconocidas.';
+
+  @override
+  String get discoverPeersUnreachable =>
+      'Tus pares no respondieron — puede que estén desconectados ahora mismo.';
+
+  @override
+  String get discoverPeersNothingNew =>
+      'Nada nuevo para esta canción en los servidores de tus pares.';
+
+  @override
+  String get autoDjSonicTitle => 'Similitud sonora';
+
+  @override
+  String get autoDjSonicSubtitle =>
+      'Elige solo canciones que suenan como la sesión, usando el análisis de audio del servidor.';
+
+  @override
+  String get autoDjSonicUnavailable =>
+      'Este servidor no tiene datos de descubrimiento — la selección seguirá siendo aleatoria.';
+
+  @override
+  String get autoDjSonicStrictness => 'Umbral de similitud';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct % o más parecido';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => 'Canción semilla';
+
+  @override
+  String get autoDjSonicSeedNone =>
+      'Sin semilla — la canción en reproducción ancla la sesión.';
+
+  @override
+  String get autoDjSonicSeedSearchHint => 'Buscar una canción…';
+
+  @override
+  String get autoDjSonicSeedRandom => 'Canción aleatoria';
+
+  @override
+  String get autoDjSonicSeedRemove => 'Quitar canción semilla';
+
+  @override
+  String get autoDjSonicSeedFailed =>
+      'No se pudo obtener una canción del servidor.';
+
+  @override
+  String get discoverFindSimilar => 'Buscar similares';
+
+  @override
+  String get discoverStartSession => 'Iniciar una sesión sonora';
+
+  @override
+  String get discoverStartSessionSubtitle =>
+      'Música sin fin que suena como esta — reemplaza tu cola.';
+
+  @override
+  String get discoverStartSessionSubtitleRandom =>
+      'Música sin fin desde una canción inicial aleatoria — reemplaza tu cola.';
+
+  @override
+  String get discoverSessionStarted =>
+      'Sesión sonora iniciada — Auto DJ activado.';
+
+  @override
+  String get autoDjSonicAnchorLabel => 'Ancla';
+
+  @override
+  String get autoDjSonicAnchorRolling => 'Seguir el ambiente';
+
+  @override
+  String get autoDjSonicAnchorLocked => 'Mantener la semilla';
+
+  @override
+  String get autoDjSonicAnchorRollingHint =>
+      'Cada canción sigue el sonido reciente de la sesión — puede evolucionar poco a poco.';
+
+  @override
+  String get autoDjSonicAnchorLockedHint =>
+      'Cada canción se mantiene cerca de la canción semilla durante toda la sesión.';
+
+  @override
+  String get trackAddToPlaylist => 'Añadir a la lista de reproducción';
+
+  @override
+  String get trackAddToPlaylistFailed =>
+      'No se pudo añadir a la lista de reproducción.';
+
+  @override
+  String get discoverPlayPathTo => 'Reproducir un camino hacia…';
+
+  @override
+  String get pathScreenTitle => 'Camino sonoro';
+
+  @override
+  String get pathStartNotAnalyzed =>
+      'La canción inicial aún no se ha analizado — espera al análisis de descubrimiento o elige otra.';
+
+  @override
+  String get pathEndNotAnalyzed =>
+      'La canción de destino aún no se ha analizado — espera al análisis de descubrimiento o elige otra.';
+
+  @override
+  String get pathStartSong => 'Canción inicial';
+
+  @override
+  String get pathEndSong => 'Canción final';
+
+  @override
+  String get pathLength => 'Longitud';
+
+  @override
+  String get pathRegenerate => 'Regenerar';
+
+  @override
+  String get pathSaveAsPlaylist => 'Guardar como lista';
 }

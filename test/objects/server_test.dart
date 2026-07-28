@@ -139,4 +139,48 @@ void main() {
       expect(json['storageMode'], 'appLocal');
     });
   });
+
+  group('discovery capability flags', () {
+    test('absent keys parse as null (unknown, not false)', () {
+      final s = Server.fromJson({
+        'url': 'https://music.example.com',
+        'username': null,
+        'password': null,
+        'jwt': null,
+        'localname': 'home',
+      });
+      expect(s.discoveryAvailable, isNull);
+      expect(s.discoveryP2pAvailable, isNull);
+      expect(s.federationDiscoveryAvailable, isNull);
+    });
+
+    test('non-bool values are ignored (defensive against corrupt files)', () {
+      final s = Server.fromJson({
+        'url': 'u',
+        'username': null,
+        'password': null,
+        'jwt': null,
+        'localname': 'l',
+        'discoveryAvailable': 'yes',
+        'discoveryP2pAvailable': 1,
+        'federationDiscoveryAvailable': {},
+      });
+      expect(s.discoveryAvailable, isNull);
+      expect(s.discoveryP2pAvailable, isNull);
+      expect(s.federationDiscoveryAvailable, isNull);
+    });
+
+    test('round-trips through toJson/fromJson', () {
+      final original = Server('u', null, null, null, 'l');
+      original.discoveryAvailable = true;
+      original.discoveryP2pAvailable = false;
+      original.federationDiscoveryAvailable = true;
+
+      final reparsed = Server.fromJson(original.toJson());
+
+      expect(reparsed.discoveryAvailable, isTrue);
+      expect(reparsed.discoveryP2pAvailable, isFalse);
+      expect(reparsed.federationDiscoveryAvailable, isTrue);
+    });
+  });
 }

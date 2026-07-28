@@ -1178,5 +1178,206 @@
   "irohShareUnavailable": "Sharing isn't available for peer-to-peer (iroh) servers — they have no public URL to link to.",
   "@irohShareUnavailable": {
     "description": "Shown when trying to share tracks from an iroh (peer-to-peer) server."
+  },
+  "discoverTitle": "Discover",
+  "@discoverTitle": {
+    "description": "Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet."
+  },
+  "discoverMatchedBySound": "Matched by sound",
+  "@discoverMatchedBySound": {
+    "description": "Subtitle under the Discover screen title: results are audio-similarity matches, not genre-tag matches."
+  },
+  "discoverSimilarTracks": "Similar tracks",
+  "@discoverSimilarTracks": {
+    "description": "Discover section header: library tracks that sound like the playing one."
+  },
+  "discoverSimilarArtists": "Similar artists",
+  "@discoverSimilarArtists": {
+    "description": "Discover section header: library artists whose sound is closest to the playing track's artist."
+  },
+  "discoverFromNetwork": "From the network",
+  "@discoverFromNetwork": {
+    "description": "Discover section header: leads from public P2P peers' libraries (not playable)."
+  },
+  "discoverFromPeers": "From your peers",
+  "@discoverFromPeers": {
+    "description": "Discover section header: leads from paired federation servers (not playable)."
+  },
+  "discoverQueueAll": "Queue all",
+  "@discoverQueueAll": {
+    "description": "Button in the Similar tracks section header: append every listed track to the play queue."
+  },
+  "discoverNewArtistsOnly": "New artists only",
+  "@discoverNewArtistsOnly": {
+    "description": "Switch above the network/peers sections: only show artists not already in the library."
+  },
+  "discoverNotAnalyzed": "This song hasn't been analyzed yet — similar songs appear once the discovery scan reaches it.",
+  "@discoverNotAnalyzed": {
+    "description": "Hint when the playing track has no audio embedding yet (server-side analysis still pending)."
+  },
+  "discoverNothingFound": "No matches found.",
+  "@discoverNothingFound": {
+    "description": "Empty state for a Discover section that returned no results."
+  },
+  "discoverNoSeed": "Play a song to discover similar music.",
+  "@discoverNoSeed": {
+    "description": "Discover screen body when nothing is playing (recommendations are seeded by the current track)."
+  },
+  "discoverLeadCopied": "Copied — go find it!",
+  "@discoverLeadCopied": {
+    "description": "Snackbar after tapping a network/peer lead: \"Artist - Title\" was copied to the clipboard."
+  },
+  "discoverOpenMusicBrainz": "Open on MusicBrainz",
+  "@discoverOpenMusicBrainz": {
+    "description": "Tooltip on a lead row's link icon: open the recording's MusicBrainz page in the browser."
+  },
+  "discoverNetworkWarmingUp": "No network data yet — peer libraries download in the background once other servers are heard.",
+  "@discoverNetworkWarmingUp": {
+    "description": "Empty state for the network section when no P2P peer snapshots have been fetched yet."
+  },
+  "discoverNetworkNothingNew": "Nothing new for this song — the network has no unfamiliar matches.",
+  "@discoverNetworkNothingNew": {
+    "description": "Empty state for the network section when the new-artists-only filter removed every match."
+  },
+  "discoverPeersUnreachable": "Your peers didn't answer — they may be offline right now.",
+  "@discoverPeersUnreachable": {
+    "description": "Empty state for the peers section when every federation peer was unreachable."
+  },
+  "discoverPeersNothingNew": "Nothing new for this song on your peers' servers.",
+  "@discoverPeersNothingNew": {
+    "description": "Empty state for the peers section when peers answered but had no (new) matches."
+  },
+  "autoDjSonicTitle": "Sonic similarity",
+  "@autoDjSonicTitle": {
+    "description": "Auto DJ continuity toggle: pick the next track by audio similarity to the playing one."
+  },
+  "autoDjSonicSubtitle": "Only pick songs that sound like the session, using the server's audio analysis.",
+  "@autoDjSonicSubtitle": {
+    "description": "Subtitle under the sonic similarity toggle when the server supports it. The pool is a hard constraint — no random fallback."
+  },
+  "autoDjSonicUnavailable": "This server doesn't have discovery data — picks stay random.",
+  "@autoDjSonicUnavailable": {
+    "description": "Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability."
+  },
+  "autoDjSonicStrictness": "Match strictness",
+  "@autoDjSonicStrictness": {
+    "description": "Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity)."
+  },
+  "autoDjSonicStrictnessValue": "{pct}% or closer",
+  "@autoDjSonicStrictnessValue": {
+    "description": "Value readout next to the strictness slider: picks must match at least this percentage.",
+    "placeholders": {
+      "pct": {
+        "type": "int"
+      }
+    }
+  },
+  "autoDjSonicSeedLabel": "Seed song",
+  "@autoDjSonicSeedLabel": {
+    "description": "Label for the sonic seed row and the seed-picker sheet title: the song the session starts from."
+  },
+  "autoDjSonicSeedNone": "No seed — the playing song anchors the session.",
+  "@autoDjSonicSeedNone": {
+    "description": "Seed row value when no explicit seed is set."
+  },
+  "autoDjSonicSeedSearchHint": "Search for a song…",
+  "@autoDjSonicSeedSearchHint": {
+    "description": "Hint in the seed-picker sheet's search field."
+  },
+  "autoDjSonicSeedRandom": "Random song",
+  "@autoDjSonicSeedRandom": {
+    "description": "Seed-picker action (and dice-button tooltip): use a random library song as the seed."
+  },
+  "autoDjSonicSeedRemove": "Remove seed song",
+  "@autoDjSonicSeedRemove": {
+    "description": "Tooltip on the clear button next to a set seed."
+  },
+  "autoDjSonicSeedFailed": "Couldn't fetch a song from the server.",
+  "@autoDjSonicSeedFailed": {
+    "description": "Error when the random-seed request fails."
+  },
+  "discoverFindSimilar": "Find similar",
+  "@discoverFindSimilar": {
+    "description": "Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track."
+  },
+  "discoverStartSession": "Start a sonic session",
+  "@discoverStartSession": {
+    "description": "Card title on the Discover screen: one tap enables sonic Auto DJ seeded by the screen's track and starts endless playback."
+  },
+  "discoverStartSessionSubtitle": "Endless music that sounds like this — replaces your queue.",
+  "@discoverStartSessionSubtitle": {
+    "description": "Session card subtitle when the screen has a seed track. Must warn that the queue is replaced."
+  },
+  "discoverStartSessionSubtitleRandom": "Endless music from a random starting song — replaces your queue.",
+  "@discoverStartSessionSubtitleRandom": {
+    "description": "Session card subtitle in the no-seed state (nothing playing): a random library song seeds the session."
+  },
+  "discoverSessionStarted": "Sonic session started — Auto DJ is on.",
+  "@discoverSessionStarted": {
+    "description": "Toast after the session card starts playback (sonic Auto DJ was enabled and seeded)."
+  },
+  "autoDjSonicAnchorLabel": "Anchor",
+  "@autoDjSonicAnchorLabel": {
+    "description": "Label above the sonic anchor-mode selector (rolling vs locked)."
+  },
+  "autoDjSonicAnchorRolling": "Follow the vibe",
+  "@autoDjSonicAnchorRolling": {
+    "description": "Rolling anchor mode: sonic seeds are the session's recent DJ picks."
+  },
+  "autoDjSonicAnchorLocked": "Stay on seed",
+  "@autoDjSonicAnchorLocked": {
+    "description": "Locked anchor mode: one pinned song seeds every pick for the whole session."
+  },
+  "autoDjSonicAnchorRollingHint": "Each pick follows the session's recent sound — it can slowly evolve.",
+  "@autoDjSonicAnchorRollingHint": {
+    "description": "Explanation under the anchor selector while rolling mode is selected."
+  },
+  "autoDjSonicAnchorLockedHint": "Every pick stays close to the seed song for the whole session.",
+  "@autoDjSonicAnchorLockedHint": {
+    "description": "Explanation under the anchor selector while locked mode is selected."
+  },
+  "trackAddToPlaylist": "Add to playlist",
+  "@trackAddToPlaylist": {
+    "description": "Track context sheet action + playlist-picker title: append this track to a server playlist."
+  },
+  "trackAddToPlaylistFailed": "Couldn't add to the playlist.",
+  "@trackAddToPlaylistFailed": {
+    "description": "Toast when the playlist add-song request fails."
+  },
+  "discoverPlayPathTo": "Play a path to…",
+  "@discoverPlayPathTo": {
+    "description": "Discover screen action + destination-picker title: build a queue that gradually morphs from the seed track's sound to a chosen destination song."
+  },
+  "pathScreenTitle": "Sonic path",
+  "@pathScreenTitle": {
+    "description": "Title of the sonic path preview screen (the ordered journey between two tracks)."
+  },
+  "pathStartNotAnalyzed": "The starting song hasn't been analyzed yet — wait for the discovery scan or pick another.",
+  "@pathStartNotAnalyzed": {
+    "description": "Path screen hint when the start seed has no embedding yet."
+  },
+  "pathEndNotAnalyzed": "The destination song hasn't been analyzed yet — wait for the discovery scan or pick another.",
+  "@pathEndNotAnalyzed": {
+    "description": "Path screen hint when the destination seed has no embedding yet."
+  },
+  "pathStartSong": "Start song",
+  "@pathStartSong": {
+    "description": "Song-picker title when re-choosing the path start endpoint."
+  },
+  "pathEndSong": "End song",
+  "@pathEndSong": {
+    "description": "Song-picker title when re-choosing the path destination endpoint."
+  },
+  "pathLength": "Length",
+  "@pathLength": {
+    "description": "Label of the path-length slider (total songs including both endpoints)."
+  },
+  "pathRegenerate": "Regenerate",
+  "@pathRegenerate": {
+    "description": "Tooltip of the refresh button that rebuilds the path with the current endpoints and length."
+  },
+  "pathSaveAsPlaylist": "Save as playlist",
+  "@pathSaveAsPlaylist": {
+    "description": "Tooltip/toast name of the action saving the generated path as a server playlist."
   }
 }

@@ -1589,4 +1589,153 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get irohShareUnavailable =>
       'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+
+  @override
+  String get discoverTitle => '发现';
+
+  @override
+  String get discoverMatchedBySound => '按声音匹配';
+
+  @override
+  String get discoverSimilarTracks => '相似歌曲';
+
+  @override
+  String get discoverSimilarArtists => '相似艺术家';
+
+  @override
+  String get discoverFromNetwork => '来自网络';
+
+  @override
+  String get discoverFromPeers => '来自伙伴服务器';
+
+  @override
+  String get discoverQueueAll => '全部加入队列';
+
+  @override
+  String get discoverNewArtistsOnly => '仅新艺术家';
+
+  @override
+  String get discoverNotAnalyzed => '这首歌尚未分析 — 发现扫描处理后会显示相似歌曲。';
+
+  @override
+  String get discoverNothingFound => '未找到匹配项。';
+
+  @override
+  String get discoverNoSeed => '播放一首歌曲以发现相似音乐。';
+
+  @override
+  String get discoverLeadCopied => '已复制 — 去找找吧！';
+
+  @override
+  String get discoverOpenMusicBrainz => '在 MusicBrainz 中打开';
+
+  @override
+  String get discoverNetworkWarmingUp => '暂无网络数据 — 发现其他服务器后，伙伴音乐库会在后台下载。';
+
+  @override
+  String get discoverNetworkNothingNew => '这首歌没有新发现 — 网络中没有陌生的匹配项。';
+
+  @override
+  String get discoverPeersUnreachable => '伙伴服务器没有响应 — 它们现在可能离线。';
+
+  @override
+  String get discoverPeersNothingNew => '伙伴服务器上没有这首歌的新发现。';
+
+  @override
+  String get autoDjSonicTitle => '声音相似度';
+
+  @override
+  String get autoDjSonicSubtitle => '利用服务器的音频分析，只挑选与本次会话声音相似的歌曲。';
+
+  @override
+  String get autoDjSonicUnavailable => '此服务器没有发现数据 — 选曲保持随机。';
+
+  @override
+  String get autoDjSonicStrictness => '相似度门槛';
+
+  @override
+  String autoDjSonicStrictnessValue(int pct) {
+    return '$pct% 或更相似';
+  }
+
+  @override
+  String get autoDjSonicSeedLabel => '种子歌曲';
+
+  @override
+  String get autoDjSonicSeedNone => '未设置 — 以正在播放的歌曲作为会话基准。';
+
+  @override
+  String get autoDjSonicSeedSearchHint => '搜索歌曲…';
+
+  @override
+  String get autoDjSonicSeedRandom => '随机歌曲';
+
+  @override
+  String get autoDjSonicSeedRemove => '移除种子歌曲';
+
+  @override
+  String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
+
+  @override
+  String get discoverFindSimilar => '查找相似歌曲';
+
+  @override
+  String get discoverStartSession => '开始声音会话';
+
+  @override
+  String get discoverStartSessionSubtitle => '无尽播放与此相似的音乐 — 将替换当前队列。';
+
+  @override
+  String get discoverStartSessionSubtitleRandom => '从随机歌曲开始无尽播放 — 将替换当前队列。';
+
+  @override
+  String get discoverSessionStarted => '声音会话已开始 — Auto DJ 已开启。';
+
+  @override
+  String get autoDjSonicAnchorLabel => '锚点';
+
+  @override
+  String get autoDjSonicAnchorRolling => '跟随氛围';
+
+  @override
+  String get autoDjSonicAnchorLocked => '固定在种子歌曲';
+
+  @override
+  String get autoDjSonicAnchorRollingHint => '每首歌都跟随会话最近的声音 — 会缓慢演变。';
+
+  @override
+  String get autoDjSonicAnchorLockedHint => '整个会话中每首歌都保持接近种子歌曲。';
+
+  @override
+  String get trackAddToPlaylist => '添加到播放列表';
+
+  @override
+  String get trackAddToPlaylistFailed => '无法添加到播放列表。';
+
+  @override
+  String get discoverPlayPathTo => '播放一条通往…的路径';
+
+  @override
+  String get pathScreenTitle => '声音路径';
+
+  @override
+  String get pathStartNotAnalyzed => '起始歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+
+  @override
+  String get pathEndNotAnalyzed => '目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+
+  @override
+  String get pathStartSong => '起始歌曲';
+
+  @override
+  String get pathEndSong => '结束歌曲';
+
+  @override
+  String get pathLength => '长度';
+
+  @override
+  String get pathRegenerate => '重新生成';
+
+  @override
+  String get pathSaveAsPlaylist => '保存为播放列表';
 }

@@ -14,6 +14,7 @@ import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
 import '../util/queue_actions.dart';
@@ -541,6 +542,10 @@ class _BrowserState extends State<Browser> {
                       Slidable.of(context)?.openEndActionPane();
                     },
                   ),
+                  // Same long-press context sheet as server rows — the queue
+                  // actions apply to local files too (Find similar hides
+                  // itself: a local path can't seed the similarity index).
+                  onLongPress: () => _showTrackActions(b[i], c),
                   onTap: () {
                     handleTap(b, i, c);
                   }),
@@ -685,6 +690,18 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  // Long-press context sheet for track rows: the album-detail queue actions
+  // (Add next / Play now / Add to end) plus Find similar when the track's
+  // server supports discovery. Long-press = item context menu is the
+  // convention everywhere (Apple Music / Spotify / Symfonium).
+  void _showTrackActions(DisplayItem item, BuildContext c) {
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      builder: (_) => TrackActionsSheet(item: item, parentContext: c),
+    );
+  }
+
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
@@ -697,6 +714,7 @@ class _BrowserState extends State<Browser> {
             color: VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
+                onLongPress: () => _showTrackActions(b[i], c),
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,

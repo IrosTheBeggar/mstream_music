@@ -16,6 +16,17 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+/// Which paths feed random-songs' `similarTo` when sonic mode is on — a
+/// pure client-side policy (the server statelessly averages whatever
+/// arrives; webapp auto-dj.js parity):
+///   rolling — the last-N DJ picks (session centroid; the session follows
+///             its own vibe and can slowly evolve)
+///   locked  — one pinned anchor for the whole session lane ("stay on
+///             seed"); the pin itself is session state on the audio handler
+/// Persisted under the JSON 'sonicAnchorMode' key by name. Localized
+/// labels: SonicAnchorModeLabel in lib/l10n/enum_labels.dart.
+enum SonicAnchorMode { rolling, locked }
+
 class AutoDJManager {
   AutoDJManager._privateConstructor();
   static final AutoDJManager _instance = AutoDJManager._privateConstructor();
@@ -54,6 +65,31 @@ class AutoDJManager {
   // `musicalKeys` (anchor + 5 neighbours).
   bool harmonicMixingEnabled = false;
 
+  // Sonic similarity — constrain picks to the session's vibe, server-side
+  // via the `similarTo` + `minSimilarity` fields on POST
+  // /api/v1/db/random-songs (the sonic pool is a hard base constraint the
+  // BPM/key waterfall relaxes within). Seeds are the rolling anchor kept in
+  // audio_stuff.dart. Only effective when the DJ server advertised
+  // `discovery` on ping (Server.discoveryAvailable).
+  bool sonicSimilarityEnabled = false;
+  // Raw cosine threshold 0..1 for the sonic pool (server default contract;
+  // webapp default 0.55). The Auto DJ screen's slider exposes 0.30–0.80.
+  double sonicMinSimilarity = 0.55;
+
+  // Anchor policy for the sonic seeds — see [SonicAnchorMode].
+  SonicAnchorMode sonicAnchorMode = SonicAnchorMode.rolling;
+
+  // Explicit sonic seed — "start the session from THIS song" (webapp
+  // sonicSeed parity). It wins over the playing track for a session's
+  // first pick; the rolling history takes over after that. Tied to the
+  // server it was picked from ([sonicSeedServer], a Server.localname) —
+  // audio_stuff only sends it when the DJ runs on that server. Setting or
+  // clearing it is a "new lane": the screen also asks the audio handler to
+  // clear its rolling history (customAction 'clearSonicSession').
+  String? sonicSeedPath; // vpath-form, no leading slash
+  String? sonicSeedTitle; // display only
+  String? sonicSeedServer;
+
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
   // for the small surface area here.
@@ -85,6 +121,19 @@ class AutoDJManager {
       bpmContinuityEnabled = m['bpmContinuityEnabled'] ?? false;
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
+      sonicSimilarityEnabled = m['sonicSimilarityEnabled'] ?? false;
+      final sonicSim = m['sonicMinSimilarity'];
+      sonicMinSimilarity =
+          sonicSim is num ? sonicSim.toDouble().clamp(0.0, 1.0) : 0.55;
+      // Hardened like genreFilterMode: stale/unknown stored values fall
+      // back to rolling instead of rippling junk into request building.
+      sonicAnchorMode = SonicAnchorMode.values.asNameMap()[m['sonicAnchorMode']] ??
+          SonicAnchorMode.rolling;
+      sonicSeedPath = m['sonicSeedPath'] is String ? m['sonicSeedPath'] : null;
+      sonicSeedTitle =
+          m['sonicSeedTitle'] is String ? m['sonicSeedTitle'] : null;
+      sonicSeedServer =
+          m['sonicSeedServer'] is String ? m['sonicSeedServer'] : null;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -102,6 +151,12 @@ class AutoDJManager {
       'bpmContinuityEnabled': bpmContinuityEnabled,
       'bpmTolerance': bpmTolerance,
       'harmonicMixingEnabled': harmonicMixingEnabled,
+      'sonicSimilarityEnabled': sonicSimilarityEnabled,
+      'sonicMinSimilarity': sonicMinSimilarity,
+      'sonicAnchorMode': sonicAnchorMode.name,
+      'sonicSeedPath': sonicSeedPath,
+      'sonicSeedTitle': sonicSeedTitle,
+      'sonicSeedServer': sonicSeedServer,
     }));
   }
 
@@ -176,6 +231,45 @@ class AutoDJManager {
 
   Future<void> setHarmonicMixingEnabled(bool v) async {
     harmonicMixingEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicSimilarityEnabled(bool v) async {
+    sonicSimilarityEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicMinSimilarity(double v) async {
+    sonicMinSimilarity = v.clamp(0.0, 1.0);
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicAnchorMode(SonicAnchorMode v) async {
+    sonicAnchorMode = v;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setSonicSeed(
+      {required String path,
+      required String title,
+      required String server}) async {
+    final norm = path.startsWith('/') ? path.substring(1) : path;
+    if (norm.isEmpty) return;
+    sonicSeedPath = norm;
+    sonicSeedTitle = title;
+    sonicSeedServer = server;
+    _notify();
+    await _save();
+  }
+
+  Future<void> clearSonicSeed() async {
+    sonicSeedPath = null;
+    sonicSeedTitle = null;
+    sonicSeedServer = null;
     _notify();
     await _save();
   }

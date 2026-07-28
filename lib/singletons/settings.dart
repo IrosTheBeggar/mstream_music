@@ -182,6 +182,10 @@ class SettingsManager {
   // the queue) are deleted, newest kept. 0 = keep everything. Only auto-
   // downloads count; user-initiated downloads are never evicted. Default 50.
   int autoDownloadCap = 50;
+  // Discover screen: restrict the P2P / federation lead sections to artists
+  // not already in the library ("new artists only"). Sticky, shared by both
+  // sections — mirrors the webapp's localStorage discoverNewArtistsOnly.
+  bool discoverNewArtistsOnly = false;
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
@@ -301,6 +305,7 @@ class SettingsManager {
       // rather than evicting unpredictably.
       final cap = m['autoDownloadCap'];
       autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;
+      discoverNewArtistsOnly = m['discoverNewArtistsOnly'] ?? false;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
@@ -485,6 +490,7 @@ class SettingsManager {
       'offlineQueue': offlineQueue,
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
       'autoDownloadCap': autoDownloadCap,
+      'discoverNewArtistsOnly': discoverNewArtistsOnly,
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
@@ -548,6 +554,11 @@ class SettingsManager {
 
   Future<void> setStartupView(StartupView v) async {
     startupView = v;
+    await _save();
+  }
+
+  Future<void> setDiscoverNewArtistsOnly(bool v) async {
+    discoverNewArtistsOnly = v;
     await _save();
   }
 
