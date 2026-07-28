@@ -1964,4 +1964,147 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjSonicNeedsNewerServer => 'サーバー 6.15.2 以降が必要です';
+
+  @override
+  String get torrentScreenTitle => 'トレント追加';
+
+  @override
+  String get torrentNoServer => 'サーバーが設定されていません。';
+
+  @override
+  String get torrentServerLabel => 'サーバー';
+
+  @override
+  String get torrentLibraryLabel => 'ライブラリ';
+
+  @override
+  String get torrentNoLibraries => 'このサーバーにはライブラリがありません';
+
+  @override
+  String get torrentSourceLabel => 'ソース';
+
+  @override
+  String get torrentChooseFile => '.torrent ファイルを選択';
+
+  @override
+  String get torrentOr => 'または';
+
+  @override
+  String get torrentMagnetLabel => 'マグネットリンク';
+
+  @override
+  String get torrentAutoDetect => 'メタデータを自動検出';
+
+  @override
+  String get torrentDetecting => '検出中…';
+
+  @override
+  String get torrentDetectNoMetadata => 'メタデータが不足しています — 手動で入力してください';
+
+  @override
+  String get torrentDetected => 'メタデータを検出しました';
+
+  @override
+  String get torrentDetectGuess => '推定結果です — 内容を確認してください';
+
+  @override
+  String get torrentMetadataLabel => 'メタデータ';
+
+  @override
+  String get torrentArtistLabel => 'アーティスト';
+
+  @override
+  String get torrentAlbumLabel => 'アルバム';
+
+  @override
+  String get torrentYearLabel => '年';
+
+  @override
+  String get torrentDestinationLabel => '保存先';
+
+  @override
+  String get torrentPathLabel => 'ライブラリ内のパス';
+
+  @override
+  String torrentPreviewNoLibrary(String path) {
+    return '‹ライブラリ未選択›/$path';
+  }
+
+  @override
+  String get torrentPreviewContents => '‹トレントの内容›';
+
+  @override
+  String get torrentRenameRoot => 'トレントのルートフォルダ名を変更';
+
+  @override
+  String get torrentRenameRootSub => '保存先フォルダ名に合わせる';
+
+  @override
+  String get torrentForceFresh => '強制的に新規ダウンロード';
+
+  @override
+  String get torrentForceFreshSub => 'サーバー上の既存ファイルを確認しない';
+
+  @override
+  String get torrentSubmit => 'トレントを追加';
+
+  @override
+  String get torrentSubmitting => '追加中…';
+
+  @override
+  String get torrentUnavailable => 'このサーバーではトレントを利用できません。';
+
+  @override
+  String get torrentPickLibrary => 'ライブラリを選択してください';
+
+  @override
+  String get torrentOneSource => 'マグネットリンクか .torrent ファイルをどちらか一つ指定してください';
+
+  @override
+  String get torrentPathEmpty => '保存先パスが空です';
+
+  @override
+  String get torrentSeeded => '既にディスク上にあります — シード中';
+
+  @override
+  String get torrentAlreadyInClient => '既にトレントクライアントにあります';
+
+  @override
+  String get torrentInvalidFile => '無効なトレントファイル';
+
+  @override
+  String get torrentSeedCheckFailed => '既存ファイルを確認できませんでした — 新規ダウンロードします';
+
+  @override
+  String get torrentPartialTitle => '一部のファイルは既に存在します';
+
+  @override
+  String get torrentPartialBody => '既存のコピーを指定してシードし、足りないファイルだけをダウンロードします。';
+
+  @override
+  String torrentPartialCount(String matched, String total) {
+    return '$matched/$total ファイルがここにあります';
+  }
+
+  @override
+  String torrentPartialMissing(String missing) {
+    return ' · 残り $missing をダウンロード';
+  }
+
+  @override
+  String get torrentDownloadFresh => 'そのまま新規ダウンロード';
+
+  @override
+  String get torrentMatchNoFolder =>
+      'この候補にはフォルダ名がありません — 「そのまま新規ダウンロード」を使ってください';
+
+  @override
+  String torrentAdded(String name) {
+    return '「$name」を追加しました';
+  }
+
+  @override
+  String torrentDuplicate(String name) {
+    return '「$name」は既にクライアントにあります';
+  }
 }

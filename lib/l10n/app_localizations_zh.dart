@@ -1922,4 +1922,146 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjSonicNeedsNewerServer => '需要服务器 6.15.2 或更高版本';
+
+  @override
+  String get torrentScreenTitle => '添加种子';
+
+  @override
+  String get torrentNoServer => '尚未配置服务器。';
+
+  @override
+  String get torrentServerLabel => '服务器';
+
+  @override
+  String get torrentLibraryLabel => '曲库';
+
+  @override
+  String get torrentNoLibraries => '此服务器上没有曲库';
+
+  @override
+  String get torrentSourceLabel => '来源';
+
+  @override
+  String get torrentChooseFile => '选择 .torrent 文件';
+
+  @override
+  String get torrentOr => '或';
+
+  @override
+  String get torrentMagnetLabel => '磁力链接';
+
+  @override
+  String get torrentAutoDetect => '自动检测元数据';
+
+  @override
+  String get torrentDetecting => '检测中…';
+
+  @override
+  String get torrentDetectNoMetadata => '元数据不足——请手动填写';
+
+  @override
+  String get torrentDetected => '已检测到元数据';
+
+  @override
+  String get torrentDetectGuess => '推测结果——请核对各字段';
+
+  @override
+  String get torrentMetadataLabel => '元数据';
+
+  @override
+  String get torrentArtistLabel => '艺术家';
+
+  @override
+  String get torrentAlbumLabel => '专辑';
+
+  @override
+  String get torrentYearLabel => '年份';
+
+  @override
+  String get torrentDestinationLabel => '目标位置';
+
+  @override
+  String get torrentPathLabel => '曲库内路径';
+
+  @override
+  String torrentPreviewNoLibrary(String path) {
+    return '‹未选曲库›/$path';
+  }
+
+  @override
+  String get torrentPreviewContents => '‹种子内容›';
+
+  @override
+  String get torrentRenameRoot => '重命名种子根文件夹';
+
+  @override
+  String get torrentRenameRootSub => '与目标文件夹名保持一致';
+
+  @override
+  String get torrentForceFresh => '强制重新下载';
+
+  @override
+  String get torrentForceFreshSub => '不检查服务器上已有的文件';
+
+  @override
+  String get torrentSubmit => '添加种子';
+
+  @override
+  String get torrentSubmitting => '添加中…';
+
+  @override
+  String get torrentUnavailable => '此服务器不支持种子。';
+
+  @override
+  String get torrentPickLibrary => '请选择曲库';
+
+  @override
+  String get torrentOneSource => '请提供磁力链接或 .torrent 文件（二选一）';
+
+  @override
+  String get torrentPathEmpty => '目标路径为空';
+
+  @override
+  String get torrentSeeded => '已在磁盘上——正在做种';
+
+  @override
+  String get torrentAlreadyInClient => '已在种子客户端中';
+
+  @override
+  String get torrentInvalidFile => '无效的种子文件';
+
+  @override
+  String get torrentSeedCheckFailed => '无法检查已有文件——将重新下载';
+
+  @override
+  String get torrentPartialTitle => '部分文件已存在';
+
+  @override
+  String get torrentPartialBody => '将种子指向已有副本进行做种，只下载缺少的文件。';
+
+  @override
+  String torrentPartialCount(String matched, String total) {
+    return '此处有 $matched/$total 个文件';
+  }
+
+  @override
+  String torrentPartialMissing(String missing) {
+    return ' · 还需下载 $missing 个';
+  }
+
+  @override
+  String get torrentDownloadFresh => '仍然重新下载';
+
+  @override
+  String get torrentMatchNoFolder => '该匹配没有文件夹名——请改用「仍然重新下载」';
+
+  @override
+  String torrentAdded(String name) {
+    return '已添加「$name」';
+  }
+
+  @override
+  String torrentDuplicate(String name) {
+    return '「$name」已在客户端中';
+  }
 }
