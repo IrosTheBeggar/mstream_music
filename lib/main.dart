@@ -23,6 +23,9 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
+import 'screens/sonic_path_screen.dart';
+import 'singletons/sonic_path_state.dart';
+import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
 import 'screens/transcode_screen.dart';
 import 'screens/share_playlist_dialog.dart';
@@ -393,6 +396,36 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     );
   }
 
+  // Browse-to-pick strip for the sonic path setup — visible while a
+  // TrackCapture request is armed: the next library track tapped fills the
+  // endpoint card. Cancel returns to the (state-preserving) path screen.
+  Widget _captureBanner() {
+    return ValueListenableBuilder<TrackCaptureRequest?>(
+      valueListenable: TrackCapture.active,
+      builder: (context, req, _) {
+        if (req == null) return const SizedBox.shrink();
+        final l = AppLocalizations.of(context);
+        return _bannerStrip(
+          Icons.route,
+          VelvetColors.primary,
+          req.isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
+          action: TextButton(
+            onPressed: () {
+              TrackCapture.cancel();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const SonicPathScreen()),
+              );
+            },
+            child: Text(l.cancel,
+                style: TextStyle(color: VelvetColors.primary)),
+          ),
+        );
+      },
+    );
+  }
+
   // Thin banner above the tabs showing a background storage move's progress
   // (and resumed moves after an app restart). Hidden when none is running.
   Widget _migrationBanner() {
@@ -674,6 +707,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       body: Column(children: [
         _migrationBanner(),
         _tunnelBanner(),
+        _captureBanner(),
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(
@@ -792,6 +826,33 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AutoDJScreen()),
+            );
+          },
+        ),
+        // Sonic path — the journey builder between two tracks. Rendered only
+        // when the current server's ping advertised the route (mStream
+        // #762); the StreamBuilder keeps the tile honest across server
+        // switches.
+        StreamBuilder<Server?>(
+          stream: ServerManager().currentServerStream,
+          initialData: ServerManager().currentServer,
+          builder: (context, snap) {
+            final s = snap.data;
+            if (s == null || s.discoveryPathAvailable != true) {
+              return const SizedBox.shrink();
+            }
+            return ListTile(
+              leading: Icon(Icons.route),
+              title: Text(l.pathScreenTitle),
+              onTap: () {
+                Navigator.of(context).pop();
+                SonicPathState().beginSetup(s);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SonicPathScreen()),
+                );
+              },
             );
           },
         ),

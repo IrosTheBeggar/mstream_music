@@ -16,10 +16,12 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../screens/discover_screen.dart';
+import '../screens/sonic_path_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
+import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
 import '../util/media_format.dart';
@@ -177,10 +179,24 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   }
 
   // Row tap: defer to the shared TapBehavior setting (the same one the file
-  // browser uses). A pure add-to-queue shows a confirmation toast.
+  // browser uses). A pure add-to-queue shows a confirmation toast. An armed
+  // sonic-path pick eats the tap first — nothing may queue mid-pick.
   Future<void> _onRowTap(int index) async {
     final songs = _songs;
-    if (songs == null) return;
+    if (songs == null || index < 0 || index >= songs.length) return;
+    switch (TrackCapture.tryCapture(songs[index])) {
+      case CaptureResult.captured:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
+        );
+        return;
+      case CaptureResult.rejected:
+        showCaptureRejectedToast(context);
+        return;
+      case CaptureResult.pass:
+        break;
+    }
     if (await handleTrackTap(songs, index)) _toast();
   }
 
