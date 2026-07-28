@@ -1014,4 +1014,161 @@ class ApiManager {
     BrowserManager()
         .addListToStack(newList, alphabetical: true, path: res['path']);
   }
+
+  // ── Torrent ─────────────────────────────────────────────────────────
+  // Add a magnet / .torrent to the server's torrent client, into a library
+  // directory — the webapp's torrent panel, driving /api/v1/torrent/*.
+  // All URIs go through Server.apiUri so iroh-tunnel servers work.
+
+  /// Capability + destination probe (GET /torrent/preflight): { active,
+  /// clientType, displayName, noUpload, userAllowed, vpath, subPath,
+  /// vpathConfirmed, daemonPath, reason }. Throws with the server's
+  /// message when the route is missing/denied.
+  Future<Map<String, dynamic>> torrentPreflight(String path,
+      {Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final uri = s.apiUri(
+        '/api/v1/torrent/preflight?path=${Uri.encodeQueryComponent(path)}');
+    final res = await http
+        .get(uri, headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_torrentError(res) ?? 'Torrent unavailable');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Per-library destination templates (GET /torrent/path-templates):
+  /// `{ vpaths: { <name>: { template } }, supportedVars, suggestedTemplate }`.
+  Future<Map<String, dynamic>> torrentPathTemplates({Server? server}) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final res = await http
+        .get(s.apiUri('/api/v1/torrent/path-templates'),
+            headers: {'x-access-token': s.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode != 200) {
+      throw Exception(_torrentError(res) ?? 'Could not load path templates');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Submit a torrent (POST /torrent/add, multipart). Provide exactly one
+  /// of [magnet] or [torrentBytes]. Throws the server's message on failure;
+  /// returns { ok, name, downloadPath, isDuplicate, renameWarning?, … }.
+  Future<Map<String, dynamic>> torrentAdd({
+    required String vpath,
+    String? subPath,
+    required String directoryName,
+    bool renameRoot = false,
+    String? magnet,
+    List<int>? torrentBytes,
+    String? torrentFilename,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest('POST', s.apiUri('/api/v1/torrent/add'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    req.fields['vpath'] = vpath;
+    if (subPath != null && subPath.isNotEmpty) req.fields['subPath'] = subPath;
+    req.fields['directoryName'] = directoryName;
+    req.fields['renameRoot'] = renameRoot ? 'true' : 'false';
+    if (magnet != null && magnet.isNotEmpty) {
+      req.fields['magnet'] = magnet;
+    } else if (torrentBytes != null) {
+      req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+          filename: torrentFilename ?? 'upload.torrent'));
+    }
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 30)));
+    Map<String, dynamic> body;
+    try {
+      body = res.body.isNotEmpty
+          ? jsonDecode(res.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+    } catch (_) {
+      body = <String, dynamic>{};
+    }
+    if (res.statusCode != 200 || body['ok'] != true) {
+      throw Exception(body['message']?.toString() ??
+          body['error']?.toString() ??
+          'Torrent add failed (HTTP ${res.statusCode})');
+    }
+    return body;
+  }
+
+  /// Server-side metadata detection for a .torrent (POST /auto-detect,
+  /// multipart). Returns the raw body — the caller checks `ok` /
+  /// `confidence` / `metadata` / `message`. [vpath] enables the server's
+  /// tag-fetch tier.
+  Future<Map<String, dynamic>> torrentAutoDetect({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    String? vpath,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', s.apiUri('/api/v1/torrent/auto-detect'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpath != null && vpath.isNotEmpty) req.fields['vpath'] = vpath;
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'message': 'Auto-detect failed (HTTP ${res.statusCode})'
+    };
+  }
+
+  /// Check whether the torrent's files already exist on the server
+  /// (POST /seed-existing, multipart). Returns the raw body — the caller
+  /// switches on `outcome` (seeded / already_in_daemon / partial_match /
+  /// no_match / invalid_torrent / daemon_error). Omitting [vpaths] scans
+  /// all of the user's libraries.
+  Future<Map<String, dynamic>> torrentSeedExisting({
+    required List<int> torrentBytes,
+    String? torrentFilename,
+    List<String>? vpaths,
+    Server? server,
+  }) async {
+    final s = server ?? ServerManager().currentServer;
+    if (s == null) throw Exception('No server selected');
+    final req = http.MultipartRequest(
+        'POST', s.apiUri('/api/v1/torrent/seed-existing'));
+    req.headers['x-access-token'] = s.jwt ?? '';
+    if (vpaths != null && vpaths.isNotEmpty) {
+      req.fields['vpaths'] = jsonEncode(vpaths);
+    }
+    req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
+        filename: torrentFilename ?? 'upload.torrent'));
+    final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 45)));
+    try {
+      final body = jsonDecode(res.body);
+      if (body is Map<String, dynamic>) return body;
+    } catch (_) {}
+    return {
+      'ok': false,
+      'outcome': 'daemon_error',
+      'error': 'Seed check failed (HTTP ${res.statusCode})'
+    };
+  }
+
+  // Pull the server's { error: "…" } message out of a failed response.
+  String? _torrentError(http.Response res) {
+    try {
+      final m = jsonDecode(res.body);
+      if (m is Map && m['error'] != null) return m['error'].toString();
+    } catch (_) {}
+    return null;
+  }
 }
