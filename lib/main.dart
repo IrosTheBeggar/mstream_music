@@ -21,6 +21,7 @@ import 'singletons/file_explorer.dart';
 import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
+import 'screens/add_torrent_screen.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
 import 'screens/sonic_path_screen.dart';
@@ -862,6 +863,21 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           onTap: () {
             Navigator.of(context).pop();
             showSharePlaylistDialog(context);
+          },
+        ),
+        // Add torrent — the webapp's torrent panel. No ping flag exists for
+        // torrents, so the entry is always shown and the screen's
+        // /torrent/preflight probe is the gate (it explains why when the
+        // server can't take one).
+        ListTile(
+          leading: Icon(Icons.downloading),
+          title: Text(l.torrentScreenTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddTorrentScreen()),
+            );
           },
         ),
         // Local playlists drawer entry hidden — having both this and

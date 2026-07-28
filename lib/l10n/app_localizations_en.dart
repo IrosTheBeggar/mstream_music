@@ -1864,4 +1864,152 @@ class AppLocalizationsEn extends AppLocalizations {
   String pathPickOnServer(String server) {
     return 'Pick a track on $server';
   }
+
+  @override
+  String get torrentScreenTitle => 'Add torrent';
+
+  @override
+  String get torrentNoServer => 'No server is configured.';
+
+  @override
+  String get torrentServerLabel => 'Server';
+
+  @override
+  String get torrentLibraryLabel => 'Library';
+
+  @override
+  String get torrentNoLibraries => 'No libraries on this server';
+
+  @override
+  String get torrentSourceLabel => 'Source';
+
+  @override
+  String get torrentChooseFile => 'Choose .torrent file';
+
+  @override
+  String get torrentOr => 'or';
+
+  @override
+  String get torrentMagnetLabel => 'Magnet link';
+
+  @override
+  String get torrentAutoDetect => 'Auto-detect metadata';
+
+  @override
+  String get torrentDetecting => 'Detecting…';
+
+  @override
+  String get torrentDetectNoMetadata =>
+      'Not enough metadata — fill the fields in manually';
+
+  @override
+  String get torrentDetected => 'Metadata detected';
+
+  @override
+  String get torrentDetectGuess =>
+      'Best-effort guess — please verify the fields';
+
+  @override
+  String get torrentMetadataLabel => 'Metadata';
+
+  @override
+  String get torrentArtistLabel => 'Artist';
+
+  @override
+  String get torrentAlbumLabel => 'Album';
+
+  @override
+  String get torrentYearLabel => 'Year';
+
+  @override
+  String get torrentDestinationLabel => 'Destination';
+
+  @override
+  String get torrentPathLabel => 'Path in library';
+
+  @override
+  String torrentPreviewNoLibrary(String path) {
+    return '‹no library›/$path';
+  }
+
+  @override
+  String get torrentPreviewContents => '‹torrent contents›';
+
+  @override
+  String get torrentRenameRoot => 'Rename the torrent\'s root folder';
+
+  @override
+  String get torrentRenameRootSub => 'Match the destination folder name';
+
+  @override
+  String get torrentForceFresh => 'Force fresh download';
+
+  @override
+  String get torrentForceFreshSub =>
+      'Skip checking for files already on the server';
+
+  @override
+  String get torrentSubmit => 'Add torrent';
+
+  @override
+  String get torrentSubmitting => 'Adding…';
+
+  @override
+  String get torrentUnavailable => 'Torrents are unavailable on this server.';
+
+  @override
+  String get torrentPickLibrary => 'Pick a library';
+
+  @override
+  String get torrentOneSource => 'Add a magnet link or a .torrent file (one)';
+
+  @override
+  String get torrentPathEmpty => 'Destination path is empty';
+
+  @override
+  String get torrentSeeded => 'Already on disk — seeding it now';
+
+  @override
+  String get torrentAlreadyInClient => 'Already in the torrent client';
+
+  @override
+  String get torrentInvalidFile => 'Invalid torrent file';
+
+  @override
+  String get torrentSeedCheckFailed =>
+      'Couldn\'t check for existing files — downloading fresh';
+
+  @override
+  String get torrentPartialTitle => 'Some files already exist';
+
+  @override
+  String get torrentPartialBody =>
+      'Point the torrent at an existing copy to seed it and download only what is missing.';
+
+  @override
+  String torrentPartialCount(String matched, String total) {
+    return '$matched/$total files here';
+  }
+
+  @override
+  String torrentPartialMissing(String missing) {
+    return ' · $missing to download';
+  }
+
+  @override
+  String get torrentDownloadFresh => 'Download fresh anyway';
+
+  @override
+  String get torrentMatchNoFolder =>
+      'That match has no folder name — use \'Download fresh\' instead';
+
+  @override
+  String torrentAdded(String name) {
+    return 'Added \"$name\"';
+  }
+
+  @override
+  String torrentDuplicate(String name) {
+    return '\"$name\" is already in the client';
+  }
 }

@@ -1428,5 +1428,209 @@
         "type": "String"
       }
     }
+  },
+  "torrentScreenTitle": "Add torrent",
+  "@torrentScreenTitle": {
+    "description": "Drawer entry + screen title for adding a torrent to the server's client."
+  },
+  "torrentNoServer": "No server is configured.",
+  "@torrentNoServer": {
+    "description": "Add-torrent empty state when the app has no servers."
+  },
+  "torrentServerLabel": "Server",
+  "@torrentServerLabel": {
+    "description": "Section label over the server dropdown (shown with 2+ servers)."
+  },
+  "torrentLibraryLabel": "Library",
+  "@torrentLibraryLabel": {
+    "description": "Section label over the destination-library (vpath) dropdown."
+  },
+  "torrentNoLibraries": "No libraries on this server",
+  "@torrentNoLibraries": {
+    "description": "Shown instead of the library dropdown when the server reports no vpaths."
+  },
+  "torrentSourceLabel": "Source",
+  "@torrentSourceLabel": {
+    "description": "Section label over the .torrent-file / magnet inputs."
+  },
+  "torrentChooseFile": "Choose .torrent file",
+  "@torrentChooseFile": {
+    "description": "Button that opens the .torrent file picker."
+  },
+  "torrentOr": "or",
+  "@torrentOr": {
+    "description": "Divider word between the file button and the magnet field."
+  },
+  "torrentMagnetLabel": "Magnet link",
+  "@torrentMagnetLabel": {
+    "description": "Label of the magnet-URI text field."
+  },
+  "torrentAutoDetect": "Auto-detect metadata",
+  "@torrentAutoDetect": {
+    "description": "Button asking the server to detect artist/album/year from the .torrent."
+  },
+  "torrentDetecting": "Detecting…",
+  "@torrentDetecting": {
+    "description": "Auto-detect button label while the server request runs."
+  },
+  "torrentDetectNoMetadata": "Not enough metadata — fill the fields in manually",
+  "@torrentDetectNoMetadata": {
+    "description": "Toast when server auto-detect could not identify the release."
+  },
+  "torrentDetected": "Metadata detected",
+  "@torrentDetected": {
+    "description": "Toast when server auto-detect succeeded with high confidence."
+  },
+  "torrentDetectGuess": "Best-effort guess — please verify the fields",
+  "@torrentDetectGuess": {
+    "description": "Toast when server auto-detect returned a low-confidence result."
+  },
+  "torrentMetadataLabel": "Metadata",
+  "@torrentMetadataLabel": {
+    "description": "Section label over the artist/album/year fields."
+  },
+  "torrentArtistLabel": "Artist",
+  "@torrentArtistLabel": {
+    "description": "Label of the artist text field."
+  },
+  "torrentAlbumLabel": "Album",
+  "@torrentAlbumLabel": {
+    "description": "Label of the album text field."
+  },
+  "torrentYearLabel": "Year",
+  "@torrentYearLabel": {
+    "description": "Label of the year text field."
+  },
+  "torrentDestinationLabel": "Destination",
+  "@torrentDestinationLabel": {
+    "description": "Section label over the path-in-library field."
+  },
+  "torrentPathLabel": "Path in library",
+  "@torrentPathLabel": {
+    "description": "Label of the destination-path text field."
+  },
+  "torrentPreviewNoLibrary": "‹no library›/{path}",
+  "@torrentPreviewNoLibrary": {
+    "description": "Destination preview line when no library is selected.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "torrentPreviewContents": "‹torrent contents›",
+  "@torrentPreviewContents": {
+    "description": "Placeholder tail of the destination preview standing in for the torrent's files."
+  },
+  "torrentRenameRoot": "Rename the torrent's root folder",
+  "@torrentRenameRoot": {
+    "description": "Toggle: rename the torrent's top folder to the destination folder name."
+  },
+  "torrentRenameRootSub": "Match the destination folder name",
+  "@torrentRenameRootSub": {
+    "description": "Subtitle of the rename-root toggle."
+  },
+  "torrentForceFresh": "Force fresh download",
+  "@torrentForceFresh": {
+    "description": "Toggle: skip the seed-existing pre-check and download everything."
+  },
+  "torrentForceFreshSub": "Skip checking for files already on the server",
+  "@torrentForceFreshSub": {
+    "description": "Subtitle of the force-fresh toggle."
+  },
+  "torrentSubmit": "Add torrent",
+  "@torrentSubmit": {
+    "description": "Primary submit button."
+  },
+  "torrentSubmitting": "Adding…",
+  "@torrentSubmitting": {
+    "description": "Submit button label while the add request runs."
+  },
+  "torrentUnavailable": "Torrents are unavailable on this server.",
+  "@torrentUnavailable": {
+    "description": "Fallback reason banner when preflight fails without a server-provided reason."
+  },
+  "torrentPickLibrary": "Pick a library",
+  "@torrentPickLibrary": {
+    "description": "Toast when submitting without a destination library selected."
+  },
+  "torrentOneSource": "Add a magnet link or a .torrent file (one)",
+  "@torrentOneSource": {
+    "description": "Toast when neither or both of magnet/file are provided."
+  },
+  "torrentPathEmpty": "Destination path is empty",
+  "@torrentPathEmpty": {
+    "description": "Toast when the destination path resolves to nothing."
+  },
+  "torrentSeeded": "Already on disk — seeding it now",
+  "@torrentSeeded": {
+    "description": "Toast when the seed-existing check found all files and started seeding in place."
+  },
+  "torrentAlreadyInClient": "Already in the torrent client",
+  "@torrentAlreadyInClient": {
+    "description": "Toast when the torrent is already loaded in the server's client."
+  },
+  "torrentInvalidFile": "Invalid torrent file",
+  "@torrentInvalidFile": {
+    "description": "Toast when the uploaded .torrent cannot be parsed."
+  },
+  "torrentSeedCheckFailed": "Couldn't check for existing files — downloading fresh",
+  "@torrentSeedCheckFailed": {
+    "description": "Toast when the seed-existing pre-check errored; the add continues as a fresh download."
+  },
+  "torrentPartialTitle": "Some files already exist",
+  "@torrentPartialTitle": {
+    "description": "Title of the partial-match sheet (some of the torrent's files are already on the server)."
+  },
+  "torrentPartialBody": "Point the torrent at an existing copy to seed it and download only what is missing.",
+  "@torrentPartialBody": {
+    "description": "Explainer under the partial-match sheet title."
+  },
+  "torrentPartialCount": "{matched}/{total} files here",
+  "@torrentPartialCount": {
+    "description": "Per-match line: how many of the torrent's files exist at this location.",
+    "placeholders": {
+      "matched": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "torrentPartialMissing": " · {missing} to download",
+  "@torrentPartialMissing": {
+    "description": "Appended to the per-match line: how many files would still download. Leading separator included.",
+    "placeholders": {
+      "missing": {
+        "type": "String"
+      }
+    }
+  },
+  "torrentDownloadFresh": "Download fresh anyway",
+  "@torrentDownloadFresh": {
+    "description": "Partial-match sheet action that ignores the matches and downloads everything."
+  },
+  "torrentMatchNoFolder": "That match has no folder name — use 'Download fresh' instead",
+  "@torrentMatchNoFolder": {
+    "description": "Toast when a partial match's path has no usable folder segment."
+  },
+  "torrentAdded": "Added \"{name}\"",
+  "@torrentAdded": {
+    "description": "Toast after a successful torrent add.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "torrentDuplicate": "\"{name}\" is already in the client",
+  "@torrentDuplicate": {
+    "description": "Toast when the add found the torrent already present.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
