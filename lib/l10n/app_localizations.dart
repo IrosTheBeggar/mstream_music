@@ -3209,6 +3209,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save as playlist'**
   String get pathSaveAsPlaylist;
+
+  /// Explainer line at the top of the sonic path setup stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a start and an end song — the journey between them fills itself.'**
+  String get pathSetupHint;
+
+  /// Placeholder in an empty endpoint card before a song is chosen.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get pathNotSet;
+
+  /// Endpoint-card button that fills the card with the currently playing track.
+  ///
+  /// In en, this message translates to:
+  /// **'Use playing song'**
+  String get pathUsePlaying;
+
+  /// Endpoint-card button that opens the song search sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get pathSearchSong;
+
+  /// Endpoint-card button that arms browse-to-pick: the user browses the library and the next tapped track fills the card.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse library'**
+  String get pathBrowseLibrary;
+
+  /// Primary setup-stage button that fetches the path between the two chosen endpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Build the journey'**
+  String get pathBuild;
+
+  /// Results-stage action that clears the journey and endpoints and returns to a pristine setup stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get pathStartOver;
+
+  /// Home-browser banner while browse-to-pick is armed for the start endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the start song — tap a track anywhere in the library'**
+  String get pathPickBannerStart;
+
+  /// Home-browser banner while browse-to-pick is armed for the end endpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the end song — tap a track anywhere in the library'**
+  String get pathPickBannerEnd;
+
+  /// Toast when Use-playing-song is tapped with an empty player.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing'**
+  String get pathNothingPlaying;
+
+  /// Toast when a browse-to-pick tap lands on a local file or another server's track; names the server the pick must come from.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a track on {server}'**
+  String pathPickOnServer(String server);
 }
 
 class _AppLocalizationsDelegate

@@ -1379,5 +1379,54 @@
   "pathSaveAsPlaylist": "Save as playlist",
   "@pathSaveAsPlaylist": {
     "description": "Tooltip/toast name of the action saving the generated path as a server playlist."
+  },
+  "pathSetupHint": "Pick a start and an end song — the journey between them fills itself.",
+  "@pathSetupHint": {
+    "description": "Explainer line at the top of the sonic path setup stage."
+  },
+  "pathNotSet": "Not set",
+  "@pathNotSet": {
+    "description": "Placeholder in an empty endpoint card before a song is chosen."
+  },
+  "pathUsePlaying": "Use playing song",
+  "@pathUsePlaying": {
+    "description": "Endpoint-card button that fills the card with the currently playing track."
+  },
+  "pathSearchSong": "Search",
+  "@pathSearchSong": {
+    "description": "Endpoint-card button that opens the song search sheet."
+  },
+  "pathBrowseLibrary": "Browse library",
+  "@pathBrowseLibrary": {
+    "description": "Endpoint-card button that arms browse-to-pick: the user browses the library and the next tapped track fills the card."
+  },
+  "pathBuild": "Build the journey",
+  "@pathBuild": {
+    "description": "Primary setup-stage button that fetches the path between the two chosen endpoints."
+  },
+  "pathStartOver": "Start over",
+  "@pathStartOver": {
+    "description": "Results-stage action that clears the journey and endpoints and returns to a pristine setup stage."
+  },
+  "pathPickBannerStart": "Pick the start song — tap a track anywhere in the library",
+  "@pathPickBannerStart": {
+    "description": "Home-browser banner while browse-to-pick is armed for the start endpoint."
+  },
+  "pathPickBannerEnd": "Pick the end song — tap a track anywhere in the library",
+  "@pathPickBannerEnd": {
+    "description": "Home-browser banner while browse-to-pick is armed for the end endpoint."
+  },
+  "pathNothingPlaying": "Nothing is playing",
+  "@pathNothingPlaying": {
+    "description": "Toast when Use-playing-song is tapped with an empty player."
+  },
+  "pathPickOnServer": "Pick a track on {server}",
+  "@pathPickOnServer": {
+    "description": "Toast when a browse-to-pick tap lands on a local file or another server's track; names the server the pick must come from.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -1864,4 +1864,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => 'Сохранить как плейлист';
+
+  @override
+  String get pathSetupHint =>
+      'Выберите начальный и конечный трек — путь между ними заполнится сам.';
+
+  @override
+  String get pathNotSet => 'Не выбрано';
+
+  @override
+  String get pathUsePlaying => 'Текущий трек';
+
+  @override
+  String get pathSearchSong => 'Поиск';
+
+  @override
+  String get pathBrowseLibrary => 'Обзор библиотеки';
+
+  @override
+  String get pathBuild => 'Построить путь';
+
+  @override
+  String get pathStartOver => 'Начать заново';
+
+  @override
+  String get pathPickBannerStart =>
+      'Выберите начальный трек — коснитесь любого трека в библиотеке';
+
+  @override
+  String get pathPickBannerEnd =>
+      'Выберите конечный трек — коснитесь любого трека в библиотеке';
+
+  @override
+  String get pathNothingPlaying => 'Сейчас ничего не играет';
+
+  @override
+  String pathPickOnServer(String server) {
+    return 'Выберите трек на $server';
+  }
 }

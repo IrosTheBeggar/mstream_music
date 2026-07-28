@@ -1776,4 +1776,39 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => 'プレイリストとして保存';
+
+  @override
+  String get pathSetupHint => '開始曲と目的曲を選ぶと、その間の旅路が自動で埋まります。';
+
+  @override
+  String get pathNotSet => '未設定';
+
+  @override
+  String get pathUsePlaying => '再生中の曲を使う';
+
+  @override
+  String get pathSearchSong => '検索';
+
+  @override
+  String get pathBrowseLibrary => 'ライブラリを見る';
+
+  @override
+  String get pathBuild => '旅路を作成';
+
+  @override
+  String get pathStartOver => '最初からやり直す';
+
+  @override
+  String get pathPickBannerStart => '開始曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
+  String get pathPickBannerEnd => '目的曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
+  String get pathNothingPlaying => '再生中の曲がありません';
+
+  @override
+  String pathPickOnServer(String server) {
+    return '$server の曲を選んでください';
+  }
 }

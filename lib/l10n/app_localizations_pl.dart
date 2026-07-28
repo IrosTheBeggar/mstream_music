@@ -1861,4 +1861,42 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => 'Zapisz jako playlistę';
+
+  @override
+  String get pathSetupHint =>
+      'Wybierz utwór początkowy i docelowy — podróż między nimi wypełni się sama.';
+
+  @override
+  String get pathNotSet => 'Nie wybrano';
+
+  @override
+  String get pathUsePlaying => 'Użyj odtwarzanego utworu';
+
+  @override
+  String get pathSearchSong => 'Szukaj';
+
+  @override
+  String get pathBrowseLibrary => 'Przeglądaj bibliotekę';
+
+  @override
+  String get pathBuild => 'Utwórz podróż';
+
+  @override
+  String get pathStartOver => 'Zacznij od nowa';
+
+  @override
+  String get pathPickBannerStart =>
+      'Wybierz utwór początkowy — stuknij dowolny utwór w bibliotece';
+
+  @override
+  String get pathPickBannerEnd =>
+      'Wybierz utwór docelowy — stuknij dowolny utwór w bibliotece';
+
+  @override
+  String get pathNothingPlaying => 'Nic nie jest odtwarzane';
+
+  @override
+  String pathPickOnServer(String server) {
+    return 'Wybierz utwór na $server';
+  }
 }

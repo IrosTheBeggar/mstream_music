@@ -1844,4 +1844,42 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => 'Salvar como playlist';
+
+  @override
+  String get pathSetupHint =>
+      'Escolha uma música de início e uma de destino — a jornada entre elas se preenche sozinha.';
+
+  @override
+  String get pathNotSet => 'Não definido';
+
+  @override
+  String get pathUsePlaying => 'Usar a música em reprodução';
+
+  @override
+  String get pathSearchSong => 'Buscar';
+
+  @override
+  String get pathBrowseLibrary => 'Explorar biblioteca';
+
+  @override
+  String get pathBuild => 'Criar a jornada';
+
+  @override
+  String get pathStartOver => 'Começar de novo';
+
+  @override
+  String get pathPickBannerStart =>
+      'Escolha a música de início — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
+  String get pathPickBannerEnd =>
+      'Escolha a música de destino — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
+  String get pathNothingPlaying => 'Nada está tocando';
+
+  @override
+  String pathPickOnServer(String server) {
+    return 'Escolha uma faixa em $server';
+  }
 }

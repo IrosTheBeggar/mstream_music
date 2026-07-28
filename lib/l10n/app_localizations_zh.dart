@@ -1738,4 +1738,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pathSaveAsPlaylist => '保存为播放列表';
+
+  @override
+  String get pathSetupHint => '选择起点和终点歌曲——两者之间的旅程会自动填充。';
+
+  @override
+  String get pathNotSet => '未设置';
+
+  @override
+  String get pathUsePlaying => '使用正在播放的歌曲';
+
+  @override
+  String get pathSearchSong => '搜索';
+
+  @override
+  String get pathBrowseLibrary => '浏览曲库';
+
+  @override
+  String get pathBuild => '生成旅程';
+
+  @override
+  String get pathStartOver => '重新开始';
+
+  @override
+  String get pathPickBannerStart => '选择起点歌曲——在曲库中点按任意曲目';
+
+  @override
+  String get pathPickBannerEnd => '选择终点歌曲——在曲库中点按任意曲目';
+
+  @override
+  String get pathNothingPlaying => '当前没有播放内容';
+
+  @override
+  String pathPickOnServer(String server) {
+    return '请选择 $server 上的曲目';
+  }
 }

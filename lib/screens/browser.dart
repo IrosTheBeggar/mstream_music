@@ -17,9 +17,11 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
+import '../singletons/track_capture.dart';
 import '../util/queue_actions.dart';
 
 import 'add_server.dart';
+import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -135,6 +137,9 @@ class _BrowserState extends State<Browser> {
     }
 
     if (browserList[index].type == 'file') {
+      // An armed sonic-path pick eats the tap BEFORE tap-behavior dispatch
+      // — nothing may queue (or play-from-here) mid-pick.
+      if (_captureTap(browserList[index], context)) return;
       if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
         _playFromHere(browserList, index);
       } else {
@@ -150,12 +155,34 @@ class _BrowserState extends State<Browser> {
     }
 
     if (browserList[index].type == 'localFile') {
+      // Local files can't seed the server's index — an armed pick rejects
+      // them (toast) instead of queueing.
+      if (_captureTap(browserList[index], context)) return;
       if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
         _playFromHere(browserList, index);
       } else {
         addLocalFile(browserList[index]);
       }
       return;
+    }
+  }
+
+  /// True when an armed TrackCapture consumed the tap: a captured pick
+  /// returns to the sonic path screen (its state already holds the song),
+  /// a rejected one toasts and stays armed.
+  bool _captureTap(DisplayItem item, BuildContext context) {
+    switch (TrackCapture.tryCapture(item)) {
+      case CaptureResult.captured:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
+        );
+        return true;
+      case CaptureResult.rejected:
+        showCaptureRejectedToast(context);
+        return true;
+      case CaptureResult.pass:
+        return false;
     }
   }
 

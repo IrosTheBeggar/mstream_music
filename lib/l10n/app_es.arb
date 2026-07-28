@@ -440,5 +440,16 @@
   "pathEndSong": "Canción final",
   "pathLength": "Longitud",
   "pathRegenerate": "Regenerar",
-  "pathSaveAsPlaylist": "Guardar como lista"
+  "pathSaveAsPlaylist": "Guardar como lista",
+  "pathSetupHint": "Elige una canción de inicio y una de destino — el viaje entre ellas se completa solo.",
+  "pathNotSet": "Sin elegir",
+  "pathUsePlaying": "Usar la canción actual",
+  "pathSearchSong": "Buscar",
+  "pathBrowseLibrary": "Explorar biblioteca",
+  "pathBuild": "Crear el viaje",
+  "pathStartOver": "Empezar de nuevo",
+  "pathPickBannerStart": "Elige la canción de inicio — toca una pista en cualquier parte de la biblioteca",
+  "pathPickBannerEnd": "Elige la canción de destino — toca una pista en cualquier parte de la biblioteca",
+  "pathNothingPlaying": "No se está reproduciendo nada",
+  "pathPickOnServer": "Elige una pista en {server}"
 }
