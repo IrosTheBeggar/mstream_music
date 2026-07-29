@@ -120,6 +120,17 @@ local.properties
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
+# This project is Swift Package Manager only — every Apple-platform plugin
+# resolves via SPM, and no Podfile is committed for either platform. Flutter's
+# tooling treats a Podfile's PRESENCE as "this project uses CocoaPods", so a
+# stray generated one makes builds demand CocoaPods on machines that don't
+# have it (and did exactly that to the macOS build). The tool regenerates
+# these on demand, so ignoring them costs nothing.
+**/ios/Podfile
+**/ios/Podfile.lock
+**/macos/Podfile
+**/macos/Podfile.lock
+
 # macOS
 **/Flutter/ephemeral/
 **/Pods/
