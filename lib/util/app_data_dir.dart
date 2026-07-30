@@ -36,7 +36,7 @@ Future<void> migrateLegacyDesktopData() async {
     appLog('[migrate] could not resolve data dirs: $e');
     return;
   }
-  for (final name in ['servers.json', 'queue.json', 'media']) {
+  for (final name in ['servers.json', 'queue.json', 'settings.json', 'media']) {
     try {
       final old = p.join(oldDir.path, name);
       final dest = p.join(newDir.path, name);
