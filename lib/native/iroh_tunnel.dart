@@ -48,18 +48,33 @@ class IrohTunnelException implements Exception {
 // Opens the platform's copy of the native tunnel library.
 //  - Android: jniLibs places libiroh_tunnel.so on the loader path under its
 //    SONAME.
-//  - iOS: the dynamic framework embedded at Runner.app/Frameworks/ (vended by
-//    packages/iroh_tunnel_native via SwiftPM); dlopen resolves the
-//    bundle-relative framework path — the standard Flutter FFI pattern.
-//  - Desktop: cargo's cdylib sits next to the executable (bundled by the
-//    platform's CMake) — `iroh_tunnel.dll` on Windows (no `lib` prefix),
-//    `libiroh_tunnel.dylib` on macOS, `libiroh_tunnel.so` on Linux.
+//  - iOS/macOS: the dynamic framework embedded by SwiftPM (vended by
+//    packages/iroh_tunnel_native's ios/ and macos/ packages). SPM links the
+//    product into Runner, so on macOS the symbols are normally already in
+//    the process image; the framework paths (iOS shallow, macOS versioned)
+//    and the bare dylib name are fallbacks.
+//  - Windows/Linux: cargo's cdylib sits next to the executable (bundled by
+//    the platform's CMake) — `iroh_tunnel.dll` (no `lib` prefix) /
+//    `libiroh_tunnel.so`.
 DynamicLibrary _openNativeLib() {
   if (Platform.isIOS) {
     return DynamicLibrary.open('iroh_tunnel.framework/iroh_tunnel');
   }
   if (Platform.isWindows) return DynamicLibrary.open('iroh_tunnel.dll');
-  if (Platform.isMacOS) return DynamicLibrary.open('libiroh_tunnel.dylib');
+  if (Platform.isMacOS) {
+    final process = DynamicLibrary.process();
+    if (process.providesSymbol('mstream_iroh_start')) return process;
+    try {
+      return DynamicLibrary.open('iroh_tunnel.framework/iroh_tunnel');
+    } catch (_) {
+      try {
+        return DynamicLibrary.open(
+            'iroh_tunnel.framework/Versions/A/iroh_tunnel');
+      } catch (_) {
+        return DynamicLibrary.open('libiroh_tunnel.dylib');
+      }
+    }
+  }
   return DynamicLibrary.open('libiroh_tunnel.so'); // Android + Linux
 }
 
