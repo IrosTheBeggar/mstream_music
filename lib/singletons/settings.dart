@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Locale;
 
-import 'package:path_provider/path_provider.dart';
+import '../util/app_data_dir.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../objects/player_layout.dart';
@@ -295,7 +295,11 @@ class SettingsManager {
   }
 
   Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
+    // App Support on desktop, documents dir on mobile — see appDataDir().
+    // (Was the documents dir everywhere: the one file the servers.json/
+    // queue.json move missed, so desktop settings silently failed to persist
+    // wherever macOS denies Documents access.)
+    final dir = await appDataDir();
     return File('${dir.path}/$_filename');
   }
 
