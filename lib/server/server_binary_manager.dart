@@ -367,10 +367,15 @@ class ServerBinaryManager {
   }
 
   Future<String> _latestVersion(String repo) async {
+    // Bounded: this runs on the server-boot path, and an un-timed-out stall
+    // here (flaky network, GitHub throttling the connection) blocked start()
+    // before its first log line — the bundled server then never booted and
+    // every server-dependent feature (incl. an iroh tunnel to it) went dark.
+    // On timeout, _tryLatestVersion falls back to the newest installed build.
     final resp = await http.get(
       Uri.parse('https://api.github.com/repos/$repo/releases/latest'),
       headers: {'Accept': 'application/vnd.github+json'},
-    );
+    ).timeout(const Duration(seconds: 10));
     if (resp.statusCode != 200) {
       throw HttpException('GitHub API HTTP ${resp.statusCode}');
     }
