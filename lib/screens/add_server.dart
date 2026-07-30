@@ -859,7 +859,14 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
 
     // Save Server List
-    if (mounted) Navigator.pop(context);
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      // Close the form — unless something already did: when this is the
+      // FIRST server, the desktop onboarding's server-list listener pops
+      // every route above home the moment addServer announces it. Popping
+      // again here would then remove the HOME route itself and leave an
+      // empty (black) Navigator — exactly the Quick Connect first-run bug.
+      Navigator.pop(context);
+    }
   }
 
   Map<String, String> parseQrCode(String qrValue) {
@@ -1645,7 +1652,14 @@ class MyCustomFormState extends State<MyCustomForm> {
     _irohSaved = true; // dispose() must not stop the now-active tunnel
     final idx = ServerManager().serverList.indexOf(server);
     if (idx >= 0) await ServerManager().changeCurrentServer(idx);
-    if (mounted) Navigator.pop(context);
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      // Close the form — unless something already did: when this is the
+      // FIRST server, the desktop onboarding's server-list listener pops
+      // every route above home the moment addServer announces it. Popping
+      // again here would then remove the HOME route itself and leave an
+      // empty (black) Navigator — exactly the Quick Connect first-run bug.
+      Navigator.pop(context);
+    }
   }
 
   // --- mDNS-discovered Quick Connect ---
