@@ -1016,8 +1016,18 @@ Future<void> _saveQueueAsPlaylist(BuildContext context) async {
     action: 'Save',
   );
   if (name == null || name.isEmpty) return;
+  // Master's savePlaylist takes the target server explicitly (the sonic-path
+  // flow saves to the seed track's server); the queue save keeps its old
+  // semantics — the CURRENT server — and refreshes the sidebar's playlists,
+  // which the old makeServerCall-based variant did implicitly.
+  final server = ServerManager().currentServer;
+  if (server == null) {
+    showGlobalSnack('No server selected');
+    return;
+  }
   try {
-    await ApiManager().savePlaylist(name, paths);
+    await ApiManager().savePlaylist(server, name, paths);
+    await ApiManager().refreshPlaylists();
     showGlobalSnack('Saved “$name”');
   } catch (_) {
     showGlobalSnack('Couldn’t save the playlist');
