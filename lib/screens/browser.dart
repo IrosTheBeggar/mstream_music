@@ -1,6 +1,5 @@
 import 'dart:io' show Platform;
 
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
@@ -22,13 +21,10 @@ import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/track_actions_sheet.dart';
 
-import '../singletons/media.dart';
-import '../singletons/track_capture.dart';
+import '../util/browse_actions.dart';
 import '../util/media_format.dart';
-import '../util/queue_actions.dart';
 import '../util/server_version.dart';
 
-import 'add_server.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -38,234 +34,13 @@ class Browser extends StatefulWidget {
 }
 
 class _BrowserState extends State<Browser> {
-  // Item types whose tap loads a new list (vs. file/localFile, which
-  // just enqueue and leave the current list in place). Tapping any of
-  // these closes local search.
-  static const Set<String> _navTypes = {
-    'addServer',
-    'directory',
-    'playlist',
-    'execAction',
-    'artist',
-    'album',
-    'localDirectory',
-  };
-
+  // Tap dispatch lives in util/browse_actions.dart, shared with the desktop
+  // search page so sectioned results act with byte-identical semantics.
+  // This stays as the local name the row builders call.
   void handleTap(
       List<DisplayItem> browserList, int index, BuildContext context) {
-    // A browse fetch is already in flight — ignore taps until it resolves (or
-    // is cancelled with Back). Without this, tapping a second folder before the
-    // first finished kicked off a racing request and the screen showed whichever
-    // returned last. addServer stays actionable (the no-server screen never has
-    // a load in flight, but never lock the user out of adding a server).
-    if (BrowserManager().isLoading &&
-        browserList[index].type != 'addServer') {
-      return;
-    }
-
-    if (_navTypes.contains(browserList[index].type)) {
-      BrowserManager().closeSearch();
-    }
-
-    if (browserList[index].type == 'addServer') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => AddServerScreen()),
-      );
-      return;
-    }
-
-    // An .m3u is a text file listing other files. Queued as audio it
-    // stalls the player on a payload it cannot decode; the server will
-    // read it for us and hand back the tracks it names.
-    if (browserList[index].type == 'file' &&
-        isM3u(browserList[index].data)) {
-      ApiManager().getM3uContents(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'directory') {
-      ApiManager().getFileList(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'playlist') {
-      ApiManager().getPlaylistContents(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'playlists') {
-      ApiManager().getPlaylists(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'fileExplorer') {
-      ApiManager().getFileList("~", useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'recent') {
-      ApiManager().getRecentlyAdded(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'rated') {
-      ApiManager().getRated(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'albums') {
-      ApiManager().getAlbums(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'localFiles') {
-      FileExplorer().getPathForServer(browserList[index].server!);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'artists') {
-      ApiManager().getArtists(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'artist') {
-      ApiManager().getArtistAlbums(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'album') {
-      // Open the album detail over the browser body (no route) — keeps the
-      // file-explorer model and the mini-player visible. See main.dart's
-      // IndexedStack and BrowserManager.albumDetail.
-      BrowserManager().openAlbumDetail(browserList[index]);
-      return;
-    }
-
-    if (browserList[index].type == 'file') {
-      // An armed sonic-path pick eats the tap BEFORE tap-behavior dispatch
-      // — nothing may queue (or play-from-here) mid-pick.
-      if (_captureTap(browserList[index], context)) return;
-      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
-        _playFromHere(browserList, index);
-      } else {
-        addFile(browserList[index]);
-      }
-      return;
-    }
-
-    if (browserList[index].type == 'localDirectory') {
-      FileExplorer()
-          .getLocalFiles(browserList[index].data, browserList[index].server!);
-      return;
-    }
-
-    if (browserList[index].type == 'localFile') {
-      // Local files can't seed the server's index — an armed pick rejects
-      // them (toast) instead of queueing.
-      if (_captureTap(browserList[index], context)) return;
-      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
-        _playFromHere(browserList, index);
-      } else {
-        addLocalFile(browserList[index]);
-      }
-      return;
-    }
+    handleBrowseTap(browserList, index, context);
   }
-
-  /// True when an armed TrackCapture consumed the tap: a captured pick
-  /// returns to whichever screen armed it (its state already holds the song),
-  /// a rejected one toasts and stays armed.
-  bool _captureTap(DisplayItem item, BuildContext context) {
-    // Read before tryCapture — a capture clears the pending request.
-    final route = TrackCapture.pending?.returnScreen;
-    switch (TrackCapture.tryCapture(item)) {
-      case CaptureResult.captured:
-        if (route != null) {
-          Navigator.push(context, MaterialPageRoute(builder: route));
-        }
-        return true;
-      case CaptureResult.rejected:
-        showCaptureRejectedToast(context);
-        return true;
-      case CaptureResult.pass:
-        return false;
-    }
-  }
-
-  // Side-effect entry points. Build the MediaItem then run it through
-  // _enqueue, which applies the user's tap behavior preference.
-  Future<void> addLocalFile(DisplayItem i) async {
-    await _enqueue(buildLocalFileMediaItem(i));
-  }
-
-  Future<void> addFile(DisplayItem i) async {
-    final item = await buildServerFileMediaItem(i);
-    if (item != null) await _enqueue(item);
-  }
-
-  // Adds the item to the queue, then dispatches on the user's tap
-  // behavior preference. Pattern A (playFromHere) doesn't reach here
-  // — it's handled directly in handleTap because it needs the
-  // surrounding browser context to know what to fill the queue with.
-  Future<void> _enqueue(MediaItem item) async {
-    final wasEmpty = MediaManager().audioHandler.queue.value.isEmpty;
-    await MediaManager().audioHandler.addQueueItem(item);
-
-    switch (SettingsManager().tapBehavior) {
-      case TapBehavior.addToQueue:
-        // Convenience: first tap from a fresh state shouldn't require
-        // a separate Play press to actually start anything.
-        if (wasEmpty) {
-          await MediaManager().audioHandler.play();
-        }
-        break;
-      case TapBehavior.appendAndJump:
-        final queueLen = MediaManager().audioHandler.queue.value.length;
-        await MediaManager().audioHandler.skipToQueueItem(queueLen - 1);
-        await MediaManager().audioHandler.play();
-        break;
-      case TapBehavior.playFromHere:
-        // Unreachable — see handleTap.
-        break;
-    }
-  }
-
-  // Pattern A: clear the queue, fill it with every playable item from the
-  // current browser view (in order), jump to the tapped one, play. Delegates to
-  // the shared helper (util/queue_actions.dart) so the album-detail screen plays
-  // albums with identical semantics.
-  /// True when the current frame is an ORDERED collection — a file-explorer
-  /// folder or a playlist — rather than an aggregate the server assembled
-  /// (search results, Rated, Recently added).
-  ///
-  /// The two frame markers are the same ones the subheader and toolbar read,
-  /// so this can't drift out of step with what the user sees named above the
-  /// list. Album detail never reaches here: it has its own row-tap path.
-  bool get _isOrderedCollection =>
-      BrowserManager().currentPath != null ||
-      BrowserManager().currentPlaylist != null;
-
-  /// Play-from-here fills the queue with the list you're looking at, which is
-  /// what you want inside an album, playlist or folder. On an aggregate it is
-  /// not: tapping one search hit would queue every other hit, and Rated is
-  /// unbounded. Spotify and Apple Music both play just the tapped song from a
-  /// search result, so aggregates get a single-item queue.
-  Future<void> _playFromHere(List<DisplayItem> browserList, int tappedIndex) =>
-      _isOrderedCollection
-          ? playFromHere(browserList, tappedIndex)
-          : playFromHere([browserList[tappedIndex]], 0);
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
@@ -648,6 +423,9 @@ class _BrowserState extends State<Browser> {
         child: Container(
             decoration: _rowBoxDecoration(i),
             child: ListTile(
+            // Long-press = this row's actions, the same convention the track
+            // rows use (touch); the ⋮ menu is the same reach for a mouse.
+            onLongPress: () => _showFolderActions(b[i], c),
             leading: b[i].icon,
             title: b[i].getText(truncate: !allowWrap),
             subtitle: b[i].getSubText(),
