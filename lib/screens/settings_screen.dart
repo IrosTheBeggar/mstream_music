@@ -16,6 +16,7 @@ import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
+import 'hotkeys_dialog.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
@@ -92,6 +93,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (result == null) return;
                 await SettingsManager()
                     .setPartyPin(result.isEmpty ? null : result);
+                if (mounted) setState(() {});
+              },
+            ),
+            ListTile(
+              title: const Text('Keyboard shortcuts'),
+              subtitle: Text(
+                SettingsManager().hotkeysEnabled
+                    ? 'Rebind playback, seek, volume and search keys'
+                    : 'Shortcuts are turned off',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              trailing: Icon(Icons.keyboard,
+                  color: VelvetColors.textSecondary, size: 20),
+              onTap: () async {
+                await showHotkeysDialog(context);
                 if (mounted) setState(() {});
               },
             ),
