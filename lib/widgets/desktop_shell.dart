@@ -16,7 +16,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter/services.dart' show FilteringTextInputFormatter, KeyDownEvent, LogicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show FilteringTextInputFormatter, KeyDownEvent, LogicalKeyboardKey;
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
@@ -29,6 +30,7 @@ import '../screens/add_server.dart';
 import '../screens/album_detail_view.dart';
 import '../screens/auto_dj.dart';
 import '../screens/browser.dart';
+import '../screens/desktop_search.dart';
 import '../screens/diagnostics_screen.dart';
 import '../screens/manage_server.dart';
 import '../screens/settings_screen.dart';
@@ -256,9 +258,21 @@ class _DesktopShellState extends State<DesktopShell> {
     setState(() => _active = cat.key);
   }
 
+  // The server-wide search page (sidebar tile + ⌘K). ⌘K toggles: a second
+  // press while the page is up pops back to browse. The browse list's LOCAL
+  // filter (which this tile used to open) moved to ⌘F — see the MediaShortcuts
+  // extra bindings in build().
+  bool _searchOpen = false;
   void _openSearch() {
+    if (_searchOpen) {
+      _contentNav.currentState?.maybePop();
+      return;
+    }
     _showBrowse();
-    BrowserManager().openSearch();
+    _searchOpen = true;
+    _contentNav.currentState
+        ?.push(MaterialPageRoute(builder: (_) => const DesktopSearchScreen()))
+        .then((_) => _searchOpen = false);
     setState(() => _active = 'search');
   }
 
@@ -371,6 +385,18 @@ class _DesktopShellState extends State<DesktopShell> {
     // notification corner (Windows / VS Code / Slack) — so toasts never cover
     // the transport controls.
     return MediaShortcuts(
+      extra: {
+        // ⌘K / Ctrl+K — the search page (toggles). ⌘F / Ctrl+F — the browse
+        // list's local filter, which lost its sidebar tile to the page.
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _openSearch,
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _openSearch,
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): () =>
+            BrowserManager().openSearch(),
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
+            BrowserManager().openSearch(),
+      },
       child: Stack(
         children: [
           shell,
