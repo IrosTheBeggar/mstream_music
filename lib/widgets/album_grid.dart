@@ -92,7 +92,7 @@ class AlbumGrid extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (context, i) {
           final item = items[i];
-          return _AlbumCard(
+          return AlbumCard(
             item: item,
             onTap: () => onTap(i),
             cacheWidth: cacheW,
@@ -103,22 +103,26 @@ class AlbumGrid extends StatelessWidget {
   }
 }
 
-class _AlbumCard extends StatefulWidget {
+/// One album/artist tile: cover art (or placeholder) over a name line, with
+/// the desktop hover lift. Public so surfaces beyond the grid — the desktop
+/// search page's horizontal shelves — render identical cards.
+class AlbumCard extends StatefulWidget {
   final DisplayItem item;
   final VoidCallback onTap;
   final int cacheWidth;
 
-  const _AlbumCard({
+  const AlbumCard({
+    super.key,
     required this.item,
     required this.onTap,
     required this.cacheWidth,
   });
 
   @override
-  State<_AlbumCard> createState() => _AlbumCardState();
+  State<AlbumCard> createState() => _AlbumCardState();
 }
 
-class _AlbumCardState extends State<_AlbumCard> {
+class _AlbumCardState extends State<AlbumCard> {
   // Pointer hover (desktop): lift the card and brighten its surface. Inert on
   // touch, so the phone grid is unchanged.
   bool _hover = false;

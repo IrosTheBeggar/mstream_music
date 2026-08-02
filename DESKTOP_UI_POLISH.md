@@ -20,7 +20,7 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 | 7 | Full-screen Now Playing view — visualizer as the live backdrop | **Done** — the flagship (see below) |
 | 8 | Synced lyrics pane (lyrics shipped in v0.30, surface on desktop) | **Done** — landed inside #7 |
 | 9 | Home dashboard landing (recently played / added / playlists shelves) | Pending |
-| 10 | Ctrl+K global search / command palette | Pending |
+| 10 | Ctrl+K global search / command palette | **Done** — reframed as a full search page: ⌘K/Ctrl+K (toggle) + the sidebar Search tile open a dedicated page with organized results (artist tiles · album card shelf · song/lyric/file rows, lyric matches show their snippet). Browse's local filter moved to ⌘F. |
 | 11 | Windows SMTC (media overlay w/ art + transport, `smtc_windows`) | Pending — Windows-side |
 | 12 | Mini player (small always-on-top window) | Pending — bigger lift |
 | 13 | Queue redesign (now/up-next grouping) | **Done** — "Queue" header + flat rows + full-height bar card |
@@ -70,4 +70,9 @@ whole layout below.
 - Judge feel/perf on RELEASE builds only (debug JIT lies about jank).
 - The hover-play button on album cards needs a side-effect-free album-songs
   fetch (the current API call drives browse navigation) — follow-up for #3
-  or whenever cards grow inline actions.
+  or whenever cards grow inline actions. The PATTERN now exists: #10 split
+  search into `searchServerRaw` (structured results, no browse side effects)
+  with the classic flat path layered on top — do the same for album songs.
+- Result/row taps dispatch through `util/browse_actions.dart` (extracted from
+  the browser in #10) — any new surface that shows DisplayItems (dashboard
+  shelves, context menus) should reuse it, not re-implement per-type taps.
