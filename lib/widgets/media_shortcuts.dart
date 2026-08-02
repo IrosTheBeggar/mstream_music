@@ -99,7 +99,15 @@ void _cycleRepeat() {
 ///   media keys       play-pause / next / previous / stop (where the OS delivers them)
 class MediaShortcuts extends StatelessWidget {
   final Widget child;
-  const MediaShortcuts({super.key, required this.child});
+
+  /// App-level chords beyond the media keys (⌘K search, ⌘F filter …), passed
+  /// in by the shell. Matched BEFORE the text-field bail-out below: chords
+  /// carry a modifier, so they are never printable input a field could want —
+  /// and ⌘K must open search even while a field holds focus.
+  final Map<ShortcutActivator, VoidCallback> extra;
+
+  const MediaShortcuts(
+      {super.key, required this.child, this.extra = const {}});
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +144,12 @@ class MediaShortcuts extends StatelessWidget {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
+        for (final entry in extra.entries) {
+          if (entry.key.accepts(event, HardwareKeyboard.instance)) {
+            entry.value();
+            return KeyEventResult.handled;
+          }
+        }
         if (_isEditingText()) return KeyEventResult.ignored;
         for (final entry in bindings.entries) {
           if (entry.key.accepts(event, HardwareKeyboard.instance)) {
