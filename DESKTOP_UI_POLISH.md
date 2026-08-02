@@ -25,6 +25,7 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 | 12 | Mini player (small always-on-top window) | Pending — bigger lift |
 | 13 | Queue redesign (now/up-next grouping) | **Done** — "Queue" header + flat rows + full-height bar card |
 | 14 | Accent/theme customization | Pending — `VelvetPalette.withAccent` already exists |
+| 15 | Configurable keyboard shortcuts (parity with the web player's keymap modal) | **Done** — Settings > Keyboard Shortcuts: rebind by pressing a key, clear/restore per action, master toggle; adds the web player's J/L, K and 0–9 actions |
 
 ## Delivered beyond the original list
 
