@@ -270,8 +270,16 @@ class _DesktopShellState extends State<DesktopShell> {
     }
     _showBrowse();
     _searchOpen = true;
+    // Zero-duration route: sidebar destinations swap the content pane in
+    // place, so search appearing with a slide read as foreign. It still
+    // rides the content Navigator (Esc/⌘K pop it, _showBrowse clears it on
+    // any sidebar jump) — it just materializes like every other page.
     _contentNav.currentState
-        ?.push(MaterialPageRoute(builder: (_) => const DesktopSearchScreen()))
+        ?.push(PageRouteBuilder(
+          pageBuilder: (_, _, _) => const DesktopSearchScreen(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ))
         .then((_) => _searchOpen = false);
     setState(() => _active = 'search');
   }
