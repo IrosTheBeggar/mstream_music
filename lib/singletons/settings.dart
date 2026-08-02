@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' show Locale;
 
 import '../util/app_data_dir.dart';
+import '../util/hotkeys.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../objects/player_layout.dart';
@@ -192,6 +193,10 @@ class SettingsManager {
   // lock). Null = hold-to-unlock only. Stored plainly in the settings file —
   // this is a guests-at-the-keyboard latch, not a security boundary.
   String? partyPin;
+  // Desktop keyboard shortcuts. The live keymap is HotkeyManager.instance;
+  // this flag is its master toggle, and the bindings ride the settings file
+  // under 'hotkeys' (see the load/save hooks below).
+  bool hotkeysEnabled = true;
   // UI language. `null` means "follow the device locale" (the default);
   // a language code like 'en'/'es' forces that language regardless of
   // the OS setting. Persisted as the JSON 'language' key.
@@ -347,6 +352,11 @@ class SettingsManager {
       accentColor = accent is int ? accent : null;
       final pp = m['partyPin'];
       partyPin = (pp is String && pp.isNotEmpty) ? pp : null;
+      hotkeysEnabled = m['hotkeysEnabled'] ?? true;
+      final hk = m['hotkeys'];
+      HotkeyManager.instance
+          .loadFrom(hk is Map ? hk.cast<String, dynamic>() : null,
+              enabled: hotkeysEnabled);
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
@@ -556,6 +566,8 @@ class SettingsManager {
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
       'partyPin': partyPin,
+      'hotkeysEnabled': hotkeysEnabled,
+      'hotkeys': HotkeyManager.instance.toJson(),
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
@@ -699,6 +711,18 @@ class SettingsManager {
     await _save();
   }
 
+  /// Persist the current keymap (HotkeyManager.instance) after the editor
+  /// changes a binding or the master toggle.
+  Future<void> saveHotkeys() async {
+    HotkeyManager.instance.enabled = hotkeysEnabled;
+    await _save();
+  }
+
+  Future<void> setHotkeysEnabled(bool v) async {
+    hotkeysEnabled = v;
+    await saveHotkeys();
+  }
+
   /// Set / change / clear (null or empty) the party-mode unlock PIN.
   Future<void> setPartyPin(String? v) async {
     partyPin = (v == null || v.isEmpty) ? null : v;
@@ -829,6 +853,10 @@ class SettingsManager {
     visualizerShaderParams = {};
     language = null;
     partyPin = null;
+    hotkeysEnabled = true;
+    HotkeyManager.instance
+      ..restoreDefaults()
+      ..enabled = true;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _letterStripSideStream.add(letterStripSide);

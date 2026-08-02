@@ -48,6 +48,7 @@ import '../native/projectm_controller.dart';
 import '../native/projectm_desktop.dart';
 import '../theme/velvet_theme.dart';
 import 'desktop_toast.dart';
+import '../util/hotkeys.dart';
 import '../util/image_cache.dart';
 import '../util/media_format.dart';
 import '../util/wake_guard.dart';
@@ -393,17 +394,14 @@ class _DesktopShellState extends State<DesktopShell> {
     // notification corner (Windows / VS Code / Slack) — so toasts never cover
     // the transport controls.
     return MediaShortcuts(
-      extra: {
-        // ⌘K / Ctrl+K — the search page (toggles). ⌘F / Ctrl+F — the browse
-        // list's local filter, which lost its sidebar tile to the page.
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
-            _openSearch,
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
-            _openSearch,
-        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): () =>
-            BrowserManager().openSearch(),
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
-            BrowserManager().openSearch(),
+      // The two shell-owned actions in the user's keymap (defaults ⌘K / ⌘F,
+      // rebindable in Settings > Keyboard Shortcuts): the search page, which
+      // toggles, and the browse list's local filter, which lost its sidebar
+      // tile to that page. Everything else in the map is player transport
+      // and MediaShortcuts runs it directly.
+      shellActions: {
+        HotkeyAction.openSearch: _openSearch,
+        HotkeyAction.localFilter: () => BrowserManager().openSearch(),
       },
       child: Stack(
         children: [
