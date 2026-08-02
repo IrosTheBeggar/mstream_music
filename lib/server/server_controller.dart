@@ -150,11 +150,15 @@ class ServerController {
               'app instance');
           return;
         }
-        // Our own leftover with a DEAD parent. Do NOT adopt it: its
-        // stdout/stderr still pipe to the dead parent, so its next console
-        // write EPIPE-crashes it (observed: the fingerprint probe above is
-        // often what kills it). Recycle instead — kill the tree and fall
-        // through to spawn a fresh child with live pipes.
+        // Our own leftover with a DEAD parent. Recycle it — kill the tree
+        // and fall through to spawn fresh with live pipes. Supervised
+        // binaries (mStream #800, spawned with --supervised) self-terminate
+        // the moment this app dies, so this backstop mostly serves
+        // pre-#800 binaries — whose orphans are also unsafe to adopt: their
+        // stdout still pipes to the dead parent, and their next console
+        // write kills them (uncaught EPIPE before #800, clean exit 74
+        // after; observed: the fingerprint probe above is often the write
+        // that does it).
         _log('recycling leftover server (pid $existingPid) on port $port');
         await _killTree(existingPid);
         if (!await _waitPortFree(port)) {
@@ -189,7 +193,16 @@ class ServerController {
       }
 
       _set(const ServerRunStatus(ServerRunPhase.starting));
-      final proc = await Process.start(exe, ['-j', configPath],
+      final args = ['-j', configPath];
+      // --supervised (mStream #800): the server watches stdin and exits the
+      // moment it hits EOF — i.e. the instant THIS process dies, even by a
+      // crash or force-kill where no cleanup code runs. Process.start's
+      // default mode keeps our end of the child's stdin pipe open for
+      // exactly that lifetime; nothing may ever close proc.stdin while the
+      // server should keep running. Older binaries exit(1) on unknown
+      // options, so the flag is capability-gated on the binary's own help.
+      if (await _supportsSupervised(exe)) args.add('--supervised');
+      final proc = await Process.start(exe, args,
           workingDirectory: dataDir.path);
       _process = proc;
       // Mirror the server's console into ServerLog (the Diagnostics "Server"
@@ -261,20 +274,59 @@ class ServerController {
     return await _listenerPid(port) ?? -1;
   }
 
-  /// Owning pid of the LISTENING socket on [port] (netstat parse), so the
-  /// recycle/share/foreign decision can identify the holder. Null when
-  /// unresolved.
+  /// Owning pid of the LISTENING socket on [port] (netstat on Windows, lsof
+  /// elsewhere), so the recycle/share/foreign decision can identify the
+  /// holder. Null when unresolved.
   Future<int?> _listenerPid(int port) async {
-    if (!Platform.isWindows) return null;
     try {
-      final r = await Process.run('netstat', ['-ano', '-p', 'TCP']);
-      for (final line in (r.stdout as String).split('\n')) {
-        if (!line.contains('LISTENING') || !line.contains(':$port ')) continue;
-        final pid = int.tryParse(line.trim().split(RegExp(r'\s+')).last);
-        if (pid != null && pid > 0) return pid;
+      if (Platform.isWindows) {
+        final r = await Process.run('netstat', ['-ano', '-p', 'TCP']);
+        for (final line in (r.stdout as String).split('\n')) {
+          if (!line.contains('LISTENING') || !line.contains(':$port ')) {
+            continue;
+          }
+          final pid = int.tryParse(line.trim().split(RegExp(r'\s+')).last);
+          if (pid != null && pid > 0) return pid;
+        }
+      } else {
+        // -t prints bare pids, one per line, for listeners on the port.
+        // Exits 1 with empty output when nothing matches — falls through.
+        final r = await Process.run(
+            'lsof', ['-nP', '-t', '-iTCP:$port', '-sTCP:LISTEN']);
+        for (final line in (r.stdout as String).split('\n')) {
+          final pid = int.tryParse(line.trim());
+          if (pid != null && pid > 0) return pid;
+        }
       }
     } catch (_) {}
     return null;
+  }
+
+  // Capability cache: exe path -> whether its help text lists --supervised.
+  // One probe per binary per app run; the binary at a given path only
+  // changes via a version update (new path), so re-probing per start is
+  // already generous.
+  static final Map<String, bool> _supervisedSupport = {};
+
+  /// Whether [exe] understands `--supervised` (mStream #800). Probed via
+  /// `--help` rather than compared against a release number: unknown flags
+  /// make older wrappers exit(1) at parse time, and the help text ships
+  /// WITH the flag, so it can't disagree with the binary the way a
+  /// hardcoded version threshold can. Any probe failure counts as "no" —
+  /// worst case the server is spawned without the flag, which every binary
+  /// accepts, and the orphan-recycle backstop below still covers it.
+  Future<bool> _supportsSupervised(String exe) async {
+    final cached = _supervisedSupport[exe];
+    if (cached != null) return cached;
+    var supported = false;
+    try {
+      final r = await Process.run(exe, ['--help'])
+          .timeout(const Duration(seconds: 10));
+      supported = (r.stdout as String).contains('--supervised');
+    } catch (_) {/* unsupported */}
+    _log('supervised mode ${supported ? 'offered' : 'not offered'} '
+        'by this server binary');
+    return _supervisedSupport[exe] = supported;
   }
 
   void _onProcessExit(int code) {
@@ -282,7 +334,13 @@ class ServerController {
     // or external kill).
     if (_process == null) return;
     _process = null;
-    _log('server exited unexpectedly (code $code)');
+    // 74 (sysexits EX_IOERR) is the server's own "console lost" self-
+    // termination (mStream #800): it concluded OUR pipes were gone. Seeing
+    // it while this app is alive means the stdio plumbing broke, not the
+    // server itself — name it so Diagnostics points the right way.
+    _log(code == 74
+        ? 'server shut itself down: console lost (exit 74)'
+        : 'server exited unexpectedly (code $code)');
     _set(ServerRunStatus(ServerRunPhase.error, error: 'server exited ($code)'));
   }
 
@@ -501,19 +559,28 @@ class ServerController {
 
   /// Whether [pid]'s parent process is a LIVE instance of this app — i.e. the
   /// server belongs to another running copy of mstream_music, not to a dead
-  /// run. One PowerShell CIM query; only reached on the rare
-  /// port-already-held boot path.
+  /// run. One PowerShell CIM query (Windows) / two ps lookups (elsewhere);
+  /// only reached on the rare port-already-held boot path.
   Future<bool> _isChildOfLiveApp(int pid) async {
-    if (!Platform.isWindows) return false;
     try {
-      final r = await Process.run('powershell', [
-        '-NoProfile',
-        '-Command',
-        "\$p = (Get-CimInstance Win32_Process -Filter 'ProcessId=$pid')"
-            ".ParentProcessId; "
-            "(Get-Process -Id \$p -ErrorAction SilentlyContinue).ProcessName",
-      ]);
-      return (r.stdout as String).trim().toLowerCase() == 'mstream_music';
+      if (Platform.isWindows) {
+        final r = await Process.run('powershell', [
+          '-NoProfile',
+          '-Command',
+          "\$p = (Get-CimInstance Win32_Process -Filter 'ProcessId=$pid')"
+              ".ParentProcessId; "
+              "(Get-Process -Id \$p -ErrorAction SilentlyContinue).ProcessName",
+        ]);
+        return (r.stdout as String).trim().toLowerCase() == 'mstream_music';
+      }
+      final pr = await Process.run('ps', ['-p', '$pid', '-o', 'ppid=']);
+      final ppid = int.tryParse((pr.stdout as String).trim());
+      // Orphans reparent to pid 1 (launchd/init) — a live app parent never is.
+      if (ppid == null || ppid <= 1) return false;
+      final cr = await Process.run('ps', ['-p', '$ppid', '-o', 'comm=']);
+      // macOS comm is the full executable path; Linux truncates to the name.
+      final comm = (cr.stdout as String).trim();
+      return comm == 'mstream_music' || comm.endsWith('/mstream_music');
     } catch (_) {
       return false;
     }
@@ -578,12 +645,24 @@ typedef _QueryImageNameC = Int32 Function(
 typedef _QueryImageNameD = int Function(
     int, int, Pointer<Utf16>, Pointer<Uint32>);
 
-/// Full executable path of [pid] via kernel32 (OpenProcess +
-/// QueryFullProcessImageNameW), or null when it can't be resolved (process
-/// gone, access denied, non-Windows). No subprocess — cheap enough for the
-/// recycle/takeover paths.
+/// Full executable path of [pid], or null when it can't be resolved (process
+/// gone, access denied). Windows: kernel32 (OpenProcess +
+/// QueryFullProcessImageNameW), no subprocess. macOS: `ps -o comm=`, which
+/// prints the full executable path there. Linux: `/proc/N/exe`. Rare-path
+/// only (recycle/takeover), so the posix subprocess cost is fine.
 String? _exeOfPid(int pid) {
-  if (!Platform.isWindows) return null;
+  if (!Platform.isWindows) {
+    try {
+      if (Platform.isLinux) {
+        return File('/proc/$pid/exe').resolveSymbolicLinksSync();
+      }
+      final r = Process.runSync('ps', ['-p', '$pid', '-o', 'comm=']);
+      final exe = (r.stdout as String).trim();
+      return exe.isEmpty ? null : exe;
+    } catch (_) {
+      return null;
+    }
+  }
   try {
     final k32 = DynamicLibrary.open('kernel32.dll');
     final openProcess =
