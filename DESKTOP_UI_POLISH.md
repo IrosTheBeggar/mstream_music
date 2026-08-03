@@ -24,7 +24,7 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 | 11 | Windows SMTC (media overlay w/ art + transport, `smtc_windows`) | Pending — Windows-side |
 | 12 | Mini player (small always-on-top window) | Pending — bigger lift |
 | 13 | Queue redesign (now/up-next grouping) | **Done** — "Queue" header + flat rows + full-height bar card |
-| 14 | Accent/theme customization | Pending — `VelvetPalette.withAccent` already exists |
+| 14 | Accent/theme customization | **Done** (row was stale) — Settings > Accent color opens `AccentColorSheet` (preset swatches + custom HSV, writes `setAccentColor`, `withAccent` re-derives the accent-keyed shades across every theme), and the theme picker carries the full set incl. the desktop-only Onyx/Graphite frames |
 | 15 | Configurable keyboard shortcuts (parity with the web player's keymap modal) | **Done** — Settings > Keyboard Shortcuts: rebind by pressing a key, clear/restore per action, master toggle; adds the web player's J/L, K and 0–9 actions |
 
 ## Delivered beyond the original list
@@ -77,9 +77,10 @@ whole layout below.
   folded queue glyph at the corner (amber while the queue is open). The whole
   card toggles the queue; the art is plain (an art-tap opening Now Playing
   wasn't discoverable).
-- **Queue column** reads a "Queue" header (carrying clear · save/download/share
-  · close) → the track list. It shares the content field with the browser (no
-  divider), web-app style.
+- **Queue column** reads a "Queue" header (light-red clear · a save/download/
+  share ⋮ menu; closing lives on the bar's queue glyph — the header's ✕ read
+  as "clear") → the track list, durations on each row's bottom line. It shares
+  the content field with the browser (no divider), web-app style.
 - **Full-screen Now Playing** (#7) covers the whole shell: blurred album art or
   the live shader visualizer as backdrop (corner toggle, no reflow between
   states), the shared waveform + transport, a synced-lyrics pane (#8), up next,
