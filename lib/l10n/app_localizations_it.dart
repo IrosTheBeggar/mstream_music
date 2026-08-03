@@ -76,6 +76,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get themeSlate => 'Ardesia';
 
   @override
+  String get themeGraphite => 'Grafite';
+
+  @override
   String get tapAddToQueue => 'Aggiungi alla coda';
 
   @override
@@ -188,6 +191,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get themeSubtitleSlate =>
       'Toni grigio-blu come la web app, con accenti ambra.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Grigi neutri con linee di accento ambra.';
 
   @override
   String get settingsTranscode => 'Transcodifica audio';

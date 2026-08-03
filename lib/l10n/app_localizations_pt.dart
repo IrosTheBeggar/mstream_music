@@ -76,6 +76,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get themeSlate => 'Ardósia';
 
   @override
+  String get themeGraphite => 'Grafite';
+
+  @override
   String get tapAddToQueue => 'Adicionar à fila';
 
   @override
@@ -188,6 +191,10 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get themeSubtitleSlate =>
       'Tons cinza-azulados como na aplicação web, com detalhes âmbar.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Cinzas neutros com linhas de destaque âmbar.';
 
   @override
   String get settingsTranscode => 'Transcodificar áudio';

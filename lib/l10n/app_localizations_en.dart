@@ -76,6 +76,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeSlate => 'Slate';
 
   @override
+  String get themeGraphite => 'Graphite';
+
+  @override
   String get tapAddToQueue => 'Add to queue';
 
   @override
@@ -188,6 +191,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get themeSubtitleSlate =>
       'Blue-gray tones matching the web app, with amber accents.';
+
+  @override
+  String get themeSubtitleGraphite => 'Neutral grays with amber accent lines.';
 
   @override
   String get settingsTranscode => 'Transcode audio';

@@ -222,6 +222,12 @@ abstract class AppLocalizations {
   /// **'Slate'**
   String get themeSlate;
 
+  /// No description provided for @themeGraphite.
+  ///
+  /// In en, this message translates to:
+  /// **'Graphite'**
+  String get themeGraphite;
+
   /// TapBehavior option: append to queue.
   ///
   /// In en, this message translates to:
@@ -431,6 +437,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Blue-gray tones matching the web app, with amber accents.'**
   String get themeSubtitleSlate;
+
+  /// No description provided for @themeSubtitleGraphite.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral grays with amber accent lines.'**
+  String get themeSubtitleGraphite;
 
   /// Transcode toggle row.
   ///
