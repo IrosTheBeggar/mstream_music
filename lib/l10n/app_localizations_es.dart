@@ -79,6 +79,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get themeGraphite => 'Grafito';
 
   @override
+  String get themeOnyx => 'Ónix';
+
+  @override
   String get tapAddToQueue => 'Añadir a la cola';
 
   @override
@@ -195,6 +198,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get themeSubtitleGraphite =>
       'Grises neutros con líneas de acento ámbar.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Los grises azulados de Pizarra bajo una barra superior negra, con líneas de acento ámbar.';
 
   @override
   String get settingsTranscode => 'Transcodificar audio';
