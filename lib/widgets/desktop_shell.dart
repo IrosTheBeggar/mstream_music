@@ -534,18 +534,17 @@ class _DesktopSidebar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Container(
       width: _kSidebarWidth,
-      // Nav tone: on Slate this is the webapp's three-tone scheme — black
-      // frame (title bar + Now Playing bar on appBarBg), a lighter nav panel
-      // (navBg), the content field in between. Older themes leave navBg
-      // unset and the sidebar falls back to sharing the frame tone. The
-      // right-edge hairline (with its twin on the bar's top edge and the
-      // title bar's bottom) is one of the structural lines dividing
-      // nav | content | player — drawn inside the sidebar's width, so
-      // nothing shifts.
+      // Nav tone: on the tricolor themes (Slate/Graphite/Onyx) this is the
+      // webapp's scheme — dark frame, a lighter nav panel (navBg), the
+      // content field in between. Older themes set navBg = appBarBg and the
+      // sidebar shares the frame tone. The quiet right-edge hairline is the
+      // shell's only structural divider besides the title bar's accent line
+      // (the bar | content boundary is a bare tone shift) — drawn inside the
+      // sidebar's width, so nothing shifts.
       decoration: BoxDecoration(
         color: VelvetColors.navBg,
         border: Border(
-          right: BorderSide(color: VelvetColors.frameLine, width: 1),
+          right: BorderSide(color: VelvetColors.border2, width: 1),
         ),
       ),
       child: Column(
@@ -756,7 +755,7 @@ class _WindowTitleBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: VelvetColors.titleBarBg,
             border: Border(
-              bottom: BorderSide(color: VelvetColors.frameLine),
+              bottom: BorderSide(color: VelvetColors.titleBarLine),
             ),
           ),
           child: SizedBox(
@@ -1197,15 +1196,10 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
     return Container(
       height: _kNowPlayingHeight,
       // Chrome tone — frames the lighter content zone (see _DesktopSidebar).
-      // The light top hairline is the second of the two structural lines
-      // (the sidebar's right edge is the other), dividing player from
-      // content; it draws inside the bar's height, above the top pad.
-      decoration: BoxDecoration(
-        color: VelvetColors.appBarBg,
-        border: Border(
-          top: BorderSide(color: VelvetColors.border2, width: 1),
-        ),
-      ),
+      // No divider against the content above: the appBarBg | bg tone shift
+      // alone marks the player's edge, the way the queue column meets the
+      // browse pane.
+      color: VelvetColors.appBarBg,
       // Left portion, top to bottom: breathing room, the elapsed/duration
       // row, the waveform band, the controls. The waveform seek strip itself
       // floats over its band from the shell's root Stack (see

@@ -591,10 +591,10 @@ class SettingsManager {
   }
 
   /// The theme resolved for the current platform: an explicit choice persists
-  /// as-is; with none stored, desktop launches on the webapp-toned Slate
-  /// scheme and the phones keep the neutral Dark they shipped with.
+  /// as-is; with none stored, desktop launches on Onyx (the shell-frame
+  /// round's winner) and the phones keep the neutral Dark they shipped with.
   AppTheme get effectiveAppTheme =>
-      appTheme ?? (isDesktopPlatform ? AppTheme.slate : AppTheme.dark);
+      appTheme ?? (isDesktopPlatform ? AppTheme.onyx : AppTheme.dark);
 
   /// The startup view resolved for the current platform. On desktop the plain
   /// "browser" home grid is disabled — it just duplicates the sidebar's

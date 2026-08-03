@@ -189,10 +189,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSubtitleSlate => '与网页应用一致的蓝灰色调，琥珀色点缀。';
 
   @override
-  String get themeSubtitleGraphite => '中性灰色搭配琥珀色点缀线条。';
+  String get themeSubtitleGraphite => '中性灰色搭配一条琥珀色点缀线。';
 
   @override
-  String get themeSubtitleOnyx => '石板的蓝灰色调配黑色顶栏，琥珀色点缀线条。';
+  String get themeSubtitleOnyx => '石板的蓝灰色调配黑色顶栏，一条琥珀色点缀线。';
 
   @override
   String get settingsTranscode => '音频转码';
