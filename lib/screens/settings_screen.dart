@@ -15,6 +15,7 @@ import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
+import '../util/desktop_platform.dart';
 import '../util/real_audio_permission.dart';
 import 'hotkeys_dialog.dart';
 import '../widgets/accent_color_sheet.dart';
@@ -127,7 +128,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               underline: SizedBox.shrink(),
               dropdownColor: VelvetColors.surface,
               style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
+              // Desktop-frame themes (Onyx/Graphite) stay off the phone list;
+              // the current theme is always shown so the dropdown's value is
+              // valid even for an out-of-place stored choice.
               items: AppTheme.values
+                  .where((t) =>
+                      isDesktopPlatform ||
+                      !t.isDesktopOnly ||
+                      t == SettingsManager().effectiveAppTheme)
                   .map((t) => DropdownMenuItem(
                         value: t,
                         child: Text(t.label(l)),
@@ -675,8 +683,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.themeSubtitleDark;
       case AppTheme.light:
         return l.themeSubtitleLight;
-      case AppTheme.slate:
-        return l.themeSubtitleSlate;
       case AppTheme.graphite:
         return l.themeSubtitleGraphite;
       case AppTheme.onyx:

@@ -2,7 +2,9 @@
 //
 // The original Velvet palette (navy/purple) lives alongside Dark (neutral
 // dark + amber accent), Light (master branch's mixed scheme — light body +
-// dark AppBar + amber accents), and Slate (the web app's blue-gray scheme).
+// dark AppBar + amber accents), and the two desktop frame themes: Onyx (the
+// default — webapp blue-grays, black cap, one amber line) and Graphite (the
+// same structure in neutral grays).
 //
 // VelvetColors used to be a class of static const colors. To allow
 // runtime theme switching, the constants are now dynamic getters that
@@ -12,7 +14,18 @@
 
 import 'package:flutter/material.dart';
 
-enum AppTheme { velvet, dark, light, slate, graphite, onyx }
+enum AppTheme {
+  velvet,
+  dark,
+  light,
+  graphite,
+  onyx;
+
+  /// Themes designed around the desktop shell's frame (window cap, nav
+  /// panel, bar tones). Hidden from the phone theme picker, where they'd
+  /// read as just another dark theme.
+  bool get isDesktopOnly => this == graphite || this == onyx;
+}
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
 // extension) — a getter here can't reach AppLocalizations.
@@ -34,8 +47,8 @@ class VelvetPalette {
   final Color appBarBg, appBarText, appBarTextSecondary;
 
   /// Desktop sidebar tone. Equal to [appBarBg] in the pre-tricolor themes;
-  /// Slate and Graphite use the webapp's three-tone scheme: black frame ·
-  /// lighter nav · in-between content.
+  /// Graphite and Onyx use the webapp's scheme: dark frame · lighter nav ·
+  /// in-between content.
   final Color navBg;
 
   /// The single structural line under the window title bar — the app's one
@@ -270,50 +283,15 @@ const _darkPalette = VelvetPalette(
   titleBarBg: Color(0xFF121212),
 );
 
-// Slate — the web app's blue-gray scheme, measured off demo.mstream.io:
-// black chrome frame (#1A1A1A app bars), the nav panel a lighter blue-gray
-// (#262A33), content field in between (#1E2228), cards riding above both
-// (#2D333B), and #444C56 hairlines. Amber stays the accent.
-const _slatePalette = VelvetPalette(
-  brightness: Brightness.dark,
-  bg: Color(0xFF1E2228),
-  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
-  // browse pane on `bg`, and the two must read as one flat field.
-  surface: Color(0xFF1E2228),
-  raised: Color(0xFF353D48),
-  card: Color(0xFF2D333B),
-  border: Color(0xFF3A4250),
-  border2: Color(0xFF444C56),
-  primary: Color(0xFFFFAB00),
-  primaryHover: Color(0xFFFFC233),
-  primaryDim: Color(0x26FFAB00),
-  primaryGlow: Color(0x66FFAB00),
-  accent: Color(0xFFFFAB00),
-  success: Color(0xFF34D399),
-  error: Color(0xFFF87171),
-  warning: Color(0xFFFBBF24),
-  textPrimary: Color(0xFFF0F2F5),
-  textSecondary: Color(0xFFAAB2BD),
-  textTertiary: Color(0xFF828A96),
-  textDim: Color(0xFF4E5763),
-  hover: Color(0x14FFFFFF),
-  active: Color(0x26FFAB00),
-  appBarBg: Color(0xFF1A1A1A),
-  appBarText: Color(0xFFF0F2F5),
-  appBarTextSecondary: Color(0xFFAAB2BD),
-  navBg: Color(0xFF262A33),
-  titleBarLine: Color(0xFF444C56),
-  titleBarBg: Color(0xFF1A1A1A),
-);
-
-// Graphite — the Slate structure in neutral grays, with the title-bar line
+// Graphite — the tricolor structure in neutral grays, with the title-bar line
 // drawn in the amber accent (the v2 card from the shell-frame design round):
 // near-black frame (#0F0F0F), neutral light nav (#2A2A2A), the dark theme's
 // field between (#1E1E1E), cards above both (#2E2E2E).
 const _graphitePalette = VelvetPalette(
   brightness: Brightness.dark,
   bg: Color(0xFF1E1E1E),
-  // Same as bg on purpose — see _slatePalette.
+  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
+  // browse pane on `bg`, and the two must read as one flat field.
   surface: Color(0xFF1E1E1E),
   raised: Color(0xFF353535),
   card: Color(0xFF2E2E2E),
@@ -341,16 +319,18 @@ const _graphitePalette = VelvetPalette(
   titleBarBg: Color(0xFF0F0F0F),
 );
 
-// Onyx — the winner of the shell-frame round: Slate's blue-gray body under
-// Graphite's blacker window cap, with ONE amber line — under the title bar.
-// Four frame tones: title bar #0F0F0F · nav #262A33 · content #1E2228 ·
-// Now Playing bar #1A1A1A (Slate's bar, slightly lifted off the cap). The
-// nav divider stays quiet (#444C56) and bar | content is a bare tone shift.
-// Desktop's default theme (see SettingsManager.effectiveAppTheme).
+// Onyx — the winner of the shell-frame round: the webapp's blue-gray body
+// (measured off demo.mstream.io) under a blacker window cap, with ONE amber
+// line — under the title bar. Four frame tones: title bar #0F0F0F · nav
+// #262A33 · content #1E2228 · Now Playing bar #1A1A1A (slightly lifted off
+// the cap). The nav divider stays quiet (#444C56) and bar | content is a
+// bare tone shift. Desktop's default theme (see
+// SettingsManager.effectiveAppTheme).
 const _onyxPalette = VelvetPalette(
   brightness: Brightness.dark,
   bg: Color(0xFF1E2228),
-  // Same as bg on purpose — see _slatePalette.
+  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
+  // browse pane on `bg`, and the two must read as one flat field.
   surface: Color(0xFF1E2228),
   raised: Color(0xFF353D48),
   card: Color(0xFF2D333B),
@@ -425,8 +405,6 @@ VelvetPalette paletteFor(AppTheme t) {
       return _darkPalette;
     case AppTheme.light:
       return _lightPalette;
-    case AppTheme.slate:
-      return _slatePalette;
     case AppTheme.graphite:
       return _graphitePalette;
     case AppTheme.onyx:

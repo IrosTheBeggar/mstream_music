@@ -70,9 +70,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeLight => '浅色';
 
   @override
-  String get themeSlate => '石板';
-
-  @override
   String get themeGraphite => '石墨';
 
   @override
@@ -184,9 +181,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeSubtitleLight => '浅色背景，深色应用栏与琥珀色点缀 — 与早期版本的主题一致。';
-
-  @override
-  String get themeSubtitleSlate => '与网页应用一致的蓝灰色调，琥珀色点缀。';
 
   @override
   String get themeSubtitleGraphite => '中性灰色搭配一条琥珀色点缀线。';
