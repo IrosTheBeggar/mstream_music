@@ -68,6 +68,7 @@
   "themeLight": "Light",
   "themeSlate": "Slate",
   "themeGraphite": "Graphite",
+  "themeOnyx": "Onyx",
   "@themeVelvet": {
     "description": "AppTheme option label."
   },
@@ -177,6 +178,7 @@
   "themeSubtitleLight": "Light body with a dark app bar and amber accents — matches the older shipped theme.",
   "themeSubtitleSlate": "Blue-gray tones matching the web app, with amber accents.",
   "themeSubtitleGraphite": "Neutral grays with amber accent lines.",
+  "themeSubtitleOnyx": "Slate's blue-grays under a black top bar, with amber accent lines.",
   "@settingsTheme": {
     "description": "Theme picker row label + per-theme subtitles."
   },

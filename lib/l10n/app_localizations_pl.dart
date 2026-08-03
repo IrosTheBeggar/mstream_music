@@ -81,6 +81,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get themeGraphite => 'Grafit';
 
   @override
+  String get themeOnyx => 'Onyks';
+
+  @override
   String get tapAddToQueue => 'Dodaj do kolejki';
 
   @override
@@ -197,6 +200,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get themeSubtitleGraphite =>
       'Neutralne szarości z bursztynowymi liniami akcentowymi.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Niebiesko-szare odcienie Łupka pod czarnym górnym paskiem, z bursztynowymi liniami.';
 
   @override
   String get settingsTranscode => 'Transkoduj dźwięk';

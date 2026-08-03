@@ -79,6 +79,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get themeGraphite => 'Grafite';
 
   @override
+  String get themeOnyx => 'Onice';
+
+  @override
   String get tapAddToQueue => 'Aggiungi alla coda';
 
   @override
@@ -195,6 +198,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get themeSubtitleGraphite =>
       'Grigi neutri con linee di accento ambra.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'I grigio-blu di Ardesia sotto una barra superiore nera, con linee di accento ambra.';
 
   @override
   String get settingsTranscode => 'Transcodifica audio';

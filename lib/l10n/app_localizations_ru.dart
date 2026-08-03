@@ -81,6 +81,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeGraphite => 'Графит';
 
   @override
+  String get themeOnyx => 'Оникс';
+
+  @override
   String get tapAddToQueue => 'Добавить в очередь';
 
   @override
@@ -197,6 +200,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get themeSubtitleGraphite =>
       'Нейтральные серые тона с янтарными акцентными линиями.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Сине-серые тона Сланца под чёрной верхней панелью с янтарными линиями.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';

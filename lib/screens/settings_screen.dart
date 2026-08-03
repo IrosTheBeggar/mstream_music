@@ -786,6 +786,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.themeSubtitleSlate;
       case AppTheme.graphite:
         return l.themeSubtitleGraphite;
+      case AppTheme.onyx:
+        return l.themeSubtitleOnyx;
     }
   }
 

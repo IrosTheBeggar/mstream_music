@@ -76,6 +76,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeGraphite => '石墨';
 
   @override
+  String get themeOnyx => '缟玛瑙';
+
+  @override
   String get tapAddToQueue => '添加到队列';
 
   @override
@@ -187,6 +190,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite => '中性灰色搭配琥珀色点缀线条。';
+
+  @override
+  String get themeSubtitleOnyx => '石板的蓝灰色调配黑色顶栏，琥珀色点缀线条。';
 
   @override
   String get settingsTranscode => '音频转码';

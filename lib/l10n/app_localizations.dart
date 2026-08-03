@@ -228,6 +228,12 @@ abstract class AppLocalizations {
   /// **'Graphite'**
   String get themeGraphite;
 
+  /// No description provided for @themeOnyx.
+  ///
+  /// In en, this message translates to:
+  /// **'Onyx'**
+  String get themeOnyx;
+
   /// TapBehavior option: append to queue.
   ///
   /// In en, this message translates to:
@@ -443,6 +449,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Neutral grays with amber accent lines.'**
   String get themeSubtitleGraphite;
+
+  /// No description provided for @themeSubtitleOnyx.
+  ///
+  /// In en, this message translates to:
+  /// **'Slate\'s blue-grays under a black top bar, with amber accent lines.'**
+  String get themeSubtitleOnyx;
 
   /// Transcode toggle row.
   ///
