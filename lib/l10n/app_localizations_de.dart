@@ -76,6 +76,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeSlate => 'Schiefer';
 
   @override
+  String get themeGraphite => 'Graphit';
+
+  @override
   String get tapAddToQueue => 'Zur Warteschlange hinzufügen';
 
   @override
@@ -190,6 +193,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get themeSubtitleSlate =>
       'Blaugraue Töne wie in der Web-App, mit bernsteinfarbenen Akzenten.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Neutrale Grautöne mit bernsteinfarbenen Akzentlinien.';
 
   @override
   String get settingsTranscode => 'Audio transkodieren';

@@ -23,6 +23,8 @@ extension AppThemeLabel on AppTheme {
         return l.themeLight;
       case AppTheme.slate:
         return l.themeSlate;
+      case AppTheme.graphite:
+        return l.themeGraphite;
     }
   }
 }

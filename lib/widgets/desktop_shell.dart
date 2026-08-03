@@ -545,7 +545,7 @@ class _DesktopSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: VelvetColors.navBg,
         border: Border(
-          right: BorderSide(color: VelvetColors.border2, width: 1),
+          right: BorderSide(color: VelvetColors.frameLine, width: 1),
         ),
       ),
       child: Column(
@@ -756,7 +756,7 @@ class _WindowTitleBar extends StatelessWidget {
           decoration: BoxDecoration(
             color: VelvetColors.appBarBg,
             border: Border(
-              bottom: BorderSide(color: VelvetColors.border2),
+              bottom: BorderSide(color: VelvetColors.frameLine),
             ),
           ),
           child: SizedBox(

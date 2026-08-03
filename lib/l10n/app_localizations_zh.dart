@@ -73,6 +73,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeSlate => '石板';
 
   @override
+  String get themeGraphite => '石墨';
+
+  @override
   String get tapAddToQueue => '添加到队列';
 
   @override
@@ -181,6 +184,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeSubtitleSlate => '与网页应用一致的蓝灰色调，琥珀色点缀。';
+
+  @override
+  String get themeSubtitleGraphite => '中性灰色搭配琥珀色点缀线条。';
 
   @override
   String get settingsTranscode => '音频转码';
