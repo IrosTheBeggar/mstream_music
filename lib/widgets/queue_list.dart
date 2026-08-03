@@ -399,29 +399,35 @@ class _QueueRow extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (item.artist != null) ...[
-                      const SizedBox(height: 1),
-                      Text(
-                        item.artist!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: VelvetColors.textSecondary,
+                    const SizedBox(height: 1),
+                    // Bottom line: artist left, duration right — keeping the
+                    // duration down here leaves the title line above the
+                    // row's full width.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.artist ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: VelvetColors.textSecondary,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          _fmtDur(item.duration),
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11.5,
+                            color: VelvetColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Duration.
-              Text(
-                _fmtDur(item.duration),
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11.5,
-                  color: VelvetColors.textTertiary,
                 ),
               ),
               // Desktop only: a per-row ⋮ menu (song info / download / remove).

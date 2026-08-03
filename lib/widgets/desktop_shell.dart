@@ -372,10 +372,7 @@ class _DesktopShellState extends State<DesktopShell> {
                       if (_queueOpen)
                         SizedBox(
                           width: queueWidth,
-                          child: _DesktopQueuePanel(
-                            onClose: () =>
-                                setState(() => _queueOpen = false),
-                          ),
+                          child: const _DesktopQueuePanel(),
                         ),
                     ],
                   ),
@@ -427,12 +424,14 @@ class _DesktopShellState extends State<DesktopShell> {
           // the bar reserves _kSeekStripHeight for it (see
           // DesktopNowPlayingBar), and the strip floats over that band,
           // spanning sidebar → the bar's now-playing tab (which owns the
-          // bar's full-height right corner) in both queue states. The
-          // waveform bars rise and reflect around the band's center line;
-          // with no waveform available the band draws the slim line there.
+          // bar's full-height right corner) in both queue states. The 12px
+          // side insets match the elapsed/duration row's padding above, so
+          // the strip's ends line up with the time stamps. The waveform bars
+          // rise and reflect around the band's center line; with no waveform
+          // available the band draws the slim line there.
           Positioned(
-            left: _kSidebarWidth,
-            right: queueWidth,
+            left: _kSidebarWidth + 12,
+            right: queueWidth + 12,
             bottom: _kControlsHeight,
             height: _kSeekStripHeight,
             child: const _SeekBar(),
@@ -1024,12 +1023,10 @@ class _DesktopBrowseView extends StatelessWidget {
 // Right-hand queue panel
 // ---------------------------------------------------------------------------
 
+// Collapsing the panel is the bar's queue glyph only — a header ✕ read as
+// "clear the queue" next to the trash button, so it's gone.
 class _DesktopQueuePanel extends StatelessWidget {
-  const _DesktopQueuePanel({required this.onClose});
-
-  /// Collapses the panel — the header's ✕ (the bar's now-playing tab stays
-  /// put in both queue states, so the close affordance lives up here).
-  final VoidCallback onClose;
+  const _DesktopQueuePanel();
 
   @override
   Widget build(BuildContext context) {
@@ -1059,10 +1056,11 @@ class _DesktopQueuePanel extends StatelessWidget {
                   const Spacer(),
                   // Clear is the most-reached-for queue action, so it gets
                   // its own button (same no-confirm behavior as the phone
-                  // queue header).
+                  // queue header). Light red: it's destructive, and the tint
+                  // separates it from the neutral actions beside it.
                   IconButton(
                     icon: const Icon(Icons.delete_sweep, size: 20),
-                    color: VelvetColors.textSecondary,
+                    color: VelvetColors.error,
                     tooltip: l.mainClearQueue,
                     onPressed: () => MediaManager()
                         .audioHandler
@@ -1095,11 +1093,6 @@ class _DesktopQueuePanel extends StatelessWidget {
                       ),
                       _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
                     ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    color: VelvetColors.textSecondary,
-                    onPressed: onClose,
                   ),
                 ],
               ),
@@ -1247,28 +1240,43 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                 fit: StackFit.expand,
                 children: [
                   Padding(
-                    // Left inset clears the folded queue glyph below.
-                    padding: const EdgeInsets.only(left: 34, right: 16),
+                    padding: const EdgeInsets.only(left: 4, right: 4),
                     child: _trackInfo(),
                   ),
-                  // The queue affordance, folded into the tab — the tab and
-                  // the old queue button did the same thing, so the glyph now
-                  // just marks the tab's corner. Its center sits on the
-                  // controls row's axis so it reads in line with the
-                  // volume/cast icons to its left; the -12 cancels the tab
-                  // pill's vertical margin (this Stack lives inside it).
+                  // The two corner glyphs, bottom-right (the info block reads
+                  // art → text from the left, so the actions balance it on
+                  // the right). Their centers sit on the controls row's axis
+                  // so they read in line with the volume/cast icons; the -6
+                  // cancels the tab pill's vertical margin (this Stack lives
+                  // inside it).
+                  //
+                  // Queue toggle at the very corner — adjacent to where the
+                  // queue column lands when it opens. The tab and the old
+                  // queue button did the same thing, so the glyph just marks
+                  // the tab; the whole card toggles.
                   Positioned(
-                    // left 0 within the pill's 10px pad: with the controls
-                    // row's right padding removed, cast's ~13px internal pad
-                    // + the pill pad ≈ the button row's glyph-to-glyph gap.
-                    left: 0,
-                    bottom: (_kControlsHeight - 22) / 2 - 12,
+                    right: 0,
+                    bottom: (_kControlsHeight - 22) / 2 - 6,
                     child: Icon(
                       Icons.queue_music,
                       size: 22,
                       color: widget.queueOpen
                           ? VelvetColors.primary
                           : VelvetColors.textSecondary,
+                    ),
+                  ),
+                  // Full-screen Now Playing entry, left of the queue glyph.
+                  // Unlike its neighbour it carries no open-state highlight
+                  // (it opens a screen, it isn't a toggle); hover brightens
+                  // it in both queue states. Its own tap wins over the tab's
+                  // queue toggle.
+                  Positioned(
+                    right: 34,
+                    bottom: (_kControlsHeight - 22) / 2 - 6,
+                    child: _TabGlyphButton(
+                      icon: Icons.open_in_full,
+                      tooltip: 'Now Playing',
+                      onTap: widget.onOpenNowPlaying,
                     ),
                   ),
                 ],
@@ -1286,24 +1294,58 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
       stream: MediaManager().audioHandler.mediaItem,
       builder: (context, snap) {
         final item = snap.data;
-        final url = item?.extras?['artUrl'] as String?;
+        final extras = item?.extras ?? const <String, dynamic>{};
+        final url = extras['artUrl'] as String?;
         final artist = item?.artist ?? '';
-        final album = item?.album ?? '';
-        // Three text lines (title / artist / album) beside near-full-height
-        // art — the tab owns the bar's whole 120px, so it can carry a real
-        // now-playing card's worth of metadata instead of a strip's.
+        final album = (item?.album ?? '').trim();
+        final year = extras['year'];
+        final albumLine = [
+          if (album.isNotEmpty) album,
+          if (year != null && '$year'.isNotEmpty && '$year' != '0') '$year',
+        ].join(' · ');
+        final bpm = extras['bpm'];
+        final musicalKey = (extras['musicalKey'] as String?)?.trim();
+        // Same track facts the Song Info screen surfaces, as micro-badges.
+        final badges = <Widget>[
+          if (bpm != null) _miniBadge('${bpm is num ? bpm.round() : bpm} BPM'),
+          if (musicalKey != null && musicalKey.isNotEmpty)
+            _miniBadge(musicalKey),
+          if (extras['hasLyrics'] == true) _miniBadge('LYRICS'),
+        ];
+        // Art on the left, then up to four text rows (title / artist /
+        // album · year / badges) — the tab owns the bar's whole height, so
+        // it carries a real now-playing card's worth of metadata.
         return Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Flexible(
+            // Plain art — the full-screen Now Playing opens via the expand
+            // glyph in the tab's corner (next to the queue glyph), not by
+            // clicking here: an art tap wasn't discoverable, so the whole
+            // card just toggles the queue.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 88,
+                height: 88,
+                child: url == null
+                    ? albumArtFallback(iconSize: 32)
+                    : Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        cacheWidth: artCacheSize(88),
+                        errorBuilder: (_, _, _) =>
+                            albumArtFallback(iconSize: 32),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item == null ? 'Nothing playing' : item.title,
                     maxLines: 1,
-                    textAlign: TextAlign.right,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
@@ -1314,11 +1356,10 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                     ),
                   ),
                   if (artist.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       artist,
                       maxLines: 1,
-                      textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
@@ -1326,12 +1367,11 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                       ),
                     ),
                   ],
-                  if (album.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                  if (albumLine.isNotEmpty) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      album,
+                      albumLine,
                       maxLines: 1,
-                      textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
@@ -1339,36 +1379,52 @@ class _DesktopNowPlayingBarState extends State<DesktopNowPlayingBar> {
                       ),
                     ),
                   ],
+                  if (badges.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    // Horizontal clip (never scrolls): at narrow widths the
+                    // badge row runs out of room before the corner glyphs —
+                    // cut it rather than overflow. 60 keeps it clear of them.
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(right: 60),
+                      child: Row(
+                        children: [
+                          for (final (i, b) in badges.indexed) ...[
+                            if (i > 0) const SizedBox(width: 4),
+                            b,
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ),
-            ),
-            const SizedBox(width: 14),
-            // The art is ALSO the door to the full-screen Now Playing (the
-            // convention every player shares): hover dims it and shows the
-            // expand glyph; its tap wins over the surrounding tab's
-            // queue-toggle tap. The rest of the card keeps toggling the queue.
-            _ExpandableArt(
-              onTap: widget.onOpenNowPlaying,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 88,
-                  height: 88,
-                  child: url == null
-                      ? albumArtFallback(iconSize: 32)
-                      : Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          cacheWidth: artCacheSize(88),
-                          errorBuilder: (_, _, _) =>
-                              albumArtFallback(iconSize: 32),
-                        ),
-                ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  /// Micro-badge for the card's facts row — the Song Info chips at bar scale.
+  Widget _miniBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        border: Border.all(color: VelvetColors.border2),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          height: 1.4,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+          color: VelvetColors.textTertiary,
+        ),
+      ),
     );
   }
 
@@ -1768,7 +1824,9 @@ class _NowPlayingTabState extends State<_NowPlayingTab> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.symmetric(vertical: 12),
+          // Slim vertical margin: the card carries four info rows (title /
+          // artist / album·year / badge row), so the height goes to content.
+          margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: _hover ? VelvetColors.hover : Colors.transparent,
@@ -1907,16 +1965,25 @@ class _MediaPos {
 /// The bar card's album art as the Now Playing door: hover dims the art and
 /// reveals the expand glyph; the tap is the child GestureDetector's, so it
 /// wins over the surrounding tab's queue toggle.
-class _ExpandableArt extends StatefulWidget {
-  final Widget child;
+/// A corner glyph in the now-playing tab that is its own button: quiet at
+/// rest, brighter while hovered (no persistent active state — see the tab's
+/// queue glyph for the stateful one). GestureDetector so its tap wins over
+/// the surrounding tab's InkWell.
+class _TabGlyphButton extends StatefulWidget {
+  final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
-  const _ExpandableArt({required this.child, required this.onTap});
+  const _TabGlyphButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   @override
-  State<_ExpandableArt> createState() => _ExpandableArtState();
+  State<_TabGlyphButton> createState() => _TabGlyphButtonState();
 }
 
-class _ExpandableArtState extends State<_ExpandableArt> {
+class _TabGlyphButtonState extends State<_TabGlyphButton> {
   bool _hover = false;
 
   @override
@@ -1928,23 +1995,15 @@ class _ExpandableArtState extends State<_ExpandableArt> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: Stack(
-          children: [
-            widget.child,
-            if (_hover)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.open_in_full,
-                        size: 26, color: Colors.white),
-                  ),
-                ),
-              ),
-          ],
+        child: Tooltip(
+          message: widget.tooltip,
+          waitDuration: const Duration(milliseconds: 600),
+          child: Icon(
+            widget.icon,
+            size: 22,
+            color:
+                _hover ? VelvetColors.textPrimary : VelvetColors.textSecondary,
+          ),
         ),
       ),
     );
@@ -2037,9 +2096,13 @@ class _NowPlayingOverlay extends StatelessWidget {
                   ),
                 ),
                 // ── Foreground (same geometry in both backdrop states) ──
+                // Art bottom must clear the meta block below it: the block is
+                // pinned at bottom 118 and runs ~102px tall with all three
+                // rows (title 40 + subtitle 28 + rating/badge 34), so 240
+                // leaves a ~20px gap where 212 had the title lapping the art.
                 Positioned(
                   left: 64,
-                  bottom: 212,
+                  bottom: 240,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: SizedBox(
