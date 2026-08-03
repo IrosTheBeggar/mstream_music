@@ -2,12 +2,9 @@ import Cocoa
 import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
-  /// The window frame's corner radius. The empty toolbar below puts the
-  /// window in macOS 26's very-round "toolbar window" appearance class;
-  /// there's no public NSWindow API for the radius, so the theme frame's
-  /// layer is masked back to this tighter curve (plain CALayer properties —
-  /// worst case a future OS ignores it and corners revert to system).
-  private let frameCornerRadius: CGFloat = 10
+  /// Vertical center of the app-drawn 52px title band, in points from the
+  /// window's top edge.
+  private let bandCenterFromTop: CGFloat = 26
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -16,59 +13,46 @@ class MainFlutterWindow: NSWindow {
     self.setFrame(windowFrame, display: true)
 
     // The app draws its own 52px title band (window_manager hides the native
-    // title bar — see DesktopIntegration.init). An empty unified toolbar makes
-    // the invisible titlebar that tall, which is what vertically centers the
-    // traffic-light buttons in the band; without it they hug the window's top
-    // edge at the standard 28px titlebar position.
-    let toolbar = NSToolbar(identifier: "band")
-    toolbar.showsBaselineSeparator = false
-    self.toolbar = toolbar
-    if #available(macOS 11.0, *) {
-      self.toolbarStyle = .unified
-    }
-
-    // Transparent window surface so the corners clipped by the frame mask
-    // show the desktop through; the shadow re-derives from the drawn shape.
-    self.isOpaque = false
-    self.backgroundColor = .clear
-
-    // Re-apply whenever AppKit might have rebuilt or resized the frame view
-    // (window_manager mutates styleMask after this method runs), and lift
-    // the mask in fullscreen where corners must be square.
+    // title bar — see DesktopIntegration.init). The traffic lights stay
+    // native but are re-centered on the band's midline by nudging their
+    // frames (the Electron approach). An empty toolbar would center them for
+    // free, but on macOS 26 a toolbar also reclassifies the window into the
+    // extra-round corner appearance — plain-window corners, matching every
+    // other app, win. AppKit re-lays the buttons out on resize/key changes,
+    // so the nudge re-runs on those notifications.
     let center = NotificationCenter.default
-    center.addObserver(
-      self, selector: #selector(applyFrameCornerMask),
-      name: NSWindow.didResizeNotification, object: self)
-    center.addObserver(
-      self, selector: #selector(applyFrameCornerMask),
-      name: NSWindow.didBecomeKeyNotification, object: self)
-    center.addObserver(
-      self, selector: #selector(removeFrameCornerMask),
-      name: NSWindow.willEnterFullScreenNotification, object: self)
-    center.addObserver(
-      self, selector: #selector(applyFrameCornerMask),
-      name: NSWindow.didExitFullScreenNotification, object: self)
+    for name: Notification.Name in [
+      NSWindow.didResizeNotification,
+      NSWindow.didBecomeKeyNotification,
+      NSWindow.didBecomeMainNotification,
+      NSWindow.didExitFullScreenNotification,
+    ] {
+      center.addObserver(
+        self, selector: #selector(centerTrafficLights),
+        name: name, object: self)
+    }
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
-    applyFrameCornerMask()
+    centerTrafficLights()
   }
 
-  @objc private func applyFrameCornerMask() {
-    guard styleMask.contains(.fullScreen) == false,
-          let frameView = contentView?.superview else { return }
-    frameView.wantsLayer = true
-    frameView.layer?.cornerRadius = frameCornerRadius
-    frameView.layer?.cornerCurve = .continuous
-    frameView.layer?.masksToBounds = true
-    invalidateShadow()
-  }
-
-  @objc private func removeFrameCornerMask() {
-    guard let frameView = contentView?.superview else { return }
-    frameView.layer?.cornerRadius = 0
-    frameView.layer?.masksToBounds = false
-    invalidateShadow()
+  @objc private func centerTrafficLights() {
+    guard !styleMask.contains(.fullScreen) else { return }
+    let types: [NSWindow.ButtonType] = [
+      .closeButton, .miniaturizeButton, .zoomButton,
+    ]
+    guard let container = standardWindowButton(.closeButton)?.superview
+    else { return }
+    // The buttons hang below the ~28pt titlebar container when centered in
+    // the 52pt band; without this they'd be clipped at its edge.
+    container.clipsToBounds = false
+    for type in types {
+      guard let button = standardWindowButton(type) else { continue }
+      let y =
+        container.frame.height - bandCenterFromTop - button.frame.height / 2
+      button.setFrameOrigin(NSPoint(x: button.frame.origin.x, y: y))
+    }
   }
 }
