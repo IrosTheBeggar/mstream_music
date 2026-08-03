@@ -12,7 +12,7 @@
 
 import 'package:flutter/material.dart';
 
-enum AppTheme { velvet, dark, light, slate, graphite }
+enum AppTheme { velvet, dark, light, slate, graphite, onyx }
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
 // extension) — a getter here can't reach AppLocalizations.
@@ -39,11 +39,16 @@ class VelvetPalette {
   final Color navBg;
 
   /// The two webapp-position structural lines (under the window title bar and
-  /// at nav | content). Equal to [border2] everywhere except Graphite, which
-  /// draws them in the amber accent. Deliberately NOT border2 itself: that
-  /// slot also feeds sliders and outlines, and the accent belongs on exactly
-  /// these two lines.
+  /// at nav | content). Equal to [border2] everywhere except Graphite and
+  /// Onyx, which draw them in the amber accent. Deliberately NOT border2
+  /// itself: that slot also feeds sliders and outlines, and the accent
+  /// belongs on exactly these two lines.
   final Color frameLine;
+
+  /// The window title bar's band. Equal to [appBarBg] everywhere except
+  /// Onyx's four-tone scheme, which caps the window in a blacker band than
+  /// the Now Playing bar.
+  final Color titleBarBg;
 
   const VelvetPalette({
     required this.brightness,
@@ -73,6 +78,7 @@ class VelvetPalette {
     required this.appBarTextSecondary,
     required this.navBg,
     required this.frameLine,
+    required this.titleBarBg,
   });
 
   VelvetPalette copyWith({
@@ -103,6 +109,7 @@ class VelvetPalette {
     Color? appBarTextSecondary,
     Color? navBg,
     Color? frameLine,
+    Color? titleBarBg,
   }) => VelvetPalette(
     brightness: brightness ?? this.brightness,
     bg: bg ?? this.bg,
@@ -131,6 +138,7 @@ class VelvetPalette {
     appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
     navBg: navBg ?? this.navBg,
     frameLine: frameLine ?? this.frameLine,
+    titleBarBg: titleBarBg ?? this.titleBarBg,
   );
 
   /// This palette with [a] as the accent: [primary] plus its dependent shades
@@ -203,6 +211,7 @@ const _velvetPalette = VelvetPalette(
   appBarTextSecondary: Color(0xFF8888B0),
   navBg: Color(0xFF16213E),
   frameLine: Color(0xFF3A4E72),
+  titleBarBg: Color(0xFF16213E),
 );
 
 // Neutral dark theme with amber accent — closer to material defaults
@@ -235,6 +244,7 @@ const _darkPalette = VelvetPalette(
   appBarTextSecondary: Color(0xFFAAAAAA),
   navBg: Color(0xFF121212),
   frameLine: Color(0xFF4A4A4A),
+  titleBarBg: Color(0xFF121212),
 );
 
 // Slate — the web app's blue-gray scheme, measured off demo.mstream.io:
@@ -271,6 +281,7 @@ const _slatePalette = VelvetPalette(
   appBarTextSecondary: Color(0xFFAAB2BD),
   navBg: Color(0xFF262A33),
   frameLine: Color(0xFF444C56),
+  titleBarBg: Color(0xFF1A1A1A),
 );
 
 // Graphite — the Slate structure in neutral grays, with the two structural
@@ -305,6 +316,42 @@ const _graphitePalette = VelvetPalette(
   appBarTextSecondary: Color(0xFFAAAAAA),
   navBg: Color(0xFF2A2A2A),
   frameLine: Color(0xFFFFAB00),
+  titleBarBg: Color(0xFF0F0F0F),
+);
+
+// Onyx — the hybrid from the shell-frame round: Slate's blue-gray body under
+// Graphite's blacker window cap, with the amber structural lines. Four frame
+// tones instead of three: title bar #0F0F0F · nav #262A33 · content #1E2228 ·
+// Now Playing bar #1A1A1A (Slate's bar, slightly lifted off the cap).
+const _onyxPalette = VelvetPalette(
+  brightness: Brightness.dark,
+  bg: Color(0xFF1E2228),
+  // Same as bg on purpose — see _slatePalette.
+  surface: Color(0xFF1E2228),
+  raised: Color(0xFF353D48),
+  card: Color(0xFF2D333B),
+  border: Color(0xFF3A4250),
+  border2: Color(0xFF444C56),
+  primary: Color(0xFFFFAB00),
+  primaryHover: Color(0xFFFFC233),
+  primaryDim: Color(0x26FFAB00),
+  primaryGlow: Color(0x66FFAB00),
+  accent: Color(0xFFFFAB00),
+  success: Color(0xFF34D399),
+  error: Color(0xFFF87171),
+  warning: Color(0xFFFBBF24),
+  textPrimary: Color(0xFFF0F2F5),
+  textSecondary: Color(0xFFAAB2BD),
+  textTertiary: Color(0xFF828A96),
+  textDim: Color(0xFF4E5763),
+  hover: Color(0x14FFFFFF),
+  active: Color(0x26FFAB00),
+  appBarBg: Color(0xFF1A1A1A),
+  appBarText: Color(0xFFF0F2F5),
+  appBarTextSecondary: Color(0xFFAAB2BD),
+  navBg: Color(0xFF262A33),
+  frameLine: Color(0xFFFFAB00),
+  titleBarBg: Color(0xFF0F0F0F),
 );
 
 // Light theme mirrors master: light gray body, dark AppBar, amber.
@@ -341,6 +388,7 @@ const _lightPalette = VelvetPalette(
   appBarTextSecondary: Color(0xFFBBBBBB),
   navBg: Color(0xFF212121),
   frameLine: Color(0xFFAAAAAA),
+  titleBarBg: Color(0xFF212121),
 );
 
 VelvetPalette paletteFor(AppTheme t) {
@@ -355,6 +403,8 @@ VelvetPalette paletteFor(AppTheme t) {
       return _slatePalette;
     case AppTheme.graphite:
       return _graphitePalette;
+    case AppTheme.onyx:
+      return _onyxPalette;
   }
 }
 
@@ -401,6 +451,7 @@ class VelvetColors {
   static Color get appBarTextSecondary => _active.appBarTextSecondary;
   static Color get navBg => _active.navBg;
   static Color get frameLine => _active.frameLine;
+  static Color get titleBarBg => _active.titleBarBg;
 
   // Theme-independent.
   static const radiusSmall = 7.0;
