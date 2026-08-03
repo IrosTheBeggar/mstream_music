@@ -75,6 +75,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeLight => 'Светлая';
 
   @override
+  String get themeGraphite => 'Графит';
+
+  @override
+  String get themeOnyx => 'Оникс';
+
+  @override
   String get tapAddToQueue => 'Добавить в очередь';
 
   @override
@@ -183,6 +189,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Светлый фон с тёмной панелью приложения и янтарными акцентами — совпадает с прежней темой.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Нейтральные серые тона с янтарной акцентной линией.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Сине-серые тона Сланца под чёрной верхней панелью с янтарной акцентной линией.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';
@@ -1094,6 +1108,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'Очистить';
 
   @override
@@ -1595,6 +1612,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get irohQrAndroidOnly =>
       'QR scanning isn\'t available on this device.';
+
+  @override
+  String get serverBadgeBuiltIn => 'Built-in';
 
   @override
   String get irohAndroidOnly =>

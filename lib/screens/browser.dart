@@ -1,27 +1,29 @@
-import 'package:audio_service/audio_service.dart';
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/api.dart';
+import '../server/server_binary_manager.dart';
+import '../server/server_controller.dart';
+import '../singletons/server_list.dart';
+import '../widgets/eq_bars_spinner.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/album_grid.dart';
+import '../widgets/desktop_toast.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
 import '../widgets/star_rating.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
-import '../singletons/media.dart';
-import '../singletons/track_capture.dart';
-import '../util/queue_actions.dart';
+import '../util/browse_actions.dart';
 
-import 'add_server.dart';
-import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -31,205 +33,13 @@ class Browser extends StatefulWidget {
 }
 
 class _BrowserState extends State<Browser> {
-  // Item types whose tap loads a new list (vs. file/localFile, which
-  // just enqueue and leave the current list in place). Tapping any of
-  // these closes local search.
-  static const Set<String> _navTypes = {
-    'addServer',
-    'directory',
-    'playlist',
-    'execAction',
-    'artist',
-    'album',
-    'localDirectory',
-  };
-
+  // Tap dispatch lives in util/browse_actions.dart, shared with the desktop
+  // search page so sectioned results act with byte-identical semantics.
+  // This stays as the local name the row builders call.
   void handleTap(
       List<DisplayItem> browserList, int index, BuildContext context) {
-    // A browse fetch is already in flight — ignore taps until it resolves (or
-    // is cancelled with Back). Without this, tapping a second folder before the
-    // first finished kicked off a racing request and the screen showed whichever
-    // returned last. addServer stays actionable (the no-server screen never has
-    // a load in flight, but never lock the user out of adding a server).
-    if (BrowserManager().isLoading &&
-        browserList[index].type != 'addServer') {
-      return;
-    }
-
-    if (_navTypes.contains(browserList[index].type)) {
-      BrowserManager().closeSearch();
-    }
-
-    if (browserList[index].type == 'addServer') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => AddServerScreen()),
-      );
-      return;
-    }
-
-    if (browserList[index].type == 'directory') {
-      ApiManager().getFileList(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'playlist') {
-      ApiManager().getPlaylistContents(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'playlists') {
-      ApiManager().getPlaylists(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'fileExplorer') {
-      ApiManager().getFileList("~", useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'recent') {
-      ApiManager().getRecentlyAdded(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'rated') {
-      ApiManager().getRated(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'albums') {
-      ApiManager().getAlbums(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'localFiles') {
-      FileExplorer().getPathForServer(browserList[index].server!);
-      return;
-    }
-
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'artists') {
-      ApiManager().getArtists(useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'artist') {
-      ApiManager().getArtistAlbums(browserList[index].data ?? '',
-          useThisServer: browserList[index].server);
-      return;
-    }
-
-    if (browserList[index].type == 'album') {
-      // Open the album detail over the browser body (no route) — keeps the
-      // file-explorer model and the mini-player visible. See main.dart's
-      // IndexedStack and BrowserManager.albumDetail.
-      BrowserManager().openAlbumDetail(browserList[index]);
-      return;
-    }
-
-    if (browserList[index].type == 'file') {
-      // An armed sonic-path pick eats the tap BEFORE tap-behavior dispatch
-      // — nothing may queue (or play-from-here) mid-pick.
-      if (_captureTap(browserList[index], context)) return;
-      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
-        _playFromHere(browserList, index);
-      } else {
-        addFile(browserList[index]);
-      }
-      return;
-    }
-
-    if (browserList[index].type == 'localDirectory') {
-      FileExplorer()
-          .getLocalFiles(browserList[index].data, browserList[index].server!);
-      return;
-    }
-
-    if (browserList[index].type == 'localFile') {
-      // Local files can't seed the server's index — an armed pick rejects
-      // them (toast) instead of queueing.
-      if (_captureTap(browserList[index], context)) return;
-      if (SettingsManager().tapBehavior == TapBehavior.playFromHere) {
-        _playFromHere(browserList, index);
-      } else {
-        addLocalFile(browserList[index]);
-      }
-      return;
-    }
+    handleBrowseTap(browserList, index, context);
   }
-
-  /// True when an armed TrackCapture consumed the tap: a captured pick
-  /// returns to the sonic path screen (its state already holds the song),
-  /// a rejected one toasts and stays armed.
-  bool _captureTap(DisplayItem item, BuildContext context) {
-    switch (TrackCapture.tryCapture(item)) {
-      case CaptureResult.captured:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
-        );
-        return true;
-      case CaptureResult.rejected:
-        showCaptureRejectedToast(context);
-        return true;
-      case CaptureResult.pass:
-        return false;
-    }
-  }
-
-  // Side-effect entry points. Build the MediaItem then run it through
-  // _enqueue, which applies the user's tap behavior preference.
-  Future<void> addLocalFile(DisplayItem i) async {
-    await _enqueue(buildLocalFileMediaItem(i));
-  }
-
-  Future<void> addFile(DisplayItem i) async {
-    final item = await buildServerFileMediaItem(i);
-    if (item != null) await _enqueue(item);
-  }
-
-  // Adds the item to the queue, then dispatches on the user's tap
-  // behavior preference. Pattern A (playFromHere) doesn't reach here
-  // — it's handled directly in handleTap because it needs the
-  // surrounding browser context to know what to fill the queue with.
-  Future<void> _enqueue(MediaItem item) async {
-    final wasEmpty = MediaManager().audioHandler.queue.value.isEmpty;
-    await MediaManager().audioHandler.addQueueItem(item);
-
-    switch (SettingsManager().tapBehavior) {
-      case TapBehavior.addToQueue:
-        // Convenience: first tap from a fresh state shouldn't require
-        // a separate Play press to actually start anything.
-        if (wasEmpty) {
-          await MediaManager().audioHandler.play();
-        }
-        break;
-      case TapBehavior.appendAndJump:
-        final queueLen = MediaManager().audioHandler.queue.value.length;
-        await MediaManager().audioHandler.skipToQueueItem(queueLen - 1);
-        await MediaManager().audioHandler.play();
-        break;
-      case TapBehavior.playFromHere:
-        // Unreachable — see handleTap.
-        break;
-    }
-  }
-
-  // Pattern A: clear the queue, fill it with every playable item from the
-  // current browser view (in order), jump to the tapped one, play. Delegates to
-  // the shared helper (util/queue_actions.dart) so the album-detail screen plays
-  // albums with identical semantics.
-  Future<void> _playFromHere(List<DisplayItem> browserList, int tappedIndex) =>
-      playFromHere(browserList, tappedIndex);
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
@@ -278,17 +88,31 @@ class _BrowserState extends State<Browser> {
     return scaled > base ? scaled : base;
   }
 
+  // Full box border for a browse row (web-app style: every item is a bordered
+  // box on the flat field). Vertical edges + bottom on every row; top only on
+  // the list's first row, so stacked rows share single hairlines instead of
+  // doubling up.
+  BoxDecoration _rowBoxDecoration(int i) => BoxDecoration(
+        border: Border(
+          top: i == 0
+              ? BorderSide(color: VelvetColors.border2)
+              : BorderSide.none,
+          left: BorderSide(color: VelvetColors.border2),
+          right: BorderSide(color: VelvetColors.border2),
+          bottom: BorderSide(color: VelvetColors.border2),
+        ),
+      );
+
   Widget makePlaylistWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     return Material(
-      color: Colors.transparent,
+      // Same card tone as the file rows — playlists render in the same browse
+      // pane, so a transparent row here would read as a different list.
+      color: VelvetColors.card,
       child: InkWell(
         onTap: () => handleTap(b, i, c),
         child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide(color: VelvetColors.border, width: 0.5)),
-          ),
+          decoration: _rowBoxDecoration(i),
           padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
           child: Row(
             children: [
@@ -452,10 +276,15 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  // Floating so it clears the docked mini-player overlay (a plain bottom
-  // snackbar renders behind it).
+  // Desktop shell up → corner toast (the browser has no Scaffold of its own
+  // there). Phone → floating SnackBar so it clears the docked mini-player
+  // overlay (a plain bottom snackbar renders behind it).
   void _playlistError(BuildContext context) {
     final l = AppLocalizations.of(context);
+    if (DesktopToasts.instance.hasHost) {
+      DesktopToasts.instance.show(l.playlistActionFailed);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(l.playlistActionFailed),
       behavior: SnackBarBehavior.floating,
@@ -474,109 +303,95 @@ class _BrowserState extends State<Browser> {
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      showDialog(
-                          context: c,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                                title: Text(l.browserConfirmDeleteFolder),
-                                content: b[i].getText(),
-                                actions: <Widget>[
-                                  TextButton(
-                                    child: Text(l.goBack),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'delete') {
+                  showDialog(
+                      context: c,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                            title: Text(l.browserConfirmDeleteFolder),
+                            content: b[i].getText(),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text(l.goBack),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                  child: Text(
+                                    l.delete,
+                                    style: TextStyle(color: VelvetColors.error),
                                   ),
-                                  TextButton(
-                                      child: Text(
-                                        l.delete,
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                      onPressed: () {
-                                        FileExplorer().deleteDirectory(
-                                            b[i].data!, b[i].server);
-                                        Navigator.of(context).pop();
-                                      })
-                                ]);
-                          });
-                    })
+                                  onPressed: () {
+                                    FileExplorer().deleteDirectory(
+                                        b[i].data!, b[i].server);
+                                    Navigator.of(context).pop();
+                                  })
+                            ]);
+                      });
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            })));
   }
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.red,
-                    icon: Icons.delete,
-                    label: l.delete,
-                    onPressed: (context) {
-                      FileExplorer().deleteFile(b[i].data!, b[i].server);
-                    })
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'delete') {
+                  FileExplorer().deleteFile(b[i].data!, b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(l.delete,
+                      style: TextStyle(color: VelvetColors.error)),
+                ),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  // Same long-press context sheet as server rows — the queue
-                  // actions apply to local files too (Find similar hides
-                  // itself: a local path can't seed the similarity index).
-                  onLongPress: () => _showTrackActions(b[i], c),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            // Same long-press context sheet as server rows — the queue
+            // actions apply to local files too (Find similar hides
+            // itself: a local path can't seed the similarity index).
+            onLongPress: () => _showTrackActions(b[i], c),
+            onTap: () {
+              handleTap(b, i, c);
+            })));
   }
 
   Widget makeFolderWidget(List<DisplayItem> b, int i, BuildContext c) {
@@ -585,42 +400,32 @@ class _BrowserState extends State<Browser> {
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: Slidable(
-            endActionPane: ActionPane(
-              motion: DrawerMotion(),
-              children: [
-                SlidableAction(
-                    backgroundColor: Colors.blueGrey,
-                    icon: Icons.add_to_queue,
-                    label: l.addAll,
-                    onPressed: (context) {
-                      ApiManager().getRecursiveFiles(b[i].data!,
-                          useThisServer: b[i].server);
-                    })
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
+            leading: b[i].icon,
+            title: b[i].getText(truncate: !allowWrap),
+            subtitle: b[i].getSubText(),
+            trailing: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: VelvetColors.textSecondary),
+              color: VelvetColors.surface,
+              tooltip: l.mainMore,
+              onSelected: (v) {
+                if (v == 'addAll') {
+                  ApiManager().getRecursiveFiles(b[i].data!,
+                      useThisServer: b[i].server);
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'addAll', child: Text(l.addAll)),
               ],
             ),
-            child: Builder(
-              builder: (context) => ListTile(
-                  leading: b[i].icon,
-                  title: b[i].getText(truncate: !allowWrap),
-                  subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
-                  onTap: () {
-                    handleTap(b, i, c);
-                  }),
-            )));
+            onTap: () {
+              handleTap(b, i, c);
+            })));
   }
 
   // Album list rows. Unlike makeBasicWidget, the leading is a FIXED-size
@@ -630,30 +435,34 @@ class _BrowserState extends State<Browser> {
   // misaligns the text.
   Widget makeAlbumWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].getAlbumThumb(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   Widget makeBasicWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
-        child: ListTile(
+    return Material(
+        // Row surface: one tone above the flat pane field (web-app style).
+        color: VelvetColors.card,
+        child: Container(
+            decoration: _rowBoxDecoration(i),
+            child: ListTile(
             leading: b[i].getImage(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
             onTap: () {
               handleTap(b, i, c);
-            }));
+            })));
   }
 
   // ── Default browser landing: section shortcuts as a modern card grid ──
@@ -661,8 +470,11 @@ class _BrowserState extends State<Browser> {
     final l = AppLocalizations.of(context);
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      // Cap the tile width and add columns as the pane widens, instead of
+      // stretching a fixed 2 columns into giant cards on a desktop window.
+      // Phones still land on 2 columns (a ~360–410px pane / 212px ≈ 2).
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: 1.3,
@@ -672,7 +484,7 @@ class _BrowserState extends State<Browser> {
         final item = items[i];
         final iconData = item.icon?.icon ?? Icons.chevron_right;
         return Material(
-          color: VelvetColors.surface,
+          color: VelvetColors.card,
           borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -735,10 +547,12 @@ class _BrowserState extends State<Browser> {
     // get to show in full.
     final allowWrap = b.length < LetterStrip.minItemsToShow;
     return Container(
-        decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: VelvetColors.border))),
+        decoration: _rowBoxDecoration(i),
         child: Material(
-            color: VelvetColors.bg,
+            // Rows sit one tone above the pane backdrop (card > bg) so the
+            // content zone gets its own hierarchy, dark-theme-style, instead
+            // of leaning on the hairline borders alone.
+            color: VelvetColors.card,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
                 onLongPress: () => _showTrackActions(b[i], c),
@@ -938,6 +752,20 @@ class _BrowserState extends State<Browser> {
                         ? rawList.where((it) => it.matchesQuery(q)).toList()
                         : rawList;
 
+                    // A section load is pending (launch startup view, or a
+                    // desktop server switch): hold a spinner over every interim
+                    // state — empty list, home menu, placeholder — until the
+                    // setter clears the flag. First so nothing below can flash
+                    // mid-load; whoever set the flag re-emits on completion and
+                    // the pane settles on the loaded section, the empty state,
+                    // or (after a failure) the offline placeholder.
+                    if (BrowserManager().awaitingSectionLoad) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                            color: VelvetColors.primary),
+                      );
+                    }
+
                     if (filtering && browserList.isEmpty) {
                       return Center(
                         child: Padding(
@@ -953,19 +781,30 @@ class _BrowserState extends State<Browser> {
                       );
                     }
 
-                    // The default browser landing (section shortcuts) gets a
-                    // modern card grid instead of plain list rows.
+                    final bool isDesktop = Platform.isWindows ||
+                        Platform.isLinux ||
+                        Platform.isMacOS;
+
+                    // The default browser landing (section shortcuts). On desktop
+                    // the home grid just duplicates the sidebar, so show the
+                    // placeholder (which points at the sidebar) instead — this is
+                    // also where an offline current server lands once its startup
+                    // section fails to load.
                     if (isHome) {
-                      // While a configured "startup view" loads on launch, show
-                      // a spinner instead of the home grid so the app lands
-                      // straight on the chosen section (no home-grid flash).
-                      if (BrowserManager().awaitingStartupView) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                              color: VelvetColors.primary),
-                        );
-                      }
-                      return _homeView(context, browserList);
+                      return isDesktop
+                          ? const _DesktopBrowsePlaceholder()
+                          : _homeView(context, browserList);
+                    }
+
+                    // Desktop: a root-level empty pane (browserCache <= 1) means no
+                    // section is loaded — typically the current server is offline —
+                    // so show the placeholder rather than a blank list. An empty
+                    // list *inside* a loaded folder (browserCache > 1) is a real
+                    // empty folder and falls through to the normal list below.
+                    if (isDesktop &&
+                        browserList.isEmpty &&
+                        BrowserManager().browserCache.length <= 1) {
+                      return const _DesktopBrowsePlaceholder();
                     }
 
                     // The server "Playlists" view gets its own layout: a New-
@@ -980,6 +819,26 @@ class _BrowserState extends State<Browser> {
                       return _playlistsView(context, browserList);
                     }
 
+                    // A loaded but EMPTY listing — e.g. the File Explorer root
+                    // of a server with no music folders configured yet (the
+                    // bundled server before setup), or an empty directory. An
+                    // explicit empty state instead of a blank pane; the server
+                    // answered, so the offline placeholder would be wrong here.
+                    if (browserList.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            l.browserEmptyList,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
                     // If the whole list is albums and the user has the
                     // album-grid setting on, show a grid of album cards
                     // instead of the plain list.
@@ -991,6 +850,15 @@ class _BrowserState extends State<Browser> {
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
                         final ts = MediaQuery.textScalerOf(context);
+                        // The letter scrubber overlays the right edge when this
+                        // view is alphabetical and long enough to show it. Inset
+                        // the rows' *content* (title + trailing ⋮) by the strip's
+                        // hit width so they don't slide under it — the row itself,
+                        // and its full-width bottom divider, is untouched.
+                        final stripVisible = BrowserManager().isAlphabetical &&
+                            browserList.isNotEmpty &&
+                            !filtering &&
+                            browserList.length >= LetterStrip.minItemsToShow;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -1018,8 +886,11 @@ class _BrowserState extends State<Browser> {
                             // so the letter-scrub cumulative math
                             // stays correct.
                             : ListTileTheme.merge(
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
+                                contentPadding: EdgeInsets.only(
+                                    left: 10,
+                                    right: stripVisible
+                                        ? LetterStrip.visibleWidth
+                                        : 10),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
                                 child: ListView.builder(
@@ -1055,6 +926,68 @@ class _BrowserState extends State<Browser> {
                             filtering) {
                           return content;
                         }
+                        void onJump(int i) {
+                          final sc = BrowserManager().sc;
+                          if (!sc.hasClients) return;
+                          final double offset;
+                          if (useGrid) {
+                            final w = MediaQuery.of(context).size.width;
+                            final cols = AlbumGrid.columnsFor(w);
+                            final rowH = AlbumGrid.rowHeightFor(w);
+                            final row = i ~/ cols;
+                            offset = AlbumGrid.padTop +
+                                row * (rowH + AlbumGrid.spacing);
+                          } else {
+                            // Sum the SAME per-row extents the ListView lays out
+                            // with (see _rowExtent) so the jump lands exactly on
+                            // the target row. File Explorer mixes 1- and 2-line
+                            // rows, hence the walk-and-sum. O(i), microseconds
+                            // even at 10k+ items.
+                            double sum = 0;
+                            final stop = i.clamp(0, browserList.length);
+                            for (var k = 0; k < stop; k++) {
+                              sum += _rowExtent(browserList[k], ts);
+                            }
+                            offset = sum;
+                          }
+                          sc.jumpTo(offset
+                              .clamp(0.0, sc.position.maxScrollExtent)
+                              .toDouble());
+                        }
+
+                        // Jump to the first item in a letter's section — the
+                        // shared target for the letter row and type-to-jump.
+                        void onLetter(String letter) {
+                          for (var k = 0; k < browserList.length; k++) {
+                            if (LetterStrip.indexLetter(browserList[k]) ==
+                                letter) {
+                              onJump(k);
+                              return;
+                            }
+                          }
+                        }
+
+                        // Desktop: a clickable letter row above the list, plus
+                        // type-to-jump (press a letter to jump to its section).
+                        // Mobile: the vertical strip overlaid on the right edge
+                        // (finger-drag).
+                        if (Platform.isWindows ||
+                            Platform.isLinux ||
+                            Platform.isMacOS) {
+                          return _TypeToJump(
+                            onLetter: onLetter,
+                            child: Column(
+                              children: [
+                                LetterStrip(
+                                  items: browserList,
+                                  axis: Axis.horizontal,
+                                  onJump: onJump,
+                                ),
+                                Expanded(child: content),
+                              ],
+                            ),
+                          );
+                        }
                         return Stack(
                           children: [
                             content,
@@ -1064,39 +997,7 @@ class _BrowserState extends State<Browser> {
                               bottom: 0,
                               child: LetterStrip(
                                 items: browserList,
-                                onJump: (i) {
-                                  final sc = BrowserManager().sc;
-                                  if (!sc.hasClients) return;
-                                  final double offset;
-                                  if (useGrid) {
-                                    final w = MediaQuery.of(context)
-                                        .size
-                                        .width;
-                                    final cols = AlbumGrid.columnsFor(w);
-                                    final rowH = AlbumGrid.rowHeightFor(w);
-                                    final row = i ~/ cols;
-                                    offset = AlbumGrid.padTop +
-                                        row * (rowH + AlbumGrid.spacing);
-                                  } else {
-                                    // Sum the SAME per-row extents the ListView
-                                    // lays out with (see _rowExtent) so the jump
-                                    // lands exactly on the target row. File
-                                    // Explorer mixes 1- and 2-line rows, hence
-                                    // the walk-and-sum. O(i), microseconds even
-                                    // at 10k+ items.
-                                    double sum = 0;
-                                    final stop =
-                                        i.clamp(0, browserList.length);
-                                    for (var k = 0; k < stop; k++) {
-                                      sum += _rowExtent(browserList[k], ts);
-                                    }
-                                    offset = sum;
-                                  }
-                                  sc.jumpTo(offset
-                                      .clamp(
-                                          0.0, sc.position.maxScrollExtent)
-                                      .toDouble());
-                                },
+                                onJump: onJump,
                               ),
                             ),
                           ],
@@ -1113,5 +1014,171 @@ class _BrowserState extends State<Browser> {
         child: _searchScopePreview(context, l),
       ),
     ]);
+  }
+}
+
+// Desktop type-to-jump: while the browse list holds focus, pressing a letter (or
+// digit → '#') jumps to that A–Z section — the keyboard companion to the letter
+// row. Requests focus on mount; typing in the search field (which isn't a
+// descendant) keeps its own focus, so letters there type normally.
+class _TypeToJump extends StatefulWidget {
+  final Widget child;
+  final void Function(String letter) onLetter;
+  const _TypeToJump({required this.child, required this.onLetter});
+
+  @override
+  State<_TypeToJump> createState() => _TypeToJumpState();
+}
+
+class _TypeToJumpState extends State<_TypeToJump> {
+  final FocusNode _node = FocusNode(debugLabel: 'browserTypeToJump');
+
+  @override
+  void initState() {
+    super.initState();
+    // Arm type-to-jump on mount, but DON'T steal focus from an active text
+    // field — notably the search box, which remounts this widget when cleared
+    // back to empty (filtering → browse). Only grab focus when nothing specific
+    // is focused yet, so clearing the search keeps its caret until you click away.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final focused = FocusManager.instance.primaryFocus;
+      if (focused == null || focused is FocusScopeNode) {
+        _node.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    // Leave modifier chords (Ctrl+F, ⌘A, …) to their shortcuts.
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
+    final ch = event.character;
+    if (ch == null || ch.isEmpty) return KeyEventResult.ignored;
+    final code = ch.toUpperCase().codeUnitAt(0);
+    if (code >= 0x41 && code <= 0x5A) {
+      widget.onLetter(ch.toUpperCase());
+      return KeyEventResult.handled;
+    }
+    if (code >= 0x30 && code <= 0x39) {
+      widget.onLetter('#');
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(focusNode: _node, onKeyEvent: _onKey, child: widget.child);
+  }
+}
+
+// Desktop stand-in for the browser home grid (which duplicates the sidebar). Shown
+// when nothing is loaded — usually because the current server is offline and the
+// startup section couldn't load. Points at the sidebar rather than the old menu.
+class _DesktopBrowsePlaceholder extends StatelessWidget {
+  const _DesktopBrowsePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final server = ServerManager().currentServer;
+    // The attached (built-in) server boots WITH the app, so at launch this
+    // pane's "offline" reading is usually just the seconds before the child
+    // process answers — confusing. Render the live controller state instead:
+    // a booting spinner until it's up (the startup retry then loads the
+    // section and this placeholder unmounts), and the offline text only on a
+    // real startup error.
+    if (server != null && server.isAttachedServer) {
+      return ValueListenableBuilder<ServerRunStatus>(
+        valueListenable: ServerController.instance.status,
+        builder: (context, run, _) => run.phase == ServerRunPhase.error
+            ? _offline(noServer: false)
+            : _booting(),
+      );
+    }
+    return _offline(noServer: server == null);
+  }
+
+  Widget _booting() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const EqBarsSpinner(width: 68, height: 44),
+            const SizedBox(height: 20),
+            Text(
+              'Starting your server…',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            // First run downloads the server binary — surface its progress
+            // instead of a silent spinner (the one moment this takes minutes).
+            ValueListenableBuilder<ServerStatus>(
+              valueListenable: ServerBinaryManager.instance.status,
+              builder: (context, bin, _) {
+                final label = bin.phase == ServerPhase.downloading
+                    ? 'Downloading the built-in mStream server… '
+                        '${(bin.progress * 100).round()}%'
+                    : 'The built-in mStream server is booting up.';
+                return Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13, color: VelvetColors.textSecondary),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _offline({required bool noServer}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(noServer ? Icons.dns_outlined : Icons.travel_explore_outlined,
+                size: 48, color: VelvetColors.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              noServer ? 'No server connected' : 'Nothing loaded',
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              noServer
+                  ? 'Add or select a server from the sidebar to start browsing.'
+                  : 'The current server may be offline. Pick a section — or a '
+                      'different server — from the sidebar.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

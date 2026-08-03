@@ -86,6 +86,10 @@ class LogManager {
     return '${p2(t.hour)}:${p2(t.minute)}:${p2(t.second)}.${p3(t.millisecond)}';
   }
 
+  /// Public redactor so sibling log buffers (e.g. the bundled-server console in
+  /// [ServerLog]) mask the same secrets before they're shown / shared.
+  static String redact(String s) => _redactSecrets(s);
+
   /// Mask credentials that legitimately appear in URLs / JSON we log: the
   /// `token=` query param on stream/art URLs, and `jwt` / `password` /
   /// `x-access-token` values in bodies or headers.

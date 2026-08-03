@@ -33,6 +33,16 @@ dependencies:
   audio_session: ^0.2.2
   audio_service: ^0.18.18
   just_audio: ^0.10.3
+  # Desktop playback backend: just_audio has no native Windows/Linux
+  # implementation, so route it through media_kit (libmpv) on those platforms.
+  # Initialized in main() for Windows/Linux only — Android/iOS/macOS keep
+  # just_audio's native backend. Depend on the per-platform libmpv packages
+  # (not the media_kit_libs_audio umbrella): the umbrella drags libmpv into the
+  # Android/iOS/macOS bundles where the backend is never used, and its macOS
+  # pod is CocoaPods-only, which breaks the otherwise all-SPM macOS build.
+  just_audio_media_kit: ^2.0.6
+  media_kit_libs_windows_audio: ^1.0.9
+  media_kit_libs_linux: ^1.2.1
   flutter_slidable: ^4.0.3
   background_downloader: ^9.4.4
   flutter_launcher_icons: ^0.14.2
@@ -53,12 +63,27 @@ dependencies:
   ffi: ^2.1.4
   media_cast_dlna: ^0.3.1
   flutter_chrome_cast: ^1.4.6
+  # Desktop Chromecast discovery (pure-Dart mDNS, works on Windows/Linux). The
+  # CASTV2 control client is hand-rolled in lib/media/castv2/ (TLS + a tiny
+  # CastMessage protobuf codec) so we control the audio LOAD content-type — the
+  # off-the-shelf Dart cast libs are video-only. flutter_chrome_cast (native
+  # Google SDK) stays for Android/iOS; desktop uses this behind the same
+  # DeviceDiscoverer/PlaybackBackend seam.
+  multicast_dns: ^0.3.2
   # Native share sheet for exporting diagnostic logs (Diagnostics screen).
-  share_plus: ^13.2.0
+  # Capped at 12.x: master moved to share_plus 13, which needs win32 ^6, but the
+  # desktop launch_at_startup 0.5.1 dep pins win32_registry ^2 (win32 ^5) and has
+  # no newer release — 13 can't co-resolve. 12.0.2 is the newest share_plus still
+  # on win32 5, and its SharePlus.instance/ShareParams API is unchanged, so the
+  # code is unaffected. Bump to 13 once launch_at_startup supports win32_registry 3.
+  share_plus: ^12.0.0
   meta: any
   # Package name (applicationId) lookup so the album-art ContentProvider
   # authority always matches the manifest, regardless of --dart-define flags.
-  package_info_plus: ^10.2.0
+  # Capped at 9.x for the same win32-5 reason as share_plus above (10.x needs
+  # win32 ^6, which the desktop launch_at_startup dep can't co-resolve). 9.0.1's
+  # PackageInfo API is unchanged, so the code is unaffected.
+  package_info_plus: ^9.0.0
   # LAN discovery of mStream servers (_mstream._tcp) for Quick Connect.
   # NsdManager/Bonjour under the hood; bonsoir manages its own multicast, so
   # no MulticastLock is needed; the manifest already declares
@@ -80,6 +105,19 @@ dependencies:
   # model (built by rust/viz_decoder/build-ios.sh).
   viz_decoder_native:
     path: packages/viz_decoder_native
+  # Desktop window/tray/startup integration (leanflutter). Desktop-only plugins
+  # (no Android/iOS native impl, so they're skipped there); all calls are gated
+  # to desktop in lib/desktop/desktop_integration.dart. window_manager =
+  # sized window + close-to-tray; tray_manager = tray icon + menu;
+  # launch_at_startup = boot-on-login (toggled from Settings).
+  window_manager: ^0.5.1
+  tray_manager: ^0.5.3
+  launch_at_startup: ^0.5.1
+  crypto: ^3.0.7
+  archive: ^4.0.9
+  # Native folder picker for the desktop onboarding's Server Mode (choose the
+  # music library folder). Official flutter.dev package; Windows/macOS/Linux.
+  file_selector: ^1.0.3
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -94,6 +132,14 @@ flutter_icons:
   image_path_ios: "graphics/icon/mstream.png"
   # The App Store rejects icons with an alpha channel.
   remove_alpha_ios: true
+  # Desktop (Windows) app icon — same mStream mark as mobile so the exe / window
+  # / taskbar icon matches the rest of the app instead of the default Flutter
+  # logo. Regenerates windows/runner/resources/app_icon.ico via
+  # `dart run flutter_launcher_icons`.
+  windows:
+    generate: true
+    image_path: "graphics/icon/mstream.png"
+    icon_size: 256
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -109,6 +155,8 @@ flutter:
     - graphics/default.png
     - assets/presets/
     - assets/shaders/
+    # System-tray icon for the desktop build (tray_manager).
+    - assets/tray_icon.ico
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

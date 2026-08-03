@@ -70,6 +70,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeLight => '浅色';
 
   @override
+  String get themeGraphite => '石墨';
+
+  @override
+  String get themeOnyx => '缟玛瑙';
+
+  @override
   String get tapAddToQueue => '添加到队列';
 
   @override
@@ -175,6 +181,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeSubtitleLight => '浅色背景，深色应用栏与琥珀色点缀 — 与早期版本的主题一致。';
+
+  @override
+  String get themeSubtitleGraphite => '中性灰色搭配一条琥珀色点缀线。';
+
+  @override
+  String get themeSubtitleOnyx => '石板的蓝灰色调配黑色顶栏，一条琥珀色点缀线。';
 
   @override
   String get settingsTranscode => '音频转码';
@@ -1019,6 +1031,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => '清除';
 
   @override
@@ -1483,6 +1498,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get irohQrAndroidOnly =>
       'QR scanning isn\'t available on this device.';
+
+  @override
+  String get serverBadgeBuiltIn => 'Built-in';
 
   @override
   String get irohAndroidOnly =>

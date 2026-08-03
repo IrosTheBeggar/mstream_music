@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Locale;
 
-import 'package:path_provider/path_provider.dart';
+import '../util/app_data_dir.dart';
+import '../util/desktop_platform.dart';
+import '../util/hotkeys.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../objects/player_layout.dart';
@@ -150,12 +152,24 @@ class SettingsManager {
     SearchCategory.songs,
   };
   Set<SearchCategory> searchCategories = defaultSearchCategories;
-  AppTheme appTheme = AppTheme.dark;
+  // The user's explicit theme choice, or null when they never picked one —
+  // the platform default applies at read time via [effectiveAppTheme] (same
+  // pattern as [effectiveStartupView]), so a stored file can still tell
+  // "never chose" from "chose the old default" if the default ever moves.
+  AppTheme? appTheme;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
   // Custom accent colour as an ARGB int, or null to use each theme's built-in
   // primary. When set it overrides the accent across all three themes.
   int? accentColor;
+  // Optional 4-digit PIN for unlocking desktop party mode (the Now Playing
+  // lock). Null = hold-to-unlock only. Stored plainly in the settings file —
+  // this is a guests-at-the-keyboard latch, not a security boundary.
+  String? partyPin;
+  // Desktop keyboard shortcuts. The live keymap is HotkeyManager.instance;
+  // this flag is its master toggle, and the bindings ride the settings file
+  // under 'hotkeys' (see the load/save hooks below).
+  bool hotkeysEnabled = true;
   // UI language. `null` means "follow the device locale" (the default);
   // a language code like 'en'/'es' forces that language regardless of
   // the OS setting. Persisted as the JSON 'language' key.
@@ -232,7 +246,7 @@ class SettingsManager {
   late final BehaviorSubject<int> _letterStripStream =
       BehaviorSubject<int>.seeded(letterStripThreshold);
   late final BehaviorSubject<AppTheme> _themeStream =
-      BehaviorSubject<AppTheme>.seeded(appTheme);
+      BehaviorSubject<AppTheme>.seeded(effectiveAppTheme);
   late final BehaviorSubject<PlayerLayout> _playerLayoutStream =
       BehaviorSubject<PlayerLayout>.seeded(playerLayout);
   late final BehaviorSubject<int?> _accentColorStream =
@@ -264,7 +278,11 @@ class SettingsManager {
   }
 
   Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
+    // App Support on desktop, documents dir on mobile — see appDataDir().
+    // (Was the documents dir everywhere: the one file the servers.json/
+    // queue.json move missed, so desktop settings silently failed to persist
+    // wherever macOS denies Documents access.)
+    final dir = await appDataDir();
     return File('${dir.path}/$_filename');
   }
 
@@ -297,6 +315,13 @@ class SettingsManager {
       playerLayout = _readPlayerLayout(m);
       final accent = m['accentColor'];
       accentColor = accent is int ? accent : null;
+      final pp = m['partyPin'];
+      partyPin = (pp is String && pp.isNotEmpty) ? pp : null;
+      hotkeysEnabled = m['hotkeysEnabled'] ?? true;
+      final hk = m['hotkeys'];
+      HotkeyManager.instance
+          .loadFrom(hk is Map ? hk.cast<String, dynamic>() : null,
+              enabled: hotkeysEnabled);
       eqEnabled = m['eqEnabled'] ?? false;
       resumeQueue = m['resumeQueue'] ?? true;
       offlineQueue = m['offlineQueue'] ?? false;
@@ -335,7 +360,7 @@ class SettingsManager {
       language = lang is String ? lang : null;
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
-      _themeStream.add(appTheme);
+      _themeStream.add(effectiveAppTheme);
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
@@ -345,14 +370,14 @@ class SettingsManager {
     }
   }
 
-  AppTheme _readTheme(Map<String, dynamic> m) {
+  AppTheme? _readTheme(Map<String, dynamic> m) {
     final str = m['theme'];
     if (str is String) {
       for (final t in AppTheme.values) {
         if (t.name == str) return t;
       }
     }
-    return AppTheme.dark;
+    return null; // never chosen — effectiveAppTheme supplies the default
   }
 
   PlayerLayout _readPlayerLayout(Map<String, dynamic> m) {
@@ -482,9 +507,12 @@ class SettingsManager {
       'tapBehavior': tapBehavior.name,
       'startupView': startupView.name,
       'searchCategories': searchCategories.map((c) => c.name).toList(),
-      'theme': appTheme.name,
+      'theme': appTheme?.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
+      'partyPin': partyPin,
+      'hotkeysEnabled': hotkeysEnabled,
+      'hotkeys': HotkeyManager.instance.toJson(),
       'eqEnabled': eqEnabled,
       'resumeQueue': resumeQueue,
       'offlineQueue': offlineQueue,
@@ -562,6 +590,22 @@ class SettingsManager {
     await _save();
   }
 
+  /// The theme resolved for the current platform: an explicit choice persists
+  /// as-is; with none stored, desktop launches on Onyx (the shell-frame
+  /// round's winner) and the phones keep the neutral Dark they shipped with.
+  AppTheme get effectiveAppTheme =>
+      appTheme ?? (isDesktopPlatform ? AppTheme.onyx : AppTheme.dark);
+
+  /// The startup view resolved for the current platform. On desktop the plain
+  /// "browser" home grid is disabled — it just duplicates the sidebar's
+  /// navigation — so it falls back to the file explorer. Any explicit choice
+  /// persists as-is; only the browser default is platform-dependent.
+  StartupView get effectiveStartupView =>
+      (startupView == StartupView.browser &&
+              (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
+          ? StartupView.fileExplorer
+          : startupView;
+
   /// Toggle whether [c] is one of the searched categories. Keeps at least one
   /// category selected (see [applyToggle]); persists only when it changed.
   Future<void> toggleSearchCategory(SearchCategory c) async {
@@ -589,6 +633,24 @@ class SettingsManager {
   Future<void> setAccentColor(int? v) async {
     accentColor = v;
     _accentColorStream.add(v);
+    await _save();
+  }
+
+  /// Persist the current keymap (HotkeyManager.instance) after the editor
+  /// changes a binding or the master toggle.
+  Future<void> saveHotkeys() async {
+    HotkeyManager.instance.enabled = hotkeysEnabled;
+    await _save();
+  }
+
+  Future<void> setHotkeysEnabled(bool v) async {
+    hotkeysEnabled = v;
+    await saveHotkeys();
+  }
+
+  /// Set / change / clear (null or empty) the party-mode unlock PIN.
+  Future<void> setPartyPin(String? v) async {
+    partyPin = (v == null || v.isEmpty) ? null : v;
     await _save();
   }
 
@@ -695,7 +757,7 @@ class SettingsManager {
     tapBehavior = TapBehavior.addToQueue;
     startupView = StartupView.browser;
     searchCategories = {...defaultSearchCategories};
-    appTheme = AppTheme.dark;
+    appTheme = null;
     playerLayout = PlayerLayout.medium;
     accentColor = null;
     eqEnabled = false;
@@ -712,9 +774,14 @@ class SettingsManager {
     visualizerGlobalParams = const [];
     visualizerShaderParams = {};
     language = null;
+    partyPin = null;
+    hotkeysEnabled = true;
+    HotkeyManager.instance
+      ..restoreDefaults()
+      ..enabled = true;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
-    _themeStream.add(appTheme);
+    _themeStream.add(effectiveAppTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
     _searchCategoriesStream.add(searchCategories);

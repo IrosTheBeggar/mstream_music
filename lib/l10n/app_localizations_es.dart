@@ -73,6 +73,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get themeLight => 'Claro';
 
   @override
+  String get themeGraphite => 'Grafito';
+
+  @override
+  String get themeOnyx => 'Ónix';
+
+  @override
   String get tapAddToQueue => 'Añadir a la cola';
 
   @override
@@ -181,6 +187,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Cuerpo claro con barra de aplicación oscura y detalles ámbar — coincide con el tema anterior.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Grises neutros con una línea de acento ámbar.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Los grises azulados de Pizarra bajo una barra superior negra, con una línea de acento ámbar.';
 
   @override
   String get settingsTranscode => 'Transcodificar audio';
@@ -1076,6 +1090,9 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get browserEmptyList => 'Nothing here yet';
+
+  @override
   String get clear => 'Borrar';
 
   @override
@@ -1574,6 +1591,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get irohQrAndroidOnly =>
       'QR scanning isn\'t available on this device.';
+
+  @override
+  String get serverBadgeBuiltIn => 'Built-in';
 
   @override
   String get irohAndroidOnly =>

@@ -1,8 +1,10 @@
-// App theme system — three swappable palettes built on the same shape.
+// App theme system — swappable palettes built on the same shape.
 //
-// The original Velvet palette (navy/purple) lives alongside two more:
-// Dark (neutral dark + amber accent) and Light (master branch's mixed
-// scheme — light body + dark AppBar + amber accents).
+// The original Velvet palette (navy/purple) lives alongside Dark (neutral
+// dark + amber accent), Light (master branch's mixed scheme — light body +
+// dark AppBar + amber accents), and the two desktop frame themes: Onyx (the
+// default — webapp blue-grays, black cap, one amber line) and Graphite (the
+// same structure in neutral grays).
 //
 // VelvetColors used to be a class of static const colors. To allow
 // runtime theme switching, the constants are now dynamic getters that
@@ -16,6 +18,13 @@ enum AppTheme {
   velvet,
   dark,
   light,
+  graphite,
+  onyx;
+
+  /// Themes designed around the desktop shell's frame (window cap, nav
+  /// panel, bar tones). Hidden from the phone theme picker, where they'd
+  /// read as just another dark theme.
+  bool get isDesktopOnly => this == graphite || this == onyx;
 }
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
@@ -25,6 +34,7 @@ class VelvetPalette {
   final Brightness brightness;
   final Color bg, surface, raised, card, border, border2;
   final Color primary, primaryHover, primaryDim, primaryGlow;
+
   /// Text/icon colour painted ON [primary] (e.g. button labels). White by
   /// default; recomputed by luminance when a custom accent is applied so a
   /// light accent doesn't end up with white-on-white text (see [withAccent]).
@@ -35,6 +45,23 @@ class VelvetPalette {
   // AppBar-specific so a theme can pair a light body with a dark
   // AppBar (or vice versa) without losing text contrast.
   final Color appBarBg, appBarText, appBarTextSecondary;
+
+  /// Desktop sidebar tone. Equal to [appBarBg] in the pre-tricolor themes;
+  /// Graphite and Onyx use the webapp's scheme: dark frame · lighter nav ·
+  /// in-between content.
+  final Color navBg;
+
+  /// The single structural line under the window title bar — the app's one
+  /// accent line. Equal to [border2] everywhere except Graphite and Onyx,
+  /// which draw it in the amber accent. Deliberately NOT border2 itself: that
+  /// slot also feeds sliders, outlines, and the nav | content divider, and
+  /// the accent belongs on exactly this one line.
+  final Color titleBarLine;
+
+  /// The window title bar's band. Equal to [appBarBg] everywhere except
+  /// Onyx's four-tone scheme, which caps the window in a blacker band than
+  /// the Now Playing bar.
+  final Color titleBarBg;
 
   const VelvetPalette({
     required this.brightness,
@@ -62,6 +89,9 @@ class VelvetPalette {
     required this.appBarBg,
     required this.appBarText,
     required this.appBarTextSecondary,
+    required this.navBg,
+    required this.titleBarLine,
+    required this.titleBarBg,
   });
 
   VelvetPalette copyWith({
@@ -90,34 +120,39 @@ class VelvetPalette {
     Color? appBarBg,
     Color? appBarText,
     Color? appBarTextSecondary,
-  }) =>
-      VelvetPalette(
-        brightness: brightness ?? this.brightness,
-        bg: bg ?? this.bg,
-        surface: surface ?? this.surface,
-        raised: raised ?? this.raised,
-        card: card ?? this.card,
-        border: border ?? this.border,
-        border2: border2 ?? this.border2,
-        primary: primary ?? this.primary,
-        primaryHover: primaryHover ?? this.primaryHover,
-        primaryDim: primaryDim ?? this.primaryDim,
-        primaryGlow: primaryGlow ?? this.primaryGlow,
-        onPrimary: onPrimary ?? this.onPrimary,
-        accent: accent ?? this.accent,
-        success: success ?? this.success,
-        error: error ?? this.error,
-        warning: warning ?? this.warning,
-        textPrimary: textPrimary ?? this.textPrimary,
-        textSecondary: textSecondary ?? this.textSecondary,
-        textTertiary: textTertiary ?? this.textTertiary,
-        textDim: textDim ?? this.textDim,
-        hover: hover ?? this.hover,
-        active: active ?? this.active,
-        appBarBg: appBarBg ?? this.appBarBg,
-        appBarText: appBarText ?? this.appBarText,
-        appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
-      );
+    Color? navBg,
+    Color? titleBarLine,
+    Color? titleBarBg,
+  }) => VelvetPalette(
+    brightness: brightness ?? this.brightness,
+    bg: bg ?? this.bg,
+    surface: surface ?? this.surface,
+    raised: raised ?? this.raised,
+    card: card ?? this.card,
+    border: border ?? this.border,
+    border2: border2 ?? this.border2,
+    primary: primary ?? this.primary,
+    primaryHover: primaryHover ?? this.primaryHover,
+    primaryDim: primaryDim ?? this.primaryDim,
+    primaryGlow: primaryGlow ?? this.primaryGlow,
+    onPrimary: onPrimary ?? this.onPrimary,
+    accent: accent ?? this.accent,
+    success: success ?? this.success,
+    error: error ?? this.error,
+    warning: warning ?? this.warning,
+    textPrimary: textPrimary ?? this.textPrimary,
+    textSecondary: textSecondary ?? this.textSecondary,
+    textTertiary: textTertiary ?? this.textTertiary,
+    textDim: textDim ?? this.textDim,
+    hover: hover ?? this.hover,
+    active: active ?? this.active,
+    appBarBg: appBarBg ?? this.appBarBg,
+    appBarText: appBarText ?? this.appBarText,
+    appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
+    navBg: navBg ?? this.navBg,
+    titleBarLine: titleBarLine ?? this.titleBarLine,
+    titleBarBg: titleBarBg ?? this.titleBarBg,
+  );
 
   /// This palette with [a] as the accent: [primary] plus its dependent shades
   /// (hover/dim/glow/active) and the on-accent text colour are all derived from
@@ -126,8 +161,9 @@ class VelvetPalette {
     final hsl = HSLColor.fromColor(a);
     return copyWith(
       primary: a,
-      primaryHover:
-          hsl.withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0)).toColor(),
+      primaryHover: hsl
+          .withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0))
+          .toColor(),
       primaryDim: a.withValues(alpha: 0.16),
       primaryGlow: a.withValues(alpha: 0.42),
       active: a.withValues(alpha: 0.18),
@@ -152,8 +188,9 @@ Color get accentInk {
   final p = VelvetColors.primary;
   if (p != _accentInkForPrimary) {
     _accentInkForPrimary = p;
-    _accentInkCache =
-        p.computeLuminance() > 0.42 ? const Color(0xFF1A1206) : Colors.white;
+    _accentInkCache = p.computeLuminance() > 0.42
+        ? const Color(0xFF1A1206)
+        : Colors.white;
   }
   return _accentInkCache!;
 }
@@ -185,6 +222,9 @@ const _velvetPalette = VelvetPalette(
   appBarBg: Color(0xFF16213E),
   appBarText: Color(0xFFEEEEFF),
   appBarTextSecondary: Color(0xFF8888B0),
+  navBg: Color(0xFF16213E),
+  titleBarLine: Color(0xFF3A4E72),
+  titleBarBg: Color(0xFF16213E),
 );
 
 // Neutral dark theme with amber accent — closer to material defaults
@@ -215,6 +255,84 @@ const _darkPalette = VelvetPalette(
   appBarBg: Color(0xFF121212),
   appBarText: Color(0xFFEEEEEE),
   appBarTextSecondary: Color(0xFFAAAAAA),
+  navBg: Color(0xFF121212),
+  titleBarLine: Color(0xFF4A4A4A),
+  titleBarBg: Color(0xFF121212),
+);
+
+// Graphite — the tricolor structure in neutral grays, with the title-bar line
+// drawn in the amber accent (the v2 card from the shell-frame design round):
+// near-black frame (#0F0F0F), neutral light nav (#2A2A2A), the dark theme's
+// field between (#1E1E1E), cards above both (#2E2E2E).
+const _graphitePalette = VelvetPalette(
+  brightness: Brightness.dark,
+  bg: Color(0xFF1E1E1E),
+  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
+  // browse pane on `bg`, and the two must read as one flat field.
+  surface: Color(0xFF1E1E1E),
+  raised: Color(0xFF353535),
+  card: Color(0xFF2E2E2E),
+  border: Color(0xFF333333),
+  border2: Color(0xFF4A4A4A),
+  primary: Color(0xFFFFAB00),
+  primaryHover: Color(0xFFFFC233),
+  primaryDim: Color(0x26FFAB00),
+  primaryGlow: Color(0x66FFAB00),
+  accent: Color(0xFFFFAB00),
+  success: Color(0xFF34D399),
+  error: Color(0xFFF87171),
+  warning: Color(0xFFFBBF24),
+  textPrimary: Color(0xFFEEEEEE),
+  textSecondary: Color(0xFFAAAAAA),
+  textTertiary: Color(0xFF888888),
+  textDim: Color(0xFF555555),
+  hover: Color(0x14FFFFFF),
+  active: Color(0x26FFAB00),
+  appBarBg: Color(0xFF0F0F0F),
+  appBarText: Color(0xFFEEEEEE),
+  appBarTextSecondary: Color(0xFFAAAAAA),
+  navBg: Color(0xFF2A2A2A),
+  titleBarLine: Color(0xFFFFAB00),
+  titleBarBg: Color(0xFF0F0F0F),
+);
+
+// Onyx — the winner of the shell-frame round: the webapp's blue-gray body
+// (measured off demo.mstream.io) under a blacker window cap, with ONE amber
+// line — under the title bar. Four frame tones: title bar #0F0F0F · nav
+// #262A33 · content #1E2228 · Now Playing bar #1A1A1A (slightly lifted off
+// the cap). The nav divider stays quiet (#444C56) and bar | content is a
+// bare tone shift. Desktop's default theme (see
+// SettingsManager.effectiveAppTheme).
+const _onyxPalette = VelvetPalette(
+  brightness: Brightness.dark,
+  bg: Color(0xFF1E2228),
+  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
+  // browse pane on `bg`, and the two must read as one flat field.
+  surface: Color(0xFF1E2228),
+  raised: Color(0xFF353D48),
+  card: Color(0xFF2D333B),
+  border: Color(0xFF3A4250),
+  border2: Color(0xFF444C56),
+  primary: Color(0xFFFFAB00),
+  primaryHover: Color(0xFFFFC233),
+  primaryDim: Color(0x26FFAB00),
+  primaryGlow: Color(0x66FFAB00),
+  accent: Color(0xFFFFAB00),
+  success: Color(0xFF34D399),
+  error: Color(0xFFF87171),
+  warning: Color(0xFFFBBF24),
+  textPrimary: Color(0xFFF0F2F5),
+  textSecondary: Color(0xFFAAB2BD),
+  textTertiary: Color(0xFF828A96),
+  textDim: Color(0xFF4E5763),
+  hover: Color(0x14FFFFFF),
+  active: Color(0x26FFAB00),
+  appBarBg: Color(0xFF1A1A1A),
+  appBarText: Color(0xFFF0F2F5),
+  appBarTextSecondary: Color(0xFFAAB2BD),
+  navBg: Color(0xFF262A33),
+  titleBarLine: Color(0xFFFFAB00),
+  titleBarBg: Color(0xFF0F0F0F),
 );
 
 // Light theme mirrors master: light gray body, dark AppBar, amber.
@@ -249,6 +367,9 @@ const _lightPalette = VelvetPalette(
   appBarBg: Color(0xFF212121),
   appBarText: Color(0xFFFAFAFA),
   appBarTextSecondary: Color(0xFFBBBBBB),
+  navBg: Color(0xFF212121),
+  titleBarLine: Color(0xFFAAAAAA),
+  titleBarBg: Color(0xFF212121),
 );
 
 VelvetPalette paletteFor(AppTheme t) {
@@ -259,6 +380,10 @@ VelvetPalette paletteFor(AppTheme t) {
       return _darkPalette;
     case AppTheme.light:
       return _lightPalette;
+    case AppTheme.graphite:
+      return _graphitePalette;
+    case AppTheme.onyx:
+      return _onyxPalette;
   }
 }
 
@@ -303,10 +428,18 @@ class VelvetColors {
   static Color get appBarBg => _active.appBarBg;
   static Color get appBarText => _active.appBarText;
   static Color get appBarTextSecondary => _active.appBarTextSecondary;
+  static Color get navBg => _active.navBg;
+  static Color get titleBarLine => _active.titleBarLine;
+  static Color get titleBarBg => _active.titleBarBg;
 
   // Theme-independent.
   static const radiusSmall = 7.0;
   static const radiusLarge = 12.0;
+
+  /// Height of every top bar in the desktop shell (sidebar header, browse
+  /// toolbar, queue header) so their bottom dividers form one continuous line
+  /// across the three columns.
+  static const desktopTopBarHeight = 56.0;
 }
 
 ThemeData buildAppTheme(VelvetPalette p) {
@@ -319,6 +452,9 @@ ThemeData buildAppTheme(VelvetPalette p) {
     dividerColor: p.border,
     splashColor: p.primaryDim,
     highlightColor: p.active,
+    // Desktop: every InkWell picks this up, so rows/cards/buttons get a
+    // subtle pointer-hover highlight for free. Inert on touch.
+    hoverColor: const Color(0x0FFFFFFF),
     colorScheme: ColorScheme(
       brightness: p.brightness,
       primary: p.primary,
@@ -387,13 +523,11 @@ ThemeData buildAppTheme(VelvetPalette p) {
       selectedTileColor: p.active,
     ),
     iconTheme: IconThemeData(color: p.textSecondary),
-    textTheme: (p.brightness == Brightness.dark
-            ? ThemeData.dark(useMaterial3: true).textTheme
-            : ThemeData.light(useMaterial3: true).textTheme)
-        .apply(
-      bodyColor: p.textPrimary,
-      displayColor: p.textPrimary,
-    ),
+    textTheme:
+        (p.brightness == Brightness.dark
+                ? ThemeData.dark(useMaterial3: true).textTheme
+                : ThemeData.light(useMaterial3: true).textTheme)
+            .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: p.raised,
