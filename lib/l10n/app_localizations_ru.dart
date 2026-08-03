@@ -78,6 +78,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeSlate => 'Сланец';
 
   @override
+  String get themeGraphite => 'Графит';
+
+  @override
   String get tapAddToQueue => 'Добавить в очередь';
 
   @override
@@ -190,6 +193,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get themeSubtitleSlate =>
       'Сине-серые тона в стиле веб-приложения с янтарными акцентами.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Нейтральные серые тона с янтарными акцентными линиями.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';
