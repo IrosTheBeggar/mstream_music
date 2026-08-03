@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' show Locale;
 
 import '../util/app_data_dir.dart';
+import '../util/desktop_platform.dart';
 import '../util/hotkeys.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -176,7 +177,11 @@ class SettingsManager {
     SearchCategory.songs,
   };
   Set<SearchCategory> searchCategories = defaultSearchCategories;
-  AppTheme appTheme = AppTheme.dark;
+  // The user's explicit theme choice, or null when they never picked one —
+  // the platform default applies at read time via [effectiveAppTheme] (same
+  // pattern as [effectiveStartupView]), so a stored file can still tell
+  // "never chose" from "chose the old default" if the default ever moves.
+  AppTheme? appTheme;
   // Which Now Playing layout the expanded player uses (Small/Medium/Large/XL).
   PlayerLayout playerLayout = PlayerLayout.medium;
   // Custom accent colour as an ARGB int, or null to use each theme's built-in
@@ -268,7 +273,7 @@ class SettingsManager {
   late final BehaviorSubject<LetterStripSide> _letterStripSideStream =
       BehaviorSubject<LetterStripSide>.seeded(letterStripSide);
   late final BehaviorSubject<AppTheme> _themeStream =
-      BehaviorSubject<AppTheme>.seeded(appTheme);
+      BehaviorSubject<AppTheme>.seeded(effectiveAppTheme);
   late final BehaviorSubject<PlayerLayout> _playerLayoutStream =
       BehaviorSubject<PlayerLayout>.seeded(playerLayout);
   late final BehaviorSubject<int?> _accentColorStream =
@@ -389,7 +394,7 @@ class SettingsManager {
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
       _letterStripSideStream.add(letterStripSide);
-      _themeStream.add(appTheme);
+      _themeStream.add(effectiveAppTheme);
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
       _localeStream.add(localeOverride);
@@ -399,14 +404,14 @@ class SettingsManager {
     }
   }
 
-  AppTheme _readTheme(Map<String, dynamic> m) {
+  AppTheme? _readTheme(Map<String, dynamic> m) {
     final str = m['theme'];
     if (str is String) {
       for (final t in AppTheme.values) {
         if (t.name == str) return t;
       }
     }
-    return AppTheme.dark;
+    return null; // never chosen — effectiveAppTheme supplies the default
   }
 
   PlayerLayout _readPlayerLayout(Map<String, dynamic> m) {
@@ -549,7 +554,7 @@ class SettingsManager {
       'welcomeShown': welcomeShown,
       'startupView': startupView.name,
       'searchCategories': searchCategories.map((c) => c.name).toList(),
-      'theme': appTheme.name,
+      'theme': appTheme?.name,
       'playerLayout': playerLayout.name,
       'accentColor': accentColor,
       'partyPin': partyPin,
@@ -652,6 +657,12 @@ class SettingsManager {
     discoverNewArtistsOnly = v;
     await _save();
   }
+
+  /// The theme resolved for the current platform: an explicit choice persists
+  /// as-is; with none stored, desktop launches on the webapp-toned Slate
+  /// scheme and the phones keep the neutral Dark they shipped with.
+  AppTheme get effectiveAppTheme =>
+      appTheme ?? (isDesktopPlatform ? AppTheme.slate : AppTheme.dark);
 
   /// The startup view resolved for the current platform. On desktop the plain
   /// "browser" home grid is disabled — it just duplicates the sidebar's
@@ -817,7 +828,7 @@ class SettingsManager {
     // onboardingComplete is deliberately NOT reset — "restore defaults"
     // shouldn't drop the user back into the first-run flow.
     searchCategories = {...defaultSearchCategories};
-    appTheme = AppTheme.dark;
+    appTheme = null;
     playerLayout = PlayerLayout.medium;
     accentColor = null;
     eqEnabled = false;
@@ -842,7 +853,7 @@ class SettingsManager {
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
     _letterStripSideStream.add(letterStripSide);
-    _themeStream.add(appTheme);
+    _themeStream.add(effectiveAppTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
     _searchCategoriesStream.add(searchCategories);

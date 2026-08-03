@@ -21,6 +21,8 @@ extension AppThemeLabel on AppTheme {
         return l.themeDark;
       case AppTheme.light:
         return l.themeLight;
+      case AppTheme.slate:
+        return l.themeSlate;
     }
   }
 }

@@ -1,8 +1,8 @@
-// App theme system — three swappable palettes built on the same shape.
+// App theme system — swappable palettes built on the same shape.
 //
-// The original Velvet palette (navy/purple) lives alongside two more:
-// Dark (neutral dark + amber accent) and Light (master branch's mixed
-// scheme — light body + dark AppBar + amber accents).
+// The original Velvet palette (navy/purple) lives alongside Dark (neutral
+// dark + amber accent), Light (master branch's mixed scheme — light body +
+// dark AppBar + amber accents), and Slate (the web app's blue-gray scheme).
 //
 // VelvetColors used to be a class of static const colors. To allow
 // runtime theme switching, the constants are now dynamic getters that
@@ -12,7 +12,7 @@
 
 import 'package:flutter/material.dart';
 
-enum AppTheme { velvet, dark, light }
+enum AppTheme { velvet, dark, light, slate }
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
 // extension) — a getter here can't reach AppLocalizations.
@@ -32,6 +32,11 @@ class VelvetPalette {
   // AppBar-specific so a theme can pair a light body with a dark
   // AppBar (or vice versa) without losing text contrast.
   final Color appBarBg, appBarText, appBarTextSecondary;
+
+  /// Desktop sidebar tone. Equal to [appBarBg] in every theme except Slate,
+  /// which uses the webapp's three-tone scheme: black frame · lighter nav ·
+  /// in-between content.
+  final Color navBg;
 
   const VelvetPalette({
     required this.brightness,
@@ -59,6 +64,7 @@ class VelvetPalette {
     required this.appBarBg,
     required this.appBarText,
     required this.appBarTextSecondary,
+    required this.navBg,
   });
 
   VelvetPalette copyWith({
@@ -87,6 +93,7 @@ class VelvetPalette {
     Color? appBarBg,
     Color? appBarText,
     Color? appBarTextSecondary,
+    Color? navBg,
   }) => VelvetPalette(
     brightness: brightness ?? this.brightness,
     bg: bg ?? this.bg,
@@ -113,6 +120,7 @@ class VelvetPalette {
     appBarBg: appBarBg ?? this.appBarBg,
     appBarText: appBarText ?? this.appBarText,
     appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
+    navBg: navBg ?? this.navBg,
   );
 
   /// This palette with [a] as the accent: [primary] plus its dependent shades
@@ -203,6 +211,7 @@ const _velvetPalette = VelvetPalette(
   appBarBg: Color(0xFF16213E),
   appBarText: Color(0xFFEEEEFF),
   appBarTextSecondary: Color(0xFF8888B0),
+  navBg: Color(0xFF16213E),
 );
 
 // Neutral dark theme with amber accent — closer to material defaults
@@ -236,6 +245,42 @@ const _darkPalette = VelvetPalette(
   appBarBg: Color(0xFF121212),
   appBarText: Color(0xFFEEEEEE),
   appBarTextSecondary: Color(0xFFAAAAAA),
+  navBg: Color(0xFF121212),
+);
+
+// Slate — the web app's blue-gray scheme, measured off demo.mstream.io:
+// black chrome frame (#1A1A1A app bars), the nav panel a lighter blue-gray
+// (#262A33), content field in between (#1E2228), cards riding above both
+// (#2D333B), and the #444C56 blue-gray structural lines. Amber stays the
+// accent. Desktop's default theme (see SettingsManager.effectiveAppTheme).
+const _slatePalette = VelvetPalette(
+  brightness: Brightness.dark,
+  bg: Color(0xFF1E2228),
+  // Same as bg on purpose: the desktop queue panel sits on `surface` and the
+  // browse pane on `bg`, and the two must read as one flat field.
+  surface: Color(0xFF1E2228),
+  raised: Color(0xFF353D48),
+  card: Color(0xFF2D333B),
+  border: Color(0xFF3A4250),
+  border2: Color(0xFF444C56),
+  primary: Color(0xFFFFAB00),
+  primaryHover: Color(0xFFFFC233),
+  primaryDim: Color(0x26FFAB00),
+  primaryGlow: Color(0x66FFAB00),
+  accent: Color(0xFFFFAB00),
+  success: Color(0xFF34D399),
+  error: Color(0xFFF87171),
+  warning: Color(0xFFFBBF24),
+  textPrimary: Color(0xFFF0F2F5),
+  textSecondary: Color(0xFFAAB2BD),
+  textTertiary: Color(0xFF828A96),
+  textDim: Color(0xFF4E5763),
+  hover: Color(0x14FFFFFF),
+  active: Color(0x26FFAB00),
+  appBarBg: Color(0xFF1A1A1A),
+  appBarText: Color(0xFFF0F2F5),
+  appBarTextSecondary: Color(0xFFAAB2BD),
+  navBg: Color(0xFF262A33),
 );
 
 // Light theme mirrors master: light gray body, dark AppBar, amber.
@@ -272,6 +317,7 @@ const _lightPalette = VelvetPalette(
   appBarBg: Color(0xFF212121),
   appBarText: Color(0xFFFAFAFA),
   appBarTextSecondary: Color(0xFFBBBBBB),
+  navBg: Color(0xFF212121),
 );
 
 VelvetPalette paletteFor(AppTheme t) {
@@ -282,6 +328,8 @@ VelvetPalette paletteFor(AppTheme t) {
       return _darkPalette;
     case AppTheme.light:
       return _lightPalette;
+    case AppTheme.slate:
+      return _slatePalette;
   }
 }
 
@@ -326,6 +374,7 @@ class VelvetColors {
   static Color get appBarBg => _active.appBarBg;
   static Color get appBarText => _active.appBarText;
   static Color get appBarTextSecondary => _active.appBarTextSecondary;
+  static Color get navBg => _active.navBg;
 
   // Theme-independent.
   static const radiusSmall = 7.0;
