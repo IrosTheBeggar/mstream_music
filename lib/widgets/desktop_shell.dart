@@ -20,6 +20,7 @@ import 'package:flutter/services.dart'
     show FilteringTextInputFormatter, KeyDownEvent, LogicalKeyboardKey;
 import 'package:rxdart/rxdart.dart';
 
+import '../desktop/desktop_integration.dart';
 import '../l10n/app_localizations.dart';
 import '../media/cast_target.dart';
 import '../objects/display_item.dart';
@@ -65,6 +66,10 @@ import 'queue_list.dart';
 // Width of the fixed left navigation rail. The right queue panel's width is
 // computed at build time to match the now-playing view (see _DesktopShellState).
 const double _kSidebarWidth = 208;
+// App-drawn window title bar (DesktopIntegration.usesCustomTitleBar
+// platforms): the chrome-black band carrying the wordmark, with the native
+// traffic lights floating over its left end.
+const double _kTitleBarHeight = 52;
 // Now Playing bar, top to bottom: breathing room, the elapsed/duration row,
 // the waveform seek strip, then the controls row (which keeps the original
 // 64px it was designed at).
@@ -405,7 +410,19 @@ class _DesktopShellState extends State<DesktopShell> {
       },
       child: Stack(
         children: [
-          shell,
+          // The window title bar sits above the shell columns but INSIDE this
+          // stack, so the full-screen Now Playing overlay still covers the
+          // whole window, chrome included. Native-chrome platforms skip the
+          // wrapper and keep the plain shell tree.
+          if (DesktopIntegration.usesCustomTitleBar)
+            Column(
+              children: [
+                const _WindowTitleBar(),
+                Expanded(child: shell),
+              ],
+            )
+          else
+            shell,
           // The scrub strip is the TOP BAND of the Now Playing bar itself —
           // the bar reserves _kSeekStripHeight for it (see
           // DesktopNowPlayingBar), and the strip floats over that band,
@@ -517,14 +534,16 @@ class _DesktopSidebar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return Container(
       width: _kSidebarWidth,
-      // Chrome tone: the sidebar, the Now Playing bar, and the three aligned
-      // top bars share the darker appBarBg so they read as one frame around
-      // the lighter content zone (Spotify-style tonal zoning). The light
-      // right-edge hairline (with its twin on the bar's top edge) is one of
-      // the two structural lines dividing nav | content | player — drawn
-      // inside the sidebar's width, so nothing shifts.
+      // Nav tone: on Slate this is the webapp's three-tone scheme — black
+      // frame (title bar + Now Playing bar on appBarBg), a lighter nav panel
+      // (navBg), the content field in between. Older themes leave navBg
+      // unset and the sidebar falls back to sharing the frame tone. The
+      // right-edge hairline (with its twin on the bar's top edge and the
+      // title bar's bottom) is one of the structural lines dividing
+      // nav | content | player — drawn inside the sidebar's width, so
+      // nothing shifts.
       decoration: BoxDecoration(
-        color: VelvetColors.appBarBg,
+        color: VelvetColors.navBg,
         border: Border(
           right: BorderSide(color: VelvetColors.border2, width: 1),
         ),
@@ -532,13 +551,15 @@ class _DesktopSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header pinned to the shared top-bar height so it stays one band
-          // with the browse toolbar and the queue header (no divider — the
-          // chrome/content tone shift marks the band's edge in those panes).
-          const SizedBox(
-            height: VelvetColors.desktopTopBarHeight,
-            child: _SidebarLogo(),
-          ),
+          // With the custom window title bar the wordmark lives up there;
+          // elsewhere it heads the sidebar, pinned to the shared top-bar
+          // height so it stays one band with the browse toolbar and the
+          // queue header.
+          if (!DesktopIntegration.usesCustomTitleBar)
+            const SizedBox(
+              height: VelvetColors.desktopTopBarHeight,
+              child: _SidebarLogo(),
+            ),
           // Server switcher (hidden with a single server) sits under the
           // aligned header line rather than stretching the header.
           const _SidebarServer(),
@@ -642,6 +663,50 @@ class _DesktopSidebar extends StatelessWidget {
   }
 }
 
+/// The mStream brand mark — amber glyph + split-weight "m"/"Stream" wordmark.
+/// One definition serving both slots that show it (the sidebar header on
+/// native-chrome platforms, the window title bar elsewhere); size and ink are
+/// the only per-slot tuning.
+class _Wordmark extends StatelessWidget {
+  final double iconSize;
+  final double fontSize;
+  final double gap;
+  final Color bright;
+  final Color dim;
+  const _Wordmark({
+    required this.iconSize,
+    required this.fontSize,
+    required this.gap,
+    required this.bright,
+    required this.dim,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.graphic_eq, color: VelvetColors.primary, size: iconSize),
+        SizedBox(width: gap),
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'm',
+                style: TextStyle(fontWeight: FontWeight.w300, color: dim),
+              ),
+              TextSpan(
+                text: 'Stream',
+                style: TextStyle(fontWeight: FontWeight.w700, color: bright),
+              ),
+            ],
+          ),
+          style: TextStyle(fontSize: fontSize, letterSpacing: -0.3),
+        ),
+      ],
+    );
+  }
+}
+
 class _SidebarLogo extends StatelessWidget {
   const _SidebarLogo();
 
@@ -649,32 +714,67 @@ class _SidebarLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Icon(Icons.graphic_eq, color: VelvetColors.primary, size: 26),
-          const SizedBox(width: 10),
-          Text.rich(
-            TextSpan(
+      child: _Wordmark(
+        iconSize: 26,
+        fontSize: 20,
+        gap: 10,
+        bright: VelvetColors.textPrimary,
+        dim: VelvetColors.textSecondary,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Window title bar (macOS custom chrome)
+// ---------------------------------------------------------------------------
+
+/// The app-drawn title bar: a chrome-black band with the mStream wordmark,
+/// the standard traffic-light buttons floating natively over its left end
+/// (TitleBarStyle.hidden — set in DesktopIntegration.init). DragToMoveArea
+/// gives the whole band window-drag plus double-click zoom, matching a native
+/// title bar's behaviour.
+class _WindowTitleBar extends StatelessWidget {
+  const _WindowTitleBar();
+
+  /// Clearance for the native close/minimize/zoom cluster, which macOS pins
+  /// at its standard spot over the band's left end: three buttons ending at
+  /// x ≈ 70 in the hidden-titlebar layout, plus breathing room.
+  static const double _trafficLightInset = 80;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragToMoveArea(
+      // The band sits OUTSIDE the shell's Material (above it in the column),
+      // so Text needs an explicit ancestor style — without one it renders in
+      // the debug yellow-underline fallback. DefaultTextStyle alone is
+      // enough; a Material here would retain ink/elevation machinery for a
+      // band that has neither.
+      child: DefaultTextStyle(
+        style: Theme.of(context).textTheme.bodyMedium!,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: VelvetColors.appBarBg,
+            border: Border(
+              bottom: BorderSide(color: VelvetColors.border2),
+            ),
+          ),
+          child: SizedBox(
+            height: _kTitleBarHeight,
+            child: Row(
               children: [
-                TextSpan(
-                  text: 'm',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w300,
-                    color: VelvetColors.textSecondary,
-                  ),
-                ),
-                TextSpan(
-                  text: 'Stream',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: VelvetColors.textPrimary,
-                  ),
+                const SizedBox(width: _trafficLightInset),
+                _Wordmark(
+                  iconSize: 22,
+                  fontSize: 17,
+                  gap: 8,
+                  bright: VelvetColors.appBarText,
+                  dim: VelvetColors.appBarTextSecondary,
                 ),
               ],
             ),
-            style: const TextStyle(fontSize: 20, letterSpacing: -0.3),
           ),
-        ],
+        ),
       ),
     );
   }

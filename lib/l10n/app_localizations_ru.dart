@@ -75,6 +75,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeLight => 'Светлая';
 
   @override
+  String get themeSlate => 'Сланец';
+
+  @override
   String get tapAddToQueue => 'Добавить в очередь';
 
   @override
@@ -183,6 +186,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Светлый фон с тёмной панелью приложения и янтарными акцентами — совпадает с прежней темой.';
+
+  @override
+  String get themeSubtitleSlate =>
+      'Сине-серые тона в стиле веб-приложения с янтарными акцентами.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';

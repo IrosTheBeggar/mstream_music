@@ -75,6 +75,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get themeLight => 'Jasny';
 
   @override
+  String get themeSlate => 'Łupek';
+
+  @override
   String get tapAddToQueue => 'Dodaj do kolejki';
 
   @override
@@ -183,6 +186,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Jasne tło z ciemnym paskiem aplikacji i bursztynowymi akcentami — zgodny ze starszym, fabrycznym motywem.';
+
+  @override
+  String get themeSubtitleSlate =>
+      'Niebiesko-szare odcienie jak w aplikacji webowej, z bursztynowymi akcentami.';
 
   @override
   String get settingsTranscode => 'Transkoduj dźwięk';

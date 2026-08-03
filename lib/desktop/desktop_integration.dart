@@ -6,6 +6,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../server/server_controller.dart';
+import '../util/desktop_platform.dart';
 
 /// Desktop-only window/tray/startup integration (leanflutter suite), matching
 /// the Electron build's behaviours:
@@ -28,8 +29,13 @@ class DesktopIntegration with WindowListener, TrayListener {
   static const _appName = 'mStream Music';
   static const _trayIcon = 'assets/tray_icon.ico';
 
-  static bool get isDesktop =>
-      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  static bool get isDesktop => isDesktopPlatform;
+
+  /// Single source of truth for which platforms hide the native title bar in
+  /// favour of the shell's app-drawn band (`_WindowTitleBar`): this drives
+  /// both the window style below and whether the shell mounts the band.
+  /// macOS only for now — Windows/Linux keep native chrome.
+  static bool get usesCustomTitleBar => Platform.isMacOS;
 
   bool _ready = false;
 
@@ -40,17 +46,21 @@ class DesktopIntegration with WindowListener, TrayListener {
     _ready = true;
 
     await windowManager.ensureInitialized();
-    const options = WindowOptions(
-      size: Size(1280, 800),
+    final options = WindowOptions(
+      size: const Size(1280, 800),
       // Keep the floor comfortably above the 900px desktop-shell breakpoint
       // (main.dart): minimumSize is the OUTER window, but the breakpoint reads
       // the inner Flutter view (window minus borders, scaled by DPI), which is a
       // few px smaller. Sitting the min at exactly 900 let the content tip under
       // 900 at the smallest size and flip to the phone shell — 960 leaves room.
-      minimumSize: Size(960, 640),
+      minimumSize: const Size(960, 640),
       center: true,
       title: 'mStream Music',
-      titleBarStyle: TitleBarStyle.normal,
+      // With the custom title bar the shell draws its own band (wordmark +
+      // drag area) under the native traffic lights, which stay visible.
+      titleBarStyle: usesCustomTitleBar
+          ? TitleBarStyle.hidden
+          : TitleBarStyle.normal,
     );
     await windowManager.waitUntilReadyToShow(options, () async {
       await windowManager.show();
