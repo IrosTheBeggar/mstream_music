@@ -12,7 +12,7 @@
 
 import 'package:flutter/material.dart';
 
-enum AppTheme { velvet, dark, light, slate }
+enum AppTheme { velvet, dark, light, slate, graphite }
 
 // Localized labels live in lib/l10n/enum_labels.dart (AppThemeLabel
 // extension) — a getter here can't reach AppLocalizations.
@@ -33,10 +33,17 @@ class VelvetPalette {
   // AppBar (or vice versa) without losing text contrast.
   final Color appBarBg, appBarText, appBarTextSecondary;
 
-  /// Desktop sidebar tone. Equal to [appBarBg] in every theme except Slate,
-  /// which uses the webapp's three-tone scheme: black frame · lighter nav ·
-  /// in-between content.
+  /// Desktop sidebar tone. Equal to [appBarBg] in the pre-tricolor themes;
+  /// Slate and Graphite use the webapp's three-tone scheme: black frame ·
+  /// lighter nav · in-between content.
   final Color navBg;
+
+  /// The two webapp-position structural lines (under the window title bar and
+  /// at nav | content). Equal to [border2] everywhere except Graphite, which
+  /// draws them in the amber accent. Deliberately NOT border2 itself: that
+  /// slot also feeds sliders and outlines, and the accent belongs on exactly
+  /// these two lines.
+  final Color frameLine;
 
   const VelvetPalette({
     required this.brightness,
@@ -65,6 +72,7 @@ class VelvetPalette {
     required this.appBarText,
     required this.appBarTextSecondary,
     required this.navBg,
+    required this.frameLine,
   });
 
   VelvetPalette copyWith({
@@ -94,6 +102,7 @@ class VelvetPalette {
     Color? appBarText,
     Color? appBarTextSecondary,
     Color? navBg,
+    Color? frameLine,
   }) => VelvetPalette(
     brightness: brightness ?? this.brightness,
     bg: bg ?? this.bg,
@@ -121,6 +130,7 @@ class VelvetPalette {
     appBarText: appBarText ?? this.appBarText,
     appBarTextSecondary: appBarTextSecondary ?? this.appBarTextSecondary,
     navBg: navBg ?? this.navBg,
+    frameLine: frameLine ?? this.frameLine,
   );
 
   /// This palette with [a] as the accent: [primary] plus its dependent shades
@@ -212,6 +222,7 @@ const _velvetPalette = VelvetPalette(
   appBarText: Color(0xFFEEEEFF),
   appBarTextSecondary: Color(0xFF8888B0),
   navBg: Color(0xFF16213E),
+  frameLine: Color(0xFF3A4E72),
 );
 
 // Neutral dark theme with amber accent — closer to material defaults
@@ -246,6 +257,7 @@ const _darkPalette = VelvetPalette(
   appBarText: Color(0xFFEEEEEE),
   appBarTextSecondary: Color(0xFFAAAAAA),
   navBg: Color(0xFF121212),
+  frameLine: Color(0xFF4A4A4A),
 );
 
 // Slate — the web app's blue-gray scheme, measured off demo.mstream.io:
@@ -281,6 +293,41 @@ const _slatePalette = VelvetPalette(
   appBarText: Color(0xFFF0F2F5),
   appBarTextSecondary: Color(0xFFAAB2BD),
   navBg: Color(0xFF262A33),
+  frameLine: Color(0xFF444C56),
+);
+
+// Graphite — the Slate structure in neutral grays, with the two structural
+// lines drawn in the amber accent (the v2 card from the shell-frame design
+// round): near-black frame (#0F0F0F), neutral light nav (#2A2A2A), the dark
+// theme's field between (#1E1E1E), cards above both (#2E2E2E), amber lines.
+const _graphitePalette = VelvetPalette(
+  brightness: Brightness.dark,
+  bg: Color(0xFF1E1E1E),
+  // Same as bg on purpose — see _slatePalette.
+  surface: Color(0xFF1E1E1E),
+  raised: Color(0xFF353535),
+  card: Color(0xFF2E2E2E),
+  border: Color(0xFF333333),
+  border2: Color(0xFF4A4A4A),
+  primary: Color(0xFFFFAB00),
+  primaryHover: Color(0xFFFFC233),
+  primaryDim: Color(0x26FFAB00),
+  primaryGlow: Color(0x66FFAB00),
+  accent: Color(0xFFFFAB00),
+  success: Color(0xFF34D399),
+  error: Color(0xFFF87171),
+  warning: Color(0xFFFBBF24),
+  textPrimary: Color(0xFFEEEEEE),
+  textSecondary: Color(0xFFAAAAAA),
+  textTertiary: Color(0xFF888888),
+  textDim: Color(0xFF555555),
+  hover: Color(0x14FFFFFF),
+  active: Color(0x26FFAB00),
+  appBarBg: Color(0xFF0F0F0F),
+  appBarText: Color(0xFFEEEEEE),
+  appBarTextSecondary: Color(0xFFAAAAAA),
+  navBg: Color(0xFF2A2A2A),
+  frameLine: Color(0xFFFFAB00),
 );
 
 // Light theme mirrors master: light gray body, dark AppBar, amber.
@@ -318,6 +365,7 @@ const _lightPalette = VelvetPalette(
   appBarText: Color(0xFFFAFAFA),
   appBarTextSecondary: Color(0xFFBBBBBB),
   navBg: Color(0xFF212121),
+  frameLine: Color(0xFFAAAAAA),
 );
 
 VelvetPalette paletteFor(AppTheme t) {
@@ -330,6 +378,8 @@ VelvetPalette paletteFor(AppTheme t) {
       return _lightPalette;
     case AppTheme.slate:
       return _slatePalette;
+    case AppTheme.graphite:
+      return _graphitePalette;
   }
 }
 
@@ -375,6 +425,7 @@ class VelvetColors {
   static Color get appBarText => _active.appBarText;
   static Color get appBarTextSecondary => _active.appBarTextSecondary;
   static Color get navBg => _active.navBg;
+  static Color get frameLine => _active.frameLine;
 
   // Theme-independent.
   static const radiusSmall = 7.0;
