@@ -73,9 +73,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get themeLight => 'Claro';
 
   @override
-  String get themeSlate => 'Pizarra';
-
-  @override
   String get themeGraphite => 'Grafito';
 
   @override
@@ -190,10 +187,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Cuerpo claro con barra de aplicación oscura y detalles ámbar — coincide con el tema anterior.';
-
-  @override
-  String get themeSubtitleSlate =>
-      'Tonos gris azulado como la aplicación web, con acentos ámbar.';
 
   @override
   String get themeSubtitleGraphite =>

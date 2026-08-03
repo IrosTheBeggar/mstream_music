@@ -73,9 +73,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get themeLight => 'Clair';
 
   @override
-  String get themeSlate => 'Ardoise';
-
-  @override
   String get themeGraphite => 'Graphite';
 
   @override
@@ -190,10 +187,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Corps clair avec une barre d\'application sombre et des accents ambrés — correspond à l\'ancien thème livré.';
-
-  @override
-  String get themeSubtitleSlate =>
-      'Tons gris-bleu assortis à l\'application web, avec des accents ambre.';
 
   @override
   String get themeSubtitleGraphite =>
