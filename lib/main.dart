@@ -169,13 +169,13 @@ Future<void> _startApp() async {
       (AppTheme theme, Locale? locale, int? accent) => (theme, locale, accent),
     ),
     initialData: (
-      SettingsManager().appTheme,
+      SettingsManager().effectiveAppTheme,
       SettingsManager().localeOverride,
       SettingsManager().accentColor,
     ),
     builder: (context, snapshot) {
       final (theme, locale, accent) =
-          snapshot.data ?? (AppTheme.dark, null, null);
+          snapshot.data ?? (SettingsManager().effectiveAppTheme, null, null);
       // A custom accent (if set) overrides the theme's built-in primary and its
       // derived shades across every theme.
       var palette = paletteFor(theme);

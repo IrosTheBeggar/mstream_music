@@ -11,7 +11,7 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | Custom title bar (hide native chrome, app-drawn caption) | **Skipped** — keeping native chrome |
+| 1 | Custom title bar (hide native chrome, app-drawn caption) | **Done (macOS)** — un-skipped by the Slate redesign: `TitleBarStyle.hidden` + app-drawn black band (`_WindowTitleBar`) carrying the wordmark, native traffic lights floating over it, drag + double-click-zoom via `DragToMoveArea`. Windows/Linux keep native chrome (sidebar keeps the wordmark there) |
 | 2 | Hover affordances (theme hoverColor + album-card lift) | **Done** |
 | 3 | Right-click context menus mirroring the ⋮ menus | Pending — oldest open item |
 | 4 | Slim seek line | **Done → superseded** by the waveform seek bar (see below) |
@@ -33,9 +33,11 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
   by the server's `/api/v1/db/waveform` endpoint (the web app's own source),
   per-track/per-server with a peaks cache; plain-line fallback when absent.
 - **Colour system** — monotone → tonal zoning → the web-app "flat field": dark
-  chrome frame (sidebar + bar on `appBarBg`) with two `border2` structural
-  hairlines, one flat content field shared by browser + queue, boxed browse
-  rows rising to the `card` tone, flat queue rows.
+  chrome frame with `border2` structural hairlines, one flat content field
+  shared by browser + queue, boxed browse rows rising to the `card` tone, flat
+  queue rows. Superseded in tone by the Slate three-tone scheme (below): the
+  frame is now title bar + bar on `appBarBg`, and the sidebar sits on its own
+  lighter `navBg` instead of sharing the frame tone.
 - **Bar / now-playing architecture** — see below.
 - **Now Playing extras** — up-next peek, in-place rating, FLAC/44.1 kHz-style
   fidelity badge, and Tier-1 party mode (fullscreen + hold-to-unlock, optional
@@ -43,6 +45,13 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 - **macOS enablement** — the `macos/` runner, SPM-only deps, darwin server-path
   fix, app data moved out of `~/Documents` (TCC), and the visualizer's
   real-audio path via the `viz_decoder` sidecar + backdrop render mode.
+- **Slate theme** — the webapp's blue-gray scheme (measured off demo.mstream.io)
+  as a fourth `AppTheme`, default on desktop: black chrome frame (title bar +
+  Now Playing bar, `appBarBg` #1A1A1A) · lighter nav panel (new `navBg` slot,
+  #262A33) · content field between (#1E2228) · cards above both (#2D333B) ·
+  #444C56 structural lines (under the title bar, at nav | content, on the
+  bar's top edge). Amber accent unchanged. Chosen from the `shell-frame/`
+  design-project round (v3 tones + v1's layout, i.e. current layout kept).
 
 ## The bar / queue / Now Playing architecture (current)
 

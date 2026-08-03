@@ -134,12 +134,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             title: Text(l.settingsTheme),
             subtitle: Text(
-              _themeSubtitle(l, SettingsManager().appTheme),
+              _themeSubtitle(l, SettingsManager().effectiveAppTheme),
               style: TextStyle(
                   color: VelvetColors.textSecondary, fontSize: 12),
             ),
             trailing: DropdownButton<AppTheme>(
-              value: SettingsManager().appTheme,
+              value: SettingsManager().effectiveAppTheme,
               underline: SizedBox.shrink(),
               dropdownColor: VelvetColors.surface,
               style: TextStyle(color: VelvetColors.textPrimary, fontSize: 14),
@@ -656,6 +656,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return l.themeSubtitleDark;
       case AppTheme.light:
         return l.themeSubtitleLight;
+      case AppTheme.slate:
+        return l.themeSubtitleSlate;
     }
   }
 
