@@ -73,6 +73,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeLight => 'Light';
 
   @override
+  String get themeSlate => 'Slate';
+
+  @override
   String get tapAddToQueue => 'Add to queue';
 
   @override
@@ -181,6 +184,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Light body with a dark app bar and amber accents — matches the older shipped theme.';
+
+  @override
+  String get themeSubtitleSlate =>
+      'Blue-gray tones matching the web app, with amber accents.';
 
   @override
   String get settingsTranscode => 'Transcode audio';

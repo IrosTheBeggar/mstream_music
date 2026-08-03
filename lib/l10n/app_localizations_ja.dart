@@ -71,6 +71,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get themeLight => 'ライト';
 
   @override
+  String get themeSlate => 'スレート';
+
+  @override
   String get tapAddToQueue => 'キューに追加';
 
   @override
@@ -177,6 +180,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       '明るい本体にダークなアプリバーとアンバーのアクセント — 以前のテーマに合わせています。';
+
+  @override
+  String get themeSubtitleSlate => 'ウェブアプリに合わせたブルーグレー調、アンバーのアクセント。';
 
   @override
   String get settingsTranscode => '音声をトランスコード';
