@@ -754,7 +754,7 @@ class _WindowTitleBar extends StatelessWidget {
         style: Theme.of(context).textTheme.bodyMedium!,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: VelvetColors.appBarBg,
+            color: VelvetColors.titleBarBg,
             border: Border(
               bottom: BorderSide(color: VelvetColors.frameLine),
             ),

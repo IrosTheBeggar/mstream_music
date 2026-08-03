@@ -25,6 +25,8 @@ extension AppThemeLabel on AppTheme {
         return l.themeSlate;
       case AppTheme.graphite:
         return l.themeGraphite;
+      case AppTheme.onyx:
+        return l.themeOnyx;
     }
   }
 }

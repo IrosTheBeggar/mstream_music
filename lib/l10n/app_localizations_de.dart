@@ -79,6 +79,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeGraphite => 'Graphit';
 
   @override
+  String get themeOnyx => 'Onyx';
+
+  @override
   String get tapAddToQueue => 'Zur Warteschlange hinzufügen';
 
   @override
@@ -197,6 +200,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get themeSubtitleGraphite =>
       'Neutrale Grautöne mit bernsteinfarbenen Akzentlinien.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Blaugraue Slate-Töne unter schwarzer Titelleiste, mit bernsteinfarbenen Akzentlinien.';
 
   @override
   String get settingsTranscode => 'Audio transkodieren';

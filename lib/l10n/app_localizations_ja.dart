@@ -77,6 +77,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get themeGraphite => 'グラファイト';
 
   @override
+  String get themeOnyx => 'オニキス';
+
+  @override
   String get tapAddToQueue => 'キューに追加';
 
   @override
@@ -189,6 +192,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite => 'ニュートラルなグレーにアンバーのアクセントライン。';
+
+  @override
+  String get themeSubtitleOnyx => 'スレートのブルーグレーに黒いトップバー、アンバーのアクセントライン。';
 
   @override
   String get settingsTranscode => '音声をトランスコード';
