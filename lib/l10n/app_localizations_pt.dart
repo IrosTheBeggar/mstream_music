@@ -197,11 +197,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite =>
-      'Cinzas neutros com linhas de destaque âmbar.';
+      'Cinzas neutros com uma linha de destaque âmbar.';
 
   @override
   String get themeSubtitleOnyx =>
-      'Os cinza-azulados de Ardósia sob uma barra superior preta, com linhas âmbar.';
+      'Os cinza-azulados de Ardósia sob uma barra superior preta, com uma linha de destaque âmbar.';
 
   @override
   String get settingsTranscode => 'Transcodificar áudio';

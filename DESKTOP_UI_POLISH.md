@@ -45,13 +45,17 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 - **macOS enablement** — the `macos/` runner, SPM-only deps, darwin server-path
   fix, app data moved out of `~/Documents` (TCC), and the visualizer's
   real-audio path via the `viz_decoder` sidecar + backdrop render mode.
-- **Slate theme** — the webapp's blue-gray scheme (measured off demo.mstream.io)
-  as a fourth `AppTheme`, default on desktop: black chrome frame (title bar +
-  Now Playing bar, `appBarBg` #1A1A1A) · lighter nav panel (new `navBg` slot,
-  #262A33) · content field between (#1E2228) · cards above both (#2D333B) ·
-  #444C56 structural lines (under the title bar, at nav | content, on the
-  bar's top edge). Amber accent unchanged. Chosen from the `shell-frame/`
-  design-project round (v3 tones + v1's layout, i.e. current layout kept).
+- **The theme round → Onyx** — three new tricolor themes came out of the
+  `shell-frame/` design-project round (Slate = v3's webapp blue-grays,
+  Graphite = v2's neutral grays + amber lines, Onyx = the hybrid), all
+  selectable in Settings; **Onyx won and is the desktop default** (resolved at
+  read time via `SettingsManager.effectiveAppTheme`). Final frame: four tones —
+  title bar #0F0F0F (`titleBarBg`) · nav #262A33 (`navBg`) · content #1E2228 ·
+  Now Playing bar #1A1A1A — with exactly ONE accent line, amber under the
+  title bar (`titleBarLine`); the nav | content divider stays quiet #444C56
+  (`border2`) and bar | content is a bare tone shift (its old hairline was
+  removed shell-wide). Cards #2D333B ride above the nav tone. Amber accent
+  unchanged.
 
 ## The bar / queue / Now Playing architecture (current)
 

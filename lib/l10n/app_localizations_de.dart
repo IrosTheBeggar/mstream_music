@@ -199,11 +199,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite =>
-      'Neutrale Grautöne mit bernsteinfarbenen Akzentlinien.';
+      'Neutrale Grautöne mit bernsteinfarbener Akzentlinie.';
 
   @override
   String get themeSubtitleOnyx =>
-      'Blaugraue Slate-Töne unter schwarzer Titelleiste, mit bernsteinfarbenen Akzentlinien.';
+      'Blaugraue Slate-Töne unter schwarzer Titelleiste, mit bernsteinfarbener Akzentlinie.';
 
   @override
   String get settingsTranscode => 'Audio transkodieren';

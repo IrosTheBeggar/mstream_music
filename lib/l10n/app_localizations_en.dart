@@ -196,11 +196,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Blue-gray tones matching the web app, with amber accents.';
 
   @override
-  String get themeSubtitleGraphite => 'Neutral grays with amber accent lines.';
+  String get themeSubtitleGraphite =>
+      'Neutral grays with an amber accent line.';
 
   @override
   String get themeSubtitleOnyx =>
-      'Slate\'s blue-grays under a black top bar, with amber accent lines.';
+      'Slate\'s blue-grays under a black top bar, with an amber accent line.';
 
   @override
   String get settingsTranscode => 'Transcode audio';

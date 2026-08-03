@@ -197,11 +197,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite =>
-      'Grigi neutri con linee di accento ambra.';
+      'Grigi neutri con una linea di accento ambra.';
 
   @override
   String get themeSubtitleOnyx =>
-      'I grigio-blu di Ardesia sotto una barra superiore nera, con linee di accento ambra.';
+      'I grigio-blu di Ardesia sotto una barra superiore nera, con una linea di accento ambra.';
 
   @override
   String get settingsTranscode => 'Transcodifica audio';
