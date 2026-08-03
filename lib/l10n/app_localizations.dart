@@ -216,12 +216,6 @@ abstract class AppLocalizations {
   /// **'Light'**
   String get themeLight;
 
-  /// No description provided for @themeSlate.
-  ///
-  /// In en, this message translates to:
-  /// **'Slate'**
-  String get themeSlate;
-
   /// No description provided for @themeGraphite.
   ///
   /// In en, this message translates to:
@@ -437,12 +431,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Light body with a dark app bar and amber accents — matches the older shipped theme.'**
   String get themeSubtitleLight;
-
-  /// No description provided for @themeSubtitleSlate.
-  ///
-  /// In en, this message translates to:
-  /// **'Blue-gray tones matching the web app, with amber accents.'**
-  String get themeSubtitleSlate;
 
   /// No description provided for @themeSubtitleGraphite.
   ///

@@ -45,11 +45,14 @@ Companion doc: `DESKTOP_PORT_PLAN.md` (platform/feature feasibility).
 - **macOS enablement** — the `macos/` runner, SPM-only deps, darwin server-path
   fix, app data moved out of `~/Documents` (TCC), and the visualizer's
   real-audio path via the `viz_decoder` sidecar + backdrop render mode.
-- **The theme round → Onyx** — three new tricolor themes came out of the
+- **The theme round → Onyx** — three tricolor candidates came out of the
   `shell-frame/` design-project round (Slate = v3's webapp blue-grays,
-  Graphite = v2's neutral grays + amber lines, Onyx = the hybrid), all
-  selectable in Settings; **Onyx won and is the desktop default** (resolved at
-  read time via `SettingsManager.effectiveAppTheme`). Final frame: four tones —
+  Graphite = v2's neutral grays + amber lines, Onyx = the hybrid), A/B'd live.
+  **Onyx won and is the desktop default** (resolved at read time via
+  `SettingsManager.effectiveAppTheme`); Graphite is kept as the alternate;
+  Slate was purged after the round. Onyx/Graphite are desktop-only entries in
+  the theme picker (`AppTheme.isDesktopOnly`) — phones keep Velvet/Dark/Light.
+  Final frame: four tones —
   title bar #0F0F0F (`titleBarBg`) · nav #262A33 (`navBg`) · content #1E2228 ·
   Now Playing bar #1A1A1A — with exactly ONE accent line, amber under the
   title bar (`titleBarLine`); the nav | content divider stays quiet #444C56
