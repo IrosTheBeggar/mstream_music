@@ -199,11 +199,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite =>
-      'Neutralne szarości z bursztynowymi liniami akcentowymi.';
+      'Neutralne szarości z bursztynową linią akcentową.';
 
   @override
   String get themeSubtitleOnyx =>
-      'Niebiesko-szare odcienie Łupka pod czarnym górnym paskiem, z bursztynowymi liniami.';
+      'Niebiesko-szare odcienie Łupka pod czarnym górnym paskiem, z bursztynową linią akcentową.';
 
   @override
   String get settingsTranscode => 'Transkoduj dźwięk';

@@ -447,13 +447,13 @@ abstract class AppLocalizations {
   /// No description provided for @themeSubtitleGraphite.
   ///
   /// In en, this message translates to:
-  /// **'Neutral grays with amber accent lines.'**
+  /// **'Neutral grays with an amber accent line.'**
   String get themeSubtitleGraphite;
 
   /// No description provided for @themeSubtitleOnyx.
   ///
   /// In en, this message translates to:
-  /// **'Slate\'s blue-grays under a black top bar, with amber accent lines.'**
+  /// **'Slate\'s blue-grays under a black top bar, with an amber accent line.'**
   String get themeSubtitleOnyx;
 
   /// Transcode toggle row.

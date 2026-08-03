@@ -199,11 +199,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get themeSubtitleGraphite =>
-      'Нейтральные серые тона с янтарными акцентными линиями.';
+      'Нейтральные серые тона с янтарной акцентной линией.';
 
   @override
   String get themeSubtitleOnyx =>
-      'Сине-серые тона Сланца под чёрной верхней панелью с янтарными линиями.';
+      'Сине-серые тона Сланца под чёрной верхней панелью с янтарной акцентной линией.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';
