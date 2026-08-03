@@ -69,10 +69,14 @@ whole layout below.
   the controls row. The waveform strip floats on the shell's root `Stack`
   straddling the content/bar boundary (`Positioned` in `_DesktopShellState`),
   spanning sidebar → the now-playing card. Thumb on hover only.
-- **Now-playing card** owns the bar's full-height right corner (88px art +
-  title/artist/album) and stays put whether the queue is open or closed. Its
-  album art is the door to the full-screen Now Playing (hover → expand glyph);
-  a folded queue glyph in its corner toggles the queue.
+- **Now-playing card** owns the bar's full-height right corner and stays put
+  whether the queue is open or closed: 88px art on the LEFT, then title /
+  artist / album·year / a badges row (BPM · key · LYRICS, from the queue's
+  metadata extras). Two glyphs sit bottom-right — expand (opens the
+  full-screen Now Playing; hover-brightens, never state-highlighted) and the
+  folded queue glyph at the corner (amber while the queue is open). The whole
+  card toggles the queue; the art is plain (an art-tap opening Now Playing
+  wasn't discoverable).
 - **Queue column** reads a "Queue" header (carrying clear · save/download/share
   · close) → the track list. It shares the content field with the browser (no
   divider), web-app style.
