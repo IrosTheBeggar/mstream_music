@@ -53,6 +53,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 
   final TextEditingController _keywordCtrl = TextEditingController();
 
+  // In-flight slider drag values. The sliders update these (cheap, local)
+  // per drag tick and commit to AutoDJManager only in onChangeEnd — the
+  // manager setter does a _notify() plus a full auto_dj.json rewrite, which
+  // used to run on EVERY tick of a drag (up to ~50 writes per gesture).
+  double? _sonicDrag;
+  int? _bpmDrag;
+
   @override
   void initState() {
     super.initState();
@@ -312,7 +319,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 Spacer(),
                 Text(
                   l.autoDjSonicStrictnessValue(
-                      (mgr.sonicMinSimilarity * 100).round()),
+                      ((_sonicDrag ?? mgr.sonicMinSimilarity) * 100).round()),
                   style: TextStyle(
                     color: VelvetColors.primary,
                     fontSize: 13,
@@ -330,11 +337,17 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               // Raw cosine threshold; the useful band in practice —
               // webapp's slider covers the same perceptual range.
               child: Slider(
-                value: mgr.sonicMinSimilarity.clamp(0.30, 0.80),
+                value: (_sonicDrag ?? mgr.sonicMinSimilarity).clamp(0.30, 0.80),
                 min: 0.30,
                 max: 0.80,
                 divisions: 50,
-                onChanged: (v) => mgr.setSonicMinSimilarity(v),
+                // Track the drag locally; persist once on release (the EQ
+                // screen's pattern) instead of a notify+file-write per tick.
+                onChanged: (v) => setState(() => _sonicDrag = v),
+                onChangeEnd: (v) async {
+                  await mgr.setSonicMinSimilarity(v);
+                  if (mounted) setState(() => _sonicDrag = null);
+                },
               ),
             ),
             // What the DJ does from a standing start. The old row here was a
@@ -458,7 +471,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 ),
                 Spacer(),
                 Text(
-                  l.autoDjBpmTolerance(mgr.bpmTolerance),
+                  l.autoDjBpmTolerance(_bpmDrag ?? mgr.bpmTolerance),
                   style: TextStyle(
                     color: VelvetColors.primary,
                     fontSize: 13,
@@ -474,11 +487,17 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 overlayColor: VelvetColors.primaryDim,
               ),
               child: Slider(
-                value: mgr.bpmTolerance.toDouble().clamp(1.0, 20.0),
+                value: (_bpmDrag ?? mgr.bpmTolerance).toDouble().clamp(1.0, 20.0),
                 min: 1,
                 max: 20,
                 divisions: 19,
-                onChanged: (v) => mgr.setBpmTolerance(v.round()),
+                // Local during the drag, persisted once on release — see
+                // _sonicDrag.
+                onChanged: (v) => setState(() => _bpmDrag = v.round()),
+                onChangeEnd: (v) async {
+                  await mgr.setBpmTolerance(v.round());
+                  if (mounted) setState(() => _bpmDrag = null);
+                },
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../objects/auto_download_entry.dart';
+import '../util/write_chain.dart';
 import 'log_manager.dart';
 
 /// Persistent, ordered record of auto-downloaded tracks (keep-queue-offline),
@@ -103,13 +104,18 @@ class AutoDownloadLedger {
           int cap, bool Function(String server, String path) isProtected) =>
       selectEvictions(_entries, cap, isProtected: isProtected);
 
-  Future<void> _persist() async {
-    try {
-      final f = await _file();
-      await f.writeAsString(
-          jsonEncode(_entries.map((e) => e.toJson()).toList()));
-    } catch (e) {
-      appLog('[auto-dl] ledger persist failed: $e');
-    }
-  }
+  // Serialized: two downloads completing near-simultaneously (routine during
+  // a keep-queue-offline sweep or "Download all") both run record→_persist;
+  // without the chain their truncate+writes interleave on auto_downloads.json.
+  final WriteChain _writeChain = WriteChain();
+
+  Future<void> _persist() => _writeChain.run(() async {
+        try {
+          final f = await _file();
+          await f.writeAsString(
+              jsonEncode(_entries.map((e) => e.toJson()).toList()));
+        } catch (e) {
+          appLog('[auto-dl] ledger persist failed: $e');
+        }
+      });
 }

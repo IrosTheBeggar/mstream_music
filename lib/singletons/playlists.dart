@@ -16,6 +16,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../objects/playlist.dart';
 import '../singletons/media.dart';
+import '../util/write_chain.dart';
 
 class PlaylistManager {
   PlaylistManager._privateConstructor();
@@ -52,10 +53,15 @@ class PlaylistManager {
     }
   }
 
-  Future<void> _save() async {
-    final f = await _file;
-    await f.writeAsString(jsonEncode(playlists.map((p) => p.toJson()).toList()));
-  }
+  // Serialized so rapid successive edits (create + add-song, bulk removes)
+  // can't interleave truncate+writes on playlists.json.
+  final WriteChain _writeChain = WriteChain();
+
+  Future<void> _save() => _writeChain.run(() async {
+        final f = await _file;
+        await f
+            .writeAsString(jsonEncode(playlists.map((p) => p.toJson()).toList()));
+      });
 
   Future<Playlist> create(String name) async {
     final p = Playlist(name: name, entries: []);

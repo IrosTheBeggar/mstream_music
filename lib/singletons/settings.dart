@@ -8,6 +8,7 @@ import 'package:rxdart/rxdart.dart';
 
 import '../objects/player_layout.dart';
 import '../theme/velvet_theme.dart';
+import '../util/write_chain.dart';
 import 'transcode.dart';
 
 /// How tapping a song in the browser should behave. The default
@@ -519,7 +520,11 @@ class SettingsManager {
     return {...current, c};
   }
 
-  Future<void> _save() async {
+  // Serialized so overlapping saves (e.g. two toggles in quick succession)
+  // can't interleave truncate+writes on settings.json — see WriteChain.
+  final WriteChain _writeChain = WriteChain();
+
+  Future<void> _save() => _writeChain.run(() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
       'transcode': TranscodeManager().transcodeOn,
@@ -558,7 +563,7 @@ class SettingsManager {
       'castVisualizerQuality': castVisualizerQuality.name,
       'language': language,
     }));
-  }
+  });
 
   Future<void> setTranscode(bool v) async {
     TranscodeManager().transcodeOn = v;

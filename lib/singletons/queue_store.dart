@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../objects/server.dart';
 import '../util/stream_url.dart';
+import '../util/write_chain.dart';
 import 'media.dart';
 import 'server_list.dart';
 import 'log_manager.dart';
@@ -45,6 +46,20 @@ class QueueStore {
   Timer? _debounceTimer;
   Timer? _ticker;
   final List<StreamSubscription> _subs = [];
+
+  // Serializes the snapshot writes AND deletes so they can't interleave a
+  // truncate+write on queue.json (a delete racing a checkpoint write is the
+  // same hazard).
+  final WriteChain _writeChain = WriteChain();
+
+  // Encoded 'items' array of the last snapshot, invalidated on every queue
+  // emission. The items are the whole queue — by far the largest part of the
+  // file and unchanged between most checkpoints (the 10s position ticker), so
+  // the checkpoint splices a fresh header onto this instead of re-serializing
+  // every item each time. Every queue content change re-emits the handler's
+  // queue subject (including the mutate-in-place `queue.value..add(x)` sites),
+  // so emission-invalidation is sound.
+  String? _itemsJsonCache;
 
   Future<File> get _file async {
     final dir = await getApplicationDocumentsDirectory();
@@ -196,8 +211,12 @@ class QueueStore {
 
   void _attachListeners() {
     final handler = MediaManager().audioHandler;
-    // Queue edits (add / remove / reorder / clear) and track changes.
-    _subs.add(handler.queue.listen((_) => _schedule()));
+    // Queue edits (add / remove / reorder / clear) and track changes. A queue
+    // emission means the items may have changed — drop the cached encoding.
+    _subs.add(handler.queue.listen((_) {
+      _itemsJsonCache = null;
+      _schedule();
+    }));
     _subs.add(handler.mediaItem.listen((_) => _schedule()));
     // Periodic position checkpoint while actually playing.
     _ticker = Timer.periodic(_tick, (_) {
@@ -236,7 +255,9 @@ class QueueStore {
       final file = await _file;
       if (!SettingsManager().resumeQueue) {
         // Feature disabled — drop any saved queue so it can't be restored.
-        if (await file.exists()) await file.delete();
+        await _writeChain.run(() async {
+          if (await file.exists()) await file.delete();
+        });
         return;
       }
       final handler = MediaManager().audioHandler;
@@ -248,7 +269,11 @@ class QueueStore {
         // whiffed — transient server-list read failure, no resolvable items —
         // would destroy the very snapshot the resumption chip serves, turning
         // a recoverable hiccup into permanent loss.
-        if (_hadQueue && await file.exists()) await file.delete();
+        if (_hadQueue) {
+          await _writeChain.run(() async {
+            if (await file.exists()) await file.delete();
+          });
+        }
         return;
       }
       _hadQueue = true;
@@ -264,18 +289,39 @@ class QueueStore {
       final int? durMs = spot != null
           ? (idx < queue.length ? queue[idx].duration?.inMilliseconds : null)
           : handler.mediaItem.value?.duration?.inMilliseconds;
-      final snapshot = <String, dynamic>{
-        'version': _schemaVersion,
-        'index': idx,
-        'positionMs': clampResumePositionMs(pos.inMilliseconds, durMs),
-        'shuffle': state.shuffleMode == AudioServiceShuffleMode.all,
-        'repeat': _repeatName(state.repeatMode),
-        'items': queue.map(itemToJson).toList(),
-      };
-      await file.writeAsString(jsonEncode(snapshot));
+      final itemsJson =
+          _itemsJsonCache ??= jsonEncode(queue.map(itemToJson).toList());
+      final content = snapshotJson(
+        index: idx,
+        positionMs: clampResumePositionMs(pos.inMilliseconds, durMs),
+        shuffle: state.shuffleMode == AudioServiceShuffleMode.all,
+        repeat: _repeatName(state.repeatMode),
+        itemsJson: itemsJson,
+      );
+      await _writeChain.run(() => file.writeAsString(content));
     } catch (e) {
       appLog('[queue] save failed: $e');
     }
+  }
+
+  /// Assemble the snapshot by splicing the pre-encoded items array into the
+  /// encoded header — see [_itemsJsonCache] for why the array is cached.
+  /// Pure; unit-tested to stay byte-identical with a full jsonEncode.
+  static String snapshotJson({
+    required int index,
+    required int positionMs,
+    required bool shuffle,
+    required String repeat,
+    required String itemsJson,
+  }) {
+    final header = jsonEncode({
+      'version': _schemaVersion,
+      'index': index,
+      'positionMs': positionMs,
+      'shuffle': shuffle,
+      'repeat': repeat,
+    });
+    return '${header.substring(0, header.length - 1)},"items":$itemsJson}';
   }
 
   // ── (de)serialization — pure & static so they're unit-testable ──
