@@ -940,11 +940,20 @@ class ServerManager {
     return false;
   }
 
-  /// Enable the native trust-all TLS bridge (ExoPlayer streaming) iff some
-  /// server opted into self-signed. No-op on the Play build. Call whenever the
-  /// server list changes.
+  /// Sync the native per-host TLS bypass (ExoPlayer streaming) to the hosts of
+  /// servers that opted into self-signed — only those hosts skip validation;
+  /// everything else keeps platform TLS. No-op on the Play build. Call whenever
+  /// the server list changes.
   void syncInsecureTls() {
-    InsecureTlsChannel.setEnabled(serverList.any((s) => s.allowSelfSigned));
+    final hosts = <String>{};
+    for (final s in serverList) {
+      if (!s.allowSelfSigned) continue;
+      try {
+        final host = Uri.parse(s.url).host;
+        if (host.isNotEmpty) hosts.add(host);
+      } catch (_) {}
+    }
+    InsecureTlsChannel.setAllowedHosts(hosts);
   }
 
   /// Like [byLocalname] but throws when no server matches — for legacy callers
