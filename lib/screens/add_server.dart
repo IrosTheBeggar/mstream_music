@@ -830,6 +830,11 @@ class MyCustomFormState extends State<MyCustomForm> {
       s.storageMode = _storageMode;
       s.allowSelfSigned = _allowSelfSigned;
       s.storageBasePath = basePath;
+      // checkServer just logged in with the (possibly edited) credentials —
+      // keep the fresh token, or every later request would still send the old
+      // one (nothing else re-logs-in on a 401). Empty jwt means no login ran
+      // (no-auth ping path / direct iroh save): keep the stored token.
+      if (jwt.isNotEmpty) s.jwt = jwt;
       ServerManager()
           .editServer(widget.editThisServer!, _urlCtrl.text, username, password);
       await ServerManager().getServerPaths(s);
