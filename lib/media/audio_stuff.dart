@@ -1660,6 +1660,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[queue] add: ${mediaItem.title} (now ${queue.value.length})');
   }
 
+  @override
+  Future<void> addQueueItems(List<MediaItem> mediaItems) async {
+    if (mediaItems.isEmpty) return;
+    // ONE queue emission + ONE backend call for the whole batch. Appending a
+    // big folder per-item re-ran every whole-queue listener (iroh scan,
+    // keep-queue-offline sweep) and a platform round-trip per track — O(N²)
+    // work that stalled the UI on large "Add all"s.
+    queue.add(queue.value..addAll(mediaItems));
+    await _backend.addSources(mediaItems);
+    appLog('[queue] add ${mediaItems.length} tracks '
+        '(now ${queue.value.length})');
+  }
+
   // The user's intended play state, tracked across just_audio errors (which flip
   // the backend's `playing` to false). A recovery uses this so a launch-time
   // re-seed resumes PAUSED rather than autoplaying on open.

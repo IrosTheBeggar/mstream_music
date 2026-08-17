@@ -309,6 +309,17 @@ abstract class EmulatedPlaylistBackend implements PlaybackBackend {
   }
 
   @override
+  Future<void> addSources(List<MediaItem> items) async {
+    if (items.isEmpty) return;
+    _items.addAll(items);
+    if (_index == -1) {
+      _index = 0;
+      emitIndex(0);
+      setProcessingState(BackendProcessingState.ready);
+    }
+  }
+
+  @override
   Future<void> removeSourceAt(int index) async {
     if (index < 0 || index >= _items.length) return;
     _items.removeAt(index);

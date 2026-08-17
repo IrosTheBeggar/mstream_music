@@ -38,6 +38,11 @@ abstract class PlaybackBackend {
   Future<void> setSources(List<MediaItem> items,
       {int? initialIndex, Duration? initialPosition});
   Future<void> addSource(MediaItem item);
+
+  /// Append [items] as ONE batch — same semantics as calling [addSource] for
+  /// each in order, but a single platform/renderer call, so a bulk enqueue
+  /// ("Add all" on a folder) doesn't pay a round-trip per track.
+  Future<void> addSources(List<MediaItem> items);
   Future<void> removeSourceAt(int index);
 
   /// Move the source at [from] to [to] (the post-removal target index, matching

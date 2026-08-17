@@ -632,7 +632,7 @@ class _BrowserState extends State<Browser> {
                     label: l.addAll,
                     onPressed: (context) {
                       ApiManager().getRecursiveFiles(b[i].data!,
-                          useThisServer: b[i].server);
+                          useThisServer: b[i].server!);
                     })
               ],
             ),
@@ -818,8 +818,10 @@ class _BrowserState extends State<Browser> {
                   style: TextStyle(color: VelvetColors.textPrimary)),
               onTap: () {
                 Navigator.of(sheetCtx).pop();
+                // A browsed folder row always carries its server; the
+                // parameter went non-null in the recursive-files hardening.
                 ApiManager().getRecursiveFiles(item.data!,
-                    useThisServer: item.server);
+                    useThisServer: item.server!);
               },
             ),
             const SizedBox(height: 8),
