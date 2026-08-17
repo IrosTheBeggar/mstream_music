@@ -272,6 +272,10 @@ class BrowserManager {
   }
 
   void goToNavScreen() {
+    // The stack this reset discards is the one any in-flight browse fetch
+    // would push onto — cancel them, or a late response (e.g. the OLD server's
+    // folder surviving a server switch) lands on top of the NEW home screen.
+    cancelLoading();
     _albumDetail.add(null);
     browserCache.clear();
     browserList.clear();

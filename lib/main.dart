@@ -888,7 +888,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   child: PopupMenuButton(
                       onSelected: (int selectedServerIndex) async {
                         if (selectedServerIndex > -1) {
-                          ServerManager()
+                          // Awaited (mirroring the add-server flow): the ping
+                          // below used to race the iroh tunnel bring-up inside
+                          // changeCurrentServer and reliably showed a spurious
+                          // "failed to connect" toast on every iroh switch.
+                          await ServerManager()
                               .changeCurrentServer(selectedServerIndex);
 
                           try {

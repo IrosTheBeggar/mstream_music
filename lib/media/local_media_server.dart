@@ -1,8 +1,15 @@
 import 'dart:io';
 import 'dart:math' show Random;
 
+import 'package:meta/meta.dart';
+
 import 'cast_art.dart' show mimeForPath;
 import 'cast_log.dart';
+
+/// Outcome of parsing a Range header against a body of known length:
+/// serve [start]..[end] inclusive ([partial] → 206, else 200), or null for an
+/// unsatisfiable range (416).
+typedef ParsedRange = ({int start, int end, bool partial});
 
 /// On-device HTTP server that streams phone-local audio files to a cast
 /// renderer over the LAN.
@@ -25,7 +32,19 @@ class LocalMediaServer {
 
   HttpServer? _server;
   String? _host; // LAN IPv4 the renderer connects back to
-  final Random _rng = Random();
+  // Secure source: the token is doing security work (it's the only thing
+  // gating a LAN peer from a registered resource on an all-interfaces bind),
+  // and math.Random is a predictable time-seeded PRNG.
+  final Random _rng = _tokenRandom();
+
+  static Random _tokenRandom() {
+    try {
+      return Random.secure();
+    } catch (_) {
+      // No secure entropy source on this platform — degraded but functional.
+      return Random();
+    }
+  }
   final Map<String, String> _files = <String, String>{}; // token -> abs path
   final Map<String, String> _types = <String, String>{}; // token -> content type
   final Map<String, String> _dirs = <String, String>{}; // token -> directory
@@ -280,24 +299,17 @@ class LocalMediaServer {
         ..set(HttpHeaders.contentTypeHeader,
             contentType ?? mimeForPath(path));
 
-      // Parse a single byte range (renderers send `bytes=start-` or
-      // `bytes=start-end`); multi-range isn't used by media renderers.
-      var start = 0;
-      var end = length - 1;
-      final range = req.headers.value(HttpHeaders.rangeHeader);
-      if (range != null && range.startsWith('bytes=')) {
-        final spec = range.substring(6).split('-');
-        if (spec[0].isNotEmpty) start = int.tryParse(spec[0]) ?? 0;
-        if (spec.length > 1 && spec[1].isNotEmpty) {
-          end = int.tryParse(spec[1]) ?? end;
-        }
-        if (start < 0 || start >= length || start > end) {
-          res.statusCode = HttpStatus.requestedRangeNotSatisfiable;
-          res.headers.set(HttpHeaders.contentRangeHeader, 'bytes */$length');
-          await res.close();
-          return;
-        }
-        if (end > length - 1) end = length - 1;
+      final parsed =
+          parseRange(req.headers.value(HttpHeaders.rangeHeader), length);
+      if (parsed == null) {
+        res.statusCode = HttpStatus.requestedRangeNotSatisfiable;
+        res.headers.set(HttpHeaders.contentRangeHeader, 'bytes */$length');
+        await res.close();
+        return;
+      }
+      final start = parsed.start;
+      final end = parsed.end;
+      if (parsed.partial) {
         res.statusCode = HttpStatus.partialContent;
         res.headers
             .set(HttpHeaders.contentRangeHeader, 'bytes $start-$end/$length');
@@ -321,6 +333,40 @@ class LocalMediaServer {
         await res.close();
       } catch (_) {}
     }
+  }
+
+  /// Parse a single byte-range header against a body of [length] bytes.
+  /// Renderers send `bytes=start-`, `bytes=start-end`, and — as the standard
+  /// tail probe for end-of-file moov atoms / tags — the suffix form
+  /// `bytes=-N` (the LAST N bytes); multi-range isn't used by media renderers.
+  ///
+  /// Returns the inclusive window to serve (partial → 206), null for an
+  /// unsatisfiable range (416), and the whole body as a plain 200 when there
+  /// is no Range header or its syntax is invalid (RFC 9110: an unparseable
+  /// Range MUST be ignored). Pure; unit-tested.
+  @visibleForTesting
+  static ParsedRange? parseRange(String? range, int length) {
+    ParsedRange full() => (start: 0, end: length - 1, partial: false);
+    if (range == null || !range.startsWith('bytes=')) return full();
+    final spec = range.substring(6).split('-');
+    if (spec.length != 2) return full(); // malformed → ignore the header
+    final first = spec[0].isEmpty ? null : int.tryParse(spec[0]);
+    final second = spec[1].isEmpty ? null : int.tryParse(spec[1]);
+
+    if (spec[0].isEmpty) {
+      // Suffix form `bytes=-N`: the last N bytes — NOT 0..N. Serving the head
+      // here made tail probes (MP4 moov at end, ID3v1/APE tags) read the
+      // wrong bytes as a well-formed 206.
+      if (second == null) return full(); // `bytes=-` → ignore
+      if (second <= 0 || length <= 0) return null; // no bytes to serve → 416
+      final start = second >= length ? 0 : length - second;
+      return (start: start, end: length - 1, partial: true);
+    }
+
+    if (first == null) return full(); // `bytes=abc-…` → ignore
+    final end = second == null || second > length - 1 ? length - 1 : second;
+    if (first < 0 || first >= length || first > end) return null; // 416
+    return (start: first, end: end, partial: true);
   }
 
   // Relay a renderer's GET/HEAD to the [upstream] loopback URL, forwarding Range

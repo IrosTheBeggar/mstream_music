@@ -716,11 +716,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // the load so the renderer auto-plays when its media is ready. Not routed
     // through _loadAtSpot — parking a local-playback spot on a switch TO a
     // renderer would be meaningless, and the local arm's own revive paths
-    // already cover the way back.
-    await next.setSources(
-        identical(next, _localBackend) ? _queueWithFreshUrls() : queue.value,
-        initialIndex: idx,
-        initialPosition: pos);
+    // already cover the way back. Clamped: a queue edit racing the switch can
+    // leave idx past the end, and an out-of-range initialIndex kills the load.
+    final items = identical(next, _localBackend)
+        ? _queueWithFreshUrls()
+        : queue.value;
+    await next.setSources(items,
+        initialIndex: items.isEmpty ? null : idx.clamp(0, items.length - 1),
+        initialPosition: items.isEmpty ? null : pos);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
       // Carry the play state into the load: a renderer then auto-plays when its
@@ -795,7 +798,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _reseedLocalAfterCastLoss(
       pos: pos,
       idx: idx,
-      play: true,
+      // The LIVE intent, not a literal true: a pause landing during the
+      // 12s remote-start wait must win (the post-await doctrine every other
+      // revive path follows) — not blast audio on the phone anyway.
+      play: _playIntent,
       dispose: [
         if (!identical(failed, _localBackend)) failed,
         if (!identical(prev, _localBackend) && !identical(prev, failed)) prev,
@@ -2656,7 +2662,29 @@ class AudioPlayerHandler extends BaseAudioHandler
     return true;
   }
 
+  // True while an autoDJ() fetch is in flight — overlapping runs share the
+  // ignoreList (it only updates after the response), so two concurrent POSTs
+  // can queue the same track twice on a narrow pool (sonic-locked / genre
+  // filter / small library). The empty-queue start path provably overlaps:
+  // its first pick's index-0 emit satisfies the last-item check in the
+  // currentIndexStream listener while the explicit follow-up call runs.
+  bool _djInFlight = false;
+
+  /// Fetch and queue one Auto-DJ pick. Overlapping calls are dropped — safe,
+  /// because every trigger (the follow-up call, the next last-item index
+  /// emit) re-fires the top-up once the in-flight run lands.
   Future<void> autoDJ(
+      {bool autoPlay = false, bool incrementIndex = false}) async {
+    if (_djInFlight) return;
+    _djInFlight = true;
+    try {
+      await _autoDJPick(autoPlay: autoPlay, incrementIndex: incrementIndex);
+    } finally {
+      _djInFlight = false;
+    }
+  }
+
+  Future<void> _autoDJPick(
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (autoDJServer == null) return;
     // The lane this call belongs to — checked when each response lands.
