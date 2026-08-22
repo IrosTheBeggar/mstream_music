@@ -104,6 +104,19 @@ class TrackActionsSheet extends StatelessWidget {
       if (m?.sampleRate != null) formatSampleRate(m!.sampleRate!),
       if (m?.duration != null) formatDuration(m!.duration!),
     ];
+    // A file explorer row carries NO metadata when the read-metadata setting
+    // is off, or when the file was never scanned into the library DB - so
+    // "title is the filename and nothing else is known" is a common case, not
+    // an edge one. Give the cover a slot only when something can balance it:
+    // real art, or enough text beside it. A bare filename next to a 60px
+    // empty placeholder reads worse than the plain centred title this
+    // replaced, so that case keeps the centred treatment.
+    final hasArt = item.server != null &&
+        (item.altAlbumArt ?? m?.albumArt) != null;
+    final showCover = hasArt || byline.isNotEmpty || specParts.isNotEmpty;
+    final crossAlign =
+        showCover ? CrossAxisAlignment.start : CrossAxisAlignment.center;
+    final textAlign = showCover ? TextAlign.start : TextAlign.center;
     // Server tracks get the server-side verbs (download, playlists); local
     // files keep just the queue actions. Find similar additionally needs a
     // server that advertised discovery on ping — a downloaded copy's local
@@ -156,60 +169,66 @@ class TrackActionsSheet extends StatelessWidget {
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    // Falls back to a same-size placeholder tile when the
-                    // track has no art, so the text never shifts.
-                    item.getAlbumThumb(size: 60),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            title,
+                Builder(builder: (_) {
+                  final text = Column(
+                    crossAxisAlignment: crossAlign,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: showCover ? 1 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: textAlign,
+                        style: TextStyle(
+                          color: VelvetColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (byline.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            byline,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            textAlign: textAlign,
                             style: TextStyle(
-                              color: VelvetColors.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              color: VelvetColors.textSecondary,
+                              fontSize: 13,
                             ),
                           ),
-                          if (byline.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                byline,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: VelvetColors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
+                        ),
+                      if (specParts.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            specParts.join('  ·  '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: textAlign,
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              letterSpacing: 0.2,
+                              color: VelvetColors.textTertiary,
                             ),
-                          if (specParts.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                specParts.join('  ·  '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  letterSpacing: 0.2,
-                                  color: VelvetColors.textTertiary,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                          ),
+                        ),
+                    ],
+                  );
+                  if (!showCover) return text;
+                  return Row(
+                    children: [
+                      // Real art when there is any; otherwise a same-size
+                      // placeholder tile, which only renders here because the
+                      // text beside it can carry the pairing.
+                      item.getAlbumThumb(size: 60),
+                      const SizedBox(width: 14),
+                      Expanded(child: text),
+                    ],
+                  );
+                }),
                 // Rating on its own labelled row rather than floating under
                 // the title: it is the only control up here, so it should
                 // read as one. Moved off the browser row when the overflow
