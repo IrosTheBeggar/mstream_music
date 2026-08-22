@@ -257,6 +257,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         _failedSkips = 0;
         _httpRetries = 0;
         _networkStalled = false;
+        _localRetryIndex = null;
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
         _restoreSpot = null;
@@ -676,6 +677,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     final idx = _localBackend.currentIndex;
     final q = queue.value;
     final failed = (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+    // The track that just died may already be ON DISK. onTrackDownloaded
+    // patches extras only — no live source surgery — so anything downloaded
+    // AFTER the queue was seeded keeps streaming from its original source
+    // until something reloads it. When that stream dies offline, reloading is
+    // exactly the recovery: _uriFor re-resolves from extras and picks the
+    // file. Must be tried BEFORE the iroh branch below, which parks playback
+    // waiting for the very network the local copy exists to make unnecessary.
+    if (idx != null && _recoverFromLocalCopy(failed, idx)) return;
     final itemServer = failed == null ? null : _serverFor(failed);
     if (itemServer != null &&
         itemServer.isIroh &&
@@ -690,6 +699,37 @@ class AudioPlayerHandler extends BaseAudioHandler
     // async connectivity probe) pauses-and-holds on a real outage, retries a
     // transient blip in place, or skips a genuinely bad source.
     _recoverHttpError(error);
+  }
+
+  // Index whose local copy we already re-seeded for. Without this a corrupt
+  // (but present) file would error, re-seed, error again forever — the
+  // re-seed clears the skip budget, so nothing else would ever stop it.
+  // Cleared whenever a track actually loads.
+  int? _localRetryIndex;
+
+  /// True when [failed] is on disk and a reload has been scheduled, so the
+  /// caller should stop: the file plays with no network at all.
+  ///
+  /// Only tried once per index — a second failure at the same spot means the
+  /// file itself is bad, and falls through to the normal recovery/skip path.
+  bool _recoverFromLocalCopy(MediaItem? failed, int idx) {
+    if (_recoveringPlayback || failed == null) return false;
+    if (_localRetryIndex == idx) return false;
+    final localPath = failed.extras?['localPath'] as String?;
+    if (localPath == null || !File(localPath).existsSync()) return false;
+    _localRetryIndex = idx;
+    // A source that died with the file sitting right there isn't a bad
+    // source — don't let it eat the skip budget.
+    _failedSkips = 0;
+    _recoveringPlayback = true;
+    appLog('[play] source failed but the track is downloaded — '
+        'reloading from disk');
+    _switchChain = _switchChain
+        .then((_) => _reseedLocalAtSpot())
+        .catchError((Object e) {
+      castLog('local-copy recovery failed', error: e);
+    }).whenComplete(() => _recoveringPlayback = false);
+    return true;
   }
 
   // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
