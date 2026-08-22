@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct} % o más parecido",
   "autoDjSonicSeedLabel": "Canción semilla",
   "autoDjSonicSeedNone": "Sin semilla — la canción en reproducción ancla la sesión.",
+  "autoDjSonicSeedBanner": "Elige la canción semilla — toca una pista en cualquier parte de la biblioteca",
   "autoDjSonicSeedSearchHint": "Buscar una canción…",
   "autoDjSonicSeedRandom": "Canción aleatoria",
   "autoDjSonicSeedRemove": "Quitar canción semilla",

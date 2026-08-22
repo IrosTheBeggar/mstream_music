@@ -1780,6 +1780,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Brak utworu startowego — sesję zakotwicza odtwarzany utwór.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Wybierz utwór startowy — stuknij dowolny utwór w bibliotece';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Szukaj utworu…';
 
   @override

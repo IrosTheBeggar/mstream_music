@@ -3060,6 +3060,12 @@ abstract class AppLocalizations {
   /// **'No seed — the playing song anchors the session.'**
   String get autoDjSonicSeedNone;
 
+  /// Browse-to-pick banner shown while the Auto DJ seed capture is armed
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the seed song — tap a track anywhere in the library'**
+  String get autoDjSonicSeedBanner;
+
   /// Hint in the seed-picker sheet's search field.
   ///
   /// In en, this message translates to:

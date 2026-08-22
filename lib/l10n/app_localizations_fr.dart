@@ -1764,6 +1764,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun titre de départ — le titre en cours ancre la session.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Choisis le titre de départ — touche une piste n\'importe où dans la bibliothèque';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Rechercher un titre…';
 
   @override

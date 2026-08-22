@@ -1746,6 +1746,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No seed — the playing song anchors the session.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Pick the seed song — tap a track anywhere in the library';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Search for a song…';
 
   @override

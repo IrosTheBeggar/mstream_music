@@ -1766,6 +1766,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Kein Ausgangssong — der laufende Titel verankert die Session.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Ausgangssong wählen — tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Nach einem Titel suchen…';
 
   @override

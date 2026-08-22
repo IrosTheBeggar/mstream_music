@@ -173,16 +173,17 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // ── actions ──
   // Row tap: defer to the shared TapBehavior setting (the same one the file
   // browser uses). A pure add-to-queue shows a confirmation toast. An armed
-  // sonic-path pick eats the tap first — nothing may queue mid-pick.
+  // browse-to-pick eats the tap first — nothing may queue mid-pick.
   Future<void> _onRowTap(int index) async {
     final songs = _songs;
     if (songs == null || index < 0 || index >= songs.length) return;
+    // Read before tryCapture — a capture clears the pending request.
+    final route = TrackCapture.pending?.returnScreen;
     switch (TrackCapture.tryCapture(songs[index])) {
       case CaptureResult.captured:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
-        );
+        if (route != null) {
+          Navigator.push(context, MaterialPageRoute(builder: route));
+        }
         return;
       case CaptureResult.rejected:
         showCaptureRejectedToast(context);

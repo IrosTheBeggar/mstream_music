@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct} % ou plus proche",
   "autoDjSonicSeedLabel": "Titre de départ",
   "autoDjSonicSeedNone": "Aucun titre de départ — le titre en cours ancre la session.",
+  "autoDjSonicSeedBanner": "Choisis le titre de départ — touche une piste n'importe où dans la bibliothèque",
   "autoDjSonicSeedSearchHint": "Rechercher un titre…",
   "autoDjSonicSeedRandom": "Titre aléatoire",
   "autoDjSonicSeedRemove": "Retirer le titre de départ",

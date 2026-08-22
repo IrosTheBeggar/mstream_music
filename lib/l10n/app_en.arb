@@ -874,9 +874,21 @@
   "lanSearching": "Searching for servers…",
   "lanRefresh": "Refresh",
   "lanServerVersion": "mStream v{version}",
-  "@lanServerVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@lanServerVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "lanLoginTitle": "Sign in to {name}",
-  "@lanLoginTitle": {"placeholders": {"name": {"type": "String"}}},
+  "@lanLoginTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "lanUnreachable": "Couldn't reach this server on the network.",
   "lanNoCode": "Quick Connect is on for this server, but it didn't share a pairing code. Sign in as an admin, or ask the operator to enable code sharing.",
   "settingsResumeQueue": "Resume queue on launch",
@@ -979,7 +991,9 @@
   "@importedShadersDownloadsImported": {
     "description": "Snackbar after copying shaders in from the Downloads folder.",
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importedShadersDownloadsNone": "No new .glsl files in Downloads",
@@ -990,7 +1004,6 @@
   "@importedShadersDownloadsNoPermission": {
     "description": "Snackbar when all-files access is denied, so Downloads can't be read."
   },
-
   "addServerTabUrl": "Server URL",
   "@addServerTabUrl": {
     "description": "Add-server form: tab label for the classic HTTP URL connection (paired with the 'Quick Connect' tab)."
@@ -1078,7 +1091,11 @@
   "irohTestConnectedVersion": "Connected through the iroh tunnel — mStream v{version}",
   "@irohTestConnectedVersion": {
     "description": "Result shown when the iroh test connection succeeds and the server reported its version.",
-    "placeholders": { "version": { "type": "String" } }
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   },
   "irohPathSuffixDirect": " · direct",
   "@irohPathSuffixDirect": {
@@ -1095,7 +1112,11 @@
   "irohTunnelTestFailed": "Tunnel test failed: {error}",
   "@irohTunnelTestFailed": {
     "description": "Shown when the iroh tunnel test fails; {error} is the raw error text.",
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "irohSignInHeader": "Sign in",
   "@irohSignInHeader": {
@@ -1116,12 +1137,20 @@
   "irohSignInFailed": "Sign-in failed: {error}",
   "@irohSignInFailed": {
     "description": "Shown when iroh sign-in fails unexpectedly; {error} is the raw error text.",
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "irohSignInFailedHttp": "Sign-in failed (HTTP {status}). Check your username and password.",
   "@irohSignInFailedHttp": {
     "description": "Shown when iroh sign-in returns an HTTP error; {status} is the HTTP status code.",
-    "placeholders": { "status": { "type": "int" } }
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
   },
   "irohBannerConnecting": "Connecting to server…",
   "@irohBannerConnecting": {
@@ -1277,6 +1306,10 @@
     "description": "Label for the sonic seed row and the seed-picker sheet title: the song the session starts from."
   },
   "autoDjSonicSeedNone": "No seed — the playing song anchors the session.",
+  "autoDjSonicSeedBanner": "Pick the seed song — tap a track anywhere in the library",
+  "@autoDjSonicSeedBanner": {
+    "description": "Browse-to-pick banner shown while the Auto DJ seed capture is armed"
+  },
   "@autoDjSonicSeedNone": {
     "description": "Seed row value when no explicit seed is set."
   },

@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct}% ou mais próximo",
   "autoDjSonicSeedLabel": "Música semente",
   "autoDjSonicSeedNone": "Sem semente — a música em reprodução ancora a sessão.",
+  "autoDjSonicSeedBanner": "Escolha a música semente — toque em uma faixa em qualquer lugar da biblioteca",
   "autoDjSonicSeedSearchHint": "Buscar uma música…",
   "autoDjSonicSeedRandom": "Música aleatória",
   "autoDjSonicSeedRemove": "Remover música semente",

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
@@ -8,6 +9,16 @@ Server _server(String name) => Server('http://$name', null, null, null, name);
 
 DisplayItem _file(Server? s, String path, {String type = 'file'}) =>
     DisplayItem(s, path.split('/').last, type, path, null, null);
+
+/// A request with the banner/return-route boilerplate filled in — these tests
+/// are about which rows a capture accepts, not about what it displays.
+TrackCaptureRequest _req(Server s, void Function(DisplayItem) onPicked) =>
+    TrackCaptureRequest(
+      server: s,
+      bannerLabel: (l) => 'pick',
+      returnScreen: (_) => const SizedBox.shrink(),
+      onPicked: onPicked,
+    );
 
 void main() {
   final a = _server('alpha');
@@ -83,8 +94,7 @@ void main() {
 
     test('captures a matching-server track, delivers it, and disarms', () {
       DisplayItem? picked;
-      TrackCapture.arm(TrackCaptureRequest(
-          server: a, isStart: true, onPicked: (i) => picked = i));
+      TrackCapture.arm(_req(a, (i) => picked = i));
       final item = _file(a, '/music/x.mp3');
       expect(TrackCapture.tryCapture(item), CaptureResult.captured);
       expect(picked, same(item));
@@ -94,8 +104,7 @@ void main() {
     });
 
     test('rejects another server\'s track and stays armed', () {
-      TrackCapture.arm(TrackCaptureRequest(
-          server: a, isStart: false, onPicked: (_) => fail('must not pick')));
+      TrackCapture.arm(_req(a, (_) => fail('must not pick')));
       expect(TrackCapture.tryCapture(_file(b, '/x.mp3')),
           CaptureResult.rejected);
       expect(TrackCapture.active.value, isNotNull);
@@ -104,8 +113,7 @@ void main() {
     test('rejects local files and rows without a path, then still captures',
         () {
       DisplayItem? picked;
-      TrackCapture.arm(TrackCaptureRequest(
-          server: a, isStart: true, onPicked: (i) => picked = i));
+      TrackCapture.arm(_req(a, (i) => picked = i));
       expect(TrackCapture.tryCapture(_file(a, '/x.mp3', type: 'localFile')),
           CaptureResult.rejected);
       expect(TrackCapture.tryCapture(_file(null, '/x.mp3')),
@@ -119,8 +127,7 @@ void main() {
     });
 
     test('cancel disarms without picking', () {
-      TrackCapture.arm(TrackCaptureRequest(
-          server: a, isStart: true, onPicked: (_) => fail('must not pick')));
+      TrackCapture.arm(_req(a, (_) => fail('must not pick')));
       TrackCapture.cancel();
       expect(TrackCapture.active.value, isNull);
       expect(TrackCapture.tryCapture(_file(a, '/x.mp3')), CaptureResult.pass);

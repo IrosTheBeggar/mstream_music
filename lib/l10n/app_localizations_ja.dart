@@ -1697,6 +1697,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjSonicSeedNone => 'シードなし — 再生中の曲がセッションの基準になります。';
 
   @override
+  String get autoDjSonicSeedBanner => 'シード曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
   String get autoDjSonicSeedSearchHint => '曲を検索…';
 
   @override

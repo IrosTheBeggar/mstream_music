@@ -1761,6 +1761,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Sem semente — a música em reprodução ancora a sessão.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Escolha a música semente — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Buscar uma música…';
 
   @override

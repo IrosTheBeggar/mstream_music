@@ -1764,6 +1764,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Nessun brano di partenza — il brano in riproduzione àncora la sessione.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Scegli il brano di partenza — tocca una traccia ovunque nella libreria';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Cerca un brano…';
 
   @override

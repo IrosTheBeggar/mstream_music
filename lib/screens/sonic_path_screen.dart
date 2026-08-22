@@ -160,7 +160,9 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
     final server = _server;
     TrackCapture.arm(TrackCaptureRequest(
       server: server,
-      isStart: isStart,
+      bannerLabel: (l) =>
+          isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
+      returnScreen: (_) => const SonicPathScreen(),
       onPicked: (item) {
         // Runs after this State is disposed — write the singleton only.
         final art = item.altAlbumArt ?? item.metadata?.albumArt;

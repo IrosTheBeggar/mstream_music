@@ -464,9 +464,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     );
   }
 
-  // Browse-to-pick strip for the sonic path setup — visible while a
-  // TrackCapture request is armed: the next library track tapped fills the
-  // endpoint card. Cancel returns to the (state-preserving) path screen.
+  // Browse-to-pick strip — visible while a TrackCapture request is armed:
+  // the next library track tapped lands on whatever asked for it (a sonic
+  // path endpoint, the Auto DJ seed). Copy and destination both come from the
+  // request, so this strip stays feature-agnostic. Cancel returns to the
+  // asking screen, which rebuilds from its own persisted state.
   Widget _captureBanner() {
     return ValueListenableBuilder<TrackCaptureRequest?>(
       valueListenable: TrackCapture.active,
@@ -476,15 +478,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         return _bannerStrip(
           Icons.route,
           VelvetColors.primary,
-          req.isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
+          req.bannerLabel(l),
           action: TextButton(
             onPressed: () {
               TrackCapture.cancel();
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const SonicPathScreen()),
-              );
+                  context, MaterialPageRoute(builder: req.returnScreen));
             },
             child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.primary)),

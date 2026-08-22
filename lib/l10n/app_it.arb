@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct} % o più simile",
   "autoDjSonicSeedLabel": "Brano di partenza",
   "autoDjSonicSeedNone": "Nessun brano di partenza — il brano in riproduzione àncora la sessione.",
+  "autoDjSonicSeedBanner": "Scegli il brano di partenza — tocca una traccia ovunque nella libreria",
   "autoDjSonicSeedSearchHint": "Cerca un brano…",
   "autoDjSonicSeedRandom": "Brano casuale",
   "autoDjSonicSeedRemove": "Rimuovi brano di partenza",

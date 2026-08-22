@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct}% lub bliżej",
   "autoDjSonicSeedLabel": "Utwór startowy",
   "autoDjSonicSeedNone": "Brak utworu startowego — sesję zakotwicza odtwarzany utwór.",
+  "autoDjSonicSeedBanner": "Wybierz utwór startowy — stuknij dowolny utwór w bibliotece",
   "autoDjSonicSeedSearchHint": "Szukaj utworu…",
   "autoDjSonicSeedRandom": "Losowy utwór",
   "autoDjSonicSeedRemove": "Usuń utwór startowy",

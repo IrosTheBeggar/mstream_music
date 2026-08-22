@@ -25,6 +25,7 @@ import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/song_picker_sheet.dart';
 
@@ -267,45 +268,57 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               ),
             ),
             // Explicit seed — "start the session from this song". Wins over
-            // the playing track for the first pick; the rolling history
-            // takes over afterwards. The dice picks a random library song.
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: _openSonicSeedPicker,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l.autoDjSonicSeedLabel,
-                            style: TextStyle(
-                                color: VelvetColors.textSecondary,
-                                fontSize: 13),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            mgr.sonicSeedTitle ?? l.autoDjSonicSeedNone,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: mgr.sonicSeedPath != null
-                                  ? VelvetColors.textPrimary
-                                  : VelvetColors.textSecondary,
-                              fontSize: 13,
-                              fontStyle: mgr.sonicSeedPath != null
-                                  ? FontStyle.normal
-                                  : FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
+            // the playing track for the first pick; the rolling history takes
+            // over afterwards.
+            //
+            // Shaped like the sonic path's endpoint cards, and for the same
+            // reason: one buried search sheet is not enough ways to name a
+            // song. Empty shows every way in (dice / search / browse); filled
+            // collapses to the pick plus a ✕, because a settled choice
+            // shouldn't keep offering to be re-made.
+            SizedBox(height: 4),
+            Text(
+              l.autoDjSonicSeedLabel,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            SizedBox(height: 6),
+            if (mgr.sonicSeedPath == null) ...[
+              Text(
+                l.autoDjSonicSeedNone,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary,
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic),
+              ),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _seedButton(Icons.casino, l.autoDjSonicSeedRandom,
+                      _pickRandomSonicSeed),
+                  // pathSearchSong / pathBrowseLibrary are bare verbs ("Search",
+                  // "Browse library") already translated everywhere — shared
+                  // with the path picker rather than cloned under a DJ name.
+                  _seedButton(
+                      Icons.search, l.pathSearchSong, _openSonicSeedPicker),
+                  _seedButton(Icons.library_music_outlined, l.pathBrowseLibrary,
+                      _pickSonicSeedViaBrowse),
+                ],
+              ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      mgr.sonicSeedTitle ?? mgr.sonicSeedPath!.split('/').last,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: VelvetColors.textPrimary, fontSize: 13),
                     ),
                   ),
-                ),
-                if (mgr.sonicSeedPath != null)
                   IconButton(
                     icon: Icon(Icons.close,
                         size: 18, color: VelvetColors.textSecondary),
@@ -313,15 +326,8 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                     visualDensity: VisualDensity.compact,
                     onPressed: _clearSonicSeed,
                   ),
-                IconButton(
-                  icon: Icon(Icons.casino,
-                      size: 20, color: VelvetColors.primary),
-                  tooltip: l.autoDjSonicSeedRandom,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _pickRandomSonicSeed,
-                ),
-              ],
-            ),
+                ],
+              ),
             // Anchor policy: follow the session's own picks (rolling) or
             // stay pinned to the seed for the whole session (locked).
             SizedBox(height: 8),
@@ -397,6 +403,47 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       return;
     }
     await _applySonicSeed(item);
+  }
+
+  Widget _seedButton(IconData icon, String label, VoidCallback onPressed) {
+    return OutlinedButton.icon(
+      icon: Icon(icon, size: 16),
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: VelvetColors.primary,
+        side: BorderSide(color: VelvetColors.border2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: onPressed,
+    );
+  }
+
+  /// Browse-to-pick: arm the capture and drop back to the home browser, where
+  /// the banner carries the instructions. This screen is torn down on the way,
+  /// so the pick writes AutoDJManager (which persists it) and the capture
+  /// re-pushes us — see TrackCaptureRequest.returnScreen.
+  void _pickSonicSeedViaBrowse() {
+    final server = _sonicSeedTarget;
+    if (server == null) return;
+    TrackCapture.arm(TrackCaptureRequest(
+      server: server,
+      bannerLabel: (l) => l.autoDjSonicSeedBanner,
+      returnScreen: (_) => const AutoDJScreen(),
+      onPicked: (item) {
+        // Runs after this State is disposed — no setState, no context. The
+        // re-pushed screen reads the manager on build.
+        final path = item.data;
+        if (path == null) return;
+        unawaited(AutoDJManager().setSonicSeed(
+          path: path,
+          title: item.metadata?.title ?? item.name.split('/').last,
+          server: server.localname,
+        ));
+      },
+    ));
+    Navigator.of(context).pop();
   }
 
   Future<void> _openSonicSeedPicker() async {

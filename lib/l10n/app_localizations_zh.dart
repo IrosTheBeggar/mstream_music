@@ -1662,6 +1662,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicSeedNone => '未设置 — 以正在播放的歌曲作为会话基准。';
 
   @override
+  String get autoDjSonicSeedBanner => '选择种子歌曲——在曲库中点按任意曲目';
+
+  @override
   String get autoDjSonicSeedSearchHint => '搜索歌曲…';
 
   @override

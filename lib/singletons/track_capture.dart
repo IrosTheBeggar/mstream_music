@@ -10,18 +10,34 @@ import '../objects/server.dart';
 enum CaptureResult { pass, captured, rejected }
 
 /// One armed "pick a song from the library" request (the webapp's
-/// songCapture): which server the pick must come from, which endpoint card
-/// it fills (drives the banner copy), and where the picked row goes.
+/// songCapture): which server the pick must come from, where the picked row
+/// goes, and — since browse-to-pick tears the asking screen down — what the
+/// banner says while armed and how to get back once a row lands.
 class TrackCaptureRequest {
   final Server server;
-  final bool isStart;
+
+  /// Banner copy while armed. A callback, not a string, so the strip picks up
+  /// a locale change and callers don't resolve AppLocalizations at arm time.
+  final String Function(AppLocalizations) bannerLabel;
+
+  /// The screen to re-push on a capture (and on Cancel). Re-push, not pop:
+  /// arming drops all the way back to the home browser, so the asking route
+  /// is gone by the time a row is tapped. Its state has to live somewhere
+  /// outside the widget — SonicPathState for the path, AutoDJManager for the
+  /// DJ seed.
+  final WidgetBuilder returnScreen;
+
   final void Function(DisplayItem) onPicked;
 
   TrackCaptureRequest(
-      {required this.server, required this.isStart, required this.onPicked});
+      {required this.server,
+      required this.bannerLabel,
+      required this.returnScreen,
+      required this.onPicked});
 }
 
-/// App-wide browse-to-pick mode. Armed by the sonic path setup cards;
+/// App-wide browse-to-pick mode. Armed by the sonic path setup cards and the
+/// Auto DJ seed card;
 /// checked at the top of the browser / album-detail tap handlers BEFORE
 /// tap-behavior dispatch, so a pick can never queue (or play-from-here)
 /// the tapped track. [active] doubles as the home banner's listenable.
@@ -34,6 +50,10 @@ class TrackCapture {
   static void arm(TrackCaptureRequest req) => active.value = req;
 
   static void cancel() => active.value = null;
+
+  /// The request a tap would run against — read this BEFORE [tryCapture],
+  /// which clears it on a capture.
+  static TrackCaptureRequest? get pending => active.value;
 
   /// Runs the armed request against a tapped row. Only a server track on
   /// the request's server is captured; the request stays armed on a

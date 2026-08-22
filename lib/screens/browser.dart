@@ -167,15 +167,16 @@ class _BrowserState extends State<Browser> {
   }
 
   /// True when an armed TrackCapture consumed the tap: a captured pick
-  /// returns to the sonic path screen (its state already holds the song),
+  /// returns to whichever screen armed it (its state already holds the song),
   /// a rejected one toasts and stays armed.
   bool _captureTap(DisplayItem item, BuildContext context) {
+    // Read before tryCapture — a capture clears the pending request.
+    final route = TrackCapture.pending?.returnScreen;
     switch (TrackCapture.tryCapture(item)) {
       case CaptureResult.captured:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
-        );
+        if (route != null) {
+          Navigator.push(context, MaterialPageRoute(builder: route));
+        }
         return true;
       case CaptureResult.rejected:
         showCaptureRejectedToast(context);

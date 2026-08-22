@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct}% и ближе",
   "autoDjSonicSeedLabel": "Стартовый трек",
   "autoDjSonicSeedNone": "Не задан — сессию задаёт играющий трек.",
+  "autoDjSonicSeedBanner": "Выберите опорный трек — коснитесь любого трека в библиотеке",
   "autoDjSonicSeedSearchHint": "Найти трек…",
   "autoDjSonicSeedRandom": "Случайный трек",
   "autoDjSonicSeedRemove": "Убрать стартовый трек",

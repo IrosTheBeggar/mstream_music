@@ -416,6 +416,7 @@
   "autoDjSonicStrictnessValue": "{pct} % oder ähnlicher",
   "autoDjSonicSeedLabel": "Ausgangssong",
   "autoDjSonicSeedNone": "Kein Ausgangssong — der laufende Titel verankert die Session.",
+  "autoDjSonicSeedBanner": "Ausgangssong wählen — tippe irgendwo in der Bibliothek auf einen Titel",
   "autoDjSonicSeedSearchHint": "Nach einem Titel suchen…",
   "autoDjSonicSeedRandom": "Zufälliger Titel",
   "autoDjSonicSeedRemove": "Ausgangssong entfernen",

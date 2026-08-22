@@ -1783,6 +1783,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjSonicSeedNone => 'Не задан — сессию задаёт играющий трек.';
 
   @override
+  String get autoDjSonicSeedBanner =>
+      'Выберите опорный трек — коснитесь любого трека в библиотеке';
+
+  @override
   String get autoDjSonicSeedSearchHint => 'Найти трек…';
 
   @override
