@@ -6,7 +6,7 @@
 // Layout (simplified from the original route screen): a medium-player-style
 // banner — album art left, title/artist/meta right — painted over the
 // album-art colour splash, then the track list. Play / Shuffle / Add all live
-// in the shared BrowserToolbar above, same as every other track list. Per-track duration,
+// in the shared BrowserToolbar above, same as every other track list. Per-track
 // album runtime, and the kbps · kHz readout render only when the server reports
 // them (older API builds omit them; see MusicMetadata).
 
@@ -400,7 +400,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               title: s.metadata?.title ?? (s.data ?? '').split('/').last,
               active: now.path != null && now.path == s.data,
               playing: now.playing,
-              duration: s.metadata?.duration,
               onTap: () => _onRowTap(i),
               onMenu: () => _showTrackActions(s),
             );
@@ -411,16 +410,15 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   }
 }
 
-/// One track row: number (or active EQ/play indicator), title, duration (when
-/// reported), and a play-options menu (Add next / Play now, plus Add to end of
-/// queue when the row tap is in play-from-here mode). The row tap itself follows
-/// the shared TapBehavior setting.
+/// One track row: number (or active EQ/play indicator), title, and the
+/// overflow that opens the shared TrackActionsSheet. Duration and rating both
+/// live in that sheet now — the row is just the song. The row tap itself
+/// follows the shared TapBehavior setting.
 class _SongRow extends StatelessWidget {
   final int number;
   final String title;
   final bool active;
   final bool playing;
-  final Duration? duration;
   final VoidCallback onTap;
   final VoidCallback onMenu;
 
@@ -431,7 +429,6 @@ class _SongRow extends StatelessWidget {
     required this.playing,
     required this.onTap,
     required this.onMenu,
-    this.duration,
   });
 
   @override
@@ -484,25 +481,6 @@ class _SongRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Duration on top with the tappable rating star(s) directly under
-              // it — vertical stacking keeps the row compact, and the star shows
-              // even when unrated so it's one tap from the rating form.
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (duration != null)
-                    Text(
-                      formatDuration(duration!, padMinutes: false),
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: VelvetColors.textTertiary,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 4),
               // Same overflow the browser's track rows carry, opening the
               // same sheet. Rating lives in there now, which is why the row's
               // inline stars are gone.
