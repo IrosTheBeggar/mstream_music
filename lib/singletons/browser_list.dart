@@ -122,8 +122,24 @@ class BrowserManager {
       BehaviorSubject<DisplayItem?>.seeded(null);
 
   // The album-detail view publishes its loaded songs here so the top toolbar's
-  // download / add-all act on them (the songs live in the view's state).
-  List<DisplayItem>? albumDetailSongs;
+  // Play / Shuffle / download / add-all act on them (the songs live in the
+  // view's state).
+  //
+  // Stream-backed, not a plain field: the songs arrive from an async fetch
+  // AFTER _albumDetail has emitted, so a toolbar that renders those controls
+  // conditionally would build once against null and never learn about them —
+  // leaving an album bar with nothing but Back on it.
+  late final BehaviorSubject<List<DisplayItem>?> _albumDetailSongs =
+      BehaviorSubject<List<DisplayItem>?>.seeded(null);
+  List<DisplayItem>? _albumSongs;
+  List<DisplayItem>? get albumDetailSongs => _albumSongs;
+  set albumDetailSongs(List<DisplayItem>? songs) {
+    _albumSongs = songs;
+    if (!_albumDetailSongs.isClosed) _albumDetailSongs.add(songs);
+  }
+
+  Stream<List<DisplayItem>?> get albumDetailSongsStream =>
+      _albumDetailSongs.stream;
 
   // Browser local-search state, shared so the top toolbar owns the field/toggle
   // while the body does the filtering. open = field shown; query = filter text.
@@ -530,6 +546,7 @@ class BrowserManager {
     _browserStream.close();
     _browserLabel.close();
     _albumDetail.close();
+    _albumDetailSongs.close();
     _search.close();
     _searchFocused.close();
     _loading.close();

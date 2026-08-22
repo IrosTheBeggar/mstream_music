@@ -36,6 +36,10 @@ typedef _Tb = ({
   ({bool open, String query}) search,
   String label,
   List<DisplayItem> list,
+  // Only used as a rebuild trigger: the album's songs land from an async fetch
+  // after `album` has emitted, and the bar's Play/Shuffle/overflow are
+  // conditional on them. _actionTargets reads the current value.
+  List<DisplayItem>? albumSongs,
 });
 
 class BrowserToolbar extends StatefulWidget implements PreferredSizeWidget {
@@ -49,18 +53,25 @@ class BrowserToolbar extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _BrowserToolbarState extends State<BrowserToolbar> {
-  late final Stream<_Tb> _stream = Rx.combineLatest4<
+  late final Stream<_Tb> _stream = Rx.combineLatest5<
       DisplayItem?,
       ({bool open, String query}),
       String,
       List<DisplayItem>,
+      List<DisplayItem>?,
       _Tb>(
     BrowserManager().albumDetailStream,
     BrowserManager().searchStream,
     BrowserManager().browserLabelStream,
     BrowserManager().browserListStream,
-    (album, search, label, list) =>
-        (album: album, search: search, label: label, list: list),
+    BrowserManager().albumDetailSongsStream,
+    (album, search, label, list, albumSongs) => (
+      album: album,
+      search: search,
+      label: label,
+      list: list,
+      albumSongs: albumSongs,
+    ),
   );
 
   // The home "search the whole server" field's focus drives the body's
@@ -332,6 +343,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           search: BrowserManager().search,
           label: BrowserManager().listName,
           list: BrowserManager().browserList,
+          albumSongs: BrowserManager().albumDetailSongs,
         ),
         builder: (context, snap) {
           final s = snap.data!;
