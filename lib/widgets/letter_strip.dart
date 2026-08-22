@@ -39,6 +39,20 @@ class LetterStrip extends StatefulWidget {
   // with no letter strip, are free to wrap long titles.
   static int get minItemsToShow => SettingsManager().letterStripThreshold;
 
+  /// How many rows the strip would actually scrub. NOT [items].length: a File
+  /// Explorer listing is folders sorted A–Z followed by files sorted A–Z, so a
+  /// single index over both resolves every letter to a folder and leaves the
+  /// files below unreachable. Where folders exist they ARE the navigation, so
+  /// the strip scrubs folders alone and counts only those. A listing with no
+  /// folders (a leaf directory, Albums, Artists, a playlist) is homogeneous
+  /// and indexes normally.
+  static int scrubbableCount(List<DisplayItem> items) =>
+      _hasFolders(items) ? items.where(_isFolder).length : items.length;
+
+  static bool _isFolder(DisplayItem i) => i.type == 'directory';
+
+  static bool _hasFolders(List<DisplayItem> items) => items.any(_isFolder);
+
   final List<DisplayItem> items;
   final void Function(int itemIndex) onJump;
 
@@ -63,6 +77,9 @@ class _LetterStripState extends State<LetterStrip> {
   ];
 
   Map<String, int> _firstIndexByLetter = const {};
+  // Cached with the index — build() would otherwise re-walk the list every
+  // frame just to decide whether to render at all.
+  int _scrubbable = 0;
   // Two letters tracked separately so taps on empty letters are
   // honest: strip highlight follows the finger, bubble shows the
   // actual destination. They match for present letters and diverge
@@ -82,13 +99,18 @@ class _LetterStripState extends State<LetterStrip> {
   @override
   void initState() {
     super.initState();
-    _firstIndexByLetter = _buildIndex(widget.items);
+    _reindex();
   }
 
   @override
   void didUpdateWidget(LetterStrip old) {
     super.didUpdateWidget(old);
+    _reindex();
+  }
+
+  void _reindex() {
     _firstIndexByLetter = _buildIndex(widget.items);
+    _scrubbable = LetterStrip.scrubbableCount(widget.items);
   }
 
   @override
@@ -98,11 +120,15 @@ class _LetterStripState extends State<LetterStrip> {
     super.dispose();
   }
 
+  // Values are indices into the FULL list — the parent turns them into scroll
+  // offsets by walking every row, so a filtered index would land on the wrong
+  // one.
   static Map<String, int> _buildIndex(List<DisplayItem> items) {
+    final foldersOnly = LetterStrip._hasFolders(items);
     final map = <String, int>{};
     for (var i = 0; i < items.length; i++) {
-      final letter = _firstLetter(items[i]);
-      map.putIfAbsent(letter, () => i);
+      if (foldersOnly && !LetterStrip._isFolder(items[i])) continue;
+      map.putIfAbsent(_firstLetter(items[i]), () => i);
     }
     return map;
   }
@@ -243,8 +269,10 @@ class _LetterStripState extends State<LetterStrip> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.items.isEmpty ||
-        widget.items.length < LetterStrip.minItemsToShow) {
+    // A folder listing with only a handful of folders gets no strip even when
+    // it holds hundreds of files: scrubbing three folders is not worth a strip,
+    // and the files aren't what it would scrub.
+    if (_scrubbable == 0 || _scrubbable < LetterStrip.minItemsToShow) {
       return SizedBox.shrink();
     }
     return LayoutBuilder(
