@@ -464,7 +464,6 @@
   "setupVisualizerBody": "O visualizador usa dados sintetizados até que isto seja ativado.",
   "setupVisualizerWarning": "Ativar isso pede a permissão de microfone: o Android a exige de apps que decodificam o fluxo de áudio do dispositivo (que é o que o visualizador faz).",
   "setupPlaybackTitle": "Ao tocar em uma música",
-  "setupPlaybackBody": "Escolha o que um toque no navegador faz. A maioria espera «Tocar a partir daqui», então essa é a opção padrão.",
   "storageAppSdCard": "Cartão SD do app",
   "setupOfflineTitle": "Mantenha sua fila offline",
   "setupFinish": "Concluir",

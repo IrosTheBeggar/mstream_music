@@ -3354,12 +3354,6 @@ abstract class AppLocalizations {
   /// **'When you tap a song'**
   String get setupPlaybackTitle;
 
-  /// Setup flow page 3 body copy.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose what a tap in the browser does. Most people expect Play from here, so that is the default.'**
-  String get setupPlaybackBody;
-
   /// Setup flow final page title (auto-download of queued tracks + how many to keep).
   ///
   /// In en, this message translates to:

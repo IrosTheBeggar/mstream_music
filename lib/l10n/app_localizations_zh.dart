@@ -1812,9 +1812,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupPlaybackTitle => '点按歌曲时';
 
   @override
-  String get setupPlaybackBody => '选择在浏览器中点按歌曲时的行为。大多数人期望「从此处播放」，因此这是默认设置。';
-
-  @override
   String get setupOfflineTitle => '离线保留播放队列';
 
   @override

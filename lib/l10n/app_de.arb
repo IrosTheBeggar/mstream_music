@@ -464,7 +464,6 @@
   "setupVisualizerBody": "Der Visualizer verwendet synthetisierte Daten, bis dies aktiviert ist.",
   "setupVisualizerWarning": "Beim Aktivieren wird die Mikrofonberechtigung angefragt — Android verlangt sie von Apps, die den Audiostream des Geräts dekodieren (was der Visualizer tut).",
   "setupPlaybackTitle": "Wenn du auf einen Titel tippst",
-  "setupPlaybackBody": "Lege fest, was ein Tippen im Browser bewirkt. Die meisten erwarten „Ab hier abspielen“, daher ist das die Voreinstellung.",
   "storageAppSdCard": "App-SD-Karte",
   "setupOfflineTitle": "Warteschlange offline behalten",
   "setupFinish": "Fertig",

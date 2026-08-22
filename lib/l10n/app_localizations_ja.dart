@@ -1852,10 +1852,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get setupPlaybackTitle => '曲をタップしたときの動作';
 
   @override
-  String get setupPlaybackBody =>
-      'ブラウザーで曲をタップしたときの動作を選びます。多くの人が「ここから再生」を想定するため、これが初期設定です。';
-
-  @override
   String get setupOfflineTitle => 'キューをオフラインで保持';
 
   @override

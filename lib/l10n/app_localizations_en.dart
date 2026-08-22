@@ -1908,10 +1908,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupPlaybackTitle => 'When you tap a song';
 
   @override
-  String get setupPlaybackBody =>
-      'Choose what a tap in the browser does. Most people expect Play from here, so that is the default.';
-
-  @override
   String get setupOfflineTitle => 'Keep your queue offline';
 
   @override

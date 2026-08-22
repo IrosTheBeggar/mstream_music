@@ -1928,10 +1928,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get setupPlaybackTitle => 'Quand vous touchez un morceau';
 
   @override
-  String get setupPlaybackBody =>
-      'Choisissez ce que fait un appui dans l\'explorateur. La plupart des gens s\'attendent à « Lire à partir d\'ici », c\'est donc l\'option par défaut.';
-
-  @override
   String get setupOfflineTitle => 'Gardez votre file d\'attente hors ligne';
 
   @override

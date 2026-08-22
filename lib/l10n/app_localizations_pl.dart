@@ -1943,10 +1943,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get setupPlaybackTitle => 'Gdy dotkniesz utworu';
 
   @override
-  String get setupPlaybackBody =>
-      'Wybierz, co robi dotknięcie w przeglądarce. Większość osób spodziewa się opcji „Odtwarzaj od tego miejsca”, więc jest ona domyślna.';
-
-  @override
   String get setupOfflineTitle => 'Zachowaj kolejkę offline';
 
   @override

@@ -464,7 +464,6 @@
   "setupVisualizerBody": "この設定を有効にするまで、ビジュアライザーはシンセサイズされたデータを使用します。",
   "setupVisualizerWarning": "オンにするとマイクの権限を求めます。Android は、端末の音声ストリームをデコードするアプリにこの権限を要求します（ビジュアライザーがこれに当たります）。",
   "setupPlaybackTitle": "曲をタップしたときの動作",
-  "setupPlaybackBody": "ブラウザーで曲をタップしたときの動作を選びます。多くの人が「ここから再生」を想定するため、これが初期設定です。",
   "storageAppSdCard": "アプリの SD カード",
   "setupOfflineTitle": "キューをオフラインで保持",
   "setupFinish": "完了",

@@ -464,7 +464,6 @@
   "setupVisualizerBody": "Le visualiseur utilise des données synthétisées tant que ceci n'est pas activé.",
   "setupVisualizerWarning": "L'activer demande l'autorisation du micro : Android l'exige des applications qui décodent le flux audio de l'appareil (ce que fait le visualiseur).",
   "setupPlaybackTitle": "Quand vous touchez un morceau",
-  "setupPlaybackBody": "Choisissez ce que fait un appui dans l'explorateur. La plupart des gens s'attendent à « Lire à partir d'ici », c'est donc l'option par défaut.",
   "storageAppSdCard": "Carte SD de l'app",
   "setupOfflineTitle": "Gardez votre file d'attente hors ligne",
   "setupFinish": "Terminer",

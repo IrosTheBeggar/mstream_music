@@ -191,7 +191,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
   Widget _pageShell(
       {required IconData icon,
       required String title,
-      required String body,
+      String? body,
       required Widget child}) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 12, 28, 12),
@@ -220,16 +220,18 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            body,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: VelvetColors.textSecondary,
-              fontSize: 14,
-              height: 1.45,
+          if (body != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 14,
+                height: 1.45,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 26),
           child,
         ],
@@ -358,11 +360,10 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
     return _pageShell(
       icon: Icons.touch_app_outlined,
       title: l.setupPlaybackTitle,
-      body: l.setupPlaybackBody,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final b in TapBehavior.values)
+          for (final b in _tapOrder)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _choice(
@@ -379,6 +380,16 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
       ),
     );
   }
+
+  /// Tap-behaviour options in the order this page offers them: the fresh-
+  /// install default leads, rather than sitting third because that is where it
+  /// happens to fall in the enum's declaration order. Settings still lists
+  /// them in declaration order.
+  static const List<TapBehavior> _tapOrder = [
+    TapBehavior.playFromHere,
+    TapBehavior.addToQueue,
+    TapBehavior.appendAndJump,
+  ];
 
   /// Cap choices for the stepper: a low 10 to keep a small cache reachable,
   /// then 25 at a time, then "keep everything". 0 means unlimited and sits

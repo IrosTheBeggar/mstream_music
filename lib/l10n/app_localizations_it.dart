@@ -1929,10 +1929,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get setupPlaybackTitle => 'Quando tocchi un brano';
 
   @override
-  String get setupPlaybackBody =>
-      'Scegli cosa fa un tocco nel browser. La maggior parte si aspetta «Riproduci da qui», quindi è l\'impostazione predefinita.';
-
-  @override
   String get setupOfflineTitle => 'Tieni la coda offline';
 
   @override

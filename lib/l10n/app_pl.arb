@@ -464,7 +464,6 @@
   "setupVisualizerBody": "Wizualizacja używa danych syntetycznych, dopóki ta opcja nie zostanie włączona.",
   "setupVisualizerWarning": "Włączenie tej opcji prosi o uprawnienie do mikrofonu — Android wymaga go od aplikacji, które dekodują strumień dźwięku urządzenia (a wizualizacja to robi).",
   "setupPlaybackTitle": "Gdy dotkniesz utworu",
-  "setupPlaybackBody": "Wybierz, co robi dotknięcie w przeglądarce. Większość osób spodziewa się opcji „Odtwarzaj od tego miejsca”, więc jest ona domyślna.",
   "storageAppSdCard": "Karta SD aplikacji",
   "setupOfflineTitle": "Zachowaj kolejkę offline",
   "setupFinish": "Zakończ",

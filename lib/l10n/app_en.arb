@@ -1484,10 +1484,6 @@
   "@setupPlaybackTitle": {
     "description": "Setup flow page 3 title (tap behaviour)."
   },
-  "setupPlaybackBody": "Choose what a tap in the browser does. Most people expect Play from here, so that is the default.",
-  "@setupPlaybackBody": {
-    "description": "Setup flow page 3 body copy."
-  },
   "setupOfflineTitle": "Keep your queue offline",
   "@setupOfflineTitle": {
     "description": "Setup flow final page title (auto-download of queued tracks + how many to keep)."

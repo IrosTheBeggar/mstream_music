@@ -1929,10 +1929,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get setupPlaybackTitle => 'Cuando tocas una canción';
 
   @override
-  String get setupPlaybackBody =>
-      'Elige qué hace un toque en el explorador. La mayoría espera «Reproducir desde aquí», así que es la opción predeterminada.';
-
-  @override
   String get setupOfflineTitle => 'Mantén tu cola sin conexión';
 
   @override

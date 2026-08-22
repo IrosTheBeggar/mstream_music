@@ -1931,10 +1931,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get setupPlaybackTitle => 'Wenn du auf einen Titel tippst';
 
   @override
-  String get setupPlaybackBody =>
-      'Lege fest, was ein Tippen im Browser bewirkt. Die meisten erwarten „Ab hier abspielen“, daher ist das die Voreinstellung.';
-
-  @override
   String get setupOfflineTitle => 'Warteschlange offline behalten';
 
   @override

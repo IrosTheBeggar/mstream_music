@@ -1926,10 +1926,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get setupPlaybackTitle => 'Ao tocar em uma música';
 
   @override
-  String get setupPlaybackBody =>
-      'Escolha o que um toque no navegador faz. A maioria espera «Tocar a partir daqui», então essa é a opção padrão.';
-
-  @override
   String get setupOfflineTitle => 'Mantenha sua fila offline';
 
   @override

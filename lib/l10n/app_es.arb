@@ -464,7 +464,6 @@
   "setupVisualizerBody": "El visualizador usa datos sintetizados hasta que actives esta opción.",
   "setupVisualizerWarning": "Activarlo pide el permiso de micrófono: Android lo exige a las apps que decodifican el flujo de audio del dispositivo (que es lo que hace el visualizador).",
   "setupPlaybackTitle": "Cuando tocas una canción",
-  "setupPlaybackBody": "Elige qué hace un toque en el explorador. La mayoría espera «Reproducir desde aquí», así que es la opción predeterminada.",
   "storageAppSdCard": "Tarjeta SD de la app",
   "setupOfflineTitle": "Mantén tu cola sin conexión",
   "setupFinish": "Finalizar",

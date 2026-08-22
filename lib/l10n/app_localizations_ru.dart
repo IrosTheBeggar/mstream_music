@@ -1946,10 +1946,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get setupPlaybackTitle => 'При нажатии на песню';
 
   @override
-  String get setupPlaybackBody =>
-      'Выберите, что делает нажатие в браузере. Большинство ожидает «Воспроизвести отсюда», поэтому это вариант по умолчанию.';
-
-  @override
   String get setupOfflineTitle => 'Держите очередь офлайн';
 
   @override
