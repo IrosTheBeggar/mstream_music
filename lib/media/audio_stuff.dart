@@ -1460,7 +1460,18 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// server context (ratings, art, URL re-resolution) went with the server.
   /// If the playing track was the server's, playback moves to the next
   /// surviving track (its stream URL just died with the server anyway).
-  Future<void> removeServerQueueItems(String localname) async {
+  /// Serialized on _switchChain like every other local-backend load: this
+  /// runs from a user deleting a server, which can land while a recovery
+  /// re-seed is in flight, and two overlapping setSources wedge just_audio
+  /// (see the rebuildTranscodeUrls customAction). Returns the chained future
+  /// so ServerManager.removeServer still awaits the real work.
+  Future<void> removeServerQueueItems(String localname) {
+    final done = _switchChain.then((_) => _removeServerQueueItems(localname));
+    _switchChain = done.catchError((_) {});
+    return done;
+  }
+
+  Future<void> _removeServerQueueItems(String localname) async {
     if (autoDJServer?.localname == localname) {
       // Auto-DJ would keep topping the queue back up from the deleted server.
       autoDJServer = null;

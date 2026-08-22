@@ -793,6 +793,18 @@ class AutoHttpException implements Exception {
 class AutoApi {
   static Future<dynamic> _call(Server server, String location,
       {Map<String, dynamic>? body}) async {
+    // An iroh server is only reachable while its tunnel serves it; without
+    // this the URL builds against a null tunnelPort and every browse fails
+    // instantly against http://127.0.0.1:0 (port 0 is a deliberate
+    // unroutable fail-fast, not an accident — see Server.effectiveBaseUrl).
+    // Auto asks again on its own, so a bounded wait that gives the tunnel a
+    // moment to come up turns "error row forever" into "loads once connected".
+    // Deliberately short: Android Auto is a car UI and must not hang, and the
+    // caller already renders a notice row on failure.
+    if (server.isIroh && !ServerManager().tunnelServes(server)) {
+      await ServerManager().awaitTunnelReady(
+          server: server, timeout: const Duration(seconds: 5));
+    }
     final uri = server.apiUri(location);
     final headers = <String, String>{'x-access-token': server.jwt ?? ''};
     late http.Response resp;
