@@ -30,7 +30,9 @@ import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_list.dart';
 import '../singletons/visualizer_audio.dart';
+import '../objects/display_item.dart';
 import '../util/camelot.dart';
+import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
 
@@ -1661,7 +1663,13 @@ class AudioPlayerHandler extends BaseAudioHandler
         _sonicLockedAnchor = null;
         break;
       case 'setAutoDJ':
-        if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
+        final nextDJ = extras?['autoDJServer'] as Server?;
+        // A re-arm on the SAME server (a settings-screen rebuild, the queue
+        // header toggling it back on) is not a new session. Only a real
+        // change resets the session state — and only a real change is allowed
+        // to take the queue, below.
+        final freshSession = autoDJServer == null || autoDJServer != nextDJ;
+        if (freshSession) {
           jsonAutoDJIgnoreList = null;
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
@@ -1669,9 +1677,11 @@ class AudioPlayerHandler extends BaseAudioHandler
           _sonicLockedAnchor = null;
           _sonicWarned = false;
         }
-        autoDJServer = extras?['autoDJServer'];
+        autoDJServer = nextDJ;
 
         customState.add(CustomEvent(autoDJServer));
+
+        if (freshSession && await _startAutoDJFromSeed()) break;
 
         if (queue.value.isEmpty ||
             queue.value.length == 1 ||
@@ -2055,6 +2065,51 @@ class AudioPlayerHandler extends BaseAudioHandler
       speed: _backend.speed,
       queueIndex: _backend.currentIndex,
     ));
+  }
+
+  /// Open an Auto DJ session ON its seed song: replace the queue with the
+  /// seed, play it, and pull its first followers. Returns false when there is
+  /// no usable seed, leaving the caller's ordinary top-up path to run.
+  ///
+  /// A seed means "start the session from this song", and until now it only
+  /// ever steered which songs got PICKED — the session opened on something
+  /// merely similar and the song the user actually named never played.
+  ///
+  /// Taking the queue is the point, so it is guarded twice over: the caller
+  /// only offers a genuinely fresh arm, and a seed is an explicit,
+  /// individually-cleared choice, not a default.
+  Future<bool> _startAutoDJFromSeed() async {
+    final server = autoDJServer;
+    final mgr = AutoDJManager();
+    // Filepaths are per-library — a seed picked on another server names
+    // nothing here.
+    final path =
+        mgr.sonicSeedServer == server?.localname ? mgr.sonicSeedPath : null;
+    if (server == null || path == null) return false;
+    // Only the path and a display title are persisted, so the row is
+    // reconstructed and buildServerFileMediaItem fetches the rest (it also
+    // resolves a downloaded copy, which a seed track may well have).
+    final MediaItem? seed = await buildServerFileMediaItem(DisplayItem(
+        server,
+        mgr.sonicSeedTitle ?? path.split('/').last,
+        'file',
+        path,
+        null,
+        null));
+    if (seed == null) return false;
+    // Same order as playFromHere — the one flow in the app that replaces a
+    // queue and starts it.
+    await customAction('clearPlaylist');
+    await addQueueItem(seed);
+    await skipToQueueItem(0);
+    await play();
+    // Followers, not a first pick: the seed IS track one. Two more so the
+    // session feels underway before the queue-end top-up takes over. The
+    // first is awaited so a failure surfaces here and not in a detached
+    // future; the second rides along behind it.
+    await autoDJ();
+    unawaited(autoDJ());
+    return true;
   }
 
   Future<void> autoDJ(
