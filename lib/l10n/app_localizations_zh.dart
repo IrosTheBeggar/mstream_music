@@ -761,7 +761,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addAll => '全部添加';
 
   @override
-  String get browserMoreActions => 'More actions';
+  String get browserMoreActions => '更多操作';
 
   @override
   String get browserConfirmDeletePlaylist => '确认删除播放列表';

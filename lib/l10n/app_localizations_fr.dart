@@ -800,7 +800,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addAll => 'Tout ajouter';
 
   @override
-  String get browserMoreActions => 'More actions';
+  String get browserMoreActions => 'Plus d\'actions';
 
   @override
   String get browserConfirmDeletePlaylist =>

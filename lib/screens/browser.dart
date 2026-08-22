@@ -227,8 +227,26 @@ class _BrowserState extends State<Browser> {
   // current browser view (in order), jump to the tapped one, play. Delegates to
   // the shared helper (util/queue_actions.dart) so the album-detail screen plays
   // albums with identical semantics.
+  /// True when the current frame is an ORDERED collection — a file-explorer
+  /// folder or a playlist — rather than an aggregate the server assembled
+  /// (search results, Rated, Recently added).
+  ///
+  /// The two frame markers are the same ones the subheader and toolbar read,
+  /// so this can't drift out of step with what the user sees named above the
+  /// list. Album detail never reaches here: it has its own row-tap path.
+  bool get _isOrderedCollection =>
+      BrowserManager().currentPath != null ||
+      BrowserManager().currentPlaylist != null;
+
+  /// Play-from-here fills the queue with the list you're looking at, which is
+  /// what you want inside an album, playlist or folder. On an aggregate it is
+  /// not: tapping one search hit would queue every other hit, and Rated is
+  /// unbounded. Spotify and Apple Music both play just the tapped song from a
+  /// search result, so aggregates get a single-item queue.
   Future<void> _playFromHere(List<DisplayItem> browserList, int tappedIndex) =>
-      playFromHere(browserList, tappedIndex);
+      _isOrderedCollection
+          ? playFromHere(browserList, tappedIndex)
+          : playFromHere([browserList[tappedIndex]], 0);
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
@@ -522,7 +540,7 @@ class _BrowserState extends State<Browser> {
                     icon: Icon(
                       Icons.keyboard_arrow_left,
                       size: 20.0,
-                      color: Colors.brown[900],
+                      color: VelvetColors.textTertiary,
                     ),
                     onPressed: () {
                       Slidable.of(context)?.openEndActionPane();
@@ -558,15 +576,14 @@ class _BrowserState extends State<Browser> {
                   leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
+                  // Same overflow a server track row carries, so the queue
+                  // actions sit in the same place whichever kind of track
+                  // you're looking at. Delete stays on the swipe.
                   trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
+                    icon: Icon(Icons.more_vert,
+                        size: 20, color: VelvetColors.textSecondary),
+                    tooltip: l.browserMoreActions,
+                    onPressed: () => _showTrackActions(b[i], c),
                   ),
                   // Same long-press context sheet as server rows — the queue
                   // actions apply to local files too (Find similar hides
@@ -610,7 +627,7 @@ class _BrowserState extends State<Browser> {
                     icon: Icon(
                       Icons.keyboard_arrow_left,
                       size: 20.0,
-                      color: Colors.brown[900],
+                      color: VelvetColors.textTertiary,
                     ),
                     onPressed: () {
                       Slidable.of(context)?.openEndActionPane();

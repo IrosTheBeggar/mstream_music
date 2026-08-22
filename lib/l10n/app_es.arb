@@ -472,5 +472,6 @@
   "settingsAutoDownloadCapSubtitle": "Guarda esta cantidad de canciones por delante de la actual; las que quedan atrás se eliminan.",
   "settingsAutoDownloadCapSubtitleUnlimited": "Guarda toda la cola (sin límite).",
   "settingsAutoDownloadCapDialogBody": "Cuántas canciones de la cola se mantienen descargadas, contando desde la que suena. A medida que avanza la reproducción, las que quedan atrás se eliminan. 0 para toda la cola.",
-  "playlistEmpty": "La lista está vacía"
+  "playlistEmpty": "La lista está vacía",
+  "browserMoreActions": "Más acciones"
 }

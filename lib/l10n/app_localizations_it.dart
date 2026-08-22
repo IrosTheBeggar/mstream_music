@@ -801,7 +801,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get addAll => 'Aggiungi tutto';
 
   @override
-  String get browserMoreActions => 'More actions';
+  String get browserMoreActions => 'Altre azioni';
 
   @override
   String get browserConfirmDeletePlaylist => 'Conferma eliminazione playlist';

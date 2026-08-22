@@ -809,7 +809,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addAll => 'Добавить всё';
 
   @override
-  String get browserMoreActions => 'More actions';
+  String get browserMoreActions => 'Другие действия';
 
   @override
   String get browserConfirmDeletePlaylist => 'Подтвердите удаление плейлиста';

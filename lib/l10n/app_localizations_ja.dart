@@ -776,7 +776,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addAll => 'すべて追加';
 
   @override
-  String get browserMoreActions => 'More actions';
+  String get browserMoreActions => 'その他の操作';
 
   @override
   String get browserConfirmDeletePlaylist => 'プレイリスト削除の確認';
