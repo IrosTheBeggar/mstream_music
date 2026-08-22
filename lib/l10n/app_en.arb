@@ -1492,5 +1492,9 @@
   "@setupOfflineTitle": {
     "description": "Setup flow final page title (auto-download of queued tracks + how many to keep)."
   },
-  "setupVisualizerNoMic": "mStream never uses your microphone."
+  "setupVisualizerNoMic": "mStream never uses your microphone.",
+  "playlistEmpty": "Playlist is empty",
+  "@playlistEmpty": {
+    "description": "Shown in the browser body when an opened playlist has no songs."
+  }
 }

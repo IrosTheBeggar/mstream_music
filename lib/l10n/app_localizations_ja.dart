@@ -1860,4 +1860,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setupVisualizerNoMic => 'mStream がマイクを使用することはありません。';
+
+  @override
+  String get playlistEmpty => 'プレイリストは空です';
 }

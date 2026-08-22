@@ -3371,6 +3371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'mStream never uses your microphone.'**
   String get setupVisualizerNoMic;
+
+  /// Shown in the browser body when an opened playlist has no songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist is empty'**
+  String get playlistEmpty;
 }
 
 class _AppLocalizationsDelegate

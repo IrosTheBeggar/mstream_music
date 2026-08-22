@@ -1952,4 +1952,7 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get setupVisualizerNoMic =>
       'mStream nigdy nie używa Twojego mikrofonu.';
+
+  @override
+  String get playlistEmpty => 'Playlista jest pusta';
 }

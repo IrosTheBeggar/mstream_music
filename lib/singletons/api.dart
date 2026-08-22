@@ -951,7 +951,10 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    // Name the frame so the subheader can label it, the toolbar can offer the
+    // album-style controls, and an empty result reads as "playlist is empty"
+    // rather than a blank list.
+    BrowserManager().addListToStack(newList, playlist: playlistName);
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {

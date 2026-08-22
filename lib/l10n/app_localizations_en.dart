@@ -1916,4 +1916,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupVisualizerNoMic => 'mStream never uses your microphone.';
+
+  @override
+  String get playlistEmpty => 'Playlist is empty';
 }

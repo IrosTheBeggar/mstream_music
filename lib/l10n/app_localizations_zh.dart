@@ -1819,4 +1819,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupVisualizerNoMic => 'mStream 绝不会使用你的麦克风。';
+
+  @override
+  String get playlistEmpty => '播放列表为空';
 }

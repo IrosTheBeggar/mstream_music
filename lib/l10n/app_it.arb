@@ -471,5 +471,6 @@
   "setupVisualizerNoMic": "mStream non usa mai il tuo microfono.",
   "settingsAutoDownloadCapSubtitle": "Memorizza questo numero di brani a partire da quello in riproduzione; quelli superati vengono rimossi.",
   "settingsAutoDownloadCapSubtitleUnlimited": "Memorizza l'intera coda (nessun limite).",
-  "settingsAutoDownloadCapDialogBody": "Quanti brani della coda restano scaricati, a partire da quello in riproduzione. Man mano che si va avanti, quelli superati vengono eliminati. 0 per l'intera coda."
+  "settingsAutoDownloadCapDialogBody": "Quanti brani della coda restano scaricati, a partire da quello in riproduzione. Man mano che si va avanti, quelli superati vengono eliminati. 0 per l'intera coda.",
+  "playlistEmpty": "La playlist è vuota"
 }

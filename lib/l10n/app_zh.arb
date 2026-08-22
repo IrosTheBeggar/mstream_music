@@ -471,5 +471,6 @@
   "setupVisualizerNoMic": "mStream 绝不会使用你的麦克风。",
   "settingsAutoDownloadCapSubtitle": "从正在播放的歌曲开始缓存这么多首；播放过的会随之删除。",
   "settingsAutoDownloadCapSubtitleUnlimited": "缓存整个播放队列（无限制）。",
-  "settingsAutoDownloadCapDialogBody": "从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 缓存整个队列。"
+  "settingsAutoDownloadCapDialogBody": "从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 缓存整个队列。",
+  "playlistEmpty": "播放列表为空"
 }

@@ -471,5 +471,6 @@
   "setupVisualizerNoMic": "O mStream nunca usa seu microfone.",
   "settingsAutoDownloadCapSubtitle": "Guarda esta quantidade de músicas a partir da atual; as que ficam para trás são removidas.",
   "settingsAutoDownloadCapSubtitleUnlimited": "Guarda a fila inteira (sem limite).",
-  "settingsAutoDownloadCapDialogBody": "Quantas músicas da fila permanecem baixadas, contando a partir da atual. Conforme a reprodução avança, as que ficam para trás são excluídas. 0 para a fila inteira."
+  "settingsAutoDownloadCapDialogBody": "Quantas músicas da fila permanecem baixadas, contando a partir da atual. Conforme a reprodução avança, as que ficam para trás são excluídas. 0 para a fila inteira.",
+  "playlistEmpty": "A playlist está vazia"
 }

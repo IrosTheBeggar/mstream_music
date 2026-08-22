@@ -1937,4 +1937,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get setupVisualizerNoMic => 'mStream nunca usa tu micrófono.';
+
+  @override
+  String get playlistEmpty => 'La lista está vacía';
 }

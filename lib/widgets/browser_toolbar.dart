@@ -426,6 +426,29 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ]);
     }
 
+    // An open playlist gets the album treatment: no label (the grey subheader
+    // below names it), everything inline. Playlist contents are a flat song
+    // list, so as with an album there's nothing to filter and the overflow
+    // would hold one entry.
+    if (BrowserManager().currentPlaylist != null) {
+      final songs = _actionTargets;
+      return Row(children: [
+        _icon(Icons.arrow_back, l.goBack, () {
+          BrowserManager().closeSearch();
+          BrowserManager().popBrowser();
+        }),
+        const Spacer(),
+        if (_enqueueable(songs).isNotEmpty) ...[
+          _icon(Icons.library_add, l.addAll, () => _addAll(context, songs)),
+          _playButton(l, songs),
+          _shuffleButton(l, songs),
+        ],
+        if (_downloadable(songs).isNotEmpty)
+          _icon(Icons.download_sharp, l.download,
+              () => _downloadAll(context, songs)),
+      ]);
+    }
+
     // Normal list: back (when there's somewhere to go) · label · Play ·
     // Shuffle · overflow.
     //

@@ -814,6 +814,12 @@ class _BrowserState extends State<Browser> {
               Icons.folder_outlined, path.isEmpty ? '/' : path,
               mono: true);
         }
+        final playlist = BrowserManager().currentPlaylist;
+        if (playlist != null) {
+          // Same strip the file explorer uses for its path — the toolbar no
+          // longer carries a label on this view, so this is what names it.
+          return _subheaderStrip(Icons.queue_music, playlist);
+        }
         return const SizedBox.shrink();
       },
     );
@@ -967,6 +973,26 @@ class _BrowserState extends State<Browser> {
                         );
                       }
                       return _homeView(context, browserList);
+                    }
+
+                    // An open playlist with nothing in it. Without this the
+                    // user gets a blank screen that's indistinguishable from
+                    // a failed load. Keyed off the frame's playlist name, so
+                    // an empty FOLDER is unaffected.
+                    if (browserList.isEmpty &&
+                        BrowserManager().currentPlaylist != null) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            l.playlistEmpty,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: VelvetColors.textTertiary,
+                                fontSize: 14),
+                          ),
+                        ),
+                      );
                     }
 
                     // The server "Playlists" view gets its own layout: a New-

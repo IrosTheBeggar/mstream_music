@@ -471,5 +471,6 @@
   "setupVisualizerNoMic": "mStream がマイクを使用することはありません。",
   "settingsAutoDownloadCapSubtitle": "再生中の曲から先、この曲数だけを保存します。通り過ぎた曲は順に削除されます。",
   "settingsAutoDownloadCapSubtitleUnlimited": "キュー全体を保存します（制限なし）。",
-  "settingsAutoDownloadCapDialogBody": "再生中の曲から数えて、キューの何曲をダウンロード済みのまま保つか。再生が進むと、通り過ぎた曲は削除されます。0 でキュー全体。"
+  "settingsAutoDownloadCapDialogBody": "再生中の曲から数えて、キューの何曲をダウンロード済みのまま保つか。再生が進むと、通り過ぎた曲は削除されます。0 でキュー全体。",
+  "playlistEmpty": "プレイリストは空です"
 }

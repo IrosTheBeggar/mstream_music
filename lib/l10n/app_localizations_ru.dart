@@ -1955,4 +1955,7 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get setupVisualizerNoMic =>
       'mStream никогда не использует ваш микрофон.';
+
+  @override
+  String get playlistEmpty => 'Плейлист пуст';
 }
