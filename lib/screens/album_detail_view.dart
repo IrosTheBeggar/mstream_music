@@ -4,8 +4,9 @@
 // (in an IndexedStack) and Back dismisses it via BrowserManager.closeAlbumDetail.
 //
 // Layout (simplified from the original route screen): a medium-player-style
-// banner — album art left, title/artist/meta right, Play + Shuffle — painted
-// over the album-art colour splash, then the track list. Per-track duration,
+// banner — album art left, title/artist/meta right — painted over the
+// album-art colour splash, then the track list. Play / Shuffle / Add all live
+// in the shared BrowserToolbar above, same as every other track list. Per-track duration,
 // album runtime, and the kbps · kHz readout render only when the server reports
 // them (older API builds omit them; see MusicMetadata).
 
@@ -172,12 +173,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   }
 
   // ── actions ──
-  void _playFrom(int index, {bool shuffle = false}) {
-    final songs = _songs;
-    if (songs == null || songs.isEmpty) return;
-    playFromHere(songs, index, shuffle: shuffle);
-  }
-
   // Row tap: defer to the shared TapBehavior setting (the same one the file
   // browser uses). A pure add-to-queue shows a confirmation toast. An armed
   // sonic-path pick eats the tap first — nothing may queue mid-pick.
@@ -306,7 +301,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
 
   // ── banner: back/overflow + medium-player-style art-left header over the splash ──
   Widget _banner(AppLocalizations l, List<DisplayItem>? songs) {
-    final enabled = songs != null && songs.isNotEmpty;
     final artUrl = _artUrl();
     final artist = songs == null ? '' : _artistLabel(songs, l);
 
@@ -401,35 +395,9 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Play (filled) + Shuffle, stacked to keep the banner compact.
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton.filled(
-                      onPressed: enabled ? () => _playFrom(0) : null,
-                      tooltip: l.play,
-                      icon: Icon(Icons.play_arrow, color: accentInk),
-                      style: IconButton.styleFrom(
-                        backgroundColor: VelvetColors.primary,
-                        disabledBackgroundColor:
-                            VelvetColors.primary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    IconButton(
-                      onPressed:
-                          enabled ? () => _playFrom(0, shuffle: true) : null,
-                      tooltip: l.shuffle,
-                      icon: const Icon(Icons.shuffle),
-                      color: VelvetColors.textSecondary,
-                      style: IconButton.styleFrom(
-                        shape: CircleBorder(
-                            side: BorderSide(color: VelvetColors.border)),
-                      ),
-                    ),
-                  ],
-                ),
+                // Play + Shuffle used to sit here, stacked. They live in the
+                // top toolbar now (see BrowserToolbar's album branch) so the
+                // controls are in the same place on every track list.
               ],
             ),
           ),

@@ -345,16 +345,22 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   Widget _content(BuildContext context, AppLocalizations l, _Tb s) {
-    // Album detail: back · name · overflow. NO Play/Shuffle here — the album
-    // banner already carries both, and duplicating them in the bar directly
-    // above would be two controls for one action. Acts on the album's songs.
+    // Album detail: back · Play · Shuffle · overflow, acting on the album's
+    // songs — the same shape every other track list gets, so the controls
+    // don't move when you open an album. No title: the banner right below
+    // already shows the album name in full, at size, with its cover.
     if (s.album != null) {
+      final albumSongs = _actionTargets;
       return Row(children: [
         _icon(Icons.arrow_back, l.goBack,
             () => BrowserManager().closeAlbumDetail()),
-        _title(s.album!.name),
+        const Spacer(),
+        if (_enqueueable(albumSongs).isNotEmpty) ...[
+          _playButton(l, albumSongs),
+          _shuffleButton(l, albumSongs),
+        ],
         // No list-filter search inside a loaded album.
-        _overflow(context, l, _actionTargets, showSearch: false),
+        _overflow(context, l, albumSongs, showSearch: false),
       ]);
     }
 
