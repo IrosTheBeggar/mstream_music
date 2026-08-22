@@ -4,7 +4,8 @@
 // take and lets the album detail view drop its own back/overflow.
 //
 // Contexts (driven by BrowserManager streams):
-//   • album detail open → back · Add all · Play · Shuffle · Download
+//   • album detail open → back · Shuffle · Play · Add all · Download
+//   • playlist open      → back · search · Shuffle · Play · Add all · Download
 //   • local search open → close · filter field
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
@@ -357,11 +358,13 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   Widget _content(BuildContext context, AppLocalizations l, _Tb s) {
-    // Album detail: back · Add all · Play · Shuffle · Download, acting on the
-    // album's songs. Everything inline — an album has no list-filter search,
-    // so with search gone the overflow would hold a single entry and cost a
-    // tap to reach it. No title either: the banner right below already shows
-    // the album name in full, at size, with its cover.
+    // Album detail: back · Shuffle · Play · Add all · Download, acting on the
+    // album's songs. The two playback verbs sit together on the left of the
+    // group and the two collect-it verbs on the right. Everything inline — an
+    // album has no list-filter search, so with search gone the overflow would
+    // hold a single entry and cost a tap to reach it. No title either: the
+    // banner right below already shows the album name in full, at size, with
+    // its cover.
     //
     // Still conditional: the songs arrive from an async fetch, so this bar is
     // Back-only until they land (and stays that way if the fetch fails).
@@ -372,10 +375,10 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             () => BrowserManager().closeAlbumDetail()),
         const Spacer(),
         if (_enqueueable(albumSongs).isNotEmpty) ...[
+          _shuffleButton(l, albumSongs),
+          _playButton(l, albumSongs),
           _icon(Icons.library_add, l.addAll,
               () => _addAll(context, albumSongs)),
-          _playButton(l, albumSongs),
-          _shuffleButton(l, albumSongs),
         ],
         if (_downloadable(albumSongs).isNotEmpty)
           _icon(Icons.download_sharp, l.download,
@@ -427,9 +430,11 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     }
 
     // An open playlist gets the album treatment: no label (the grey subheader
-    // below names it), everything inline. Playlist contents are a flat song
-    // list, so as with an album there's nothing to filter and the overflow
-    // would hold one entry.
+    // below names it), everything inline. Unlike an album it KEEPS the list
+    // filter: a playlist is hand-built and can run long past the point where
+    // scrolling to one track is the slow way to reach it. Search sits beside
+    // Back, at the opposite end from the actions, so it reads as "narrow this
+    // list" rather than as another thing to do to the list.
     if (BrowserManager().currentPlaylist != null) {
       final songs = _actionTargets;
       return Row(children: [
@@ -437,11 +442,13 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           BrowserManager().closeSearch();
           BrowserManager().popBrowser();
         }),
+        _icon(Icons.search, l.browserSearchList,
+            () => BrowserManager().openSearch()),
         const Spacer(),
         if (_enqueueable(songs).isNotEmpty) ...[
-          _icon(Icons.library_add, l.addAll, () => _addAll(context, songs)),
-          _playButton(l, songs),
           _shuffleButton(l, songs),
+          _playButton(l, songs),
+          _icon(Icons.library_add, l.addAll, () => _addAll(context, songs)),
         ],
         if (_downloadable(songs).isNotEmpty)
           _icon(Icons.download_sharp, l.download,
