@@ -257,7 +257,16 @@ class AudioPlayerHandler extends BaseAudioHandler
         _failedSkips = 0;
         _httpRetries = 0;
         _networkStalled = false;
-        _localRetryIndex = null;
+        // Only a DIFFERENT track reaching ready clears the local-copy retry
+        // guard. Clearing it on every ready reopened the loop it exists to
+        // stop: a corrupt-but-LOADABLE file (valid header, damaged tail)
+        // reaches ready, clears the guard, fails mid-track, and re-seeds
+        // forever — the skip budget never accrues because both this branch
+        // and the recovery zero it.
+        if (_localRetryIndex != null &&
+            _localRetryIndex != _backend.currentIndex) {
+          _localRetryIndex = null;
+        }
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
         _restoreSpot = null;
@@ -1040,7 +1049,14 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (_localBackend.processingState != BackendProcessingState.idle) return;
       await _reseedLocalAtSpot();
     }).catchError((Object e) {
-      castLog('tunnel-reconnect resume failed', error: e);
+      // appLog, not castLog: no cast is involved, and the incident log this
+      // fix came from was tagged [cast] with no cast in sight.
+      appLog('[play] tunnel-reconnect resume failed: $e');
+      // Try again rather than leaving the player parked. Bounded by the
+      // tunnelServes gate, the 10s per-server cooldown and the single
+      // _tunnelHealRetry slot, so a flapping tunnel gets ~one attempt per
+      // 10-11s and a revived player fails the idle guard and stops.
+      _rearmTunnelHeal();
     }).whenComplete(() => _recoveringPlayback = false);
   }
 
@@ -1610,9 +1626,21 @@ class AudioPlayerHandler extends BaseAudioHandler
 
         break;
       case 'rebuildTranscodeUrls':
-        await _rebuildTranscodeUrls(
+        // Serialized with every other local-backend load. Two setSources
+        // overlapping does NOT merely interrupt the older one: an interrupt
+        // landing inside just_audio's platform-activation window throws out of
+        // setPlatform() itself, leaving _active stuck true, _platform a
+        // permanently-errored future and the event subscriptions cancelled —
+        // after which every later load/play rethrows "Loading interrupted"
+        // instantly until stop(), an EQ rebuild, or process death. Observed
+        // on-device: a tunnel bind fired this rebuild while the reconnect
+        // reseed was chaining, both threw, and playback was dead for the rest
+        // of the drive. The chain is what makes that unreachable.
+        final rebuild = _switchChain.then((_) => _rebuildTranscodeUrls(
             upcomingOnly: extras?['upcomingOnly'] == true,
-            auto: extras?['auto'] == true);
+            auto: extras?['auto'] == true));
+        _switchChain = rebuild.catchError((_) {});
+        await rebuild;
         break;
     }
   }
@@ -1709,7 +1737,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       appLog('[queue] stream URLs rebuilt — reloading at track ${cur + 1}'
           '${auto ? ' (auto)' : ''}');
       final pos = _backend.position;
-      final wasPlaying = _backend.playing;
+      // `playing` is FALSE on an error-parked player, so an auto rebuild after
+      // a tunnel bind would reload the track and sit silent — and, now that
+      // the reseed is serialized behind this, its own not-idle early-return
+      // means nothing downstream would start it either. _playIntent is the
+      // user's actual intent, cleared by pause/stop and false at boot, so
+      // OR-ing it in resumes only where playback was genuinely wanted.
+      final wasPlaying = _backend.playing || (auto && _playIntent);
       final wasShuffle = _backend.shuffleEnabled;
       final wasRepeat = _backend.repeat;
       _reordering = true;

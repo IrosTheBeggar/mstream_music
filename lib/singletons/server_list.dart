@@ -429,9 +429,12 @@ class ServerManager {
             .customAction('rebuildTranscodeUrls',
                 const {'upcomingOnly': false, 'auto': true})
             .catchError((Object e) {
-          // A concurrent serialized load (restore, re-seed) can interrupt this
-          // reload ("Loading interrupted") — benign, the newer load already
-          // carries the fresh tunnel URLs; just don't let it hit the zone.
+          // Reaching here should now be rare: the handler runs this rebuild
+          // on the same chain as every other local-backend load, so a
+          // concurrent load can't interrupt it. It is NOT benign if it does —
+          // an interrupt inside just_audio's activation window wedges the
+          // player until stop() or process death (see the customAction case
+          // in audio_stuff.dart). Logged, not swallowed silently.
           appLog('[iroh] auto URL rebuild after tunnel bind failed: $e');
         }));
       } catch (e) {
