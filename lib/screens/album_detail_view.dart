@@ -16,12 +16,10 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
-import '../screens/discover_screen.dart';
 import '../screens/sonic_path_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
-import '../singletons/settings.dart';
 import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
@@ -30,7 +28,7 @@ import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../widgets/player_panel.dart';
-import '../widgets/star_rating.dart';
+import '../widgets/track_actions_sheet.dart';
 
 class AlbumDetailView extends StatefulWidget {
   /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`)
@@ -195,46 +193,22 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     if (await handleTrackTap(songs, index)) _toast();
   }
 
-  // ── per-row play-options menu ──
-  Future<void> _rowAddNext(int index) async {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    await addNext(songs[index]);
-    _toast();
-  }
-
-  void _rowPlayNow(int index) {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    playNow(songs[index]);
-  }
-
-  Future<void> _rowAddToEnd(int index) async {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    await addToQueueEnd(songs[index]);
-    _toast();
-  }
-
-  // "Find similar" — Discover screen pinned to this row's track (only
-  // offered when the track's server advertised discovery; see the menu
-  // gating in _trackList).
-  void _rowFindSimilar(int index) {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    final song = songs[index];
-    final server = song.server;
-    final path = song.data;
-    if (server == null || path == null) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DiscoverScreen(
-        seedServer: server,
-        seedPath: path,
-        seedTitle: song.metadata?.title ?? path.split('/').last,
-        seedArtist: song.metadata?.artist,
+  // ── per-row overflow ──
+  // The same sheet the browser's track rows open, so a song offers the same
+  // actions wherever you meet it — and gains Add to playlist / Download,
+  // which the dropdown this replaced never had.
+  void _showTrackActions(DisplayItem item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-    ));
+      builder: (_) => TrackActionsSheet(item: item, parentContext: context),
+    );
   }
+
 
   // "Added to queue" confirmation. Floats above the docked mini-player — that
   // overlay sits in a higher layer at the bottom and would otherwise hide a
@@ -409,23 +383,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // Tappable rating for a track row: small stars when rated, a single outline
   // star otherwise; opens the rating form on tap and refreshes the list on
   // change. Empty placeholder if the row has no server/path (shouldn't happen
-  // for album songs).
-  Widget _ratingControl(DisplayItem s) {
-    final server = s.server;
-    final path = s.data;
-    if (server == null || path == null) return const SizedBox.shrink();
-    return RatingControl(
-      rating: s.metadata?.rating,
-      server: server,
-      filepath: path,
-      size: 11,
-      onChanged: (r) {
-        s.metadata?.rating = r;
-        if (mounted) setState(() {});
-      },
-    );
-  }
-
+ 
   Widget _trackList(List<DisplayItem> songs) {
     return StreamBuilder<({String? path, bool playing})>(
       stream: _nowStream,
@@ -444,16 +402,7 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
               playing: now.playing,
               duration: s.metadata?.duration,
               onTap: () => _onRowTap(i),
-              onAddNext: () => _rowAddNext(i),
-              onPlayNow: () => _rowPlayNow(i),
-              onAddToEnd: () => _rowAddToEnd(i),
-              // Only when this track's server has discovery data — the menu
-              // entry hides entirely on older servers (never probed).
-              onFindSimilar: (s.server?.discoveryAvailable == true &&
-                      s.data != null)
-                  ? () => _rowFindSimilar(i)
-                  : null,
-              ratingControl: _ratingControl(s),
+              onMenu: () => _showTrackActions(s),
             );
           },
         );
@@ -473,12 +422,7 @@ class _SongRow extends StatelessWidget {
   final bool playing;
   final Duration? duration;
   final VoidCallback onTap;
-  final VoidCallback onAddNext;
-  final VoidCallback onPlayNow;
-  final VoidCallback onAddToEnd;
-  // Null hides the menu entry (track's server lacks discovery data).
-  final VoidCallback? onFindSimilar;
-  final Widget ratingControl;
+  final VoidCallback onMenu;
 
   const _SongRow({
     required this.number,
@@ -486,11 +430,7 @@ class _SongRow extends StatelessWidget {
     required this.active,
     required this.playing,
     required this.onTap,
-    required this.onAddNext,
-    required this.onPlayNow,
-    required this.onAddToEnd,
-    this.onFindSimilar,
-    required this.ratingControl,
+    required this.onMenu,
     this.duration,
   });
 
@@ -560,50 +500,20 @@ class _SongRow extends StatelessWidget {
                         color: VelvetColors.textTertiary,
                       ),
                     ),
-                  if (duration != null) const SizedBox(height: 1),
-                  ratingControl,
                 ],
               ),
               const SizedBox(width: 4),
-              // Queue-options dropdown: Add next / Play now (+ Add to end of
-              // queue when the row tap is play-from-here). Rating moved out to
-              // the always-visible star above.
-              PopupMenuButton<String>(
-                icon: Icon(Icons.arrow_drop_down,
-                    color: VelvetColors.textSecondary),
-                iconSize: 24,
-                color: VelvetColors.surface,
+              // Same overflow the browser's track rows carry, opening the
+              // same sheet. Rating lives in there now, which is why the row's
+              // inline stars are gone.
+              IconButton(
+                icon: Icon(Icons.more_vert,
+                    size: 20, color: VelvetColors.textSecondary),
+                tooltip: l.browserMoreActions,
                 padding: EdgeInsets.zero,
                 constraints:
                     const BoxConstraints(minWidth: 40, minHeight: 40),
-                onSelected: (v) {
-                  switch (v) {
-                    case 'next':
-                      onAddNext();
-                      break;
-                    case 'now':
-                      onPlayNow();
-                      break;
-                    case 'end':
-                      onAddToEnd();
-                      break;
-                    case 'similar':
-                      onFindSimilar?.call();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(value: 'next', child: Text(l.queueAddNext)),
-                  PopupMenuItem(value: 'now', child: Text(l.queuePlayNow)),
-                  if (SettingsManager().tapBehavior ==
-                      TapBehavior.playFromHere)
-                    PopupMenuItem(
-                        value: 'end', child: Text(l.queueAddToEnd)),
-                  if (onFindSimilar != null)
-                    PopupMenuItem(
-                        value: 'similar',
-                        child: Text(l.discoverFindSimilar)),
-                ],
+                onPressed: onMenu,
               ),
             ],
           ),
