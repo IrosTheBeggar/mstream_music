@@ -577,6 +577,10 @@
   },
   "download": "Download",
   "addAll": "Add All",
+  "browserMoreActions": "More actions",
+  "@browserMoreActions": {
+    "description": "Tooltip for the browser toolbar's overflow (⋮) menu holding Search list / Download / Add All."
+  },
   "@download": {
     "description": "Generic Download / Add All action labels (browser toolbar + swipe actions)."
   },
@@ -885,11 +889,11 @@
   "@settingsAutoDownloadCap": {
     "description": "Title of the keep-queue-offline retention-cap setting."
   },
-  "settingsAutoDownloadCapSubtitle": "Keep the newest this many auto-downloads; older ones no longer in your queue are removed.",
+  "settingsAutoDownloadCapSubtitle": "Cache this many songs ahead of the one playing; songs left behind are removed as you go.",
   "@settingsAutoDownloadCapSubtitle": {
     "description": "Subtitle when a finite auto-download cap is set."
   },
-  "settingsAutoDownloadCapSubtitleUnlimited": "Keep every auto-downloaded track (no limit).",
+  "settingsAutoDownloadCapSubtitleUnlimited": "Cache the whole queue (no limit).",
   "@settingsAutoDownloadCapSubtitleUnlimited": {
     "description": "Subtitle when the auto-download cap is unlimited (0)."
   },
@@ -901,7 +905,7 @@
   "@settingsAutoDownloadCapField": {
     "description": "Text field label in the auto-download limit dialog."
   },
-  "settingsAutoDownloadCapDialogBody": "Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren't in your queue are deleted. Set to 0 to keep everything.",
+  "settingsAutoDownloadCapDialogBody": "How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.",
   "@settingsAutoDownloadCapDialogBody": {
     "description": "Explainer in the auto-download limit dialog."
   },
@@ -921,6 +925,10 @@
   "diagnosticsCopied": "Logs copied to clipboard",
   "diagnosticsEmpty": "No logs yet",
   "storageAppExternal": "App external",
+  "storageAppSdCard": "App SD card",
+  "@storageAppSdCard": {
+    "description": "Storage-location option: the SD card's own app folder (no permission needed, removed on uninstall). Only offered when a card is present."
+  },
   "selfSignedTitle": "Allow self-signed certificate",
   "selfSignedSubtitle": "Skip TLS validation for this server. Only enable on a network you trust.",
   "importedShadersTitle": "Imported shaders",
@@ -991,17 +999,9 @@
   "@addServerTabQuickConnect": {
     "description": "Add-server form: tab label for the iroh peer-to-peer pairing flow (paired with the 'Server URL' tab)."
   },
-  "irohConnectHeader": "Connect peer-to-peer",
-  "@irohConnectHeader": {
-    "description": "Title at the top of the Quick Connect tab."
-  },
   "irohPairingHeader": "Connect with a pairing code",
   "@irohPairingHeader": {
     "description": "Header of the manual pairing-code section on the Quick Connect tab."
-  },
-  "irohConnectBody": "Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.",
-  "@irohConnectBody": {
-    "description": "Explainer under the Quick Connect tab title."
   },
   "irohPairingBody": "Enable Remote Access on the server, then paste its pairing code or scan the QR.",
   "@irohPairingBody": {
@@ -1428,5 +1428,69 @@
         "type": "String"
       }
     }
-  }
+  },
+  "welcomeTranslationNote": "This language was machine-translated and may read awkwardly.",
+  "@welcomeTranslationNote": {
+    "description": "Shown on the first-run screen only when the UI language is not English."
+  },
+  "welcomeTranslationCta": "Help translate mStream",
+  "@welcomeTranslationCta": {
+    "description": "Tappable link under the machine-translation note; opens the project on GitHub."
+  },
+  "setupTitle": "Quick setup",
+  "@setupTitle": {
+    "description": "App bar title of the first-run setup flow shown after the first server is added."
+  },
+  "setupSkip": "Skip",
+  "@setupSkip": {
+    "description": "Setup flow: dismisses the whole flow without visiting the remaining pages."
+  },
+  "setupNext": "Next",
+  "@setupNext": {
+    "description": "Setup flow: advances to the next page."
+  },
+  "setupFinish": "Finish",
+  "@setupFinish": {
+    "description": "Setup flow: primary button on the LAST page; closes the flow."
+  },
+  "setupBack": "Back",
+  "@setupBack": {
+    "description": "Setup flow: returns to the previous page."
+  },
+  "setupAccentTitle": "Pick your color",
+  "@setupAccentTitle": {
+    "description": "Setup flow page 1 title (accent colour)."
+  },
+  "setupAccentBody": "The accent color highlights buttons, sliders and the player controls. Tap one to try it.",
+  "@setupAccentBody": {
+    "description": "Setup flow page 1 body copy."
+  },
+  "setupVisualizerTitle": "Real audio for the visualizer",
+  "@setupVisualizerTitle": {
+    "description": "Setup flow page 2 title (visualizer audio source). Android only."
+  },
+  "setupVisualizerBody": "The visualizer uses synthesized data until this is enabled.",
+  "@setupVisualizerBody": {
+    "description": "Setup flow page 2 body copy."
+  },
+  "setupVisualizerWarning": "Turning this on asks for the microphone permission — Android requires this for apps that decode the device's audio stream (which the visualizer does).",
+  "@setupVisualizerWarning": {
+    "description": "Setup flow page 2: explains up front why a music app requests RECORD_AUDIO. Rendered immediately before setupVisualizerNoMic, which is bold — keep them readable as one paragraph."
+  },
+  "@setupVisualizerNoMic": {
+    "description": "Setup flow page 2: the reassurance sentence closing the mic explanation. Rendered BOLD, so it is a separate string rather than part of setupVisualizerWarning."
+  },
+  "setupPlaybackTitle": "When you tap a song",
+  "@setupPlaybackTitle": {
+    "description": "Setup flow page 3 title (tap behaviour)."
+  },
+  "setupPlaybackBody": "Choose what a tap in the browser does. Most people expect Play from here, so that is the default.",
+  "@setupPlaybackBody": {
+    "description": "Setup flow page 3 body copy."
+  },
+  "setupOfflineTitle": "Keep your queue offline",
+  "@setupOfflineTitle": {
+    "description": "Setup flow final page title (auto-download of queued tracks + how many to keep)."
+  },
+  "setupVisualizerNoMic": "mStream never uses your microphone."
 }

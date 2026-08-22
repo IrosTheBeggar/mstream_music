@@ -182,6 +182,12 @@ class AudioPlayerHandler extends BaseAudioHandler
           appLog('[play] track ${index + 1}/${queue.value.length}: '
               '${item.title}');
         }
+        // Keep-queue-offline: the cap caches a window of tracks AHEAD of the
+        // playing one, so advancing slides that window — sweep to pull in
+        // whatever just entered it. No-op when the setting is off, the cap is
+        // unlimited (window = whole queue, already swept on the queue change),
+        // or everything in range is on disk.
+        unawaited(DownloadManager().autoDownloadQueue(queue.value));
       }
       _emitCurrentMediaItem();
     });

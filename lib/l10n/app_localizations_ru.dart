@@ -809,6 +809,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addAll => 'Добавить всё';
 
   @override
+  String get browserMoreActions => 'More actions';
+
+  @override
   String get browserConfirmDeletePlaylist => 'Подтвердите удаление плейлиста';
 
   @override
@@ -1411,11 +1414,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+      'Кэшировать столько треков начиная с текущего; пройденные удаляются по ходу.';
 
   @override
   String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+      'Кэшировать всю очередь (без ограничений).';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1425,7 +1428,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      'Сколько треков очереди остаются загруженными, начиная с текущего. По мере воспроизведения пройденные удаляются. 0 — вся очередь.';
 
   @override
   String get downloadWaitingWifi => 'Ожидание Wi-Fi';
@@ -1477,6 +1480,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'Внешнее (приложение)';
+
+  @override
+  String get storageAppSdCard => 'SD-карта приложения';
 
   @override
   String get selfSignedTitle => 'Разрешить самоподписанный сертификат';
@@ -1542,14 +1548,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1902,4 +1901,58 @@ class AppLocalizationsRu extends AppLocalizations {
   String pathPickOnServer(String server) {
     return 'Выберите трек на $server';
   }
+
+  @override
+  String get welcomeTranslationNote =>
+      'Этот язык переведён машинно и может звучать неестественно.';
+
+  @override
+  String get welcomeTranslationCta => 'Помочь с переводом mStream';
+
+  @override
+  String get setupTitle => 'Быстрая настройка';
+
+  @override
+  String get setupSkip => 'Пропустить';
+
+  @override
+  String get setupNext => 'Далее';
+
+  @override
+  String get setupFinish => 'Готово';
+
+  @override
+  String get setupBack => 'Назад';
+
+  @override
+  String get setupAccentTitle => 'Выберите цвет';
+
+  @override
+  String get setupAccentBody =>
+      'Акцентный цвет выделяет кнопки, ползунки и элементы управления плеером. Коснитесь любого, чтобы попробовать.';
+
+  @override
+  String get setupVisualizerTitle => 'Реальный звук для визуализатора';
+
+  @override
+  String get setupVisualizerBody =>
+      'Пока это не включено, визуализатор использует синтезированные данные.';
+
+  @override
+  String get setupVisualizerWarning =>
+      'При включении запрашивается разрешение на микрофон — Android требует его от приложений, которые декодируют аудиопоток устройства (а визуализатор это делает).';
+
+  @override
+  String get setupPlaybackTitle => 'При нажатии на песню';
+
+  @override
+  String get setupPlaybackBody =>
+      'Выберите, что делает нажатие в браузере. Большинство ожидает «Воспроизвести отсюда», поэтому это вариант по умолчанию.';
+
+  @override
+  String get setupOfflineTitle => 'Держите очередь офлайн';
+
+  @override
+  String get setupVisualizerNoMic =>
+      'mStream никогда не использует ваш микрофон.';
 }

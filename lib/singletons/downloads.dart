@@ -320,6 +320,29 @@ class DownloadManager {
   /// was deleted (folder cleaned, SD ejected) carries a DEAD localPath and
   /// must be a candidate again, mirroring how every playback consumer of
   /// localPath probes before using it. Pure over the inputs; unit-tested.
+  /// The slice of the queue the cap says to keep on disk: at most [cap] items
+  /// starting at [startIndex] (the playing track), i.e. "this many songs
+  /// cached ahead of you". [cap] <= 0 means the whole queue.
+  ///
+  /// This is the ONE definition of the cache set — both the download sweep and
+  /// the eviction pass read it, so the app can never fetch something it is
+  /// about to delete, or protect something it never fetched. Before this, the
+  /// cap only evicted tracks that had LEFT the queue, so a 100-track queue
+  /// pulled all 100 files no matter what the cap said.
+  ///
+  /// Deliberately does NOT wrap past the end: without repeat enabled, tracks
+  /// before the playing one are behind you and aren't coming back, so near the
+  /// end of a queue the window is simply shorter. Pure; unit-tested.
+  static List<MediaItem> cacheWindow(
+      List<MediaItem> items, int cap, int startIndex) {
+    if (cap <= 0 || items.length <= cap) return items;
+    final start = startIndex < 0
+        ? 0
+        : (startIndex >= items.length ? items.length - 1 : startIndex);
+    final end = start + cap;
+    return items.sublist(start, end > items.length ? items.length : end);
+  }
+
   static List<MediaItem> autoDownloadCandidates(
       List<MediaItem> items, Set<String> attempted,
       {required bool Function(String path) fileExists}) {
@@ -347,28 +370,41 @@ class DownloadManager {
   Future<void> autoDownloadQueue(List<MediaItem> items) async {
     if (!SettingsManager().offlineQueue) return;
     final wifiOnly = SettingsManager().offlineQueueWifiOnly;
-    for (final m in autoDownloadCandidates(items, _autoAttempted,
+    // Only fetch what the cap actually allows on disk. Tracks outside the
+    // window are never marked in _autoAttempted, so they become candidates the
+    // moment playback advances far enough to pull them into it.
+    final window =
+        cacheWindow(items, SettingsManager().autoDownloadCap, _playingIndex());
+    for (final m in autoDownloadCandidates(window, _autoAttempted,
         fileExists: (p) => File(p).existsSync())) {
       await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
           requiresWiFi: wifiOnly, auto: true, quiet: true);
     }
   }
 
-  /// Delete auto-downloads over the user's cap, oldest orphans first. Runs
-  /// after a fresh auto-download lands and when the user lowers the cap — both
+  /// Delete auto-downloads outside the cache window, oldest first. Runs after
+  /// a fresh auto-download lands and when the user lowers the cap — both
   /// deliberate, online-ish moments; never from startup or a connectivity
-  /// change. Tracks still in the queue (incl. the playing one) are protected,
-  /// so the queue stays fully offline-available and only the extra cache is
-  /// trimmed. cap 0 = keep everything.
+  /// change. Protection is [cacheWindow], so tracks that fall BEHIND the
+  /// playing one are reclaimed as you go. cap 0 = keep everything.
+  ///
+  /// Edge: a slide that pulls in nothing new (everything ahead already on
+  /// disk) lands no download and so runs no eviction — disk can sit a little
+  /// over the cap until the next fetch. Harmless, and it avoids deleting files
+  /// on every track change.
   Future<void> enforceAutoDownloadCap() => _enforceAutoDownloadCap();
 
   Future<void> _enforceAutoDownloadCap() async {
     final cap = SettingsManager().autoDownloadCap;
     if (cap <= 0) return;
-    // Protected = anything in the current queue, keyed serverName+path (the
-    // same key the ledger and the queue's extras share).
+    // Protected = the cache window, keyed serverName+path (the same key the
+    // ledger and the queue's extras share) — NOT the whole queue. Protecting
+    // every queued track is what let disk usage grow to the queue's full size
+    // regardless of the cap: as playback advanced, each track in turn became
+    // protected and nothing was ever reclaimed.
     final queued = <String>{};
-    for (final m in MediaManager().audioHandler.queue.value) {
+    for (final m in cacheWindow(MediaManager().audioHandler.queue.value, cap,
+        _playingIndex())) {
       final s = m.extras?['server'], p = m.extras?['path'];
       if (s is String && p is String) queued.add(s + p);
     }
@@ -398,6 +434,12 @@ class DownloadManager {
   /// keep-queue-offline setting ON, so it acts now instead of on the next
   /// queue edit. Clears the once-per-session guard so earlier failures get a
   /// fresh chance.
+  /// Index of the track playing right now, or 0 when nothing is (a queue
+  /// restored but not started caches from the top, which is where it will
+  /// begin). Drives [cacheWindow].
+  int _playingIndex() =>
+      MediaManager().audioHandler.playbackState.value.queueIndex ?? 0;
+
   Future<void> sweepQueueNow() async {
     _autoAttempted.clear();
     await autoDownloadQueue(MediaManager().audioHandler.queue.value);

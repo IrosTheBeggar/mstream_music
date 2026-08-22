@@ -1488,6 +1488,12 @@ abstract class AppLocalizations {
   /// **'Add All'**
   String get addAll;
 
+  /// Tooltip for the browser toolbar's overflow (⋮) menu holding Search list / Download / Add All.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get browserMoreActions;
+
   /// Browser delete-confirmation dialog titles + search hint.
   ///
   /// In en, this message translates to:
@@ -2409,13 +2415,13 @@ abstract class AppLocalizations {
   /// Subtitle when a finite auto-download cap is set.
   ///
   /// In en, this message translates to:
-  /// **'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.'**
+  /// **'Cache this many songs ahead of the one playing; songs left behind are removed as you go.'**
   String get settingsAutoDownloadCapSubtitle;
 
   /// Subtitle when the auto-download cap is unlimited (0).
   ///
   /// In en, this message translates to:
-  /// **'Keep every auto-downloaded track (no limit).'**
+  /// **'Cache the whole queue (no limit).'**
   String get settingsAutoDownloadCapSubtitleUnlimited;
 
   /// Shown as the auto-download cap value when there's no limit.
@@ -2433,7 +2439,7 @@ abstract class AppLocalizations {
   /// Explainer in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.'**
+  /// **'How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.'**
   String get settingsAutoDownloadCapDialogBody;
 
   /// No description provided for @downloadWaitingWifi.
@@ -2531,6 +2537,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App external'**
   String get storageAppExternal;
+
+  /// Storage-location option: the SD card's own app folder (no permission needed, removed on uninstall). Only offered when a card is present.
+  ///
+  /// In en, this message translates to:
+  /// **'App SD card'**
+  String get storageAppSdCard;
 
   /// No description provided for @selfSignedTitle.
   ///
@@ -2640,23 +2652,11 @@ abstract class AppLocalizations {
   /// **'Quick Connect'**
   String get addServerTabQuickConnect;
 
-  /// Title at the top of the Quick Connect tab.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect peer-to-peer'**
-  String get irohConnectHeader;
-
   /// Header of the manual pairing-code section on the Quick Connect tab.
   ///
   /// In en, this message translates to:
   /// **'Connect with a pairing code'**
   String get irohPairingHeader;
-
-  /// Explainer under the Quick Connect tab title.
-  ///
-  /// In en, this message translates to:
-  /// **'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.'**
-  String get irohConnectBody;
 
   /// Explainer under the pairing-code section header on the Quick Connect tab.
   ///
@@ -3275,6 +3275,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick a track on {server}'**
   String pathPickOnServer(String server);
+
+  /// Shown on the first-run screen only when the UI language is not English.
+  ///
+  /// In en, this message translates to:
+  /// **'This language was machine-translated and may read awkwardly.'**
+  String get welcomeTranslationNote;
+
+  /// Tappable link under the machine-translation note; opens the project on GitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Help translate mStream'**
+  String get welcomeTranslationCta;
+
+  /// App bar title of the first-run setup flow shown after the first server is added.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick setup'**
+  String get setupTitle;
+
+  /// Setup flow: dismisses the whole flow without visiting the remaining pages.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get setupSkip;
+
+  /// Setup flow: advances to the next page.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get setupNext;
+
+  /// Setup flow: primary button on the LAST page; closes the flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get setupFinish;
+
+  /// Setup flow: returns to the previous page.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get setupBack;
+
+  /// Setup flow page 1 title (accent colour).
+  ///
+  /// In en, this message translates to:
+  /// **'Pick your color'**
+  String get setupAccentTitle;
+
+  /// Setup flow page 1 body copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The accent color highlights buttons, sliders and the player controls. Tap one to try it.'**
+  String get setupAccentBody;
+
+  /// Setup flow page 2 title (visualizer audio source). Android only.
+  ///
+  /// In en, this message translates to:
+  /// **'Real audio for the visualizer'**
+  String get setupVisualizerTitle;
+
+  /// Setup flow page 2 body copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The visualizer uses synthesized data until this is enabled.'**
+  String get setupVisualizerBody;
+
+  /// Setup flow page 2: explains up front why a music app requests RECORD_AUDIO. Rendered immediately before setupVisualizerNoMic, which is bold — keep them readable as one paragraph.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning this on asks for the microphone permission — Android requires this for apps that decode the device\'s audio stream (which the visualizer does).'**
+  String get setupVisualizerWarning;
+
+  /// Setup flow page 3 title (tap behaviour).
+  ///
+  /// In en, this message translates to:
+  /// **'When you tap a song'**
+  String get setupPlaybackTitle;
+
+  /// Setup flow page 3 body copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what a tap in the browser does. Most people expect Play from here, so that is the default.'**
+  String get setupPlaybackBody;
+
+  /// Setup flow final page title (auto-download of queued tracks + how many to keep).
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your queue offline'**
+  String get setupOfflineTitle;
+
+  /// Setup flow page 2: the reassurance sentence closing the mic explanation. Rendered BOLD, so it is a separate string rather than part of setupVisualizerWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream never uses your microphone.'**
+  String get setupVisualizerNoMic;
 }
 
 class _AppLocalizationsDelegate

@@ -4,10 +4,11 @@
 // take and lets the album detail view drop its own back/overflow.
 //
 // Contexts (driven by BrowserManager streams):
-//   • album detail open → back · album name · download · add-all
+//   • album detail open → back · album name · overflow (banner owns Play)
 //   • local search open → close · filter field
 //   • home (section list) → the "search the whole server" field
-//   • normal list        → back · label · search · download · add-all
+//   • normal list        → back · label · Play · Shuffle · overflow (songs)
+//                          back · label · search · (no songs to act on)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
 // download / add-all actions operate on the current list — the album's loaded
@@ -172,6 +173,78 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         onPressed: onTap,
       );
 
+  // Filled accent Play, sized to the 44px the bar leaves after its bottom
+  // padding (a default IconButton's 48px minimum would overflow). Deliberately
+  // the same treatment as the album banner's play control, so the two verbs
+  // rank identically wherever they appear.
+  Widget _playButton(AppLocalizations l, List<DisplayItem> rows) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: IconButton.filled(
+          onPressed: () => playFromHere(rows, 0),
+          tooltip: l.play,
+          iconSize: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+          icon: Icon(Icons.play_arrow, color: accentInk),
+          style: IconButton.styleFrom(backgroundColor: VelvetColors.primary),
+        ),
+      );
+
+  Widget _shuffleButton(AppLocalizations l, List<DisplayItem> rows) =>
+      _icon(Icons.shuffle, l.shuffle, () => playFromHere(rows, 0, shuffle: true));
+
+  // Everything demoted out of the bar to make room for Play / Shuffle. Entries
+  // appear only when they'd do something: Download needs server files
+  // (_downloadable), Add All needs anything playable (_enqueueable). Both used
+  // to render unconditionally, so they were live-but-inert on Albums, Artists
+  // and Playlists — this fixes that as a side effect.
+  Widget _overflow(
+    BuildContext context,
+    AppLocalizations l,
+    List<DisplayItem> targets, {
+    bool showSearch = true,
+  }) {
+    final canDownload = _downloadable(targets).isNotEmpty;
+    final canAdd = _enqueueable(targets).isNotEmpty;
+    if (!showSearch && !canDownload && !canAdd) return const SizedBox(width: 12);
+    return PopupMenuButton<_BarAction>(
+      icon: Icon(Icons.more_vert,
+          color: VelvetColors.appBarTextSecondary, size: 22),
+      tooltip: l.browserMoreActions,
+      color: VelvetColors.surface,
+      itemBuilder: (_) => [
+        if (showSearch)
+          _menuItem(_BarAction.search, Icons.search, l.browserSearchList),
+        if (canDownload)
+          _menuItem(_BarAction.download, Icons.download_sharp, l.download),
+        if (canAdd) _menuItem(_BarAction.addAll, Icons.library_add, l.addAll),
+      ],
+      onSelected: (a) {
+        switch (a) {
+          case _BarAction.search:
+            BrowserManager().openSearch();
+          case _BarAction.download:
+            _downloadAll(context, targets);
+          case _BarAction.addAll:
+            _addAll(context, targets);
+        }
+      },
+    );
+  }
+
+  PopupMenuItem<_BarAction> _menuItem(
+          _BarAction value, IconData icon, String label) =>
+      PopupMenuItem<_BarAction>(
+        value: value,
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: VelvetColors.textSecondary),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(color: VelvetColors.textPrimary)),
+          ],
+        ),
+      );
+
   Widget _title(String text) => Expanded(
         child: Text(
           text,
@@ -272,17 +345,16 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   Widget _content(BuildContext context, AppLocalizations l, _Tb s) {
-    // Album detail: back · name · download · add-all (Play/Shuffle stay in the
-    // banner). Acts on the album's loaded songs.
+    // Album detail: back · name · overflow. NO Play/Shuffle here — the album
+    // banner already carries both, and duplicating them in the bar directly
+    // above would be two controls for one action. Acts on the album's songs.
     if (s.album != null) {
       return Row(children: [
         _icon(Icons.arrow_back, l.goBack,
             () => BrowserManager().closeAlbumDetail()),
         _title(s.album!.name),
-        _icon(Icons.download_sharp, l.download,
-            () => _downloadAll(context, _actionTargets)),
-        _icon(Icons.library_add, l.addAll,
-            () => _addAll(context, _actionTargets)),
+        // No list-filter search inside a loaded album.
+        _overflow(context, l, _actionTargets, showSearch: false),
       ]);
     }
 
@@ -329,9 +401,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       ]);
     }
 
-    // Normal list: back (when there's somewhere to go) · label · search ·
-    // download · add-all.
+    // Normal list: back (when there's somewhere to go) · label · Play ·
+    // Shuffle · overflow.
+    //
+    // Play/Shuffle appear only when the current list actually holds playable
+    // rows, so Albums / Artists / Playlists (which list containers, not songs)
+    // keep a clean bar and you never get a play button with nothing to play.
     final canBack = BrowserManager().browserCache.length > 1;
+    final targets = _actionTargets;
+    final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
       if (canBack)
         _icon(Icons.arrow_back, l.goBack, () {
@@ -341,12 +419,24 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       else
         const SizedBox(width: 12),
       _title(browserChromeLabel(l, s.label)),
-      _icon(Icons.search, l.browserSearchList,
-          () => BrowserManager().openSearch()),
-      _icon(Icons.download_sharp, l.download,
-          () => _downloadAll(context, _actionTargets)),
-      _icon(Icons.library_add, l.addAll,
-          () => _addAll(context, _actionTargets)),
+      if (canPlay) ...[
+        // Play/Shuffle claim the bar, so search moves into the overflow.
+        _playButton(l, targets),
+        _shuffleButton(l, targets),
+        _overflow(context, l, targets),
+      ] else ...[
+        // Nothing playable here (Albums, Artists, a song-less folder). The bar
+        // is empty anyway, so search keeps its one-tap spot rather than being
+        // buried to make room for buttons that aren't being shown. The overflow
+        // collapses to a spacer — with no playable rows there is no Add All,
+        // and Download needs server files, which are a subset of those.
+        _icon(Icons.search, l.browserSearchList,
+            () => BrowserManager().openSearch()),
+        _overflow(context, l, targets, showSearch: false),
+      ],
     ]);
   }
 }
+
+// Actions demoted into the toolbar's overflow menu.
+enum _BarAction { search, download, addAll }

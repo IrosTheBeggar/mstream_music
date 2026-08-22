@@ -3,10 +3,10 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
-import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../l10n/language_names.dart';
 import '../objects/player_layout.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
@@ -14,6 +14,7 @@ import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
+import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
@@ -26,23 +27,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // A language's name in its own language. Intentionally NOT translated —
-  // users recognize their language by its endonym. Keyed by language
-  // code; the picker is built from AppLocalizations.supportedLocales so
-  // it auto-grows as ARB files are added.
-  static const _endonyms = <String, String>{
-    'en': 'English',
-    'es': 'Español',
-    'fr': 'Français',
-    'de': 'Deutsch',
-    'pt': 'Português',
-    'zh': '中文',
-    'ru': 'Русский',
-    'it': 'Italiano',
-    'pl': 'Polski',
-    'ja': '日本語',
-  };
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -152,7 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   (loc) => DropdownMenuItem<String?>(
                     value: loc.languageCode,
                     child: Text(
-                        _endonyms[loc.languageCode] ?? loc.languageCode),
+                        kLanguageEndonyms[loc.languageCode] ?? loc.languageCode),
                   ),
                 ),
               ],
@@ -641,64 +625,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (v == current) return;
 
     if (v == VisualizerAudioSource.real) {
-      final ok = await _confirmRealAudioPermission();
+      // Shared with the first-run setup flow — see util/real_audio_permission.
+      final ok = await confirmRealAudioPermission(context);
       if (!ok) return;
     }
 
     await SettingsManager().setVisualizerAudioSource(v);
     if (mounted) setState(() {});
-  }
-
-  // Two-step: explanation dialog → OS permission prompt. Returns true
-  // only if the user accepted both and the permission is granted.
-  Future<bool> _confirmRealAudioPermission() async {
-    final l = AppLocalizations.of(context);
-    final consented = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: VelvetColors.surface,
-        title: Text(l.realAudioDialogTitle,
-            style: TextStyle(color: VelvetColors.textPrimary)),
-        content: Text(
-          l.realAudioDialogBody,
-          style: TextStyle(color: VelvetColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l.cancel,
-                style: TextStyle(color: VelvetColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l.continueLabel,
-                style: TextStyle(color: VelvetColors.primary)),
-          ),
-        ],
-      ),
-    );
-    if (consented != true || !mounted) return false;
-
-    final status = await Permission.microphone.request();
-    if (status.isGranted) return true;
-
-    if (mounted) {
-      final permanentlyDenied = status.isPermanentlyDenied;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(permanentlyDenied
-              ? l.realAudioPermPermanentlyDenied
-              : l.realAudioPermDenied),
-          action: permanentlyDenied
-              ? SnackBarAction(
-                  label: l.openSettings,
-                  onPressed: openAppSettings,
-                )
-              : null,
-        ),
-      );
-    }
-    return false;
   }
 
   String _tapBehaviorSubtitle(AppLocalizations l, TapBehavior b) {

@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../screens/discover_screen.dart';
 import '../singletons/api.dart';
+import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -11,6 +12,7 @@ import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import 'player_panel.dart';
 import 'playlist_picker_sheet.dart';
+import 'star_rating.dart';
 
 /// Track context sheet, opened by long-pressing a browser row. Long-press on
 /// a list row conventionally opens the item's context menu (Apple Music,
@@ -106,7 +108,13 @@ class TrackActionsSheet extends StatelessWidget {
     }
 
     return SafeArea(
-      child: Column(
+      // Scrollable so the sheet can never overflow. The action list is
+      // conditional (Add to end, the server-only pair, Find similar) and the
+      // tallest combination plus the header outgrew the room a short screen —
+      // or a large text scale — leaves. mainAxisSize.min keeps the sheet
+      // hugging its content in the normal case where it fits.
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Track header, so the sheet self-identifies (matches the
@@ -138,6 +146,27 @@ class TrackActionsSheet extends StatelessWidget {
                       style: TextStyle(
                         color: VelvetColors.textSecondary,
                         fontSize: 12,
+                      ),
+                    ),
+                  ),
+                // Rating moved here from the row's trailing slot, which the
+                // overflow button now occupies. Larger than it was inline
+                // (20 vs 11) since there is room, and it writes through the
+                // same way: patch the in-memory metadata, then re-emit so
+                // visible rows repaint.
+                if (isServerTrack && item.metadata != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Center(
+                      child: RatingControl(
+                        rating: item.metadata?.rating,
+                        server: item.server!,
+                        filepath: item.data!,
+                        size: 20,
+                        onChanged: (r) {
+                          item.metadata?.rating = r;
+                          BrowserManager().updateStream();
+                        },
                       ),
                     ),
                   ),
@@ -185,6 +214,7 @@ class TrackActionsSheet extends StatelessWidget {
             }),
           const SizedBox(height: 8),
         ],
+        ),
       ),
     );
   }

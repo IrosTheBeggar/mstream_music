@@ -761,6 +761,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addAll => '全部添加';
 
   @override
+  String get browserMoreActions => 'More actions';
+
+  @override
   String get browserConfirmDeletePlaylist => '确认删除播放列表';
 
   @override
@@ -1303,12 +1306,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAutoDownloadCap => 'Auto-download limit';
 
   @override
-  String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+  String get settingsAutoDownloadCapSubtitle => '从正在播放的歌曲开始缓存这么多首；播放过的会随之删除。';
 
   @override
-  String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+  String get settingsAutoDownloadCapSubtitleUnlimited => '缓存整个播放队列（无限制）。';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1318,7 +1319,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      '从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 缓存整个队列。';
 
   @override
   String get downloadWaitingWifi => '等待 Wi-Fi';
@@ -1368,6 +1369,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get storageAppExternal => '应用外部';
+
+  @override
+  String get storageAppSdCard => '应用 SD 卡';
 
   @override
   String get selfSignedTitle => '允许自签名证书';
@@ -1430,14 +1434,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1773,4 +1770,53 @@ class AppLocalizationsZh extends AppLocalizations {
   String pathPickOnServer(String server) {
     return '请选择 $server 上的曲目';
   }
+
+  @override
+  String get welcomeTranslationNote => '此语言为机器翻译，表述可能不够自然。';
+
+  @override
+  String get welcomeTranslationCta => '帮助翻译 mStream';
+
+  @override
+  String get setupTitle => '快速设置';
+
+  @override
+  String get setupSkip => '跳过';
+
+  @override
+  String get setupNext => '下一步';
+
+  @override
+  String get setupFinish => '完成';
+
+  @override
+  String get setupBack => '上一步';
+
+  @override
+  String get setupAccentTitle => '选择你的颜色';
+
+  @override
+  String get setupAccentBody => '强调色会用于按钮、滑块和播放器控件。点按任意一个即可试用。';
+
+  @override
+  String get setupVisualizerTitle => '为可视化效果使用真实音频';
+
+  @override
+  String get setupVisualizerBody => '在启用此选项之前，可视化效果将使用合成数据。';
+
+  @override
+  String get setupVisualizerWarning =>
+      '开启后会请求麦克风权限——Android 会向解码设备音频流的应用要求该权限（可视化效果正是如此）。';
+
+  @override
+  String get setupPlaybackTitle => '点按歌曲时';
+
+  @override
+  String get setupPlaybackBody => '选择在浏览器中点按歌曲时的行为。大多数人期望「从此处播放」，因此这是默认设置。';
+
+  @override
+  String get setupOfflineTitle => '离线保留播放队列';
+
+  @override
+  String get setupVisualizerNoMic => 'mStream 绝不会使用你的麦克风。';
 }

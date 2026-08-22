@@ -794,6 +794,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addAll => 'Add All';
 
   @override
+  String get browserMoreActions => 'More actions';
+
+  @override
   String get browserConfirmDeletePlaylist => 'Confirm Delete Playlist';
 
   @override
@@ -1373,11 +1376,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+      'Cache this many songs ahead of the one playing; songs left behind are removed as you go.';
 
   @override
   String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+      'Cache the whole queue (no limit).';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1387,7 +1390,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      'How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.';
 
   @override
   String get downloadWaitingWifi => 'Waiting for Wi-Fi';
@@ -1439,6 +1442,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'App external';
+
+  @override
+  String get storageAppSdCard => 'App SD card';
 
   @override
   String get selfSignedTitle => 'Allow self-signed certificate';
@@ -1504,14 +1510,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1864,4 +1863,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String pathPickOnServer(String server) {
     return 'Pick a track on $server';
   }
+
+  @override
+  String get welcomeTranslationNote =>
+      'This language was machine-translated and may read awkwardly.';
+
+  @override
+  String get welcomeTranslationCta => 'Help translate mStream';
+
+  @override
+  String get setupTitle => 'Quick setup';
+
+  @override
+  String get setupSkip => 'Skip';
+
+  @override
+  String get setupNext => 'Next';
+
+  @override
+  String get setupFinish => 'Finish';
+
+  @override
+  String get setupBack => 'Back';
+
+  @override
+  String get setupAccentTitle => 'Pick your color';
+
+  @override
+  String get setupAccentBody =>
+      'The accent color highlights buttons, sliders and the player controls. Tap one to try it.';
+
+  @override
+  String get setupVisualizerTitle => 'Real audio for the visualizer';
+
+  @override
+  String get setupVisualizerBody =>
+      'The visualizer uses synthesized data until this is enabled.';
+
+  @override
+  String get setupVisualizerWarning =>
+      'Turning this on asks for the microphone permission — Android requires this for apps that decode the device\'s audio stream (which the visualizer does).';
+
+  @override
+  String get setupPlaybackTitle => 'When you tap a song';
+
+  @override
+  String get setupPlaybackBody =>
+      'Choose what a tap in the browser does. Most people expect Play from here, so that is the default.';
+
+  @override
+  String get setupOfflineTitle => 'Keep your queue offline';
+
+  @override
+  String get setupVisualizerNoMic => 'mStream never uses your microphone.';
 }

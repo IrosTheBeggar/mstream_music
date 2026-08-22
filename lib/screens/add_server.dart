@@ -79,6 +79,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   // auto-fill (subdomain-domain) stops overwriting their choice. Also set
   // in edit mode, where the existing folder must be preserved.
   bool _folderManuallyEdited = false;
+  // Folder name for a NEW server on the Play build, where the field is hidden.
+  // Generated once per screen so a retried save reuses the same directory.
+  late final String _playFolderId = Uuid().v4();
 
   bool submitPending = false;
   // Download storage destination: 'appLocal' | 'permanent' | 'sdCard'
@@ -779,7 +782,15 @@ class MyCustomFormState extends State<MyCustomForm> {
     // The user-chosen download folder (media/<this>). If they cleared it,
     // fall back to the URL-derived name, then a generated id.
     String folder = _sanitizeFolderName(_downloadFolderCtrl.text.trim());
-    if (folder.isEmpty) {
+    if (isPlayBuild && widget.editThisServer == null) {
+      // Play hides the folder field, so a readable name buys nothing here and
+      // would write the server's hostname into a path that lives on the SD
+      // card's Android/data dir. A UUID carries the same information (none)
+      // without the leak. EDITING is deliberately excluded: an existing
+      // server keeps whatever localname it already has, so its downloads
+      // stay where they are.
+      folder = _playFolderId;
+    } else if (folder.isEmpty) {
       folder = _computeAutoFolder() ?? Uuid().v4();
     }
 
@@ -874,85 +885,6 @@ class MyCustomFormState extends State<MyCustomForm> {
     checkServer();
   }
 
-  // Lists the existing per-server download folders (media/<id>) so the
-  // user can point this server at one — recovering a re-added server's
-  // previously-downloaded songs.
-  Future<void> _browseDownloadFolders() async {
-    final l = AppLocalizations.of(context);
-    final base =
-        await FileExplorer().getDownloadDir(_storageMode, _storageBasePath);
-    if (!mounted) return;
-    if (base == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l.storageNoStorageAvailable)));
-      return;
-    }
-    final mediaDir = Directory(path.join(base.path, 'media'));
-    final folders = mediaDir.existsSync()
-        ? mediaDir.listSync().whereType<Directory>().toList()
-        : <Directory>[];
-    if (!mounted) return;
-    if (folders.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.storageNoDownloadFolders)));
-      return;
-    }
-    final chosen = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: VelvetColors.surface,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(l.storageExistingFolders,
-                    style: TextStyle(
-                        color: VelvetColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: folders.map((d) {
-                  final name = path.basename(d.path);
-                  int count = 0;
-                  DateTime? modified;
-                  try {
-                    count = d.listSync().length;
-                    modified = d.statSync().modified;
-                  } catch (_) {}
-                  return ListTile(
-                    leading: Icon(Icons.folder, color: VelvetColors.primary),
-                    title: Text(name,
-                        style: TextStyle(color: VelvetColors.textPrimary),
-                        overflow: TextOverflow.ellipsis),
-                    subtitle: Text(
-                        l.storageItemCount(count) +
-                            (modified != null
-                                ? ' · ${modified.toString().split('.').first}'
-                                : ''),
-                        style: TextStyle(
-                            color: VelvetColors.textSecondary, fontSize: 12)),
-                    onTap: () => Navigator.of(ctx).pop(name),
-                  );
-                }).toList(),
-              ),
-            ),
-            SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-    if (chosen != null && mounted) {
-      _folderManuallyEdited = true;
-      setState(() => _downloadFolderCtrl.text = chosen);
-    }
-  }
 
   // The dropdown offers only the three real modes; a migrated
   // 'legacyExternal' server displays as App local but keeps its stored
@@ -960,9 +892,19 @@ class MyCustomFormState extends State<MyCustomForm> {
   // orphaned just by opening this screen).
   String get _displayStorageMode {
     // Map the stored mode to a value the dropdown actually offers, so a hidden
-    // (Play flavor omits permanent/sdCard) or legacy value never breaks the
-    // DropdownButton's value==one-of-items invariant.
-    if (_storageMode == 'appExternal') return 'appExternal';
+    // (Play flavor omits permanent/sdCard; sdCardApp needs a card present) or
+    // legacy value never breaks the DropdownButton's value==one-of-items
+    // invariant.
+    //
+    // 'appExternal' is no longer offered — it pointed at primary external
+    // storage, which on most devices is the same volume as App local. A server
+    // still holding it displays as App local and KEEPS the stored mode until
+    // the user actively picks something else, so its existing downloads (which
+    // resolve through getDownloadDir's appExternal case) aren't orphaned just
+    // by opening this screen. Same treatment 'legacyExternal' already gets.
+    // The item is rendered whenever the mode is set to it (card present or
+    // not), so this never dangles.
+    if (_storageMode == 'sdCardApp') return 'sdCardApp';
     if (!isPlayBuild &&
         (_storageMode == 'permanent' || _storageMode == 'sdCard')) {
       return _storageMode;
@@ -986,6 +928,13 @@ class MyCustomFormState extends State<MyCustomForm> {
         _storageMode = v;
         _storageBasePath = null;
       });
+    }
+    // These two modes are meaningless without a destination, and the save is
+    // blocked until one is picked — so go straight to the picker rather than
+    // leaving the user to spot a second button. Cancelling just leaves
+    // "no folder chosen" under it; the mode stays selected so they can retry.
+    if (v == 'permanent' || v == 'sdCard') {
+      await _chooseStorageFolder();
     }
   }
 
@@ -1220,6 +1169,12 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
     return DefaultTabController(
       length: 2,
+      // First-ever server: open on Quick Connect. Someone with nothing
+      // configured is far more likely to be discovered-on-the-LAN or holding a
+      // pairing code than to have a URL ready, and the LAN list starts scanning
+      // the moment the tab is visible. Once a server exists, adding another is
+      // usually the deliberate URL case, so it opens there.
+      initialIndex: ServerManager().serverList.isEmpty ? 1 : 0,
       child: Column(
         children: [
           Material(
@@ -1843,20 +1798,8 @@ class MyCustomFormState extends State<MyCustomForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tab title + the p2p pitch: everything below connects
-            // peer-to-peer, whether via a discovered LAN server or a manually
-            // entered pairing code.
-            Text(l.irohConnectHeader,
-                style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700)),
-            SizedBox(height: 6),
-            Text(
-              l.irohConnectBody,
-              style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
-            SizedBox(height: 16),
+            // No tab title or p2p pitch here — the tab label already says
+            // Quick Connect, and the LAN list below is self-explanatory.
             // Servers found on the LAN (mDNS). Tapping one bootstraps an iroh
             // connection over the network; the manual paste/scan below is the
             // fallback (and the only path away from home).
@@ -2234,9 +2177,16 @@ class MyCustomFormState extends State<MyCustomForm> {
                       items: [
                         DropdownMenuItem(
                             value: 'appLocal', child: Text(l.storageAppLocal)),
-                        DropdownMenuItem(
-                            value: 'appExternal',
-                            child: Text(l.storageAppExternal)),
+                        // The card's own app-specific dir (same mode the Play
+                        // build's switch sets). Only meaningful with a card in
+                        // the slot, so it is hidden without one. Replaces the
+                        // old 'appExternal' entry, which pointed at PRIMARY
+                        // external storage — usually the same physical volume
+                        // as App local, so it offered no real choice.
+                        if (_hasSdCard || _storageMode == 'sdCardApp')
+                          DropdownMenuItem(
+                              value: 'sdCardApp',
+                              child: Text(l.storageAppSdCard)),
                         // Permanent / SD card write to a user-chosen shared-storage
                         // folder, which needs All-files-access (full flavor only).
                         DropdownMenuItem(
@@ -2256,84 +2206,42 @@ class MyCustomFormState extends State<MyCustomForm> {
               if (_storageMode == 'permanent' ||
                   _storageMode == 'sdCard') ...[
                 SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _storageBasePath ?? l.storageNoFolderChosen,
-                        style: TextStyle(
-                            color: _storageBasePath == null
-                                ? VelvetColors.textTertiary
-                                : VelvetColors.textPrimary,
-                            fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: VelvetColors.textPrimary,
-                        side: BorderSide(color: VelvetColors.border2),
-                        padding:
-                            EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(VelvetColors.radiusSmall),
-                        ),
-                      ),
-                      icon: Icon(Icons.folder_open, size: 18),
-                      label: Text(l.storageChooseFolder),
-                      onPressed: submitPending ? null : _chooseStorageFolder,
-                    ),
-                  ],
-                ),
-              ],
-              SizedBox(height: 8),
-              Text(l.storageDownloadFolderLabel,
-                  style: TextStyle(
-                      color: VelvetColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
-              SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _downloadFolderCtrl,
-                      autocorrect: false,
-                      onChanged: (_) => _folderManuallyEdited = true,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        prefixIcon: Icon(Icons.folder_outlined),
-                        hintText: l.storageDownloadFolderHint,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  OutlinedButton.icon(
+                // Button first, chosen path underneath on its own full-width
+                // line: these paths are long, and sharing a row with the button
+                // meant every real one ellipsised away to nothing.
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: VelvetColors.textPrimary,
                       side: BorderSide(color: VelvetColors.border2),
                       padding:
-                          EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius:
                             BorderRadius.circular(VelvetColors.radiusSmall),
                       ),
                     ),
                     icon: Icon(Icons.folder_open, size: 18),
-                    label: Text(l.storageBrowse),
-                    onPressed: submitPending ? null : _browseDownloadFolders,
+                    label: Text(l.storageChooseFolder),
+                    onPressed: submitPending ? null : _chooseStorageFolder,
                   ),
-                ],
-              ),
-              SizedBox(height: 6),
-              Text(
-                l.storageDownloadFolderHelp,
-                style:
-                    TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
-              ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  _storageBasePath ?? l.storageNoFolderChosen,
+                  style: TextStyle(
+                      color: _storageBasePath == null
+                          ? VelvetColors.textTertiary
+                          : VelvetColors.textPrimary,
+                      fontSize: 12),
+                ),
+              ],
+              // No download-folder field on either flavor. The per-server
+              // directory is derived automatically (see saveServer): a UUID on
+              // Play, where the destination is app-private and invisible; the
+              // host-derived name on Full, where a Permanent / SD-card pick
+              // does land somewhere the user can browse.
               SizedBox(height: 24),
               // QR Code button hidden — flutter_barcode_scanner is
               // commented out in pubspec.yaml (hasn't kept up with

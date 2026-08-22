@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show HttpOverrides;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
@@ -23,6 +24,8 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
+import 'screens/setup_flow.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/sonic_path_screen.dart';
 import 'singletons/sonic_path_state.dart';
 import 'singletons/track_capture.dart';
@@ -159,6 +162,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<List<Server>>? _serverListSub;
+  // Guards the first-run setup push: serverListStream re-emits on every server
+  // edit, and the flow marks onboarding complete only once it's dismissed.
+  bool _setupShown = false;
 
   @override
   void initState() {
@@ -181,6 +188,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
+      _maybeShowWelcome();
+      // Armed only after the saved list has landed, so the first-run flow keys
+      // off the user adding a server — not off startup restoring one.
+      _armFirstRunSetup();
     });
     // (DownloadManager().initDownloader() moved to _startApp so headless
     // boots track download completions too — a second call here would attach
@@ -208,6 +219,62 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();
       }
+    });
+  }
+
+  /// One-shot welcome screen for a brand new install, over the browser (which
+  /// shows its usual add-server row underneath).
+  ///
+  /// The flag is written the moment it's pushed rather than when the user
+  /// acts, which is what makes it survive every later state: skipping it,
+  /// killing the app mid-screen, or deleting every server months later all
+  /// leave welcomeShown == true, so the browser row is the only first-run
+  /// affordance from then on. welcomeShown reads `true` for any settings.json
+  /// written before this existed, so upgrades never see it.
+  void _maybeShowWelcome() {
+    if (!mounted || SettingsManager().welcomeShown) return;
+    unawaited(SettingsManager().setWelcomeShown(true));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      );
+    });
+  }
+
+  /// First-run setup, armed once the saved server list has loaded from disk.
+  ///
+  /// Driven off the server list rather than hooked into the add-server screen
+  /// because every add path (URL form, iroh pairing, mDNS Quick Connect)
+  /// funnels through ServerManager.addServer.
+  ///
+  /// Two gates keep it from firing when it shouldn't:
+  ///   * `.skip(1)` drops serverListStream's replayed current value (it's a
+  ///     BehaviorSubject) — otherwise an existing install with servers would
+  ///     trip this on every launch, not on an actual add.
+  ///   * onboardingComplete reads `true` for any settings.json written before
+  ///     this flow existed (see SettingsManager.load), so only a genuinely new
+  ///     install reaches the push.
+  void _armFirstRunSetup() {
+    // ensureLoaded's future can land after an early teardown, by which point
+    // dispose() has already run its cancel — don't leave a live subscription.
+    if (!mounted) return;
+    _serverListSub =
+        ServerManager().serverListStream.skip(1).listen((servers) {
+      if (servers.isEmpty ||
+          _setupShown ||
+          SettingsManager().onboardingComplete) {
+        return;
+      }
+      _setupShown = true;
+      // Post-frame so the add-server route's own pop settles first — pushing
+      // during its exit would land the flow under the screen being removed.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SetupFlowScreen()),
+        );
+      });
     });
   }
 
@@ -297,6 +364,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
+    _serverListSub?.cancel();
     DownloadManager().dispose();
     super.dispose();
   }
@@ -914,6 +982,47 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             );
           },
         ),
+        // TEMPORARY — first-run testing aids. Delete these two ListTiles when
+        // the onboarding work is signed off. kDebugMode keeps them out of
+        // release/profile builds regardless, and the labels are deliberately
+        // hard-coded English (not ARB keys) so nothing has to be unwound from
+        // the localisations when they go.
+        if (kDebugMode) ...[
+          ListTile(
+            leading: Icon(Icons.restart_alt, color: VelvetColors.warning),
+            title: Text('Show welcome screen',
+                style: TextStyle(color: VelvetColors.warning)),
+            subtitle: Text('Debug build only',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.tune, color: VelvetColors.warning),
+            title: Text('Show setup flow',
+                style: TextStyle(color: VelvetColors.warning)),
+            // markCompleteOnExit: false — previewing must not spend the real
+            // onboarding flag, or the genuine first run afterwards is skipped.
+            subtitle: Text("Debug build only · won't mark onboarding done",
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) =>
+                        const SetupFlowScreen(markCompleteOnExit: false)),
+              );
+            },
+          ),
+        ],
         ListTile(
           leading: Icon(Icons.info_outline),
           title: Text(l.aboutTitle),

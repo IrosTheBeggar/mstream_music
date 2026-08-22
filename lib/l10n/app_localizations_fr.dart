@@ -800,6 +800,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addAll => 'Tout ajouter';
 
   @override
+  String get browserMoreActions => 'More actions';
+
+  @override
   String get browserConfirmDeletePlaylist =>
       'Confirmer la suppression de la liste de lecture';
 
@@ -1389,11 +1392,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+      'Met en cache ce nombre de morceaux à partir du morceau en cours ; ceux qui sont dépassés sont supprimés.';
 
   @override
   String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+      'Met en cache toute la file d\'attente (sans limite).';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1403,7 +1406,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      'Combien de morceaux de la file restent téléchargés, à partir de celui en cours. Au fil de la lecture, les morceaux dépassés sont supprimés. 0 pour toute la file.';
 
   @override
   String get downloadWaitingWifi => 'En attente du Wi-Fi';
@@ -1455,6 +1458,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'App externe';
+
+  @override
+  String get storageAppSdCard => 'Carte SD de l\'app';
 
   @override
   String get selfSignedTitle => 'Autoriser le certificat auto-signé';
@@ -1521,14 +1527,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1884,4 +1883,57 @@ class AppLocalizationsFr extends AppLocalizations {
   String pathPickOnServer(String server) {
     return 'Choisis une piste sur $server';
   }
+
+  @override
+  String get welcomeTranslationNote =>
+      'Cette langue a été traduite automatiquement et peut sembler maladroite.';
+
+  @override
+  String get welcomeTranslationCta => 'Aidez à traduire mStream';
+
+  @override
+  String get setupTitle => 'Configuration rapide';
+
+  @override
+  String get setupSkip => 'Ignorer';
+
+  @override
+  String get setupNext => 'Suivant';
+
+  @override
+  String get setupFinish => 'Terminer';
+
+  @override
+  String get setupBack => 'Retour';
+
+  @override
+  String get setupAccentTitle => 'Choisissez votre couleur';
+
+  @override
+  String get setupAccentBody =>
+      'La couleur d\'accent met en valeur les boutons, les curseurs et les commandes du lecteur. Touchez-en une pour l\'essayer.';
+
+  @override
+  String get setupVisualizerTitle => 'Audio réel pour le visualiseur';
+
+  @override
+  String get setupVisualizerBody =>
+      'Le visualiseur utilise des données synthétisées tant que ceci n\'est pas activé.';
+
+  @override
+  String get setupVisualizerWarning =>
+      'L\'activer demande l\'autorisation du micro : Android l\'exige des applications qui décodent le flux audio de l\'appareil (ce que fait le visualiseur).';
+
+  @override
+  String get setupPlaybackTitle => 'Quand vous touchez un morceau';
+
+  @override
+  String get setupPlaybackBody =>
+      'Choisissez ce que fait un appui dans l\'explorateur. La plupart des gens s\'attendent à « Lire à partir d\'ici », c\'est donc l\'option par défaut.';
+
+  @override
+  String get setupOfflineTitle => 'Gardez votre file d\'attente hors ligne';
+
+  @override
+  String get setupVisualizerNoMic => 'mStream n\'utilise jamais votre micro.';
 }
