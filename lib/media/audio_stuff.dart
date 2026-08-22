@@ -258,14 +258,13 @@ class AudioPlayerHandler extends BaseAudioHandler
         _httpRetries = 0;
         _networkStalled = false;
         // Only a DIFFERENT track reaching ready clears the local-copy retry
-        // guard. Clearing it on every ready reopened the loop it exists to
+        // guard. Clearing it on every ready reopens the loop it exists to
         // stop: a corrupt-but-LOADABLE file (valid header, damaged tail)
         // reaches ready, clears the guard, fails mid-track, and re-seeds
-        // forever — the skip budget never accrues because both this branch
-        // and the recovery zero it.
-        if (_localRetryIndex != null &&
-            _localRetryIndex != _backend.currentIndex) {
-          _localRetryIndex = null;
+        // forever.
+        if (_localRetryKey != null &&
+            _localRetryKey != _trackKey(_itemAt(_backend.currentIndex))) {
+          _localRetryKey = null;
         }
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
@@ -693,9 +692,19 @@ class AudioPlayerHandler extends BaseAudioHandler
     // exactly the recovery: _uriFor re-resolves from extras and picks the
     // file. Must be tried BEFORE the iroh branch below, which parks playback
     // waiting for the very network the local copy exists to make unnecessary.
-    if (idx != null && _recoverFromLocalCopy(failed, idx)) return;
+    if (_recoverFromLocalCopy(failed)) return;
+    // Reaching here on a guarded track whose file is still present means the
+    // disk copy was already tried and failed: the FILE is bad, not the
+    // network. Parking on the tunnel would wait on a source this track
+    // doesn't need, in silence, while the rest of a downloaded queue sits
+    // there playable. Falling through hands it to _recoverHttpError, which
+    // reads a decode/format failure as an unplayable source and skips.
+    final badLocalCopy = _localRetryKey != null &&
+        _localRetryKey == _trackKey(failed) &&
+        failed?.extras?['localPath'] != null;
     final itemServer = failed == null ? null : _serverFor(failed);
-    if (itemServer != null &&
+    if (!badLocalCopy &&
+        itemServer != null &&
         itemServer.isIroh &&
         !ServerManager().tunnelServes(itemServer)) {
       // The tunnel isn't live for this track's iroh server — point it there and
@@ -710,33 +719,60 @@ class AudioPlayerHandler extends BaseAudioHandler
     _recoverHttpError(error);
   }
 
-  // Index whose local copy we already re-seeded for. Without this a corrupt
-  // (but present) file would error, re-seed, error again forever — the
-  // re-seed clears the skip budget, so nothing else would ever stop it.
-  // Cleared whenever a track actually loads.
-  int? _localRetryIndex;
+  // The TRACK whose local copy we already re-seeded for — identity, never an
+  // index: a removal above the marked row slides a different track underneath
+  // it, and that track's disk recovery would then be denied, parking an iroh
+  // track on the tunnel with its file sitting on disk. Which is precisely the
+  // incident this whole recovery exists to prevent.
+  //
+  // Without the guard at all, a corrupt-but-present file would error,
+  // re-seed, error again forever. Cleared when a different track loads, on
+  // explicit user navigation, and when a fresh download replaces the file.
+  String? _localRetryKey;
+
+  /// Stable identity for [m] across queue edits and URL rebuilds. Server
+  /// localname + library path is the real identity; `id` is the fallback for
+  /// a purely local item that has no server path, and is stable for exactly
+  /// the items this guard covers ([_withRebuiltUrl] never rewrites an item
+  /// carrying a localPath).
+  static String? _trackKey(MediaItem? m) {
+    if (m == null) return null;
+    final path = m.extras?['path'] as String?;
+    if (path == null) return m.id;
+    return '${m.extras?['server'] as String? ?? ''}\u0000$path';
+  }
+
+  MediaItem? _itemAt(int? idx) {
+    final q = queue.value;
+    return (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+  }
 
   /// True when [failed] is on disk and a reload has been scheduled, so the
   /// caller should stop: the file plays with no network at all.
   ///
-  /// Only tried once per index — a second failure at the same spot means the
+  /// Only tried once per track — a second failure on the same track means the
   /// file itself is bad, and falls through to the normal recovery/skip path.
-  bool _recoverFromLocalCopy(MediaItem? failed, int idx) {
+  bool _recoverFromLocalCopy(MediaItem? failed) {
     if (_recoveringPlayback || failed == null) return false;
-    if (_localRetryIndex == idx) return false;
+    final key = _trackKey(failed);
+    if (key == null || _localRetryKey == key) return false;
     final localPath = failed.extras?['localPath'] as String?;
     if (localPath == null || !File(localPath).existsSync()) return false;
-    _localRetryIndex = idx;
-    // A source that died with the file sitting right there isn't a bad
-    // source — don't let it eat the skip budget.
-    _failedSkips = 0;
+    _localRetryKey = key;
+    // Deliberately does NOT touch _failedSkips. The budget only ever grows in
+    // _skipFailedTrack, so zeroing it here couldn't protect this recovery
+    // from anything — it could only erase skips already accrued, and that
+    // erases the terminal "Can't play these tracks" stop: a whole queue of
+    // present-but-unplayable files (a captive portal answering a download
+    // sweep with 200 + HTML makes one) would re-seed and skip forever
+    // instead of stopping.
     _recoveringPlayback = true;
     appLog('[play] source failed but the track is downloaded — '
         'reloading from disk');
     _switchChain = _switchChain
         .then((_) => _reseedLocalAtSpot())
         .catchError((Object e) {
-      castLog('local-copy recovery failed', error: e);
+      appLog('[play] local-copy recovery failed: $e');
     }).whenComplete(() => _recoveringPlayback = false);
     return true;
   }
@@ -1121,6 +1157,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Explicit navigation supersedes a failed-restore park -- without this a
     // stale spot would hijack the next re-seed back to the old track.
     _restoreSpot = null;
+    // Deliberately re-tapping a track that failed from disk is a request to
+    // try it again, so don't let the one-attempt guard deny it.
+    _localRetryKey = null;
     // This jumps to the beginning of the queue item at newIndex.
     _backend.seek(Duration.zero, index: index);
   }
@@ -1515,18 +1554,31 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  Future<void> _doClearPlaylist() async {
+    appLog('[queue] cleared');
+    _restoreSpot = null; // the queue the spot described is gone
+    _intentionalStop = true;
+    await _backend.stop();
+    await super.stop();
+    await _backend.clearSources();
+    queue.add(queue.value..clear());
+    _broadcastState();
+  }
+
   @override
   customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'clearPlaylist':
-        appLog('[queue] cleared');
-        _restoreSpot = null; // the queue the spot described is gone
-        _intentionalStop = true;
-        await _backend.stop();
-        await super.stop();
-        await _backend.clearSources();
-        queue.add(queue.value..clear());
-        _broadcastState();
+        // Serialized like every other load-class operation. AutoBrowse.play →
+        // playFromHere → clearPlaylist means a car-UI tap can drop this
+        // stop + clearSources on top of an in-flight recovery re-seed, and a
+        // load torn down inside just_audio's activation window is what wedged
+        // the player during the incident this series came from. Callers that
+        // await customAction still see the clear COMPLETE before they queue
+        // their new items, so play-from-here ordering is unchanged.
+        final cleared = _switchChain.then((_) => _doClearPlaylist());
+        _switchChain = cleared.catchError((_) {});
+        await cleared;
         break;
       case 'moveQueueItem':
         // Drag-to-reorder. [to] is the post-removal target index
@@ -1754,6 +1806,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       // means nothing downstream would start it either. _playIntent is the
       // user's actual intent, cleared by pause/stop and false at boot, so
       // OR-ing it in resumes only where playback was genuinely wanted.
+      // `playing` is FALSE on an error-parked player, so an auto rebuild
+      // after a tunnel bind would reload the track and sit silent. _playIntent
+      // is the user's actual intent (cleared by pause/stop, false at boot), so
+      // OR-ing it in resumes only where playback was genuinely wanted.
       final wasPlaying = _backend.playing || (auto && _playIntent);
       final wasShuffle = _backend.shuffleEnabled;
       final wasRepeat = _backend.repeat;
@@ -1761,7 +1817,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       try {
         queue.add(rebuilt);
         await _backend.setSources(rebuilt);
-        await _backend.seek(pos, index: cur, play: wasPlaying);
+        // Re-read the intent AFTER the load: setSources is network-bound and
+        // can run for seconds over a fresh tunnel, and a pause landing inside
+        // that window must win over what we captured before it. Same doctrine
+        // as _reseedLocalAtSpot and _doSetEqEnabled.
+        await _backend.seek(pos, index: cur, play: wasPlaying && _playIntent);
         // setSources rebuilds the playlist; re-apply shuffle/repeat so a
         // transcode change doesn't silently drop them (mirrors restoreQueue).
         await _backend.setShuffleEnabled(wasShuffle);
@@ -1819,6 +1879,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (patched == null) return;
     appLog('[queue] download landed — queued copies of '
         '${path.split('/').last} marked local');
+    // A new file on disk retires any "already tried it, the copy is bad"
+    // verdict against this track — the copy it was about is gone.
+    if (_localRetryKey != null &&
+        _localRetryKey == '$serverName\u0000$path') {
+      _localRetryKey = null;
+    }
     // The PLAYING track keeps streaming its already-loaded source until the
     // next load, but its extras now say "local" — hold the WifiLock until a
     // fresh load actually reads the file (cleared on `loading`), or the

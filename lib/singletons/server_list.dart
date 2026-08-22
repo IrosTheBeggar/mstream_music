@@ -569,8 +569,14 @@ class ServerManager {
   /// Wait (bounded) for the active iroh tunnel to report CONNECTED, kicking a
   /// verify-rebuild in case it's hard-down. Returns true once connected; false on
   /// a rejected (re-pair) state or timeout. Non-iroh servers are ready immediately.
+  /// Set [extendWhileDialing] false to make [timeout] a HARD deadline. The
+  /// default keeps extending it while a dial is in flight — right for the
+  /// playback and download paths, which would rather wait than fail — but a
+  /// caller driving a UI needs a bound it can actually promise the user.
   Future<bool> awaitTunnelReady(
-      {Server? server, Duration timeout = const Duration(seconds: 12)}) async {
+      {Server? server,
+      Duration timeout = const Duration(seconds: 12),
+      bool extendWhileDialing = true}) async {
     // Default to the browsed server; callers on the playback path pass the
     // track's server (which the single tunnel may be serving instead).
     final s = server ?? currentServer;
@@ -588,7 +594,9 @@ class ServerManager {
           IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
         return false; // this server's code was rejected (needs re-pair)
       }
-      if (_tunnelStarting) deadline = DateTime.now().add(timeout);
+      if (_tunnelStarting && extendWhileDialing) {
+        deadline = DateTime.now().add(timeout);
+      }
       await Future.delayed(const Duration(milliseconds: 300));
     }
     return tunnelServes(s);
@@ -651,9 +659,17 @@ class ServerManager {
     // anymore and their metadata context (ratings, art, URL re-resolution)
     // went with it. Done before ensureActiveTunnel so no tunnel is kept
     // alive for tracks that are about to disappear.
-    await MediaManager()
-        .audioHandler
-        .removeServerQueueItems(removeThisServer.localname);
+    // Caught here on purpose: everything below persists the shortened server
+    // list and re-points the tunnel. Letting this throw past would skip
+    // writeServerFile, and the server the user just deleted would be back on
+    // the next launch.
+    try {
+      await MediaManager()
+          .audioHandler
+          .removeServerQueueItems(removeThisServer.localname);
+    } catch (err) {
+      appLog('[server] clearing queued tracks failed: $err');
+    }
     // Drop a stale queue-tunnel pointer to the removed server so ensureActiveTunnel
     // below doesn't try to keep its tunnel up (the queue listener would clear it on
     // the next edit, but do it now).

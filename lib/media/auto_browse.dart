@@ -799,11 +799,18 @@ class AutoApi {
     // unroutable fail-fast, not an accident — see Server.effectiveBaseUrl).
     // Auto asks again on its own, so a bounded wait that gives the tunnel a
     // moment to come up turns "error row forever" into "loads once connected".
-    // Deliberately short: Android Auto is a car UI and must not hang, and the
-    // caller already renders a notice row on failure.
+    //
+    // extendWhileDialing: false is what makes the bound real. By default
+    // awaitTunnelReady re-arms its deadline every 300ms for as long as a dial
+    // is in flight, capped at 45s — right for playback, wrong here, where it
+    // would replace an instant error row with a 45s spinner on every browse
+    // tap of an unreachable server. 12s is long enough for a tunnel that is
+    // actually coming up and short enough to stay a car UI.
     if (server.isIroh && !ServerManager().tunnelServes(server)) {
       await ServerManager().awaitTunnelReady(
-          server: server, timeout: const Duration(seconds: 5));
+          server: server,
+          timeout: const Duration(seconds: 12),
+          extendWhileDialing: false);
     }
     final uri = server.apiUri(location);
     final headers = <String, String>{'x-access-token': server.jwt ?? ''};
