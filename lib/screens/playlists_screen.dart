@@ -16,7 +16,7 @@ class PlaylistsScreen extends StatelessWidget {
       appBar: AppBar(title: Text(l.playlistsTitle)),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: VelvetColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: onAccent(VelvetColors.primary),
         icon: Icon(Icons.add),
         label: Text(l.playlistsNew),
         onPressed: () => _showCreateDialog(context),

@@ -552,7 +552,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor:
                   enabled ? VelvetColors.error : VelvetColors.primary,
-              foregroundColor: Colors.white,
+              // Ink follows whichever fill is showing.
+              foregroundColor: onAccent(
+                  enabled ? VelvetColors.error : VelvetColors.primary),
               padding: EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius:

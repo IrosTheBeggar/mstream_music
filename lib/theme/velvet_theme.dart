@@ -171,6 +171,8 @@ const _velvetPalette = VelvetPalette(
   primaryHover: Color(0xFF7C3AED),
   primaryDim: Color(0x268B5CF6),
   primaryGlow: Color(0x668B5CF6),
+  // = onAccent(primary): #8B5CF6 is dark (luminance 0.20), so white ink.
+  onPrimary: Colors.white,
   accent: Color(0xFF60A5FA),
   success: Color(0xFF34D399),
   error: Color(0xFFF87171),
@@ -202,6 +204,9 @@ const _darkPalette = VelvetPalette(
   primaryHover: Color(0xFFFFC233),
   primaryDim: Color(0x26FFAB00),
   primaryGlow: Color(0x66FFAB00),
+  // = onAccent(primary): amber is bright (luminance 0.50), so DARK ink. Was
+  // inheriting the Colors.white default, which put white on amber at ~1.9:1.
+  onPrimary: Colors.black,
   accent: Color(0xFFFFAB00),
   success: Color(0xFF34D399),
   error: Color(0xFFF87171),
@@ -235,6 +240,8 @@ const _lightPalette = VelvetPalette(
   primaryHover: Color(0xFFE69500),
   primaryDim: Color(0x26FFAB00),
   primaryGlow: Color(0x66FFAB00),
+  // = onAccent(primary) — same amber as the Dark palette.
+  onPrimary: Colors.black,
   accent: Color(0xFFFFAB00),
   success: Color(0xFF22C55E),
   error: Color(0xFFEF4444),
