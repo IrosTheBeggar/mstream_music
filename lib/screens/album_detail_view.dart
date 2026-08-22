@@ -16,7 +16,6 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
-import '../screens/sonic_path_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';

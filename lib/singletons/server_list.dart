@@ -602,6 +602,55 @@ class ServerManager {
     return tunnelServes(s);
   }
 
+  // At most one forced rebuild per minute. A hard stop/start rotates the
+  // loopback port AND the per-connection token: every in-flight download
+  // fails, and _reEnqueueOnLiveTunnel only re-resolves twice before giving
+  // up. Worth paying once for a tunnel that is lying about being up; a loop
+  // of them is worse than the outage it is trying to fix.
+  DateTime? _lastForcedRebuild;
+  bool _reverifying = false;
+
+  /// Ground-truth check for a tunnel that REPORTS connected while nothing can
+  /// actually stream through it — the shim only flips to reconnecting once the
+  /// QUIC connection's close arrives, so a link that vanished underneath it
+  /// keeps claiming to be up, and the playback heal fires on a status
+  /// TRANSITION that therefore never comes.
+  ///
+  /// Probes the loopback and, only when the probe fails, hard-drops and
+  /// rebuilds — the same sequence [handleNetworkChange] runs, which is the one
+  /// path that has ever recovered this state. A passing probe means the tunnel
+  /// is fine and the failures were the source's own problem, so nothing moves.
+  Future<void> reverifyTunnel(Server s) async {
+    if (!IrohTunnel.isSupported || !s.isIroh || _reverifying) return;
+    if (_activeTunnelCode == null || s.tunnelPort == null) return;
+    // Already known down: ensureActiveTunnel / awaitTunnelReady own that case
+    // and this would only race them.
+    if (!tunnelServes(s)) return;
+    final now = DateTime.now();
+    final last = _lastForcedRebuild;
+    if (last != null && now.difference(last) < const Duration(seconds: 60)) {
+      return;
+    }
+    _reverifying = true;
+    try {
+      if (await _probeTunnel(s)) {
+        appLog('[iroh] tunnel probe passed — the failures were not the path');
+        return;
+      }
+      _lastForcedRebuild = DateTime.now();
+      appLog('[iroh] tunnel says connected but the path is dead — rebuilding');
+      final drop = _tunnelChain.then((_) {
+        IrohTunnel.instance.stop();
+        _activeTunnelCode = null;
+      });
+      _tunnelChain = drop.catchError((_) {});
+      await drop;
+      await ensureActiveTunnel(verify: true);
+    } finally {
+      _reverifying = false;
+    }
+  }
+
   /// Re-pair the active iroh server with a fresh pairing code (after a rotated
   /// secret) and restart the tunnel. Validates the new code by bringing the tunnel
   /// up BEFORE persisting; on failure the previous code is restored (and re-dialed)

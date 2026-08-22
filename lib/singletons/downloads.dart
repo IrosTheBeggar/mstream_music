@@ -437,8 +437,11 @@ class DownloadManager {
   /// Index of the track playing right now, or 0 when nothing is (a queue
   /// restored but not started caches from the top, which is where it will
   /// begin). Drives [cacheWindow].
-  int _playingIndex() =>
-      MediaManager().audioHandler.playbackState.value.queueIndex ?? 0;
+  // The handler's LOGICAL position, not the published queueIndex: a player
+  // that failed a load reports 0, and a window recentred on that bogus 0
+  // evicts the downloads sitting ahead of where the user really is — eating
+  // the offline copies they need at exactly the moment the network broke.
+  int _playingIndex() => MediaManager().audioHandler.logicalQueueIndex;
 
   Future<void> sweepQueueNow() async {
     _autoAttempted.clear();

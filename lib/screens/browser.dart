@@ -20,7 +20,6 @@ import '../singletons/track_capture.dart';
 import '../util/queue_actions.dart';
 
 import 'add_server.dart';
-import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
