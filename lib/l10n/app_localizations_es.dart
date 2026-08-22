@@ -1939,4 +1939,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get trackRating => 'Valoración';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'Disco $n';
+  }
 }

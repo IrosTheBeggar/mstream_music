@@ -1938,4 +1938,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get trackRating => 'Note';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'Disque $n';
+  }
 }

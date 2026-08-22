@@ -3377,6 +3377,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rating'**
   String get trackRating;
+
+  /// Separator above each disc's tracks in the album view; only shown when an album spans more than one disc.
+  ///
+  /// In en, this message translates to:
+  /// **'Disc {n}'**
+  String albumDiscNumber(int n);
 }
 
 class _AppLocalizationsDelegate

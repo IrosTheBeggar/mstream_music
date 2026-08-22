@@ -473,5 +473,6 @@
   "settingsAutoDownloadCapDialogBody": "Cuántas canciones de la cola se mantienen descargadas, contando desde la que suena. A medida que avanza la reproducción, las que quedan atrás se eliminan. 0 para toda la cola.",
   "playlistEmpty": "La lista está vacía",
   "browserMoreActions": "Más acciones",
-  "trackRating": "Valoración"
+  "trackRating": "Valoración",
+  "albumDiscNumber": "Disco {n}"
 }

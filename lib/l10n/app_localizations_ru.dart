@@ -1957,4 +1957,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get trackRating => 'Оценка';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'Диск $n';
+  }
 }

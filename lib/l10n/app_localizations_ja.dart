@@ -1862,4 +1862,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get trackRating => '評価';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'ディスク $n';
+  }
 }

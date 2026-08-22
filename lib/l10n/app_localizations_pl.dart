@@ -1954,4 +1954,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get trackRating => 'Ocena';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'Płyta $n';
+  }
 }

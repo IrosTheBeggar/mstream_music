@@ -1822,4 +1822,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trackRating => '评分';
+
+  @override
+  String albumDiscNumber(int n) {
+    return '第 $n 张';
+  }
 }

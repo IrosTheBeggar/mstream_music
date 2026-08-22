@@ -384,28 +384,88 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // star otherwise; opens the rating form on tap and refreshes the list on
   // change. Empty placeholder if the row has no server/path (shouldn't happen
  
+  /// Disc a track belongs to. The server treats an absent disc tag as disc 1
+  /// when it sorts (COALESCE(disc_number, 1) in ALBUM_TRACK_ORDER), so the
+  /// grouping here has to agree or a half-tagged album would show a phantom
+  /// extra disc.
+  int _discOf(DisplayItem s) => s.metadata?.disc ?? 1;
+
   Widget _trackList(List<DisplayItem> songs) {
+    // Rows arrive already in album order (server-side ALBUM_TRACK_ORDER:
+    // disc, then track, with untagged tracks last within their disc), so this
+    // only has to RENDER that order — never re-sort it.
+    final discs = {for (final s in songs) _discOf(s)};
+    final showDiscs = discs.length > 1;
+    // Real track numbers, but only when the album actually carries them.
+    // Falling back to the row's position per-track would hand an untagged
+    // file a tidy sequential number and hide the fact it has no tag; falling
+    // back for the WHOLE album keeps a completely untagged one readable.
+    final anyTrackNumbers =
+        songs.any((s) => s.metadata?.track != null);
+
+    // Flattened render list: a disc header owns a null song.
+    final entries = <({DisplayItem? song, int index, int disc})>[];
+    int? lastDisc;
+    for (var i = 0; i < songs.length; i++) {
+      final d = _discOf(songs[i]);
+      if (showDiscs && d != lastDisc) {
+        entries.add((song: null, index: -1, disc: d));
+        lastDisc = d;
+      }
+      entries.add((song: songs[i], index: i, disc: d));
+    }
+
     return StreamBuilder<({String? path, bool playing})>(
       stream: _nowStream,
       initialData: (path: null, playing: false),
       builder: (context, snap) {
         final now = snap.data ?? (path: null, playing: false);
+        final l = AppLocalizations.of(context);
         return ListView.builder(
           padding: const EdgeInsets.only(top: 4, bottom: 12),
-          itemCount: songs.length,
-          itemBuilder: (context, i) {
-            final s = songs[i];
+          itemCount: entries.length,
+          itemBuilder: (context, e) {
+            final entry = entries[e];
+            final s = entry.song;
+            if (s == null) return _discHeader(l, entry.disc);
             return _SongRow(
-              number: i + 1,
+              // A track with no number inside an otherwise-tagged album shows
+              // a dash rather than a made-up one.
+              number: anyTrackNumbers
+                  ? s.metadata?.track
+                  : entry.index + 1,
               title: s.metadata?.title ?? (s.data ?? '').split('/').last,
               active: now.path != null && now.path == s.data,
               playing: now.playing,
-              onTap: () => _onRowTap(i),
+              onTap: () => _onRowTap(entry.index),
               onMenu: () => _showTrackActions(s),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _discHeader(AppLocalizations l, int disc) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+      child: Row(
+        children: [
+          Icon(Icons.album_outlined, size: 13, color: VelvetColors.primary),
+          const SizedBox(width: 7),
+          Text(
+            l.albumDiscNumber(disc),
+            style: TextStyle(
+              color: VelvetColors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Container(height: 1, color: VelvetColors.border)),
+        ],
+      ),
     );
   }
 }
@@ -415,7 +475,8 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
 /// live in that sheet now — the row is just the song. The row tap itself
 /// follows the shared TapBehavior setting.
 class _SongRow extends StatelessWidget {
-  final int number;
+  /// Null when the track carries no number in a tagged album.
+  final int? number;
   final String title;
   final bool active;
   final bool playing;
@@ -457,7 +518,9 @@ class _SongRow extends StatelessWidget {
                       ? Icon(playing ? Icons.graphic_eq : Icons.play_arrow,
                           size: playing ? 18 : 16, color: VelvetColors.primary)
                       : Text(
-                          number.toString().padLeft(2, '0'),
+                          number == null
+                              ? '--'
+                              : number.toString().padLeft(2, '0'),
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 13,

@@ -473,5 +473,6 @@
   "settingsAutoDownloadCapDialogBody": "Сколько треков очереди остаются загруженными, начиная с текущего. По мере воспроизведения пройденные удаляются. 0 — вся очередь.",
   "playlistEmpty": "Плейлист пуст",
   "browserMoreActions": "Другие действия",
-  "trackRating": "Оценка"
+  "trackRating": "Оценка",
+  "albumDiscNumber": "Диск {n}"
 }

@@ -1496,5 +1496,14 @@
   "trackRating": "Rating",
   "@trackRating": {
     "description": "Label on the track sheet's rating row, beside the stars."
+  },
+  "albumDiscNumber": "Disc {n}",
+  "@albumDiscNumber": {
+    "description": "Separator above each disc's tracks in the album view; only shown when an album spans more than one disc.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   }
 }

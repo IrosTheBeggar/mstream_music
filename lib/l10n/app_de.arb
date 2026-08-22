@@ -473,5 +473,6 @@
   "settingsAutoDownloadCapDialogBody": "Wie viele Titel der Warteschlange ab dem laufenden heruntergeladen bleiben. Während der Wiedergabe werden zurückgelassene Titel gelöscht. 0 = die ganze Warteschlange.",
   "playlistEmpty": "Wiedergabeliste ist leer",
   "browserMoreActions": "Weitere Aktionen",
-  "trackRating": "Bewertung"
+  "trackRating": "Bewertung",
+  "albumDiscNumber": "CD {n}"
 }
