@@ -4,7 +4,7 @@
 // take and lets the album detail view drop its own back/overflow.
 //
 // Contexts (driven by BrowserManager streams):
-//   • album detail open → back · album name · overflow (banner owns Play)
+//   • album detail open → back · Add all · Play · Shuffle · Download
 //   • local search open → close · filter field
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
@@ -357,10 +357,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   }
 
   Widget _content(BuildContext context, AppLocalizations l, _Tb s) {
-    // Album detail: back · Play · Shuffle · overflow, acting on the album's
-    // songs — the same shape every other track list gets, so the controls
-    // don't move when you open an album. No title: the banner right below
-    // already shows the album name in full, at size, with its cover.
+    // Album detail: back · Add all · Play · Shuffle · Download, acting on the
+    // album's songs. Everything inline — an album has no list-filter search,
+    // so with search gone the overflow would hold a single entry and cost a
+    // tap to reach it. No title either: the banner right below already shows
+    // the album name in full, at size, with its cover.
+    //
+    // Still conditional: the songs arrive from an async fetch, so this bar is
+    // Back-only until they land (and stays that way if the fetch fails).
     if (s.album != null) {
       final albumSongs = _actionTargets;
       return Row(children: [
@@ -368,11 +372,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             () => BrowserManager().closeAlbumDetail()),
         const Spacer(),
         if (_enqueueable(albumSongs).isNotEmpty) ...[
+          _icon(Icons.library_add, l.addAll,
+              () => _addAll(context, albumSongs)),
           _playButton(l, albumSongs),
           _shuffleButton(l, albumSongs),
         ],
-        // No list-filter search inside a loaded album.
-        _overflow(context, l, albumSongs, showSearch: false),
+        if (_downloadable(albumSongs).isNotEmpty)
+          _icon(Icons.download_sharp, l.download,
+              () => _downloadAll(context, albumSongs)),
       ]);
     }
 
