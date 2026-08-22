@@ -1915,4 +1915,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'Playlist is empty';
+
+  @override
+  String get trackRating => 'Rating';
 }

@@ -472,5 +472,6 @@
   "settingsAutoDownloadCapSubtitleUnlimited": "Met en cache toute la file d'attente (sans limite).",
   "settingsAutoDownloadCapDialogBody": "Combien de morceaux de la file restent téléchargés, à partir de celui en cours. Au fil de la lecture, les morceaux dépassés sont supprimés. 0 pour toute la file.",
   "playlistEmpty": "La liste de lecture est vide",
-  "browserMoreActions": "Plus d'actions"
+  "browserMoreActions": "Plus d'actions",
+  "trackRating": "Note"
 }

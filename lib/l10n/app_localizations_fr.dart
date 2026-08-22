@@ -1935,4 +1935,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'La liste de lecture est vide';
+
+  @override
+  String get trackRating => 'Note';
 }

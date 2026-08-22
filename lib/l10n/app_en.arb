@@ -1492,5 +1492,9 @@
   "playlistEmpty": "Playlist is empty",
   "@playlistEmpty": {
     "description": "Shown in the browser body when an opened playlist has no songs."
+  },
+  "trackRating": "Rating",
+  "@trackRating": {
+    "description": "Label on the track sheet's rating row, beside the stars."
   }
 }

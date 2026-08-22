@@ -472,5 +472,6 @@
   "settingsAutoDownloadCapSubtitleUnlimited": "Zachowuje całą kolejkę (bez limitu).",
   "settingsAutoDownloadCapDialogBody": "Ile utworów z kolejki pozostaje pobranych, licząc od aktualnie odtwarzanego. W miarę odtwarzania te, które zostają z tyłu, są usuwane. 0 = cała kolejka.",
   "playlistEmpty": "Playlista jest pusta",
-  "browserMoreActions": "Więcej akcji"
+  "browserMoreActions": "Więcej akcji",
+  "trackRating": "Ocena"
 }

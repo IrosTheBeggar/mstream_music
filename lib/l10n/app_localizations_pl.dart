@@ -1951,4 +1951,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'Playlista jest pusta';
+
+  @override
+  String get trackRating => 'Ocena';
 }

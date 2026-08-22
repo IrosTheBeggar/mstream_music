@@ -1859,4 +1859,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'プレイリストは空です';
+
+  @override
+  String get trackRating => '評価';
 }

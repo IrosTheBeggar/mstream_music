@@ -1936,4 +1936,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'La lista está vacía';
+
+  @override
+  String get trackRating => 'Valoración';
 }

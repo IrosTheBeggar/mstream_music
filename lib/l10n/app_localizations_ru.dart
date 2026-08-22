@@ -1954,4 +1954,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'Плейлист пуст';
+
+  @override
+  String get trackRating => 'Оценка';
 }

@@ -3371,6 +3371,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playlist is empty'**
   String get playlistEmpty;
+
+  /// Label on the track sheet's rating row, beside the stars.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get trackRating;
 }
 
 class _AppLocalizationsDelegate

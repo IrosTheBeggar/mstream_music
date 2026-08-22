@@ -1938,4 +1938,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get playlistEmpty => 'Wiedergabeliste ist leer';
+
+  @override
+  String get trackRating => 'Bewertung';
 }

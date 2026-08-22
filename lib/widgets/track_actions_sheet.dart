@@ -9,6 +9,7 @@ import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
+import '../util/media_format.dart';
 import '../util/stream_url.dart';
 import 'player_panel.dart';
 import 'playlist_picker_sheet.dart';
@@ -87,6 +88,22 @@ class TrackActionsSheet extends StatelessWidget {
     final title =
         item.metadata?.title ?? (item.data ?? item.name).split('/').last;
     final artist = item.metadata?.artist;
+    final m = item.metadata;
+    // "Artist / Album" on one line - either half may be missing.
+    final byline = [
+      if (artist != null && artist.trim().isNotEmpty) artist.trim(),
+      if (m?.album != null && m!.album!.trim().isNotEmpty) m.album!.trim(),
+    ].join('  ·  ');
+    // The monospace readout, in the album banner's vocabulary. Older servers
+    // omit bitrate / sample rate and a local file has no server metadata at
+    // all, so each part is independent and the line vanishes when empty.
+    final specParts = <String>[
+      if (m?.format != null && m!.format!.trim().isNotEmpty)
+        m.format!.trim().toUpperCase(),
+      if (m?.bitrate != null) formatBitrate(m!.bitrate!),
+      if (m?.sampleRate != null) formatSampleRate(m!.sampleRate!),
+      if (m?.duration != null) formatDuration(m!.duration!),
+    ];
     // Server tracks get the server-side verbs (download, playlists); local
     // files keep just the queue actions. Find similar additionally needs a
     // server that advertised discovery on ping — a downloaded copy's local
@@ -117,57 +134,119 @@ class TrackActionsSheet extends StatelessWidget {
         child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Track header, so the sheet self-identifies (matches the
-          // streaming apps' long-press sheets).
+          // Track header: cover + title / artist + album + the monospace
+          // format readout, so the sheet identifies the song by sight and not
+          // only by name. Same FLAC / kbps / kHz vocabulary the album banner
+          // already speaks.
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: VelvetColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (artist != null && artist.trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: VelvetColors.textSecondary,
-                        fontSize: 12,
-                      ),
+                // Grab handle - the accent-colour sheet has one and this
+                // didn't; closing that inconsistency.
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: VelvetColors.border2,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                // Rating moved here from the row's trailing slot, which the
-                // overflow button now occupies. Larger than it was inline
-                // (20 vs 11) since there is room, and it writes through the
-                // same way: patch the in-memory metadata, then re-emit so
-                // visible rows repaint.
-                if (isServerTrack && item.metadata != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Center(
-                      child: RatingControl(
-                        rating: item.metadata?.rating,
-                        server: item.server!,
-                        filepath: item.data!,
-                        size: 20,
-                        onChanged: (r) {
-                          item.metadata?.rating = r;
-                          BrowserManager().updateStream();
-                        },
+                ),
+                Row(
+                  children: [
+                    // Falls back to a same-size placeholder tile when the
+                    // track has no art, so the text never shifts.
+                    item.getAlbumThumb(size: 60),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: VelvetColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (byline.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                byline,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: VelvetColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          if (specParts.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                specParts.join('  ·  '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 10,
+                                  letterSpacing: 0.2,
+                                  color: VelvetColors.textTertiary,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
+                  ],
+                ),
+                // Rating on its own labelled row rather than floating under
+                // the title: it is the only control up here, so it should
+                // read as one. Moved off the browser row when the overflow
+                // button took that slot; writes through the same way - patch
+                // the in-memory metadata, then re-emit so rows repaint.
+                if (isServerTrack && item.metadata != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: VelvetColors.card,
+                      border: Border.all(color: VelvetColors.border),
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l.trackRating,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 13),
+                          ),
+                        ),
+                        RatingControl(
+                          rating: item.metadata?.rating,
+                          server: item.server!,
+                          filepath: item.data!,
+                          size: 18,
+                          onChanged: (r) {
+                            item.metadata?.rating = r;
+                            BrowserManager().updateStream();
+                          },
+                        ),
+                      ],
                     ),
                   ),
               ],

@@ -1819,4 +1819,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get playlistEmpty => '播放列表为空';
+
+  @override
+  String get trackRating => '评分';
 }
