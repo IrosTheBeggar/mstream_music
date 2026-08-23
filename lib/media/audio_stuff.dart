@@ -520,8 +520,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   // one (the local backend is persistent and reused).
   Future<void> _switchBackend(PlaybackBackend next) async {
     final prev = _backend;
-    final pos = prev.position;
-    final idx = prev.currentIndex ?? 0;
+    // _reviveSpot when leaving the LOCAL player: a parked failed load leaves
+    // its index reading 0, so casting while parked would start the renderer
+    // at track 1 — and the cast's own `ready` then clears the park, laundering
+    // the loss into something no revive can undo. A remote backend has no
+    // park concept, so it keeps reporting for itself.
+    final fromLocal = identical(prev, _localBackend);
+    final spot = fromLocal ? _reviveSpot() : null;
+    final pos = spot?.position ?? prev.position;
+    final idx = spot?.index ?? prev.currentIndex ?? 0;
     final wasPlaying = prev.playing;
     // The switch carries the AUDIBLE state, so the intent must follow it:
     // playback started from a renderer's own remote never went through

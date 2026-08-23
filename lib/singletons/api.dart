@@ -626,14 +626,24 @@ class ApiManager {
       Server server, String filepath) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
     try {
-      final response = await http.post(
-        server.apiUri('/api/v1/db/metadata'),
-        body: jsonEncode({'filepath': fp}),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-token': server.jwt ?? '',
-        },
-      );
+      // 15s, matching the other direct-http calls in this file. Untimed,
+      // this had no deadline at all on a path that runs ONE POST PER TRACK,
+      // serially, from a car tap (queue_actions -> buildServerFileMediaItem
+      // for every row without a metadata block). A stalled connection there
+      // hangs Android Auto for as long as the socket takes to give up, which
+      // defeats the bounded wait AutoApi._call exists to provide. Returns
+      // null on timeout like every other failure here — the caller falls back
+      // to the row's own lite metadata.
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/metadata'),
+            body: jsonEncode({'filepath': fp}),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode > 299) return null;
       final decoded = jsonDecode(response.body);
       final md = decoded is Map ? decoded['metadata'] : null;
