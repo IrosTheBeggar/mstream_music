@@ -478,7 +478,17 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Pushed for exactly one event as the queue empties, purely to overwrite
   /// the platform session's metadata. Never meant to be READ as a track — the
   /// null that follows it immediately is the value in-app consumers see.
-  static const MediaItem _blankNowPlaying = MediaItem(id: '', title: '');
+  ///
+  /// Both fields are SET rather than left empty or null, because the media
+  /// card renders whatever it is handed: an empty title made One UI fall back
+  /// to "mStream Plus is running", and a null artist printed the literal word
+  /// "null" underneath it.
+  ///
+  /// English, like the Auto DJ notices in this file — the handler has no
+  /// BuildContext and no locale of its own, and plumbing one in for a single
+  /// placeholder is more machinery than the string is worth.
+  static const MediaItem _blankNowPlaying =
+      MediaItem(id: '', title: 'No media loaded', artist: '');
 
   void _emitCurrentMediaItem() {
     if (_reordering || _rebuilding || _restoring) return;

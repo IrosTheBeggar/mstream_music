@@ -26,6 +26,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
+import '../widgets/queue_list.dart' show toggleAutoDJ;
 
 class AutoDJScreen extends StatefulWidget {
   const AutoDJScreen({super.key});
@@ -538,8 +539,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               textStyle:
                   TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
-            onPressed: () => _setAutoDJ(
-                enabled ? null : ServerManager().currentServer),
+            // Through the shared toggle, not _setAutoDJ: starting the DJ on an
+            // EMPTY queue has to ask for an opening track first, and going
+            // straight to setAutoDJ skipped that — the handler fell back to
+            // the stored sonic seed, so this button silently replayed the
+            // last song while the identical button in the player bar asked.
+            // _setAutoDJ stays for the source dropdown below, which only
+            // exists while the DJ is already running.
+            onPressed: () => toggleAutoDJ(context),
             child: Text(enabled ? l.autoDjStop : l.autoDjStart),
           ),
         ],

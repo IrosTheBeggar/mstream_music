@@ -222,11 +222,29 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
-    // An iroh server can only be pinged through its live tunnel; skip when the
-    // tunnel isn't up (e.g. a non-active iroh server at startup).
+    // An iroh server can only be pinged through its live tunnel.
     if (server.isIroh && server.tunnelPort == null) {
-      if (throwErr) throw Exception('iroh tunnel not connected');
-      return;
+      // At launch this fires for the ACTIVE server too: loadServerList pings
+      // every server as soon as the list is read, and the tunnel is still
+      // dialling. Skipping meant its capabilities and — since the version
+      // probe rides along here — its VERSION were never fetched at all, so an
+      // iroh server sat on "version unknown" with an update warning under it
+      // until something else happened to re-ping.
+      //
+      // Bounded, and only for the active server: one tunnel at a time, so any
+      // other iroh server's is never coming up and waiting on it would stall
+      // the launch sweep for nothing. extendWhileDialing:false keeps the bound
+      // real — the default re-arms for as long as a dial is in flight.
+      if (identical(server, currentServer)) {
+        await awaitTunnelReady(
+            server: server,
+            timeout: const Duration(seconds: 12),
+            extendWhileDialing: false);
+      }
+      if (server.tunnelPort == null) {
+        if (throwErr) throw Exception('iroh tunnel not connected');
+        return;
+      }
     }
     try {
       var response = await http
@@ -545,25 +563,48 @@ class ServerManager {
   /// import in the singleton layer for the sake of twelve lines. It is also
   /// server lifecycle, not library browsing — the same reason _probeTunnel is
   /// here.
+  /// Ask `GET /api/` who the server is. Null when it won't say — which the
+  /// caller treats as "older than 5.4.2", the release that added the route.
+  ///
+  /// package:http, like the ping right above it, NOT dart:io's HttpClient.
+  /// The HttpClient version failed on every iroh server while the ping over
+  /// the same tunnel succeeded in the same call — an app pinned to a 6.20
+  /// server sat on "Server version unknown" with an update warning under it.
+  /// The pairing flow proves the URL itself is fine: add_server fetches
+  /// `/api/?__lt=…` through the tunnel with package:http and requires a 200
+  /// before it will save the server. Same URL, same token, different client,
+  /// different answer — so the client was the variable worth removing.
+  ///
+  /// Logs its failures. This runs unattended and its only visible symptom is
+  /// a version that never appears, which is indistinguishable from an old
+  /// server unless something says otherwise.
   Future<String?> fetchServerVersion(Server s) async {
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
     try {
-      final req = await client
-          .getUrl(s.apiUri('/api/'))
-          .timeout(const Duration(seconds: 6));
-      final resp = await req.close().timeout(const Duration(seconds: 10));
+      final resp = await http.get(
+        s.apiUri('/api/'),
+        // The route is public, but something in front of it on an iroh
+        // connection is not: the probe came back 401 over the tunnel while
+        // the ping in the same call — identical URL builder, but carrying
+        // this header — came back 200. Sent unconditionally; a plain HTTP
+        // server ignores it on a route that never asked.
+        headers: {'x-access-token': s.jwt ?? ''},
+      ).timeout(const Duration(seconds: 8));
       if (resp.statusCode > 299) {
-        await resp.drain<void>();
-        return null; // 404 here means older than 5.4.2
+        // 404 is the expected answer from a pre-5.4.2 server, not a fault.
+        if (resp.statusCode != 404) {
+          appLog('[api] version probe ${s.localname} → '
+              'HTTP ${resp.statusCode}');
+        }
+        return null;
       }
-      final body = await resp.transform(utf8.decoder).join();
-      final decoded = jsonDecode(body);
+      final decoded = jsonDecode(resp.body);
       final v = decoded is Map ? decoded['server'] : null;
-      return v is String && v.trim().isNotEmpty ? v.trim() : null;
-    } catch (_) {
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+      appLog('[api] version probe ${s.localname} → no version in response');
       return null;
-    } finally {
-      client.close(force: true);
+    } catch (e) {
+      appLog('[api] version probe ${s.localname} failed: $e');
+      return null;
     }
   }
 
