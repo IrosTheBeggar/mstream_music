@@ -197,7 +197,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
       // otherwise dragging the playing track to the last slot would append a
       // spurious Auto-DJ track.
-      if (_reordering || _rebuilding) return;
+      if (_reordering || _rebuilding || _restoring) return;
       if (index == queue.value.length - 1) {
         autoDJ();
       }
@@ -467,7 +467,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void _emitCurrentMediaItem() {
-    if (_reordering || _rebuilding) return;
+    if (_reordering || _rebuilding || _restoring) return;
     if (queue.value.isEmpty) return;
     // A failed launch restore parks a spot the backend never reached — show
     // THAT track as now-playing, not track 1. Spot FIRST: the failed load
@@ -1301,6 +1301,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   // True only while _doSetEqEnabled rebuilds the local player; suppresses the
   // currentIndexStream Auto-DJ top-up during the re-emit's index replay.
   bool _rebuilding = false;
+  // True while the launch restore's load is in flight. The queue is published
+  // BEFORE the sources are seeded (restoreQueue has to, so a transport command
+  // racing the restore sees the tracks), which leaves a window where the queue
+  // is the restored one but the fresh player still reads index 0. Everything
+  // that derives now-playing from those two would resolve to track 1 for that
+  // window — the log, the notification, the lock screen, Android Auto — and
+  // flash the wrong track on every open before snapping to the real spot.
+  bool _restoring = false;
 
   // Last item id logged by the [play] track-change diagnostic, so repeated
   // currentIndex emits for the same track don't spam the log.
@@ -1366,6 +1374,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // interrupted"), losing the saved spot.
     final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
+      _restoring = true;
       try {
         // No play call after it: the restore deliberately opens PAUSED at the
         // saved spot rather than blasting audio on launch.
@@ -1379,9 +1388,18 @@ class AudioPlayerHandler extends BaseAudioHandler
         // still apply without sources.
         appLog('[queue] restore load failed: $e');
       }
-      _repeatMode = repeat;
-      await _backend.setRepeat(_backendRepeat(repeat));
-      if (shuffle) await _backend.setShuffleEnabled(true);
+      try {
+        _repeatMode = repeat;
+        await _backend.setRepeat(_backendRepeat(repeat));
+        if (shuffle) await _backend.setShuffleEnabled(true);
+      } finally {
+        // finally, not a plain assignment: a throw from the repeat/shuffle
+        // calls would otherwise leave this latched and suppress every
+        // now-playing update for the rest of the session. Cleared before the
+        // emit/broadcast at the end of restoreQueue, which publishes the REAL
+        // spot.
+        _restoring = false;
+      }
     });
     _switchChain = done.catchError((_) {});
     await done;
@@ -2209,7 +2227,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _broadcastState() {
     // Mid-rebuild reads go through the NEW empty player and would publish a
     // bogus transient `error`; _doSetEqEnabled broadcasts once it's done.
-    if (_rebuilding) return;
+    // Mid-restore they'd publish queueIndex 0 to the media session, which is
+    // the same wrong-track flash one layer down; restoreQueue broadcasts once
+    // it has landed.
+    if (_rebuilding || _restoring) return;
     _updateWifiLock();
     final playing = _backend.playing;
     final AudioServiceShuffleMode shuffle = _backend.shuffleEnabled == true
