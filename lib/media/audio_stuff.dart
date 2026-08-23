@@ -477,7 +477,18 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   void _emitCurrentMediaItem() {
     if (_reordering || _rebuilding || _restoring) return;
-    if (queue.value.isEmpty) return;
+    if (queue.value.isEmpty) {
+      // Nothing queued is nothing playing. This used to return early, which
+      // left the last track's title, artist and art standing on every
+      // now-playing surface — the player bar, the expanded player, the
+      // system notification and the lock screen — after the queue was
+      // cleared. The three flags above already cover the windows where the
+      // queue is EMPTY IN TRANSIT (a restore before its publish, a
+      // transcode-URL rebuild, a reorder), so reaching here means the queue
+      // is genuinely empty rather than mid-swap.
+      mediaItem.add(null);
+      return;
+    }
     // A failed launch restore parks a spot the backend never reached — show
     // THAT track as now-playing, not track 1. Spot FIRST: the failed load
     // leaves the backend's currentIndex at 0 (not null), so an index-first
@@ -1785,12 +1796,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         '${q.length - plan.keep.length} of its queued track(s)');
     _restoreSpot = null; // row indices shift — a parked index would lie
     if (plan.keep.isEmpty) {
-      // The whole queue belonged to it: same teardown as clearPlaylist.
+      // The whole queue belonged to it: same teardown as clearPlaylist,
+      // including dropping the now-playing metadata.
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
       await _backend.clearSources();
       queue.add(queue.value..clear());
+      _emitCurrentMediaItem();
       _broadcastState();
       return;
     }
@@ -1826,6 +1839,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     await super.stop();
     await _backend.clearSources();
     queue.add(queue.value..clear());
+    // Explicit, not left to the currentIndex listener: clearSources may or
+    // may not emit an index change, and "did the notification keep the old
+    // song's art" should not depend on which.
+    _emitCurrentMediaItem();
     _broadcastState();
   }
 
