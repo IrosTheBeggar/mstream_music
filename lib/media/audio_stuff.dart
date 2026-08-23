@@ -672,7 +672,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       final items = _queueWithFreshUrls();
       if (items.isNotEmpty) {
         await _loadAtSpot(_localBackend, items, (index: idx, position: pos));
-        if (play) unawaited(_localBackend.play());
+        // play && _playIntent, not the captured flag alone: this load is
+        // network-bound and can run for seconds, and a pause landing inside
+        // that window must win. Same post-await doctrine as every other
+        // revive path here.
+        if (play && _playIntent) unawaited(_localBackend.play());
       }
     } finally {
       _backendSubject.add(_localBackend);
@@ -1126,7 +1130,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// an errored player reports 0, and a window recentred on that bogus 0
   /// evicts the downloads sitting AHEAD of the user, which is precisely the
   /// offline copy they need when the network is the thing that broke.
-  int get logicalQueueIndex => _reviveSpot().index;
+  int get logicalQueueIndex {
+    final q = queue.value;
+    if (q.isEmpty) return 0;
+    // A park wins — that is the whole point — but otherwise read the ACTIVE
+    // backend, not _reviveSpot's local one. During a cast the local player
+    // sits frozen at the switch-time index while the renderer advances, so
+    // _reviveSpot would peg the download window to a stale spot: nothing
+    // ahead of the real position prefetches, and files around it get evicted
+    // as "outside the window" — the exact wrong-side eviction this getter
+    // exists to prevent, just moved into the cast arm.
+    final parked = _restoreSpot;
+    final i = parked != null ? parked.index : (_backend.currentIndex ?? 0);
+    return i.clamp(0, q.length - 1);
+  }
 
   /// Reload the local backend at its current spot, with every URL re-derived
   /// against the live tunnel/transcode state, then resume if the user still
@@ -1245,6 +1262,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       // appLog, not castLog: no cast is involved, and the incident log this
       // fix came from was tagged [cast] with no cast in sight.
       appLog('[play] tunnel-reconnect resume failed: $e');
+      // Count it HERE. _onPlaybackError's counter sits behind its
+      // "one recovery at a time" early return, and every failure after the
+      // first is produced BY a recovery holding that flag — so the counter
+      // there oscillates 0↔1 and the ground-truth probe never fires. This
+      // loop is the one that ran every 11s for the whole incident; it is
+      // exactly the run of failures worth probing on.
+      _noteTunnelLoadFailure(server);
       // Try again rather than leaving the player parked. Bounded by the
       // tunnelServes gate, the 10s per-server cooldown and the single
       // _tunnelHealRetry slot, so a flapping tunnel gets ~one attempt per
@@ -1390,8 +1414,19 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       try {
         _repeatMode = repeat;
+        // Guarded the same way setShuffleMode/setRepeatMode guard these very
+        // calls: the backend can reject them outright when nothing is loaded
+        // (a cold headless bind), which is precisely the state a failed
+        // restore load leaves behind. Unguarded, the throw escapes the
+        // closure and skips restoreQueue's closing emit/broadcast — and since
+        // every broadcast during the load was suppressed, playbackState keeps
+        // its boot queueIndex of null, so the next snapshot save persists
+        // index 0 and the following launch opens on track 1 at 0:00. The
+        // exact loss this series exists to prevent.
         await _backend.setRepeat(_backendRepeat(repeat));
         if (shuffle) await _backend.setShuffleEnabled(true);
+      } catch (e) {
+        appLog('[queue] restore repeat/shuffle failed: $e');
       } finally {
         // finally, not a plain assignment: a throw from the repeat/shuffle
         // calls would otherwise leave this latched and suppress every
