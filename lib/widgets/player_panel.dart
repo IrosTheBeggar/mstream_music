@@ -1317,34 +1317,20 @@ class _MiniPlayer extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    // Filled accent circle: the primary action should look
-                    // like one. Matches the album/playlist toolbars.
+                    // Accent-coloured, not a filled circle: it stays the same
+                    // flat glyph as its neighbours and just carries the theme
+                    // colour, so it reads as the primary action without
+                    // turning into a second, heavier control.
                     StreamBuilder<bool>(
                       stream: handler.playbackState
                           .map((s) => s.playing)
                           .distinct(),
                       builder: (context, snap) {
                         final playing = snap.data ?? false;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 2),
-                          child: Material(
-                            color: VelvetColors.primary,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: playing ? handler.pause : handler.play,
-                              child: SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: Icon(
-                                  playing ? Icons.pause : Icons.play_arrow,
-                                  size: 22,
-                                  color: VelvetColors.onPrimary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
+                        return _btn(
+                            playing ? Icons.pause : Icons.play_arrow,
+                            playing ? handler.pause : handler.play,
+                            active: true);
                       },
                     ),
                     _btn(Icons.skip_next, handler.skipToNext),
