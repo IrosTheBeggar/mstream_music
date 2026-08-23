@@ -2343,6 +2343,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<bool> _startAutoDJFromSeed() async {
     final server = autoDJServer;
     final mgr = AutoDJManager();
+    // ONLY opens an empty queue. With tracks already queued the DJ takes its
+    // cue from those — replacing them with a seed would throw away a queue the
+    // user built, which is never what arming the DJ meant.
+    if (queue.value.isNotEmpty) return false;
     // Filepaths are per-library — a seed picked on another server names
     // nothing here.
     final path =

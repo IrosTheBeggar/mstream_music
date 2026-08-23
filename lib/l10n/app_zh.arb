@@ -477,5 +477,17 @@
   "playlistEmpty": "播放列表为空",
   "browserMoreActions": "更多操作",
   "trackRating": "评分",
-  "albumDiscNumber": "第 {n} 张"
+  "albumDiscNumber": "第 {n} 张",
+  "autoDjStartTitle": "Auto DJ 从什么开始？",
+  "autoDjStartSubtitle": "队列为空，DJ 需要一首起始曲目。有队列时，它会直接沿用其中的内容。",
+  "autoDjStartRandom": "给我惊喜",
+  "autoDjStartRandomSub": "从曲库中随机选一首，并以此展开。",
+  "autoDjStartPick": "我来选",
+  "autoDjStartPickSub": "打开曲库，自己挑选起始曲目。",
+  "autoDjStartRemember": "记住此选择",
+  "autoDjStartRememberSub": "下次跳过此询问，始终以这种方式开始。",
+  "autoDjStartPickBanner": "选择起始歌曲——在曲库中点按任意曲目",
+  "autoDjOnEmptyQueue": "队列为空时",
+  "autoDjOnEmptyQueueSub": "队列为空时开启 Auto DJ 的行为。",
+  "autoDjStartAskShort": "询问"
 }

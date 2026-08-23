@@ -1952,4 +1952,46 @@ class AppLocalizationsPt extends AppLocalizations {
   String albumDiscNumber(int n) {
     return 'Disco $n';
   }
+
+  @override
+  String get autoDjStartTitle => 'Começar o Auto DJ com o quê?';
+
+  @override
+  String get autoDjStartSubtitle =>
+      'Não há nada na fila, então o DJ precisa de uma primeira música. Com fila, ele apenas segue o que já existe.';
+
+  @override
+  String get autoDjStartRandom => 'Surpreenda-me';
+
+  @override
+  String get autoDjStartRandomSub =>
+      'Escolher uma música aleatória da biblioteca e construir a partir dela.';
+
+  @override
+  String get autoDjStartPick => 'Eu escolho';
+
+  @override
+  String get autoDjStartPickSub =>
+      'Abrir a biblioteca e escolher a primeira música você mesmo.';
+
+  @override
+  String get autoDjStartRemember => 'Lembrar disto';
+
+  @override
+  String get autoDjStartRememberSub =>
+      'Pular esta pergunta na próxima vez e sempre começar assim.';
+
+  @override
+  String get autoDjStartPickBanner =>
+      'Escolha a primeira música — toque em uma faixa em qualquer lugar da biblioteca';
+
+  @override
+  String get autoDjOnEmptyQueue => 'Com a fila vazia';
+
+  @override
+  String get autoDjOnEmptyQueueSub =>
+      'O que o Auto DJ faz quando você o liga sem nada na fila.';
+
+  @override
+  String get autoDjStartAskShort => 'Perguntar';
 }

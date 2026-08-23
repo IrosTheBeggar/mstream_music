@@ -477,5 +477,17 @@
   "playlistEmpty": "Playlista jest pusta",
   "browserMoreActions": "Więcej akcji",
   "trackRating": "Ocena",
-  "albumDiscNumber": "Płyta {n}"
+  "albumDiscNumber": "Płyta {n}",
+  "autoDjStartTitle": "Od czego zacząć Auto DJ?",
+  "autoDjStartSubtitle": "Kolejka jest pusta, więc DJ potrzebuje pierwszego utworu. Z kolejką po prostu podąża za tym, co już masz.",
+  "autoDjStartRandom": "Zaskocz mnie",
+  "autoDjStartRandomSub": "Wybierz losowy utwór z biblioteki i buduj od niego.",
+  "autoDjStartPick": "Wybiorę sam",
+  "autoDjStartPickSub": "Otwórz bibliotekę i wybierz pierwszy utwór samodzielnie.",
+  "autoDjStartRemember": "Zapamiętaj",
+  "autoDjStartRememberSub": "Pomiń to pytanie następnym razem i zawsze zaczynaj tak.",
+  "autoDjStartPickBanner": "Wybierz pierwszy utwór — stuknij dowolny utwór w bibliotece",
+  "autoDjOnEmptyQueue": "Przy pustej kolejce",
+  "autoDjOnEmptyQueueSub": "Co robi Auto DJ, gdy włączysz go bez niczego w kolejce.",
+  "autoDjStartAskShort": "Zapytaj"
 }

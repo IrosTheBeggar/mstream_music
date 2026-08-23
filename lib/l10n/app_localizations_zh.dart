@@ -1836,4 +1836,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String albumDiscNumber(int n) {
     return '第 $n 张';
   }
+
+  @override
+  String get autoDjStartTitle => 'Auto DJ 从什么开始？';
+
+  @override
+  String get autoDjStartSubtitle => '队列为空，DJ 需要一首起始曲目。有队列时，它会直接沿用其中的内容。';
+
+  @override
+  String get autoDjStartRandom => '给我惊喜';
+
+  @override
+  String get autoDjStartRandomSub => '从曲库中随机选一首，并以此展开。';
+
+  @override
+  String get autoDjStartPick => '我来选';
+
+  @override
+  String get autoDjStartPickSub => '打开曲库，自己挑选起始曲目。';
+
+  @override
+  String get autoDjStartRemember => '记住此选择';
+
+  @override
+  String get autoDjStartRememberSub => '下次跳过此询问，始终以这种方式开始。';
+
+  @override
+  String get autoDjStartPickBanner => '选择起始歌曲——在曲库中点按任意曲目';
+
+  @override
+  String get autoDjOnEmptyQueue => '队列为空时';
+
+  @override
+  String get autoDjOnEmptyQueueSub => '队列为空时开启 Auto DJ 的行为。';
+
+  @override
+  String get autoDjStartAskShort => '询问';
 }

@@ -477,5 +477,17 @@
   "playlistEmpty": "プレイリストは空です",
   "browserMoreActions": "その他の操作",
   "trackRating": "評価",
-  "albumDiscNumber": "ディスク {n}"
+  "albumDiscNumber": "ディスク {n}",
+  "autoDjStartTitle": "Auto DJ を何から始めますか？",
+  "autoDjStartSubtitle": "キューが空なので、DJ には最初の曲が必要です。キューがあればその内容に従います。",
+  "autoDjStartRandom": "おまかせ",
+  "autoDjStartRandomSub": "ライブラリからランダムに1曲選び、そこから広げます。",
+  "autoDjStartPick": "自分で選ぶ",
+  "autoDjStartPickSub": "ライブラリを開いて最初の曲を自分で選びます。",
+  "autoDjStartRemember": "記憶する",
+  "autoDjStartRememberSub": "次回からこの質問を省略し、常にこの方法で開始します。",
+  "autoDjStartPickBanner": "最初の曲を選択 — ライブラリ内の好きな曲をタップ",
+  "autoDjOnEmptyQueue": "キューが空のとき",
+  "autoDjOnEmptyQueueSub": "キューが空の状態で Auto DJ をオンにしたときの動作。",
+  "autoDjStartAskShort": "確認する"
 }

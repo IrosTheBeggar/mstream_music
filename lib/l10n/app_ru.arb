@@ -477,5 +477,17 @@
   "playlistEmpty": "Плейлист пуст",
   "browserMoreActions": "Другие действия",
   "trackRating": "Оценка",
-  "albumDiscNumber": "Диск {n}"
+  "albumDiscNumber": "Диск {n}",
+  "autoDjStartTitle": "С чего начать Auto DJ?",
+  "autoDjStartSubtitle": "Очередь пуста, поэтому диджею нужен первый трек. С очередью он просто идёт по тому, что уже есть.",
+  "autoDjStartRandom": "Удиви меня",
+  "autoDjStartRandomSub": "Выбрать случайный трек из библиотеки и строить от него.",
+  "autoDjStartPick": "Выберу сам",
+  "autoDjStartPickSub": "Открыть библиотеку и выбрать первый трек самостоятельно.",
+  "autoDjStartRemember": "Запомнить",
+  "autoDjStartRememberSub": "Пропускать этот вопрос и всегда начинать так.",
+  "autoDjStartPickBanner": "Выберите первый трек — коснитесь любого трека в библиотеке",
+  "autoDjOnEmptyQueue": "При пустой очереди",
+  "autoDjOnEmptyQueueSub": "Что делает Auto DJ, когда вы включаете его с пустой очередью.",
+  "autoDjStartAskShort": "Спрашивать"
 }

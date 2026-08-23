@@ -477,5 +477,17 @@
   "playlistEmpty": "La lista está vacía",
   "browserMoreActions": "Más acciones",
   "trackRating": "Valoración",
-  "albumDiscNumber": "Disco {n}"
+  "albumDiscNumber": "Disco {n}",
+  "autoDjStartTitle": "¿Con qué empieza Auto DJ?",
+  "autoDjStartSubtitle": "No hay nada en la cola, así que el DJ necesita una primera canción. Con cola, simplemente sigue lo que ya tienes.",
+  "autoDjStartRandom": "Sorpréndeme",
+  "autoDjStartRandomSub": "Elegir una canción al azar de la biblioteca y construir a partir de ahí.",
+  "autoDjStartPick": "Déjame elegir",
+  "autoDjStartPickSub": "Abrir la biblioteca y elegir tú la primera canción.",
+  "autoDjStartRemember": "Recordar esto",
+  "autoDjStartRememberSub": "Omitir esta pregunta la próxima vez y empezar siempre así.",
+  "autoDjStartPickBanner": "Elige la primera canción — toca una pista en cualquier parte de la biblioteca",
+  "autoDjOnEmptyQueue": "Con la cola vacía",
+  "autoDjOnEmptyQueueSub": "Qué hace Auto DJ cuando lo activas sin nada en la cola.",
+  "autoDjStartAskShort": "Preguntar"
 }

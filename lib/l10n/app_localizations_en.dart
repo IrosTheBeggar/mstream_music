@@ -1934,4 +1934,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String albumDiscNumber(int n) {
     return 'Disc $n';
   }
+
+  @override
+  String get autoDjStartTitle => 'Start Auto DJ with what?';
+
+  @override
+  String get autoDjStartSubtitle =>
+      'Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.';
+
+  @override
+  String get autoDjStartRandom => 'Surprise me';
+
+  @override
+  String get autoDjStartRandomSub =>
+      'Pick a random song from the library and build outward from it.';
+
+  @override
+  String get autoDjStartPick => 'Let me choose';
+
+  @override
+  String get autoDjStartPickSub =>
+      'Open the library and pick the opening track yourself.';
+
+  @override
+  String get autoDjStartRemember => 'Remember this';
+
+  @override
+  String get autoDjStartRememberSub =>
+      'Skip this question next time and always start this way.';
+
+  @override
+  String get autoDjStartPickBanner =>
+      'Pick the opening song — tap a track anywhere in the library';
+
+  @override
+  String get autoDjOnEmptyQueue => 'On an empty queue';
+
+  @override
+  String get autoDjOnEmptyQueueSub =>
+      'What Auto DJ does when you switch it on with nothing queued.';
+
+  @override
+  String get autoDjStartAskShort => 'Ask';
 }

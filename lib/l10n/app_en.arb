@@ -1546,5 +1546,53 @@
         "type": "int"
       }
     }
+  },
+  "autoDjStartTitle": "Start Auto DJ with what?",
+  "@autoDjStartTitle": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartSubtitle": "Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.",
+  "@autoDjStartSubtitle": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartRandom": "Surprise me",
+  "@autoDjStartRandom": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartRandomSub": "Pick a random song from the library and build outward from it.",
+  "@autoDjStartRandomSub": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartPick": "Let me choose",
+  "@autoDjStartPick": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartPickSub": "Open the library and pick the opening track yourself.",
+  "@autoDjStartPickSub": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartRemember": "Remember this",
+  "@autoDjStartRemember": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartRememberSub": "Skip this question next time and always start this way.",
+  "@autoDjStartRememberSub": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartPickBanner": "Pick the opening song — tap a track anywhere in the library",
+  "@autoDjStartPickBanner": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjOnEmptyQueue": "On an empty queue",
+  "@autoDjOnEmptyQueue": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjOnEmptyQueueSub": "What Auto DJ does when you switch it on with nothing queued.",
+  "@autoDjOnEmptyQueueSub": {
+    "description": "Auto DJ empty-queue start chooser"
+  },
+  "autoDjStartAskShort": "Ask",
+  "@autoDjStartAskShort": {
+    "description": "Segmented-button label: ask each time"
   }
 }

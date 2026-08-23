@@ -27,6 +27,22 @@ import 'package:rxdart/rxdart.dart';
 /// labels: SonicAnchorModeLabel in lib/l10n/enum_labels.dart.
 enum SonicAnchorMode { rolling, locked }
 
+/// What Auto DJ does when it is switched on with NOTHING queued. With a queue
+/// it never applies: the DJ takes its cue from the tracks already there.
+///
+/// [ask] shows the chooser each time; the other two are what "remember this"
+/// stores, so the toggle becomes one tap.
+enum EmptyQueueStart {
+  /// Ask on every empty-queue start.
+  ask,
+
+  /// Pull a random song from the library and build outward from it.
+  random,
+
+  /// Drop into the library so the user picks the opening track.
+  pick,
+}
+
 class AutoDJManager {
   AutoDJManager._privateConstructor();
   static final AutoDJManager _instance = AutoDJManager._privateConstructor();
@@ -90,6 +106,11 @@ class AutoDJManager {
   String? sonicSeedTitle; // display only
   String? sonicSeedServer;
 
+  /// See [EmptyQueueStart]. Defaults to asking, because guessing wrong here
+  /// either plays a song nobody chose or dumps the user in a browser they
+  /// didn't ask for.
+  EmptyQueueStart emptyQueueStart = EmptyQueueStart.ask;
+
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
   // for the small surface area here.
@@ -134,6 +155,11 @@ class AutoDJManager {
           m['sonicSeedTitle'] is String ? m['sonicSeedTitle'] : null;
       sonicSeedServer =
           m['sonicSeedServer'] is String ? m['sonicSeedServer'] : null;
+      // Hardened like sonicAnchorMode: an unknown stored value falls back to
+      // asking rather than silently committing the user to a behaviour.
+      emptyQueueStart =
+          EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
+              EmptyQueueStart.ask;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -157,6 +183,7 @@ class AutoDJManager {
       'sonicSeedPath': sonicSeedPath,
       'sonicSeedTitle': sonicSeedTitle,
       'sonicSeedServer': sonicSeedServer,
+      'emptyQueueStart': emptyQueueStart.name,
     }));
   }
 
@@ -262,6 +289,12 @@ class AutoDJManager {
     sonicSeedPath = norm;
     sonicSeedTitle = title;
     sonicSeedServer = server;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setEmptyQueueStart(EmptyQueueStart v) async {
+    emptyQueueStart = v;
     _notify();
     await _save();
   }

@@ -477,5 +477,17 @@
   "playlistEmpty": "Wiedergabeliste ist leer",
   "browserMoreActions": "Weitere Aktionen",
   "trackRating": "Bewertung",
-  "albumDiscNumber": "CD {n}"
+  "albumDiscNumber": "CD {n}",
+  "autoDjStartTitle": "Auto DJ womit starten?",
+  "autoDjStartSubtitle": "Nichts in der Warteschlange – der DJ braucht einen Starttitel. Mit Warteschlange folgt er einfach dem, was da ist.",
+  "autoDjStartRandom": "Überrasch mich",
+  "autoDjStartRandomSub": "Einen zufälligen Titel aus der Bibliothek wählen und darauf aufbauen.",
+  "autoDjStartPick": "Ich wähle selbst",
+  "autoDjStartPickSub": "Die Bibliothek öffnen und den Starttitel selbst wählen.",
+  "autoDjStartRemember": "Merken",
+  "autoDjStartRememberSub": "Diese Frage künftig überspringen und immer so starten.",
+  "autoDjStartPickBanner": "Starttitel wählen — tippe irgendwo in der Bibliothek auf einen Titel",
+  "autoDjOnEmptyQueue": "Bei leerer Warteschlange",
+  "autoDjOnEmptyQueueSub": "Was Auto DJ tut, wenn du ihn ohne Warteschlange einschaltest.",
+  "autoDjStartAskShort": "Fragen"
 }

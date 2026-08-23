@@ -477,5 +477,17 @@
   "playlistEmpty": "La liste de lecture est vide",
   "browserMoreActions": "Plus d'actions",
   "trackRating": "Note",
-  "albumDiscNumber": "Disque {n}"
+  "albumDiscNumber": "Disque {n}",
+  "autoDjStartTitle": "Démarrer Auto DJ avec quoi ?",
+  "autoDjStartSubtitle": "La file est vide, le DJ a besoin d'un premier titre. Avec une file, il suit simplement ce qui s'y trouve.",
+  "autoDjStartRandom": "Surprends-moi",
+  "autoDjStartRandomSub": "Choisir un titre au hasard dans la bibliothèque et partir de là.",
+  "autoDjStartPick": "Je choisis",
+  "autoDjStartPickSub": "Ouvrir la bibliothèque et choisir le premier titre soi-même.",
+  "autoDjStartRemember": "Mémoriser",
+  "autoDjStartRememberSub": "Passer cette question la prochaine fois et toujours démarrer ainsi.",
+  "autoDjStartPickBanner": "Choisis le premier titre — touche une piste n'importe où dans la bibliothèque",
+  "autoDjOnEmptyQueue": "File vide",
+  "autoDjOnEmptyQueueSub": "Ce que fait Auto DJ quand tu l'actives sans rien dans la file.",
+  "autoDjStartAskShort": "Demander"
 }

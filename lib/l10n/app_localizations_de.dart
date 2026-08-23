@@ -1957,4 +1957,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String albumDiscNumber(int n) {
     return 'CD $n';
   }
+
+  @override
+  String get autoDjStartTitle => 'Auto DJ womit starten?';
+
+  @override
+  String get autoDjStartSubtitle =>
+      'Nichts in der Warteschlange – der DJ braucht einen Starttitel. Mit Warteschlange folgt er einfach dem, was da ist.';
+
+  @override
+  String get autoDjStartRandom => 'Überrasch mich';
+
+  @override
+  String get autoDjStartRandomSub =>
+      'Einen zufälligen Titel aus der Bibliothek wählen und darauf aufbauen.';
+
+  @override
+  String get autoDjStartPick => 'Ich wähle selbst';
+
+  @override
+  String get autoDjStartPickSub =>
+      'Die Bibliothek öffnen und den Starttitel selbst wählen.';
+
+  @override
+  String get autoDjStartRemember => 'Merken';
+
+  @override
+  String get autoDjStartRememberSub =>
+      'Diese Frage künftig überspringen und immer so starten.';
+
+  @override
+  String get autoDjStartPickBanner =>
+      'Starttitel wählen — tippe irgendwo in der Bibliothek auf einen Titel';
+
+  @override
+  String get autoDjOnEmptyQueue => 'Bei leerer Warteschlange';
+
+  @override
+  String get autoDjOnEmptyQueueSub =>
+      'Was Auto DJ tut, wenn du ihn ohne Warteschlange einschaltest.';
+
+  @override
+  String get autoDjStartAskShort => 'Fragen';
 }

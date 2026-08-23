@@ -477,5 +477,17 @@
   "playlistEmpty": "La playlist è vuota",
   "browserMoreActions": "Altre azioni",
   "trackRating": "Valutazione",
-  "albumDiscNumber": "Disco {n}"
+  "albumDiscNumber": "Disco {n}",
+  "autoDjStartTitle": "Avviare Auto DJ con cosa?",
+  "autoDjStartSubtitle": "La coda è vuota, quindi al DJ serve un brano iniziale. Con una coda segue semplicemente ciò che c'è già.",
+  "autoDjStartRandom": "Sorprendimi",
+  "autoDjStartRandomSub": "Scegliere un brano a caso dalla libreria e costruire da lì.",
+  "autoDjStartPick": "Scelgo io",
+  "autoDjStartPickSub": "Aprire la libreria e scegliere tu il brano iniziale.",
+  "autoDjStartRemember": "Ricorda",
+  "autoDjStartRememberSub": "Salta questa domanda la prossima volta e parti sempre così.",
+  "autoDjStartPickBanner": "Scegli il brano iniziale — tocca una traccia ovunque nella libreria",
+  "autoDjOnEmptyQueue": "Con la coda vuota",
+  "autoDjOnEmptyQueueSub": "Cosa fa Auto DJ quando lo attivi senza nulla in coda.",
+  "autoDjStartAskShort": "Chiedi"
 }

@@ -3401,6 +3401,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disc {n}'**
   String albumDiscNumber(int n);
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Start Auto DJ with what?'**
+  String get autoDjStartTitle;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.'**
+  String get autoDjStartSubtitle;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise me'**
+  String get autoDjStartRandom;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a random song from the library and build outward from it.'**
+  String get autoDjStartRandomSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Let me choose'**
+  String get autoDjStartPick;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Open the library and pick the opening track yourself.'**
+  String get autoDjStartPickSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Remember this'**
+  String get autoDjStartRemember;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this question next time and always start this way.'**
+  String get autoDjStartRememberSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the opening song — tap a track anywhere in the library'**
+  String get autoDjStartPickBanner;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'On an empty queue'**
+  String get autoDjOnEmptyQueue;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'What Auto DJ does when you switch it on with nothing queued.'**
+  String get autoDjOnEmptyQueueSub;
+
+  /// Segmented-button label: ask each time
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get autoDjStartAskShort;
 }
 
 class _AppLocalizationsDelegate
