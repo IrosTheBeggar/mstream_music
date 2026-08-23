@@ -37,6 +37,11 @@ import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
+/// What [AudioPlayerHandler.healAction] decided the tunnel heal should do:
+/// [run] it now, [rearm] the re-check timer and look again shortly, or [drop]
+/// this trigger entirely.
+enum HealAction { run, rearm, drop }
+
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   // ignore: close_sinks
@@ -251,6 +256,18 @@ class AudioPlayerHandler extends BaseAudioHandler
             '${_backend.duration?.inSeconds ?? '?'}s '
             'index=${_backend.currentIndex} of ${queue.value.length}');
         stop();
+      }
+      // Playback just parked (idle with tracks still queued). The tunnel may
+      // ALREADY be connected — a status edge that landed while this load was
+      // still running is spent, and no further edge is coming — so the park is
+      // its own trigger. Fully guarded by _onTunnelReconnected itself (local
+      // backend, no intentional stop, iroh server, tunnelServes, and the 10s
+      // per-server cooldown), so a park with a genuinely dead tunnel costs one
+      // predicate and nothing else.
+      if (state == BackendProcessingState.idle &&
+          queue.value.isNotEmpty &&
+          !_intentionalStop) {
+        _onTunnelReconnected();
       }
       // A track that loads clears the skip-budget AND the HTTP retry budget,
       // and lifts any network-stall pause — so the guards only trip on a genuine
@@ -1127,18 +1144,57 @@ class AudioPlayerHandler extends BaseAudioHandler
   // consumed edge never re-fires on its own — dropping it would park playback
   // until the user taps play.
   Timer? _tunnelHealRetry;
+  /// What the tunnel heal should do when it runs. Pure; unit-tested.
+  ///
+  /// [HealAction.rearm] rather than [HealAction.drop] for a player that isn't
+  /// parked YET is the whole point. The heal's original trigger was a single
+  /// edge — the tunnel status going not-connected → connected — and that
+  /// stream only emits on CHANGE. So an edge that lands while a load is still
+  /// in flight used to be swallowed by a bare `return`, and if that load then
+  /// failed, the player parked with the tunnel already connected and no
+  /// further edge coming. Nothing retried, ever.
+  ///
+  /// That is the seven-and-a-half minutes of silence in the incident log: the
+  /// bind at 18:21:14 fired the heal while the reload was still running, the
+  /// reload threw at 18:21:17, and nothing automatic happened again until a
+  /// hard rebuild produced a fresh edge at 18:29:19.
+  static HealAction healAction({
+    required bool onLocalBackend,
+    required bool intentionalStop,
+    required bool recovering,
+    required bool skipPending,
+    required BackendProcessingState processingState,
+    required bool queueEmpty,
+  }) {
+    if (!onLocalBackend || intentionalStop || queueEmpty) return HealAction.drop;
+    // A recovery in flight will finish; re-check after it does.
+    if (recovering || skipPending) return HealAction.rearm;
+    // Not parked yet. It may still park (a load in flight can fail), and no
+    // second edge is coming, so keep watching rather than dropping the edge.
+    if (processingState != BackendProcessingState.idle) return HealAction.rearm;
+    return HealAction.run;
+  }
+
   void _onTunnelReconnected() {
     _tunnelHealRetry?.cancel();
     _tunnelHealRetry = null;
-    if (!identical(_backend, _localBackend)) return;
-    if (_intentionalStop) return;
-    if (_recoveringPlayback || _skipPending) {
-      _rearmTunnelHeal();
-      return;
-    }
-    if (_localBackend.processingState != BackendProcessingState.idle) return;
     final q = queue.value;
-    if (q.isEmpty) return;
+    switch (healAction(
+      onLocalBackend: identical(_backend, _localBackend),
+      intentionalStop: _intentionalStop,
+      recovering: _recoveringPlayback,
+      skipPending: _skipPending,
+      processingState: _localBackend.processingState,
+      queueEmpty: q.isEmpty,
+    )) {
+      case HealAction.drop:
+        return;
+      case HealAction.rearm:
+        _rearmTunnelHeal();
+        return;
+      case HealAction.run:
+        break;
+    }
     // _reviveSpot: after a failed launch restore the backend reads index 0 --
     // a mixed queue whose track 1 isn't iroh would never pass the gate below
     // even though the PARKED track's server just healed.
