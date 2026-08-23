@@ -1995,4 +1995,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'This server is version $version. Some features need 5.5 or newer and will be unavailable.';
   }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.';
+
+  @override
+  String get autoDjSonicNeedsNewerServer => 'Needs server 6.15.2 or newer';
 }

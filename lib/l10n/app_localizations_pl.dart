@@ -2031,4 +2031,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'Ten serwer ma wersję $version. Niektóre funkcje wymagają 5.5 lub nowszej i będą niedostępne.';
   }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'Ciągłość BPM, miksowanie harmoniczne i filtr gatunków wymagają nowszego serwera. Zaktualizuj, aby z nich korzystać.';
+
+  @override
+  String get autoDjSonicNeedsNewerServer =>
+      'Wymaga serwera 6.15.2 lub nowszego';
 }

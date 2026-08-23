@@ -24,6 +24,7 @@ import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
 
 class AutoDJScreen extends StatefulWidget {
@@ -157,15 +158,35 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             ..._vpathTiles(_autoDJServer!),
             Divider(color: VelvetColors.border, height: 1),
           ],
-          _sectionHeader(l.autoDjSectionContinuity),
-          _sonicSimilaritySection(),
-          _bpmContinuitySection(),
-          _harmonicMixingSection(),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.autoDjSectionFilters),
-          if (enabled) _minRatingTile(_autoDJServer!),
-          _genreFilterSection(),
-          _keywordFilterSection(),
+          // BPM continuity, harmonic mixing and the genre filter all arrived
+          // in 6.7.1. On a server known to predate them the controls are
+          // HIDDEN rather than shown-and-ignored: the app strips those
+          // parameters before sending, so a switch left visible would sit
+          // there saying "on" while the picks were plain random.
+          //
+          // Sonic similarity is separate — it landed in 6.15.2 — so a
+          // 6.7.1..6.14 server keeps this whole block and only that one
+          // switch is disabled.
+          if (_filtersHidden) ...[
+            _sectionHeader(l.autoDjSectionContinuity),
+            _olderServerNote(l),
+            Divider(color: VelvetColors.border, height: 1),
+            _sectionHeader(l.autoDjSectionFilters),
+            if (enabled) _minRatingTile(_autoDJServer!),
+            // Keyword filter survives: it is applied client-side, so it works
+            // against any server however old.
+            _keywordFilterSection(),
+          ] else ...[
+            _sectionHeader(l.autoDjSectionContinuity),
+            _sonicSimilaritySection(),
+            _bpmContinuitySection(),
+            _harmonicMixingSection(),
+            Divider(color: VelvetColors.border, height: 1),
+            _sectionHeader(l.autoDjSectionFilters),
+            if (enabled) _minRatingTile(_autoDJServer!),
+            _genreFilterSection(),
+            _keywordFilterSection(),
+          ],
         ],
       ),
       ),
@@ -173,6 +194,31 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   }
 
   // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
+
+  /// True when the DJ server is KNOWN to predate 6.7.1. Unknown versions and
+  /// forks read false — they can't be compared, so the controls stay and the
+  /// capability learner handles any rejection.
+  bool get _filtersHidden => autoDjFiltersKnownUnsupported(
+      ServerVersion.tryParse(
+          (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
+
+  Widget _olderServerNote(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 16, color: VelvetColors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(l.autoDjNeedsNewerServer,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _sonicSimilaritySection() {
     final l = AppLocalizations.of(context);
@@ -182,7 +228,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // Without discovery data the toggle is inert, so show it disabled with
     // an explanation instead of letting it silently do nothing.
     final target = _autoDJServer ?? ServerManager().currentServer;
-    final supported = target?.discoveryAvailable == true;
+    // Two independent reasons it can be unavailable, and the subtitle says
+    // which: the server predates 6.15.2, or discovery is switched off there.
+    final tooOld =
+        sonicKnownUnsupported(ServerVersion.tryParse(target?.serverVersion));
+    final supported = target?.discoveryAvailable == true && !tooOld;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -201,7 +251,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                     Text(
                       supported
                           ? l.autoDjSonicSubtitle
-                          : l.autoDjSonicUnavailable,
+                          : (tooOld
+                              ? l.autoDjSonicNeedsNewerServer
+                              : l.autoDjSonicUnavailable),
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),

@@ -2034,4 +2034,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'Версия этого сервера — $version. Некоторым функциям нужна 5.5 или новее, они будут недоступны.';
   }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'Непрерывность BPM, гармоничное сведение и фильтр жанров требуют более новой версии сервера. Обновите, чтобы получить их.';
+
+  @override
+  String get autoDjSonicNeedsNewerServer => 'Требуется сервер 6.15.2 или новее';
 }

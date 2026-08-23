@@ -173,7 +173,10 @@ String paramWireName(ServerParam p) => p.name;
 /// [ServerParam] for how these were derived and why they are lower bounds.
 const Map<ServerParam, ServerVersion> _paramFloor = {
   ServerParam.ignoreVPaths: ServerVersion(4, 6, 0, '4.6.0'),
-  ServerParam.genres: ServerVersion(5, 16, 0, '5.16.0'),
+  // 6.7.1, not 5.16.0: the earlier date was the word 'genres' appearing in
+  // an unrelated sqlite/rust-parser commit. It entered the random-songs
+  // SCHEMA in the same 'backend for genre filter' change as genreMode.
+  ServerParam.genres: ServerVersion(6, 7, 1, '6.7.1'),
   ServerParam.genreMode: ServerVersion(6, 7, 1, '6.7.1'),
   ServerParam.bpmRanges: ServerVersion(6, 7, 1, '6.7.1'),
   ServerParam.bpmRangesWide: ServerVersion(6, 7, 1, '6.7.1'),
@@ -196,3 +199,20 @@ bool paramKnownUnsupported(ServerVersion? v, ServerParam p) {
   final floor = _paramFloor[p];
   return floor != null && v < floor;
 }
+
+/// The Auto DJ continuity/filter block — BPM continuity, harmonic mixing and
+/// the genre filter — all arrived together in 6.7.1. True when the server is
+/// KNOWN to predate them, which is the cue to hide those controls rather than
+/// let them claim to work.
+///
+/// False for a fork or an unknown version: neither can be compared, so neither
+/// is known to be too old, and hiding a control a server might well support
+/// would be worse than offering it and learning from a rejection.
+bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.bpmRanges);
+
+/// Sonic similarity needs 6.15.2. Separate from the block above because it
+/// landed two months later — a 6.7.1..6.14 server has the filters but not
+/// this, which is the band where the switch is shown but disabled.
+bool sonicKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.similarTo);

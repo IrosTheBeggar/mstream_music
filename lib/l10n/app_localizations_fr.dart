@@ -2015,4 +2015,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'Ce serveur est en version $version. Certaines fonctions nécessitent 5.5 ou plus récent et seront indisponibles.';
   }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'La continuité BPM, le mixage harmonique et le filtre de genres nécessitent un serveur plus récent. Mets à jour pour en profiter.';
+
+  @override
+  String get autoDjSonicNeedsNewerServer =>
+      'Nécessite un serveur 6.15.2 ou plus récent';
 }

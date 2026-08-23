@@ -494,5 +494,7 @@
   "serverVersionUnknown": "Version du serveur inconnue",
   "serverUpdateUrgent": "Mets à jour ton serveur",
   "serverUpdateAvailable": "Mise à jour du serveur disponible",
-  "serverTooOldWarning": "Ce serveur est en version {version}. Certaines fonctions nécessitent 5.5 ou plus récent et seront indisponibles."
+  "serverTooOldWarning": "Ce serveur est en version {version}. Certaines fonctions nécessitent 5.5 ou plus récent et seront indisponibles.",
+  "autoDjNeedsNewerServer": "La continuité BPM, le mixage harmonique et le filtre de genres nécessitent un serveur plus récent. Mets à jour pour en profiter.",
+  "autoDjSonicNeedsNewerServer": "Nécessite un serveur 6.15.2 ou plus récent"
 }

@@ -494,5 +494,7 @@
   "serverVersionUnknown": "サーバーのバージョン不明",
   "serverUpdateUrgent": "サーバーを更新してください",
   "serverUpdateAvailable": "サーバーの更新があります",
-  "serverTooOldWarning": "このサーバーはバージョン {version} です。一部の機能には 5.5 以降が必要で、利用できません。"
+  "serverTooOldWarning": "このサーバーはバージョン {version} です。一部の機能には 5.5 以降が必要で、利用できません。",
+  "autoDjNeedsNewerServer": "BPM 連続性、ハーモニックミックス、ジャンルフィルターには新しいサーバーが必要です。更新すると利用できます。",
+  "autoDjSonicNeedsNewerServer": "サーバー 6.15.2 以降が必要です"
 }

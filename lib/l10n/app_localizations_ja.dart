@@ -1932,4 +1932,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return 'このサーバーはバージョン $version です。一部の機能には 5.5 以降が必要で、利用できません。';
   }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'BPM 連続性、ハーモニックミックス、ジャンルフィルターには新しいサーバーが必要です。更新すると利用できます。';
+
+  @override
+  String get autoDjSonicNeedsNewerServer => 'サーバー 6.15.2 以降が必要です';
 }

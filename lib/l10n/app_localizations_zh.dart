@@ -1891,4 +1891,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String serverTooOldWarning(String version) {
     return '此服务器版本为 $version。部分功能需要 5.5 或更高版本，将不可用。';
   }
+
+  @override
+  String get autoDjNeedsNewerServer => 'BPM 连贯性、和声混音和流派筛选需要更新的服务器版本。更新后即可使用。';
+
+  @override
+  String get autoDjSonicNeedsNewerServer => '需要服务器 6.15.2 或更高版本';
 }

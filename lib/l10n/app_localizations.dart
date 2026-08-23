@@ -3503,6 +3503,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This server is version {version}. Some features need 5.5 or newer and will be unavailable.'**
   String serverTooOldWarning(String version);
+
+  /// Auto DJ server-version gating notes
+  ///
+  /// In en, this message translates to:
+  /// **'BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.'**
+  String get autoDjNeedsNewerServer;
+
+  /// Auto DJ server-version gating notes
+  ///
+  /// In en, this message translates to:
+  /// **'Needs server 6.15.2 or newer'**
+  String get autoDjSonicNeedsNewerServer;
 }
 
 class _AppLocalizationsDelegate

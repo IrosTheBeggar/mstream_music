@@ -1624,5 +1624,13 @@
         "type": "String"
       }
     }
+  },
+  "autoDjNeedsNewerServer": "BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.",
+  "@autoDjNeedsNewerServer": {
+    "description": "Auto DJ server-version gating notes"
+  },
+  "autoDjSonicNeedsNewerServer": "Needs server 6.15.2 or newer",
+  "@autoDjSonicNeedsNewerServer": {
+    "description": "Auto DJ server-version gating notes"
   }
 }
