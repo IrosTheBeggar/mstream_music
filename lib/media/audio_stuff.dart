@@ -236,7 +236,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       // No-op unless the setting is on; DownloadManager dedupes (in-flight,
       // once-per-session, already-on-disk). Lives here — not main.dart — so
       // headless sessions (Android Auto + Auto-DJ top-ups) sweep too.
-      unawaited(DownloadManager().autoDownloadQueue(items));
+      //
+      // Skipped mid-restore. restoreQueue publishes the queue BEFORE the load
+      // parks the spot, so at this instant the window centres on the fresh
+      // player's index 0. On a deep restore (saved at track 50, cap 10) that
+      // fetches tracks 1-10, and by the time they land the window has moved to
+      // 50 and evicts every one of them — a full cap's worth of cellular data
+      // spent on files deleted on arrival. The restore's own load fires this
+      // again from the currentIndex listener once the spot is real.
+      if (!_restoring) unawaited(DownloadManager().autoDownloadQueue(items));
     });
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
@@ -1398,6 +1406,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (which abort each other → "Loading interrupted", losing the restore).
     await _initialized.future;
     _intentionalStop = false;
+    // Set BEFORE the queue is published, not inside the chained closure. The
+    // publish is what wakes the queue listener and the now-playing derivation,
+    // and at that instant the fresh player still reads index 0 — so the flag
+    // has to already be up. It also closes the window a busy _switchChain
+    // would otherwise open between the publish and the load. Cleared in the
+    // closure's finally, which always runs: every link of the chain ends in a
+    // catchError, so the chain always completes.
+    _restoring = true;
     queue.add(items.toList());
     // Serialized on _switchChain: the re-seed paths (reload-on-play, tunnel
     // heal) chain their loads there, and an un-serialized restore load racing
@@ -1405,38 +1421,39 @@ class AudioPlayerHandler extends BaseAudioHandler
     // interrupted"), losing the saved spot.
     final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
-      _restoring = true;
       try {
+        try {
         // No play call after it: the restore deliberately opens PAUSED at the
         // saved spot rather than blasting audio on launch.
-        await _loadAtSpot(_backend, items, (index: i, position: position));
-      } catch (e) {
-        // A dead-server cold start (offline, stale tunnel loopback) makes the
-        // load throw AFTER the queue is published. _loadAtSpot has parked the
-        // spot, so the revive paths re-seed THERE (not at track 1) and the
-        // next snapshot save doesn't persist the loss. Swallowed rather than
-        // rethrown because repeat/shuffle below are player-level flags that
-        // still apply without sources.
-        appLog('[queue] restore load failed: $e');
-      }
-      try {
-        _repeatMode = repeat;
-        // Guarded the same way setShuffleMode/setRepeatMode guard these very
-        // calls: the backend can reject them outright when nothing is loaded
-        // (a cold headless bind), which is precisely the state a failed
-        // restore load leaves behind. Unguarded, the throw escapes the
-        // closure and skips restoreQueue's closing emit/broadcast — and since
-        // every broadcast during the load was suppressed, playbackState keeps
-        // its boot queueIndex of null, so the next snapshot save persists
-        // index 0 and the following launch opens on track 1 at 0:00. The
-        // exact loss this series exists to prevent.
-        await _backend.setRepeat(_backendRepeat(repeat));
-        if (shuffle) await _backend.setShuffleEnabled(true);
-      } catch (e) {
-        appLog('[queue] restore repeat/shuffle failed: $e');
+          await _loadAtSpot(_backend, items, (index: i, position: position));
+        } catch (e) {
+          // A dead-server cold start (offline, stale tunnel loopback) makes
+          // the load throw AFTER the queue is published. _loadAtSpot has
+          // parked the spot, so the revive paths re-seed THERE (not at
+          // track 1) and the next snapshot save doesn't persist the loss.
+          // Swallowed rather than rethrown because repeat/shuffle below are
+          // player-level flags that still apply without sources.
+          appLog('[queue] restore load failed: $e');
+        }
+        try {
+          _repeatMode = repeat;
+          // Guarded the same way setShuffleMode/setRepeatMode guard these
+          // very calls: the backend can reject them outright when nothing is
+          // loaded (a cold headless bind), which is precisely the state a
+          // failed restore load leaves behind. Unguarded, the throw escapes
+          // the closure and skips restoreQueue's closing emit/broadcast — and
+          // since every broadcast during the load was suppressed,
+          // playbackState keeps its boot queueIndex of null, so the next
+          // snapshot save persists index 0 and the following launch opens on
+          // track 1 at 0:00. The exact loss this series exists to prevent.
+          await _backend.setRepeat(_backendRepeat(repeat));
+          if (shuffle) await _backend.setShuffleEnabled(true);
+        } catch (e) {
+          appLog('[queue] restore repeat/shuffle failed: $e');
+        }
       } finally {
-        // finally, not a plain assignment: a throw from the repeat/shuffle
-        // calls would otherwise leave this latched and suppress every
+        // finally around the WHOLE body: anything escaping either inner
+        // catch would otherwise leave this latched and suppress every
         // now-playing update for the rest of the session. Cleared before the
         // emit/broadcast at the end of restoreQueue, which publishes the REAL
         // spot.

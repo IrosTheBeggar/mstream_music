@@ -1,18 +1,11 @@
-import 'dart:io' show Platform;
-
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
-import '../screens/discover_screen.dart';
-import '../screens/visualizer_screen.dart';
 import '../singletons/media.dart';
-import '../singletons/server_list.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
-import '../visualizer/shader_visualizer_screen.dart';
 import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
@@ -58,36 +51,8 @@ class MoreActionsSheet extends StatelessWidget {
               );
             },
           ),
-          // Discover — sonic-similarity recommendations seeded by the playing
-          // track. Shown only when that track's server advertised a discovery
-          // capability on ping (older servers: hidden, never probed).
-          StreamBuilder<MediaItem?>(
-            stream: MediaManager().audioHandler.mediaItem,
-            initialData: MediaManager().audioHandler.mediaItem.valueOrNull,
-            builder: (context, snap) {
-              final extras = snap.data?.extras;
-              final server =
-                  ServerManager().byLocalname(extras?['server'] as String?);
-              final available = extras?['path'] is String &&
-                  server != null &&
-                  (server.discoveryAvailable == true ||
-                      server.discoveryP2pAvailable == true ||
-                      server.federationDiscoveryAvailable == true);
-              if (!available) return const SizedBox.shrink();
-              return ListTile(
-                leading:
-                    Icon(Icons.explore, color: VelvetColors.textSecondary),
-                title: Text(l.discoverTitle,
-                    style: TextStyle(color: VelvetColors.textPrimary)),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(parentContext).push(
-                    MaterialPageRoute(builder: (_) => const DiscoverScreen()),
-                  );
-                },
-              );
-            },
-          ),
+          // Discover is deliberately absent: the collapsible bar under the
+          // queue is its home, and it sits a few pixels from this button.
           // Sleep timer — opens the timer picker.
           StreamBuilder<Duration?>(
             stream: SleepTimerManager().remainingStream,
@@ -117,24 +82,8 @@ class MoreActionsSheet extends StatelessWidget {
               );
             },
           ),
-          // Visualizer.
-          ListTile(
-            leading:
-                Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
-            title: Text(l.visualizerTitle,
-                style: TextStyle(color: VelvetColors.textPrimary)),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(parentContext).push(
-                MaterialPageRoute(
-                    // iOS has no native visualizer host; it gets the
-                    // pure-Flutter shader engine (same module as desktop).
-                    builder: (_) => Platform.isAndroid
-                        ? VisualizerScreen()
-                        : const ShaderVisualizerScreen()),
-              );
-            },
-          ),
+          // Visualizer is deliberately absent too: the mini player carries
+          // it, one tap away without opening this sheet at all.
           // Download queue — save every downloadable track to the device.
           ListTile(
             leading: Icon(Icons.download_for_offline,
