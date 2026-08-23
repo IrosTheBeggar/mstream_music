@@ -7,32 +7,46 @@
 /// same set, so an unknown version needs no separate handling anywhere.
 library;
 
-/// A parsed `major.minor.patch`. Extra components and any pre-release suffix
-/// are ignored — mStream forks tag things like `6.4.2-velvet`, and the fork
-/// still answers for the features of its base version.
+/// A parsed `major.minor.patch`, plus whether the build is upstream mStream.
+///
+/// A suffix is NOT cosmetic. The velvet fork numbers its releases on its own
+/// line — velvet 6.14.7 shipped 2026-05-02, ten days BEFORE upstream 6.7.1 —
+/// so comparing a fork's number against upstream milestones is meaningless in
+/// both directions. [isUpstream] is false for anything carrying a suffix, and
+/// the feature table refuses to answer for those: they fall through to
+/// probing, which asks the server itself instead of guessing from a number.
 class ServerVersion implements Comparable<ServerVersion> {
   final int major;
   final int minor;
   final int patch;
 
-  /// The string exactly as the server reported it, for display. A fork's
-  /// suffix is preserved here even though it is ignored for comparison.
+  /// The string exactly as the server reported it, for display.
   final String raw;
 
-  const ServerVersion(this.major, this.minor, this.patch, this.raw);
+  /// False when [raw] carried a `-suffix` — a fork or pre-release, whose
+  /// numbering cannot be compared against upstream milestones.
+  final bool isUpstream;
+
+  const ServerVersion(this.major, this.minor, this.patch, this.raw,
+      {this.isUpstream = true});
 
   /// Null when [raw] carries no leading `major.minor` — an empty body, an HTML
   /// error page, or a shape this parser was never told about. Callers treat
   /// null the same as a 404: below the floor.
   static ServerVersion? tryParse(String? raw) {
     if (raw == null) return null;
-    final m = RegExp(r'^\s*v?(\d+)\.(\d+)(?:\.(\d+))?').firstMatch(raw);
+    final t = raw.trim();
+    final m = RegExp(r'^v?(\d+)\.(\d+)(?:\.(\d+))?(.*)$').firstMatch(t);
     if (m == null) return null;
+    // Anything trailing the numbers — `-velvet`, `-rc1`, `-beta` — marks a
+    // build whose numbering is not upstream's.
+    final tail = (m.group(4) ?? '').trim();
     return ServerVersion(
       int.parse(m.group(1)!),
       int.parse(m.group(2)!),
       int.tryParse(m.group(3) ?? '0') ?? 0,
-      raw.trim(),
+      t,
+      isUpstream: tail.isEmpty,
     );
   }
 
@@ -97,3 +111,88 @@ UpdateBand updateBandFor(ServerVersion? v) {
 /// True when the server is older than this app supports — the add-server
 /// warning, and the reason a null version is not treated as "probably fine".
 bool isBelowSupportFloor(ServerVersion? v) => v == null || v < supportFloor;
+
+
+// ---------------------------------------------------------------------------
+// Feature table
+// ---------------------------------------------------------------------------
+
+/// Request parameters the app sends that older servers reject outright.
+///
+/// mStream validates request bodies with Joi and no `allowUnknown`, so an
+/// unrecognised key is a hard 400 — verified against 6.22:
+/// `{"error":"\"totallyMadeUpParam\" is not allowed"}`. That is what makes a
+/// version table worth having at all: the cost of guessing wrong is a failed
+/// request, not a silently ignored field.
+///
+/// Dates come from the first commit on mStream's **master** that introduced
+/// each key under `src/`. Restricting to master matters — searching all refs
+/// picks up the velvet fork's independent numbering and dates things years
+/// wrong. The version recorded is the one in package.json at that commit, i.e.
+/// the release then in development, so the true floor is that release or the
+/// next one; treat these as lower bounds.
+///
+/// This table is an OPTIMISATION, not the source of truth. It exists to avoid
+/// a wasted round trip against a server we can already tell is too old. The
+/// authority is [ServerCapabilities], which learns from the server's own
+/// rejection — so an entry being slightly wrong costs one 400, not a broken
+/// feature.
+enum ServerParam {
+  /// random-songs: exclude whole vpaths.
+  ignoreVPaths,
+
+  /// random-songs: genre whitelist/blacklist values.
+  genres,
+
+  /// random-songs: which way `genres` applies.
+  genreMode,
+
+  /// random-songs: BPM-continuity windows and their relaxation step.
+  bpmRanges,
+  bpmRangesWide,
+  requireBpm,
+
+  /// random-songs: harmonic-mixing Camelot codes.
+  musicalKeys,
+  requireMusicalKey,
+
+  /// random-songs: artist cooldown.
+  ignoreArtists,
+
+  /// random-songs: sonic-similarity constraint. Also ping-flagged via
+  /// `discovery`, so the flag is consulted first and this is the backstop.
+  similarTo,
+  minSimilarity,
+}
+
+/// Wire name for [p] — what actually goes in the JSON body, and what the
+/// server names back at us in a rejection.
+String paramWireName(ServerParam p) => p.name;
+
+/// Lowest upstream version known to accept each parameter. See the doc on
+/// [ServerParam] for how these were derived and why they are lower bounds.
+const Map<ServerParam, ServerVersion> _paramFloor = {
+  ServerParam.ignoreVPaths: ServerVersion(4, 6, 0, '4.6.0'),
+  ServerParam.genres: ServerVersion(5, 16, 0, '5.16.0'),
+  ServerParam.genreMode: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.bpmRanges: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.bpmRangesWide: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.requireBpm: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.musicalKeys: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.requireMusicalKey: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.ignoreArtists: ServerVersion(6, 7, 1, '6.7.1'),
+  ServerParam.similarTo: ServerVersion(6, 15, 2, '6.15.2'),
+  ServerParam.minSimilarity: ServerVersion(6, 15, 2, '6.15.2'),
+};
+
+/// Whether [v] is known to be too old for [p].
+///
+/// False for an unknown version and false for a fork: neither can be compared,
+/// so neither is *known* to be too old. Both then fall through to sending the
+/// parameter and learning from the answer — which is the correct order, since
+/// a fork may well support something upstream added later, or vice versa.
+bool paramKnownUnsupported(ServerVersion? v, ServerParam p) {
+  if (v == null || !v.isUpstream) return false;
+  final floor = _paramFloor[p];
+  return floor != null && v < floor;
+}

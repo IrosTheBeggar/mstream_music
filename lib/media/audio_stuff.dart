@@ -28,6 +28,7 @@ import '../singletons/downloads.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
+import '../singletons/server_capabilities.dart';
 import '../singletons/server_list.dart';
 import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
@@ -2498,14 +2499,44 @@ class AudioPlayerHandler extends BaseAudioHandler
         // a Shuffle All started from Android Auto, which awaits this) can't hang
         // forever; the catch below treats the TimeoutException as a network
         // error and bails silently.
-        final res = await http.post(
+        // Drop anything this server is known not to accept before sending.
+        // mStream validates with Joi and no allowUnknown, so one unrecognised
+        // key 400s the WHOLE request — a single new parameter would otherwise
+        // take Auto DJ out entirely on an older server.
+        final filtered =
+            ServerCapabilities().filter(autoDJServer!, payload);
+        if (filtered.dropped.isNotEmpty) {
+          appLog('[dj] dropped for this server: '
+              '${filtered.dropped.join(", ")}');
+        }
+        var res = await http.post(
           autoDJServer!.apiUri('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
             'x-access-token': autoDJServer?.jwt ?? '',
           },
-          body: jsonEncode(payload),
+          body: jsonEncode(filtered.body),
         ).timeout(const Duration(seconds: 15));
+        // A rejection names the offending key, so learn it and go again
+        // without it. Bounded by the payload size and terminating by
+        // construction: every pass removes one key permanently for this
+        // session, so it cannot loop. Only "is not allowed" retries — an auth
+        // failure or a bad value returns null and falls through to the normal
+        // error handling below, because resending a smaller body there would
+        // fail again with less information.
+        while (res.statusCode == 400 &&
+            ServerCapabilities().noteRejection(autoDJServer!, res.body) !=
+                null) {
+          final retry = ServerCapabilities().filter(autoDJServer!, payload);
+          res = await http.post(
+            autoDJServer!.apiUri('/api/v1/db/random-songs'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': autoDJServer?.jwt ?? '',
+            },
+            body: jsonEncode(retry.body),
+          ).timeout(const Duration(seconds: 15));
+        }
         if (res.statusCode > 299) {
           appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
           // Sonic mode fails LOUD by the server's contract: the pool is a
