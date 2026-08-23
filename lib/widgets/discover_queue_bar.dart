@@ -159,7 +159,11 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
           _rows = r.data!.results.map((t) {
             final row = DisplayItem(server, t.filepath, 'file',
                 '/${t.filepath}', null, null);
+            // Lite metadata (server-side toLiteMetadata), so flag it partial and
+            // let the queue path fetch the full block — see _rowsFor in
+            // screens/discover_screen.dart for why.
             row.metadata = t.metadata;
+            row.partialMetadata = true;
             return row;
           }).toList();
         }

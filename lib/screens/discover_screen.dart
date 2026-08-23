@@ -259,7 +259,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return tracks.map((t) {
       final row = DisplayItem(server, t.filepath, 'file', '/${t.filepath}',
           Icon(Icons.music_note, color: VelvetColors.accent), null);
+      // Lite metadata, like a search hit: the /discovery routes render
+      // their results through the server's toLiteMetadata, which drops the
+      // fidelity / identity / stats fields Song Info shows. Flagging it
+      // partial is what makes buildServerFileMediaItem fetch the full block
+      // before queueing — without it a track queued from Discover kept the
+      // lite block for good, while the same track queued from search did
+      // not. One prefill request now covers the whole list.
       row.metadata = t.metadata;
+      row.partialMetadata = true;
       return row;
     }).toList();
   }

@@ -124,7 +124,11 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
       _rows = results.map((t) {
         final row =
             DisplayItem(_server, t.filepath, 'file', '/${t.filepath}', null, null);
+        // Lite metadata (server-side toLiteMetadata), so flag it partial and
+        // let the queue path fetch the full block — see _rowsFor in
+        // screens/discover_screen.dart for why.
         row.metadata = t.metadata;
+        row.partialMetadata = true;
         return row;
       }).toList();
       // The cards show whatever the picker knew; the seed rows carry the
