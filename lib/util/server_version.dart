@@ -228,6 +228,25 @@ bool knownOlderThan(ServerVersion? v, ServerVersion floor) =>
 bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.bpmRanges);
 
+/// `POST /api/v1/db/metadata/batch` arrived at 5.11.0 — many filepaths in
+/// one request instead of one per track.
+///
+/// A floor, not a capability check: the endpoint returns the SAME object the
+/// single-track route does at every version that has it (6.11+ builds it in
+/// one query; 5.16..6.10 literally looped pullMetaData), so there is nothing
+/// to degrade — either it is there or it 404s. The batch caller treats a 404
+/// as "fall back to per-track" anyway, so this only saves a request whose
+/// answer is already known.
+///
+/// The version is the one in package.json at the introducing commit, i.e. the
+/// release then in development, so the true floor is this or the next one —
+/// which is exactly why the fallback, not this constant, is load-bearing.
+const ServerVersion metadataBatchFloor = ServerVersion(5, 11, 0, '5.11.0');
+
+/// True when the server is known to predate batched metadata.
+bool metadataBatchKnownUnsupported(ServerVersion? v) =>
+    knownOlderThan(v, metadataBatchFloor);
+
 /// `POST /api/v1/playlist/rename` arrived at 5.16.0 — the only ENDPOINT the
 /// app calls that lands above the support floor without a ping flag to
 /// advertise it. Everything else it talks to either predates 5.5 or is

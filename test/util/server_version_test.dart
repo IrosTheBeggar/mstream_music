@@ -117,4 +117,31 @@ void main() {
       expect(playlistRenameKnownUnsupported(null), isFalse);
     });
   });
+
+  group('metadataBatchKnownUnsupported', () {
+    test('below 5.11.0 the batch request is skipped', () {
+      for (final v in ['5.5.0', '5.10.9']) {
+        expect(metadataBatchKnownUnsupported(ServerVersion.tryParse(v)), isTrue,
+            reason: v);
+      }
+    });
+
+    test('5.11.0 and up batch', () {
+      for (final v in ['5.11.0', '5.16.0', '6.22.0']) {
+        expect(metadataBatchKnownUnsupported(ServerVersion.tryParse(v)),
+            isFalse, reason: v);
+      }
+    });
+
+    // A fork and an unknown version both try it. Costing one 404 that falls
+    // straight back to the per-track path is cheaper than never batching for
+    // a server that supports it — the floor is an optimisation, and the
+    // fallback is what actually has to be right.
+    test('a fork and an unknown version both try', () {
+      expect(
+          metadataBatchKnownUnsupported(ServerVersion.tryParse('5.4.2-velvet')),
+          isFalse);
+      expect(metadataBatchKnownUnsupported(null), isFalse);
+    });
+  });
 }

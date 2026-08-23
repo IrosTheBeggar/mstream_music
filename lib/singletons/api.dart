@@ -633,6 +633,61 @@ class ApiManager {
     }
   }
 
+  /// POST /api/v1/db/metadata/batch — the full metadata block for many tracks
+  /// in ONE request, keyed by the filepath as sent (leading slash stripped).
+  /// Paths the server couldn't resolve are simply absent from the map.
+  ///
+  /// The same renderer as the single-track route, on every version that has
+  /// this endpoint — 6.11+ resolves the whole list in one query, and 5.16
+  /// through 6.10 looped pullMetaData per path. So a batched fetch is never a
+  /// LITE fetch: the reduced 13-field shape belongs to search and discovery
+  /// (server-side toLiteMetadata), which is what the callers of this are
+  /// repairing in the first place.
+  ///
+  /// Best-effort like [fetchTrackMetadata] — an empty map on ANY failure,
+  /// which the caller reads as "fall back to per-track". That covers a 404
+  /// from a server below the floor, a timeout, and a body in a shape we don't
+  /// recognise, so none of those needs a branch of its own.
+  Future<Map<String, MusicMetadata>> fetchTrackMetadataBatch(
+      Server server, List<String> filepaths) async {
+    final fps = filepaths
+        .map((p) => p.startsWith('/') ? p.substring(1) : p)
+        .toSet()
+        .toList();
+    if (fps.isEmpty) return const {};
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/metadata/batch'),
+            // A bare JSON ARRAY, not an object: the route iterates req.body
+            // itself rather than reading a field off it.
+            body: jsonEncode(fps),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          // Longer than the single-track 15s because it stands in for N of
+          // them, but still bounded — the whole point of batching is that one
+          // stalled connection must not cost N timeouts, and an unbounded
+          // wait here would trade N bounded stalls for one unbounded one.
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode > 299) return const {};
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return const {};
+      final out = <String, MusicMetadata>{};
+      decoded.forEach((key, value) {
+        // Each value is the {filepath, metadata} wrapper the single-track
+        // route returns, with metadata null for a path this user cannot see.
+        final md = value is Map ? value['metadata'] : null;
+        if (md is Map) out[key.toString()] = MusicMetadata.fromServerMap(md);
+      });
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
+
   /// POST /api/v1/db/metadata — the full metadata block for a single track by its
   /// (library-prefixed) [filepath]. Used to enrich queue items built from the
   /// lightweight search endpoint, which returns only name/filepath/art. Returns
