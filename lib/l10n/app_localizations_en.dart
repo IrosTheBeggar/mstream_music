@@ -1713,6 +1713,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sonic discovery has been switched off on this server.';
 
   @override
+  String get pathScanPending =>
+      'This server hasn\'t analyzed any music yet, so there\'s nothing to build a path through. It works once the discovery scan has run.';
+
+  @override
   String get discoverNothingFound => 'No matches found.';
 
   @override

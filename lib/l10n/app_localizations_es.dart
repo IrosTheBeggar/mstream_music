@@ -1730,6 +1730,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'El descubrimiento se ha desactivado en este servidor.';
 
   @override
+  String get pathScanPending =>
+      'Este servidor todavía no ha analizado ninguna música, así que no hay nada por lo que trazar un recorrido. Funcionará cuando el análisis de descubrimiento se haya ejecutado.';
+
+  @override
   String get discoverNothingFound => 'No se encontraron coincidencias.';
 
   @override

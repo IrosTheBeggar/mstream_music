@@ -1667,6 +1667,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverTurnedOff => 'このサーバーではディスカバリーが無効になっています。';
 
   @override
+  String get pathScanPending =>
+      'このサーバーはまだ音楽を解析していないため、経路を作るための曲がありません。ディスカバリースキャンが実行されると利用できます。';
+
+  @override
   String get discoverNothingFound => '一致する曲が見つかりませんでした。';
 
   @override

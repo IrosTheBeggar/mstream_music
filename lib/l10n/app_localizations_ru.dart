@@ -1751,6 +1751,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Подбор по звучанию отключён на этом сервере.';
 
   @override
+  String get pathScanPending =>
+      'На этом сервере музыка ещё не проанализирована, поэтому прокладывать путь не по чему. Заработает после сканирования.';
+
+  @override
   String get discoverNothingFound => 'Совпадений не найдено.';
 
   @override

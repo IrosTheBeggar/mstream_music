@@ -1732,6 +1732,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Discovery wurde auf diesem Server deaktiviert.';
 
   @override
+  String get pathScanPending =>
+      'Dieser Server hat noch keine Musik analysiert, daher gibt es nichts, wodurch ein Pfad führen könnte. Es funktioniert, sobald der Discovery-Scan gelaufen ist.';
+
+  @override
   String get discoverNothingFound => 'Keine Treffer gefunden.';
 
   @override

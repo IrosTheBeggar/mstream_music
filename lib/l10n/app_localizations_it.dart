@@ -1731,6 +1731,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'La scoperta è stata disattivata su questo server.';
 
   @override
+  String get pathScanPending =>
+      'Questo server non ha ancora analizzato alcuna musica, quindi non c\'è nulla attraverso cui costruire un percorso. Funzionerà quando la scansione di scoperta sarà stata eseguita.';
+
+  @override
   String get discoverNothingFound => 'Nessuna corrispondenza trovata.';
 
   @override

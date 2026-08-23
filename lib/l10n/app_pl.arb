@@ -407,6 +407,7 @@
   "discoverScanPendingBody": "Na tym serwerze odkrywanie jest włączone, ale nie przeanalizowano jeszcze żadnej muzyki. Podobne utwory pojawią się, gdy skan odkrywania zostanie wykonany.",
   "discoverCheckAgain": "Sprawdź ponownie",
   "discoverTurnedOff": "Odkrywanie zostało wyłączone na tym serwerze.",
+  "pathScanPending": "Ten serwer nie przeanalizował jeszcze żadnej muzyki, więc nie ma przez co poprowadzić ścieżki. Zadziała, gdy skan odkrywania zostanie wykonany.",
   "discoverNothingFound": "Nie znaleziono dopasowań.",
   "discoverNoSeed": "Odtwórz utwór, aby odkryć podobną muzykę.",
   "discoverLeadCopied": "Skopiowano — idź i znajdź!",

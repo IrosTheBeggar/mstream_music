@@ -407,6 +407,7 @@
   "discoverScanPendingBody": "このサーバーではディスカバリーが有効ですが、まだ音楽が解析されていません。ディスカバリースキャンが実行されると、似ている曲が表示されます。",
   "discoverCheckAgain": "再確認",
   "discoverTurnedOff": "このサーバーではディスカバリーが無効になっています。",
+  "pathScanPending": "このサーバーはまだ音楽を解析していないため、経路を作るための曲がありません。ディスカバリースキャンが実行されると利用できます。",
   "discoverNothingFound": "一致する曲が見つかりませんでした。",
   "discoverNoSeed": "曲を再生すると、似ている音楽を発見できます。",
   "discoverLeadCopied": "コピーしました — 探してみましょう！",

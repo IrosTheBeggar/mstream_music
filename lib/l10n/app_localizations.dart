@@ -3006,6 +3006,12 @@ abstract class AppLocalizations {
   /// **'Sonic discovery has been switched off on this server.'**
   String get discoverTurnedOff;
 
+  /// Sonic path build failed with a 403 and a re-ping confirmed discovery is still enabled: the server has no index yet.
+  ///
+  /// In en, this message translates to:
+  /// **'This server hasn\'t analyzed any music yet, so there\'s nothing to build a path through. It works once the discovery scan has run.'**
+  String get pathScanPending;
+
   /// Empty state for a Discover section that returned no results.
   ///
   /// In en, this message translates to:

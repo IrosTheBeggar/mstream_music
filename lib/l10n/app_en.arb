@@ -1268,6 +1268,10 @@
   "@discoverTurnedOff": {
     "description": "Shown when a re-check reveals discovery was switched off server-side while the screen was open."
   },
+  "pathScanPending": "This server hasn't analyzed any music yet, so there's nothing to build a path through. It works once the discovery scan has run.",
+  "@pathScanPending": {
+    "description": "Sonic path build failed with a 403 and a re-ping confirmed discovery is still enabled: the server has no index yet."
+  },
   "discoverNothingFound": "No matches found.",
   "@discoverNothingFound": {
     "description": "Empty state for a Discover section that returned no results."

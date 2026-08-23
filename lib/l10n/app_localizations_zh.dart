@@ -1634,6 +1634,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverTurnedOff => '此服务器已关闭发现功能。';
 
   @override
+  String get pathScanPending => '此服务器尚未分析任何音乐，因此没有可用于构建路径的曲目。发现扫描完成后即可使用。';
+
+  @override
   String get discoverNothingFound => '未找到匹配项。';
 
   @override

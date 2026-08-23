@@ -1747,6 +1747,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Odkrywanie zostało wyłączone na tym serwerze.';
 
   @override
+  String get pathScanPending =>
+      'Ten serwer nie przeanalizował jeszcze żadnej muzyki, więc nie ma przez co poprowadzić ścieżki. Zadziała, gdy skan odkrywania zostanie wykonany.';
+
+  @override
   String get discoverNothingFound => 'Nie znaleziono dopasowań.';
 
   @override

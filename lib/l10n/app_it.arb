@@ -407,6 +407,7 @@
   "discoverScanPendingBody": "Su questo server la scoperta è attiva, ma non è ancora stata analizzata alcuna musica. I brani simili appariranno quando la scansione di scoperta sarà stata eseguita.",
   "discoverCheckAgain": "Controlla di nuovo",
   "discoverTurnedOff": "La scoperta è stata disattivata su questo server.",
+  "pathScanPending": "Questo server non ha ancora analizzato alcuna musica, quindi non c'è nulla attraverso cui costruire un percorso. Funzionerà quando la scansione di scoperta sarà stata eseguita.",
   "discoverNothingFound": "Nessuna corrispondenza trovata.",
   "discoverNoSeed": "Riproduci un brano per scoprire musica simile.",
   "discoverLeadCopied": "Copiato — vai a cercarlo!",

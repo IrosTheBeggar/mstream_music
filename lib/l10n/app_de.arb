@@ -407,6 +407,7 @@
   "discoverScanPendingBody": "Auf diesem Server ist Discovery aktiviert, es wurde aber noch keine Musik analysiert. Ähnliche Titel erscheinen, sobald der Discovery-Scan gelaufen ist.",
   "discoverCheckAgain": "Erneut prüfen",
   "discoverTurnedOff": "Discovery wurde auf diesem Server deaktiviert.",
+  "pathScanPending": "Dieser Server hat noch keine Musik analysiert, daher gibt es nichts, wodurch ein Pfad führen könnte. Es funktioniert, sobald der Discovery-Scan gelaufen ist.",
   "discoverNothingFound": "Keine Treffer gefunden.",
   "discoverNoSeed": "Spiele einen Titel ab, um ähnliche Musik zu entdecken.",
   "discoverLeadCopied": "Kopiert — viel Erfolg beim Suchen!",
