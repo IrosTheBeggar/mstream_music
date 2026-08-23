@@ -149,17 +149,36 @@ class AudioPlayerHandler extends BaseAudioHandler
     // a permanent one — which pauses playback and never auto-resumes. Declaring
     // music attributes makes focus/duck/resume behave deterministically.
     //
-    // We deliberately do NOT add becomingNoisy / interruption *handlers* here:
-    // just_audio already wires those up internally (handleInterruptions
-    // defaults to true) and auto-pauses/resumes. A second handler would
-    // double-fire and fight it. The listener below is logging-only (read-only),
-    // so a "stopped after a call and never came back" report is diagnosable.
+    // We deliberately do NOT add an interruption *handler* here: just_audio
+    // wires that up internally (handleInterruptions defaults to true) and
+    // auto-pauses/resumes around calls and nav prompts. A second handler would
+    // double-fire and fight its resume. That listener stays logging-only, so a
+    // "stopped after a call and never came back" report is diagnosable.
+    //
+    // Becoming-noisy is the exception, and it needs US. just_audio subscribes
+    // to it too, but calls pause() on the PLAYER — which never reaches this
+    // handler's pause() and so never clears _playIntent. The player stops while
+    // the handler still believes playback is wanted, and every revive path here
+    // ends with `if (_playIntent) play()`. Getting out of a car is exactly when
+    // those fire (network change, tunnel re-bind, re-seed), so the music came
+    // back a minute later on the phone's own speaker. Routing through pause()
+    // records the intent, which is what actually makes it stay stopped. The
+    // duplicate pause underneath is harmless — both want the same thing.
     try {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
       session.interruptionEventStream.listen((event) {
         appLog('[audio] interruption '
             '${event.begin ? 'begin' : 'end'} type=${event.type}');
+      });
+      session.becomingNoisyEventStream.listen((_) {
+        // Local playback only. On a cast the audio is coming out of the
+        // renderer, not this phone — unplugging the phone's headphones or
+        // walking away from its car stereo says nothing about the TV that is
+        // actually playing.
+        if (!identical(_backend, _localBackend)) return;
+        appLog('[audio] output disconnected — pausing');
+        unawaited(pause());
       });
     } catch (e) {
       appLog('[audio] audio session configure failed: $e');
