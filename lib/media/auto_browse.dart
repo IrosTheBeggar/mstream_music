@@ -33,6 +33,7 @@ import '../objects/server.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
+import '../singletons/server_capabilities.dart';
 import '../singletons/server_list.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
@@ -940,7 +941,12 @@ class AutoApi {
         List<DisplayItem> albums,
         List<DisplayItem> titles,
       })> search(Server s, String query) async {
-    final res = await _call(s, '/api/v1/db/search', body: {
+    // Pre-filtered, like the app's own search. `noLyrics` is 6.13.1+ and
+    // db/search validates with Joi and no allowUnknown, so sending it to an
+    // older server is a hard 400 — which would take out car search entirely,
+    // voice included, rather than degrading it. This is the one send site
+    // that was still going out blind.
+    final body = ServerCapabilities().filter(s, {
       'search': query,
       'noArtists': false,
       'noAlbums': false,
@@ -950,7 +956,8 @@ class AutoApi {
       // this parser ignores the `lyrics` array anyway — opt out so the server
       // skips the lyric FTS work.
       'noLyrics': true,
-    });
+    }).body;
+    final res = await _call(s, '/api/v1/db/search', body: body);
     final artists = <DisplayItem>[];
     for (final e in (res['artists'] as List? ?? const [])) {
       final name = e['name']?.toString();

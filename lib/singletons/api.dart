@@ -794,14 +794,21 @@ class ApiManager {
       final response = await http
           .post(
             server.apiUri('/api/v1/db/search'),
-            body: jsonEncode({
+            // Pre-filtered for the same reason as [searchServer]: an
+            // older server rejects `noLyrics` outright, and this method
+            // swallows errors, so a blind send would turn every query in the
+            // picker into "no results". Only reachable from sonic-path
+            // surfaces today (6.18.1+, well past noLyrics), but the picker
+            // shouldn't carry a version assumption its callers happen to
+            // satisfy.
+            body: jsonEncode(ServerCapabilities().filter(server, {
               'search': search,
               'noArtists': true,
               'noAlbums': true,
               'noTitles': false,
               'noFiles': true,
               'noLyrics': true,
-            }),
+            }).body),
             headers: {
               'Content-Type': 'application/json',
               'x-access-token': server.jwt ?? '',
