@@ -2599,11 +2599,43 @@ class AudioPlayerHandler extends BaseAudioHandler
                     'yet, so it is playing without sonic similarity.');
               }
             } else if (lower.contains('discovery is disabled')) {
-              // The capability vanished since the last ping. Silent by
-              // design — the user switched it off server-side, so being told
-              // about it is noise — but it must degrade rather than stall,
-              // which is what this branch used to do.
-              degraded = 'discovery switched off server-side';
+              // requireIndex() answers this for BOTH "the feature is off in
+              // config" and "it is on but there is no index yet" — the same
+              // status on purpose, so an anonymous prober cannot tell
+              // configuration from failure. The ping separates them for us:
+              // it carries the CONFIG flag and this route carries the DATA,
+              // and asking it is something an authenticated client is
+              // entitled to do.
+              //
+              // Off in config → silent, as before. The user switched it off
+              // themselves; being told about their own decision is noise.
+              //
+              // On in config → the scan has not produced anything yet. That
+              // user made no decision and has no way to connect "Auto DJ
+              // sounds like shuffle" to a scan they may not know exists —
+              // and since sonic similarity is on by default, this is the
+              // out-of-the-box experience on an unscanned library, not an
+              // edge case. It gets the same one-per-session explanation as
+              // its two siblings above.
+              //
+              // Reads the cached flag rather than re-pinging: the other
+              // surfaces that face this 403 (the Discover panel, its bar,
+              // sonic path) probe first, but they are screens with a user
+              // waiting on an answer. This runs inside a pick, where the
+              // music must continue either way. The flag is refreshed on
+              // launch and on resume, so going stale needs the server to
+              // change while the app is running and playing — and in that
+              // case the user is the one who changed it.
+              final unscanned = autoDJServer!.discoveryAvailable == true;
+              degraded = unscanned
+                  ? 'discovery enabled but nothing analyzed yet'
+                  : 'discovery switched off server-side';
+              if (unscanned && !_sonicWarned) {
+                _sonicWarned = true;
+                _showPlaybackErrorToast(
+                    "Auto DJ: this server hasn't analyzed any music yet, so "
+                    'it is playing without sonic similarity.');
+              }
             }
             if (degraded != null) {
               ServerCapabilities()
