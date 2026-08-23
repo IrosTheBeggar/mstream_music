@@ -61,6 +61,7 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   // refused; only the explicit re-check below clears it.
   bool _disabled = false;
   bool _rechecking = false;
+  bool _probed = false;
 
   Server? _seedServer;
   String? _seedPath;
@@ -154,6 +155,19 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
         _loading = false;
         if (r.disabled) {
           _disabled = true;
+          // Decide WHY before the panel says why — a 403 nearly always means
+          // the feature was switched off since our last ping, not that the
+          // scan is pending (discovery.db exists whenever the flag is on, so
+          // an unscanned library answers 200 + notAnalyzed instead). If the
+          // re-ping clears the flag, `visible` goes false and the bar stands
+          // down; if it survives, the scan-pending body is correct. Same
+          // reasoning as _probeAfterRefusal in screens/discover_screen.dart.
+          if (!_probed) {
+            _probed = true;
+            unawaited(ServerManager().getServerPaths(server).then((_) {
+              if (mounted) setState(() {});
+            }));
+          }
         } else if (r.data != null) {
           _tracks = r.data;
           _rows = r.data!.results.map((t) {

@@ -101,6 +101,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   // Re-checking whether the discovery scan has produced anything yet.
   bool _rechecking = false;
 
+  // One automatic probe per screen after a 403 — see _probeAfterRefusal.
+  bool _probed = false;
+
   @override
   void initState() {
     super.initState();
@@ -180,6 +183,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _tracksLoading = false;
             if (r.disabled) {
               _tracksDisabled = true;
+              _probeAfterRefusal();
             } else if (r.data != null) {
               _tracks = r.data;
               _trackRows = _rowsFor(seedServer, r.data!.results);
@@ -396,6 +400,33 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   /// or a random song in the no-seed state), REPLACES the queue — standard
   /// "start radio" semantics, and the subtitle says so — and hands off to
   /// the player.
+  /// Settle WHY the route refused, without waiting for the user to ask.
+  ///
+  /// Measured against a live server rather than assumed: with
+  /// collectDiscoveryData on, discovery.db is created at boot AND by the admin
+  /// toggle (which calls initDiscoveryDb immediately), so getIndex() is never
+  /// null and the "enabled but no index" 403 does not occur in normal
+  /// operation. A library the scan hasn't reached answers 200 with
+  /// notAnalyzed instead — which the sections below already handle.
+  ///
+  /// So a 403 reaching us almost always means the feature was switched OFF
+  /// since our last ping, and the card would otherwise open by blaming a scan
+  /// that isn't the problem. One re-ping decides it: the flag flips false, the
+  /// card stops being drawn, and the panel says it was turned off. If the flag
+  /// survives, this really is the rare no-index case and the card is right.
+  ///
+  /// Once per screen. A server that is genuinely off answers the same way
+  /// every time, and this fires from inside a fetch handler.
+  void _probeAfterRefusal() {
+    if (_probed) return;
+    _probed = true;
+    final server = _seedServer;
+    if (server == null) return;
+    unawaited(ServerManager().getServerPaths(server).then((_) {
+      if (mounted) setState(() {});
+    }));
+  }
+
   /// Ask the server again whether the discovery scan has produced anything.
   ///
   /// The 403 that lands us in the scan-pending state is deliberately

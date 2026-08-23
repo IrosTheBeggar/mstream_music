@@ -2534,7 +2534,16 @@ class AudioPlayerHandler extends BaseAudioHandler
         // failure or a bad value returns null and falls through to the normal
         // error handling below, because resending a smaller body there would
         // fail again with less information.
-        while (res.statusCode == 400 &&
+        //
+        // The BODY is the signal, not the status. mStream answered a schema
+        // rejection with 403 up to and including 6.11.0 and with 400 from
+        // 6.12.0 (server.js: "That's 400 Bad Request, not 403 Forbidden"),
+        // and both carry the same `"<key>" is not allowed` message. Gating on
+        // 400 meant the learner — the half of this that is authoritative,
+        // since the version table is only a pre-filter — was inert on exactly
+        // the older servers it exists for. Verified against a live 6.11.0 and
+        // a live 6.22.0.
+        while (res.statusCode > 299 &&
             ServerCapabilities().noteRejection(autoDJServer!, res.body) !=
                 null) {
           final retry = ServerCapabilities().filter(autoDJServer!, payload);
@@ -2599,43 +2608,22 @@ class AudioPlayerHandler extends BaseAudioHandler
                     'yet, so it is playing without sonic similarity.');
               }
             } else if (lower.contains('discovery is disabled')) {
-              // requireIndex() answers this for BOTH "the feature is off in
-              // config" and "it is on but there is no index yet" — the same
-              // status on purpose, so an anonymous prober cannot tell
-              // configuration from failure. The ping separates them for us:
-              // it carries the CONFIG flag and this route carries the DATA,
-              // and asking it is something an authenticated client is
-              // entitled to do.
+              // requireIndex() answers this for both "the feature is off"
+              // and "it is on but there is no index yet", the same status on
+              // purpose so an anonymous prober cannot tell configuration from
+              // failure. I briefly toasted the second reading here. Measuring
+              // against a live server killed it: with collectDiscoveryData on,
+              // discovery.db is created at boot AND by the admin toggle, so
+              // getIndex() is never null and the no-index case does not arise
+              // in normal operation.
               //
-              // Off in config → silent, as before. The user switched it off
-              // themselves; being told about their own decision is noise.
-              //
-              // On in config → the scan has not produced anything yet. That
-              // user made no decision and has no way to connect "Auto DJ
-              // sounds like shuffle" to a scan they may not know exists —
-              // and since sonic similarity is on by default, this is the
-              // out-of-the-box experience on an unscanned library, not an
-              // edge case. It gets the same one-per-session explanation as
-              // its two siblings above.
-              //
-              // Reads the cached flag rather than re-pinging: the other
-              // surfaces that face this 403 (the Discover panel, its bar,
-              // sonic path) probe first, but they are screens with a user
-              // waiting on an answer. This runs inside a pick, where the
-              // music must continue either way. The flag is refreshed on
-              // launch and on resume, so going stale needs the server to
-              // change while the app is running and playing — and in that
-              // case the user is the one who changed it.
-              final unscanned = autoDJServer!.discoveryAvailable == true;
-              degraded = unscanned
-                  ? 'discovery enabled but nothing analyzed yet'
-                  : 'discovery switched off server-side';
-              if (unscanned && !_sonicWarned) {
-                _sonicWarned = true;
-                _showPlaybackErrorToast(
-                    "Auto DJ: this server hasn't analyzed any music yet, so "
-                    'it is playing without sonic similarity.');
-              }
+              // Which leaves the first reading — switched off since our last
+              // ping — and that stays silent: the user made that change
+              // themselves, so being told is noise. The genuinely-unscanned
+              // library never reaches here anyway; it answers 400 "Sonic seed
+              // track has not been analyzed yet", which the branch above
+              // already explains.
+              degraded = 'discovery switched off server-side';
             }
             if (degraded != null) {
               ServerCapabilities()
@@ -2650,7 +2638,15 @@ class AudioPlayerHandler extends BaseAudioHandler
           }
           // An expired/rotated JWT kills Auto DJ permanently and used to do it
           // in total silence — infinite play just stopped. Tell the user once.
+          //
+          // Not for a schema rejection wearing a 403: pre-6.12 servers answer
+          // validation failures with that status, and telling someone to
+          // re-login over a parameter they never typed sends them to fix the
+          // one thing that is not wrong. The loop above already retried those
+          // to exhaustion, so anything still carrying a not-allowed body here
+          // is a key we cannot drop, not an expired session.
           if ((res.statusCode == 401 || res.statusCode == 403) &&
+              parseNotAllowedKey(res.body) == null &&
               !_autoDJAuthWarned) {
             _autoDJAuthWarned = true;
             _showPlaybackErrorToast(
