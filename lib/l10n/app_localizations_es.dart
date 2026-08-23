@@ -1997,4 +1997,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get autoDjStartAskShort => 'Preguntar';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'Servidor $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'Versión del servidor desconocida';
+
+  @override
+  String get serverUpdateUrgent => 'Actualiza tu servidor';
+
+  @override
+  String get serverUpdateAvailable => 'Actualización de servidor disponible';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'Este servidor es la versión $version. Algunas funciones requieren 5.5 o posterior y no estarán disponibles.';
+  }
 }

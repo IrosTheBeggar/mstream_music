@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "最初の曲を選択 — ライブラリ内の好きな曲をタップ",
   "autoDjOnEmptyQueue": "キューが空のとき",
   "autoDjOnEmptyQueueSub": "キューが空の状態で Auto DJ をオンにしたときの動作。",
-  "autoDjStartAskShort": "確認する"
+  "autoDjStartAskShort": "確認する",
+  "serverVersionLabel": "サーバー {version}",
+  "serverVersionUnknown": "サーバーのバージョン不明",
+  "serverUpdateUrgent": "サーバーを更新してください",
+  "serverUpdateAvailable": "サーバーの更新があります",
+  "serverTooOldWarning": "このサーバーはバージョン {version} です。一部の機能には 5.5 以降が必要で、利用できません。"
 }

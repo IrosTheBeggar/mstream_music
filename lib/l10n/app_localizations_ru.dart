@@ -2015,4 +2015,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjStartAskShort => 'Спрашивать';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'Сервер $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'Версия сервера неизвестна';
+
+  @override
+  String get serverUpdateUrgent => 'Обновите сервер';
+
+  @override
+  String get serverUpdateAvailable => 'Доступно обновление сервера';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'Версия этого сервера — $version. Некоторым функциям нужна 5.5 или новее, они будут недоступны.';
+  }
 }

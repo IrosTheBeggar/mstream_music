@@ -1594,5 +1594,35 @@
   "autoDjStartAskShort": "Ask",
   "@autoDjStartAskShort": {
     "description": "Segmented-button label: ask each time"
+  },
+  "serverVersionLabel": "Server {version}",
+  "@serverVersionLabel": {
+    "description": "Server version / update flags",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "serverVersionUnknown": "Server version unknown",
+  "@serverVersionUnknown": {
+    "description": "Server version / update flags"
+  },
+  "serverUpdateUrgent": "Update your server",
+  "@serverUpdateUrgent": {
+    "description": "Server version / update flags"
+  },
+  "serverUpdateAvailable": "Server update available",
+  "@serverUpdateAvailable": {
+    "description": "Server version / update flags"
+  },
+  "serverTooOldWarning": "This server is version {version}. Some features need 5.5 or newer and will be unavailable.",
+  "@serverTooOldWarning": {
+    "description": "Server version / update flags",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
   }
 }

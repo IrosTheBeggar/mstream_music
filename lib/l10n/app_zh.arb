@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "选择起始歌曲——在曲库中点按任意曲目",
   "autoDjOnEmptyQueue": "队列为空时",
   "autoDjOnEmptyQueueSub": "队列为空时开启 Auto DJ 的行为。",
-  "autoDjStartAskShort": "询问"
+  "autoDjStartAskShort": "询问",
+  "serverVersionLabel": "服务器 {version}",
+  "serverVersionUnknown": "服务器版本未知",
+  "serverUpdateUrgent": "请更新服务器",
+  "serverUpdateAvailable": "有可用的服务器更新",
+  "serverTooOldWarning": "此服务器版本为 {version}。部分功能需要 5.5 或更高版本，将不可用。"
 }

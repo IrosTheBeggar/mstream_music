@@ -3473,6 +3473,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ask'**
   String get autoDjStartAskShort;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server {version}'**
+  String serverVersionLabel(String version);
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server version unknown'**
+  String get serverVersionUnknown;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Update your server'**
+  String get serverUpdateUrgent;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server update available'**
+  String get serverUpdateAvailable;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'This server is version {version}. Some features need 5.5 or newer and will be unavailable.'**
+  String serverTooOldWarning(String version);
 }
 
 class _AppLocalizationsDelegate

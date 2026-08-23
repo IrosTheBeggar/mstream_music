@@ -1872,4 +1872,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjStartAskShort => '询问';
+
+  @override
+  String serverVersionLabel(String version) {
+    return '服务器 $version';
+  }
+
+  @override
+  String get serverVersionUnknown => '服务器版本未知';
+
+  @override
+  String get serverUpdateUrgent => '请更新服务器';
+
+  @override
+  String get serverUpdateAvailable => '有可用的服务器更新';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return '此服务器版本为 $version。部分功能需要 5.5 或更高版本，将不可用。';
+  }
 }

@@ -50,6 +50,7 @@ import 'native/iroh_tunnel.dart';
 import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
+import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
 
 void main() {
@@ -863,6 +864,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
               Text(l.drawerTagline,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12)),
+              // Server version + refresh, and the update flag when the server
+              // is behind. Under the logo because that is where "what am I
+              // connected to" belongs, and it is the one place every screen
+              // can reach.
+              ServerVersionLine(),
             ],
           ),
         ),

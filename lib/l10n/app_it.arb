@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "Scegli il brano iniziale — tocca una traccia ovunque nella libreria",
   "autoDjOnEmptyQueue": "Con la coda vuota",
   "autoDjOnEmptyQueueSub": "Cosa fa Auto DJ quando lo attivi senza nulla in coda.",
-  "autoDjStartAskShort": "Chiedi"
+  "autoDjStartAskShort": "Chiedi",
+  "serverVersionLabel": "Server {version}",
+  "serverVersionUnknown": "Versione del server sconosciuta",
+  "serverUpdateUrgent": "Aggiorna il server",
+  "serverUpdateAvailable": "Aggiornamento del server disponibile",
+  "serverTooOldWarning": "Questo server è alla versione {version}. Alcune funzioni richiedono la 5.5 o successiva e non saranno disponibili."
 }

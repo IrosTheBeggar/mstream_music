@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "Elige la primera canción — toca una pista en cualquier parte de la biblioteca",
   "autoDjOnEmptyQueue": "Con la cola vacía",
   "autoDjOnEmptyQueueSub": "Qué hace Auto DJ cuando lo activas sin nada en la cola.",
-  "autoDjStartAskShort": "Preguntar"
+  "autoDjStartAskShort": "Preguntar",
+  "serverVersionLabel": "Servidor {version}",
+  "serverVersionUnknown": "Versión del servidor desconocida",
+  "serverUpdateUrgent": "Actualiza tu servidor",
+  "serverUpdateAvailable": "Actualización de servidor disponible",
+  "serverTooOldWarning": "Este servidor es la versión {version}. Algunas funciones requieren 5.5 o posterior y no estarán disponibles."
 }

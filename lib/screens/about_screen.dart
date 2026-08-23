@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
 import '../l10n/app_localizations.dart';
+import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import 'attributions_screen.dart';
 
@@ -116,6 +117,23 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
           ),
+          SizedBox(height: 18),
+          // The SERVER's version, distinct from the app version above it.
+          // Same source as the drawer's line; shown here because About is
+          // where people look when asked "what version are you running".
+          Builder(builder: (context) {
+            final server = ServerManager().currentServer;
+            if (server == null) return const SizedBox.shrink();
+            return Center(
+              child: Text(
+                server.serverVersion == null
+                    ? l.serverVersionUnknown
+                    : l.serverVersionLabel(server.serverVersion!),
+                style: TextStyle(
+                    fontSize: 13, color: VelvetColors.textSecondary),
+              ),
+            );
+          }),
           SizedBox(height: 22),
           // The one thing on this page worth a button. Sits above the link
           // list so it reads as an invitation rather than another entry.

@@ -1,0 +1,94 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/util/server_version.dart';
+
+void main() {
+  group('ServerVersion.tryParse', () {
+    test('plain and v-prefixed', () {
+      expect(ServerVersion.tryParse('6.22.0'), ServerVersion(6, 22, 0, ''));
+      expect(ServerVersion.tryParse('v6.22.0'), ServerVersion(6, 22, 0, ''));
+    });
+
+    test('a missing patch reads as .0', () {
+      expect(ServerVersion.tryParse('6.15'), ServerVersion(6, 15, 0, ''));
+    });
+
+    // Paul's own fork tags as `-velvet`; it answers for its base version's
+    // features, so the suffix must not defeat the parse.
+    test('fork and pre-release suffixes are ignored for comparison', () {
+      final v = ServerVersion.tryParse('6.4.2-velvet');
+      expect(v, ServerVersion(6, 4, 2, ''));
+      expect(v!.raw, '6.4.2-velvet', reason: 'display keeps the suffix');
+    });
+
+    test('nonsense parses to null, not to zero', () {
+      for (final bad in [null, '', '   ', 'unknown', '<!DOCTYPE html>', 'v']) {
+        expect(ServerVersion.tryParse(bad), isNull, reason: 'input: $bad');
+      }
+    });
+  });
+
+  group('ordering', () {
+    test('compares component-wise, not lexically', () {
+      // The lexical trap: "6.9" > "6.10" as strings.
+      final a = ServerVersion.tryParse('6.9.0')!;
+      final b = ServerVersion.tryParse('6.10.0')!;
+      expect(a < b, isTrue);
+      expect(b >= a, isTrue);
+    });
+
+    test('major beats minor beats patch', () {
+      expect(ServerVersion.tryParse('5.99.99')! < ServerVersion.tryParse('6.0.0')!,
+          isTrue);
+      expect(ServerVersion.tryParse('6.1.0')! < ServerVersion.tryParse('6.1.1')!,
+          isTrue);
+    });
+  });
+
+  group('isBelowSupportFloor', () {
+    // A server that cannot report a version is pre-5.4.2, which is below the
+    // 5.5 floor by construction — the whole reason the floor sits there.
+    test('unknown counts as below', () {
+      expect(isBelowSupportFloor(null), isTrue);
+    });
+
+    test('the floor itself is supported', () {
+      expect(isBelowSupportFloor(ServerVersion.tryParse('5.5.0')), isFalse);
+      expect(isBelowSupportFloor(ServerVersion.tryParse('5.4.9')), isTrue);
+    });
+
+    test('everything modern is supported', () {
+      for (final v in ['5.10.0', '6.0.0', '6.22.0']) {
+        expect(isBelowSupportFloor(ServerVersion.tryParse(v)), isFalse,
+            reason: v);
+      }
+    });
+  });
+
+  group('updateBandFor', () {
+    test('5.x and unknown get the loud flag', () {
+      expect(updateBandFor(null), UpdateBand.urgent);
+      expect(updateBandFor(ServerVersion.tryParse('5.5.0')), UpdateBand.urgent);
+      expect(updateBandFor(ServerVersion.tryParse('5.16.0')), UpdateBand.urgent);
+    });
+
+    test('6.0 through 6.14 get the quiet flag', () {
+      for (final v in ['6.0.0', '6.9.0', '6.14.9']) {
+        expect(updateBandFor(ServerVersion.tryParse(v)), UpdateBand.suggested,
+            reason: v);
+      }
+    });
+
+    test('6.15 and up show nothing', () {
+      for (final v in ['6.15.0', '6.22.0', '7.0.0']) {
+        expect(updateBandFor(ServerVersion.tryParse(v)), UpdateBand.none,
+            reason: v);
+      }
+    });
+
+    // The boundary that would break under a lexical compare.
+    test('6.9 is behind 6.15, not ahead of it', () {
+      expect(updateBandFor(ServerVersion.tryParse('6.9.0')),
+          UpdateBand.suggested);
+    });
+  });
+}

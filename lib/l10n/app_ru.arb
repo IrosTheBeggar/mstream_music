@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "Выберите первый трек — коснитесь любого трека в библиотеке",
   "autoDjOnEmptyQueue": "При пустой очереди",
   "autoDjOnEmptyQueueSub": "Что делает Auto DJ, когда вы включаете его с пустой очередью.",
-  "autoDjStartAskShort": "Спрашивать"
+  "autoDjStartAskShort": "Спрашивать",
+  "serverVersionLabel": "Сервер {version}",
+  "serverVersionUnknown": "Версия сервера неизвестна",
+  "serverUpdateUrgent": "Обновите сервер",
+  "serverUpdateAvailable": "Доступно обновление сервера",
+  "serverTooOldWarning": "Версия этого сервера — {version}. Некоторым функциям нужна 5.5 или новее, они будут недоступны."
 }

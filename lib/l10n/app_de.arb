@@ -489,5 +489,10 @@
   "autoDjStartPickBanner": "Starttitel wählen — tippe irgendwo in der Bibliothek auf einen Titel",
   "autoDjOnEmptyQueue": "Bei leerer Warteschlange",
   "autoDjOnEmptyQueueSub": "Was Auto DJ tut, wenn du ihn ohne Warteschlange einschaltest.",
-  "autoDjStartAskShort": "Fragen"
+  "autoDjStartAskShort": "Fragen",
+  "serverVersionLabel": "Server {version}",
+  "serverVersionUnknown": "Serverversion unbekannt",
+  "serverUpdateUrgent": "Server aktualisieren",
+  "serverUpdateAvailable": "Server-Update verfügbar",
+  "serverTooOldWarning": "Dieser Server hat Version {version}. Einige Funktionen benötigen 5.5 oder neuer und sind nicht verfügbar."
 }

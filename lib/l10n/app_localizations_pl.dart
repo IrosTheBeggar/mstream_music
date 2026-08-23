@@ -2012,4 +2012,23 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjStartAskShort => 'Zapytaj';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'Serwer $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'Nieznana wersja serwera';
+
+  @override
+  String get serverUpdateUrgent => 'Zaktualizuj serwer';
+
+  @override
+  String get serverUpdateAvailable => 'Dostępna aktualizacja serwera';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'Ten serwer ma wersję $version. Niektóre funkcje wymagają 5.5 lub nowszej i będą niedostępne.';
+  }
 }

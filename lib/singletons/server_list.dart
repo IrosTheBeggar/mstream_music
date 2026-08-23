@@ -9,6 +9,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
+import '../util/server_version.dart';
 import '../native/iroh_tunnel.dart';
 import '../media/cast_target.dart';
 import 'cast_manager.dart';
@@ -168,6 +169,34 @@ class ServerManager {
 
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
+
+    // Fetch the version now and warn if the server predates what this app
+    // supports. Here rather than in the add-server form because both entry
+    // points (URL and Quick Connect) funnel through this, and because the
+    // warning should follow the server, not the screen that created it.
+    //
+    // Warn, never block: an old server still browses and plays. The point is
+    // that the user finds out from us rather than from a feature quietly
+    // doing nothing.
+    unawaited(_warnIfBelowFloor(newServer));
+  }
+
+  Future<void> _warnIfBelowFloor(Server server) async {
+    final raw = await fetchServerVersion(server);
+    if (raw != null) {
+      server.serverVersion = raw;
+      server.versionCheckedAt = DateTime.now();
+      await writeServerFile();
+      _serverListStream.sink.add(serverList);
+    }
+    final parsed = ServerVersion.tryParse(raw);
+    if (!isBelowSupportFloor(parsed)) return;
+    // Null reads as the endpoint being absent, which puts the server before
+    // 5.4.2 — older than the floor, so it lands here too.
+    showGlobalSnack(parsed == null
+        ? 'This server is older than 5.5. Some features will be unavailable.'
+        : 'This server is version ${parsed.raw}. Some features need 5.5 or '
+            'newer and will be unavailable.');
   }
 
   // Storage mode + base path are set directly on the Server in the
@@ -289,9 +318,25 @@ class ServerManager {
       server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
       server.discoveryPathAvailable = res['discoveryPath'] == true;
 
+      // Version rides along with the capability refresh: same moment, same
+      // persistence, and it is a cheap unauthenticated GET. Failure leaves the
+      // stored value alone rather than blanking it — a momentary blip should
+      // not make a known-good server look ancient.
+      final prevVersion = server.serverVersion;
+      final fetched = await fetchServerVersion(server);
+      if (fetched != null) {
+        server.serverVersion = fetched;
+        server.versionCheckedAt = DateTime.now();
+      } else {
+        // Never successfully checked AND it just failed: record the attempt so
+        // the periodic re-check backs off instead of retrying every resume.
+        server.versionCheckedAt ??= DateTime.now();
+      }
+
       // Persist the capabilities so the NEXT launch knows them before the queue
       // is restored — otherwise restore races the ping and bakes in /media URLs.
-      if (server.transcodeAvailable != prevAvail ||
+      if (server.serverVersion != prevVersion ||
+          server.transcodeAvailable != prevAvail ||
           server.transcodeDefaultCodec != prevCodec ||
           server.transcodeDefaultBitrate != prevBitrate ||
           server.discoveryAvailable != prevDiscovery ||
@@ -486,6 +531,40 @@ class ServerManager {
       await drop;
     }
     await ensureActiveTunnel(verify: true);
+  }
+
+  /// Read the server's version from `GET /api/` — public, no auth, and served
+  /// since 5.4.2. Returns the raw `server` string, or null when the endpoint
+  /// isn't there (pre-5.4.2), the body isn't the shape we expect, or the
+  /// request fails. Null is meaningful rather than an error: see
+  /// util/server_version.dart for why "can't say" and "too old" are the same
+  /// answer.
+  ///
+  /// Lives here rather than in ApiManager because api.dart already imports
+  /// this file, and reaching back the other way would make the first mutual
+  /// import in the singleton layer for the sake of twelve lines. It is also
+  /// server lifecycle, not library browsing — the same reason _probeTunnel is
+  /// here.
+  Future<String?> fetchServerVersion(Server s) async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+    try {
+      final req = await client
+          .getUrl(s.apiUri('/api/'))
+          .timeout(const Duration(seconds: 6));
+      final resp = await req.close().timeout(const Duration(seconds: 10));
+      if (resp.statusCode > 299) {
+        await resp.drain<void>();
+        return null; // 404 here means older than 5.4.2
+      }
+      final body = await resp.transform(utf8.decoder).join();
+      final decoded = jsonDecode(body);
+      final v = decoded is Map ? decoded['server'] : null;
+      return v is String && v.trim().isNotEmpty ? v.trim() : null;
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
   }
 
   /// Ground-truth tunnel liveness: one HTTP round-trip through the loopback

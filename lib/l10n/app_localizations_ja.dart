@@ -1913,4 +1913,23 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjStartAskShort => '確認する';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'サーバー $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'サーバーのバージョン不明';
+
+  @override
+  String get serverUpdateUrgent => 'サーバーを更新してください';
+
+  @override
+  String get serverUpdateAvailable => 'サーバーの更新があります';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'このサーバーはバージョン $version です。一部の機能には 5.5 以降が必要で、利用できません。';
+  }
 }
