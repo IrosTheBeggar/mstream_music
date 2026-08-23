@@ -481,9 +481,13 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           req.bannerLabel(l),
           action: TextButton(
             onPressed: () {
+              final back = req.returnScreen;
               TrackCapture.cancel();
-              Navigator.push(
-                  context, MaterialPageRoute(builder: req.returnScreen));
+              // Same rule as a successful pick: go back only when there is
+              // somewhere to go back to.
+              if (back != null) {
+                Navigator.push(context, MaterialPageRoute(builder: back));
+              }
             },
             child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.primary)),

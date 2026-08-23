@@ -8,7 +8,6 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../singletons/api.dart';
 import '../singletons/track_capture.dart';
-import '../screens/auto_dj.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../screens/metadata_screen.dart';
@@ -639,7 +638,8 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
   TrackCapture.arm(TrackCaptureRequest(
     server: server,
     bannerLabel: (l) => l.autoDjStartPickBanner,
-    returnScreen: (_) => const AutoDJScreen(),
+    // No return screen: the question came from a sheet over the browser, so
+    // the pick simply starts the DJ and leaves the user where they are.
     onPicked: (item) {
       final path = item.data;
       if (path == null) return;

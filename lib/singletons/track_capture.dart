@@ -20,19 +20,26 @@ class TrackCaptureRequest {
   /// a locale change and callers don't resolve AppLocalizations at arm time.
   final String Function(AppLocalizations) bannerLabel;
 
-  /// The screen to re-push on a capture (and on Cancel). Re-push, not pop:
-  /// arming drops all the way back to the home browser, so the asking route
-  /// is gone by the time a row is tapped. Its state has to live somewhere
-  /// outside the widget — SonicPathState for the path, AutoDJManager for the
-  /// DJ seed.
-  final WidgetBuilder returnScreen;
+  /// The screen to re-push on a capture (and on Cancel), or null to stay put.
+  ///
+  /// Re-push, not pop: arming drops all the way back to the home browser, so
+  /// the asking route is gone by the time a row is tapped. Its state has to
+  /// live somewhere outside the widget — SonicPathState for the path,
+  /// AutoDJManager for the DJ seed.
+  ///
+  /// Null when there is nothing to go back TO. Sonic path was mid-setup and
+  /// the user has to see the result, but the Auto DJ button in the player bar
+  /// asks its question from a sheet over the browser — pushing the Auto DJ
+  /// screen after the pick would land the user on a settings page they never
+  /// opened, on top of the music they just started.
+  final WidgetBuilder? returnScreen;
 
   final void Function(DisplayItem) onPicked;
 
   TrackCaptureRequest(
       {required this.server,
       required this.bannerLabel,
-      required this.returnScreen,
+      this.returnScreen,
       required this.onPicked});
 }
 
