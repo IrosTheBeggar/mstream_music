@@ -1737,6 +1737,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Этот трек ещё не проанализирован — похожие треки появятся, когда сканирование дойдёт до него.';
 
   @override
+  String get discoverScanPendingTitle => 'Пока ничего не проанализировано';
+
+  @override
+  String get discoverScanPendingBody =>
+      'На этом сервере подбор по звучанию включён, но музыка ещё не проанализирована. Похожие треки появятся после сканирования.';
+
+  @override
+  String get discoverCheckAgain => 'Проверить снова';
+
+  @override
+  String get discoverTurnedOff =>
+      'Подбор по звучанию отключён на этом сервере.';
+
+  @override
   String get discoverNothingFound => 'Совпадений не найдено.';
 
   @override

@@ -1718,6 +1718,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dieser Titel wurde noch nicht analysiert — ähnliche Titel erscheinen, sobald der Discovery-Scan ihn erreicht.';
 
   @override
+  String get discoverScanPendingTitle => 'Noch nichts analysiert';
+
+  @override
+  String get discoverScanPendingBody =>
+      'Auf diesem Server ist Discovery aktiviert, es wurde aber noch keine Musik analysiert. Ähnliche Titel erscheinen, sobald der Discovery-Scan gelaufen ist.';
+
+  @override
+  String get discoverCheckAgain => 'Erneut prüfen';
+
+  @override
+  String get discoverTurnedOff =>
+      'Discovery wurde auf diesem Server deaktiviert.';
+
+  @override
   String get discoverNothingFound => 'Keine Treffer gefunden.';
 
   @override

@@ -1621,6 +1621,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverNotAnalyzed => '这首歌尚未分析 — 发现扫描处理后会显示相似歌曲。';
 
   @override
+  String get discoverScanPendingTitle => '尚未分析任何内容';
+
+  @override
+  String get discoverScanPendingBody =>
+      '此服务器已启用发现功能，但尚未分析任何音乐。发现扫描完成后即可看到相似歌曲。';
+
+  @override
+  String get discoverCheckAgain => '重新检查';
+
+  @override
+  String get discoverTurnedOff => '此服务器已关闭发现功能。';
+
+  @override
   String get discoverNothingFound => '未找到匹配项。';
 
   @override

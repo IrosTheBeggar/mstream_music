@@ -1252,6 +1252,22 @@
   "@discoverNotAnalyzed": {
     "description": "Hint when the playing track has no audio embedding yet (server-side analysis still pending)."
   },
+  "discoverScanPendingTitle": "Nothing analyzed yet",
+  "@discoverScanPendingTitle": {
+    "description": "Header of the Discover card shown when the server has discovery enabled but no analyzed music yet."
+  },
+  "discoverScanPendingBody": "This server has sonic discovery switched on, but hasn't analyzed any music yet. Similar songs appear once the discovery scan has run.",
+  "@discoverScanPendingBody": {
+    "description": "Body of that card. The server answers the same 403 for 'feature off' and 'enabled but no index', so this is what the app can honestly say."
+  },
+  "discoverCheckAgain": "Check again",
+  "@discoverCheckAgain": {
+    "description": "Button that re-pings the server and retries the discovery requests."
+  },
+  "discoverTurnedOff": "Sonic discovery has been switched off on this server.",
+  "@discoverTurnedOff": {
+    "description": "Shown when a re-check reveals discovery was switched off server-side while the screen was open."
+  },
   "discoverNothingFound": "No matches found.",
   "@discoverNothingFound": {
     "description": "Empty state for a Discover section that returned no results."

@@ -2982,6 +2982,30 @@ abstract class AppLocalizations {
   /// **'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.'**
   String get discoverNotAnalyzed;
 
+  /// Header of the Discover card shown when the server has discovery enabled but no analyzed music yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing analyzed yet'**
+  String get discoverScanPendingTitle;
+
+  /// Body of that card. The server answers the same 403 for 'feature off' and 'enabled but no index', so this is what the app can honestly say.
+  ///
+  /// In en, this message translates to:
+  /// **'This server has sonic discovery switched on, but hasn\'t analyzed any music yet. Similar songs appear once the discovery scan has run.'**
+  String get discoverScanPendingBody;
+
+  /// Button that re-pings the server and retries the discovery requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again'**
+  String get discoverCheckAgain;
+
+  /// Shown when a re-check reveals discovery was switched off server-side while the screen was open.
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic discovery has been switched off on this server.'**
+  String get discoverTurnedOff;
+
   /// Empty state for a Discover section that returned no results.
   ///
   /// In en, this message translates to:

@@ -1699,6 +1699,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.';
 
   @override
+  String get discoverScanPendingTitle => 'Nothing analyzed yet';
+
+  @override
+  String get discoverScanPendingBody =>
+      'This server has sonic discovery switched on, but hasn\'t analyzed any music yet. Similar songs appear once the discovery scan has run.';
+
+  @override
+  String get discoverCheckAgain => 'Check again';
+
+  @override
+  String get discoverTurnedOff =>
+      'Sonic discovery has been switched off on this server.';
+
+  @override
   String get discoverNothingFound => 'No matches found.';
 
   @override

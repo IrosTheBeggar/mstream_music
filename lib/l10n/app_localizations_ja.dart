@@ -1654,6 +1654,19 @@ class AppLocalizationsJa extends AppLocalizations {
       'この曲はまだ解析されていません — ディスカバリースキャンが到達すると、似ている曲が表示されます。';
 
   @override
+  String get discoverScanPendingTitle => 'まだ何も解析されていません';
+
+  @override
+  String get discoverScanPendingBody =>
+      'このサーバーではディスカバリーが有効ですが、まだ音楽が解析されていません。ディスカバリースキャンが実行されると、似ている曲が表示されます。';
+
+  @override
+  String get discoverCheckAgain => '再確認';
+
+  @override
+  String get discoverTurnedOff => 'このサーバーではディスカバリーが無効になっています。';
+
+  @override
   String get discoverNothingFound => '一致する曲が見つかりませんでした。';
 
   @override

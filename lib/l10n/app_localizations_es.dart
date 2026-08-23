@@ -1716,6 +1716,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Esta canción aún no se ha analizado — las canciones similares aparecerán cuando el análisis de descubrimiento la procese.';
 
   @override
+  String get discoverScanPendingTitle => 'Aún no hay nada analizado';
+
+  @override
+  String get discoverScanPendingBody =>
+      'Este servidor tiene el descubrimiento activado, pero todavía no ha analizado ninguna música. Las canciones similares aparecerán cuando el análisis de descubrimiento se haya ejecutado.';
+
+  @override
+  String get discoverCheckAgain => 'Comprobar de nuevo';
+
+  @override
+  String get discoverTurnedOff =>
+      'El descubrimiento se ha desactivado en este servidor.';
+
+  @override
   String get discoverNothingFound => 'No se encontraron coincidencias.';
 
   @override

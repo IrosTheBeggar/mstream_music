@@ -1733,6 +1733,20 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ten utwór nie został jeszcze przeanalizowany — podobne utwory pojawią się, gdy skan odkrywania do niego dotrze.';
 
   @override
+  String get discoverScanPendingTitle => 'Nic jeszcze nie przeanalizowano';
+
+  @override
+  String get discoverScanPendingBody =>
+      'Na tym serwerze odkrywanie jest włączone, ale nie przeanalizowano jeszcze żadnej muzyki. Podobne utwory pojawią się, gdy skan odkrywania zostanie wykonany.';
+
+  @override
+  String get discoverCheckAgain => 'Sprawdź ponownie';
+
+  @override
+  String get discoverTurnedOff =>
+      'Odkrywanie zostało wyłączone na tym serwerze.';
+
+  @override
   String get discoverNothingFound => 'Nie znaleziono dopasowań.';
 
   @override
