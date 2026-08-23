@@ -363,10 +363,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get aboutSponsor => 'Apoiar o mStream';
 
   @override
-  String get aboutSponsorSubtitle =>
-      'O mStream é gratuito e de código aberto. Apoiar no GitHub mantém isso assim.';
-
-  @override
   String get ok => 'OK';
 
   @override

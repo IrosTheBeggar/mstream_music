@@ -726,12 +726,6 @@ abstract class AppLocalizations {
   /// **'Sponsor mStream'**
   String get aboutSponsor;
 
-  /// One line under the sponsor button explaining the ask
-  ///
-  /// In en, this message translates to:
-  /// **'mStream is free and open source. Sponsoring on GitHub keeps it that way.'**
-  String get aboutSponsorSubtitle;
-
   /// Generic action labels reused across dialogs/menus.
   ///
   /// In en, this message translates to:

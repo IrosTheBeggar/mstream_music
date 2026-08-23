@@ -364,10 +364,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get aboutSponsor => 'mStream unterstützen';
 
   @override
-  String get aboutSponsorSubtitle =>
-      'mStream ist kostenlos und quelloffen. Ein Sponsoring auf GitHub hält das so.';
-
-  @override
   String get ok => 'OK';
 
   @override

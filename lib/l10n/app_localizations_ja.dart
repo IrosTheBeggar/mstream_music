@@ -353,10 +353,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutSponsor => 'mStream を支援';
 
   @override
-  String get aboutSponsorSubtitle =>
-      'mStream は無料のオープンソースです。GitHub での支援がそれを支えます。';
-
-  @override
   String get ok => 'OK';
 
   @override

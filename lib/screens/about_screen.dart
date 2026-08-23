@@ -154,16 +154,6 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              l.aboutSponsorSubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 12, color: VelvetColors.textSecondary),
-            ),
-          ),
           SizedBox(height: 24),
           Divider(color: VelvetColors.border, height: 1),
           ..._links.map((link) => ListTile(

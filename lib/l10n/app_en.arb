@@ -294,10 +294,6 @@
   "@aboutSponsor": {
     "description": "Button on the About page linking to GitHub Sponsors"
   },
-  "aboutSponsorSubtitle": "mStream is free and open source. Sponsoring on GitHub keeps it that way.",
-  "@aboutSponsorSubtitle": {
-    "description": "One line under the sponsor button explaining the ask"
-  },
   "@aboutAttributions": {
     "description": "Attributions row on the About screen."
   },
