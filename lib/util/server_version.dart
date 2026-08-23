@@ -202,10 +202,20 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
 /// parameter and learning from the answer — which is the correct order, since
 /// a fork may well support something upstream added later, or vice versa.
 bool paramKnownUnsupported(ServerVersion? v, ServerParam p) {
-  if (v == null || !v.isUpstream) return false;
   final floor = _paramFloor[p];
-  return floor != null && v < floor;
+  return floor != null && knownOlderThan(v, floor);
 }
+
+/// True only when [v] can be compared to [floor] AND falls below it.
+///
+/// The double negative matters: this answers "known to be too old", not "not
+/// known to be new enough". An unknown version and a fork both return false —
+/// neither can be compared to an upstream milestone, so neither is KNOWN to
+/// be anything, and the caller should send the request (or show the control)
+/// and let the server answer. Guessing the other way hides working features
+/// on forks that may well support them.
+bool knownOlderThan(ServerVersion? v, ServerVersion floor) =>
+    v != null && v.isUpstream && v < floor;
 
 /// The Auto DJ continuity/filter block — BPM continuity, harmonic mixing and
 /// the genre filter — all arrived together in 6.7.1. True when the server is
@@ -217,6 +227,20 @@ bool paramKnownUnsupported(ServerVersion? v, ServerParam p) {
 /// would be worse than offering it and learning from a rejection.
 bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.bpmRanges);
+
+/// `POST /api/v1/playlist/rename` arrived at 5.16.0 — the only ENDPOINT the
+/// app calls that lands above the support floor without a ping flag to
+/// advertise it. Everything else it talks to either predates 5.5 or is
+/// announced on ping, which is why this is a lone constant rather than a
+/// second table.
+const ServerVersion playlistRenameFloor = ServerVersion(5, 16, 0, '5.16.0');
+
+/// True when the server is known to predate playlist rename — the cue to
+/// leave the item out of the menu. Offering it there produced a generic
+/// "playlist error" on the 404, which reads as an app bug rather than as an
+/// old server.
+bool playlistRenameKnownUnsupported(ServerVersion? v) =>
+    knownOlderThan(v, playlistRenameFloor);
 
 /// Sonic similarity needs 6.15.2. Separate from the block above because it
 /// landed two months later — a 6.7.1..6.14 server has the filters but not

@@ -18,6 +18,7 @@ import '../widgets/track_actions_sheet.dart';
 import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
 import '../util/queue_actions.dart';
+import '../util/server_version.dart';
 
 import 'add_server.dart';
 
@@ -340,7 +341,13 @@ class _BrowserState extends State<Browser> {
                   if (v == 'delete') _deletePlaylist(c, b[i]);
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                  // Rename is 5.16.0; delete predates the support floor. On an
+                  // older server the rename call 404s and surfaces as a
+                  // generic playlist error, so drop the item instead of
+                  // offering an action that cannot work.
+                  if (!playlistRenameKnownUnsupported(
+                      ServerVersion.tryParse(b[i].server?.serverVersion)))
+                    PopupMenuItem(value: 'rename', child: Text(l.rename)),
                   PopupMenuItem(
                     value: 'delete',
                     child: Text(l.delete,

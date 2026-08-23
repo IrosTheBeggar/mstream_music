@@ -91,4 +91,30 @@ void main() {
           UpdateBand.suggested);
     });
   });
+
+  group('playlistRenameKnownUnsupported', () {
+    test('below 5.16.0 the menu item is dropped', () {
+      for (final v in ['5.5.0', '5.15.9']) {
+        expect(playlistRenameKnownUnsupported(ServerVersion.tryParse(v)),
+            isTrue, reason: v);
+      }
+    });
+
+    test('5.16.0 and up keep it', () {
+      for (final v in ['5.16.0', '6.22.0']) {
+        expect(playlistRenameKnownUnsupported(ServerVersion.tryParse(v)),
+            isFalse, reason: v);
+      }
+    });
+
+    // "Known to be too old", not "not known to be new enough". A fork's
+    // numbering is its own and an unknown version says nothing at all, so
+    // both keep the item and let the server answer — hiding a feature a
+    // server may well support is the worse mistake.
+    test('a fork and an unknown version both keep it', () {
+      expect(playlistRenameKnownUnsupported(ServerVersion.tryParse('5.4.2-velvet')),
+          isFalse);
+      expect(playlistRenameKnownUnsupported(null), isFalse);
+    });
+  });
 }
