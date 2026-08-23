@@ -475,6 +475,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     _emitCurrentMediaItem();
   }
 
+  /// Pushed for exactly one event as the queue empties, purely to overwrite
+  /// the platform session's metadata. Never meant to be READ as a track — the
+  /// null that follows it immediately is the value in-app consumers see.
+  static const MediaItem _blankNowPlaying = MediaItem(id: '', title: '');
+
   void _emitCurrentMediaItem() {
     if (_reordering || _rebuilding || _restoring) return;
     if (queue.value.isEmpty) {
@@ -486,6 +491,24 @@ class AudioPlayerHandler extends BaseAudioHandler
       // queue is EMPTY IN TRANSIT (a restore before its publish, a
       // transcode-URL rebuild, a reorder), so reaching here means the queue
       // is genuinely empty rather than mid-swap.
+      //
+      // TWO events, deliberately. audio_service drops a null mediaItem on the
+      // floor (audio_service.dart:1023, `if (mediaItem == null) return`), so
+      // null alone cleared the in-app surfaces and left the last track's
+      // title and art sitting on the notification and lock screen — verified
+      // in the shade after a clear. A blank item IS forwarded, and
+      // overwriting is the only way to clear those while the service stays
+      // foreground, which it must: androidStopForegroundOnPause is false so
+      // One UI can't reap it across a pause.
+      //
+      // The null that follows is what every in-app consumer already reads as
+      // "nothing playing", so no call site has to learn what a blank item
+      // means and .value settles on null before any listener runs.
+      //
+      // Guarded on something actually showing: this also runs on duration
+      // ticks, and an empty queue must not push a blank item at the platform
+      // over and over.
+      if (mediaItem.valueOrNull != null) mediaItem.add(_blankNowPlaying);
       mediaItem.add(null);
       return;
     }
