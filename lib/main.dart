@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show HttpOverrides;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
@@ -991,47 +990,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             );
           },
         ),
-        // TEMPORARY — first-run testing aids. Delete these two ListTiles when
-        // the onboarding work is signed off. kDebugMode keeps them out of
-        // release/profile builds regardless, and the labels are deliberately
-        // hard-coded English (not ARB keys) so nothing has to be unwound from
-        // the localisations when they go.
-        if (kDebugMode) ...[
-          ListTile(
-            leading: Icon(Icons.restart_alt, color: VelvetColors.warning),
-            title: Text('Show welcome screen',
-                style: TextStyle(color: VelvetColors.warning)),
-            subtitle: Text('Debug build only',
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12)),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.tune, color: VelvetColors.warning),
-            title: Text('Show setup flow',
-                style: TextStyle(color: VelvetColors.warning)),
-            // markCompleteOnExit: false — previewing must not spend the real
-            // onboarding flag, or the genuine first run afterwards is skipped.
-            subtitle: Text("Debug build only · won't mark onboarding done",
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 12)),
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const SetupFlowScreen(markCompleteOnExit: false)),
-              );
-            },
-          ),
-        ],
         ListTile(
           leading: Icon(Icons.info_outline),
           title: Text(l.aboutTitle),

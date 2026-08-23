@@ -29,6 +29,14 @@ import '../util/queue_actions.dart';
 /// Hidden entirely (never probed) unless the playing track's server
 /// advertised `discovery` on ping; a 403 mid-session hides it until the
 /// next app launch.
+/// Discover's own accent, matching the webapp's panel (webapp/alpha/spa.css,
+/// `.discover-icon` / `.discover-panel`): periwinkle #657ee4 with #8ea0f0 as
+/// its light end. Deliberately NOT the user's accent — Discover is one
+/// feature with a colour of its own in both clients, and tying it to a custom
+/// accent would make it a different colour in every install.
+const Color _discoverAccent = Color(0xFF657EE4);
+const Color _discoverLight = Color(0xFF8EA0F0);
+
 class DiscoverQueueBar extends StatefulWidget {
   const DiscoverQueueBar({super.key});
 
@@ -185,14 +193,12 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
         // 1.00px while collapsed.
         height: 1 + (_expanded ? panelHeight : 44),
         decoration: BoxDecoration(
-          // Accent-tinted rather than the queue's own surface: this strip sat
-          // in exactly the same colour as the list above it and read as part
-          // of the queue, so nobody found it. primaryDim is the accent at 16%
-          // alpha, so it follows a custom accent instead of pinning a colour,
-          // and the accent top border replaces the hairline that used to be
-          // the only thing separating the two.
-          color: VelvetColors.primaryDim,
-          border: Border(top: BorderSide(color: VelvetColors.primary)),
+          // Tinted rather than the queue's own surface: this strip sat in
+          // exactly the same colour as the list above it and read as part of
+          // the queue, so nobody found it. Low alpha so it stays a wash over
+          // whichever theme is active instead of a slab of colour.
+          color: _discoverLight.withValues(alpha: 0.14),
+          border: Border(top: BorderSide(color: _discoverAccent)),
         ),
         child: Column(
           children: [
@@ -206,8 +212,7 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Icon(Icons.explore,
-                          size: 18, color: VelvetColors.primary),
+                      Icon(Icons.explore, size: 18, color: _discoverLight),
                       const SizedBox(width: 8),
                       Text(
                         l.discoverTitle.toUpperCase(),
@@ -215,7 +220,7 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                           // Matches the explore icon beside it; the muted grey
                           // it replaces was the other half of why the strip
                           // disappeared into the queue.
-                          color: VelvetColors.primary,
+                          color: _discoverLight,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.1,
