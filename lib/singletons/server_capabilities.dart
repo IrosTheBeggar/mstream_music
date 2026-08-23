@@ -75,6 +75,32 @@ class ServerCapabilities {
     return key;
   }
 
+  /// Stop sending [keys] to [server] for the rest of this session, for a
+  /// reason other than the schema rejecting them.
+  ///
+  /// The schema case ([noteRejection]) is "this server has never heard of the
+  /// key". This one is "the key is valid but the server cannot act on it yet"
+  /// — sonic similarity against a library the discovery scan has not reached.
+  /// Different causes, identical remedy: stop sending it, keep playing. Both
+  /// live in the same set because the set's meaning is simply "wire names not
+  /// to send to this server this session", and [forget] clears both on the
+  /// upgrade or reconnect that could change either answer.
+  void suppress(Server server, Iterable<String> keys, String reason) {
+    final set = _rejected[server.localname] ??= <String>{};
+    final added = keys.where(set.add).toList();
+    if (added.isNotEmpty) {
+      appLog('[caps] ${server.localname}: dropping '
+          '${added.join(", ")} for this session — $reason');
+    }
+  }
+
+  /// True when every one of [keys] is already suppressed for [server], so a
+  /// caller can skip building them at all rather than building and stripping.
+  bool allSuppressed(Server server, Iterable<String> keys) {
+    final set = _rejected[server.localname];
+    return set != null && keys.every(set.contains);
+  }
+
   /// Everything [server] has rejected so far, for diagnostics.
   Set<String> rejectedFor(Server server) =>
       Set.unmodifiable(_rejected[server.localname] ?? const <String>{});

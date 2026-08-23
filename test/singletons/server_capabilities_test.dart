@@ -144,4 +144,38 @@ void main() {
       expect(caps.filter(b, {'genres': []}).dropped, isEmpty);
     });
   });
+
+  group('suppression (valid key, server cannot act on it)', () {
+    test('suppressed keys are dropped like rejected ones', () {
+      final s = _server('new', '6.22.0');
+      final caps = ServerCapabilities();
+      caps.suppress(s, ['similarTo', 'minSimilarity'], 'not analyzed yet');
+      final r = caps.filter(s, {
+        'ignoreList': [],
+        'similarTo': ['x'],
+        'minSimilarity': 0.5,
+      });
+      expect(r.body.keys, ['ignoreList']);
+      expect(r.dropped, containsAll(['similarTo', 'minSimilarity']));
+    });
+
+    test('allSuppressed only when every key is', () {
+      final s = _server('new', '6.22.0');
+      final caps = ServerCapabilities();
+      expect(caps.allSuppressed(s, ['similarTo', 'minSimilarity']), isFalse);
+      caps.suppress(s, ['similarTo'], 'partial');
+      expect(caps.allSuppressed(s, ['similarTo', 'minSimilarity']), isFalse,
+          reason: 'one of two is not all');
+      caps.suppress(s, ['minSimilarity'], 'rest');
+      expect(caps.allSuppressed(s, ['similarTo', 'minSimilarity']), isTrue);
+    });
+
+    test('forget lifts suppression — a finished scan should re-enable it', () {
+      final s = _server('new', '6.22.0');
+      final caps = ServerCapabilities();
+      caps.suppress(s, ['similarTo'], 'not analyzed yet');
+      caps.forget(s);
+      expect(caps.allSuppressed(s, ['similarTo']), isFalse);
+    });
+  });
 }

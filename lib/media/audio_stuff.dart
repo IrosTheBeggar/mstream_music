@@ -794,6 +794,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     _recoverHttpError(error);
   }
 
+  // The wire names sonicParams produces. Named once so the suppress/skip
+  // pair below can't drift apart from what is actually sent.
+  static const List<String> _kSonicParamKeys = ['similarTo', 'minSimilarity'];
+
   // Consecutive load failures against a tunnel that says it is connected.
   // Reset by the `ready` handler — anything loading at all means the path
   // works. Deliberately not reset by a recovery starting: the whole point is
@@ -2422,8 +2426,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // anchor: the last few DJ picks (session centroid), else the playing
     // track; a cold start on an empty queue has no anchor and stays plain
     // random until the first pick seeds the session.
+    // Suppressed after a no-data failure earlier this session (see the
+    // degradation below), so skip building the params at all rather than
+    // building them and having filter() strip them — that also keeps the
+    // error branch from thinking sonic is still in play.
     final sonicEnabled = mgr.sonicSimilarityEnabled &&
-        autoDJServer!.discoveryAvailable == true;
+        autoDJServer!.discoveryAvailable == true &&
+        !ServerCapabilities()
+            .allSuppressed(autoDJServer!, _kSonicParamKeys);
     // The explicit seed ("start the session here") only counts when it was
     // picked from the DJ server — filepaths are per-library. Same rule for
     // the playing track.
@@ -2560,29 +2570,50 @@ class AudioPlayerHandler extends BaseAudioHandler
                 (res.statusCode == 404 || lower.contains('analyzed'))) {
               _sonicLockedAnchor = null;
             }
+            // The three ways sonic can fail while the request itself is
+            // fine. All used to `return` — no pick, and with the queue-end
+            // top-up being the only caller that meant silence until the user
+            // intervened. A constraint the server cannot satisfy should cost
+            // the CONSTRAINT, not the music: drop the sonic keys for this
+            // session and take the same pick without them.
+            //
+            // Still says so once, because a session that quietly stopped
+            // honouring "only songs that sound like this" would be lying
+            // about what it is doing. Once, not per pick.
+            String? degraded;
             if (lower.contains('similarity range')) {
+              degraded = 'nothing within the similarity range';
               if (!_sonicWarned) {
                 _sonicWarned = true;
                 _showPlaybackErrorToast(
-                    'Auto DJ: no songs are within the similarity range. '
-                    'Loosen the match slider or adjust your filters.');
+                    'Auto DJ: nothing is within the similarity range, so it '
+                    'is playing without that filter. Loosen the match slider '
+                    'to use it again.');
               }
-              return;
-            }
-            if (lower.contains('analyzed')) {
+            } else if (lower.contains('analyzed')) {
+              degraded = 'library not analyzed yet';
               if (!_sonicWarned) {
                 _sonicWarned = true;
                 _showPlaybackErrorToast(
-                    "Auto DJ: this song hasn't been analyzed yet — wait "
-                    'for the discovery scan or play a different song.');
+                    "Auto DJ: the discovery scan hasn't reached these tracks "
+                    'yet, so it is playing without sonic similarity.');
               }
-              return;
+            } else if (lower.contains('discovery is disabled')) {
+              // The capability vanished since the last ping. Silent by
+              // design — the user switched it off server-side, so being told
+              // about it is noise — but it must degrade rather than stall,
+              // which is what this branch used to do.
+              degraded = 'discovery switched off server-side';
             }
-            // requireIndex 403 ("Discovery is disabled"): the capability
-            // vanished since the last ping — NOT an expired login, so it
-            // must not fall through to the re-login toast below.
-            if (lower.contains('discovery is disabled')) {
-              return;
+            if (degraded != null) {
+              ServerCapabilities()
+                  .suppress(autoDJServer!, _kSonicParamKeys, degraded);
+              _sonicLockedAnchor = null;
+              // Retry this same pick without the constraint. Bounded by the
+              // enclosing attempt loop, and cannot spin: the keys are now
+              // suppressed, so the next pass sends a payload that no longer
+              // carries them.
+              continue;
             }
           }
           // An expired/rotated JWT kills Auto DJ permanently and used to do it
