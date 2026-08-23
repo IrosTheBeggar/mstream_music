@@ -1035,9 +1035,21 @@ class _BrowserState extends State<Browser> {
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
                         final ts = MediaQuery.textScalerOf(context);
+                        // Reserve the strip's width only when the strip will
+                        // actually be there — the same three conditions the
+                        // overlay below uses, plus the strip's own
+                        // will-I-render check. Otherwise a list short enough
+                        // to hide the strip would still get an empty gutter.
+                        final stripShowing = BrowserManager().isAlphabetical &&
+                            browserList.isNotEmpty &&
+                            !filtering &&
+                            LetterStrip.showsFor(browserList);
+                        final gutter =
+                            stripShowing ? LetterStrip.stripWidth : 0.0;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
+                                gutter: gutter,
                                 // Pass the shared controller so the
                                 // letter-strip's jumpTo actually
                                 // moves the grid (and so the existing
@@ -1116,8 +1128,10 @@ class _BrowserState extends State<Browser> {
                                     final w = MediaQuery.of(context)
                                         .size
                                         .width;
-                                    final cols = AlbumGrid.columnsFor(w);
-                                    final rowH = AlbumGrid.rowHeightFor(w);
+                                    final cols =
+                                        AlbumGrid.columnsFor(w, gutter);
+                                    final rowH =
+                                        AlbumGrid.rowHeightFor(w, gutter);
                                     final row = i ~/ cols;
                                     offset = AlbumGrid.padTop +
                                         row * (rowH + AlbumGrid.spacing);

@@ -185,8 +185,14 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
         // 1.00px while collapsed.
         height: 1 + (_expanded ? panelHeight : 44),
         decoration: BoxDecoration(
-          color: VelvetColors.surface,
-          border: Border(top: BorderSide(color: VelvetColors.border)),
+          // Accent-tinted rather than the queue's own surface: this strip sat
+          // in exactly the same colour as the list above it and read as part
+          // of the queue, so nobody found it. primaryDim is the accent at 16%
+          // alpha, so it follows a custom accent instead of pinning a colour,
+          // and the accent top border replaces the hairline that used to be
+          // the only thing separating the two.
+          color: VelvetColors.primaryDim,
+          border: Border(top: BorderSide(color: VelvetColors.primary)),
         ),
         child: Column(
           children: [
@@ -206,7 +212,10 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                       Text(
                         l.discoverTitle.toUpperCase(),
                         style: TextStyle(
-                          color: VelvetColors.textSecondary,
+                          // Matches the explore icon beside it; the muted grey
+                          // it replaces was the other half of why the strip
+                          // disappeared into the queue.
+                          color: VelvetColors.primary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.1,

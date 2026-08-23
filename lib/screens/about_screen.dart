@@ -38,6 +38,11 @@ class AboutScreen extends StatelessWidget {
     ),
   ];
 
+  // GitHub Sponsors for the mStream author. Deliberately NOT in [_links]:
+  // that list is a row of equal-weight reference links, and burying the ask
+  // among them is the same as not making it.
+  static const _sponsorUrl = 'https://github.com/sponsors/IrosTheBeggar';
+
   const AboutScreen({super.key});
 
   static String _linkSubtitle(AppLocalizations l, _LinkId id) {
@@ -109,6 +114,36 @@ class AboutScreen extends StatelessWidget {
                 fontSize: 14,
                 color: VelvetColors.textSecondary,
               ),
+            ),
+          ),
+          SizedBox(height: 22),
+          // The one thing on this page worth a button. Sits above the link
+          // list so it reads as an invitation rather than another entry.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: FilledButton.icon(
+              onPressed: () => _open(context, _sponsorUrl),
+              // Not a heart — Attributions below already uses one, and two
+              // hearts on one screen means neither says anything.
+              icon: const Icon(Icons.volunteer_activism, size: 18),
+              label: Text(l.aboutSponsor),
+              style: FilledButton.styleFrom(
+                backgroundColor: VelvetColors.primary,
+                foregroundColor: VelvetColors.onPrimary,
+                minimumSize: const Size.fromHeight(46),
+                textStyle: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+          SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              l.aboutSponsorSubtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 12, color: VelvetColors.textSecondary),
             ),
           ),
           SizedBox(height: 24),

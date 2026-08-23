@@ -813,7 +813,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // drawer's local-history entry on the home route).
   Widget _appDrawer(BuildContext context, AppLocalizations l) {
     return Drawer(
-      child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+      child: ListView(
+          // Zero on top so the DrawerHeader still runs under the status bar,
+          // but the BOTTOM inset has to come back: EdgeInsets.zero dropped the
+          // system-bar padding a ListView is otherwise given, so the scroll
+          // extent ended at the last tile and the navigation bar sat on top of
+          // it. With enough entries to make the list scroll, About became
+          // unreachable — you could scroll to the end and it was still under
+          // the bar.
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom),
+          children: <Widget>[
         DrawerHeader(
           decoration: BoxDecoration(
             gradient: LinearGradient(

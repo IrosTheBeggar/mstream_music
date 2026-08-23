@@ -360,6 +360,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Licence, crédits des shaders et mentions open source.';
 
   @override
+  String get aboutSponsor => 'Soutenir mStream';
+
+  @override
+  String get aboutSponsorSubtitle =>
+      'mStream est gratuit et open source. Le sponsoriser sur GitHub le garde ainsi.';
+
+  @override
   String get ok => 'OK';
 
   @override

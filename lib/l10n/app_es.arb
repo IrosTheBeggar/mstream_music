@@ -97,6 +97,8 @@
   "linkHomepageSubtitle": "Página del proyecto",
   "aboutAttributions": "Atribuciones",
   "aboutAttributionsSubtitle": "Licencia, créditos de shaders y avisos de código abierto.",
+  "aboutSponsor": "Patrocinar mStream",
+  "aboutSponsorSubtitle": "mStream es gratuito y de código abierto. Patrocinarlo en GitHub lo mantiene así.",
   "ok": "Aceptar",
   "delete": "Eliminar",
   "edit": "Editar",

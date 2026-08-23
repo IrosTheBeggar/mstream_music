@@ -49,6 +49,17 @@ class LetterStrip extends StatefulWidget {
   static int scrubbableCount(List<DisplayItem> items) =>
       _hasFolders(items) ? items.where(_isFolder).length : items.length;
 
+  /// Painted width of the strip (the hit region is wider — see build). A
+  /// parent that lays content out UNDER the strip reserves this much on the
+  /// right so the two don't overlap.
+  static const double stripWidth = 24;
+
+  /// Whether the strip will actually render for [items]. The overlay decision
+  /// and the gutter decision have to agree, or the gutter appears without a
+  /// strip (or worse, the other way round).
+  static bool showsFor(List<DisplayItem> items) =>
+      scrubbableCount(items) >= minItemsToShow;
+
   static bool _isFolder(DisplayItem i) => i.type == 'directory';
 
   static bool _hasFolders(List<DisplayItem> items) => items.any(_isFolder);

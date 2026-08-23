@@ -720,6 +720,18 @@ abstract class AppLocalizations {
   /// **'License, shader credits, and open-source notices.'**
   String get aboutAttributionsSubtitle;
 
+  /// Button on the About page linking to GitHub Sponsors
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsor mStream'**
+  String get aboutSponsor;
+
+  /// One line under the sponsor button explaining the ask
+  ///
+  /// In en, this message translates to:
+  /// **'mStream is free and open source. Sponsoring on GitHub keeps it that way.'**
+  String get aboutSponsorSubtitle;
+
   /// Generic action labels reused across dialogs/menus.
   ///
   /// In en, this message translates to:

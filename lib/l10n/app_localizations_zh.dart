@@ -340,6 +340,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutAttributionsSubtitle => '许可证、着色器致谢和开源声明。';
 
   @override
+  String get aboutSponsor => '赞助 mStream';
+
+  @override
+  String get aboutSponsorSubtitle => 'mStream 是免费开源的。在 GitHub 上赞助能让它保持如此。';
+
+  @override
   String get ok => '确定';
 
   @override

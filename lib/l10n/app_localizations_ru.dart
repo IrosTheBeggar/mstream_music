@@ -363,6 +363,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'Лицензия, упоминания авторов шейдеров и уведомления об открытом исходном коде.';
 
   @override
+  String get aboutSponsor => 'Поддержать mStream';
+
+  @override
+  String get aboutSponsorSubtitle =>
+      'mStream — бесплатный проект с открытым кодом. Поддержка на GitHub сохраняет его таким.';
+
+  @override
   String get ok => 'ОК';
 
   @override

@@ -97,6 +97,8 @@
   "linkHomepageSubtitle": "Домашняя страница проекта",
   "aboutAttributions": "Упоминания",
   "aboutAttributionsSubtitle": "Лицензия, упоминания авторов шейдеров и уведомления об открытом исходном коде.",
+  "aboutSponsor": "Поддержать mStream",
+  "aboutSponsorSubtitle": "mStream — бесплатный проект с открытым кодом. Поддержка на GitHub сохраняет его таким.",
   "ok": "ОК",
   "delete": "Удалить",
   "edit": "Изменить",

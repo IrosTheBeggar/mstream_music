@@ -235,16 +235,8 @@ class TrackActionsSheet extends StatelessWidget {
                 // button took that slot; writes through the same way - patch
                 // the in-memory metadata, then re-emit so rows repaint.
                 if (isServerTrack && item.metadata != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 14),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: VelvetColors.card,
-                      border: Border.all(color: VelvetColors.border),
-                      borderRadius:
-                          BorderRadius.circular(VelvetColors.radiusSmall),
-                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
                     child: Row(
                       children: [
                         Expanded(
@@ -255,15 +247,30 @@ class TrackActionsSheet extends StatelessWidget {
                                 fontSize: 13),
                           ),
                         ),
-                        RatingControl(
-                          rating: item.metadata?.rating,
-                          server: item.server!,
-                          filepath: item.data!,
-                          size: 18,
-                          onChanged: (r) {
-                            item.metadata?.rating = r;
-                            BrowserManager().updateStream();
-                          },
+                        // The box hugs the STARS, not the whole row. Around
+                        // the label too it drew one control-sized affordance
+                        // whose left half was inert — it read as a button
+                        // that ignored taps. Only the stars take input, so
+                        // only the stars get the frame.
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: VelvetColors.card,
+                            border: Border.all(color: VelvetColors.border),
+                            borderRadius: BorderRadius.circular(
+                                VelvetColors.radiusSmall),
+                          ),
+                          child: RatingControl(
+                            rating: item.metadata?.rating,
+                            server: item.server!,
+                            filepath: item.data!,
+                            size: 18,
+                            onChanged: (r) {
+                              item.metadata?.rating = r;
+                              BrowserManager().updateStream();
+                            },
+                          ),
                         ),
                       ],
                     ),
