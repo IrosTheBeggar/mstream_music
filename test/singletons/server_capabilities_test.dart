@@ -84,6 +84,31 @@ void main() {
     });
   });
 
+  group('search flags', () {
+    // Only noLyrics (6.13.1) is young enough to matter. The other four date to
+    // 4.7.0, below the support floor, so gating them would be dead weight.
+    test('an old server loses only noLyrics', () {
+      final s = _server('old', '6.10.0');
+      final r = ServerCapabilities().filter(s, {
+        'search': 'x',
+        'noArtists': false,
+        'noAlbums': false,
+        'noTitles': false,
+        'noFiles': false,
+        'noLyrics': true,
+      });
+      expect(r.dropped, ['noLyrics']);
+      expect(r.body.containsKey('noArtists'), isTrue);
+      expect(r.body.containsKey('search'), isTrue);
+    });
+
+    test('6.13.1 and up keep it', () {
+      final s = _server('new', '6.13.1');
+      expect(ServerCapabilities().filter(s, {'noLyrics': true}).dropped,
+          isEmpty);
+    });
+  });
+
   group('learning from rejections', () {
     test('a rejection sticks, so the same request cannot fail twice', () {
       final s = _server('new', '6.22.0');

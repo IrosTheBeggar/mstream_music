@@ -163,6 +163,12 @@ enum ServerParam {
   /// `discovery`, so the flag is consulted first and this is the backstop.
   similarTo,
   minSimilarity,
+
+  /// db/search: restrict the lyrics category. The endpoint's other four
+  /// `no*` flags all date to 4.7.0 — below the support floor, so they are
+  /// never worth gating; this one arrived at 6.13.1 and is the only search
+  /// parameter that can 400 a server we still support.
+  noLyrics,
 }
 
 /// Wire name for [p] — what actually goes in the JSON body, and what the
@@ -186,6 +192,7 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   ServerParam.ignoreArtists: ServerVersion(6, 7, 1, '6.7.1'),
   ServerParam.similarTo: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.minSimilarity: ServerVersion(6, 15, 2, '6.15.2'),
+  ServerParam.noLyrics: ServerVersion(6, 13, 1, '6.13.1'),
 };
 
 /// Whether [v] is known to be too old for [p].

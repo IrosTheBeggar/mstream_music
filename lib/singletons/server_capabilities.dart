@@ -63,9 +63,15 @@ class ServerCapabilities {
   String? noteRejection(Server server, String? errorBody) {
     final key = parseNotAllowedKey(errorBody);
     if (key == null) return null;
-    (_rejected[server.localname] ??= <String>{}).add(key);
-    appLog('[caps] ${server.localname} rejected "$key" — '
-        'dropping it for the rest of this session');
+    // Log only on the FIRST learn. Concurrent callers (the seeded Auto DJ
+    // start fires several picks at once) all send the same doomed payload
+    // before any of them has learned, so each gets its own rejection for the
+    // same key — one fact, not three. Set.add reports whether it was new.
+    final added = (_rejected[server.localname] ??= <String>{}).add(key);
+    if (added) {
+      appLog('[caps] ${server.localname} rejected "$key" — '
+          'dropping it for the rest of this session');
+    }
     return key;
   }
 

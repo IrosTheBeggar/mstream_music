@@ -1,3 +1,4 @@
+import './server_capabilities.dart';
 import './server_list.dart';
 import './browser_list.dart';
 import './log_manager.dart';
@@ -340,14 +341,31 @@ class ApiManager {
       // `no*` flags — the server only does the work that's asked. The default
       // set (artists+albums+songs) reproduces mStream's classic search.
       final cats = SettingsManager().searchCategories;
-      var res = await makeServerCall(null, '/api/v1/db/search', {
+      // noLyrics is the only one of the five worth gating: the other four
+      // date to 4.7.0, below the support floor, so no server we still talk to
+      // can reject them. noLyrics arrived at 6.13.1, and one unknown key 400s
+      // the whole search — losing artists and albums too, over a category the
+      // server cannot do either way. Dropping it just lets the server apply
+      // its default, which on those versions is "no lyrics search exists".
+      //
+      // Pre-filter only, no learn-and-retry: makeServerCall discards the
+      // response body on an error, so there is nothing here to read the
+      // rejected key out of. Widening that shared error contract is a bigger
+      // change than this one parameter justifies.
+      final server = ServerManager().currentServer;
+      final searchPayload = <String, dynamic>{
         'search': search,
         'noArtists': !cats.contains(SearchCategory.artists),
         'noAlbums': !cats.contains(SearchCategory.albums),
         'noTitles': !cats.contains(SearchCategory.songs),
         'noFiles': !cats.contains(SearchCategory.files),
         'noLyrics': !cats.contains(SearchCategory.lyrics),
-      }, 'POST');
+      };
+      final searchBody = server == null
+          ? searchPayload
+          : ServerCapabilities().filter(server, searchPayload).body;
+      var res =
+          await makeServerCall(null, '/api/v1/db/search', searchBody, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
       List<DisplayItem> newList = [];
