@@ -1305,77 +1305,77 @@ class _MiniPlayer extends StatelessWidget {
                 },
               ),
             ),
-            // Transport row — flat icons like the original bar.
+            // Transport row. Pared back to what a mini player is for: get it
+            // going, skip forward, jump to the visualizer, arm the DJ.
+            // Previous, shuffle, repeat and the overflow all live in the full
+            // player a swipe away — duplicating them here bought a crowded
+            // strip of identical grey glyphs where the one control people
+            // actually reach for was indistinguishable from the rest.
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 2, 6, 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(mainAxisSize: MainAxisSize.min, children: [
-                    _btn(Icons.skip_previous, handler.skipToPrevious),
+                    // Accent-coloured, not a filled circle: it stays the same
+                    // flat glyph as its neighbours and just carries the theme
+                    // colour, so it reads as the primary action without
+                    // turning into a second, heavier control.
                     StreamBuilder<bool>(
                       stream: handler.playbackState
                           .map((s) => s.playing)
                           .distinct(),
                       builder: (context, snap) {
                         final playing = snap.data ?? false;
-                        return _btn(playing ? Icons.pause : Icons.play_arrow,
-                            playing ? handler.pause : handler.play);
+                        return _btn(
+                            playing ? Icons.pause : Icons.play_arrow,
+                            playing ? handler.pause : handler.play,
+                            active: true);
                       },
                     ),
                     _btn(Icons.skip_next, handler.skipToNext),
                   ]),
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    StreamBuilder<AudioServiceShuffleMode>(
-                      stream: handler.playbackState
-                          .map((s) => s.shuffleMode)
-                          .distinct(),
-                      builder: (context, snap) {
-                        final on = snap.data == AudioServiceShuffleMode.all;
-                        return _btn(
-                            Icons.shuffle,
-                            () => handler.setShuffleMode(on
-                                ? AudioServiceShuffleMode.none
-                                : AudioServiceShuffleMode.all),
-                            active: on);
-                      },
-                    ),
-                    StreamBuilder<AudioServiceRepeatMode>(
-                      stream: handler.playbackState
-                          .map((s) => s.repeatMode)
-                          .distinct(),
-                      builder: (context, snap) {
-                        final mode = snap.data ?? AudioServiceRepeatMode.none;
-                        final on = mode != AudioServiceRepeatMode.none;
-                        return _btn(
-                            mode == AudioServiceRepeatMode.one
-                                ? Icons.repeat_one
-                                : Icons.repeat, () {
-                          final next = mode == AudioServiceRepeatMode.none
-                              ? AudioServiceRepeatMode.all
-                              : mode == AudioServiceRepeatMode.all
-                                  ? AudioServiceRepeatMode.one
-                                  : AudioServiceRepeatMode.none;
-                          handler.setRepeatMode(next);
-                        }, active: on);
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.more_vert),
-                      iconSize: 22,
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                      constraints:
-                          const BoxConstraints(minWidth: 38, minHeight: 36),
-                      color: VelvetColors.appBarTextSecondary,
-                      tooltip: l.mainMore,
-                      onPressed: () => showModalBottomSheet(
-                        context: context,
-                        backgroundColor: VelvetColors.surface,
-                        builder: (_) => MoreActionsSheet(parentContext: context),
-                      ),
-                    ),
-                  ]),
+                  // Centre: straight into the visualizer.
+                  _btn(
+                    Icons.auto_awesome,
+                    () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => Platform.isAndroid
+                            ? VisualizerScreen()
+                            : const ShaderVisualizerScreen())),
+                  ),
+                  // Right: one labelled button rather than three glyphs. Wide
+                  // on purpose — it is the only thing over here, and a word
+                  // reads faster than an icon nobody has learned yet.
+                  StreamBuilder<dynamic>(
+                    stream: handler.customState,
+                    builder: (context, snap) {
+                      final on = snap.data?.autoDJState != null;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 2),
+                        child: OutlinedButton(
+                          onPressed: () => toggleAutoDJ(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: on
+                                ? VelvetColors.primary
+                                : VelvetColors.appBarText,
+                            backgroundColor:
+                                on ? VelvetColors.primaryDim : null,
+                            side: BorderSide(
+                                color: on
+                                    ? VelvetColors.primary
+                                    : VelvetColors.border2),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 14),
+                            minimumSize: const Size(0, 34),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            textStyle: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                          child: Text(l.autoDjTitle),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

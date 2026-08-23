@@ -70,6 +70,15 @@ class Server {
   // server, the role [url] plays for an HTTP server). Null for HTTP servers.
   String? irohPairingCode;
 
+  /// Raw `server` string from `GET /api/` — display as reported, compare via
+  /// ServerVersion.tryParse. Null means the server has never answered that
+  /// endpoint, which puts it before 5.4.2 (see util/server_version.dart).
+  String? serverVersion;
+
+  /// When [serverVersion] was last fetched, so the periodic re-check knows
+  /// whether it is stale. Null = never checked.
+  DateTime? versionCheckedAt;
+
   // Full-flavor only: accept a self-signed / untrusted TLS cert for this server
   // — API calls (via Dart HttpOverrides) and streaming (via the native
   // insecure-TLS bridge for ExoPlayer). Off by default; the Play build never
@@ -145,7 +154,11 @@ class Server {
             ? json['discoveryPathAvailable']
             : null,
         connectionType = json['connectionType'] as String? ?? 'http',
-        irohPairingCode = json['irohPairingCode'] as String?;
+        irohPairingCode = json['irohPairingCode'] as String?,
+        serverVersion = json['serverVersion'] as String?,
+        versionCheckedAt = json['versionCheckedAt'] is int
+            ? DateTime.fromMillisecondsSinceEpoch(json['versionCheckedAt'])
+            : null;
 
   Map<String, dynamic> toJson() => {
         'url': url,
@@ -167,6 +180,8 @@ class Server {
         'federationDiscoveryAvailable': federationDiscoveryAvailable,
         'discoveryPathAvailable': discoveryPathAvailable,
         'connectionType': connectionType,
-        'irohPairingCode': irohPairingCode
+        'irohPairingCode': irohPairingCode,
+        'serverVersion': serverVersion,
+        'versionCheckedAt': versionCheckedAt?.millisecondsSinceEpoch
       };
 }

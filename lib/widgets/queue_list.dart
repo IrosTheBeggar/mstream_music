@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
+import '../singletons/api.dart';
+import '../singletons/track_capture.dart';
 import '../objects/server.dart';
 import '../screens/discover_screen.dart';
 import '../screens/metadata_screen.dart';
@@ -15,6 +18,7 @@ import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
+import 'auto_dj_start_sheet.dart';
 
 /// Active-row state — which queue slot is playing, and whether it's playing —
 /// pushed down to each row (see [QueueList.build]) so a track advancing rebuilds
@@ -567,6 +571,14 @@ Future<void> toggleAutoDJ(BuildContext context) async {
   final messenger = ScaffoldMessenger.of(context);
   final Server? state = handler.customState.valueOrNull?.autoDJState as Server?;
   if (state == null) {
+    // Nothing queued: the DJ has no cue to work from, so it needs a first
+    // track before it means anything. With a queue this never runs — the DJ
+    // reads what is already there, which is why the old standing "seed song"
+    // setting is gone.
+    if (handler.queue.value.isEmpty &&
+        !await _seedEmptyQueue(context, current)) {
+      return; // dismissed, or the pick handed off to the browser
+    }
     handler.customAction('setAutoDJ', {'autoDJServer': current});
     messenger.showSnackBar(SnackBar(
         content: Text(ServerManager().serverList.length == 1
@@ -580,6 +592,70 @@ Future<void> toggleAutoDJ(BuildContext context) async {
     messenger.showSnackBar(
         SnackBar(content: Text(l.autoDjEnabledFor(current.url))));
   }
+}
+
+/// Give the DJ an opening track for an empty queue. Returns true when one is
+/// set and the caller should switch the DJ on now; false when it must not —
+/// the sheet was dismissed, or the user chose to pick from the library and the
+/// browser has taken over (the capture switches the DJ on once a row lands).
+Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
+  final mgr = AutoDJManager();
+  var choice = mgr.emptyQueueStart;
+  if (choice == EmptyQueueStart.ask) {
+    final picked = await showModalBottomSheet<EmptyQueueStart>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => const AutoDjStartSheet(),
+    );
+    if (picked == null) return false; // dismissed — leave the DJ off
+    choice = picked;
+  }
+
+  if (choice == EmptyQueueStart.random) {
+    final item = await ApiManager().fetchRandomSong(server);
+    final path = item?.data;
+    if (path == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)
+                .autoDjSonicSeedFailed)));
+      }
+      return false;
+    }
+    await mgr.setSonicSeed(
+        path: path,
+        title: item!.metadata?.title ?? item.name.split('/').last,
+        server: server.localname);
+    return true;
+  }
+
+  // Pick-from-library: hand off to the browser. Switching the DJ on happens in
+  // onPicked, not here — there is nothing to start from until a row lands, and
+  // arming it now would open on a random track instead of the chosen one.
+  if (!context.mounted) return false;
+  TrackCapture.arm(TrackCaptureRequest(
+    server: server,
+    bannerLabel: (l) => l.autoDjStartPickBanner,
+    // No return screen: the question came from a sheet over the browser, so
+    // the pick simply starts the DJ and leaves the user where they are.
+    onPicked: (item) {
+      final path = item.data;
+      if (path == null) return;
+      // Runs after the arming widget is gone — singletons only.
+      unawaited(mgr
+          .setSonicSeed(
+              path: path,
+              title: item.metadata?.title ?? item.name.split('/').last,
+              server: server.localname)
+          .then((_) => MediaManager()
+              .audioHandler
+              .customAction('setAutoDJ', {'autoDJServer': server})));
+    },
+  ));
+  Navigator.of(context).popUntil((r) => r.isFirst);
+  return false;
 }
 
 /// Auto DJ state at a glance in the queue header (the ∞-icon-on-the-queue

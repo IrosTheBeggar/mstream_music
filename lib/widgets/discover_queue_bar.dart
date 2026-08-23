@@ -27,8 +27,18 @@ import '../util/queue_actions.dart';
 /// closed player.
 ///
 /// Hidden entirely (never probed) unless the playing track's server
-/// advertised `discovery` on ping; a 403 mid-session hides it until the
-/// next app launch.
+/// advertised `discovery` on ping. A 403 does NOT hide it: the bar is lazy,
+/// so a 403 can only arrive in response to the tap that opened the panel,
+/// and vanishing under that tap read as a glitch. It stays and says what
+/// happened instead — see [_scanPendingBody].
+/// Discover's own accent, matching the webapp's panel (webapp/alpha/spa.css,
+/// `.discover-icon` / `.discover-panel`): periwinkle #657ee4 with #8ea0f0 as
+/// its light end. Deliberately NOT the user's accent — Discover is one
+/// feature with a colour of its own in both clients, and tying it to a custom
+/// accent would make it a different colour in every install.
+const Color _discoverAccent = Color(0xFF657EE4);
+const Color _discoverLight = Color(0xFF8EA0F0);
+
 class DiscoverQueueBar extends StatefulWidget {
   const DiscoverQueueBar({super.key});
 
@@ -46,7 +56,12 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   bool _expanded = false;
   bool _dirty = true; // seed changed while collapsed → refetch on expand
   bool _loading = false;
-  bool _disabled = false; // 403 → hide for the session (flag was stale)
+  // 403 → the ping flag said yes and the route said no. Latched so an
+  // automatic refetch (track change) doesn't re-ask a server that just
+  // refused; only the explicit re-check below clears it.
+  bool _disabled = false;
+  bool _rechecking = false;
+  bool _probed = false;
 
   Server? _seedServer;
   String? _seedPath;
@@ -89,6 +104,27 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     if (_expanded && (_dirty || _tracks == null)) _refresh();
   }
 
+  /// Same re-check as the Discover panel: re-ping FIRST, then retry.
+  ///
+  /// The 403 is ambiguous — requireIndex() answers the same status for
+  /// "discovery is off" and "it is on but there is no index yet" — and the
+  /// two live in different places: the ping carries the config flag, the
+  /// route carries the data. If the flag has gone, `visible` goes false and
+  /// the bar hides itself, which is the right answer to "check again" when
+  /// the feature really was switched off.
+  Future<void> _recheck() async {
+    final server = _seedServer;
+    if (server == null || _rechecking) return;
+    setState(() => _rechecking = true);
+    await ServerManager().getServerPaths(server);
+    if (!mounted) return;
+    setState(() {
+      _rechecking = false;
+      _disabled = false;
+    });
+    _refresh();
+  }
+
   void _refresh() {
     final item = MediaManager().audioHandler.mediaItem.value;
     final extras = item?.extras;
@@ -96,7 +132,10 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     final server = ServerManager().byLocalname(extras?['server'] as String?);
     _seedServer = server;
     _seedPath = path;
-    if (server == null || path == null || server.discoveryAvailable != true) {
+    if (server == null ||
+        path == null ||
+        server.discoveryAvailable != true ||
+        _disabled) {
       setState(() {
         _tracks = null;
         _rows = const [];
@@ -116,12 +155,29 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
         _loading = false;
         if (r.disabled) {
           _disabled = true;
+          // Decide WHY before the panel says why — a 403 nearly always means
+          // the feature was switched off since our last ping, not that the
+          // scan is pending (discovery.db exists whenever the flag is on, so
+          // an unscanned library answers 200 + notAnalyzed instead). If the
+          // re-ping clears the flag, `visible` goes false and the bar stands
+          // down; if it survives, the scan-pending body is correct. Same
+          // reasoning as _probeAfterRefusal in screens/discover_screen.dart.
+          if (!_probed) {
+            _probed = true;
+            unawaited(ServerManager().getServerPaths(server).then((_) {
+              if (mounted) setState(() {});
+            }));
+          }
         } else if (r.data != null) {
           _tracks = r.data;
           _rows = r.data!.results.map((t) {
             final row = DisplayItem(server, t.filepath, 'file',
                 '/${t.filepath}', null, null);
+            // Lite metadata (server-side toLiteMetadata), so flag it partial and
+            // let the queue path fetch the full block — see _rowsFor in
+            // screens/discover_screen.dart for why.
             row.metadata = t.metadata;
+            row.partialMetadata = true;
             return row;
           }).toList();
         }
@@ -165,8 +221,9 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     final extras = item?.extras;
     final path = extras?['path'] as String?;
     final server = ServerManager().byLocalname(extras?['server'] as String?);
-    final visible =
-        !_disabled && path != null && server?.discoveryAvailable == true;
+    // `_disabled` deliberately absent: a refused route is something to
+    // report in the panel, not a reason to remove the panel.
+    final visible = path != null && server?.discoveryAvailable == true;
     if (!visible) return const SizedBox.shrink();
 
     // Compact panel height: enough for the header + a few rows without
@@ -185,8 +242,12 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
         // 1.00px while collapsed.
         height: 1 + (_expanded ? panelHeight : 44),
         decoration: BoxDecoration(
-          color: VelvetColors.surface,
-          border: Border(top: BorderSide(color: VelvetColors.border)),
+          // Tinted rather than the queue's own surface: this strip sat in
+          // exactly the same colour as the list above it and read as part of
+          // the queue, so nobody found it. Low alpha so it stays a wash over
+          // whichever theme is active instead of a slab of colour.
+          color: _discoverLight.withValues(alpha: 0.14),
+          border: Border(top: BorderSide(color: _discoverAccent)),
         ),
         child: Column(
           children: [
@@ -200,13 +261,15 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Icon(Icons.explore,
-                          size: 18, color: VelvetColors.primary),
+                      Icon(Icons.explore, size: 18, color: _discoverLight),
                       const SizedBox(width: 8),
                       Text(
                         l.discoverTitle.toUpperCase(),
                         style: TextStyle(
-                          color: VelvetColors.textSecondary,
+                          // Matches the explore icon beside it; the muted grey
+                          // it replaces was the other half of why the strip
+                          // disappeared into the queue.
+                          color: _discoverLight,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.1,
@@ -255,8 +318,49 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     );
   }
 
+  /// The ping advertised discovery and the route answered 403: switched on,
+  /// nothing analyzed. Same state the Discover panel names, in the compact
+  /// shape — one line and the re-check, no title (the bar's own header
+  /// already says DISCOVER).
+  Widget _scanPendingBody(AppLocalizations l) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l.discoverScanPendingBody,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: _rechecking ? null : _recheck,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: _rechecking
+                  ? SizedBox(
+                      width: 13,
+                      height: 13,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _discoverLight),
+                    )
+                  : Icon(Icons.refresh, size: 15, color: _discoverLight),
+              label: Text(
+                l.discoverCheckAgain,
+                style: TextStyle(color: _discoverLight, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+
   Widget _body(AppLocalizations l) {
     final result = _tracks;
+    if (_disabled) return _scanPendingBody(l);
     if (_loading && result == null) {
       return Center(
         child: SizedBox(

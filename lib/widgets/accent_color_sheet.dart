@@ -6,7 +6,7 @@ import '../theme/velvet_theme.dart';
 
 /// Curated accent presets — all bright/saturated so they read on the dark
 /// surfaces and keep the on-accent glyphs legible.
-const List<Color> _accentPresets = [
+const List<Color> kAccentPresets = [
   Color(0xFFFFAB00), // amber
   Color(0xFFFB923C), // orange
   Color(0xFFEF4444), // red
@@ -28,7 +28,21 @@ const List<Color> _hueTrack = [
   Color(0xFFFF0000),
 ];
 
-int _argb(Color c) {
+/// [kAccentPresets] minus anything that duplicates [themeDefault].
+///
+/// Every picker leads with a "Theme default" swatch painted in the active
+/// theme's own primary, and that colour is usually also in the preset list —
+/// amber for Dark/Light, purple for Velvet — so the row opened with two
+/// identical circles that just looked like a rendering bug. They are NOT the
+/// same choice (theme-default follows the theme when you switch it; the preset
+/// pins that colour), which is why the fix is to drop the redundant preset
+/// rather than the theme-default swatch.
+List<Color> accentPresetsFor(Color themeDefault) {
+  final skip = accentArgb(themeDefault);
+  return [for (final c in kAccentPresets) if (accentArgb(c) != skip) c];
+}
+
+int accentArgb(Color c) {
   int ch(double v) => (v * 255.0).round() & 0xff;
   return 0xFF000000 | (ch(c.r) << 16) | (ch(c.g) << 8) | ch(c.b);
 }
@@ -71,7 +85,7 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
   // Persist the custom colour on release only (not per drag tick) — the live
   // sheet preview is driven by [_hsv] during the drag.
   void _commitCustom() =>
-      SettingsManager().setAccentColor(_argb(_hsv.value.toColor()));
+      SettingsManager().setAccentColor(accentArgb(_hsv.value.toColor()));
 
   @override
   Widget build(BuildContext context) {
@@ -112,18 +126,18 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
               spacing: 14,
               runSpacing: 14,
               children: [
-                _Swatch(
+                AccentSwatch(
                   color: themeDefault,
                   selected: current == null,
                   icon: Icons.format_color_reset,
                   tooltip: l.accentThemeDefault,
                   onTap: () => _applyPreset(null),
                 ),
-                for (final c in _accentPresets)
-                  _Swatch(
+                for (final c in accentPresetsFor(themeDefault))
+                  AccentSwatch(
                     color: c,
-                    selected: current == _argb(c),
-                    onTap: () => _applyPreset(_argb(c)),
+                    selected: current == accentArgb(c),
+                    onTap: () => _applyPreset(accentArgb(c)),
                   ),
               ],
             ),
@@ -157,7 +171,7 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: VelvetColors.border),
                       ),
-                      child: current == _argb(custom)
+                      child: current == accentArgb(custom)
                           ? Icon(Icons.check, color: onAccent(custom), size: 22)
                           : null,
                     ),
@@ -210,13 +224,16 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
   }
 }
 
-class _Swatch extends StatelessWidget {
+/// One tappable accent circle. Shared by this sheet and the first-run setup
+/// flow so both render the palette identically.
+class AccentSwatch extends StatelessWidget {
   final Color color;
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
   final String? tooltip;
-  const _Swatch({
+  const AccentSwatch({
+    super.key,
     required this.color,
     required this.selected,
     required this.onTap,

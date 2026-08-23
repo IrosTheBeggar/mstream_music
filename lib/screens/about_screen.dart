@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
 import '../l10n/app_localizations.dart';
+import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import 'attributions_screen.dart';
 
@@ -37,6 +38,11 @@ class AboutScreen extends StatelessWidget {
       icon: Icons.public,
     ),
   ];
+
+  // GitHub Sponsors for the mStream author. Deliberately NOT in [_links]:
+  // that list is a row of equal-weight reference links, and burying the ask
+  // among them is the same as not making it.
+  static const _sponsorUrl = 'https://github.com/sponsors/IrosTheBeggar';
 
   const AboutScreen({super.key});
 
@@ -108,6 +114,43 @@ class AboutScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 color: VelvetColors.textSecondary,
+              ),
+            ),
+          ),
+          SizedBox(height: 18),
+          // The SERVER's version, distinct from the app version above it.
+          // Same source as the drawer's line; shown here because About is
+          // where people look when asked "what version are you running".
+          Builder(builder: (context) {
+            final server = ServerManager().currentServer;
+            if (server == null) return const SizedBox.shrink();
+            return Center(
+              child: Text(
+                server.serverVersion == null
+                    ? l.serverVersionUnknown
+                    : l.serverVersionLabel(server.serverVersion!),
+                style: TextStyle(
+                    fontSize: 13, color: VelvetColors.textSecondary),
+              ),
+            );
+          }),
+          SizedBox(height: 22),
+          // The one thing on this page worth a button. Sits above the link
+          // list so it reads as an invitation rather than another entry.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: FilledButton.icon(
+              onPressed: () => _open(context, _sponsorUrl),
+              // Not a heart — Attributions below already uses one, and two
+              // hearts on one screen means neither says anything.
+              icon: const Icon(Icons.volunteer_activism, size: 18),
+              label: Text(l.aboutSponsor),
+              style: FilledButton.styleFrom(
+                backgroundColor: VelvetColors.primary,
+                foregroundColor: VelvetColors.onPrimary,
+                minimumSize: const Size.fromHeight(46),
+                textStyle: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w700),
               ),
             ),
           ),

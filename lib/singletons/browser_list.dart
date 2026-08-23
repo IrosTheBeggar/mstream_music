@@ -27,6 +27,11 @@ class BrowserManager {
   // frames), so the search-results subheader shows the term and reverts on
   // back-nav, mirroring pathCache. Display-only.
   final List<String?> searchTermCache = [];
+  // 1:1 with browserCache. The playlist name per frame (null for non-playlist
+  // frames), so the grey subheader names the open playlist and reverts on
+  // back-nav — and so the toolbar and the empty state can tell "a playlist
+  // with no songs" apart from "a folder with no songs".
+  final List<String?> playlistCache = [];
 
   final List<DisplayItem> browserList = [];
 
@@ -48,6 +53,11 @@ class BrowserManager {
   /// isn't a search-results list.
   String? get currentSearchTerm =>
       searchTermCache.isNotEmpty ? searchTermCache.last : null;
+
+  /// The open playlist's name for the top frame, or null when the current
+  /// view isn't a playlist's contents.
+  String? get currentPlaylist =>
+      playlistCache.isNotEmpty ? playlistCache.last : null;
 
   String listName = 'Welcome';
 
@@ -122,8 +132,24 @@ class BrowserManager {
       BehaviorSubject<DisplayItem?>.seeded(null);
 
   // The album-detail view publishes its loaded songs here so the top toolbar's
-  // download / add-all act on them (the songs live in the view's state).
-  List<DisplayItem>? albumDetailSongs;
+  // Play / Shuffle / download / add-all act on them (the songs live in the
+  // view's state).
+  //
+  // Stream-backed, not a plain field: the songs arrive from an async fetch
+  // AFTER _albumDetail has emitted, so a toolbar that renders those controls
+  // conditionally would build once against null and never learn about them —
+  // leaving an album bar with nothing but Back on it.
+  late final BehaviorSubject<List<DisplayItem>?> _albumDetailSongs =
+      BehaviorSubject<List<DisplayItem>?>.seeded(null);
+  List<DisplayItem>? _albumSongs;
+  List<DisplayItem>? get albumDetailSongs => _albumSongs;
+  set albumDetailSongs(List<DisplayItem>? songs) {
+    _albumSongs = songs;
+    if (!_albumDetailSongs.isClosed) _albumDetailSongs.add(songs);
+  }
+
+  Stream<List<DisplayItem>?> get albumDetailSongsStream =>
+      _albumDetailSongs.stream;
 
   // Browser local-search state, shared so the top toolbar owns the field/toggle
   // while the body does the filtering. open = field shown; query = filter text.
@@ -221,6 +247,8 @@ class BrowserManager {
     String? holdPath = pathCache.isNotEmpty ? pathCache[0] : null;
     String? holdTerm =
         searchTermCache.isNotEmpty ? searchTermCache[0] : null;
+    String? holdPlaylist =
+        playlistCache.isNotEmpty ? playlistCache[0] : null;
 
     browserCache.clear();
     browserList.clear();
@@ -237,6 +265,9 @@ class BrowserManager {
     searchTermCache
       ..clear()
       ..add(holdTerm);
+    playlistCache
+      ..clear()
+      ..add(holdPlaylist);
   }
 
   void goToNavScreen() {
@@ -249,6 +280,7 @@ class BrowserManager {
     alphabeticalCache.clear();
     pathCache.clear();
     searchTermCache.clear();
+    playlistCache.clear();
 
     if (ServerManager().currentServer == null) {
       return;
@@ -316,6 +348,7 @@ class BrowserManager {
     alphabeticalCache.add(false);
     pathCache.add(null); // home nav isn't the file explorer — no path row
     searchTermCache.add(null); // home nav isn't a search result — no term row
+    playlistCache.add(null); // ...nor a playlist — no name row
     browserList.add(newItem1);
     browserList.add(newItem2);
     browserList.add(newItem3);
@@ -336,6 +369,7 @@ class BrowserManager {
     alphabeticalCache.clear();
     pathCache.clear();
     searchTermCache.clear();
+    playlistCache.clear();
 
     browserList.add(DisplayItem(null, 'Welcome To mStream', 'addServer', '',
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
@@ -344,7 +378,10 @@ class BrowserManager {
   }
 
   void addListToStack(List<DisplayItem> newList,
-      {bool alphabetical = false, String? path, String? searchTerm}) {
+      {bool alphabetical = false,
+      String? path,
+      String? searchTerm,
+      String? playlist}) {
     // Capture the current screen's scroll position before navigating
     // forward. sc.hasClients is false when navigation is triggered
     // from a non-Browser context (e.g. tapping File Explorer in the
@@ -358,6 +395,7 @@ class BrowserManager {
     alphabeticalCache.add(alphabetical);
     pathCache.add(path);
     searchTermCache.add(searchTerm);
+    playlistCache.add(playlist);
 
     browserList
       ..clear()
@@ -482,6 +520,7 @@ class BrowserManager {
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
     if (pathCache.isNotEmpty) pathCache.removeLast();
     if (searchTermCache.isNotEmpty) searchTermCache.removeLast();
+    if (playlistCache.isNotEmpty) playlistCache.removeLast();
     browserList
       ..clear()
       ..addAll(browserCache.last);
@@ -530,6 +569,7 @@ class BrowserManager {
     _browserStream.close();
     _browserLabel.close();
     _albumDetail.close();
+    _albumDetailSongs.close();
     _search.close();
     _searchFocused.close();
     _loading.close();

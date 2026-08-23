@@ -4,8 +4,9 @@
 // (in an IndexedStack) and Back dismisses it via BrowserManager.closeAlbumDetail.
 //
 // Layout (simplified from the original route screen): a medium-player-style
-// banner — album art left, title/artist/meta right, Play + Shuffle — painted
-// over the album-art colour splash, then the track list. Per-track duration,
+// banner — album art left, title/artist/meta right — painted over the
+// album-art colour splash, then the track list. Play / Shuffle / Add all live
+// in the shared BrowserToolbar above, same as every other track list. Per-track
 // album runtime, and the kbps · kHz readout render only when the server reports
 // them (older API builds omit them; see MusicMetadata).
 
@@ -15,12 +16,9 @@ import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
-import '../screens/discover_screen.dart';
-import '../screens/sonic_path_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
-import '../singletons/settings.dart';
 import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
 import '../util/ambient_color.dart';
@@ -29,7 +27,7 @@ import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../widgets/player_panel.dart';
-import '../widgets/star_rating.dart';
+import '../widgets/track_actions_sheet.dart';
 
 class AlbumDetailView extends StatefulWidget {
   /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`)
@@ -172,24 +170,19 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   }
 
   // ── actions ──
-  void _playFrom(int index, {bool shuffle = false}) {
-    final songs = _songs;
-    if (songs == null || songs.isEmpty) return;
-    playFromHere(songs, index, shuffle: shuffle);
-  }
-
   // Row tap: defer to the shared TapBehavior setting (the same one the file
   // browser uses). A pure add-to-queue shows a confirmation toast. An armed
-  // sonic-path pick eats the tap first — nothing may queue mid-pick.
+  // browse-to-pick eats the tap first — nothing may queue mid-pick.
   Future<void> _onRowTap(int index) async {
     final songs = _songs;
     if (songs == null || index < 0 || index >= songs.length) return;
+    // Read before tryCapture — a capture clears the pending request.
+    final route = TrackCapture.pending?.returnScreen;
     switch (TrackCapture.tryCapture(songs[index])) {
       case CaptureResult.captured:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
-        );
+        if (route != null) {
+          Navigator.push(context, MaterialPageRoute(builder: route));
+        }
         return;
       case CaptureResult.rejected:
         showCaptureRejectedToast(context);
@@ -200,46 +193,22 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     if (await handleTrackTap(songs, index)) _toast();
   }
 
-  // ── per-row play-options menu ──
-  Future<void> _rowAddNext(int index) async {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    await addNext(songs[index]);
-    _toast();
-  }
-
-  void _rowPlayNow(int index) {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    playNow(songs[index]);
-  }
-
-  Future<void> _rowAddToEnd(int index) async {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    await addToQueueEnd(songs[index]);
-    _toast();
-  }
-
-  // "Find similar" — Discover screen pinned to this row's track (only
-  // offered when the track's server advertised discovery; see the menu
-  // gating in _trackList).
-  void _rowFindSimilar(int index) {
-    final songs = _songs;
-    if (songs == null || index < 0 || index >= songs.length) return;
-    final song = songs[index];
-    final server = song.server;
-    final path = song.data;
-    if (server == null || path == null) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => DiscoverScreen(
-        seedServer: server,
-        seedPath: path,
-        seedTitle: song.metadata?.title ?? path.split('/').last,
-        seedArtist: song.metadata?.artist,
+  // ── per-row overflow ──
+  // The same sheet the browser's track rows open, so a song offers the same
+  // actions wherever you meet it — and gains Add to playlist / Download,
+  // which the dropdown this replaced never had.
+  void _showTrackActions(DisplayItem item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-    ));
+      builder: (_) => TrackActionsSheet(item: item, parentContext: context),
+    );
   }
+
 
   // "Added to queue" confirmation. Floats above the docked mini-player — that
   // overlay sits in a higher layer at the bottom and would otherwise hide a
@@ -306,7 +275,6 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
 
   // ── banner: back/overflow + medium-player-style art-left header over the splash ──
   Widget _banner(AppLocalizations l, List<DisplayItem>? songs) {
-    final enabled = songs != null && songs.isNotEmpty;
     final artUrl = _artUrl();
     final artist = songs == null ? '' : _artistLabel(songs, l);
 
@@ -401,35 +369,9 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Play (filled) + Shuffle, stacked to keep the banner compact.
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton.filled(
-                      onPressed: enabled ? () => _playFrom(0) : null,
-                      tooltip: l.play,
-                      icon: Icon(Icons.play_arrow, color: accentInk),
-                      style: IconButton.styleFrom(
-                        backgroundColor: VelvetColors.primary,
-                        disabledBackgroundColor:
-                            VelvetColors.primary.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    IconButton(
-                      onPressed:
-                          enabled ? () => _playFrom(0, shuffle: true) : null,
-                      tooltip: l.shuffle,
-                      icon: const Icon(Icons.shuffle),
-                      color: VelvetColors.textSecondary,
-                      style: IconButton.styleFrom(
-                        shape: CircleBorder(
-                            side: BorderSide(color: VelvetColors.border)),
-                      ),
-                    ),
-                  ],
-                ),
+                // Play + Shuffle used to sit here, stacked. They live in the
+                // top toolbar now (see BrowserToolbar's album branch) so the
+                // controls are in the same place on every track list.
               ],
             ),
           ),
@@ -441,76 +383,105 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // Tappable rating for a track row: small stars when rated, a single outline
   // star otherwise; opens the rating form on tap and refreshes the list on
   // change. Empty placeholder if the row has no server/path (shouldn't happen
-  // for album songs).
-  Widget _ratingControl(DisplayItem s) {
-    final server = s.server;
-    final path = s.data;
-    if (server == null || path == null) return const SizedBox.shrink();
-    return RatingControl(
-      rating: s.metadata?.rating,
-      server: server,
-      filepath: path,
-      size: 11,
-      onChanged: (r) {
-        s.metadata?.rating = r;
-        if (mounted) setState(() {});
-      },
-    );
-  }
+ 
+  /// Disc a track belongs to. The server treats an absent disc tag as disc 1
+  /// when it sorts (COALESCE(disc_number, 1) in ALBUM_TRACK_ORDER), so the
+  /// grouping here has to agree or a half-tagged album would show a phantom
+  /// extra disc.
+  int _discOf(DisplayItem s) => s.metadata?.disc ?? 1;
 
   Widget _trackList(List<DisplayItem> songs) {
+    // Rows arrive already in album order (server-side ALBUM_TRACK_ORDER:
+    // disc, then track, with untagged tracks last within their disc), so this
+    // only has to RENDER that order — never re-sort it.
+    final discs = {for (final s in songs) _discOf(s)};
+    final showDiscs = discs.length > 1;
+    // Real track numbers, but only when the album actually carries them.
+    // Falling back to the row's position per-track would hand an untagged
+    // file a tidy sequential number and hide the fact it has no tag; falling
+    // back for the WHOLE album keeps a completely untagged one readable.
+    final anyTrackNumbers =
+        songs.any((s) => s.metadata?.track != null);
+
+    // Flattened render list: a disc header owns a null song.
+    final entries = <({DisplayItem? song, int index, int disc})>[];
+    int? lastDisc;
+    for (var i = 0; i < songs.length; i++) {
+      final d = _discOf(songs[i]);
+      if (showDiscs && d != lastDisc) {
+        entries.add((song: null, index: -1, disc: d));
+        lastDisc = d;
+      }
+      entries.add((song: songs[i], index: i, disc: d));
+    }
+
     return StreamBuilder<({String? path, bool playing})>(
       stream: _nowStream,
       initialData: (path: null, playing: false),
       builder: (context, snap) {
         final now = snap.data ?? (path: null, playing: false);
+        final l = AppLocalizations.of(context);
         return ListView.builder(
           padding: const EdgeInsets.only(top: 4, bottom: 12),
-          itemCount: songs.length,
-          itemBuilder: (context, i) {
-            final s = songs[i];
+          itemCount: entries.length,
+          itemBuilder: (context, e) {
+            final entry = entries[e];
+            final s = entry.song;
+            if (s == null) return _discHeader(l, entry.disc);
             return _SongRow(
-              number: i + 1,
+              // A track with no number inside an otherwise-tagged album shows
+              // a dash rather than a made-up one.
+              number: anyTrackNumbers
+                  ? s.metadata?.track
+                  : entry.index + 1,
               title: s.metadata?.title ?? (s.data ?? '').split('/').last,
               active: now.path != null && now.path == s.data,
               playing: now.playing,
-              duration: s.metadata?.duration,
-              onTap: () => _onRowTap(i),
-              onAddNext: () => _rowAddNext(i),
-              onPlayNow: () => _rowPlayNow(i),
-              onAddToEnd: () => _rowAddToEnd(i),
-              // Only when this track's server has discovery data — the menu
-              // entry hides entirely on older servers (never probed).
-              onFindSimilar: (s.server?.discoveryAvailable == true &&
-                      s.data != null)
-                  ? () => _rowFindSimilar(i)
-                  : null,
-              ratingControl: _ratingControl(s),
+              onTap: () => _onRowTap(entry.index),
+              onMenu: () => _showTrackActions(s),
             );
           },
         );
       },
     );
   }
+
+  Widget _discHeader(AppLocalizations l, int disc) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+      child: Row(
+        children: [
+          Icon(Icons.album_outlined, size: 13, color: VelvetColors.primary),
+          const SizedBox(width: 7),
+          Text(
+            l.albumDiscNumber(disc),
+            style: TextStyle(
+              color: VelvetColors.primary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Container(height: 1, color: VelvetColors.border)),
+        ],
+      ),
+    );
+  }
 }
 
-/// One track row: number (or active EQ/play indicator), title, duration (when
-/// reported), and a play-options menu (Add next / Play now, plus Add to end of
-/// queue when the row tap is in play-from-here mode). The row tap itself follows
-/// the shared TapBehavior setting.
+/// One track row: number (or active EQ/play indicator), title, and the
+/// overflow that opens the shared TrackActionsSheet. Duration and rating both
+/// live in that sheet now — the row is just the song. The row tap itself
+/// follows the shared TapBehavior setting.
 class _SongRow extends StatelessWidget {
-  final int number;
+  /// Null when the track carries no number in a tagged album.
+  final int? number;
   final String title;
   final bool active;
   final bool playing;
-  final Duration? duration;
   final VoidCallback onTap;
-  final VoidCallback onAddNext;
-  final VoidCallback onPlayNow;
-  final VoidCallback onAddToEnd;
-  // Null hides the menu entry (track's server lacks discovery data).
-  final VoidCallback? onFindSimilar;
-  final Widget ratingControl;
+  final VoidCallback onMenu;
 
   const _SongRow({
     required this.number,
@@ -518,12 +489,7 @@ class _SongRow extends StatelessWidget {
     required this.active,
     required this.playing,
     required this.onTap,
-    required this.onAddNext,
-    required this.onPlayNow,
-    required this.onAddToEnd,
-    this.onFindSimilar,
-    required this.ratingControl,
-    this.duration,
+    required this.onMenu,
   });
 
   @override
@@ -552,7 +518,9 @@ class _SongRow extends StatelessWidget {
                       ? Icon(playing ? Icons.graphic_eq : Icons.play_arrow,
                           size: playing ? 18 : 16, color: VelvetColors.primary)
                       : Text(
-                          number.toString().padLeft(2, '0'),
+                          number == null
+                              ? '--'
+                              : number.toString().padLeft(2, '0'),
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 13,
@@ -576,66 +544,17 @@ class _SongRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Duration on top with the tappable rating star(s) directly under
-              // it — vertical stacking keeps the row compact, and the star shows
-              // even when unrated so it's one tap from the rating form.
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (duration != null)
-                    Text(
-                      formatDuration(duration!, padMinutes: false),
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: VelvetColors.textTertiary,
-                      ),
-                    ),
-                  if (duration != null) const SizedBox(height: 1),
-                  ratingControl,
-                ],
-              ),
-              const SizedBox(width: 4),
-              // Queue-options dropdown: Add next / Play now (+ Add to end of
-              // queue when the row tap is play-from-here). Rating moved out to
-              // the always-visible star above.
-              PopupMenuButton<String>(
-                icon: Icon(Icons.arrow_drop_down,
-                    color: VelvetColors.textSecondary),
-                iconSize: 24,
-                color: VelvetColors.surface,
+              // Same overflow the browser's track rows carry, opening the
+              // same sheet. Rating lives in there now, which is why the row's
+              // inline stars are gone.
+              IconButton(
+                icon: Icon(Icons.more_vert,
+                    size: 20, color: VelvetColors.textSecondary),
+                tooltip: l.browserMoreActions,
                 padding: EdgeInsets.zero,
                 constraints:
                     const BoxConstraints(minWidth: 40, minHeight: 40),
-                onSelected: (v) {
-                  switch (v) {
-                    case 'next':
-                      onAddNext();
-                      break;
-                    case 'now':
-                      onPlayNow();
-                      break;
-                    case 'end':
-                      onAddToEnd();
-                      break;
-                    case 'similar':
-                      onFindSimilar?.call();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(value: 'next', child: Text(l.queueAddNext)),
-                  PopupMenuItem(value: 'now', child: Text(l.queuePlayNow)),
-                  if (SettingsManager().tapBehavior ==
-                      TapBehavior.playFromHere)
-                    PopupMenuItem(
-                        value: 'end', child: Text(l.queueAddToEnd)),
-                  if (onFindSimilar != null)
-                    PopupMenuItem(
-                        value: 'similar',
-                        child: Text(l.discoverFindSimilar)),
-                ],
+                onPressed: onMenu,
               ),
             ],
           ),

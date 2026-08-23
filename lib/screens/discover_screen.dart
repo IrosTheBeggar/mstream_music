@@ -98,6 +98,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   // being set up / the first DJ pick is fetched.
   bool _startingSession = false;
 
+  // Re-checking whether the discovery scan has produced anything yet.
+  bool _rechecking = false;
+
+  // One automatic probe per screen after a 403 — see _probeAfterRefusal.
+  bool _probed = false;
+
   @override
   void initState() {
     super.initState();
@@ -177,6 +183,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             _tracksLoading = false;
             if (r.disabled) {
               _tracksDisabled = true;
+              _probeAfterRefusal();
             } else if (r.data != null) {
               _tracks = r.data;
               _trackRows = _rowsFor(seedServer, r.data!.results);
@@ -256,7 +263,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return tracks.map((t) {
       final row = DisplayItem(server, t.filepath, 'file', '/${t.filepath}',
           Icon(Icons.music_note, color: VelvetColors.accent), null);
+      // Lite metadata, like a search hit: the /discovery routes render
+      // their results through the server's toLiteMetadata, which drops the
+      // fidelity / identity / stats fields Song Info shows. Flagging it
+      // partial is what makes buildServerFileMediaItem fetch the full block
+      // before queueing — without it a track queued from Discover kept the
+      // lite block for good, while the same track queued from search did
+      // not. One prefill request now covers the whole list.
       row.metadata = t.metadata;
+      row.partialMetadata = true;
       return row;
     }).toList();
   }
@@ -385,6 +400,62 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   /// or a random song in the no-seed state), REPLACES the queue — standard
   /// "start radio" semantics, and the subtitle says so — and hands off to
   /// the player.
+  /// Settle WHY the route refused, without waiting for the user to ask.
+  ///
+  /// Measured against a live server rather than assumed: with
+  /// collectDiscoveryData on, discovery.db is created at boot AND by the admin
+  /// toggle (which calls initDiscoveryDb immediately), so getIndex() is never
+  /// null and the "enabled but no index" 403 does not occur in normal
+  /// operation. A library the scan hasn't reached answers 200 with
+  /// notAnalyzed instead — which the sections below already handle.
+  ///
+  /// So a 403 reaching us almost always means the feature was switched OFF
+  /// since our last ping, and the card would otherwise open by blaming a scan
+  /// that isn't the problem. One re-ping decides it: the flag flips false, the
+  /// card stops being drawn, and the panel says it was turned off. If the flag
+  /// survives, this really is the rare no-index case and the card is right.
+  ///
+  /// Once per screen. A server that is genuinely off answers the same way
+  /// every time, and this fires from inside a fetch handler.
+  void _probeAfterRefusal() {
+    if (_probed) return;
+    _probed = true;
+    final server = _seedServer;
+    if (server == null) return;
+    unawaited(ServerManager().getServerPaths(server).then((_) {
+      if (mounted) setState(() {});
+    }));
+  }
+
+  /// Ask the server again whether the discovery scan has produced anything.
+  ///
+  /// The 403 that lands us in the scan-pending state is deliberately
+  /// ambiguous: requireIndex() answers the same status for "the feature is
+  /// off" and "the feature is on but there is no index yet", so probing
+  /// cannot tell configuration from failure. Asking again is the only honest
+  /// way to separate them — the ping reports the CONFIG flag, the discovery
+  /// routes report the DATA — so this re-pings FIRST. A server switched off
+  /// since the screen opened then resolves to the off message instead of
+  /// sitting on "scan pending" forever.
+  Future<void> _recheckScan() async {
+    final server = _seedServer;
+    if (server == null || _rechecking) return;
+    setState(() => _rechecking = true);
+    await ServerManager().getServerPaths(server);
+    if (!mounted) return;
+    setState(() {
+      _rechecking = false;
+      // Drop the per-screen 403 latches. They exist so one refusal doesn't
+      // cost a request per rebuild; the user has just explicitly asked us to
+      // try again, which is the one thing that should clear them.
+      _tracksDisabled = false;
+      _artistsDisabled = false;
+      _networkDisabled = false;
+      _peersDisabled = false;
+    });
+    _refresh();
+  }
+
   Future<void> _startSonicSession() async {
     if (_startingSession) return;
     setState(() => _startingSession = true);
@@ -579,6 +650,73 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
+  /// Shown when the ping advertised discovery but the routes answered 403:
+  /// the server has the feature switched on and nothing analyzed to search.
+  ///
+  /// Without this the panel fell through to "No matches found", which reads
+  /// as "your music has no matches" — the one thing we know is NOT the case,
+  /// since the server never got as far as looking.
+  Widget _scanPendingCard(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: VelvetColors.raised,
+          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.hourglass_empty,
+                    size: 18, color: VelvetColors.textSecondary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l.discoverScanPendingTitle,
+                    style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l.discoverScanPendingBody,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _rechecking ? null : _recheckScan,
+                icon: _rechecking
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: VelvetColors.primary),
+                      )
+                    : Icon(Icons.refresh,
+                        size: 16, color: VelvetColors.primary),
+                label: Text(
+                  l.discoverCheckAgain,
+                  style: TextStyle(color: VelvetColors.primary, fontSize: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _sections(AppLocalizations l) {
     final server = _seedServer!;
     final showTracks = server.discoveryAvailable == true && !_tracksDisabled;
@@ -604,15 +742,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ),
     ];
 
+    // A 403 from a route the ping said was available. `_tracksDisabled` can
+    // only be set after a request we chose to make, so reaching here means
+    // the flag said yes and the route said no — nothing analyzed yet (or,
+    // rarely, a store that failed to open). Explain it and offer the retry.
+    final scanPending = server.discoveryAvailable == true && _tracksDisabled;
+    if (scanPending) children.add(_scanPendingCard(l));
+
     // One-tap endless radio anchored on this seed. Hidden while the seed is
     // known to be unanalyzed — starting a session would clear the queue and
-    // then fail loud with nothing playing.
-    if (server.discoveryAvailable == true && _tracks?.notAnalyzed != true) {
+    // then fail loud with nothing playing. Hidden on `scanPending` for the
+    // same reason: nothing is analyzed, so the DJ has nothing to anchor on.
+    if (server.discoveryAvailable == true &&
+        !scanPending &&
+        _tracks?.notAnalyzed != true) {
       children.add(_sessionCard(l, random: false));
     }
     // Sonic path: pick a destination, get a queue that morphs from this
-    // seed's sound to it. Needs the newer server route (discoveryPath flag).
-    if (server.discoveryPathAvailable == true && _tracks?.notAnalyzed != true) {
+    // seed's sound to it. Needs the newer server route (discoveryPath flag)
+    // — and the same index, so the same 403 takes it out too.
+    if (server.discoveryPathAvailable == true &&
+        !scanPending &&
+        _tracks?.notAnalyzed != true) {
       children.add(_pathRow(l));
     }
 
@@ -641,9 +792,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
 
     if (children.length == 1) {
-      // Every section 403'd away (stale ping flags) — mirror the no-results
-      // look rather than an empty white void.
-      children.add(_hintRow(l.discoverNothingFound));
+      // Only reachable after a re-check flipped the flag: the screen cannot
+      // be opened unless the ping said discovery was available, so this is
+      // "switched off while you were looking at it", not a cold state.
+      children.add(_hintRow(server.discoveryAvailable == true
+          ? l.discoverNothingFound
+          : l.discoverTurnedOff));
     }
     children.add(const SizedBox(height: 24));
 

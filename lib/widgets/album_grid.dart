@@ -21,11 +21,16 @@ class AlbumGrid extends StatelessWidget {
   // implicit controller.
   final ScrollController? controller;
 
+  /// Right-edge space reserved for the overlaid letter strip. Without it the
+  /// last column runs underneath the letters.
+  final double gutter;
+
   const AlbumGrid({
     super.key,
     required this.items,
     required this.onTap,
     this.controller,
+    this.gutter = 0,
   });
 
   // Layout constants exposed so the parent can compute the per-row
@@ -36,29 +41,38 @@ class AlbumGrid extends StatelessWidget {
   static const double spacing = 12;
   static const double aspectRatio = 0.72;
 
-  static int columnsFor(double width) =>
-      width > 600 ? 4 : (width > 400 ? 3 : 2);
-
-  static double itemWidthFor(double width) {
-    final cols = columnsFor(width);
-    return (width - padHorizontal * 2 - spacing * (cols - 1)) / cols;
+  /// [gutter] is space reserved on the right for an overlaid letter strip.
+  /// It has to reach every one of these: the strip sits ON TOP of the grid, so
+  /// tiles laid out under it are half-hidden, and the letter-jump offset is
+  /// derived from row height, which moves as soon as the usable width does.
+  /// Threading it through all three keeps the two in agreement.
+  static int columnsFor(double width, [double gutter = 0]) {
+    final w = width - gutter;
+    return w > 600 ? 4 : (w > 400 ? 3 : 2);
   }
 
-  static double rowHeightFor(double width) => itemWidthFor(width) / aspectRatio;
+  static double itemWidthFor(double width, [double gutter = 0]) {
+    final cols = columnsFor(width, gutter);
+    return (width - gutter - padHorizontal * 2 - spacing * (cols - 1)) / cols;
+  }
+
+  static double rowHeightFor(double width, [double gutter = 0]) =>
+      itemWidthFor(width, gutter) / aspectRatio;
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = columnsFor(width);
+    final crossAxisCount = columnsFor(width, gutter);
     // Decode cover art at the card's pixel width (computed once for the grid),
     // not the full source resolution — see artCacheSize.
-    final cacheW = artCacheSize(itemWidthFor(width));
+    final cacheW = artCacheSize(itemWidthFor(width, gutter));
 
     return Container(
       color: VelvetColors.bg,
       child: GridView.builder(
         controller: controller,
-        padding: EdgeInsets.fromLTRB(padHorizontal, padTop, padHorizontal, 80),
+        padding: EdgeInsets.fromLTRB(
+            padHorizontal, padTop, padHorizontal + gutter, 80),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: spacing,

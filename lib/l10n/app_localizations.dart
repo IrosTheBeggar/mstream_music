@@ -720,6 +720,12 @@ abstract class AppLocalizations {
   /// **'License, shader credits, and open-source notices.'**
   String get aboutAttributionsSubtitle;
 
+  /// Button on the About page linking to GitHub Sponsors
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsor mStream'**
+  String get aboutSponsor;
+
   /// Generic action labels reused across dialogs/menus.
   ///
   /// In en, this message translates to:
@@ -1487,6 +1493,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add All'**
   String get addAll;
+
+  /// Tooltip for the browser toolbar's overflow (⋮) menu holding Search list / Download / Add All.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get browserMoreActions;
 
   /// Browser delete-confirmation dialog titles + search hint.
   ///
@@ -2409,13 +2421,13 @@ abstract class AppLocalizations {
   /// Subtitle when a finite auto-download cap is set.
   ///
   /// In en, this message translates to:
-  /// **'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.'**
+  /// **'Cache this many songs ahead of the one playing; songs left behind are removed as you go.'**
   String get settingsAutoDownloadCapSubtitle;
 
   /// Subtitle when the auto-download cap is unlimited (0).
   ///
   /// In en, this message translates to:
-  /// **'Keep every auto-downloaded track (no limit).'**
+  /// **'Cache the whole queue (no limit).'**
   String get settingsAutoDownloadCapSubtitleUnlimited;
 
   /// Shown as the auto-download cap value when there's no limit.
@@ -2433,7 +2445,7 @@ abstract class AppLocalizations {
   /// Explainer in the auto-download limit dialog.
   ///
   /// In en, this message translates to:
-  /// **'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.'**
+  /// **'How many queued songs to keep downloaded, counting from the one playing. As playback moves on, songs that fall behind are deleted. Set to 0 to cache the whole queue.'**
   String get settingsAutoDownloadCapDialogBody;
 
   /// No description provided for @downloadWaitingWifi.
@@ -2531,6 +2543,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App external'**
   String get storageAppExternal;
+
+  /// Storage-location option: the SD card's own app folder (no permission needed, removed on uninstall). Only offered when a card is present.
+  ///
+  /// In en, this message translates to:
+  /// **'App SD card'**
+  String get storageAppSdCard;
 
   /// No description provided for @selfSignedTitle.
   ///
@@ -2640,23 +2658,11 @@ abstract class AppLocalizations {
   /// **'Quick Connect'**
   String get addServerTabQuickConnect;
 
-  /// Title at the top of the Quick Connect tab.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect peer-to-peer'**
-  String get irohConnectHeader;
-
   /// Header of the manual pairing-code section on the Quick Connect tab.
   ///
   /// In en, this message translates to:
   /// **'Connect with a pairing code'**
   String get irohPairingHeader;
-
-  /// Explainer under the Quick Connect tab title.
-  ///
-  /// In en, this message translates to:
-  /// **'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.'**
-  String get irohConnectBody;
 
   /// Explainer under the pairing-code section header on the Quick Connect tab.
   ///
@@ -2970,6 +2976,36 @@ abstract class AppLocalizations {
   /// **'This song hasn\'t been analyzed yet — similar songs appear once the discovery scan reaches it.'**
   String get discoverNotAnalyzed;
 
+  /// Header of the Discover card shown when the server has discovery enabled but no analyzed music yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing analyzed yet'**
+  String get discoverScanPendingTitle;
+
+  /// Body of that card. The server answers the same 403 for 'feature off' and 'enabled but no index', so this is what the app can honestly say.
+  ///
+  /// In en, this message translates to:
+  /// **'This server has sonic discovery switched on, but hasn\'t analyzed any music yet. Similar songs appear once the discovery scan has run.'**
+  String get discoverScanPendingBody;
+
+  /// Button that re-pings the server and retries the discovery requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again'**
+  String get discoverCheckAgain;
+
+  /// Shown when a re-check reveals discovery was switched off server-side while the screen was open.
+  ///
+  /// In en, this message translates to:
+  /// **'Sonic discovery has been switched off on this server.'**
+  String get discoverTurnedOff;
+
+  /// Sonic path build failed with a 403 and a re-ping confirmed discovery is still enabled: the server has no index yet.
+  ///
+  /// In en, this message translates to:
+  /// **'This server hasn\'t analyzed any music yet, so there\'s nothing to build a path through. It works once the discovery scan has run.'**
+  String get pathScanPending;
+
   /// Empty state for a Discover section that returned no results.
   ///
   /// In en, this message translates to:
@@ -3059,6 +3095,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No seed — the playing song anchors the session.'**
   String get autoDjSonicSeedNone;
+
+  /// Browse-to-pick banner shown while the Auto DJ seed capture is armed
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the seed song — tap a track anywhere in the library'**
+  String get autoDjSonicSeedBanner;
 
   /// Hint in the seed-picker sheet's search field.
   ///
@@ -3275,6 +3317,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick a track on {server}'**
   String pathPickOnServer(String server);
+
+  /// Shown on the first-run screen only when the UI language is not English.
+  ///
+  /// In en, this message translates to:
+  /// **'This language was machine-translated and may read awkwardly.'**
+  String get welcomeTranslationNote;
+
+  /// Tappable link under the machine-translation note; opens the project on GitHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Help translate mStream'**
+  String get welcomeTranslationCta;
+
+  /// App bar title of the first-run setup flow shown after the first server is added.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick setup'**
+  String get setupTitle;
+
+  /// Setup flow: dismisses the whole flow without visiting the remaining pages.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get setupSkip;
+
+  /// Setup flow: advances to the next page.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get setupNext;
+
+  /// Setup flow: primary button on the LAST page; closes the flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish'**
+  String get setupFinish;
+
+  /// Setup flow: returns to the previous page.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get setupBack;
+
+  /// Setup flow page 1 title (accent colour).
+  ///
+  /// In en, this message translates to:
+  /// **'Pick your color'**
+  String get setupAccentTitle;
+
+  /// Setup flow page 1 body copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The accent color highlights buttons, sliders and the player controls. Tap one to try it.'**
+  String get setupAccentBody;
+
+  /// Setup flow page 2 title (visualizer audio source). Android only.
+  ///
+  /// In en, this message translates to:
+  /// **'Real audio for the visualizer'**
+  String get setupVisualizerTitle;
+
+  /// Setup flow page 2 body copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The visualizer uses synthesized data until this is enabled.'**
+  String get setupVisualizerBody;
+
+  /// Setup flow page 2: explains up front why a music app requests RECORD_AUDIO. Rendered immediately before setupVisualizerNoMic, which is bold — keep them readable as one paragraph.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning this on asks for the microphone permission — Android requires this for apps that decode the device\'s audio stream (which the visualizer does).'**
+  String get setupVisualizerWarning;
+
+  /// Setup flow page 3 title (tap behaviour).
+  ///
+  /// In en, this message translates to:
+  /// **'When you tap a song'**
+  String get setupPlaybackTitle;
+
+  /// Setup flow final page title (auto-download of queued tracks + how many to keep).
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your queue offline'**
+  String get setupOfflineTitle;
+
+  /// Setup flow page 2: the reassurance sentence closing the mic explanation. Rendered BOLD, so it is a separate string rather than part of setupVisualizerWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream never uses your microphone.'**
+  String get setupVisualizerNoMic;
+
+  /// Shown in the browser body when an opened playlist has no songs.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist is empty'**
+  String get playlistEmpty;
+
+  /// Label on the track sheet's rating row, beside the stars.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get trackRating;
+
+  /// Separator above each disc's tracks in the album view; only shown when an album spans more than one disc.
+  ///
+  /// In en, this message translates to:
+  /// **'Disc {n}'**
+  String albumDiscNumber(int n);
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Start Auto DJ with what?'**
+  String get autoDjStartTitle;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is queued, so the DJ needs an opening track. With a queue it just follows what you already have.'**
+  String get autoDjStartSubtitle;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise me'**
+  String get autoDjStartRandom;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a random song from the library and build outward from it.'**
+  String get autoDjStartRandomSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Let me choose'**
+  String get autoDjStartPick;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Open the library and pick the opening track yourself.'**
+  String get autoDjStartPickSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Remember this'**
+  String get autoDjStartRemember;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this question next time and always start this way.'**
+  String get autoDjStartRememberSub;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the opening song — tap a track anywhere in the library'**
+  String get autoDjStartPickBanner;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'On an empty queue'**
+  String get autoDjOnEmptyQueue;
+
+  /// Auto DJ empty-queue start chooser
+  ///
+  /// In en, this message translates to:
+  /// **'What Auto DJ does when you switch it on with nothing queued.'**
+  String get autoDjOnEmptyQueueSub;
+
+  /// Segmented-button label: ask each time
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get autoDjStartAskShort;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server {version}'**
+  String serverVersionLabel(String version);
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server version unknown'**
+  String get serverVersionUnknown;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Update your server'**
+  String get serverUpdateUrgent;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'Server update available'**
+  String get serverUpdateAvailable;
+
+  /// Server version / update flags
+  ///
+  /// In en, this message translates to:
+  /// **'This server is version {version}. Some features need 5.5 or newer and will be unavailable.'**
+  String serverTooOldWarning(String version);
+
+  /// Auto DJ server-version gating notes
+  ///
+  /// In en, this message translates to:
+  /// **'BPM continuity, harmonic mixing and the genre filter need a newer server. Update to get them.'**
+  String get autoDjNeedsNewerServer;
+
+  /// Auto DJ server-version gating notes
+  ///
+  /// In en, this message translates to:
+  /// **'Needs server 6.15.2 or newer'**
+  String get autoDjSonicNeedsNewerServer;
 }
 
 class _AppLocalizationsDelegate

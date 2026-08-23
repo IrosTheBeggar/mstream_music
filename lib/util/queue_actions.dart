@@ -17,6 +17,7 @@ import '../singletons/api.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
+import 'server_version.dart';
 import 'stream_url.dart';
 
 /// Pure builder for a localFile MediaItem (no I/O).
@@ -122,6 +123,58 @@ Future<MediaItem?> buildMediaItemForRow(DisplayItem i) => i.type == 'localFile'
 /// Non-playable rows (folders, headers) are skipped, and [tappedIndex] is
 /// remapped onto the filtered list. All MediaItems are built before the queue is
 /// touched, so a failed build never leaves a half-replaced queue.
+/// Fill in the metadata these rows are missing, one request per server,
+/// before the build loops below ask for it one track at a time.
+///
+/// Only search hits and discovery rows arrive without a full block — browsed
+/// and album rows already carry one and skip the fetch entirely — so this is
+/// about "queue all" on a search, where 50 hits meant 50 serial round trips
+/// each with its own timeout. In the car that is the whole of voice search.
+///
+/// Purely an optimisation, and deliberately shaped so it cannot become
+/// anything else: it fills DisplayItem.metadata in place, and every row it
+/// does NOT fill is fetched by buildServerFileMediaItem exactly as before. A
+/// server below the floor, a 404, a timeout, a partial answer and a row the
+/// server can't resolve all land in that same path without a branch of their
+/// own — which is what makes the version floor an optimisation too rather
+/// than something that has to be right.
+Future<void> prefillMetadata(List<DisplayItem> rows) async {
+  // Grouped by server: one queue can span servers and each has its own
+  // version. Keyed by localname rather than by the Server object, so two
+  // rows holding different instances of the same server still share a
+  // request.
+  final byServer = <String, List<DisplayItem>>{};
+  for (final i in rows) {
+    if (i.type != 'file') continue;
+    if (i.metadata != null && !i.partialMetadata) continue;
+    final s = i.server;
+    if (s == null || i.data == null) continue;
+    if (metadataBatchKnownUnsupported(
+        ServerVersion.tryParse(s.serverVersion))) {
+      continue;
+    }
+    (byServer[s.localname] ??= []).add(i);
+  }
+  for (final group in byServer.values) {
+    // One row is one request either way: batching buys nothing and adds a
+    // second way to fail.
+    if (group.length < 2) continue;
+    final got = await ApiManager()
+        .fetchTrackMetadataBatch(group.first.server!, [
+      for (final i in group) i.data!,
+    ]);
+    if (got.isEmpty) continue;
+    for (final i in group) {
+      final path = i.data!;
+      final md = got[path.startsWith('/') ? path.substring(1) : path];
+      if (md == null) continue;
+      i.metadata = md;
+      // The block is now the full one, so the per-row fetch is a no-op.
+      i.partialMetadata = false;
+    }
+  }
+}
+
 Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
     {bool shuffle = false}) async {
   final playable = <DisplayItem>[];
@@ -139,6 +192,8 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
     playable.shuffle();
     newIndex = 0;
   }
+
+  await prefillMetadata(playable);
 
   final items = <MediaItem>[];
   for (final i in playable) {
@@ -161,6 +216,7 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
 /// number of tracks enqueued.
 Future<int> addRowsToQueue(List<DisplayItem> rows) async {
   final wasEmpty = MediaManager().audioHandler.queue.value.isEmpty;
+  await prefillMetadata(rows);
   int n = 0;
   for (final i in rows) {
     if (i.type != 'file' && i.type != 'localFile') continue;

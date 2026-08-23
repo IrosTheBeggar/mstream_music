@@ -33,6 +33,7 @@ import '../objects/server.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
+import '../singletons/server_capabilities.dart';
 import '../singletons/server_list.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
@@ -793,6 +794,25 @@ class AutoHttpException implements Exception {
 class AutoApi {
   static Future<dynamic> _call(Server server, String location,
       {Map<String, dynamic>? body}) async {
+    // An iroh server is only reachable while its tunnel serves it; without
+    // this the URL builds against a null tunnelPort and every browse fails
+    // instantly against http://127.0.0.1:0 (port 0 is a deliberate
+    // unroutable fail-fast, not an accident — see Server.effectiveBaseUrl).
+    // Auto asks again on its own, so a bounded wait that gives the tunnel a
+    // moment to come up turns "error row forever" into "loads once connected".
+    //
+    // extendWhileDialing: false is what makes the bound real. By default
+    // awaitTunnelReady re-arms its deadline every 300ms for as long as a dial
+    // is in flight, capped at 45s — right for playback, wrong here, where it
+    // would replace an instant error row with a 45s spinner on every browse
+    // tap of an unreachable server. 12s is long enough for a tunnel that is
+    // actually coming up and short enough to stay a car UI.
+    if (server.isIroh && !ServerManager().tunnelServes(server)) {
+      await ServerManager().awaitTunnelReady(
+          server: server,
+          timeout: const Duration(seconds: 12),
+          extendWhileDialing: false);
+    }
     final uri = server.apiUri(location);
     final headers = <String, String>{'x-access-token': server.jwt ?? ''};
     late http.Response resp;
@@ -921,7 +941,12 @@ class AutoApi {
         List<DisplayItem> albums,
         List<DisplayItem> titles,
       })> search(Server s, String query) async {
-    final res = await _call(s, '/api/v1/db/search', body: {
+    // Pre-filtered, like the app's own search. `noLyrics` is 6.13.1+ and
+    // db/search validates with Joi and no allowUnknown, so sending it to an
+    // older server is a hard 400 — which would take out car search entirely,
+    // voice included, rather than degrading it. This is the one send site
+    // that was still going out blind.
+    final body = ServerCapabilities().filter(s, {
       'search': query,
       'noArtists': false,
       'noAlbums': false,
@@ -931,7 +956,8 @@ class AutoApi {
       // this parser ignores the `lyrics` array anyway — opt out so the server
       // skips the lyric FTS work.
       'noLyrics': true,
-    });
+    }).body;
+    final res = await _call(s, '/api/v1/db/search', body: body);
     final artists = <DisplayItem>[];
     for (final e in (res['artists'] as List? ?? const [])) {
       final name = e['name']?.toString();

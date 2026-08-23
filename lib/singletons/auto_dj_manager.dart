@@ -27,6 +27,22 @@ import 'package:rxdart/rxdart.dart';
 /// labels: SonicAnchorModeLabel in lib/l10n/enum_labels.dart.
 enum SonicAnchorMode { rolling, locked }
 
+/// What Auto DJ does when it is switched on with NOTHING queued. With a queue
+/// it never applies: the DJ takes its cue from the tracks already there.
+///
+/// [ask] shows the chooser each time; the other two are what "remember this"
+/// stores, so the toggle becomes one tap.
+enum EmptyQueueStart {
+  /// Ask on every empty-queue start.
+  ask,
+
+  /// Pull a random song from the library and build outward from it.
+  random,
+
+  /// Drop into the library so the user picks the opening track.
+  pick,
+}
+
 class AutoDJManager {
   AutoDJManager._privateConstructor();
   static final AutoDJManager _instance = AutoDJManager._privateConstructor();
@@ -71,7 +87,20 @@ class AutoDJManager {
   // BPM/key waterfall relaxes within). Seeds are the rolling anchor kept in
   // audio_stuff.dart. Only effective when the DJ server advertised
   // `discovery` on ping (Server.discoveryAvailable).
-  bool sonicSimilarityEnabled = false;
+  /// On by default. It is the feature that makes Auto DJ feel like a DJ
+  /// rather than shuffle, and leaving it off meant most people never found it.
+  ///
+  /// Safe to default only because the failure paths degrade now: a server
+  /// without the capability disables the switch, one below 6.15.2 disables it
+  /// too, and a server that has discovery but no scan data yet drops the
+  /// constraint on the first pick and keeps playing (see the suppression in
+  /// audio_stuff's autoDJ). Before that, defaulting this on would have meant
+  /// Auto DJ producing nothing on any unscanned library.
+  ///
+  /// This is the FIELD default, so it applies to fresh installs only —
+  /// _save() writes every key, so anyone who has ever touched an Auto DJ
+  /// setting has an explicit value in auto_dj.json and keeps it.
+  bool sonicSimilarityEnabled = true;
   // Raw cosine threshold 0..1 for the sonic pool (server default contract;
   // webapp default 0.55). The Auto DJ screen's slider exposes 0.30–0.80.
   double sonicMinSimilarity = 0.55;
@@ -89,6 +118,11 @@ class AutoDJManager {
   String? sonicSeedPath; // vpath-form, no leading slash
   String? sonicSeedTitle; // display only
   String? sonicSeedServer;
+
+  /// See [EmptyQueueStart]. Defaults to asking, because guessing wrong here
+  /// either plays a song nobody chose or dumps the user in a browser they
+  /// didn't ask for.
+  EmptyQueueStart emptyQueueStart = EmptyQueueStart.ask;
 
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
@@ -121,7 +155,11 @@ class AutoDJManager {
       bpmContinuityEnabled = m['bpmContinuityEnabled'] ?? false;
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
-      sonicSimilarityEnabled = m['sonicSimilarityEnabled'] ?? false;
+      // ?? true matches the field default: a stored file that predates the
+      // key (rather than one that stored `false`) reads as a fresh install
+      // and gets the new default. An explicit false is still an explicit
+      // false and survives.
+      sonicSimilarityEnabled = m['sonicSimilarityEnabled'] ?? true;
       final sonicSim = m['sonicMinSimilarity'];
       sonicMinSimilarity =
           sonicSim is num ? sonicSim.toDouble().clamp(0.0, 1.0) : 0.55;
@@ -134,6 +172,11 @@ class AutoDJManager {
           m['sonicSeedTitle'] is String ? m['sonicSeedTitle'] : null;
       sonicSeedServer =
           m['sonicSeedServer'] is String ? m['sonicSeedServer'] : null;
+      // Hardened like sonicAnchorMode: an unknown stored value falls back to
+      // asking rather than silently committing the user to a behaviour.
+      emptyQueueStart =
+          EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
+              EmptyQueueStart.ask;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -157,6 +200,7 @@ class AutoDJManager {
       'sonicSeedPath': sonicSeedPath,
       'sonicSeedTitle': sonicSeedTitle,
       'sonicSeedServer': sonicSeedServer,
+      'emptyQueueStart': emptyQueueStart.name,
     }));
   }
 
@@ -262,6 +306,12 @@ class AutoDJManager {
     sonicSeedPath = norm;
     sonicSeedTitle = title;
     sonicSeedServer = server;
+    _notify();
+    await _save();
+  }
+
+  Future<void> setEmptyQueueStart(EmptyQueueStart v) async {
+    emptyQueueStart = v;
     _notify();
     await _save();
   }

@@ -19,14 +19,14 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
-import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
-import '../widgets/song_picker_sheet.dart';
+import '../widgets/queue_list.dart' show toggleAutoDJ;
 
 class AutoDJScreen extends StatefulWidget {
   const AutoDJScreen({super.key});
@@ -159,15 +159,35 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             ..._vpathTiles(_autoDJServer!),
             Divider(color: VelvetColors.border, height: 1),
           ],
-          _sectionHeader(l.autoDjSectionContinuity),
-          _sonicSimilaritySection(),
-          _bpmContinuitySection(),
-          _harmonicMixingSection(),
-          Divider(color: VelvetColors.border, height: 1),
-          _sectionHeader(l.autoDjSectionFilters),
-          if (enabled) _minRatingTile(_autoDJServer!),
-          _genreFilterSection(),
-          _keywordFilterSection(),
+          // BPM continuity, harmonic mixing and the genre filter all arrived
+          // in 6.7.1. On a server known to predate them the controls are
+          // HIDDEN rather than shown-and-ignored: the app strips those
+          // parameters before sending, so a switch left visible would sit
+          // there saying "on" while the picks were plain random.
+          //
+          // Sonic similarity is separate — it landed in 6.15.2 — so a
+          // 6.7.1..6.14 server keeps this whole block and only that one
+          // switch is disabled.
+          if (_filtersHidden) ...[
+            _sectionHeader(l.autoDjSectionContinuity),
+            _olderServerNote(l),
+            Divider(color: VelvetColors.border, height: 1),
+            _sectionHeader(l.autoDjSectionFilters),
+            if (enabled) _minRatingTile(_autoDJServer!),
+            // Keyword filter survives: it is applied client-side, so it works
+            // against any server however old.
+            _keywordFilterSection(),
+          ] else ...[
+            _sectionHeader(l.autoDjSectionContinuity),
+            _sonicSimilaritySection(),
+            _bpmContinuitySection(),
+            _harmonicMixingSection(),
+            Divider(color: VelvetColors.border, height: 1),
+            _sectionHeader(l.autoDjSectionFilters),
+            if (enabled) _minRatingTile(_autoDJServer!),
+            _genreFilterSection(),
+            _keywordFilterSection(),
+          ],
         ],
       ),
       ),
@@ -175,6 +195,31 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   }
 
   // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
+
+  /// True when the DJ server is KNOWN to predate 6.7.1. Unknown versions and
+  /// forks read false — they can't be compared, so the controls stay and the
+  /// capability learner handles any rejection.
+  bool get _filtersHidden => autoDjFiltersKnownUnsupported(
+      ServerVersion.tryParse(
+          (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
+
+  Widget _olderServerNote(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 16, color: VelvetColors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(l.autoDjNeedsNewerServer,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _sonicSimilaritySection() {
     final l = AppLocalizations.of(context);
@@ -184,7 +229,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // Without discovery data the toggle is inert, so show it disabled with
     // an explanation instead of letting it silently do nothing.
     final target = _autoDJServer ?? ServerManager().currentServer;
-    final supported = target?.discoveryAvailable == true;
+    // Two independent reasons it can be unavailable, and the subtitle says
+    // which: the server predates 6.15.2, or discovery is switched off there.
+    final tooOld =
+        sonicKnownUnsupported(ServerVersion.tryParse(target?.serverVersion));
+    final supported = target?.discoveryAvailable == true && !tooOld;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -203,7 +252,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                     Text(
                       supported
                           ? l.autoDjSonicSubtitle
-                          : l.autoDjSonicUnavailable,
+                          : (tooOld
+                              ? l.autoDjSonicNeedsNewerServer
+                              : l.autoDjSonicUnavailable),
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),
@@ -266,62 +317,47 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 onChanged: (v) => mgr.setSonicMinSimilarity(v),
               ),
             ),
-            // Explicit seed — "start the session from this song". Wins over
-            // the playing track for the first pick; the rolling history
-            // takes over afterwards. The dice picks a random library song.
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: _openSonicSeedPicker,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l.autoDjSonicSeedLabel,
-                            style: TextStyle(
-                                color: VelvetColors.textSecondary,
-                                fontSize: 13),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            mgr.sonicSeedTitle ?? l.autoDjSonicSeedNone,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: mgr.sonicSeedPath != null
-                                  ? VelvetColors.textPrimary
-                                  : VelvetColors.textSecondary,
-                              fontSize: 13,
-                              fontStyle: mgr.sonicSeedPath != null
-                                  ? FontStyle.normal
-                                  : FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (mgr.sonicSeedPath != null)
-                  IconButton(
-                    icon: Icon(Icons.close,
-                        size: 18, color: VelvetColors.textSecondary),
-                    tooltip: l.autoDjSonicSeedRemove,
-                    visualDensity: VisualDensity.compact,
-                    onPressed: _clearSonicSeed,
-                  ),
-                IconButton(
-                  icon: Icon(Icons.casino,
-                      size: 20, color: VelvetColors.primary),
-                  tooltip: l.autoDjSonicSeedRandom,
-                  visualDensity: VisualDensity.compact,
-                  onPressed: _pickRandomSonicSeed,
-                ),
-              ],
+            // What the DJ does from a standing start. The old row here was a
+            // persistent "seed song" the user had to set, remember, and clear
+            // — a standing anchor for a decision that only ever matters at the
+            // moment of switching on with nothing queued. This is that same
+            // decision, stated as the question it actually is.
+            SizedBox(height: 4),
+            Text(
+              l.autoDjOnEmptyQueue,
+              style:
+                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
             ),
+            SizedBox(height: 2),
+            Text(
+              l.autoDjOnEmptyQueueSub,
+              style: TextStyle(
+                  color: VelvetColors.textTertiary, fontSize: 12),
+            ),
+            SizedBox(height: 8),
+            SegmentedButton<EmptyQueueStart>(
+              segments: [
+                ButtonSegment(
+                    value: EmptyQueueStart.ask,
+                    label: Text(l.autoDjStartAskShort)),
+                ButtonSegment(
+                    value: EmptyQueueStart.random,
+                    label: Text(l.autoDjStartRandom)),
+                ButtonSegment(
+                    value: EmptyQueueStart.pick,
+                    label: Text(l.autoDjStartPick)),
+              ],
+              selected: {mgr.emptyQueueStart},
+              onSelectionChanged: (set) {
+                if (set.isNotEmpty) mgr.setEmptyQueueStart(set.first);
+              },
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+              ),
+            ),
+            SizedBox(height: 8),
             // Anchor policy: follow the session's own picks (rolling) or
             // stay pinned to the seed for the whole session (locked).
             SizedBox(height: 8),
@@ -357,64 +393,6 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  // The server a seed would be picked from / sent to: the DJ server when
-  // one is running, else the current server (same fallback as the genre
-  // picker).
-  Server? get _sonicSeedTarget => _autoDJServer ?? ServerManager().currentServer;
-
-  Future<void> _applySonicSeed(DisplayItem item) async {
-    final path = item.data;
-    final server = item.server;
-    if (path == null || server == null) return;
-    final meta = item.metadata;
-    final artist = meta?.artist?.trim() ?? '';
-    final title = [
-      meta?.title ?? item.name,
-      if (artist.isNotEmpty) artist,
-    ].join(' · ');
-    await AutoDJManager()
-        .setSonicSeed(path: path, title: title, server: server.localname);
-    // New lane: restart the rolling sonic session so the next pick anchors
-    // on this seed instead of the previous picks.
-    MediaManager().audioHandler.customAction('clearSonicSession');
-  }
-
-  Future<void> _clearSonicSeed() async {
-    await AutoDJManager().clearSonicSeed();
-    MediaManager().audioHandler.customAction('clearSonicSession');
-  }
-
-  Future<void> _pickRandomSonicSeed() async {
-    final server = _sonicSeedTarget;
-    if (server == null) return;
-    final l = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final item = await ApiManager().fetchRandomSong(server);
-    if (!mounted) return;
-    if (item == null) {
-      messenger
-          .showSnackBar(SnackBar(content: Text(l.autoDjSonicSeedFailed)));
-      return;
-    }
-    await _applySonicSeed(item);
-  }
-
-  Future<void> _openSonicSeedPicker() async {
-    final server = _sonicSeedTarget;
-    if (server == null) return;
-    final l = AppLocalizations.of(context);
-    final picked = await showModalBottomSheet<DisplayItem>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: VelvetColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) =>
-          SongPickerSheet(server: server, title: l.autoDjSonicSeedLabel),
-    );
-    if (picked != null) await _applySonicSeed(picked);
-  }
 
   Widget _bpmContinuitySection() {
     final l = AppLocalizations.of(context);
@@ -561,8 +539,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
               textStyle:
                   TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
-            onPressed: () => _setAutoDJ(
-                enabled ? null : ServerManager().currentServer),
+            // Through the shared toggle, not _setAutoDJ: starting the DJ on an
+            // EMPTY queue has to ask for an opening track first, and going
+            // straight to setAutoDJ skipped that — the handler fell back to
+            // the stored sonic seed, so this button silently replayed the
+            // last song while the identical button in the player bar asked.
+            // _setAutoDJ stays for the source dropdown below, which only
+            // exists while the DJ is already running.
+            onPressed: () => toggleAutoDJ(context),
             child: Text(enabled ? l.autoDjStop : l.autoDjStart),
           ),
         ],

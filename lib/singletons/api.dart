@@ -1,3 +1,4 @@
+import './server_capabilities.dart';
 import './server_list.dart';
 import './browser_list.dart';
 import './log_manager.dart';
@@ -340,14 +341,31 @@ class ApiManager {
       // `no*` flags — the server only does the work that's asked. The default
       // set (artists+albums+songs) reproduces mStream's classic search.
       final cats = SettingsManager().searchCategories;
-      var res = await makeServerCall(null, '/api/v1/db/search', {
+      // noLyrics is the only one of the five worth gating: the other four
+      // date to 4.7.0, below the support floor, so no server we still talk to
+      // can reject them. noLyrics arrived at 6.13.1, and one unknown key 400s
+      // the whole search — losing artists and albums too, over a category the
+      // server cannot do either way. Dropping it just lets the server apply
+      // its default, which on those versions is "no lyrics search exists".
+      //
+      // Pre-filter only, no learn-and-retry: makeServerCall discards the
+      // response body on an error, so there is nothing here to read the
+      // rejected key out of. Widening that shared error contract is a bigger
+      // change than this one parameter justifies.
+      final server = ServerManager().currentServer;
+      final searchPayload = <String, dynamic>{
         'search': search,
         'noArtists': !cats.contains(SearchCategory.artists),
         'noAlbums': !cats.contains(SearchCategory.albums),
         'noTitles': !cats.contains(SearchCategory.songs),
         'noFiles': !cats.contains(SearchCategory.files),
         'noLyrics': !cats.contains(SearchCategory.lyrics),
-      }, 'POST');
+      };
+      final searchBody = server == null
+          ? searchPayload
+          : ServerCapabilities().filter(server, searchPayload).body;
+      var res =
+          await makeServerCall(null, '/api/v1/db/search', searchBody, 'POST');
 
       BrowserManager().setBrowserLabel('Search');
       List<DisplayItem> newList = [];
@@ -615,6 +633,61 @@ class ApiManager {
     }
   }
 
+  /// POST /api/v1/db/metadata/batch — the full metadata block for many tracks
+  /// in ONE request, keyed by the filepath as sent (leading slash stripped).
+  /// Paths the server couldn't resolve are simply absent from the map.
+  ///
+  /// The same renderer as the single-track route, on every version that has
+  /// this endpoint — 6.11+ resolves the whole list in one query, and 5.16
+  /// through 6.10 looped pullMetaData per path. So a batched fetch is never a
+  /// LITE fetch: the reduced 13-field shape belongs to search and discovery
+  /// (server-side toLiteMetadata), which is what the callers of this are
+  /// repairing in the first place.
+  ///
+  /// Best-effort like [fetchTrackMetadata] — an empty map on ANY failure,
+  /// which the caller reads as "fall back to per-track". That covers a 404
+  /// from a server below the floor, a timeout, and a body in a shape we don't
+  /// recognise, so none of those needs a branch of its own.
+  Future<Map<String, MusicMetadata>> fetchTrackMetadataBatch(
+      Server server, List<String> filepaths) async {
+    final fps = filepaths
+        .map((p) => p.startsWith('/') ? p.substring(1) : p)
+        .toSet()
+        .toList();
+    if (fps.isEmpty) return const {};
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/metadata/batch'),
+            // A bare JSON ARRAY, not an object: the route iterates req.body
+            // itself rather than reading a field off it.
+            body: jsonEncode(fps),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          // Longer than the single-track 15s because it stands in for N of
+          // them, but still bounded — the whole point of batching is that one
+          // stalled connection must not cost N timeouts, and an unbounded
+          // wait here would trade N bounded stalls for one unbounded one.
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode > 299) return const {};
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return const {};
+      final out = <String, MusicMetadata>{};
+      decoded.forEach((key, value) {
+        // Each value is the {filepath, metadata} wrapper the single-track
+        // route returns, with metadata null for a path this user cannot see.
+        final md = value is Map ? value['metadata'] : null;
+        if (md is Map) out[key.toString()] = MusicMetadata.fromServerMap(md);
+      });
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
+
   /// POST /api/v1/db/metadata — the full metadata block for a single track by its
   /// (library-prefixed) [filepath]. Used to enrich queue items built from the
   /// lightweight search endpoint, which returns only name/filepath/art. Returns
@@ -626,14 +699,24 @@ class ApiManager {
       Server server, String filepath) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
     try {
-      final response = await http.post(
-        server.apiUri('/api/v1/db/metadata'),
-        body: jsonEncode({'filepath': fp}),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-token': server.jwt ?? '',
-        },
-      );
+      // 15s, matching the other direct-http calls in this file. Untimed,
+      // this had no deadline at all on a path that runs ONE POST PER TRACK,
+      // serially, from a car tap (queue_actions -> buildServerFileMediaItem
+      // for every row without a metadata block). A stalled connection there
+      // hangs Android Auto for as long as the socket takes to give up, which
+      // defeats the bounded wait AutoApi._call exists to provide. Returns
+      // null on timeout like every other failure here — the caller falls back
+      // to the row's own lite metadata.
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/metadata'),
+            body: jsonEncode({'filepath': fp}),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode > 299) return null;
       final decoded = jsonDecode(response.body);
       final md = decoded is Map ? decoded['metadata'] : null;
@@ -766,14 +849,21 @@ class ApiManager {
       final response = await http
           .post(
             server.apiUri('/api/v1/db/search'),
-            body: jsonEncode({
+            // Pre-filtered for the same reason as [searchServer]: an
+            // older server rejects `noLyrics` outright, and this method
+            // swallows errors, so a blind send would turn every query in the
+            // picker into "no results". Only reachable from sonic-path
+            // surfaces today (6.18.1+, well past noLyrics), but the picker
+            // shouldn't carry a version assumption its callers happen to
+            // satisfy.
+            body: jsonEncode(ServerCapabilities().filter(server, {
               'search': search,
               'noArtists': true,
               'noAlbums': true,
               'noTitles': false,
               'noFiles': true,
               'noLyrics': true,
-            }),
+            }).body),
             headers: {
               'Content-Type': 'application/json',
               'x-access-token': server.jwt ?? '',
@@ -951,7 +1041,10 @@ class ApiManager {
       newList.add(newItem);
     });
 
-    BrowserManager().addListToStack(newList);
+    // Name the frame so the subheader can label it, the toolbar can offer the
+    // album-style controls, and an empty result reads as "playlist is empty"
+    // rather than a blank list.
+    BrowserManager().addListToStack(newList, playlist: playlistName);
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {

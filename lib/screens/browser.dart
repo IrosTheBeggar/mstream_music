@@ -12,16 +12,15 @@ import '../widgets/album_grid.dart';
 import '../widgets/letter_strip.dart';
 import '../widgets/player_panel.dart';
 import '../widgets/playlist_name_dialog.dart';
-import '../widgets/star_rating.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
 import '../util/queue_actions.dart';
+import '../util/server_version.dart';
 
 import 'add_server.dart';
-import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -168,15 +167,16 @@ class _BrowserState extends State<Browser> {
   }
 
   /// True when an armed TrackCapture consumed the tap: a captured pick
-  /// returns to the sonic path screen (its state already holds the song),
+  /// returns to whichever screen armed it (its state already holds the song),
   /// a rejected one toasts and stays armed.
   bool _captureTap(DisplayItem item, BuildContext context) {
+    // Read before tryCapture — a capture clears the pending request.
+    final route = TrackCapture.pending?.returnScreen;
     switch (TrackCapture.tryCapture(item)) {
       case CaptureResult.captured:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SonicPathScreen()),
-        );
+        if (route != null) {
+          Navigator.push(context, MaterialPageRoute(builder: route));
+        }
         return true;
       case CaptureResult.rejected:
         showCaptureRejectedToast(context);
@@ -228,8 +228,26 @@ class _BrowserState extends State<Browser> {
   // current browser view (in order), jump to the tapped one, play. Delegates to
   // the shared helper (util/queue_actions.dart) so the album-detail screen plays
   // albums with identical semantics.
+  /// True when the current frame is an ORDERED collection — a file-explorer
+  /// folder or a playlist — rather than an aggregate the server assembled
+  /// (search results, Rated, Recently added).
+  ///
+  /// The two frame markers are the same ones the subheader and toolbar read,
+  /// so this can't drift out of step with what the user sees named above the
+  /// list. Album detail never reaches here: it has its own row-tap path.
+  bool get _isOrderedCollection =>
+      BrowserManager().currentPath != null ||
+      BrowserManager().currentPlaylist != null;
+
+  /// Play-from-here fills the queue with the list you're looking at, which is
+  /// what you want inside an album, playlist or folder. On an aggregate it is
+  /// not: tapping one search hit would queue every other hit, and Rated is
+  /// unbounded. Spotify and Apple Music both play just the tapped song from a
+  /// search result, so aggregates get a single-item queue.
   Future<void> _playFromHere(List<DisplayItem> browserList, int tappedIndex) =>
-      playFromHere(browserList, tappedIndex);
+      _isOrderedCollection
+          ? playFromHere(browserList, tappedIndex)
+          : playFromHere([browserList[tappedIndex]], 0);
 
   Widget makeListItem(List<DisplayItem> b, int i, BuildContext c) {
     switch (b[i].type) {
@@ -323,7 +341,13 @@ class _BrowserState extends State<Browser> {
                   if (v == 'delete') _deletePlaylist(c, b[i]);
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                  // Rename is 5.16.0; delete predates the support floor. On an
+                  // older server the rename call 404s and surfaces as a
+                  // generic playlist error, so drop the item instead of
+                  // offering an action that cannot work.
+                  if (!playlistRenameKnownUnsupported(
+                      ServerVersion.tryParse(b[i].server?.serverVersion)))
+                    PopupMenuItem(value: 'rename', child: Text(l.rename)),
                   PopupMenuItem(
                     value: 'delete',
                     child: Text(l.delete,
@@ -523,7 +547,7 @@ class _BrowserState extends State<Browser> {
                     icon: Icon(
                       Icons.keyboard_arrow_left,
                       size: 20.0,
-                      color: Colors.brown[900],
+                      color: VelvetColors.textTertiary,
                     ),
                     onPressed: () {
                       Slidable.of(context)?.openEndActionPane();
@@ -559,15 +583,14 @@ class _BrowserState extends State<Browser> {
                   leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
+                  // Same overflow a server track row carries, so the queue
+                  // actions sit in the same place whichever kind of track
+                  // you're looking at. Delete stays on the swipe.
                   trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: Colors.brown[900],
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
+                    icon: Icon(Icons.more_vert,
+                        size: 20, color: VelvetColors.textSecondary),
+                    tooltip: l.browserMoreActions,
+                    onPressed: () => _showTrackActions(b[i], c),
                   ),
                   // Same long-press context sheet as server rows — the queue
                   // actions apply to local files too (Find similar hides
@@ -611,7 +634,7 @@ class _BrowserState extends State<Browser> {
                     icon: Icon(
                       Icons.keyboard_arrow_left,
                       size: 20.0,
-                      color: Colors.brown[900],
+                      color: VelvetColors.textTertiary,
                     ),
                     onPressed: () {
                       Slidable.of(context)?.openEndActionPane();
@@ -725,11 +748,20 @@ class _BrowserState extends State<Browser> {
     showModalBottomSheet(
       context: c,
       backgroundColor: VelvetColors.surface,
+      // Without this the sheet is capped at 9/16 of the screen. A server track
+      // with discovery shows header + rating + six actions, which lands right
+      // on that cap and overflowed the last row. Scroll-controlled here, and
+      // the sheet scrolls internally, so the entry count can't overflow it.
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (_) => TrackActionsSheet(item: item, parentContext: c),
     );
   }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
+    final l = AppLocalizations.of(c);
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
@@ -768,26 +800,19 @@ class _BrowserState extends State<Browser> {
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
-                              // Server songs get a tappable rating star at the
-                              // end (same pattern as the album rows). Local files
-                              // have no server-side rating, so no star. Needs a
-                              // metadata object too — without one the rate has
-                              // nowhere to write back to (onChanged below).
-                              trailing: (b[i].type == 'file' &&
-                                      b[i].server != null &&
-                                      b[i].data != null &&
-                                      b[i].metadata != null)
-                                  ? RatingControl(
-                                      rating: b[i].metadata?.rating,
-                                      server: b[i].server!,
-                                      filepath: b[i].data!,
-                                      size: 11,
-                                      onChanged: (r) {
-                                        b[i].metadata?.rating = r;
-                                        BrowserManager().updateStream();
-                                      },
-                                    )
-                                  : null,
+                              // The overflow the queue actions hang off. Under
+                              // the play-from-here default a row tap REPLACES
+                              // the queue, so "add just this one" needs a
+                              // visible affordance — long-press alone hid it.
+                              // Opens the same sheet, which now also carries
+                              // the rating stars this slot used to hold.
+                              trailing: IconButton(
+                                icon: Icon(Icons.more_vert,
+                                    size: 20,
+                                    color: VelvetColors.textSecondary),
+                                tooltip: l.browserMoreActions,
+                                onPressed: () => _showTrackActions(b[i], c),
+                              ),
                               onTap: () {
                                 handleTap(b, i, c);
                               }))
@@ -812,6 +837,12 @@ class _BrowserState extends State<Browser> {
           return _subheaderStrip(
               Icons.folder_outlined, path.isEmpty ? '/' : path,
               mono: true);
+        }
+        final playlist = BrowserManager().currentPlaylist;
+        if (playlist != null) {
+          // Same strip the file explorer uses for its path — the toolbar no
+          // longer carries a label on this view, so this is what names it.
+          return _subheaderStrip(Icons.queue_music, playlist);
         }
         return const SizedBox.shrink();
       },
@@ -968,6 +999,26 @@ class _BrowserState extends State<Browser> {
                       return _homeView(context, browserList);
                     }
 
+                    // An open playlist with nothing in it. Without this the
+                    // user gets a blank screen that's indistinguishable from
+                    // a failed load. Keyed off the frame's playlist name, so
+                    // an empty FOLDER is unaffected.
+                    if (browserList.isEmpty &&
+                        BrowserManager().currentPlaylist != null) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            l.playlistEmpty,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: VelvetColors.textTertiary,
+                                fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
                     // The server "Playlists" view gets its own layout: a New-
                     // playlist button + modern rows with a rename/delete menu.
                     // Detected by item type ('playlist'); the empty-list case is
@@ -991,9 +1042,21 @@ class _BrowserState extends State<Browser> {
                       builder: (context, gridSnap) {
                         final useGrid = (gridSnap.data ?? true) && allAlbums;
                         final ts = MediaQuery.textScalerOf(context);
+                        // Reserve the strip's width only when the strip will
+                        // actually be there — the same three conditions the
+                        // overlay below uses, plus the strip's own
+                        // will-I-render check. Otherwise a list short enough
+                        // to hide the strip would still get an empty gutter.
+                        final stripShowing = BrowserManager().isAlphabetical &&
+                            browserList.isNotEmpty &&
+                            !filtering &&
+                            LetterStrip.showsFor(browserList);
+                        final gutter =
+                            stripShowing ? LetterStrip.stripWidth : 0.0;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
+                                gutter: gutter,
                                 // Pass the shared controller so the
                                 // letter-strip's jumpTo actually
                                 // moves the grid (and so the existing
@@ -1072,8 +1135,10 @@ class _BrowserState extends State<Browser> {
                                     final w = MediaQuery.of(context)
                                         .size
                                         .width;
-                                    final cols = AlbumGrid.columnsFor(w);
-                                    final rowH = AlbumGrid.rowHeightFor(w);
+                                    final cols =
+                                        AlbumGrid.columnsFor(w, gutter);
+                                    final rowH =
+                                        AlbumGrid.rowHeightFor(w, gutter);
                                     final row = i ~/ cols;
                                     offset = AlbumGrid.padTop +
                                         row * (rowH + AlbumGrid.spacing);

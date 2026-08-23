@@ -360,6 +360,9 @@ class AppLocalizationsFr extends AppLocalizations {
       'Licence, crédits des shaders et mentions open source.';
 
   @override
+  String get aboutSponsor => 'Soutenir mStream';
+
+  @override
   String get ok => 'OK';
 
   @override
@@ -798,6 +801,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get addAll => 'Tout ajouter';
+
+  @override
+  String get browserMoreActions => 'Plus d\'actions';
 
   @override
   String get browserConfirmDeletePlaylist =>
@@ -1389,11 +1395,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+      'Met en cache ce nombre de morceaux à partir du morceau en cours ; ceux qui sont dépassés sont supprimés.';
 
   @override
   String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+      'Met en cache toute la file d\'attente (sans limite).';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1403,7 +1409,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      'Combien de morceaux de la file restent téléchargés, à partir de celui en cours. Au fil de la lecture, les morceaux dépassés sont supprimés. 0 pour toute la file.';
 
   @override
   String get downloadWaitingWifi => 'En attente du Wi-Fi';
@@ -1455,6 +1461,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'App externe';
+
+  @override
+  String get storageAppSdCard => 'Carte SD de l\'app';
 
   @override
   String get selfSignedTitle => 'Autoriser le certificat auto-signé';
@@ -1521,14 +1530,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1710,6 +1712,24 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ce titre n\'a pas encore été analysé — les titres similaires apparaîtront quand l\'analyse de découverte l\'aura traité.';
 
   @override
+  String get discoverScanPendingTitle => 'Rien n\'a encore été analysé';
+
+  @override
+  String get discoverScanPendingBody =>
+      'La découverte est activée sur ce serveur, mais aucune musique n\'a encore été analysée. Les titres similaires apparaîtront une fois l\'analyse de découverte effectuée.';
+
+  @override
+  String get discoverCheckAgain => 'Vérifier à nouveau';
+
+  @override
+  String get discoverTurnedOff =>
+      'La découverte a été désactivée sur ce serveur.';
+
+  @override
+  String get pathScanPending =>
+      'Ce serveur n\'a encore analysé aucune musique, il n\'y a donc rien pour tracer un parcours. Cela fonctionnera une fois l\'analyse de découverte effectuée.';
+
+  @override
   String get discoverNothingFound => 'Aucune correspondance trouvée.';
 
   @override
@@ -1763,6 +1783,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get autoDjSonicSeedNone =>
       'Aucun titre de départ — le titre en cours ancre la session.';
+
+  @override
+  String get autoDjSonicSeedBanner =>
+      'Choisis le titre de départ — touche une piste n\'importe où dans la bibliothèque';
 
   @override
   String get autoDjSonicSeedSearchHint => 'Rechercher un titre…';
@@ -1884,4 +1908,133 @@ class AppLocalizationsFr extends AppLocalizations {
   String pathPickOnServer(String server) {
     return 'Choisis une piste sur $server';
   }
+
+  @override
+  String get welcomeTranslationNote =>
+      'Cette langue a été traduite automatiquement et peut sembler maladroite.';
+
+  @override
+  String get welcomeTranslationCta => 'Aidez à traduire mStream';
+
+  @override
+  String get setupTitle => 'Configuration rapide';
+
+  @override
+  String get setupSkip => 'Ignorer';
+
+  @override
+  String get setupNext => 'Suivant';
+
+  @override
+  String get setupFinish => 'Terminer';
+
+  @override
+  String get setupBack => 'Retour';
+
+  @override
+  String get setupAccentTitle => 'Choisissez votre couleur';
+
+  @override
+  String get setupAccentBody =>
+      'La couleur d\'accent met en valeur les boutons, les curseurs et les commandes du lecteur. Touchez-en une pour l\'essayer.';
+
+  @override
+  String get setupVisualizerTitle => 'Audio réel pour le visualiseur';
+
+  @override
+  String get setupVisualizerBody =>
+      'Le visualiseur utilise des données synthétisées tant que ceci n\'est pas activé.';
+
+  @override
+  String get setupVisualizerWarning =>
+      'L\'activer demande l\'autorisation du micro : Android l\'exige des applications qui décodent le flux audio de l\'appareil (ce que fait le visualiseur).';
+
+  @override
+  String get setupPlaybackTitle => 'Quand vous touchez un morceau';
+
+  @override
+  String get setupOfflineTitle => 'Gardez votre file d\'attente hors ligne';
+
+  @override
+  String get setupVisualizerNoMic => 'mStream n\'utilise jamais votre micro.';
+
+  @override
+  String get playlistEmpty => 'La liste de lecture est vide';
+
+  @override
+  String get trackRating => 'Note';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'Disque $n';
+  }
+
+  @override
+  String get autoDjStartTitle => 'Démarrer Auto DJ avec quoi ?';
+
+  @override
+  String get autoDjStartSubtitle =>
+      'La file est vide, le DJ a besoin d\'un premier titre. Avec une file, il suit simplement ce qui s\'y trouve.';
+
+  @override
+  String get autoDjStartRandom => 'Surprends-moi';
+
+  @override
+  String get autoDjStartRandomSub =>
+      'Choisir un titre au hasard dans la bibliothèque et partir de là.';
+
+  @override
+  String get autoDjStartPick => 'Je choisis';
+
+  @override
+  String get autoDjStartPickSub =>
+      'Ouvrir la bibliothèque et choisir le premier titre soi-même.';
+
+  @override
+  String get autoDjStartRemember => 'Mémoriser';
+
+  @override
+  String get autoDjStartRememberSub =>
+      'Passer cette question la prochaine fois et toujours démarrer ainsi.';
+
+  @override
+  String get autoDjStartPickBanner =>
+      'Choisis le premier titre — touche une piste n\'importe où dans la bibliothèque';
+
+  @override
+  String get autoDjOnEmptyQueue => 'File vide';
+
+  @override
+  String get autoDjOnEmptyQueueSub =>
+      'Ce que fait Auto DJ quand tu l\'actives sans rien dans la file.';
+
+  @override
+  String get autoDjStartAskShort => 'Demander';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'Serveur $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'Version du serveur inconnue';
+
+  @override
+  String get serverUpdateUrgent => 'Mets à jour ton serveur';
+
+  @override
+  String get serverUpdateAvailable => 'Mise à jour du serveur disponible';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'Ce serveur est en version $version. Certaines fonctions nécessitent 5.5 ou plus récent et seront indisponibles.';
+  }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'La continuité BPM, le mixage harmonique et le filtre de genres nécessitent un serveur plus récent. Mets à jour pour en profiter.';
+
+  @override
+  String get autoDjSonicNeedsNewerServer =>
+      'Nécessite un serveur 6.15.2 ou plus récent';
 }

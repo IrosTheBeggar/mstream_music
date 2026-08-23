@@ -6,6 +6,7 @@ import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/media.dart';
+import '../singletons/server_list.dart';
 import '../singletons/sonic_path_state.dart';
 import '../singletons/track_capture.dart';
 import '../theme/velvet_theme.dart';
@@ -39,6 +40,26 @@ class SonicPathScreen extends StatefulWidget {
   State<SonicPathScreen> createState() => _SonicPathScreenState();
 }
 
+/// Why a build failed, once we know. The route cannot tell us on its own:
+/// requireIndex() answers the same 403 for "discovery is switched off" and
+/// "it is on but there is no index yet", deliberately, so that probing can't
+/// distinguish configuration from failure. The two answers do live in
+/// different places though — the ping carries the config flag, the route
+/// carries the data — so a 403 is followed by a re-ping that settles it.
+enum _PathFailure {
+  /// Transport or server error. A plain retry is the right answer, and no
+  /// probe is warranted: nothing about the feature is in question.
+  transient,
+
+  /// 403, and the re-ping still advertises the feature: switched on with
+  /// nothing analyzed to path through.
+  scanPending,
+
+  /// 403, and the flag has gone: switched off server-side since this screen
+  /// was opened.
+  turnedOff,
+}
+
 class _SonicPathScreenState extends State<SonicPathScreen> {
   SonicPathState get _s => SonicPathState();
   Server get _server => _s.server!;
@@ -46,6 +67,7 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
   bool _showResults = false;
   bool _loading = false;
   bool _failed = false;
+  _PathFailure _failure = _PathFailure.transient;
   DiscoveryPath? _path;
   List<DisplayItem> _rows = const [];
 
@@ -75,19 +97,38 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
         _server, _s.start!.path, _s.end!.path,
         length: _s.length);
     if (!mounted || rid != _reqId) return;
+    if (r.data == null) {
+      // Ask before naming a reason. The probe runs INSIDE the failure path
+      // rather than after it, so the user is never shown an explanation we
+      // then have to retract — they have already waited for the build, and
+      // one unauthenticated GET is cheap next to being told the wrong thing.
+      var failure = _PathFailure.transient;
+      if (r.disabled) {
+        await ServerManager().getServerPaths(_server);
+        if (!mounted || rid != _reqId) return;
+        failure = _server.discoveryPathAvailable == true
+            ? _PathFailure.scanPending
+            : _PathFailure.turnedOff;
+      }
+      setState(() {
+        _loading = false;
+        _failed = true;
+        _failure = failure;
+      });
+      return;
+    }
     setState(() {
       _loading = false;
-      // 403 = the ping flag was stale; both fold into the retryable state.
-      if (r.data == null) {
-        _failed = true;
-        return;
-      }
       _path = r.data;
       final results = r.data!.results;
       _rows = results.map((t) {
         final row =
             DisplayItem(_server, t.filepath, 'file', '/${t.filepath}', null, null);
+        // Lite metadata (server-side toLiteMetadata), so flag it partial and
+        // let the queue path fetch the full block — see _rowsFor in
+        // screens/discover_screen.dart for why.
         row.metadata = t.metadata;
+        row.partialMetadata = true;
         return row;
       }).toList();
       // The cards show whatever the picker knew; the seed rows carry the
@@ -160,7 +201,9 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
     final server = _server;
     TrackCapture.arm(TrackCaptureRequest(
       server: server,
-      isStart: isStart,
+      bannerLabel: (l) =>
+          isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
+      returnScreen: (_) => const SonicPathScreen(),
       onPicked: (item) {
         // Runs after this State is disposed — write the singleton only.
         final art = item.altAlbumArt ?? item.metadata?.albumArt;
@@ -218,6 +261,7 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
       _showResults = false;
       _loading = false;
       _failed = false;
+      _failure = _PathFailure.transient;
       _path = null;
       _rows = const [];
     });
@@ -708,7 +752,17 @@ class _SonicPathScreenState extends State<SonicPathScreen> {
     }
     final path = _path;
     if (_failed || path == null) {
-      return _hint(l.discoverNothingFound, retry: true);
+      // "No matches found" was wrong for two of these three: the server
+      // never got as far as looking at the library.
+      return switch (_failure) {
+        // Retry re-runs _load, which re-probes if it 403s again — so a scan
+        // that finished in the meantime resolves on the next tap.
+        _PathFailure.scanPending => _hint(l.pathScanPending, retry: true),
+        // Nothing to retry: the feature is gone until it is switched back on,
+        // and the next ping takes this screen's drawer entry with it.
+        _PathFailure.turnedOff => _hint(l.discoverTurnedOff),
+        _PathFailure.transient => _hint(l.discoverNothingFound, retry: true),
+      };
     }
     if (path.notAnalyzed) {
       return _hint(

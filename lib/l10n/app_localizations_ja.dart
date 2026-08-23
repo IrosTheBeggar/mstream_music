@@ -350,6 +350,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutAttributionsSubtitle => 'ライセンス、シェーダーのクレジット、オープンソースのお知らせ。';
 
   @override
+  String get aboutSponsor => 'mStream を支援';
+
+  @override
   String get ok => 'OK';
 
   @override
@@ -774,6 +777,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get addAll => 'すべて追加';
+
+  @override
+  String get browserMoreActions => 'その他の操作';
 
   @override
   String get browserConfirmDeletePlaylist => 'プレイリスト削除の確認';
@@ -1332,11 +1338,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
-      'Keep the newest this many auto-downloads; older ones no longer in your queue are removed.';
+      '再生中の曲から先、この曲数だけを保存します。通り過ぎた曲は順に削除されます。';
 
   @override
-  String get settingsAutoDownloadCapSubtitleUnlimited =>
-      'Keep every auto-downloaded track (no limit).';
+  String get settingsAutoDownloadCapSubtitleUnlimited => 'キュー全体を保存します（制限なし）。';
 
   @override
   String get settingsAutoDownloadCapUnlimited => 'Unlimited';
@@ -1346,7 +1351,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      'Automatically downloaded tracks kept for offline play. When you go over, the oldest ones that aren\'t in your queue are deleted. Set to 0 to keep everything.';
+      '再生中の曲から数えて、キューの何曲をダウンロード済みのまま保つか。再生が進むと、通り過ぎた曲は削除されます。0 でキュー全体。';
 
   @override
   String get downloadWaitingWifi => 'Wi-Fi接続を待機中';
@@ -1396,6 +1401,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storageAppExternal => 'アプリ外部';
+
+  @override
+  String get storageAppSdCard => 'アプリの SD カード';
 
   @override
   String get selfSignedTitle => '自己署名証明書を許可';
@@ -1460,14 +1468,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get addServerTabQuickConnect => 'Quick Connect';
 
   @override
-  String get irohConnectHeader => 'Connect peer-to-peer';
-
-  @override
   String get irohPairingHeader => 'Connect with a pairing code';
-
-  @override
-  String get irohConnectBody =>
-      'Reach your server from anywhere — no port-forwarding, DNS, or public IP needed.';
 
   @override
   String get irohPairingBody =>
@@ -1649,6 +1650,23 @@ class AppLocalizationsJa extends AppLocalizations {
       'この曲はまだ解析されていません — ディスカバリースキャンが到達すると、似ている曲が表示されます。';
 
   @override
+  String get discoverScanPendingTitle => 'まだ何も解析されていません';
+
+  @override
+  String get discoverScanPendingBody =>
+      'このサーバーではディスカバリーが有効ですが、まだ音楽が解析されていません。ディスカバリースキャンが実行されると、似ている曲が表示されます。';
+
+  @override
+  String get discoverCheckAgain => '再確認';
+
+  @override
+  String get discoverTurnedOff => 'このサーバーではディスカバリーが無効になっています。';
+
+  @override
+  String get pathScanPending =>
+      'このサーバーはまだ音楽を解析していないため、経路を作るための曲がありません。ディスカバリースキャンが実行されると利用できます。';
+
+  @override
   String get discoverNothingFound => '一致する曲が見つかりませんでした。';
 
   @override
@@ -1697,6 +1715,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedNone => 'シードなし — 再生中の曲がセッションの基準になります。';
+
+  @override
+  String get autoDjSonicSeedBanner => 'シード曲を選択 — ライブラリ内の好きな曲をタップ';
 
   @override
   String get autoDjSonicSeedSearchHint => '曲を検索…';
@@ -1811,4 +1832,124 @@ class AppLocalizationsJa extends AppLocalizations {
   String pathPickOnServer(String server) {
     return '$server の曲を選んでください';
   }
+
+  @override
+  String get welcomeTranslationNote => 'この言語は機械翻訳されているため、不自然な表現が含まれることがあります。';
+
+  @override
+  String get welcomeTranslationCta => 'mStream の翻訳に協力する';
+
+  @override
+  String get setupTitle => 'かんたん設定';
+
+  @override
+  String get setupSkip => 'スキップ';
+
+  @override
+  String get setupNext => '次へ';
+
+  @override
+  String get setupFinish => '完了';
+
+  @override
+  String get setupBack => '戻る';
+
+  @override
+  String get setupAccentTitle => '色を選ぶ';
+
+  @override
+  String get setupAccentBody =>
+      'アクセントカラーはボタン・スライダー・プレーヤーの操作部分に使われます。タップして試してみてください。';
+
+  @override
+  String get setupVisualizerTitle => 'ビジュアライザーで実際の音声を使う';
+
+  @override
+  String get setupVisualizerBody => 'この設定を有効にするまで、ビジュアライザーはシンセサイズされたデータを使用します。';
+
+  @override
+  String get setupVisualizerWarning =>
+      'オンにするとマイクの権限を求めます。Android は、端末の音声ストリームをデコードするアプリにこの権限を要求します（ビジュアライザーがこれに当たります）。';
+
+  @override
+  String get setupPlaybackTitle => '曲をタップしたときの動作';
+
+  @override
+  String get setupOfflineTitle => 'キューをオフラインで保持';
+
+  @override
+  String get setupVisualizerNoMic => 'mStream がマイクを使用することはありません。';
+
+  @override
+  String get playlistEmpty => 'プレイリストは空です';
+
+  @override
+  String get trackRating => '評価';
+
+  @override
+  String albumDiscNumber(int n) {
+    return 'ディスク $n';
+  }
+
+  @override
+  String get autoDjStartTitle => 'Auto DJ を何から始めますか？';
+
+  @override
+  String get autoDjStartSubtitle => 'キューが空なので、DJ には最初の曲が必要です。キューがあればその内容に従います。';
+
+  @override
+  String get autoDjStartRandom => 'おまかせ';
+
+  @override
+  String get autoDjStartRandomSub => 'ライブラリからランダムに1曲選び、そこから広げます。';
+
+  @override
+  String get autoDjStartPick => '自分で選ぶ';
+
+  @override
+  String get autoDjStartPickSub => 'ライブラリを開いて最初の曲を自分で選びます。';
+
+  @override
+  String get autoDjStartRemember => '記憶する';
+
+  @override
+  String get autoDjStartRememberSub => '次回からこの質問を省略し、常にこの方法で開始します。';
+
+  @override
+  String get autoDjStartPickBanner => '最初の曲を選択 — ライブラリ内の好きな曲をタップ';
+
+  @override
+  String get autoDjOnEmptyQueue => 'キューが空のとき';
+
+  @override
+  String get autoDjOnEmptyQueueSub => 'キューが空の状態で Auto DJ をオンにしたときの動作。';
+
+  @override
+  String get autoDjStartAskShort => '確認する';
+
+  @override
+  String serverVersionLabel(String version) {
+    return 'サーバー $version';
+  }
+
+  @override
+  String get serverVersionUnknown => 'サーバーのバージョン不明';
+
+  @override
+  String get serverUpdateUrgent => 'サーバーを更新してください';
+
+  @override
+  String get serverUpdateAvailable => 'サーバーの更新があります';
+
+  @override
+  String serverTooOldWarning(String version) {
+    return 'このサーバーはバージョン $version です。一部の機能には 5.5 以降が必要で、利用できません。';
+  }
+
+  @override
+  String get autoDjNeedsNewerServer =>
+      'BPM 連続性、ハーモニックミックス、ジャンルフィルターには新しいサーバーが必要です。更新すると利用できます。';
+
+  @override
+  String get autoDjSonicNeedsNewerServer => 'サーバー 6.15.2 以降が必要です';
 }

@@ -28,13 +28,21 @@ import '../singletons/downloads.dart';
 import '../singletons/log_manager.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
+import '../singletons/server_capabilities.dart';
 import '../singletons/server_list.dart';
 import '../singletons/visualizer_audio.dart';
+import '../objects/display_item.dart';
 import '../util/camelot.dart';
+import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
 
 /// An [AudioHandler] for playing a list of podcast episodes.
+/// What [AudioPlayerHandler.healAction] decided the tunnel heal should do:
+/// [run] it now, [rearm] the re-check timer and look again shortly, or [drop]
+/// this trigger entirely.
+enum HealAction { run, rearm, drop }
+
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   // ignore: close_sinks
@@ -142,17 +150,36 @@ class AudioPlayerHandler extends BaseAudioHandler
     // a permanent one — which pauses playback and never auto-resumes. Declaring
     // music attributes makes focus/duck/resume behave deterministically.
     //
-    // We deliberately do NOT add becomingNoisy / interruption *handlers* here:
-    // just_audio already wires those up internally (handleInterruptions
-    // defaults to true) and auto-pauses/resumes. A second handler would
-    // double-fire and fight it. The listener below is logging-only (read-only),
-    // so a "stopped after a call and never came back" report is diagnosable.
+    // We deliberately do NOT add an interruption *handler* here: just_audio
+    // wires that up internally (handleInterruptions defaults to true) and
+    // auto-pauses/resumes around calls and nav prompts. A second handler would
+    // double-fire and fight its resume. That listener stays logging-only, so a
+    // "stopped after a call and never came back" report is diagnosable.
+    //
+    // Becoming-noisy is the exception, and it needs US. just_audio subscribes
+    // to it too, but calls pause() on the PLAYER — which never reaches this
+    // handler's pause() and so never clears _playIntent. The player stops while
+    // the handler still believes playback is wanted, and every revive path here
+    // ends with `if (_playIntent) play()`. Getting out of a car is exactly when
+    // those fire (network change, tunnel re-bind, re-seed), so the music came
+    // back a minute later on the phone's own speaker. Routing through pause()
+    // records the intent, which is what actually makes it stay stopped. The
+    // duplicate pause underneath is harmless — both want the same thing.
     try {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
       session.interruptionEventStream.listen((event) {
         appLog('[audio] interruption '
             '${event.begin ? 'begin' : 'end'} type=${event.type}');
+      });
+      session.becomingNoisyEventStream.listen((_) {
+        // Local playback only. On a cast the audio is coming out of the
+        // renderer, not this phone — unplugging the phone's headphones or
+        // walking away from its car stereo says nothing about the TV that is
+        // actually playing.
+        if (!identical(_backend, _localBackend)) return;
+        appLog('[audio] output disconnected — pausing');
+        unawaited(pause());
       });
     } catch (e) {
       appLog('[audio] audio session configure failed: $e');
@@ -171,7 +198,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // advancing, so skip the Auto-DJ top-up (and the now-playing re-emit) —
       // otherwise dragging the playing track to the last slot would append a
       // spurious Auto-DJ track.
-      if (_reordering || _rebuilding) return;
+      if (_reordering || _rebuilding || _restoring) return;
       if (index == queue.value.length - 1) {
         autoDJ();
       }
@@ -182,6 +209,12 @@ class AudioPlayerHandler extends BaseAudioHandler
           appLog('[play] track ${index + 1}/${queue.value.length}: '
               '${item.title}');
         }
+        // Keep-queue-offline: the cap caches a window of tracks AHEAD of the
+        // playing one, so advancing slides that window — sweep to pull in
+        // whatever just entered it. No-op when the setting is off, the cap is
+        // unlimited (window = whole queue, already swept on the queue change),
+        // or everything in range is on disk.
+        unawaited(DownloadManager().autoDownloadQueue(queue.value));
       }
       _emitCurrentMediaItem();
     });
@@ -204,7 +237,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       // No-op unless the setting is on; DownloadManager dedupes (in-flight,
       // once-per-session, already-on-disk). Lives here — not main.dart — so
       // headless sessions (Android Auto + Auto-DJ top-ups) sweep too.
-      unawaited(DownloadManager().autoDownloadQueue(items));
+      //
+      // Skipped mid-restore. restoreQueue publishes the queue BEFORE the load
+      // parks the spot, so at this instant the window centres on the fresh
+      // player's index 0. On a deep restore (saved at track 50, cap 10) that
+      // fetches tracks 1-10, and by the time they land the window has moved to
+      // 50 and evicts every one of them — a full cap's worth of cellular data
+      // spent on files deleted on arrival. The restore's own load fires this
+      // again from the currentIndex listener once the spot is real.
+      if (!_restoring) unawaited(DownloadManager().autoDownloadQueue(items));
     });
     // duration usually arrives via durationStream after the source
     // loads. Re-emit the current MediaItem with the duration filled in
@@ -244,6 +285,18 @@ class AudioPlayerHandler extends BaseAudioHandler
             'index=${_backend.currentIndex} of ${queue.value.length}');
         stop();
       }
+      // Playback just parked (idle with tracks still queued). The tunnel may
+      // ALREADY be connected — a status edge that landed while this load was
+      // still running is spent, and no further edge is coming — so the park is
+      // its own trigger. Fully guarded by _onTunnelReconnected itself (local
+      // backend, no intentional stop, iroh server, tunnelServes, and the 10s
+      // per-server cooldown), so a park with a genuinely dead tunnel costs one
+      // predicate and nothing else.
+      if (state == BackendProcessingState.idle &&
+          queue.value.isNotEmpty &&
+          !_intentionalStop) {
+        _onTunnelReconnected();
+      }
       // A track that loads clears the skip-budget AND the HTTP retry budget,
       // and lifts any network-stall pause — so the guards only trip on a genuine
       // run of failures, not after a recovery.
@@ -251,6 +304,16 @@ class AudioPlayerHandler extends BaseAudioHandler
         _failedSkips = 0;
         _httpRetries = 0;
         _networkStalled = false;
+        _tunnelLoadFailures = 0;
+        // Only a DIFFERENT track reaching ready clears the local-copy retry
+        // guard. Clearing it on every ready reopens the loop it exists to
+        // stop: a corrupt-but-LOADABLE file (valid header, damaged tail)
+        // reaches ready, clears the guard, fails mid-track, and re-seeds
+        // forever.
+        if (_localRetryKey != null &&
+            _localRetryKey != _trackKey(_itemAt(_backend.currentIndex))) {
+          _localRetryKey = null;
+        }
         // A track actually loaded — the live player state is the truth now;
         // stop overriding reads with the failed-restore park.
         _restoreSpot = null;
@@ -390,20 +453,17 @@ class AudioPlayerHandler extends BaseAudioHandler
       try {
         final fresh = _queueWithFreshUrls();
         if (fresh.isNotEmpty) {
-          await _localBackend.setSources(fresh);
+          await _loadAtSpot(_localBackend, fresh, spot);
           // Live _playIntent, not a captured wasPlaying: a pause (or play)
           // landing during the network-bound load must win — the same
           // post-await doctrine as every revive path.
-          await _localBackend.seek(spot.position,
-              index: spot.index.clamp(0, fresh.length - 1),
-              play: _playIntent);
+          if (_playIntent) unawaited(_localBackend.play());
         }
       } catch (e) {
-        // Same park as a failed launch restore: the new player is empty, so
-        // without this the next revive / snapshot save would land on
-        // track 1 / 0:00 instead of the user's spot.
-        _restoreSpot = (index: spot.index, position: spot.position);
-        appLog('[eq] re-seed after EQ toggle failed — spot parked: $e');
+        // _loadAtSpot already parked the spot and logged the cause; the new
+        // player is empty, so without that park the next revive / snapshot
+        // save would land on track 1 / 0:00 instead of the user's spot.
+        appLog('[eq] re-seed after EQ toggle failed: $e');
       }
       // The rebuilt player has a new audio-session id — re-point the
       // visualizer's real-audio capture (no-op unless actively tapping).
@@ -415,9 +475,53 @@ class AudioPlayerHandler extends BaseAudioHandler
     _emitCurrentMediaItem();
   }
 
+  /// Pushed for exactly one event as the queue empties, purely to overwrite
+  /// the platform session's metadata. Never meant to be READ as a track — the
+  /// null that follows it immediately is the value in-app consumers see.
+  ///
+  /// Both fields are SET rather than left empty or null, because the media
+  /// card renders whatever it is handed: an empty title made One UI fall back
+  /// to "mStream Plus is running", and a null artist printed the literal word
+  /// "null" underneath it.
+  ///
+  /// English, like the Auto DJ notices in this file — the handler has no
+  /// BuildContext and no locale of its own, and plumbing one in for a single
+  /// placeholder is more machinery than the string is worth.
+  static const MediaItem _blankNowPlaying =
+      MediaItem(id: '', title: 'No media loaded', artist: '');
+
   void _emitCurrentMediaItem() {
-    if (_reordering || _rebuilding) return;
-    if (queue.value.isEmpty) return;
+    if (_reordering || _rebuilding || _restoring) return;
+    if (queue.value.isEmpty) {
+      // Nothing queued is nothing playing. This used to return early, which
+      // left the last track's title, artist and art standing on every
+      // now-playing surface — the player bar, the expanded player, the
+      // system notification and the lock screen — after the queue was
+      // cleared. The three flags above already cover the windows where the
+      // queue is EMPTY IN TRANSIT (a restore before its publish, a
+      // transcode-URL rebuild, a reorder), so reaching here means the queue
+      // is genuinely empty rather than mid-swap.
+      //
+      // TWO events, deliberately. audio_service drops a null mediaItem on the
+      // floor (audio_service.dart:1023, `if (mediaItem == null) return`), so
+      // null alone cleared the in-app surfaces and left the last track's
+      // title and art sitting on the notification and lock screen — verified
+      // in the shade after a clear. A blank item IS forwarded, and
+      // overwriting is the only way to clear those while the service stays
+      // foreground, which it must: androidStopForegroundOnPause is false so
+      // One UI can't reap it across a pause.
+      //
+      // The null that follows is what every in-app consumer already reads as
+      // "nothing playing", so no call site has to learn what a blank item
+      // means and .value settles on null before any listener runs.
+      //
+      // Guarded on something actually showing: this also runs on duration
+      // ticks, and an empty queue must not push a blank item at the platform
+      // over and over.
+      if (mediaItem.valueOrNull != null) mediaItem.add(_blankNowPlaying);
+      mediaItem.add(null);
+      return;
+    }
     // A failed launch restore parks a spot the backend never reached — show
     // THAT track as now-playing, not track 1. Spot FIRST: the failed load
     // leaves the backend's currentIndex at 0 (not null), so an index-first
@@ -469,8 +573,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   // one (the local backend is persistent and reused).
   Future<void> _switchBackend(PlaybackBackend next) async {
     final prev = _backend;
-    final pos = prev.position;
-    final idx = prev.currentIndex ?? 0;
+    // _reviveSpot when leaving the LOCAL player: a parked failed load leaves
+    // its index reading 0, so casting while parked would start the renderer
+    // at track 1 — and the cast's own `ready` then clears the park, laundering
+    // the loss into something no revive can undo. A remote backend has no
+    // park concept, so it keeps reporting for itself.
+    final fromLocal = identical(prev, _localBackend);
+    final spot = fromLocal ? _reviveSpot() : null;
+    final pos = spot?.position ?? prev.position;
+    final idx = spot?.index ?? prev.currentIndex ?? 0;
     final wasPlaying = prev.playing;
     // The switch carries the AUDIBLE state, so the intent must follow it:
     // playback started from a renderer's own remote never went through
@@ -486,9 +597,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Returning to the phone must re-derive queue URLs (the auto rebuild is
     // skipped while casting; a tunnel restart mid-cast leaves stale loopback
     // ports in the stored ids). Cast backends re-resolve per track instead.
-    await next.setSources(identical(next, _localBackend)
-        ? _queueWithFreshUrls()
-        : queue.value);
+    // initialIndex so the load starts where the user IS. The follow-up seek
+    // stays: a cast backend takes its position from that seek (its setSources
+    // deliberately ignores initialPosition) and carries the play state into
+    // the load so the renderer auto-plays when its media is ready. Not routed
+    // through _loadAtSpot — parking a local-playback spot on a switch TO a
+    // renderer would be meaningless, and the local arm's own revive paths
+    // already cover the way back.
+    await next.setSources(
+        identical(next, _localBackend) ? _queueWithFreshUrls() : queue.value,
+        initialIndex: idx,
+        initialPosition: pos);
     _backendSubject.add(next);
     if (queue.value.isNotEmpty) {
       // Carry the play state into the load: a renderer then auto-plays when its
@@ -611,9 +730,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   }) async {
     try {
       final items = _queueWithFreshUrls();
-      await _localBackend.setSources(items);
       if (items.isNotEmpty) {
-        await _localBackend.seek(pos, index: idx, play: play);
+        await _loadAtSpot(_localBackend, items, (index: idx, position: pos));
+        // play && _playIntent, not the captured flag alone: this load is
+        // network-bound and can run for seconds, and a pause landing inside
+        // that window must win. Same post-await doctrine as every other
+        // revive path here.
+        if (play && _playIntent) unawaited(_localBackend.play());
       }
     } finally {
       _backendSubject.add(_localBackend);
@@ -670,8 +793,26 @@ class AudioPlayerHandler extends BaseAudioHandler
     final idx = _localBackend.currentIndex;
     final q = queue.value;
     final failed = (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+    // The track that just died may already be ON DISK. onTrackDownloaded
+    // patches extras only — no live source surgery — so anything downloaded
+    // AFTER the queue was seeded keeps streaming from its original source
+    // until something reloads it. When that stream dies offline, reloading is
+    // exactly the recovery: _uriFor re-resolves from extras and picks the
+    // file. Must be tried BEFORE the iroh branch below, which parks playback
+    // waiting for the very network the local copy exists to make unnecessary.
+    if (_recoverFromLocalCopy(failed)) return;
+    // Reaching here on a guarded track whose file is still present means the
+    // disk copy was already tried and failed: the FILE is bad, not the
+    // network. Parking on the tunnel would wait on a source this track
+    // doesn't need, in silence, while the rest of a downloaded queue sits
+    // there playable. Falling through hands it to _recoverHttpError, which
+    // reads a decode/format failure as an unplayable source and skips.
+    final badLocalCopy = _localRetryKey != null &&
+        _localRetryKey == _trackKey(failed) &&
+        failed?.extras?['localPath'] != null;
     final itemServer = failed == null ? null : _serverFor(failed);
-    if (itemServer != null &&
+    if (!badLocalCopy &&
+        itemServer != null &&
         itemServer.isIroh &&
         !ServerManager().tunnelServes(itemServer)) {
       // The tunnel isn't live for this track's iroh server — point it there and
@@ -680,10 +821,98 @@ class AudioPlayerHandler extends BaseAudioHandler
       _recoverIrohPlayback(itemServer);
       return;
     }
+    // The tunnel claims to be serving this server and the load still died.
+    // The shim only flips to reconnecting once the QUIC connection's close
+    // actually arrives, so a link that went away underneath it keeps
+    // reporting connected — and nothing forces the issue, because the heal
+    // fires on a status TRANSITION that never comes. Count these; past a
+    // couple, ask for ground truth.
+    if (itemServer != null &&
+        itemServer.isIroh &&
+        ServerManager().tunnelServes(itemServer)) {
+      _noteTunnelLoadFailure(itemServer);
+    }
     // Non-iroh source failed → hand off to _recoverHttpError, which (with an
     // async connectivity probe) pauses-and-holds on a real outage, retries a
     // transient blip in place, or skips a genuinely bad source.
     _recoverHttpError(error);
+  }
+
+  // The wire names sonicParams produces. Named once so the suppress/skip
+  // pair below can't drift apart from what is actually sent.
+  static const List<String> _kSonicParamKeys = ['similarTo', 'minSimilarity'];
+
+  // Consecutive load failures against a tunnel that says it is connected.
+  // Reset by the `ready` handler — anything loading at all means the path
+  // works. Deliberately not reset by a recovery starting: the whole point is
+  // to notice a RUN of failures the recoveries could not fix.
+  int _tunnelLoadFailures = 0;
+  static const int _kTunnelFailuresBeforeProbe = 3;
+
+  void _noteTunnelLoadFailure(Server server) {
+    if (++_tunnelLoadFailures < _kTunnelFailuresBeforeProbe) return;
+    _tunnelLoadFailures = 0;
+    appLog('[iroh] $_kTunnelFailuresBeforeProbe loads failed against a '
+        'tunnel reporting connected — checking whether it really is');
+    unawaited(ServerManager().reverifyTunnel(server));
+  }
+
+  // The TRACK whose local copy we already re-seeded for — identity, never an
+  // index: a removal above the marked row slides a different track underneath
+  // it, and that track's disk recovery would then be denied, parking an iroh
+  // track on the tunnel with its file sitting on disk. Which is precisely the
+  // incident this whole recovery exists to prevent.
+  //
+  // Without the guard at all, a corrupt-but-present file would error,
+  // re-seed, error again forever. Cleared when a different track loads, on
+  // explicit user navigation, and when a fresh download replaces the file.
+  String? _localRetryKey;
+
+  /// Stable identity for [m] across queue edits and URL rebuilds. Server
+  /// localname + library path is the real identity; `id` is the fallback for
+  /// a purely local item that has no server path, and is stable for exactly
+  /// the items this guard covers ([_withRebuiltUrl] never rewrites an item
+  /// carrying a localPath).
+  static String? _trackKey(MediaItem? m) {
+    if (m == null) return null;
+    final path = m.extras?['path'] as String?;
+    if (path == null) return m.id;
+    return '${m.extras?['server'] as String? ?? ''}\u0000$path';
+  }
+
+  MediaItem? _itemAt(int? idx) {
+    final q = queue.value;
+    return (idx != null && idx >= 0 && idx < q.length) ? q[idx] : null;
+  }
+
+  /// True when [failed] is on disk and a reload has been scheduled, so the
+  /// caller should stop: the file plays with no network at all.
+  ///
+  /// Only tried once per track — a second failure on the same track means the
+  /// file itself is bad, and falls through to the normal recovery/skip path.
+  bool _recoverFromLocalCopy(MediaItem? failed) {
+    if (_recoveringPlayback || failed == null) return false;
+    final key = _trackKey(failed);
+    if (key == null || _localRetryKey == key) return false;
+    final localPath = failed.extras?['localPath'] as String?;
+    if (localPath == null || !File(localPath).existsSync()) return false;
+    _localRetryKey = key;
+    // Deliberately does NOT touch _failedSkips. The budget only ever grows in
+    // _skipFailedTrack, so zeroing it here couldn't protect this recovery
+    // from anything — it could only erase skips already accrued, and that
+    // erases the terminal "Can't play these tracks" stop: a whole queue of
+    // present-but-unplayable files (a captive portal answering a download
+    // sweep with 200 + HTML makes one) would re-seed and skip forever
+    // instead of stopping.
+    _recoveringPlayback = true;
+    appLog('[play] source failed but the track is downloaded — '
+        'reloading from disk');
+    _switchChain = _switchChain
+        .then((_) => _reseedLocalAtSpot())
+        .catchError((Object e) {
+      appLog('[play] local-copy recovery failed: $e');
+    }).whenComplete(() => _recoveringPlayback = false);
+    return true;
   }
 
   // Resume after an iroh playback error whose tunnel isn't live yet: a mid-stream
@@ -711,23 +940,25 @@ class AudioPlayerHandler extends BaseAudioHandler
     // queued, so it's already the target); just wait for it and re-seed.
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
+      final ready = await ServerManager().awaitTunnelReady(server: server);
+      if (!ready) return; // tunnel didn't come up; the banner shows why
+      // Spot read AFTER the wait, not before: awaitTunnelReady re-arms its
+      // deadline for as long as a dial is in flight and can run tens of
+      // seconds, so a skip or seek landing in that window is the newer truth.
+      // Same post-await doctrine as the play-intent reads below.
       // _reviveSpot: a launch-restore whose load failed parks at the SAVED
       // spot — the never-loaded backend would report track 1 / 0:00.
       final spot = _reviveSpot();
-      final pos = spot.position;
-      final idx = spot.index;
-      final ready = await ServerManager().awaitTunnelReady(server: server);
-      if (!ready) return; // tunnel didn't come up; the banner shows why
       // Rebuild URLs against the now-live tunnel ourselves rather than reusing
       // queue.value: a hard restart may have changed the port/token, and the
       // concurrent rebuild-on-(re)bind might not have refreshed queue.value yet —
       // _withRebuiltUrl uses the current effectiveBaseUrl, so these are always live.
       final fresh = queue.value.map(_withRebuiltUrl).toList();
       queue.add(fresh);
-      await _localBackend.setSources(fresh);
+      await _loadAtSpot(_localBackend, fresh, spot);
       // Resume with the user's intent: a mid-stream drop while playing resumes
       // playing; a launch-time recovery (never played) stays paused.
-      await _localBackend.seek(pos, index: idx, play: _playIntent);
+      if (_playIntent) unawaited(_localBackend.play());
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
@@ -885,7 +1116,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         final pos = spot.position;
         final idx = spot.index;
         appLog('[play] network error — retry $attempt/$_kMaxHttpRetries');
-        await _localBackend.setSources(queue.value,
+        // Fresh URLs, not queue.value: a tunnel that rebuilt during the
+        // backoff has a new port and token, and retrying the stale ones just
+        // burns the bounded budget against addresses that cannot work.
+        await _localBackend.setSources(_queueWithFreshUrls(),
             initialIndex: idx, initialPosition: pos);
         if (_playIntent) unawaited(_localBackend.play());
       } else {
@@ -917,6 +1151,62 @@ class AudioPlayerHandler extends BaseAudioHandler
         .catchError((Object e) {
       castLog('network-regained resume failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  /// Load [items] into [backend] starting AT [spot], and park that spot if
+  /// the load throws.
+  ///
+  /// Two rules in one, because they are the same rule. A player must never be
+  /// asked to start at track 1 while the user is somewhere else — just_audio
+  /// defaults a source list to index 0, so `setSources(items)` followed by a
+  /// `seek` is a load of the WRONG track that only reaches the right one if
+  /// it succeeds. And a load that fails must not be left REPORTING track 1
+  /// afterwards, because everything downstream believes it.
+  ///
+  /// Both halves come from one incident. A tunnel died mid-drive, the URL
+  /// rebuild loaded index 0, that load threw, and the session was stranded on
+  /// the one track in a 102-item queue that wasn't downloaded — the offline
+  /// cap keeps a window AHEAD of the playing track, so track 1 was the first
+  /// thing evicted. Ten minutes of silence, with the track the user was
+  /// actually on sitting on disk the whole time. Loading at the spot would
+  /// have played it with no network at all.
+  ///
+  /// The spot is parked, not merely remembered: [_restoreSpot] is what
+  /// [_reviveSpot] and the queue snapshot both read, so parking keeps the
+  /// position true for the next revive AND stops queue.json persisting the
+  /// loss within a second of the failure.
+  Future<void> _loadAtSpot(PlaybackBackend backend, List<MediaItem> items,
+      ({int index, Duration position}) spot) async {
+    final idx = spot.index.clamp(0, items.length - 1);
+    try {
+      await backend.setSources(items,
+          initialIndex: idx, initialPosition: spot.position);
+    } catch (e) {
+      _restoreSpot = (index: idx, position: spot.position);
+      appLog('[play] load failed — spot parked (track ${idx + 1} @ '
+          '${spot.position.inSeconds}s): $e');
+      rethrow;
+    }
+  }
+
+  /// The queue position the app considers current: the parked spot when a load
+  /// failed, else the backend's own index. Read by the offline cache window —
+  /// an errored player reports 0, and a window recentred on that bogus 0
+  /// evicts the downloads sitting AHEAD of the user, which is precisely the
+  /// offline copy they need when the network is the thing that broke.
+  int get logicalQueueIndex {
+    final q = queue.value;
+    if (q.isEmpty) return 0;
+    // A park wins — that is the whole point — but otherwise read the ACTIVE
+    // backend, not _reviveSpot's local one. During a cast the local player
+    // sits frozen at the switch-time index while the renderer advances, so
+    // _reviveSpot would peg the download window to a stale spot: nothing
+    // ahead of the real position prefetches, and files around it get evicted
+    // as "outside the window" — the exact wrong-side eviction this getter
+    // exists to prevent, just moved into the cast arm.
+    final parked = _restoreSpot;
+    final i = parked != null ? parked.index : (_backend.currentIndex ?? 0);
+    return i.clamp(0, q.length - 1);
   }
 
   /// Reload the local backend at its current spot, with every URL re-derived
@@ -954,18 +1244,57 @@ class AudioPlayerHandler extends BaseAudioHandler
   // consumed edge never re-fires on its own — dropping it would park playback
   // until the user taps play.
   Timer? _tunnelHealRetry;
+  /// What the tunnel heal should do when it runs. Pure; unit-tested.
+  ///
+  /// [HealAction.rearm] rather than [HealAction.drop] for a player that isn't
+  /// parked YET is the whole point. The heal's original trigger was a single
+  /// edge — the tunnel status going not-connected → connected — and that
+  /// stream only emits on CHANGE. So an edge that lands while a load is still
+  /// in flight used to be swallowed by a bare `return`, and if that load then
+  /// failed, the player parked with the tunnel already connected and no
+  /// further edge coming. Nothing retried, ever.
+  ///
+  /// That is the seven-and-a-half minutes of silence in the incident log: the
+  /// bind at 18:21:14 fired the heal while the reload was still running, the
+  /// reload threw at 18:21:17, and nothing automatic happened again until a
+  /// hard rebuild produced a fresh edge at 18:29:19.
+  static HealAction healAction({
+    required bool onLocalBackend,
+    required bool intentionalStop,
+    required bool recovering,
+    required bool skipPending,
+    required BackendProcessingState processingState,
+    required bool queueEmpty,
+  }) {
+    if (!onLocalBackend || intentionalStop || queueEmpty) return HealAction.drop;
+    // A recovery in flight will finish; re-check after it does.
+    if (recovering || skipPending) return HealAction.rearm;
+    // Not parked yet. It may still park (a load in flight can fail), and no
+    // second edge is coming, so keep watching rather than dropping the edge.
+    if (processingState != BackendProcessingState.idle) return HealAction.rearm;
+    return HealAction.run;
+  }
+
   void _onTunnelReconnected() {
     _tunnelHealRetry?.cancel();
     _tunnelHealRetry = null;
-    if (!identical(_backend, _localBackend)) return;
-    if (_intentionalStop) return;
-    if (_recoveringPlayback || _skipPending) {
-      _rearmTunnelHeal();
-      return;
-    }
-    if (_localBackend.processingState != BackendProcessingState.idle) return;
     final q = queue.value;
-    if (q.isEmpty) return;
+    switch (healAction(
+      onLocalBackend: identical(_backend, _localBackend),
+      intentionalStop: _intentionalStop,
+      recovering: _recoveringPlayback,
+      skipPending: _skipPending,
+      processingState: _localBackend.processingState,
+      queueEmpty: q.isEmpty,
+    )) {
+      case HealAction.drop:
+        return;
+      case HealAction.rearm:
+        _rearmTunnelHeal();
+        return;
+      case HealAction.run:
+        break;
+    }
     // _reviveSpot: after a failed launch restore the backend reads index 0 --
     // a mixed queue whose track 1 isn't iroh would never pass the gate below
     // even though the PARKED track's server just healed.
@@ -994,7 +1323,21 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (_localBackend.processingState != BackendProcessingState.idle) return;
       await _reseedLocalAtSpot();
     }).catchError((Object e) {
-      castLog('tunnel-reconnect resume failed', error: e);
+      // appLog, not castLog: no cast is involved, and the incident log this
+      // fix came from was tagged [cast] with no cast in sight.
+      appLog('[play] tunnel-reconnect resume failed: $e');
+      // Count it HERE. _onPlaybackError's counter sits behind its
+      // "one recovery at a time" early return, and every failure after the
+      // first is produced BY a recovery holding that flag — so the counter
+      // there oscillates 0↔1 and the ground-truth probe never fires. This
+      // loop is the one that ran every 11s for the whole incident; it is
+      // exactly the run of failures worth probing on.
+      _noteTunnelLoadFailure(server);
+      // Try again rather than leaving the player parked. Bounded by the
+      // tunnelServes gate, the 10s per-server cooldown and the single
+      // _tunnelHealRetry slot, so a flapping tunnel gets ~one attempt per
+      // 10-11s and a revived player fails the idle guard and stops.
+      _rearmTunnelHeal();
     }).whenComplete(() => _recoveringPlayback = false);
   }
 
@@ -1046,6 +1389,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   // True only while _doSetEqEnabled rebuilds the local player; suppresses the
   // currentIndexStream Auto-DJ top-up during the re-emit's index replay.
   bool _rebuilding = false;
+  // True while the launch restore's load is in flight. The queue is published
+  // BEFORE the sources are seeded (restoreQueue has to, so a transport command
+  // racing the restore sees the tracks), which leaves a window where the queue
+  // is the restored one but the fresh player still reads index 0. Everything
+  // that derives now-playing from those two would resolve to track 1 for that
+  // window — the log, the notification, the lock screen, Android Auto — and
+  // flash the wrong track on every open before snapping to the real spot.
+  bool _restoring = false;
 
   // Last item id logged by the [play] track-change diagnostic, so repeated
   // currentIndex emits for the same track don't spam the log.
@@ -1055,10 +1406,38 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> skipToQueueItem(int index) async {
     // Then default implementations of skipToNext and skipToPrevious provided by
     // the [QueueHandler] mixin will delegate to this method.
-    if (index < 0 || index > queue.value.length) return;
+    // >= : an index equal to the length is off the end, not the last row.
+    if (index < 0 || index >= queue.value.length) return;
     // Explicit navigation supersedes a failed-restore park -- without this a
     // stale spot would hijack the next re-seed back to the old track.
     _restoreSpot = null;
+    // Deliberately re-tapping a track that failed from disk is a request to
+    // try it again, so don't let the one-attempt guard deny it.
+    _localRetryKey = null;
+    // A bare seek on an IDLE player is swallowed. just_audio's idle stub
+    // records the index and broadcasts it — so it even looks like it worked in
+    // the logs — but there is no platform player to move, and the next revive
+    // re-reads the backend's own index and loads somewhere else entirely.
+    // Seen in the car: three taps on the Android Auto queue, three silent
+    // relocations back to track 1. Park the choice, then re-seed at it.
+    if (identical(_backend, _localBackend) &&
+        _backend.processingState == BackendProcessingState.idle &&
+        queue.value.isNotEmpty) {
+      // Parked even when a recovery is already running and we can't start our
+      // own: that one finishes wherever it was headed, and this is what sends
+      // the NEXT one to the track the user actually asked for.
+      _restoreSpot = (index: index, position: Duration.zero);
+      if (_recoveringPlayback) return;
+      appLog('[play] track tapped on an idle player — '
+          're-seeding at track ${index + 1}');
+      _recoveringPlayback = true;
+      _switchChain = _switchChain
+          .then((_) => _reseedLocalAtSpot())
+          .catchError(
+              (Object e) => appLog('[play] tapped-track re-seed failed: $e'))
+          .whenComplete(() => _recoveringPlayback = false);
+      return _switchChain;
+    }
     // This jumps to the beginning of the queue item at newIndex.
     _backend.seek(Duration.zero, index: index);
   }
@@ -1076,6 +1455,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (which abort each other → "Loading interrupted", losing the restore).
     await _initialized.future;
     _intentionalStop = false;
+    // Set BEFORE the queue is published, not inside the chained closure. The
+    // publish is what wakes the queue listener and the now-playing derivation,
+    // and at that instant the fresh player still reads index 0 — so the flag
+    // has to already be up. It also closes the window a busy _switchChain
+    // would otherwise open between the publish and the load. Cleared in the
+    // closure's finally, which always runs: every link of the chain ends in a
+    // catchError, so the chain always completes.
+    _restoring = true;
     queue.add(items.toList());
     // Serialized on _switchChain: the re-seed paths (reload-on-play, tunnel
     // heal) chain their loads there, and an un-serialized restore load racing
@@ -1084,25 +1471,43 @@ class AudioPlayerHandler extends BaseAudioHandler
     final int i = index.clamp(0, items.length - 1);
     final done = _switchChain.then((_) async {
       try {
-        await _backend.setSources(items);
-        // play: false → load paused at the saved spot (don't blast audio on
-        // open).
-        await _backend.seek(position, index: i, play: false);
-      } catch (e) {
-        // A dead-server cold start (offline, stale tunnel loopback) makes the
-        // load throw AFTER the queue is published — the player never reaches
-        // the saved track, so its live index/position read 0. Don't lose the
-        // user's spot: park it in _restoreSpot so the revive paths re-seed
-        // THERE (not at track 1) and the next snapshot save doesn't persist
-        // the loss. Repeat/shuffle below are player-level flags and still
-        // apply without sources.
-        _restoreSpot = (index: i, position: position);
-        appLog('[queue] restore load failed — spot parked '
-            '(track ${i + 1} @ ${position.inSeconds}s): $e');
+        try {
+        // No play call after it: the restore deliberately opens PAUSED at the
+        // saved spot rather than blasting audio on launch.
+          await _loadAtSpot(_backend, items, (index: i, position: position));
+        } catch (e) {
+          // A dead-server cold start (offline, stale tunnel loopback) makes
+          // the load throw AFTER the queue is published. _loadAtSpot has
+          // parked the spot, so the revive paths re-seed THERE (not at
+          // track 1) and the next snapshot save doesn't persist the loss.
+          // Swallowed rather than rethrown because repeat/shuffle below are
+          // player-level flags that still apply without sources.
+          appLog('[queue] restore load failed: $e');
+        }
+        try {
+          _repeatMode = repeat;
+          // Guarded the same way setShuffleMode/setRepeatMode guard these
+          // very calls: the backend can reject them outright when nothing is
+          // loaded (a cold headless bind), which is precisely the state a
+          // failed restore load leaves behind. Unguarded, the throw escapes
+          // the closure and skips restoreQueue's closing emit/broadcast — and
+          // since every broadcast during the load was suppressed,
+          // playbackState keeps its boot queueIndex of null, so the next
+          // snapshot save persists index 0 and the following launch opens on
+          // track 1 at 0:00. The exact loss this series exists to prevent.
+          await _backend.setRepeat(_backendRepeat(repeat));
+          if (shuffle) await _backend.setShuffleEnabled(true);
+        } catch (e) {
+          appLog('[queue] restore repeat/shuffle failed: $e');
+        }
+      } finally {
+        // finally around the WHOLE body: anything escaping either inner
+        // catch would otherwise leave this latched and suppress every
+        // now-playing update for the rest of the session. Cleared before the
+        // emit/broadcast at the end of restoreQueue, which publishes the REAL
+        // spot.
+        _restoring = false;
       }
-      _repeatMode = repeat;
-      await _backend.setRepeat(_backendRepeat(repeat));
-      if (shuffle) await _backend.setShuffleEnabled(true);
     });
     _switchChain = done.catchError((_) {});
     await done;
@@ -1398,7 +1803,18 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// server context (ratings, art, URL re-resolution) went with the server.
   /// If the playing track was the server's, playback moves to the next
   /// surviving track (its stream URL just died with the server anyway).
-  Future<void> removeServerQueueItems(String localname) async {
+  /// Serialized on _switchChain like every other local-backend load: this
+  /// runs from a user deleting a server, which can land while a recovery
+  /// re-seed is in flight, and two overlapping setSources wedge just_audio
+  /// (see the rebuildTranscodeUrls customAction). Returns the chained future
+  /// so ServerManager.removeServer still awaits the real work.
+  Future<void> removeServerQueueItems(String localname) {
+    final done = _switchChain.then((_) => _removeServerQueueItems(localname));
+    _switchChain = done.catchError((_) {});
+    return done;
+  }
+
+  Future<void> _removeServerQueueItems(String localname) async {
     if (autoDJServer?.localname == localname) {
       // Auto-DJ would keep topping the queue back up from the deleted server.
       autoDJServer = null;
@@ -1413,12 +1829,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         '${q.length - plan.keep.length} of its queued track(s)');
     _restoreSpot = null; // row indices shift — a parked index would lie
     if (plan.keep.isEmpty) {
-      // The whole queue belonged to it: same teardown as clearPlaylist.
+      // The whole queue belonged to it: same teardown as clearPlaylist,
+      // including dropping the now-playing metadata.
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
       await _backend.clearSources();
       queue.add(queue.value..clear());
+      _emitCurrentMediaItem();
       _broadcastState();
       return;
     }
@@ -1429,8 +1847,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     _reordering = true;
     try {
       queue.add(plan.keep);
-      await _backend.setSources(plan.keep);
-      await _backend.seek(pos, index: plan.newIndex, play: wasPlaying);
+      // plan.newIndex is the surviving position, so parking it on a failure is
+      // right even though the removal cleared the old park above (row indices
+      // shifted; the pre-removal one would have lied).
+      await _loadAtSpot(
+          _backend, plan.keep, (index: plan.newIndex, position: pos));
+      if (wasPlaying) unawaited(_backend.play());
       // setSources rebuilds the playlist; re-apply shuffle/repeat so the
       // removal doesn't silently drop them (mirrors the transcode reload).
       await _backend.setShuffleEnabled(wasShuffle);
@@ -1442,18 +1864,35 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  Future<void> _doClearPlaylist() async {
+    appLog('[queue] cleared');
+    _restoreSpot = null; // the queue the spot described is gone
+    _intentionalStop = true;
+    await _backend.stop();
+    await super.stop();
+    await _backend.clearSources();
+    queue.add(queue.value..clear());
+    // Explicit, not left to the currentIndex listener: clearSources may or
+    // may not emit an index change, and "did the notification keep the old
+    // song's art" should not depend on which.
+    _emitCurrentMediaItem();
+    _broadcastState();
+  }
+
   @override
   customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'clearPlaylist':
-        appLog('[queue] cleared');
-        _restoreSpot = null; // the queue the spot described is gone
-        _intentionalStop = true;
-        await _backend.stop();
-        await super.stop();
-        await _backend.clearSources();
-        queue.add(queue.value..clear());
-        _broadcastState();
+        // Serialized like every other load-class operation. AutoBrowse.play →
+        // playFromHere → clearPlaylist means a car-UI tap can drop this
+        // stop + clearSources on top of an in-flight recovery re-seed, and a
+        // load torn down inside just_audio's activation window is what wedged
+        // the player during the incident this series came from. Callers that
+        // await customAction still see the clear COMPLETE before they queue
+        // their new items, so play-from-here ordering is unchanged.
+        final cleared = _switchChain.then((_) => _doClearPlaylist());
+        _switchChain = cleared.catchError((_) {});
+        await cleared;
         break;
       case 'moveQueueItem':
         // Drag-to-reorder. [to] is the post-removal target index
@@ -1536,7 +1975,13 @@ class AudioPlayerHandler extends BaseAudioHandler
         _sonicLockedAnchor = null;
         break;
       case 'setAutoDJ':
-        if (autoDJServer == null || autoDJServer != extras?['autoDJServer']) {
+        final nextDJ = extras?['autoDJServer'] as Server?;
+        // A re-arm on the SAME server (a settings-screen rebuild, the queue
+        // header toggling it back on) is not a new session. Only a real
+        // change resets the session state — and only a real change is allowed
+        // to take the queue, below.
+        final freshSession = autoDJServer == null || autoDJServer != nextDJ;
+        if (freshSession) {
           jsonAutoDJIgnoreList = null;
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
@@ -1544,9 +1989,11 @@ class AudioPlayerHandler extends BaseAudioHandler
           _sonicLockedAnchor = null;
           _sonicWarned = false;
         }
-        autoDJServer = extras?['autoDJServer'];
+        autoDJServer = nextDJ;
 
         customState.add(CustomEvent(autoDJServer));
+
+        if (freshSession && await _startAutoDJFromSeed()) break;
 
         if (queue.value.isEmpty ||
             queue.value.length == 1 ||
@@ -1564,9 +2011,21 @@ class AudioPlayerHandler extends BaseAudioHandler
 
         break;
       case 'rebuildTranscodeUrls':
-        await _rebuildTranscodeUrls(
+        // Serialized with every other local-backend load. Two setSources
+        // overlapping does NOT merely interrupt the older one: an interrupt
+        // landing inside just_audio's platform-activation window throws out of
+        // setPlatform() itself, leaving _active stuck true, _platform a
+        // permanently-errored future and the event subscriptions cancelled —
+        // after which every later load/play rethrows "Loading interrupted"
+        // instantly until stop(), an EQ rebuild, or process death. Observed
+        // on-device: a tunnel bind fired this rebuild while the reconnect
+        // reseed was chaining, both threw, and playback was dead for the rest
+        // of the drive. The chain is what makes that unreachable.
+        final rebuild = _switchChain.then((_) => _rebuildTranscodeUrls(
             upcomingOnly: extras?['upcomingOnly'] == true,
-            auto: extras?['auto'] == true);
+            auto: extras?['auto'] == true));
+        _switchChain = rebuild.catchError((_) {});
+        await rebuild;
         break;
     }
   }
@@ -1624,6 +2083,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     final q = queue.value;
     if (q.isEmpty) return;
+    // The BACKEND's live index, for the upcomingOnly branch alone: that branch
+    // does source-list surgery against the player's own list, so it has to
+    // address the same indices the player does. The full branch below reloads
+    // everything and wants the LOGICAL spot instead.
     final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
 
     if (upcomingOnly) {
@@ -1660,17 +2123,29 @@ class AudioPlayerHandler extends BaseAudioHandler
         if (!identical(rebuilt[i], q[i])) changed = true;
       }
       if (!changed) return;
-      appLog('[queue] stream URLs rebuilt — reloading at track ${cur + 1}'
-          '${auto ? ' (auto)' : ''}');
-      final pos = _backend.position;
-      final wasPlaying = _backend.playing;
+      // _reviveSpot, not the backend's index: this runs on a tunnel re-bind,
+      // which is exactly when a previous load may have failed and left the
+      // player reporting track 1. Reading that back would relocate the
+      // session again, one rebuild at a time.
+      final spot = _reviveSpot();
+      appLog('[queue] stream URLs rebuilt — reloading at track '
+          '${spot.index + 1}${auto ? ' (auto)' : ''}');
+      // `playing` is FALSE on an error-parked player, so an auto rebuild
+      // after a tunnel bind would reload the track and sit silent. _playIntent
+      // is the user's actual intent (cleared by pause/stop, false at boot), so
+      // OR-ing it in resumes only where playback was genuinely wanted.
+      final wasPlaying = _backend.playing || (auto && _playIntent);
       final wasShuffle = _backend.shuffleEnabled;
       final wasRepeat = _backend.repeat;
       _reordering = true;
       try {
         queue.add(rebuilt);
-        await _backend.setSources(rebuilt);
-        await _backend.seek(pos, index: cur, play: wasPlaying);
+        await _loadAtSpot(_backend, rebuilt, spot);
+        // Re-read the intent AFTER the load: the load is network-bound and can
+        // run for seconds over a fresh tunnel, and a pause landing inside that
+        // window must win over what we captured before it. Same doctrine as
+        // _reseedLocalAtSpot and _doSetEqEnabled.
+        if (wasPlaying && _playIntent) unawaited(_backend.play());
         // setSources rebuilds the playlist; re-apply shuffle/repeat so a
         // transcode change doesn't silently drop them (mirrors restoreQueue).
         await _backend.setShuffleEnabled(wasShuffle);
@@ -1728,6 +2203,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (patched == null) return;
     appLog('[queue] download landed — queued copies of '
         '${path.split('/').last} marked local');
+    // A new file on disk retires any "already tried it, the copy is bad"
+    // verdict against this track — the copy it was about is gone.
+    if (_localRetryKey != null &&
+        _localRetryKey == '$serverName\u0000$path') {
+      _localRetryKey = null;
+    }
     // The PLAYING track keeps streaming its already-loaded source until the
     // next load, but its extras now say "local" — hold the WifiLock until a
     // fresh load actually reads the file (cleared on `loading`), or the
@@ -1860,7 +2341,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _broadcastState() {
     // Mid-rebuild reads go through the NEW empty player and would publish a
     // bogus transient `error`; _doSetEqEnabled broadcasts once it's done.
-    if (_rebuilding) return;
+    // Mid-restore they'd publish queueIndex 0 to the media session, which is
+    // the same wrong-track flash one layer down; restoreQueue broadcasts once
+    // it has landed.
+    if (_rebuilding || _restoring) return;
     _updateWifiLock();
     final playing = _backend.playing;
     final AudioServiceShuffleMode shuffle = _backend.shuffleEnabled == true
@@ -1898,6 +2382,55 @@ class AudioPlayerHandler extends BaseAudioHandler
       speed: _backend.speed,
       queueIndex: _backend.currentIndex,
     ));
+  }
+
+  /// Open an Auto DJ session ON its seed song: replace the queue with the
+  /// seed, play it, and pull its first followers. Returns false when there is
+  /// no usable seed, leaving the caller's ordinary top-up path to run.
+  ///
+  /// A seed means "start the session from this song", and until now it only
+  /// ever steered which songs got PICKED — the session opened on something
+  /// merely similar and the song the user actually named never played.
+  ///
+  /// Taking the queue is the point, so it is guarded twice over: the caller
+  /// only offers a genuinely fresh arm, and a seed is an explicit,
+  /// individually-cleared choice, not a default.
+  Future<bool> _startAutoDJFromSeed() async {
+    final server = autoDJServer;
+    final mgr = AutoDJManager();
+    // ONLY opens an empty queue. With tracks already queued the DJ takes its
+    // cue from those — replacing them with a seed would throw away a queue the
+    // user built, which is never what arming the DJ meant.
+    if (queue.value.isNotEmpty) return false;
+    // Filepaths are per-library — a seed picked on another server names
+    // nothing here.
+    final path =
+        mgr.sonicSeedServer == server?.localname ? mgr.sonicSeedPath : null;
+    if (server == null || path == null) return false;
+    // Only the path and a display title are persisted, so the row is
+    // reconstructed and buildServerFileMediaItem fetches the rest (it also
+    // resolves a downloaded copy, which a seed track may well have).
+    final MediaItem? seed = await buildServerFileMediaItem(DisplayItem(
+        server,
+        mgr.sonicSeedTitle ?? path.split('/').last,
+        'file',
+        path,
+        null,
+        null));
+    if (seed == null) return false;
+    // Same order as playFromHere — the one flow in the app that replaces a
+    // queue and starts it.
+    await customAction('clearPlaylist');
+    await addQueueItem(seed);
+    await skipToQueueItem(0);
+    await play();
+    // Followers, not a first pick: the seed IS track one. Two more so the
+    // session feels underway before the queue-end top-up takes over. The
+    // first is awaited so a failure surfaces here and not in a detached
+    // future; the second rides along behind it.
+    await autoDJ();
+    unawaited(autoDJ());
+    return true;
   }
 
   Future<void> autoDJ(
@@ -1943,8 +2476,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     // anchor: the last few DJ picks (session centroid), else the playing
     // track; a cold start on an empty queue has no anchor and stays plain
     // random until the first pick seeds the session.
+    // Suppressed after a no-data failure earlier this session (see the
+    // degradation below), so skip building the params at all rather than
+    // building them and having filter() strip them — that also keeps the
+    // error branch from thinking sonic is still in play.
     final sonicEnabled = mgr.sonicSimilarityEnabled &&
-        autoDJServer!.discoveryAvailable == true;
+        autoDJServer!.discoveryAvailable == true &&
+        !ServerCapabilities()
+            .allSuppressed(autoDJServer!, _kSonicParamKeys);
     // The explicit seed ("start the session here") only counts when it was
     // picked from the DJ server — filepaths are per-library. Same rule for
     // the playing track.
@@ -2020,14 +2559,53 @@ class AudioPlayerHandler extends BaseAudioHandler
         // a Shuffle All started from Android Auto, which awaits this) can't hang
         // forever; the catch below treats the TimeoutException as a network
         // error and bails silently.
-        final res = await http.post(
+        // Drop anything this server is known not to accept before sending.
+        // mStream validates with Joi and no allowUnknown, so one unrecognised
+        // key 400s the WHOLE request — a single new parameter would otherwise
+        // take Auto DJ out entirely on an older server.
+        final filtered =
+            ServerCapabilities().filter(autoDJServer!, payload);
+        if (filtered.dropped.isNotEmpty) {
+          appLog('[dj] dropped for this server: '
+              '${filtered.dropped.join(", ")}');
+        }
+        var res = await http.post(
           autoDJServer!.apiUri('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
             'x-access-token': autoDJServer?.jwt ?? '',
           },
-          body: jsonEncode(payload),
+          body: jsonEncode(filtered.body),
         ).timeout(const Duration(seconds: 15));
+        // A rejection names the offending key, so learn it and go again
+        // without it. Bounded by the payload size and terminating by
+        // construction: every pass removes one key permanently for this
+        // session, so it cannot loop. Only "is not allowed" retries — an auth
+        // failure or a bad value returns null and falls through to the normal
+        // error handling below, because resending a smaller body there would
+        // fail again with less information.
+        //
+        // The BODY is the signal, not the status. mStream answered a schema
+        // rejection with 403 up to and including 6.11.0 and with 400 from
+        // 6.12.0 (server.js: "That's 400 Bad Request, not 403 Forbidden"),
+        // and both carry the same `"<key>" is not allowed` message. Gating on
+        // 400 meant the learner — the half of this that is authoritative,
+        // since the version table is only a pre-filter — was inert on exactly
+        // the older servers it exists for. Verified against a live 6.11.0 and
+        // a live 6.22.0.
+        while (res.statusCode > 299 &&
+            ServerCapabilities().noteRejection(autoDJServer!, res.body) !=
+                null) {
+          final retry = ServerCapabilities().filter(autoDJServer!, payload);
+          res = await http.post(
+            autoDJServer!.apiUri('/api/v1/db/random-songs'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': autoDJServer?.jwt ?? '',
+            },
+            body: jsonEncode(retry.body),
+          ).timeout(const Duration(seconds: 15));
+        }
         if (res.statusCode > 299) {
           appLog('[dj] random-songs HTTP ${res.statusCode} — pick skipped');
           // Sonic mode fails LOUD by the server's contract: the pool is a
@@ -2051,34 +2629,74 @@ class AudioPlayerHandler extends BaseAudioHandler
                 (res.statusCode == 404 || lower.contains('analyzed'))) {
               _sonicLockedAnchor = null;
             }
+            // The three ways sonic can fail while the request itself is
+            // fine. All used to `return` — no pick, and with the queue-end
+            // top-up being the only caller that meant silence until the user
+            // intervened. A constraint the server cannot satisfy should cost
+            // the CONSTRAINT, not the music: drop the sonic keys for this
+            // session and take the same pick without them.
+            //
+            // Still says so once, because a session that quietly stopped
+            // honouring "only songs that sound like this" would be lying
+            // about what it is doing. Once, not per pick.
+            String? degraded;
             if (lower.contains('similarity range')) {
+              degraded = 'nothing within the similarity range';
               if (!_sonicWarned) {
                 _sonicWarned = true;
                 _showPlaybackErrorToast(
-                    'Auto DJ: no songs are within the similarity range. '
-                    'Loosen the match slider or adjust your filters.');
+                    'Auto DJ: nothing is within the similarity range, so it '
+                    'is playing without that filter. Loosen the match slider '
+                    'to use it again.');
               }
-              return;
-            }
-            if (lower.contains('analyzed')) {
+            } else if (lower.contains('analyzed')) {
+              degraded = 'library not analyzed yet';
               if (!_sonicWarned) {
                 _sonicWarned = true;
                 _showPlaybackErrorToast(
-                    "Auto DJ: this song hasn't been analyzed yet — wait "
-                    'for the discovery scan or play a different song.');
+                    "Auto DJ: the discovery scan hasn't reached these tracks "
+                    'yet, so it is playing without sonic similarity.');
               }
-              return;
+            } else if (lower.contains('discovery is disabled')) {
+              // requireIndex() answers this for both "the feature is off"
+              // and "it is on but there is no index yet", the same status on
+              // purpose so an anonymous prober cannot tell configuration from
+              // failure. I briefly toasted the second reading here. Measuring
+              // against a live server killed it: with collectDiscoveryData on,
+              // discovery.db is created at boot AND by the admin toggle, so
+              // getIndex() is never null and the no-index case does not arise
+              // in normal operation.
+              //
+              // Which leaves the first reading — switched off since our last
+              // ping — and that stays silent: the user made that change
+              // themselves, so being told is noise. The genuinely-unscanned
+              // library never reaches here anyway; it answers 400 "Sonic seed
+              // track has not been analyzed yet", which the branch above
+              // already explains.
+              degraded = 'discovery switched off server-side';
             }
-            // requireIndex 403 ("Discovery is disabled"): the capability
-            // vanished since the last ping — NOT an expired login, so it
-            // must not fall through to the re-login toast below.
-            if (lower.contains('discovery is disabled')) {
-              return;
+            if (degraded != null) {
+              ServerCapabilities()
+                  .suppress(autoDJServer!, _kSonicParamKeys, degraded);
+              _sonicLockedAnchor = null;
+              // Retry this same pick without the constraint. Bounded by the
+              // enclosing attempt loop, and cannot spin: the keys are now
+              // suppressed, so the next pass sends a payload that no longer
+              // carries them.
+              continue;
             }
           }
           // An expired/rotated JWT kills Auto DJ permanently and used to do it
           // in total silence — infinite play just stopped. Tell the user once.
+          //
+          // Not for a schema rejection wearing a 403: pre-6.12 servers answer
+          // validation failures with that status, and telling someone to
+          // re-login over a parameter they never typed sends them to fix the
+          // one thing that is not wrong. The loop above already retried those
+          // to exhaustion, so anything still carrying a not-allowed body here
+          // is a key we cannot drop, not an expired session.
           if ((res.statusCode == 401 || res.statusCode == 403) &&
+              parseNotAllowedKey(res.body) == null &&
               !_autoDJAuthWarned) {
             _autoDJAuthWarned = true;
             _showPlaybackErrorToast(

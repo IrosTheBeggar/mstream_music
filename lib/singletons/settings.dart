@@ -136,8 +136,22 @@ class SettingsManager {
   // folder/file names to wrap) when a list has fewer than this many
   // items. Single knob driving both behaviors.
   int letterStripThreshold = 25;
-  TapBehavior tapBehavior = TapBehavior.addToQueue;
+  // Field default = the FRESH-INSTALL default (load() early-returns when no
+  // settings.json exists). New installs get playFromHere because that is what
+  // people coming from other music apps expect; an existing install that
+  // predates the key keeps addToQueue — see [_readTapBehavior].
+  TapBehavior tapBehavior = TapBehavior.playFromHere;
   StartupView startupView = StartupView.browser;
+  // Whether the first-run setup flow (SetupFlowScreen) has been dismissed.
+  // Same fresh-install trick as [tapBehavior]: false here so a brand new
+  // install runs the flow, but load() reads a MISSING key as `true` so an
+  // upgrade never gets the flow retroactively.
+  bool onboardingComplete = false;
+  // Whether the one-shot WelcomeScreen has been shown. Set the moment it is
+  // pushed, NOT when a server is added — so a user who later deletes every
+  // server drops back to the browser's plain add-server row instead of
+  // replaying the welcome. Same missing-key-means-true rule as above.
+  bool welcomeShown = false;
   // Which categories the whole-server search queries. The default
   // (artists + albums + songs; files + lyrics off) reproduces mStream's classic
   // search; files and lyrics are opt-in because bare filepath matches and full-
@@ -291,6 +305,11 @@ class SettingsManager {
       fileExplorerMetadata = m['fileExplorerMetadata'] ?? true;
       letterStripThreshold = m['letterStripThreshold'] ?? 25;
       tapBehavior = _readTapBehavior(m);
+      // Absent key = a settings.json written before the setup flow existed, so
+      // the user is already past onboarding. Only an explicit `false` (written
+      // by a fresh install that saved a setting mid-flow) re-runs it.
+      onboardingComplete = m['onboardingComplete'] ?? true;
+      welcomeShown = m['welcomeShown'] ?? true;
       startupView = _readStartupView(m);
       searchCategories = _readSearchCategories(m);
       appTheme = _readTheme(m);
@@ -480,6 +499,8 @@ class SettingsManager {
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
       'tapBehavior': tapBehavior.name,
+      'onboardingComplete': onboardingComplete,
+      'welcomeShown': welcomeShown,
       'startupView': startupView.name,
       'searchCategories': searchCategories.map((c) => c.name).toList(),
       'theme': appTheme.name,
@@ -554,6 +575,21 @@ class SettingsManager {
 
   Future<void> setStartupView(StartupView v) async {
     startupView = v;
+    await _save();
+  }
+
+  /// Marks the first-run setup flow as finished. Called however the flow
+  /// leaves the screen (Continue, Skip, or a system Back), so it never
+  /// reappears on the next launch.
+  Future<void> setOnboardingComplete(bool v) async {
+    onboardingComplete = v;
+    await _save();
+  }
+
+  /// Marks the one-shot welcome screen as spent. Written as soon as it is
+  /// pushed, so an interrupted first run doesn't replay it.
+  Future<void> setWelcomeShown(bool v) async {
+    welcomeShown = v;
     await _save();
   }
 
@@ -692,8 +728,10 @@ class SettingsManager {
     ratingAllowHalf = false;
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
-    tapBehavior = TapBehavior.addToQueue;
+    tapBehavior = TapBehavior.playFromHere;
     startupView = StartupView.browser;
+    // onboardingComplete is deliberately NOT reset — "restore defaults"
+    // shouldn't drop the user back into the first-run flow.
     searchCategories = {...defaultSearchCategories};
     appTheme = AppTheme.dark;
     playerLayout = PlayerLayout.medium;

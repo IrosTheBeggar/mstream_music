@@ -9,6 +9,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
+import '../util/server_version.dart';
 import '../native/iroh_tunnel.dart';
 import '../media/cast_target.dart';
 import 'cast_manager.dart';
@@ -168,6 +169,34 @@ class ServerManager {
 
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
+
+    // Fetch the version now and warn if the server predates what this app
+    // supports. Here rather than in the add-server form because both entry
+    // points (URL and Quick Connect) funnel through this, and because the
+    // warning should follow the server, not the screen that created it.
+    //
+    // Warn, never block: an old server still browses and plays. The point is
+    // that the user finds out from us rather than from a feature quietly
+    // doing nothing.
+    unawaited(_warnIfBelowFloor(newServer));
+  }
+
+  Future<void> _warnIfBelowFloor(Server server) async {
+    final raw = await fetchServerVersion(server);
+    if (raw != null) {
+      server.serverVersion = raw;
+      server.versionCheckedAt = DateTime.now();
+      await writeServerFile();
+      _serverListStream.sink.add(serverList);
+    }
+    final parsed = ServerVersion.tryParse(raw);
+    if (!isBelowSupportFloor(parsed)) return;
+    // Null reads as the endpoint being absent, which puts the server before
+    // 5.4.2 — older than the floor, so it lands here too.
+    showGlobalSnack(parsed == null
+        ? 'This server is older than 5.5. Some features will be unavailable.'
+        : 'This server is version ${parsed.raw}. Some features need 5.5 or '
+            'newer and will be unavailable.');
   }
 
   // Storage mode + base path are set directly on the Server in the
@@ -193,11 +222,29 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
-    // An iroh server can only be pinged through its live tunnel; skip when the
-    // tunnel isn't up (e.g. a non-active iroh server at startup).
+    // An iroh server can only be pinged through its live tunnel.
     if (server.isIroh && server.tunnelPort == null) {
-      if (throwErr) throw Exception('iroh tunnel not connected');
-      return;
+      // At launch this fires for the ACTIVE server too: loadServerList pings
+      // every server as soon as the list is read, and the tunnel is still
+      // dialling. Skipping meant its capabilities and — since the version
+      // probe rides along here — its VERSION were never fetched at all, so an
+      // iroh server sat on "version unknown" with an update warning under it
+      // until something else happened to re-ping.
+      //
+      // Bounded, and only for the active server: one tunnel at a time, so any
+      // other iroh server's is never coming up and waiting on it would stall
+      // the launch sweep for nothing. extendWhileDialing:false keeps the bound
+      // real — the default re-arms for as long as a dial is in flight.
+      if (identical(server, currentServer)) {
+        await awaitTunnelReady(
+            server: server,
+            timeout: const Duration(seconds: 12),
+            extendWhileDialing: false);
+      }
+      if (server.tunnelPort == null) {
+        if (throwErr) throw Exception('iroh tunnel not connected');
+        return;
+      }
     }
     try {
       var response = await http
@@ -289,9 +336,25 @@ class ServerManager {
       server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
       server.discoveryPathAvailable = res['discoveryPath'] == true;
 
+      // Version rides along with the capability refresh: same moment, same
+      // persistence, and it is a cheap unauthenticated GET. Failure leaves the
+      // stored value alone rather than blanking it — a momentary blip should
+      // not make a known-good server look ancient.
+      final prevVersion = server.serverVersion;
+      final fetched = await fetchServerVersion(server);
+      if (fetched != null) {
+        server.serverVersion = fetched;
+        server.versionCheckedAt = DateTime.now();
+      } else {
+        // Never successfully checked AND it just failed: record the attempt so
+        // the periodic re-check backs off instead of retrying every resume.
+        server.versionCheckedAt ??= DateTime.now();
+      }
+
       // Persist the capabilities so the NEXT launch knows them before the queue
       // is restored — otherwise restore races the ping and bakes in /media URLs.
-      if (server.transcodeAvailable != prevAvail ||
+      if (server.serverVersion != prevVersion ||
+          server.transcodeAvailable != prevAvail ||
           server.transcodeDefaultCodec != prevCodec ||
           server.transcodeDefaultBitrate != prevBitrate ||
           server.discoveryAvailable != prevDiscovery ||
@@ -429,9 +492,12 @@ class ServerManager {
             .customAction('rebuildTranscodeUrls',
                 const {'upcomingOnly': false, 'auto': true})
             .catchError((Object e) {
-          // A concurrent serialized load (restore, re-seed) can interrupt this
-          // reload ("Loading interrupted") — benign, the newer load already
-          // carries the fresh tunnel URLs; just don't let it hit the zone.
+          // Reaching here should now be rare: the handler runs this rebuild
+          // on the same chain as every other local-backend load, so a
+          // concurrent load can't interrupt it. It is NOT benign if it does —
+          // an interrupt inside just_audio's activation window wedges the
+          // player until stop() or process death (see the customAction case
+          // in audio_stuff.dart). Logged, not swallowed silently.
           appLog('[iroh] auto URL rebuild after tunnel bind failed: $e');
         }));
       } catch (e) {
@@ -483,6 +549,63 @@ class ServerManager {
       await drop;
     }
     await ensureActiveTunnel(verify: true);
+  }
+
+  /// Read the server's version from `GET /api/` — public, no auth, and served
+  /// since 5.4.2. Returns the raw `server` string, or null when the endpoint
+  /// isn't there (pre-5.4.2), the body isn't the shape we expect, or the
+  /// request fails. Null is meaningful rather than an error: see
+  /// util/server_version.dart for why "can't say" and "too old" are the same
+  /// answer.
+  ///
+  /// Lives here rather than in ApiManager because api.dart already imports
+  /// this file, and reaching back the other way would make the first mutual
+  /// import in the singleton layer for the sake of twelve lines. It is also
+  /// server lifecycle, not library browsing — the same reason _probeTunnel is
+  /// here.
+  /// Ask `GET /api/` who the server is. Null when it won't say — which the
+  /// caller treats as "older than 5.4.2", the release that added the route.
+  ///
+  /// package:http, like the ping right above it, NOT dart:io's HttpClient.
+  /// The HttpClient version failed on every iroh server while the ping over
+  /// the same tunnel succeeded in the same call — an app pinned to a 6.20
+  /// server sat on "Server version unknown" with an update warning under it.
+  /// The pairing flow proves the URL itself is fine: add_server fetches
+  /// `/api/?__lt=…` through the tunnel with package:http and requires a 200
+  /// before it will save the server. Same URL, same token, different client,
+  /// different answer — so the client was the variable worth removing.
+  ///
+  /// Logs its failures. This runs unattended and its only visible symptom is
+  /// a version that never appears, which is indistinguishable from an old
+  /// server unless something says otherwise.
+  Future<String?> fetchServerVersion(Server s) async {
+    try {
+      final resp = await http.get(
+        s.apiUri('/api/'),
+        // The route is public, but something in front of it on an iroh
+        // connection is not: the probe came back 401 over the tunnel while
+        // the ping in the same call — identical URL builder, but carrying
+        // this header — came back 200. Sent unconditionally; a plain HTTP
+        // server ignores it on a route that never asked.
+        headers: {'x-access-token': s.jwt ?? ''},
+      ).timeout(const Duration(seconds: 8));
+      if (resp.statusCode > 299) {
+        // 404 is the expected answer from a pre-5.4.2 server, not a fault.
+        if (resp.statusCode != 404) {
+          appLog('[api] version probe ${s.localname} → '
+              'HTTP ${resp.statusCode}');
+        }
+        return null;
+      }
+      final decoded = jsonDecode(resp.body);
+      final v = decoded is Map ? decoded['server'] : null;
+      if (v is String && v.trim().isNotEmpty) return v.trim();
+      appLog('[api] version probe ${s.localname} → no version in response');
+      return null;
+    } catch (e) {
+      appLog('[api] version probe ${s.localname} failed: $e');
+      return null;
+    }
   }
 
   /// Ground-truth tunnel liveness: one HTTP round-trip through the loopback
@@ -566,8 +689,14 @@ class ServerManager {
   /// Wait (bounded) for the active iroh tunnel to report CONNECTED, kicking a
   /// verify-rebuild in case it's hard-down. Returns true once connected; false on
   /// a rejected (re-pair) state or timeout. Non-iroh servers are ready immediately.
+  /// Set [extendWhileDialing] false to make [timeout] a HARD deadline. The
+  /// default keeps extending it while a dial is in flight — right for the
+  /// playback and download paths, which would rather wait than fail — but a
+  /// caller driving a UI needs a bound it can actually promise the user.
   Future<bool> awaitTunnelReady(
-      {Server? server, Duration timeout = const Duration(seconds: 12)}) async {
+      {Server? server,
+      Duration timeout = const Duration(seconds: 12),
+      bool extendWhileDialing = true}) async {
     // Default to the browsed server; callers on the playback path pass the
     // track's server (which the single tunnel may be serving instead).
     final s = server ?? currentServer;
@@ -585,10 +714,61 @@ class ServerManager {
           IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
         return false; // this server's code was rejected (needs re-pair)
       }
-      if (_tunnelStarting) deadline = DateTime.now().add(timeout);
+      if (_tunnelStarting && extendWhileDialing) {
+        deadline = DateTime.now().add(timeout);
+      }
       await Future.delayed(const Duration(milliseconds: 300));
     }
     return tunnelServes(s);
+  }
+
+  // At most one forced rebuild per minute. A hard stop/start rotates the
+  // loopback port AND the per-connection token: every in-flight download
+  // fails, and _reEnqueueOnLiveTunnel only re-resolves twice before giving
+  // up. Worth paying once for a tunnel that is lying about being up; a loop
+  // of them is worse than the outage it is trying to fix.
+  DateTime? _lastForcedRebuild;
+  bool _reverifying = false;
+
+  /// Ground-truth check for a tunnel that REPORTS connected while nothing can
+  /// actually stream through it — the shim only flips to reconnecting once the
+  /// QUIC connection's close arrives, so a link that vanished underneath it
+  /// keeps claiming to be up, and the playback heal fires on a status
+  /// TRANSITION that therefore never comes.
+  ///
+  /// Probes the loopback and, only when the probe fails, hard-drops and
+  /// rebuilds — the same sequence [handleNetworkChange] runs, which is the one
+  /// path that has ever recovered this state. A passing probe means the tunnel
+  /// is fine and the failures were the source's own problem, so nothing moves.
+  Future<void> reverifyTunnel(Server s) async {
+    if (!IrohTunnel.isSupported || !s.isIroh || _reverifying) return;
+    if (_activeTunnelCode == null || s.tunnelPort == null) return;
+    // Already known down: ensureActiveTunnel / awaitTunnelReady own that case
+    // and this would only race them.
+    if (!tunnelServes(s)) return;
+    final now = DateTime.now();
+    final last = _lastForcedRebuild;
+    if (last != null && now.difference(last) < const Duration(seconds: 60)) {
+      return;
+    }
+    _reverifying = true;
+    try {
+      if (await _probeTunnel(s)) {
+        appLog('[iroh] tunnel probe passed — the failures were not the path');
+        return;
+      }
+      _lastForcedRebuild = DateTime.now();
+      appLog('[iroh] tunnel says connected but the path is dead — rebuilding');
+      final drop = _tunnelChain.then((_) {
+        IrohTunnel.instance.stop();
+        _activeTunnelCode = null;
+      });
+      _tunnelChain = drop.catchError((_) {});
+      await drop;
+      await ensureActiveTunnel(verify: true);
+    } finally {
+      _reverifying = false;
+    }
   }
 
   /// Re-pair the active iroh server with a fresh pairing code (after a rotated
@@ -648,9 +828,17 @@ class ServerManager {
     // anymore and their metadata context (ratings, art, URL re-resolution)
     // went with it. Done before ensureActiveTunnel so no tunnel is kept
     // alive for tracks that are about to disappear.
-    await MediaManager()
-        .audioHandler
-        .removeServerQueueItems(removeThisServer.localname);
+    // Caught here on purpose: everything below persists the shortened server
+    // list and re-points the tunnel. Letting this throw past would skip
+    // writeServerFile, and the server the user just deleted would be back on
+    // the next launch.
+    try {
+      await MediaManager()
+          .audioHandler
+          .removeServerQueueItems(removeThisServer.localname);
+    } catch (err) {
+      appLog('[server] clearing queued tracks failed: $err');
+    }
     // Drop a stale queue-tunnel pointer to the removed server so ensureActiveTunnel
     // below doesn't try to keep its tunnel up (the queue listener would clear it on
     // the next edit, but do it now).

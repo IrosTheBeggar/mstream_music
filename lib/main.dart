@@ -23,6 +23,8 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
+import 'screens/setup_flow.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/sonic_path_screen.dart';
 import 'singletons/sonic_path_state.dart';
 import 'singletons/track_capture.dart';
@@ -48,6 +50,7 @@ import 'native/iroh_tunnel.dart';
 import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
+import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
 
 void main() {
@@ -159,6 +162,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<List<Server>>? _serverListSub;
+  // Guards the first-run setup push: serverListStream re-emits on every server
+  // edit, and the flow marks onboarding complete only once it's dismissed.
+  bool _setupShown = false;
 
   @override
   void initState() {
@@ -181,6 +188,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
+      _maybeShowWelcome();
+      // Armed only after the saved list has landed, so the first-run flow keys
+      // off the user adding a server — not off startup restoring one.
+      _armFirstRunSetup();
     });
     // (DownloadManager().initDownloader() moved to _startApp so headless
     // boots track download completions too — a second call here would attach
@@ -208,6 +219,62 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();
       }
+    });
+  }
+
+  /// One-shot welcome screen for a brand new install, over the browser (which
+  /// shows its usual add-server row underneath).
+  ///
+  /// The flag is written the moment it's pushed rather than when the user
+  /// acts, which is what makes it survive every later state: skipping it,
+  /// killing the app mid-screen, or deleting every server months later all
+  /// leave welcomeShown == true, so the browser row is the only first-run
+  /// affordance from then on. welcomeShown reads `true` for any settings.json
+  /// written before this existed, so upgrades never see it.
+  void _maybeShowWelcome() {
+    if (!mounted || SettingsManager().welcomeShown) return;
+    unawaited(SettingsManager().setWelcomeShown(true));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      );
+    });
+  }
+
+  /// First-run setup, armed once the saved server list has loaded from disk.
+  ///
+  /// Driven off the server list rather than hooked into the add-server screen
+  /// because every add path (URL form, iroh pairing, mDNS Quick Connect)
+  /// funnels through ServerManager.addServer.
+  ///
+  /// Two gates keep it from firing when it shouldn't:
+  ///   * `.skip(1)` drops serverListStream's replayed current value (it's a
+  ///     BehaviorSubject) — otherwise an existing install with servers would
+  ///     trip this on every launch, not on an actual add.
+  ///   * onboardingComplete reads `true` for any settings.json written before
+  ///     this flow existed (see SettingsManager.load), so only a genuinely new
+  ///     install reaches the push.
+  void _armFirstRunSetup() {
+    // ensureLoaded's future can land after an early teardown, by which point
+    // dispose() has already run its cancel — don't leave a live subscription.
+    if (!mounted) return;
+    _serverListSub =
+        ServerManager().serverListStream.skip(1).listen((servers) {
+      if (servers.isEmpty ||
+          _setupShown ||
+          SettingsManager().onboardingComplete) {
+        return;
+      }
+      _setupShown = true;
+      // Post-frame so the add-server route's own pop settles first — pushing
+      // during its exit would land the flow under the screen being removed.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SetupFlowScreen()),
+        );
+      });
     });
   }
 
@@ -297,6 +364,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
+    _serverListSub?.cancel();
     DownloadManager().dispose();
     super.dispose();
   }
@@ -396,9 +464,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     );
   }
 
-  // Browse-to-pick strip for the sonic path setup — visible while a
-  // TrackCapture request is armed: the next library track tapped fills the
-  // endpoint card. Cancel returns to the (state-preserving) path screen.
+  // Browse-to-pick strip — visible while a TrackCapture request is armed:
+  // the next library track tapped lands on whatever asked for it (a sonic
+  // path endpoint, the Auto DJ seed). Copy and destination both come from the
+  // request, so this strip stays feature-agnostic. Cancel returns to the
+  // asking screen, which rebuilds from its own persisted state.
   Widget _captureBanner() {
     return ValueListenableBuilder<TrackCaptureRequest?>(
       valueListenable: TrackCapture.active,
@@ -408,15 +478,16 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         return _bannerStrip(
           Icons.route,
           VelvetColors.primary,
-          req.isStart ? l.pathPickBannerStart : l.pathPickBannerEnd,
+          req.bannerLabel(l),
           action: TextButton(
             onPressed: () {
+              final back = req.returnScreen;
               TrackCapture.cancel();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const SonicPathScreen()),
-              );
+              // Same rule as a successful pick: go back only when there is
+              // somewhere to go back to.
+              if (back != null) {
+                Navigator.push(context, MaterialPageRoute(builder: back));
+              }
             },
             child: Text(l.cancel,
                 style: TextStyle(color: VelvetColors.primary)),
@@ -746,7 +817,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // drawer's local-history entry on the home route).
   Widget _appDrawer(BuildContext context, AppLocalizations l) {
     return Drawer(
-      child: ListView(padding: EdgeInsets.zero, children: <Widget>[
+      child: ListView(
+          // Zero on top so the DrawerHeader still runs under the status bar,
+          // but the BOTTOM inset has to come back: EdgeInsets.zero dropped the
+          // system-bar padding a ListView is otherwise given, so the scroll
+          // extent ended at the last tile and the navigation bar sat on top of
+          // it. With enough entries to make the list scroll, About became
+          // unreachable — you could scroll to the end and it was still under
+          // the bar.
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom),
+          children: <Widget>[
         DrawerHeader(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -787,6 +868,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
               Text(l.drawerTagline,
                   style: TextStyle(
                       color: VelvetColors.textSecondary, fontSize: 12)),
+              // Server version + refresh, and the update flag when the server
+              // is behind. Under the logo because that is where "what am I
+              // connected to" belongs, and it is the one place every screen
+              // can reach.
+              ServerVersionLine(),
             ],
           ),
         ),
