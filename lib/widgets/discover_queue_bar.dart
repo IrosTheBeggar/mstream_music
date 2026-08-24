@@ -63,6 +63,10 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   bool _rechecking = false;
   bool _probed = false;
 
+  // Distance travelled by the current header drag, so a slow drag that never
+  // reaches a fling velocity still resolves by direction.
+  double _dragDy = 0;
+
   Server? _seedServer;
   String? _seedPath;
   DiscoverySimilarTracks? _tracks;
@@ -102,6 +106,28 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   void _toggle() {
     setState(() => _expanded = !_expanded);
     if (_expanded && (_dirty || _tracks == null)) _refresh();
+  }
+
+  void _setExpanded(bool open) {
+    if (open == _expanded) return;
+    _toggle();
+  }
+
+  /// Same reading the player panel gives a release: a flick past ±300 px/s
+  /// wins outright, otherwise the drag has to have travelled far enough to
+  /// count — 24px, so a wobble on a tap does not flip the panel.
+  void _onHeaderDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0; // negative = upward
+    if (v < -300) {
+      _setExpanded(true);
+    } else if (v > 300) {
+      _setExpanded(false);
+    } else if (_dragDy < -24) {
+      _setExpanded(true);
+    } else if (_dragDy > 24) {
+      _setExpanded(false);
+    }
+    _dragDy = 0;
   }
 
   /// Same re-check as the Discover panel: re-ping FIRST, then retry.
@@ -253,7 +279,24 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
           children: [
             // Header — the whole strip toggles, like the webapp's panel
             // header. Extra actions appear only while expanded.
-            InkWell(
+            //
+            // Also drags, the way the player panel above it does: a flick
+            // decides by velocity, a slow drag by how far it went. Only the
+            // HEADER takes the gesture — putting it on the whole bar would
+            // fight the track list inside for vertical drags, which is the
+            // same reason the player panel hangs its drag off the grab area
+            // rather than the sheet.
+            //
+            // This is two states with an AnimatedSize between them, not a
+            // controller the finger drives, so the panel does not track the
+            // finger mid-drag; it commits on release. Worth knowing before
+            // anyone tries to make it rubber-band.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragStart: (_) => _dragDy = 0,
+              onVerticalDragUpdate: (d) => _dragDy += d.primaryDelta ?? 0,
+              onVerticalDragEnd: _onHeaderDragEnd,
+              child: InkWell(
               onTap: _toggle,
               child: SizedBox(
                 height: 44,
@@ -310,6 +353,7 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                   ),
                 ),
               ),
+            ),
             ),
             if (_expanded) Expanded(child: _body(l)),
           ],
