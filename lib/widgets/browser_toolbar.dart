@@ -28,6 +28,7 @@ import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import 'local_search_bar.dart';
 
@@ -110,7 +111,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           e.type == 'file' &&
           e.server != null &&
           e.data != null &&
-          !e.data!.toLowerCase().endsWith('.m3u'))
+          !isM3u(e.data))
       .toList();
 
   // Playable rows for add-all (server + local files), minus playlists.
@@ -118,7 +119,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       .where((e) =>
           (e.type == 'file' || e.type == 'localFile') &&
           e.data != null &&
-          !e.data!.toLowerCase().endsWith('.m3u'))
+          !isM3u(e.data))
       .toList();
 
   // Mirrors the old browser "Download all": confirm the count, then enqueue

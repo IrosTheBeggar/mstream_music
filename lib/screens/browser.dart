@@ -17,6 +17,7 @@ import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
+import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/server_version.dart';
 
@@ -64,6 +65,16 @@ class _BrowserState extends State<Browser> {
         context,
         MaterialPageRoute(builder: (context) => AddServerScreen()),
       );
+      return;
+    }
+
+    // An .m3u is a text file listing other files. Queued as audio it
+    // stalls the player on a payload it cannot decode; the server will
+    // read it for us and hand back the tracks it names.
+    if (browserList[index].type == 'file' &&
+        isM3u(browserList[index].data)) {
+      ApiManager().getM3uContents(browserList[index].data ?? '',
+          useThisServer: browserList[index].server);
       return;
     }
 
@@ -627,6 +638,10 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
+                  // Long-press = this row's actions, the same convention the
+                  // track rows use. The swipe pane has carried Add all for a
+                  // while, but a swipe is only found by accident.
+                  onLongPress: () => _showFolderActions(b[i], c),
                   leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
@@ -767,6 +782,57 @@ class _BrowserState extends State<Browser> {
     );
   }
 
+  /// Long-press sheet for a folder row: the one thing you can do to a folder
+  /// without opening it. Same sheet shape as the track one so a long-press
+  /// means the same thing everywhere in the browser.
+  void _showFolderActions(DisplayItem item, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Row(children: [
+                Icon(Icons.folder, color: VelvetColors.warning, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary),
+                  ),
+                ),
+              ]),
+            ),
+            Divider(color: VelvetColors.border, height: 17),
+            ListTile(
+              leading: Icon(Icons.library_add, color: VelvetColors.primary),
+              title: Text(l.addAll,
+                  style: TextStyle(color: VelvetColors.textPrimary)),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                ApiManager().getRecursiveFiles(item.data!,
+                    useThisServer: item.server);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Long-press context sheet for track rows: the album-detail queue actions
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
@@ -788,7 +854,6 @@ class _BrowserState extends State<Browser> {
   }
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final l = AppLocalizations.of(c);
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
@@ -827,19 +892,9 @@ class _BrowserState extends State<Browser> {
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
-                              // The overflow the queue actions hang off. Under
-                              // the play-from-here default a row tap REPLACES
-                              // the queue, so "add just this one" needs a
-                              // visible affordance — long-press alone hid it.
-                              // Opens the same sheet, which now also carries
-                              // the rating stars this slot used to hold.
-                              trailing: IconButton(
-                                icon: Icon(Icons.more_vert,
-                                    size: 20,
-                                    color: VelvetColors.textSecondary),
-                                tooltip: l.browserMoreActions,
-                                onPressed: () => _showTrackActions(b[i], c),
-                              ),
+                              // No trailing control: it sat exactly where
+                              // the letter strip lands, and long-press opens
+                              // the same sheet.
                               onTap: () {
                                 handleTap(b, i, c);
                               }))
@@ -1109,12 +1164,20 @@ class _BrowserState extends State<Browser> {
                             // so the letter-scrub cumulative math
                             // stays correct.
                             : ListTileTheme.merge(
-                                contentPadding: EdgeInsets.only(
-                                    left: 10 + (stripOnLeft ? gutter : 0),
-                                    right: 10 + (stripOnLeft ? 0 : gutter)),
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
-                                child: ListView.builder(
+                                // The gutter is padding on the LIST, not on
+                                // the rows' contents: a row draws its own
+                                // bottom border across its full width, so
+                                // insetting only the content left the divider
+                                // running on under the strip.
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                      left: stripOnLeft ? gutter : 0,
+                                      right: stripOnLeft ? 0 : gutter),
+                                  child: ListView.builder(
                                     controller: BrowserManager().sc,
                                     physics:
                                         const AlwaysScrollableScrollPhysics(),
@@ -1136,15 +1199,16 @@ class _BrowserState extends State<Browser> {
                                       return makeListItem(
                                           browserList, index, context);
                                     }),
+                                ),
                               );
 
                         // Only overlay the letter scrubber for views
                         // the server sorts alphabetically (Albums,
                         // Artists, File Explorer) — see BrowserManager
-                        // .alphabeticalCache.
-                        if (!BrowserManager().isAlphabetical ||
-                            browserList.isEmpty ||
-                            filtering) {
+                        // .alphabeticalCache. `stripShowing` carries the
+                        // strip's own will-I-render check too, so the rule
+                        // below can never be drawn beside nothing.
+                        if (!stripShowing) {
                           return content;
                         }
                         return Stack(
