@@ -275,6 +275,7 @@ class _QueueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = item.extras?['artUrl'] as String?;
+    final dur = _fmtDur(item.duration);
     final edgeColor = active
         ? VelvetColors.primary
         : (downloaded ? VelvetColors.success : Colors.transparent);
@@ -366,29 +367,49 @@ class _QueueRow extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (item.artist != null) ...[
+                    // The duration rides the ARTIST line, right-aligned,
+                    // rather than sitting in its own column beside both. Its
+                    // column used to run the full row height and take that
+                    // width from the title on every row — the title is the
+                    // thing that gets truncated, and the artist line almost
+                    // never fills its width. Same x as before: the text
+                    // column now extends into the space the duration column
+                    // occupied, so a right-aligned readout lands where the
+                    // old one did.
+                    //
+                    // Rendered whenever there is EITHER an artist or a
+                    // duration: a row with no artist still has a length.
+                    if (item.artist != null || dur.isNotEmpty) ...[
                       const SizedBox(height: 1),
-                      Text(
-                        item.artist!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: VelvetColors.textSecondary,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.artist ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: VelvetColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          if (dur.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Text(
+                              dur,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11.5,
+                                color: VelvetColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Duration.
-              Text(
-                _fmtDur(item.duration),
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11.5,
-                  color: VelvetColors.textTertiary,
                 ),
               ),
               // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
