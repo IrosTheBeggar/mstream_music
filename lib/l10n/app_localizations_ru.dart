@@ -285,6 +285,19 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать полосу быстрой прокрутки A–Z, когда в списке столько элементов или больше. Ниже этого размера полоса скрывается, а длинные имена папок и файлов переносятся на несколько строк вместо обрезки. Установите 0, чтобы полоса показывалась всегда.';
 
   @override
+  String get settingsLetterStripSide => 'Сторона ползунка';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'У какого края находится полоса A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Слева';
+
+  @override
+  String get settingsLetterStripRight => 'Справа';
+
+  @override
   String get settingsReset => 'Сбросить к значениям по умолчанию';
 
   @override

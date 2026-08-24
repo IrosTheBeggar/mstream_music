@@ -283,6 +283,19 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mostra a barra de navegação rápida A-Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
 
   @override
+  String get settingsLetterStripSide => 'Lado da barra';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Em que extremidade fica a barra A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Esquerda';
+
+  @override
+  String get settingsLetterStripRight => 'Direita';
+
+  @override
   String get settingsReset => 'Restaurar padrões';
 
   @override

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';
+import 'letter_strip.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 
@@ -41,7 +42,8 @@ class AlbumGrid extends StatelessWidget {
   static const double spacing = 12;
   static const double aspectRatio = 0.72;
 
-  /// [gutter] is space reserved on the right for an overlaid letter strip.
+  /// [gutter] is space reserved for an overlaid letter strip, on whichever
+  /// edge LetterStrip.onLeft says it is.
   /// It has to reach every one of these: the strip sits ON TOP of the grid, so
   /// tiles laid out under it are half-hidden, and the letter-jump offset is
   /// derived from row height, which moves as soon as the usable width does.
@@ -72,7 +74,10 @@ class AlbumGrid extends StatelessWidget {
       child: GridView.builder(
         controller: controller,
         padding: EdgeInsets.fromLTRB(
-            padHorizontal, padTop, padHorizontal + gutter, 80),
+            padHorizontal + (LetterStrip.onLeft ? gutter : 0),
+            padTop,
+            padHorizontal + (LetterStrip.onLeft ? 0 : gutter),
+            80),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: spacing,

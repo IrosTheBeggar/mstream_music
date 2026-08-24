@@ -283,6 +283,19 @@ class AppLocalizationsIt extends AppLocalizations {
       'Mostra la barra di scorrimento rapido A-Z quando un elenco ha questo numero di elementi o più. Sotto questa dimensione la barra è nascosta e i nomi lunghi di cartelle/file vanno a capo su più righe invece di essere troncati. Imposta 0 per mostrare sempre la barra.';
 
   @override
+  String get settingsLetterStripSide => 'Lato della barra';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Su quale bordo si trova la barra A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Sinistra';
+
+  @override
+  String get settingsLetterStripRight => 'Destra';
+
+  @override
   String get settingsReset => 'Ripristina valori predefiniti';
 
   @override

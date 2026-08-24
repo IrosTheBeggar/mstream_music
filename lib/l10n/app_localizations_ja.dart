@@ -277,6 +277,18 @@ class AppLocalizationsJa extends AppLocalizations {
       'リストの項目数がこの値以上のとき、A〜Z のクイックスクラブ用ストリップを表示します。これより少ない場合はストリップを隠し、長いフォルダ名やファイル名を省略せず複数行に折り返します。0 に設定すると常にストリップを表示します。';
 
   @override
+  String get settingsLetterStripSide => 'スクロールバーの位置';
+
+  @override
+  String get settingsLetterStripSideSubtitle => 'A–Z バーをどちらの端に置くか。';
+
+  @override
+  String get settingsLetterStripLeft => '左';
+
+  @override
+  String get settingsLetterStripRight => '右';
+
+  @override
   String get settingsReset => 'デフォルトにリセット';
 
   @override

@@ -228,6 +228,22 @@
   "@settingsLetterStrip": {
     "description": "Letter-scrubber threshold slider row."
   },
+  "settingsLetterStripSide": "Scrubber side",
+  "@settingsLetterStripSide": {
+    "description": "Label for the setting choosing which screen edge the A-Z scrubber sits on."
+  },
+  "settingsLetterStripSideSubtitle": "Which edge the A–Z strip sits on.",
+  "@settingsLetterStripSideSubtitle": {
+    "description": "Explains the scrubber-side setting."
+  },
+  "settingsLetterStripLeft": "Left",
+  "@settingsLetterStripLeft": {
+    "description": "Segmented-button option: scrubber on the left edge."
+  },
+  "settingsLetterStripRight": "Right",
+  "@settingsLetterStripRight": {
+    "description": "Segmented-button option: scrubber on the right edge."
+  },
   "settingsReset": "Reset to defaults",
   "settingsResetSubtitle": "Restore all settings on this screen to their default values. Servers and downloads are not affected.",
   "settingsResetDone": "Settings restored to defaults",

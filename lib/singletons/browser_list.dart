@@ -175,6 +175,7 @@ class BrowserManager {
     // requiring the user to navigate away and back.
     _letterStripSub =
         SettingsManager().letterStripStream.listen((_) => updateStream());
+        SettingsManager().letterStripSideStream.listen((_) => updateStream());
     // When a storage move finishes, re-check on-device download badges so a
     // background "Move them" re-marks files now present at the new location
     // (the edit-time refresh ran before the move had finished).

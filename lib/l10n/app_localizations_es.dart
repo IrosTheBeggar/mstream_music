@@ -283,6 +283,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'Muestra la tira de desplazamiento rápido A-Z cuando una lista tiene esta cantidad de elementos o más. Por debajo de este tamaño la tira se oculta y los nombres largos de carpetas/archivos se ajustan en varias líneas en lugar de truncarse. Pon 0 para mostrar siempre la tira.';
 
   @override
+  String get settingsLetterStripSide => 'Lado del deslizador';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'En qué borde se sitúa la barra A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Izquierda';
+
+  @override
+  String get settingsLetterStripRight => 'Derecha';
+
+  @override
   String get settingsReset => 'Restablecer valores predeterminados';
 
   @override

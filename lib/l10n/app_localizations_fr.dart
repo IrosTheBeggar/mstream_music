@@ -283,6 +283,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Afficher la bande de défilement rapide A-Z lorsqu\'une liste compte au moins ce nombre d\'éléments. En dessous de cette taille, la bande est masquée et les longs noms de dossiers/fichiers passent à la ligne au lieu d\'être tronqués. Mettez 0 pour toujours afficher la bande.';
 
   @override
+  String get settingsLetterStripSide => 'Côté du curseur';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Sur quel bord se place la barre A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Gauche';
+
+  @override
+  String get settingsLetterStripRight => 'Droite';
+
+  @override
   String get settingsReset => 'Réinitialiser aux valeurs par défaut';
 
   @override

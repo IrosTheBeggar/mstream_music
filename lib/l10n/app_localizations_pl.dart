@@ -285,6 +285,19 @@ class AppLocalizationsPl extends AppLocalizations {
       'Pokazuj pasek szybkiego przewijania A–Z, gdy lista ma tyle elementów lub więcej. Poniżej tego rozmiaru pasek jest ukryty, a długie nazwy folderów/plików zawijają się do wielu wierszy zamiast być obcinane. Ustaw 0, aby zawsze pokazywać pasek.';
 
   @override
+  String get settingsLetterStripSide => 'Strona paska';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Przy której krawędzi znajduje się pasek A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Lewa';
+
+  @override
+  String get settingsLetterStripRight => 'Prawa';
+
+  @override
   String get settingsReset => 'Przywróć ustawienia domyślne';
 
   @override

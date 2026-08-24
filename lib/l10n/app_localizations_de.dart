@@ -284,6 +284,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Den A-Z-Schnellscrubber anzeigen, wenn eine Liste mindestens so viele Einträge hat. Darunter wird der Streifen ausgeblendet und lange Ordner-/Dateinamen werden auf mehrere Zeilen umgebrochen statt abgeschnitten. Auf 0 setzen, um den Streifen immer anzuzeigen.';
 
   @override
+  String get settingsLetterStripSide => 'Seite der Scrollleiste';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'An welchem Rand die A–Z-Leiste sitzt.';
+
+  @override
+  String get settingsLetterStripLeft => 'Links';
+
+  @override
+  String get settingsLetterStripRight => 'Rechts';
+
+  @override
   String get settingsReset => 'Auf Standard zurücksetzen';
 
   @override

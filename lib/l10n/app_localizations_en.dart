@@ -281,6 +281,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.';
 
   @override
+  String get settingsLetterStripSide => 'Scrubber side';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Which edge the A–Z strip sits on.';
+
+  @override
+  String get settingsLetterStripLeft => 'Left';
+
+  @override
+  String get settingsLetterStripRight => 'Right';
+
+  @override
   String get settingsReset => 'Reset to defaults';
 
   @override

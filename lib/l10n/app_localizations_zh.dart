@@ -269,6 +269,18 @@ class AppLocalizationsZh extends AppLocalizations {
       '当列表项达到此数量或更多时显示 A-Z 快速滚动条。低于此数量时隐藏滚动条，且较长的文件夹/文件名会换行显示而非截断。设为 0 可始终显示滚动条。';
 
   @override
+  String get settingsLetterStripSide => '快速滑块位置';
+
+  @override
+  String get settingsLetterStripSideSubtitle => 'A–Z 快速条显示在哪一侧。';
+
+  @override
+  String get settingsLetterStripLeft => '左侧';
+
+  @override
+  String get settingsLetterStripRight => '右侧';
+
+  @override
   String get settingsReset => '恢复默认设置';
 
   @override

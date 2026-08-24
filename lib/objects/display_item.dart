@@ -124,8 +124,11 @@ class DisplayItem {
       (l != null && (type == 'execAction' || type == 'addServer'))
           ? browserChromeLabel(l, name)
           : name,
-      style: TextStyle(
-          fontFamily: 'Jura', fontSize: 15, color: VelvetColors.textPrimary),
+      // Same style as the metadata and file branches above. This used to
+      // carry fontFamily: 'Jura', which made folder rows — and the built-in
+      // browser nodes — the only list text in the app in a different
+      // typeface, next to file rows that were not.
+      style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
       maxLines: truncate ? 1 : null,
       overflow: truncate ? TextOverflow.ellipsis : TextOverflow.clip,
     );

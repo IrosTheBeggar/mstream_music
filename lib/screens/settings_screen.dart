@@ -513,6 +513,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                SizedBox(height: 4),
+                Text(
+                  l.settingsLetterStripSide,
+                  style: TextStyle(
+                      fontSize: 16, color: VelvetColors.textPrimary),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  l.settingsLetterStripSideSubtitle,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                ),
+                SizedBox(height: 8),
+                SegmentedButton<LetterStripSide>(
+                  segments: [
+                    ButtonSegment(
+                        value: LetterStripSide.left,
+                        label: Text(l.settingsLetterStripLeft)),
+                    ButtonSegment(
+                        value: LetterStripSide.right,
+                        label: Text(l.settingsLetterStripRight)),
+                  ],
+                  selected: {SettingsManager().letterStripSide},
+                  onSelectionChanged: (set) async {
+                    if (set.isEmpty) return;
+                    await SettingsManager().setLetterStripSide(set.first);
+                    setState(() {});
+                  },
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    textStyle:
+                        WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+                  ),
+                ),
               ],
             ),
           ),

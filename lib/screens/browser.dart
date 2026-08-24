@@ -497,7 +497,7 @@ class _BrowserState extends State<Browser> {
     final l = AppLocalizations.of(c);
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -561,7 +561,7 @@ class _BrowserState extends State<Browser> {
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -607,7 +607,7 @@ class _BrowserState extends State<Browser> {
     // Below the letter-strip threshold there's no strip math to keep
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -765,7 +765,7 @@ class _BrowserState extends State<Browser> {
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -1052,7 +1052,8 @@ class _BrowserState extends State<Browser> {
                             !filtering &&
                             LetterStrip.showsFor(browserList);
                         final gutter =
-                            stripShowing ? LetterStrip.stripWidth : 0.0;
+                            stripShowing ? LetterStrip.gutterWidth : 0.0;
+                        final stripOnLeft = LetterStrip.onLeft;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -1081,8 +1082,9 @@ class _BrowserState extends State<Browser> {
                             // so the letter-scrub cumulative math
                             // stays correct.
                             : ListTileTheme.merge(
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
+                                contentPadding: EdgeInsets.only(
+                                    left: 10 + (stripOnLeft ? gutter : 0),
+                                    right: 10 + (stripOnLeft ? 0 : gutter)),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
                                 child: ListView.builder(
@@ -1121,8 +1123,27 @@ class _BrowserState extends State<Browser> {
                         return Stack(
                           children: [
                             content,
+                            // A hairline between the rows and the strip, in
+                            // the row divider's own colour so the two read as
+                            // one grid. Drawn here rather than as a border on
+                            // the strip: the strip's visible pill is rounded
+                            // and only as tall as its letters, and this has to
+                            // run the full height of the list.
                             Positioned(
-                              right: 0,
+                              left: stripOnLeft
+                                  ? LetterStrip.stripWidth
+                                  : null,
+                              right: stripOnLeft
+                                  ? null
+                                  : LetterStrip.stripWidth,
+                              top: 0,
+                              bottom: 0,
+                              child: Container(
+                                  width: 1, color: VelvetColors.border),
+                            ),
+                            Positioned(
+                              left: stripOnLeft ? 0 : null,
+                              right: stripOnLeft ? null : 0,
                               top: 0,
                               bottom: 0,
                               child: LetterStrip(
