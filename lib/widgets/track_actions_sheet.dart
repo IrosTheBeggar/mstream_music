@@ -11,6 +11,7 @@ import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
 import '../util/media_format.dart';
 import '../util/stream_url.dart';
+import 'fact_badge.dart';
 import 'player_panel.dart';
 import 'playlist_picker_sheet.dart';
 import 'star_rating.dart';
@@ -333,37 +334,15 @@ class _TrackBadges extends StatelessWidget {
       children: [
         _SheetRating(item: item),
         if (key != null && key.isNotEmpty)
-          _factBadge(Icons.piano, key),
+          factBadge(Icons.piano, key),
         // A tempo of 0 is "the scanner found no BPM", not a 0-BPM song.
-        if (bpm != null && bpm > 0) _factBadge(Icons.speed, '$bpm BPM'),
+        if (bpm != null && bpm > 0) factBadge(Icons.speed, '$bpm BPM'),
         if (m?.hasLyrics == true)
-          _factBadge(Icons.lyrics_rounded, l.lyricsTitle),
+          factBadge(Icons.lyrics_rounded, l.lyricsTitle),
       ],
     );
   }
 
-  static Widget _factBadge(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: VelvetColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: VelvetColors.textTertiary),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: VelvetColors.textSecondary,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
 }
 
 /// The rating badge — a real button, and the ONLY stateful thing in this

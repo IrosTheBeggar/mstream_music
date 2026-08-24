@@ -17,6 +17,7 @@ import '../util/image_cache.dart';
 import '../visualizer/shader_visualizer_screen.dart';
 import 'more_actions_sheet.dart';
 import 'discover_queue_bar.dart';
+import 'fact_badge.dart';
 import 'queue_list.dart';
 import 'star_rating.dart';
 import 'waveform_progress.dart';
@@ -393,7 +394,6 @@ class _TopMedium extends StatelessWidget {
             builder: (context, snap) {
               final item = snap.data;
               final url = item?.extras?['artUrl'] as String?;
-              final year = item?.extras?['year']?.toString();
               return Row(
                 children: [
                   _albumArt(url, size: 92, radius: 8),
@@ -415,22 +415,7 @@ class _TopMedium extends StatelessWidget {
                         const SizedBox(height: 3),
                         _artistAlbum(item, fontSize: 13.5),
                         const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            if (year != null && year.isNotEmpty)
-                              Text(year,
-                                  style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      letterSpacing: 0.3,
-                                      color: VelvetColors.textTertiary)),
-                            if (item != null) ...[
-                              if (year != null && year.isNotEmpty)
-                                const SizedBox(width: 10),
-                              MediaItemRating(item: item, size: 13),
-                            ],
-                          ],
-                        ),
+                        _TrackFacts(item: item),
                       ],
                     ),
                   ),
@@ -495,7 +480,6 @@ class _TopLarge extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
-              final year = item?.extras?['year']?.toString();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -511,22 +495,7 @@ class _TopLarge extends StatelessWidget {
                   const SizedBox(height: 3),
                   _artistAlbum(item, fontSize: 13.5),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (year != null && year.isNotEmpty)
-                        Text(year,
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10,
-                                letterSpacing: 0.3,
-                                color: VelvetColors.textTertiary)),
-                      if (item != null) ...[
-                        if (year != null && year.isNotEmpty)
-                          const SizedBox(width: 10),
-                        MediaItemRating(item: item, size: 13),
-                      ],
-                    ],
-                  ),
+                  _TrackFacts(item: item),
                 ],
               );
             },
@@ -582,7 +551,6 @@ class _TopXL extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
-              final year = item?.extras?['year']?.toString();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -599,22 +567,7 @@ class _TopXL extends StatelessWidget {
                   const SizedBox(height: 4),
                   _artistAlbum(item, fontSize: 14.5),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (year != null && year.isNotEmpty)
-                        Text(year,
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10.5,
-                                letterSpacing: 0.3,
-                                color: VelvetColors.textTertiary)),
-                      if (item != null) ...[
-                        if (year != null && year.isNotEmpty)
-                          const SizedBox(width: 10),
-                        MediaItemRating(item: item, size: 13),
-                      ],
-                    ],
-                  ),
+                  _TrackFacts(item: item),
                 ],
               );
             },
@@ -1344,19 +1297,61 @@ Widget _albumArt(String? url,
 
 Widget _fallback(double size) => albumArtFallback(iconSize: size);
 
-/// Artist and album stacked, one per line.
+/// The rating, then what the file knows about the song: key, tempo, whether it
+/// has words.
+///
+/// Same badges the track sheet shows, at header size, so a song reads the same
+/// wherever you meet it. Only the rating takes input. A [Wrap] rather than a
+/// [Row] because the medium layout's column is narrow — a long key or a
+/// four-digit tempo drops to a second line instead of overflowing.
+class _TrackFacts extends StatelessWidget {
+  final MediaItem? item;
+  const _TrackFacts({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final e = item?.extras;
+    final key = (e?['musicalKey'] as String?)?.trim() ?? '';
+    final bpm = (e?['bpm'] as num?)?.round();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        // canRate rather than letting the widget render nothing: an empty
+        // SizedBox still takes a Wrap slot, and the spacing either side of it.
+        if (item != null && MediaItemRating.canRate(item!))
+          MediaItemRating(item: item!, size: 13),
+        if (key.isNotEmpty) factBadge(Icons.piano, key, compact: true),
+        // A tempo of 0 is "the scanner found no BPM", not a 0-BPM song.
+        if (bpm != null && bpm > 0)
+          factBadge(Icons.speed, '$bpm BPM', compact: true),
+        if (e?['hasLyrics'] == true)
+          factBadge(Icons.lyrics_rounded, l.lyricsTitle, compact: true),
+      ],
+    );
+  }
+}
+
+/// Who made it, then which record it came from and when — one per line.
 ///
 /// Joined on a single line as "Icarus · Be Somebody" the reader has to work
 /// out where the performer ends and the record begins, and the album is what
 /// gets truncated because it happens to come second. Stacking says which is
 /// which by position instead, and the header has the room for it now that the
 /// visualizer and cast glyphs have moved into the queue menu.
+///
+/// The year rides on the album line because that is what it dates — it used to
+/// sit down in the rating row, where it read as a fact about the song.
 Widget _artistAlbum(MediaItem? item, {required double fontSize}) {
   final artist = item?.artist?.trim() ?? '';
   final album = item?.album?.trim() ?? '';
+  final year = item?.extras?['year']?.toString().trim() ?? '';
   final lines = [
     if (artist.isNotEmpty) artist,
-    if (album.isNotEmpty) album,
+    if (year.isNotEmpty || album.isNotEmpty)
+      [if (year.isNotEmpty) year, if (album.isNotEmpty) album].join(' - '),
   ];
   // One line's worth of height even with nothing to say, so the header does
   // not jump as the track changes.
