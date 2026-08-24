@@ -251,51 +251,15 @@ class TrackActionsSheet extends StatelessWidget {
                     ],
                   );
                 }),
-                // Rating on its own labelled row rather than floating under
-                // the title: it is the only control up here, so it should
-                // read as one. Moved off the browser row when the overflow
-                // button took that slot; writes through the same way - patch
-                // the in-memory metadata, then re-emit so rows repaint.
+                // A row of badges under the header: the rating (the only
+                // one that takes input) beside what the track IS — key, tempo,
+                // whether it has words. The "Rating" label that used to sit
+                // here was naming the one control on the row, which the stars
+                // already did.
                 if (isServerTrack && item.metadata != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l.trackRating,
-                            style: TextStyle(
-                                color: VelvetColors.textSecondary,
-                                fontSize: 13),
-                          ),
-                        ),
-                        // The box hugs the STARS, not the whole row. Around
-                        // the label too it drew one control-sized affordance
-                        // whose left half was inert — it read as a button
-                        // that ignored taps. Only the stars take input, so
-                        // only the stars get the frame.
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: VelvetColors.card,
-                            border: Border.all(color: VelvetColors.border),
-                            borderRadius: BorderRadius.circular(
-                                VelvetColors.radiusSmall),
-                          ),
-                          child: RatingControl(
-                            rating: item.metadata?.rating,
-                            server: item.server!,
-                            filepath: item.data!,
-                            size: 18,
-                            onChanged: (r) {
-                              item.metadata?.rating = r;
-                              BrowserManager().updateStream();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: _TrackBadges(item: item),
                   ),
               ],
             ),
@@ -341,6 +305,145 @@ class TrackActionsSheet extends StatelessWidget {
             }),
           const SizedBox(height: 8),
         ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The badge row under the sheet header: rating, musical key, tempo, lyrics.
+///
+/// Only the rating is interactive; the rest state facts about the track. They
+/// share a shape so the row reads as one band rather than a control with
+/// decorations around it.
+class _TrackBadges extends StatelessWidget {
+  final DisplayItem item;
+  const _TrackBadges({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final m = item.metadata;
+    final key = m?.musicalKey?.trim();
+    final bpm = m?.bpm;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _SheetRating(item: item),
+        if (key != null && key.isNotEmpty)
+          _factBadge(Icons.piano, key),
+        // A tempo of 0 is "the scanner found no BPM", not a 0-BPM song.
+        if (bpm != null && bpm > 0) _factBadge(Icons.speed, '$bpm BPM'),
+        if (m?.hasLyrics == true)
+          _factBadge(Icons.lyrics_rounded, l.lyricsTitle),
+      ],
+    );
+  }
+
+  static Widget _factBadge(IconData icon, String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: VelvetColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: VelvetColors.textTertiary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+/// The rating badge — a real button, and the ONLY stateful thing in this
+/// sheet.
+///
+/// The sheet is stateless and its `item` is the row that opened it, so rating
+/// a song used to update the server and the browser row behind the sheet
+/// while the sheet itself kept showing the old value until you closed and
+/// reopened it. This holds the current rating locally, so the number changes
+/// under your thumb, and still writes through to the item + the browser so
+/// everything else agrees.
+class _SheetRating extends StatefulWidget {
+  final DisplayItem item;
+  const _SheetRating({required this.item});
+
+  @override
+  State<_SheetRating> createState() => _SheetRatingState();
+}
+
+class _SheetRatingState extends State<_SheetRating> {
+  late int? _rating = widget.item.metadata?.rating;
+
+  // 0-10 server scale -> a compact 0-5 label: "5", "3.5", "3".
+  static String _half(int v) {
+    final s = v / 2.0;
+    return s == s.roundToDouble() ? s.toStringAsFixed(0) : s.toStringAsFixed(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = (_rating ?? 0).clamp(0, 10);
+    final rated = v > 0;
+    return Material(
+      color: rated ? VelvetColors.primaryDim : Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => showRatingDialog(
+          context,
+          server: widget.item.server!,
+          filepath: widget.item.data!,
+          current: _rating,
+          onChanged: (r) {
+            setState(() => _rating = r);
+            widget.item.metadata?.rating = r;
+            BrowserManager().updateStream();
+          },
+        ),
+        child: Container(
+          // A tap target rather than the size of the glyphs: rated, this was
+          // a number and a star inside 2px of padding, and you had to hit the
+          // star itself. 40 high is the floor a finger needs.
+          constraints: const BoxConstraints(minHeight: 40, minWidth: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: rated ? VelvetColors.primary : VelvetColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(rated ? Icons.star : Icons.star_border,
+                  size: 16,
+                  color:
+                      rated ? VelvetColors.primary : VelvetColors.textTertiary),
+              if (rated) ...[
+                const SizedBox(width: 5),
+                Text(
+                  _half(v),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: VelvetColors.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
