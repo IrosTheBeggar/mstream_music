@@ -1,11 +1,17 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../objects/server.dart';
+import '../media/cast_target.dart';
+import '../screens/visualizer_screen.dart';
+import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/sleep_timer.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../visualizer/shader_visualizer_screen.dart';
+import 'cast_picker_sheet.dart';
 import 'queue_list.dart';
 import 'sleep_timer_sheet.dart';
 
@@ -28,31 +34,56 @@ class MoreActionsSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 8),
-          // Auto DJ — toggles in place; the switch reflects live state.
-          StreamBuilder<dynamic>(
-            stream: MediaManager().audioHandler.customState,
-            builder: (context, snapshot) {
-              final Server? autoDJState =
-                  (snapshot.data?.autoDJState as Server?);
-              final on = autoDJState != null;
-              return SwitchListTile(
-                secondary: Icon(Icons.album,
-                    color: on
+          // Auto DJ is deliberately absent: it is a labelled button a few
+          // pixels away in the queue header and again in the mini player.
+          // Discover is absent for the same reason — the collapsible bar
+          // under the queue is its home.
+          //
+          // Visualizer and cast moved DOWN here from the now-playing header.
+          // They were two glyphs competing with the art and the transport for
+          // a strip that is mostly about the song; here they sit with the
+          // other things you do to a session rather than to a track.
+          ListTile(
+            leading:
+                Icon(Icons.auto_awesome, color: VelvetColors.textSecondary),
+            title: Text(l.visualizerTitle,
+                style: TextStyle(color: VelvetColors.textPrimary)),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(parentContext).push(MaterialPageRoute(
+                  builder: (_) => Platform.isAndroid
+                      ? VisualizerScreen()
+                      : const ShaderVisualizerScreen()));
+            },
+          ),
+          StreamBuilder<CastTarget>(
+            stream: CastManager().activeTargetStream,
+            initialData: CastManager().activeTarget,
+            builder: (context, snap) {
+              final casting = !(snap.data ?? CastTarget.local).isLocal;
+              return ListTile(
+                leading: Icon(casting ? Icons.cast_connected : Icons.cast,
+                    color: casting
                         ? VelvetColors.primary
                         : VelvetColors.textSecondary),
-                title: Text(l.autoDjTitle,
+                title: Text(l.castPlayOnTooltip,
                     style: TextStyle(color: VelvetColors.textPrimary)),
-                subtitle: Text(on ? l.commonOn : l.commonOff,
-                    style: TextStyle(color: VelvetColors.textSecondary)),
-                value: on,
-                activeThumbColor: VelvetColors.primary,
-                // Shared with the queue header's DJ button (queue_list.dart).
-                onChanged: (_) => toggleAutoDJ(context),
+                subtitle: casting
+                    ? Text(snap.data!.name,
+                        style: TextStyle(color: VelvetColors.textSecondary))
+                    : null,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showModalBottomSheet(
+                    context: parentContext,
+                    backgroundColor: VelvetColors.surface,
+                    isScrollControlled: true,
+                    builder: (_) => CastPickerSheet(),
+                  );
+                },
               );
             },
           ),
-          // Discover is deliberately absent: the collapsible bar under the
-          // queue is its home, and it sits a few pixels from this button.
           // Sleep timer — opens the timer picker.
           StreamBuilder<Duration?>(
             stream: SleepTimerManager().remainingStream,
@@ -82,8 +113,6 @@ class MoreActionsSheet extends StatelessWidget {
               );
             },
           ),
-          // Visualizer is deliberately absent too: the mini player carries
-          // it, one tap away without opening this sheet at all.
           // Download queue — save every downloadable track to the device.
           ListTile(
             leading: Icon(Icons.download_for_offline,

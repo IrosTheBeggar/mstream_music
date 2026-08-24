@@ -1,6 +1,7 @@
 import './server_capabilities.dart';
 import './server_list.dart';
 import './browser_list.dart';
+import './app_messenger.dart';
 import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
@@ -9,6 +10,7 @@ import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
+import '../util/media_format.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:flutter/material.dart';
@@ -1082,12 +1084,16 @@ class ApiManager {
     });
 
     res['files'].forEach((e) {
+      // A playlist file opens a list rather than playing, so it should not
+      // wear the same icon as the tracks around it.
+      final isPlaylistFile = isM3u(e['name']?.toString());
       DisplayItem newItem = DisplayItem(
           useThisServer,
           e['name'],
           'file',
           path.join(res['path'], e['name']),
-          Icon(Icons.music_note, color: VelvetColors.accent),
+          Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
+              color: VelvetColors.accent),
           null);
 
       // The server wraps each file's metadata as { filepath, metadata:
@@ -1106,5 +1112,60 @@ class ApiManager {
 
     BrowserManager()
         .addListToStack(newList, alphabetical: true, path: res['path']);
+  }
+
+  /// POST /api/v1/file-explorer/m3u — read a playlist FILE and push what it
+  /// names as a browse list.
+  ///
+  /// The alternative is what used to happen: an .m3u tapped in the file
+  /// explorer went to the queue like any other file, and the player stalled
+  /// trying to decode a text file. The server already parses these (since
+  /// 4.7.0, below the support floor, so no gate) and resolves each entry
+  /// against the playlist's own directory, dropping anything that escapes the
+  /// library root.
+  ///
+  /// Pushed as a NON-alphabetical list: an m3u's order is the point of an
+  /// m3u. Sorting it — or offering a letter strip over it — would throw away
+  /// the one thing the file is for.
+  Future<void> getM3uContents(String filepath,
+      {Server? useThisServer}) async {
+    dynamic res;
+    try {
+      res = await makeServerCall(useThisServer, '/api/v1/file-explorer/m3u',
+          {'path': filepath}, 'POST');
+    } catch (err) {
+      appLog('[api] getM3uContents failed: $err');
+      return;
+    }
+
+    final List<DisplayItem> newList = [];
+    for (final e in (res['files'] as List? ?? const [])) {
+      final name = e['name']?.toString();
+      final p = e['path']?.toString();
+      if (name == null || p == null) continue;
+      newList.add(DisplayItem(
+        useThisServer ?? ServerManager().currentServer,
+        name,
+        'file',
+        p.startsWith('/') ? p : '/$p',
+        Icon(Icons.music_note, color: VelvetColors.accent),
+        null,
+      ));
+    }
+
+    // The server counts entries it refused to resolve. Saying nothing would
+    // present a short playlist as a complete one.
+    final skipped = res['skipped'];
+    if (skipped is int && skipped > 0) {
+      showGlobalSnack('$skipped track(s) in this playlist are outside '
+          'the library and were skipped');
+    }
+
+    // Label stays "File Explorer" and the playlist's own path goes in the
+    // breadcrumb: popBrowser restores the path stack but there is no label
+    // stack, so a per-list title would still be showing after you backed out
+    // of it. The breadcrumb names the file, which is the part that changed.
+    BrowserManager()
+        .addListToStack(newList, alphabetical: false, path: filepath);
   }
 }

@@ -33,6 +33,16 @@ enum TapBehavior {
   // Localized labels: TapBehaviorLabel extension in lib/l10n/enum_labels.dart.
 }
 
+/// Which edge the browser's A-Z scrubber sits on. Right by default (thumb
+/// reach on a right-handed grip); left for the other hand, or to keep the
+/// strip off the row-trailing controls.
+enum LetterStripSide {
+  right,
+  left;
+
+  // Localized labels: LetterStripSideLabel extension in lib/l10n/enum_labels.dart.
+}
+
 /// Which view the app opens into on launch. `browser` is the normal home grid;
 /// any other value loads that browser section on top of the home grid at
 /// startup, so the system Back button returns to the browser home. Persisted.
@@ -136,6 +146,7 @@ class SettingsManager {
   // folder/file names to wrap) when a list has fewer than this many
   // items. Single knob driving both behaviors.
   int letterStripThreshold = 25;
+  LetterStripSide letterStripSide = LetterStripSide.right;
   // Field default = the FRESH-INSTALL default (load() early-returns when no
   // settings.json exists). New installs get playFromHere because that is what
   // people coming from other music apps expect; an existing install that
@@ -245,6 +256,8 @@ class SettingsManager {
       BehaviorSubject<bool>.seeded(albumGrid);
   late final BehaviorSubject<int> _letterStripStream =
       BehaviorSubject<int>.seeded(letterStripThreshold);
+  late final BehaviorSubject<LetterStripSide> _letterStripSideStream =
+      BehaviorSubject<LetterStripSide>.seeded(letterStripSide);
   late final BehaviorSubject<AppTheme> _themeStream =
       BehaviorSubject<AppTheme>.seeded(appTheme);
   late final BehaviorSubject<PlayerLayout> _playerLayoutStream =
@@ -352,8 +365,10 @@ class SettingsManager {
       castVisualizerQuality = _readCastVisualizerQuality(m);
       final lang = m['language'];
       language = lang is String ? lang : null;
+      letterStripSide = _readLetterStripSide(m);
       _albumGridStream.add(albumGrid);
       _letterStripStream.add(letterStripThreshold);
+      _letterStripSideStream.add(letterStripSide);
       _themeStream.add(appTheme);
       _playerLayoutStream.add(playerLayout);
       _accentColorStream.add(accentColor);
@@ -429,6 +444,16 @@ class SettingsManager {
     return TapBehavior.addToQueue;
   }
 
+  LetterStripSide _readLetterStripSide(Map<String, dynamic> m) {
+    final str = m['letterStripSide'];
+    if (str is String) {
+      for (final v in LetterStripSide.values) {
+        if (v.name == str) return v;
+      }
+    }
+    return LetterStripSide.right;
+  }
+
   StartupView _readStartupView(Map<String, dynamic> m) {
     final str = m['startupView'];
     if (str is String) {
@@ -498,6 +523,7 @@ class SettingsManager {
       'ratingAllowHalf': ratingAllowHalf,
       'fileExplorerMetadata': fileExplorerMetadata,
       'letterStripThreshold': letterStripThreshold,
+      'letterStripSide': letterStripSide.name,
       'tapBehavior': tapBehavior.name,
       'onboardingComplete': onboardingComplete,
       'welcomeShown': welcomeShown,
@@ -565,6 +591,12 @@ class SettingsManager {
   Future<void> setLetterStripThreshold(int v) async {
     letterStripThreshold = v;
     _letterStripStream.add(v);
+    await _save();
+  }
+
+  Future<void> setLetterStripSide(LetterStripSide v) async {
+    letterStripSide = v;
+    _letterStripSideStream.add(v);
     await _save();
   }
 
@@ -728,6 +760,7 @@ class SettingsManager {
     ratingAllowHalf = false;
     fileExplorerMetadata = true;
     letterStripThreshold = 25;
+    letterStripSide = LetterStripSide.right;
     tapBehavior = TapBehavior.playFromHere;
     startupView = StartupView.browser;
     // onboardingComplete is deliberately NOT reset — "restore defaults"
@@ -752,6 +785,7 @@ class SettingsManager {
     language = null;
     _albumGridStream.add(albumGrid);
     _letterStripStream.add(letterStripThreshold);
+    _letterStripSideStream.add(letterStripSide);
     _themeStream.add(appTheme);
     _accentColorStream.add(accentColor);
     _localeStream.add(localeOverride);
@@ -761,6 +795,8 @@ class SettingsManager {
 
   Stream<bool> get albumGridStream => _albumGridStream.stream;
   Stream<int> get letterStripStream => _letterStripStream.stream;
+  Stream<LetterStripSide> get letterStripSideStream =>
+      _letterStripSideStream.stream;
   Stream<AppTheme> get themeStream => _themeStream.stream;
   Stream<PlayerLayout> get playerLayoutStream => _playerLayoutStream.stream;
   Stream<int?> get accentColorStream => _accentColorStream.stream;

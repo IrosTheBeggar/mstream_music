@@ -17,6 +17,7 @@ import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
+import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/server_version.dart';
 
@@ -64,6 +65,16 @@ class _BrowserState extends State<Browser> {
         context,
         MaterialPageRoute(builder: (context) => AddServerScreen()),
       );
+      return;
+    }
+
+    // An .m3u is a text file listing other files. Queued as audio it
+    // stalls the player on a payload it cannot decode; the server will
+    // read it for us and hand back the tracks it names.
+    if (browserList[index].type == 'file' &&
+        isM3u(browserList[index].data)) {
+      ApiManager().getM3uContents(browserList[index].data ?? '',
+          useThisServer: browserList[index].server);
       return;
     }
 
@@ -497,7 +508,7 @@ class _BrowserState extends State<Browser> {
     final l = AppLocalizations.of(c);
     // Same rationale as makeFolderWidget — wrap long names below the
     // letter-strip threshold.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -561,7 +572,7 @@ class _BrowserState extends State<Browser> {
 
   Widget makeLocalFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     final l = AppLocalizations.of(c);
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -607,7 +618,7 @@ class _BrowserState extends State<Browser> {
     // Below the letter-strip threshold there's no strip math to keep
     // uniform — let long folder names wrap and show in full. Smaller
     // folders tend to have longer / more descriptive names.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -627,19 +638,19 @@ class _BrowserState extends State<Browser> {
             ),
             child: Builder(
               builder: (context) => ListTile(
+                  // Long-press = this row's actions, the same convention the
+                  // track rows use. The swipe pane has carried Add all for a
+                  // while, but a swipe is only found by accident.
+                  onLongPress: () => _showFolderActions(b[i], c),
                   leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: VelvetColors.textTertiary,
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
+                  // No caret: it opened the swipe pane, whose only action is
+                  // the Add all the long-press above now offers — two handles
+                  // on one action, the second sitting under the letter strip.
+                  // The swipe itself still works. makeLocalFolderWidget keeps
+                  // its caret: that pane is Delete, and nothing else reaches
+                  // it.
                   onTap: () {
                     handleTap(b, i, c);
                   }),
@@ -679,64 +690,142 @@ class _BrowserState extends State<Browser> {
             }));
   }
 
-  // ── Default browser landing: section shortcuts as a modern card grid ──
+  // ── Default browser landing: section shortcuts as a card grid ──
+  //
+  // Cards sit on VelvetColors.card, the token the palette has always defined
+  // and this screen never used: face and page were both `surface`, so a card
+  // was a 1px border around nothing and the grid read flat. On the real
+  // surface the border is redundant and gone.
+  //
+  // Laid out as rows rather than a GridView because an odd item count left
+  // the last card stranded beside a hole — the trailing one spans the row
+  // instead. IntrinsicHeight pairs each row to its taller card, so a row is
+  // as tall as its content needs and no taller: with a fixed aspect ratio the
+  // card height fell out of the screen WIDTH, which on a narrow phone (or at
+  // a large text scale) squeezed the tile and label into less room than they
+  // occupy and overflowed.
   Widget _homeView(BuildContext context, List<DisplayItem> items) {
-    final l = AppLocalizations.of(context);
-    return GridView.builder(
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final pair = items.skip(i).take(2).toList();
+      rows.add(Padding(
+        padding: EdgeInsets.only(top: i == 0 ? 0 : _homeCardGap),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var j = 0; j < pair.length; j++) ...[
+                if (j > 0) SizedBox(width: _homeCardGap),
+                Expanded(child: _homeCard(context, items, i + j)),
+              ],
+            ],
+          ),
+        ),
+      ));
+    }
+    return ListView(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.3,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final iconData = item.icon?.icon ?? Icons.chevron_right;
-        return Material(
-          color: VelvetColors.surface,
-          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => handleTap(items, i, context),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: VelvetColors.border),
-                borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      children: rows,
+    );
+  }
+
+  static const double _homeCardGap = 10;
+
+  Widget _homeCard(BuildContext context, List<DisplayItem> items, int i) {
+    final l = AppLocalizations.of(context);
+    final item = items[i];
+    final iconData = item.icon?.icon ?? Icons.chevron_right;
+    return Material(
+      color: VelvetColors.card,
+      borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => handleTap(items, i, context),
+        child: Padding(
+          // Tighter vertically than horizontally: the vertical axis is the one
+          // that runs out first, and the tile already carries its own visual
+          // padding around the icon.
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: VelvetColors.primaryDim,
+                  borderRadius:
+                      BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+                child: Icon(iconData, color: VelvetColors.primary, size: 22),
               ),
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: VelvetColors.primaryDim,
-                      borderRadius:
-                          BorderRadius.circular(VelvetColors.radiusSmall),
-                    ),
-                    child: Icon(iconData,
-                        color: VelvetColors.primary, size: 24),
-                  ),
-                  Text(
-                    browserChromeLabel(l, item.name),
-                    maxLines: 2,
+              Text(
+                browserChromeLabel(l, item.name),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Long-press sheet for a folder row: the one thing you can do to a folder
+  /// without opening it. Same sheet shape as the track one so a long-press
+  /// means the same thing everywhere in the browser.
+  void _showFolderActions(DisplayItem item, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Row(children: [
+                Icon(Icons.folder, color: VelvetColors.warning, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: VelvetColors.textPrimary,
-                    ),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary),
                   ),
-                ],
-              ),
+                ),
+              ]),
             ),
-          ),
-        );
-      },
+            Divider(color: VelvetColors.border, height: 17),
+            ListTile(
+              leading: Icon(Icons.library_add, color: VelvetColors.primary),
+              title: Text(l.addAll,
+                  style: TextStyle(color: VelvetColors.textPrimary)),
+              onTap: () {
+                Navigator.of(sheetCtx).pop();
+                ApiManager().getRecursiveFiles(item.data!,
+                    useThisServer: item.server);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 
@@ -744,28 +833,14 @@ class _BrowserState extends State<Browser> {
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
   // convention everywhere (Apple Music / Spotify / Symfonium).
-  void _showTrackActions(DisplayItem item, BuildContext c) {
-    showModalBottomSheet(
-      context: c,
-      backgroundColor: VelvetColors.surface,
-      // Without this the sheet is capped at 9/16 of the screen. A server track
-      // with discovery shows header + rating + six actions, which lands right
-      // on that cap and overflowed the last row. Scroll-controlled here, and
-      // the sheet scrolls internally, so the entry count can't overflow it.
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => TrackActionsSheet(item: item, parentContext: c),
-    );
-  }
+  void _showTrackActions(DisplayItem item, BuildContext c) =>
+      showTrackActionsSheet(c, item);
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
-    final l = AppLocalizations.of(c);
     // Same wrap-on-small-list rule as folders: below the letter-strip
     // threshold there's no uniform-row constraint, so long song names
     // get to show in full.
-    final allowWrap = b.length < LetterStrip.minItemsToShow;
+    final allowWrap = !LetterStrip.showsFor(b);
     return Container(
         decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: VelvetColors.border))),
@@ -773,7 +848,18 @@ class _BrowserState extends State<Browser> {
             color: VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
-                onLongPress: () => _showTrackActions(b[i], c),
+                // Nothing for an .m3u: the track sheet rates, queues and finds
+                // similar music for the row it opens on, and none of that
+                // means anything for a playlist file.
+                //
+                // A no-op rather than null, deliberately. With no long-press
+                // recognizer the tap one wins and fires on release however
+                // long the press was, so `null` made holding an .m3u OPEN it
+                // — measured, not assumed. An empty handler claims the
+                // gesture and the press ends where it started: nothing.
+                onLongPress: isM3u(b[i].data)
+                    ? () {}
+                    : () => _showTrackActions(b[i], c),
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -800,19 +886,9 @@ class _BrowserState extends State<Browser> {
                               leading: b[i].getImage(),
                               title: b[i].getText(truncate: !allowWrap),
                               subtitle: b[i].getSubText(),
-                              // The overflow the queue actions hang off. Under
-                              // the play-from-here default a row tap REPLACES
-                              // the queue, so "add just this one" needs a
-                              // visible affordance — long-press alone hid it.
-                              // Opens the same sheet, which now also carries
-                              // the rating stars this slot used to hold.
-                              trailing: IconButton(
-                                icon: Icon(Icons.more_vert,
-                                    size: 20,
-                                    color: VelvetColors.textSecondary),
-                                tooltip: l.browserMoreActions,
-                                onPressed: () => _showTrackActions(b[i], c),
-                              ),
+                              // No trailing control: it sat exactly where
+                              // the letter strip lands, and long-press opens
+                              // the same sheet.
                               onTap: () {
                                 handleTap(b, i, c);
                               }))
@@ -1052,7 +1128,8 @@ class _BrowserState extends State<Browser> {
                             !filtering &&
                             LetterStrip.showsFor(browserList);
                         final gutter =
-                            stripShowing ? LetterStrip.stripWidth : 0.0;
+                            stripShowing ? LetterStrip.gutterWidth : 0.0;
+                        final stripOnLeft = LetterStrip.onLeft;
                         final Widget content = useGrid
                             ? AlbumGrid(
                                 items: browserList,
@@ -1085,7 +1162,16 @@ class _BrowserState extends State<Browser> {
                                     const EdgeInsets.symmetric(horizontal: 10),
                                 horizontalTitleGap: 10,
                                 minLeadingWidth: 32,
-                                child: ListView.builder(
+                                // The gutter is padding on the LIST, not on
+                                // the rows' contents: a row draws its own
+                                // bottom border across its full width, so
+                                // insetting only the content left the divider
+                                // running on under the strip.
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                      left: stripOnLeft ? gutter : 0,
+                                      right: stripOnLeft ? 0 : gutter),
+                                  child: ListView.builder(
                                     controller: BrowserManager().sc,
                                     physics:
                                         const AlwaysScrollableScrollPhysics(),
@@ -1107,22 +1193,42 @@ class _BrowserState extends State<Browser> {
                                       return makeListItem(
                                           browserList, index, context);
                                     }),
+                                ),
                               );
 
                         // Only overlay the letter scrubber for views
                         // the server sorts alphabetically (Albums,
                         // Artists, File Explorer) — see BrowserManager
-                        // .alphabeticalCache.
-                        if (!BrowserManager().isAlphabetical ||
-                            browserList.isEmpty ||
-                            filtering) {
+                        // .alphabeticalCache. `stripShowing` carries the
+                        // strip's own will-I-render check too, so the rule
+                        // below can never be drawn beside nothing.
+                        if (!stripShowing) {
                           return content;
                         }
                         return Stack(
                           children: [
                             content,
+                            // A hairline between the rows and the strip, in
+                            // the row divider's own colour so the two read as
+                            // one grid. Drawn here rather than as a border on
+                            // the strip: the strip's visible pill is rounded
+                            // and only as tall as its letters, and this has to
+                            // run the full height of the list.
                             Positioned(
-                              right: 0,
+                              left: stripOnLeft
+                                  ? LetterStrip.stripWidth
+                                  : null,
+                              right: stripOnLeft
+                                  ? null
+                                  : LetterStrip.stripWidth,
+                              top: 0,
+                              bottom: 0,
+                              child: Container(
+                                  width: 1, color: VelvetColors.border),
+                            ),
+                            Positioned(
+                              left: stripOnLeft ? 0 : null,
+                              right: stripOnLeft ? null : 0,
                               top: 0,
                               bottom: 0,
                               child: LetterStrip(

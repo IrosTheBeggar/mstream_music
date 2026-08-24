@@ -39,20 +39,39 @@ class LetterStrip extends StatefulWidget {
   // with no letter strip, are free to wrap long titles.
   static int get minItemsToShow => SettingsManager().letterStripThreshold;
 
-  /// How many rows the strip would actually scrub. NOT [items].length: a File
-  /// Explorer listing is folders sorted A–Z followed by files sorted A–Z, so a
-  /// single index over both resolves every letter to a folder and leaves the
-  /// files below unreachable. Where folders exist they ARE the navigation, so
-  /// the strip scrubs folders alone and counts only those. A listing with no
-  /// folders (a leaf directory, Albums, Artists, a playlist) is homogeneous
-  /// and indexes normally.
+  /// How many rows the strip would actually scrub. NOT [items].length.
+  ///
+  /// A File Explorer listing is folders sorted A–Z followed by files in
+  /// whatever order the server returns them — usually track order, so "01 -",
+  /// "02 -", not an alphabet. Scrubbing those does nothing useful, and a
+  /// single index over both resolves every letter to a folder anyway, leaving
+  /// the files below unreachable. So an explorer listing counts FOLDERS, even
+  /// when there are none: a leaf directory of 200 songs gets no strip, which
+  /// is the honest answer for a list the alphabet cannot address.
+  ///
+  /// Everything else — Albums, Artists, a playlist — is homogeneous and
+  /// genuinely alphabetical, and indexes normally.
   static int scrubbableCount(List<DisplayItem> items) =>
-      _hasFolders(items) ? items.where(_isFolder).length : items.length;
+      _isExplorerListing(items) ? items.where(_isFolder).length : items.length;
 
-  /// Painted width of the strip (the hit region is wider — see build). A
-  /// parent that lays content out UNDER the strip reserves this much on the
-  /// right so the two don't overlap.
+  /// Painted width of the strip (the hit region is wider — see build).
   static const double stripWidth = 24;
+
+  /// Clear space between the rows and the hairline rule, so a row's trailing
+  /// control isn't pressed against the letters.
+  static const double rowGap = 8;
+
+  /// What a parent reserves beside the list: the strip, the 1px rule at its
+  /// inner edge, and [rowGap]. Rows laid out inside this never sit under the
+  /// strip — which is what they used to do in list mode, where the gutter was
+  /// computed and then only ever applied to the album grid.
+  static const double gutterWidth = stripWidth + 1 + rowGap;
+
+  /// Which edge the strip is pinned to. Read straight from settings so the
+  /// strip, its rule and the parent's gutter can never disagree about a side.
+  static LetterStripSide get side => SettingsManager().letterStripSide;
+
+  static bool get onLeft => side == LetterStripSide.left;
 
   /// Whether the strip will actually render for [items]. The overlay decision
   /// and the gutter decision have to agree, or the gutter appears without a
@@ -62,7 +81,11 @@ class LetterStrip extends StatefulWidget {
 
   static bool _isFolder(DisplayItem i) => i.type == 'directory';
 
-  static bool _hasFolders(List<DisplayItem> items) => items.any(_isFolder);
+  static bool _isExplorerRow(DisplayItem i) =>
+      i.type == 'directory' || i.type == 'file' || i.type == 'localFile';
+
+  static bool _isExplorerListing(List<DisplayItem> items) =>
+      items.any(_isExplorerRow);
 
   final List<DisplayItem> items;
   final void Function(int itemIndex) onJump;
@@ -135,7 +158,9 @@ class _LetterStripState extends State<LetterStrip> {
   // offsets by walking every row, so a filtered index would land on the wrong
   // one.
   static Map<String, int> _buildIndex(List<DisplayItem> items) {
-    final foldersOnly = LetterStrip._hasFolders(items);
+    // Same rule scrubbableCount counts by: in an explorer listing only
+    // folders are addressable by letter, so only folders get an index entry.
+    final foldersOnly = LetterStrip._isExplorerListing(items);
     final map = <String, int>{};
     for (var i = 0; i < items.length; i++) {
       if (foldersOnly && !LetterStrip._isFolder(items[i])) continue;
@@ -302,13 +327,15 @@ class _LetterStripState extends State<LetterStrip> {
           onVerticalDragEnd: (_) => _clearActive(),
           onVerticalDragCancel: _clearActive,
           // Outer SizedBox = hit region (40 wide); inner Container =
-          // visible strip (24 wide, right-aligned). Gives the finger
-          // ~16px of extra reach to the left of the letters without
-          // pushing the visible strip away from the edge.
+          // visible strip (24 wide, pinned to whichever edge the strip is
+          // on). Gives the finger ~16px of extra reach on the list side of
+          // the letters without pushing the visible strip off the edge.
           child: SizedBox(
             width: 40,
             child: Align(
-              alignment: Alignment.centerRight,
+              alignment: LetterStrip.onLeft
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
               // Rebuild only the strip (tint + active cell) as the finger moves,
               // via [_touched] — not the enclosing LayoutBuilder/GestureDetector.
               child: ValueListenableBuilder<String?>(

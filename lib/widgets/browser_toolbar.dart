@@ -28,6 +28,7 @@ import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import 'local_search_bar.dart';
 
@@ -110,7 +111,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           e.type == 'file' &&
           e.server != null &&
           e.data != null &&
-          !e.data!.toLowerCase().endsWith('.m3u'))
+          !isM3u(e.data))
       .toList();
 
   // Playable rows for add-all (server + local files), minus playlists.
@@ -118,7 +119,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
       .where((e) =>
           (e.type == 'file' || e.type == 'localFile') &&
           e.data != null &&
-          !e.data!.toLowerCase().endsWith('.m3u'))
+          !isM3u(e.data))
       .toList();
 
   // Mirrors the old browser "Download all": confirm the count, then enqueue
@@ -215,10 +216,15 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     AppLocalizations l,
     List<DisplayItem> targets, {
     bool showSearch = true,
+    bool showShuffle = false,
   }) {
     final canDownload = _downloadable(targets).isNotEmpty;
     final canAdd = _enqueueable(targets).isNotEmpty;
-    if (!showSearch && !canDownload && !canAdd) return const SizedBox(width: 12);
+    // showShuffle is only passed where Add all took Shuffle's spot on the bar.
+    final shuffle = showShuffle && canAdd;
+    if (!showSearch && !canDownload && !canAdd && !shuffle) {
+      return const SizedBox(width: 12);
+    }
     return PopupMenuButton<_BarAction>(
       icon: Icon(Icons.more_vert,
           color: VelvetColors.appBarTextSecondary, size: 22),
@@ -229,7 +235,9 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
           _menuItem(_BarAction.search, Icons.search, l.browserSearchList),
         if (canDownload)
           _menuItem(_BarAction.download, Icons.download_sharp, l.download),
-        if (canAdd) _menuItem(_BarAction.addAll, Icons.library_add, l.addAll),
+        if (canAdd && !showShuffle)
+          _menuItem(_BarAction.addAll, Icons.library_add, l.addAll),
+        if (shuffle) _menuItem(_BarAction.shuffle, Icons.shuffle, l.shuffle),
       ],
       onSelected: (a) {
         switch (a) {
@@ -239,6 +247,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             _downloadAll(context, targets);
           case _BarAction.addAll:
             _addAll(context, targets);
+          case _BarAction.shuffle:
+            playFromHere(targets, 0, shuffle: true);
         }
       },
     );
@@ -475,10 +485,14 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         const SizedBox(width: 12),
       _title(browserChromeLabel(l, s.label)),
       if (canPlay) ...[
-        // Play/Shuffle claim the bar, so search moves into the overflow.
+        // Play/Add all claim the bar, so search moves into the overflow.
+        // Add all rather than Shuffle: in a folder the usual intent is "put
+        // this on the end of what I'm listening to", and shuffling a single
+        // directory is the rarer one. They swapped places — Shuffle is in the
+        // overflow now.
         _playButton(l, targets),
-        _shuffleButton(l, targets),
-        _overflow(context, l, targets),
+        _icon(Icons.library_add, l.addAll, () => _addAll(context, targets)),
+        _overflow(context, l, targets, showShuffle: true),
       ] else ...[
         // Nothing playable here (Albums, Artists, a song-less folder). The bar
         // is empty anyway, so search keeps its one-tap spot rather than being
@@ -494,4 +508,4 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
 }
 
 // Actions demoted into the toolbar's overflow menu.
-enum _BarAction { search, download, addAll }
+enum _BarAction { search, download, addAll, shuffle }

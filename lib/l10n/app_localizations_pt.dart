@@ -283,6 +283,19 @@ class AppLocalizationsPt extends AppLocalizations {
       'Mostra a barra de navegação rápida A-Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
 
   @override
+  String get settingsLetterStripSide => 'Lado da barra';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Em que extremidade fica a barra A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Esquerda';
+
+  @override
+  String get settingsLetterStripRight => 'Direita';
+
+  @override
   String get settingsReset => 'Restaurar padrões';
 
   @override
@@ -897,8 +910,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count faixas na fila',
-      one: '1 faixa na fila',
+      other: '$count faixas',
+      one: '1 faixa',
     );
     return '$_temp0';
   }
@@ -2010,7 +2023,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Servidor $version';
+    return 'Servidor v$version';
   }
 
   @override
@@ -2024,7 +2037,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Este servidor é a versão $version. Alguns recursos exigem 5.5 ou mais recente e ficarão indisponíveis.';
+    return 'Este servidor é a versão v$version. Alguns recursos exigem v5.5 ou mais recente e ficarão indisponíveis.';
   }
 
   @override

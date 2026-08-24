@@ -84,28 +84,9 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
     // (which the in-app UI reads). Both are kept in sync.
     artUri: artUrl == null ? null : Uri.parse(artUrl),
     extras: {
-      'server': i.server!.localname,
-      'path': i.data,
+      ...queueExtras(meta,
+          server: i.server!.localname, path: i.data!, artUrl: artUrl),
       if (isLocal) 'localPath': finalString,
-      'year': meta?.year,
-      'track': meta?.track,
-      'disc': meta?.disc,
-      // Song rating (0–10 server scale) so the now-playing screen can show +
-      // edit stars for the current track without a refetch.
-      'rating': meta?.rating,
-      'artUrl': artUrl,
-      // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing modes.
-      'bpm': meta?.bpm,
-      'musicalKey': meta?.musicalKey,
-      // Fidelity + counts for the Song Info screen (it reads only from extras).
-      'bitrate': meta?.bitrate,
-      'sampleRate': meta?.sampleRate,
-      'format': meta?.format,
-      'trackTotal': meta?.trackTotal,
-      'discTotal': meta?.discTotal,
-      'playCount': meta?.playCount,
-      // Drives the Song Info lyrics badge (tap → fetch via GET /api/v1/lyrics).
-      'hasLyrics': meta?.hasLyrics ?? false,
     },
   );
 }

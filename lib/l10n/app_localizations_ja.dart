@@ -277,6 +277,18 @@ class AppLocalizationsJa extends AppLocalizations {
       'リストの項目数がこの値以上のとき、A〜Z のクイックスクラブ用ストリップを表示します。これより少ない場合はストリップを隠し、長いフォルダ名やファイル名を省略せず複数行に折り返します。0 に設定すると常にストリップを表示します。';
 
   @override
+  String get settingsLetterStripSide => 'スクロールバーの位置';
+
+  @override
+  String get settingsLetterStripSideSubtitle => 'A–Z バーをどちらの端に置くか。';
+
+  @override
+  String get settingsLetterStripLeft => '左';
+
+  @override
+  String get settingsLetterStripRight => '右';
+
+  @override
   String get settingsReset => 'デフォルトにリセット';
 
   @override
@@ -870,7 +882,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'キューに $count 曲',
+      other: '$count 曲',
     );
     return '$_temp0';
   }
@@ -1929,7 +1941,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'サーバー $version';
+    return 'サーバー v$version';
   }
 
   @override
@@ -1943,7 +1955,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'このサーバーはバージョン $version です。一部の機能には 5.5 以降が必要で、利用できません。';
+    return 'このサーバーはバージョン v$version です。一部の機能には v5.5 以降が必要で、利用できません。';
   }
 
   @override

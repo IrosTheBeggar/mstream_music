@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -275,6 +276,7 @@ class _QueueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = item.extras?['artUrl'] as String?;
+    final dur = _fmtDur(item.duration);
     final edgeColor = active
         ? VelvetColors.primary
         : (downloaded ? VelvetColors.success : Colors.transparent);
@@ -366,36 +368,56 @@ class _QueueRow extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (item.artist != null) ...[
+                    // The duration rides the ARTIST line, right-aligned,
+                    // rather than sitting in its own column beside both. Its
+                    // column used to run the full row height and take that
+                    // width from the title on every row — the title is the
+                    // thing that gets truncated, and the artist line almost
+                    // never fills its width. Same x as before: the text
+                    // column now extends into the space the duration column
+                    // occupied, so a right-aligned readout lands where the
+                    // old one did.
+                    //
+                    // Rendered whenever there is EITHER an artist or a
+                    // duration: a row with no artist still has a length.
+                    if (item.artist != null || dur.isNotEmpty) ...[
                       const SizedBox(height: 1),
-                      Text(
-                        item.artist!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: VelvetColors.textSecondary,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.artist ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: VelvetColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          if (dur.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Text(
+                              dur,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11.5,
+                                color: VelvetColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              // Duration.
-              Text(
-                _fmtDur(item.duration),
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11.5,
-                  color: VelvetColors.textTertiary,
-                ),
-              ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
-              // (ReorderableDragStartListener) to reorder, or TAP it to open the
-              // action drawer (the start/left pane). The GestureDetector also
-              // keeps the tap from falling through to the row's play-on-tap.
-              ReorderableDragStartListener(
+              // Drag-to-reorder grip — a comfortable 44px touch target. HOLD
+              // then drag to reorder, or TAP it to open the action drawer (the
+              // start/left pane). The GestureDetector also keeps the tap from
+              // falling through to the row's play-on-tap.
+              _HeldDragStartListener(
                 index: index,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -473,7 +495,8 @@ class QueueHeader extends StatelessWidget {
               children: [
                 // Auto DJ at a glance + one-tap toggle (the queue-header
                 // autoplay-control pattern) — lit while the DJ runs.
-                _DjHeaderButton(),
+                const AutoDjButton(),
+                const SizedBox(width: 4),
                 if (showOptions)
                   IconButton(
                     icon: const Icon(Icons.more_vert, size: 20),
@@ -662,8 +685,34 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
 /// pattern): lit while the DJ runs — explore icon when sonic similarity is
 /// shaping picks, album icon for the classic random DJ — dim when off.
 /// Tapping toggles the DJ for the current server.
-class _DjHeaderButton extends StatelessWidget {
-  const _DjHeaderButton();
+/// A reorder grip that waits to be held before it grabs the row.
+///
+/// The grip column runs the length of the queue, so a flick that happens to
+/// start on one used to pick the song up and drag it instead of scrolling.
+/// [ReorderableDragStartListener] claims the gesture on touch-down; this waits
+/// [_holdBeforeDrag] first, which lets the list's own drag win a quick scroll
+/// and leaves a deliberate hold to reorder. Shorter than a long-press: the
+/// grip's whole job is dragging, so 500ms of nothing reads as a dead control.
+class _HeldDragStartListener extends ReorderableDragStartListener {
+  static const _holdBeforeDrag = Duration(milliseconds: 220);
+
+  const _HeldDragStartListener({required super.child, required super.index});
+
+  @override
+  MultiDragGestureRecognizer createRecognizer() =>
+      DelayedMultiDragGestureRecognizer(
+          delay: _holdBeforeDrag, debugOwner: this);
+}
+
+/// The labelled Auto DJ toggle, lit while the DJ runs.
+///
+/// One widget for both places it appears — the mini player and the queue
+/// header — because they are the same control and a word reads faster than a
+/// glyph nobody has learned. The header used to carry an icon that changed
+/// between a disc and a compass depending on whether sonic mode was on, which
+/// asked the reader to know two symbols to learn one fact.
+class AutoDjButton extends StatelessWidget {
+  const AutoDjButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -671,14 +720,22 @@ class _DjHeaderButton extends StatelessWidget {
     return StreamBuilder<dynamic>(
       stream: MediaManager().audioHandler.customState,
       builder: (context, snap) {
-        final Server? djServer = snap.data?.autoDJState as Server?;
-        final on = djServer != null;
-        final sonic = on && AutoDJManager().sonicSimilarityEnabled;
-        return IconButton(
-          icon: Icon(sonic ? Icons.explore : Icons.album, size: 20),
-          color: on ? VelvetColors.primary : VelvetColors.textSecondary,
-          tooltip: l.autoDjTitle,
+        final on = snap.data?.autoDJState != null;
+        return OutlinedButton(
           onPressed: () => toggleAutoDJ(context),
+          style: OutlinedButton.styleFrom(
+            foregroundColor:
+                on ? VelvetColors.primary : VelvetColors.appBarText,
+            backgroundColor: on ? VelvetColors.primaryDim : null,
+            side: BorderSide(
+                color: on ? VelvetColors.primary : VelvetColors.border2),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            minimumSize: const Size(0, 34),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            textStyle:
+                const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          child: Text(l.autoDjTitle),
         );
       },
     );

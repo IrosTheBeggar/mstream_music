@@ -197,17 +197,8 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // The same sheet the browser's track rows open, so a song offers the same
   // actions wherever you meet it — and gains Add to playlist / Download,
   // which the dropdown this replaced never had.
-  void _showTrackActions(DisplayItem item) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: VelvetColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => TrackActionsSheet(item: item, parentContext: context),
-    );
-  }
+  void _showTrackActions(DisplayItem item) =>
+      showTrackActionsSheet(context, item);
 
 
   // "Added to queue" confirmation. Floats above the docked mini-player — that
@@ -499,6 +490,10 @@ class _SongRow extends StatelessWidget {
       color: active ? VelvetColors.primaryDim : Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        // Long-press opens the same sheet the ⋮ does, which is what a browser
+        // row has always done. A song offering different gestures depending on
+        // which screen you met it on is the inconsistency.
+        onLongPress: onMenu,
         child: Container(
           decoration: BoxDecoration(
             border: Border(

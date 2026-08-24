@@ -13,6 +13,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
+import 'track_actions_sheet.dart';
 
 /// Collapsible Discover bar docked under the queue in the expanded player —
 /// the mobile counterpart of the webapp's Discover panel in the Now Playing
@@ -46,14 +47,30 @@ class DiscoverQueueBar extends StatefulWidget {
   State<DiscoverQueueBar> createState() => _DiscoverQueueBarState();
 }
 
-class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
+class _DiscoverQueueBarState extends State<DiscoverQueueBar>
+    with SingleTickerProviderStateMixin {
   static const int _limit = 6;
+
+  /// Header height. The panel never goes below this — it is the collapsed bar.
+  static const double _headerHeight = 44;
 
   StreamSubscription<MediaItem?>? _sub;
   Timer? _debounce;
   int _reqId = 0;
 
-  bool _expanded = false;
+  // 0.0 = collapsed strip, 1.0 = open panel. A continuous value rather than
+  // a bool, which is the whole difference between "commits on release" and
+  // "follows the finger" — the same thing PlayerPanelState does one layer up.
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+
+  /// Travel available to a drag, in logical px: set from layout each build,
+  /// so the finger moves the panel 1:1 whatever height the panel resolved to.
+  double _dragExtent = 1.0;
+
+  bool get _expanded => _ctrl.value > 0.5;
   bool _dirty = true; // seed changed while collapsed → refetch on expand
   bool _loading = false;
   // 403 → the ping flag said yes and the route said no. Latched so an
@@ -62,6 +79,7 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   bool _disabled = false;
   bool _rechecking = false;
   bool _probed = false;
+
 
   Server? _seedServer;
   String? _seedPath;
@@ -96,12 +114,43 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   void dispose() {
     _debounce?.cancel();
     _sub?.cancel();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (_expanded && (_dirty || _tracks == null)) _refresh();
+  void _expand() {
+    _ctrl.animateTo(1.0, curve: Curves.easeOutCubic);
+    if (_dirty || _tracks == null) _refresh();
+  }
+
+  void _collapse() => _ctrl.animateTo(0.0, curve: Curves.easeOutCubic);
+
+  void _toggle() => _expanded ? _collapse() : _expand();
+
+  /// Track the finger. Dividing by [_dragExtent] is what makes the panel move
+  /// exactly as far as the thumb does rather than at some invented rate.
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_dragExtent <= 0) return;
+    _ctrl.value =
+        (_ctrl.value - (d.primaryDelta ?? 0) / _dragExtent).clamp(0.0, 1.0);
+  }
+
+  /// The player panel's rule, and worth stating why it is not just "past
+  /// half wins": a fast flick is a decision even when it covered no distance,
+  /// and without the velocity arm a quick flick from rest would spring back
+  /// and feel broken. Distance only decides when the release was slow enough
+  /// to be a placement rather than a throw.
+  void _onDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0; // px/s, negative = upward
+    if (v < -300) {
+      _expand();
+    } else if (v > 300) {
+      _collapse();
+    } else if (_ctrl.value > 0.5) {
+      _expand();
+    } else {
+      _collapse();
+    }
   }
 
   /// Same re-check as the Discover panel: re-ping FIRST, then retry.
@@ -231,16 +280,22 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     final panelHeight =
         (MediaQuery.of(context).size.height * 0.34).clamp(200.0, 320.0);
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.topCenter,
-      child: Container(
+    _dragExtent = (panelHeight - _headerHeight).clamp(1.0, double.infinity);
+
+    // The body is built ONCE and handed to the builder as `child`: a drag
+    // then re-runs only the height wrapper, not the track list, the art or
+    // the row builders. AnimatedSize used to relayout the whole subtree on
+    // every animation tick, which is the expensive half of what made the old
+    // open feel heavier than the player panel's.
+    return AnimatedBuilder(
+      animation: _ctrl,
+      child: _body(l),
+      builder: (context, body) => Container(
         // +1: Container folds the decoration's border widths into padding,
         // so the top hairline insets the content box by a pixel — without
         // accounting for it the fixed-height header overflows by exactly
         // 1.00px while collapsed.
-        height: 1 + (_expanded ? panelHeight : 44),
+        height: 1 + _headerHeight + _ctrl.value * _dragExtent,
         decoration: BoxDecoration(
           // Tinted rather than the queue's own surface: this strip sat in
           // exactly the same colour as the list above it and read as part of
@@ -249,12 +304,36 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
           color: _discoverLight.withValues(alpha: 0.14),
           border: Border(top: BorderSide(color: _discoverAccent)),
         ),
-        child: Column(
+        child: ClipRect(
+            child: Column(
           children: [
             // Header — the whole strip toggles, like the webapp's panel
             // header. Extra actions appear only while expanded.
-            InkWell(
+            //
+            // Also drags, the way the player panel above it does: a flick
+            // decides by velocity, a slow drag by how far it went. Only the
+            // HEADER takes the gesture — putting it on the whole bar would
+            // fight the track list inside for vertical drags, which is the
+            // same reason the player panel hangs its drag off the grab area
+            // rather than the sheet.
+            //
+            // The header's press feedback lands on RELEASE, not on touch: the
+            // drag recognizer here competes with the InkWell's tap in the
+            // gesture arena, and Flutter holds the tap's highlight until the
+            // arena resolves. Measured, not assumed — a held press on the
+            // header changes no pixels, while a queue row (no competing drag)
+            // highlights immediately. The rows inside this panel have no drag
+            // over them and behave normally.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragUpdate: _onDragUpdate,
+              onVerticalDragEnd: _onDragEnd,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
               onTap: _toggle,
+              splashColor: _discoverLight.withValues(alpha: 0.18),
+              highlightColor: _discoverLight.withValues(alpha: 0.08),
               child: SizedBox(
                 height: 44,
                 child: Padding(
@@ -310,9 +389,32 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                   ),
                 ),
               ),
+                ),
+              ),
             ),
-            if (_expanded) Expanded(child: _body(l)),
+            // OverflowBox so the body always lays out at its FULL height and
+            // is clipped to whatever the panel currently shows. Without it a
+            // half-open panel would try to lay the content out in half the
+            // space — reflowing text and rows on every frame of the drag, and
+            // overflowing the ones that cannot shrink.
+            //
+            // Gated on the live controller value, not on `_expanded`: this
+            // runs inside the builder, so a fully-closed panel keeps the
+            // rows (and their album art) out of the tree entirely, while the
+            // first pixel of a drag brings them in. Reading a bool here
+            // instead would leave the list mounted-but-clipped whenever the
+            // panel had ever been open.
+            if (_ctrl.value > 0)
+              Expanded(
+                child: OverflowBox(
+                  alignment: Alignment.topCenter,
+                  minHeight: 0,
+                  maxHeight: panelHeight - _headerHeight,
+                  child: body,
+                ),
+              ),
           ],
+        ),
         ),
       ),
     );
@@ -391,7 +493,30 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
           if (artist != null && artist.trim().isNotEmpty) artist.trim(),
           ?genre,
         ].join(' · ');
-        return ListTile(
+        // Material(transparency) + InkWell rather than ListTile's own
+        // onTap. The panel paints its tint with a Container decoration, and a
+        // Container's background sits ABOVE the Material that would draw the
+        // splash — so ListTile's ripple was being applied to a surface nobody
+        // could see. A transparent Material inside the Container gives the ink
+        // somewhere to land. Same shape the browser's file rows use.
+        //
+        // Splash in the panel's own periwinkle, not the user's accent: the
+        // Discover surface deliberately keeps one colour across both clients
+        // (see _discoverAccent), and a press that flashed amber here would
+        // break that on exactly the interaction that draws the eye.
+        return Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            splashColor: _discoverLight.withValues(alpha: 0.20),
+            highlightColor: _discoverLight.withValues(alpha: 0.10),
+            onTap: () => _queueRow(i),
+            // Same sheet as everywhere else. Guarded on the row existing: the
+            // DisplayItem list is rebuilt alongside the results and a
+            // long-press landing between the two would otherwise open a sheet
+            // on nothing.
+            onLongPress:
+                row == null ? null : () => showTrackActionsSheet(context, row),
+            child: ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
           leading: row?.getAlbumThumb(size: 36),
@@ -411,7 +536,8 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
                       fontSize: 12, color: VelvetColors.textSecondary),
                 ),
           trailing: MatchMeter(similarity: track.similarity),
-          onTap: () => _queueRow(i),
+            ),
+          ),
         );
       },
     );

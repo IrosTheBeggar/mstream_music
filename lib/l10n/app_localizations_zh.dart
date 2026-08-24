@@ -269,6 +269,18 @@ class AppLocalizationsZh extends AppLocalizations {
       '当列表项达到此数量或更多时显示 A-Z 快速滚动条。低于此数量时隐藏滚动条，且较长的文件夹/文件名会换行显示而非截断。设为 0 可始终显示滚动条。';
 
   @override
+  String get settingsLetterStripSide => '快速滑块位置';
+
+  @override
+  String get settingsLetterStripSideSubtitle => 'A–Z 快速条显示在哪一侧。';
+
+  @override
+  String get settingsLetterStripLeft => '左侧';
+
+  @override
+  String get settingsLetterStripRight => '右侧';
+
+  @override
   String get settingsReset => '恢复默认设置';
 
   @override
@@ -855,7 +867,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '队列中有 $count 个曲目',
+      other: '$count 个曲目',
     );
     return '$_temp0';
   }
@@ -1888,7 +1900,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return '服务器 $version';
+    return '服务器 v$version';
   }
 
   @override
@@ -1902,7 +1914,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return '此服务器版本为 $version。部分功能需要 5.5 或更高版本，将不可用。';
+    return '此服务器版本为 v$version。部分功能需要 v5.5 或更高版本，将不可用。';
   }
 
   @override

@@ -285,6 +285,19 @@ class AppLocalizationsPl extends AppLocalizations {
       'Pokazuj pasek szybkiego przewijania A–Z, gdy lista ma tyle elementów lub więcej. Poniżej tego rozmiaru pasek jest ukryty, a długie nazwy folderów/plików zawijają się do wielu wierszy zamiast być obcinane. Ustaw 0, aby zawsze pokazywać pasek.';
 
   @override
+  String get settingsLetterStripSide => 'Strona paska';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Przy której krawędzi znajduje się pasek A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Lewa';
+
+  @override
+  String get settingsLetterStripRight => 'Prawa';
+
+  @override
   String get settingsReset => 'Przywróć ustawienia domyślne';
 
   @override
@@ -905,10 +918,10 @@ class AppLocalizationsPl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count utworów w kolejce',
-      many: '$count utworów w kolejce',
-      few: '$count utwory w kolejce',
-      one: '1 utwór w kolejce',
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
     );
     return '$_temp0';
   }
@@ -2029,7 +2042,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Serwer $version';
+    return 'Serwer v$version';
   }
 
   @override
@@ -2043,7 +2056,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Ten serwer ma wersję $version. Niektóre funkcje wymagają 5.5 lub nowszej i będą niedostępne.';
+    return 'Ten serwer ma wersję v$version. Niektóre funkcje wymagają v5.5 lub nowszej i będą niedostępne.';
   }
 
   @override

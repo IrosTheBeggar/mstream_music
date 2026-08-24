@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 
 import '../theme/velvet_theme.dart';
 
+/// True for a playlist file rather than an audio one.
+///
+/// An .m3u is a text file naming other files. Everywhere it is treated as
+/// audio it goes wrong: queued, the player stalls on a payload it cannot
+/// decode; downloaded or added-all, it takes a byte of text instead of the
+/// music. The browser opens it through the server's m3u reader instead, and
+/// the toolbar's download/enqueue targets filter it out.
+bool isM3u(String? path) =>
+    path != null && path.toLowerCase().endsWith('.m3u');
+
 /// Formats a [Duration] as `m:ss`, `mm:ss`, or `h:mm:ss`.
 ///
 /// [padMinutes] pads the minutes field to two digits when there is no hours

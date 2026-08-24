@@ -30,3 +30,10 @@ analyzer:
     # gen_l10n output (regenerated on every `flutter pub get` / build).
     # enum_labels.dart in the same dir is hand-written, so it is NOT excluded.
     - lib/l10n/app_localizations*.dart
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**

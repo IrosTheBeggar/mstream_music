@@ -284,6 +284,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Den A-Z-Schnellscrubber anzeigen, wenn eine Liste mindestens so viele Einträge hat. Darunter wird der Streifen ausgeblendet und lange Ordner-/Dateinamen werden auf mehrere Zeilen umgebrochen statt abgeschnitten. Auf 0 setzen, um den Streifen immer anzuzeigen.';
 
   @override
+  String get settingsLetterStripSide => 'Seite der Scrollleiste';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'An welchem Rand die A–Z-Leiste sitzt.';
+
+  @override
+  String get settingsLetterStripLeft => 'Links';
+
+  @override
+  String get settingsLetterStripRight => 'Rechts';
+
+  @override
   String get settingsReset => 'Auf Standard zurücksetzen';
 
   @override
@@ -901,8 +914,8 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Titel in der Warteschlange',
-      one: '1 Titel in der Warteschlange',
+      other: '$count Titel',
+      one: '1 Titel',
     );
     return '$_temp0';
   }
@@ -2016,7 +2029,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Server $version';
+    return 'Server v$version';
   }
 
   @override
@@ -2030,7 +2043,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Dieser Server hat Version $version. Einige Funktionen benötigen 5.5 oder neuer und sind nicht verfügbar.';
+    return 'Dieser Server hat Version v$version. Einige Funktionen benötigen v5.5 oder neuer und sind nicht verfügbar.';
   }
 
   @override

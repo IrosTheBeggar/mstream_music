@@ -588,6 +588,30 @@ abstract class AppLocalizations {
   /// **'Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.'**
   String get settingsLetterStripSubtitle;
 
+  /// Label for the setting choosing which screen edge the A-Z scrubber sits on.
+  ///
+  /// In en, this message translates to:
+  /// **'Scrubber side'**
+  String get settingsLetterStripSide;
+
+  /// Explains the scrubber-side setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Which edge the A–Z strip sits on.'**
+  String get settingsLetterStripSideSubtitle;
+
+  /// Segmented-button option: scrubber on the left edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get settingsLetterStripLeft;
+
+  /// Segmented-button option: scrubber on the right edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Right'**
+  String get settingsLetterStripRight;
+
   /// Reset-to-defaults row + confirmation snackbar.
   ///
   /// In en, this message translates to:
@@ -1635,7 +1659,7 @@ abstract class AppLocalizations {
   /// Queue tab header count.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 track in queue} other{{count} tracks in queue}}'**
+  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
   String mainQueueCount(int count);
 
   /// Bottom-bar Auto DJ toggle snackbars.
@@ -3501,7 +3525,7 @@ abstract class AppLocalizations {
   /// Server version / update flags
   ///
   /// In en, this message translates to:
-  /// **'Server {version}'**
+  /// **'Server v{version}'**
   String serverVersionLabel(String version);
 
   /// Server version / update flags
@@ -3525,7 +3549,7 @@ abstract class AppLocalizations {
   /// Server version / update flags
   ///
   /// In en, this message translates to:
-  /// **'This server is version {version}. Some features need 5.5 or newer and will be unavailable.'**
+  /// **'This server is v{version}. Some features need v5.5 or newer and will be unavailable.'**
   String serverTooOldWarning(String version);
 
   /// Auto DJ server-version gating notes

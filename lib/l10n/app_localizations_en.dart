@@ -281,6 +281,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show the A-Z quick-scrub strip when a list has this many items or more. Below this size the strip is hidden and long folder/file names wrap to multiple lines instead of being truncated. Set 0 to always show the strip.';
 
   @override
+  String get settingsLetterStripSide => 'Scrubber side';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Which edge the A–Z strip sits on.';
+
+  @override
+  String get settingsLetterStripLeft => 'Left';
+
+  @override
+  String get settingsLetterStripRight => 'Right';
+
+  @override
   String get settingsReset => 'Reset to defaults';
 
   @override
@@ -890,8 +903,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count tracks in queue',
-      one: '1 track in queue',
+      other: '$count tracks',
+      one: '1 track',
     );
     return '$_temp0';
   }
@@ -1993,7 +2006,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Server $version';
+    return 'Server v$version';
   }
 
   @override
@@ -2007,7 +2020,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'This server is version $version. Some features need 5.5 or newer and will be unavailable.';
+    return 'This server is v$version. Some features need v5.5 or newer and will be unavailable.';
   }
 
   @override

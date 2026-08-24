@@ -285,6 +285,19 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать полосу быстрой прокрутки A–Z, когда в списке столько элементов или больше. Ниже этого размера полоса скрывается, а длинные имена папок и файлов переносятся на несколько строк вместо обрезки. Установите 0, чтобы полоса показывалась всегда.';
 
   @override
+  String get settingsLetterStripSide => 'Сторона ползунка';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'У какого края находится полоса A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Слева';
+
+  @override
+  String get settingsLetterStripRight => 'Справа';
+
+  @override
   String get settingsReset => 'Сбросить к значениям по умолчанию';
 
   @override
@@ -909,10 +922,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count треков в очереди',
-      many: '$count треков в очереди',
-      few: '$count трека в очереди',
-      one: '$count трек в очереди',
+      other: '$count треков',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
     );
     return '$_temp0';
   }
@@ -2032,7 +2045,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Сервер $version';
+    return 'Сервер v$version';
   }
 
   @override
@@ -2046,7 +2059,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Версия этого сервера — $version. Некоторым функциям нужна 5.5 или новее, они будут недоступны.';
+    return 'Версия этого сервера — v$version. Некоторым функциям нужна v5.5 или новее, они будут недоступны.';
   }
 
   @override

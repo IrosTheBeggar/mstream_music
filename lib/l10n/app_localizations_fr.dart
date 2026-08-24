@@ -283,6 +283,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'Afficher la bande de défilement rapide A-Z lorsqu\'une liste compte au moins ce nombre d\'éléments. En dessous de cette taille, la bande est masquée et les longs noms de dossiers/fichiers passent à la ligne au lieu d\'être tronqués. Mettez 0 pour toujours afficher la bande.';
 
   @override
+  String get settingsLetterStripSide => 'Côté du curseur';
+
+  @override
+  String get settingsLetterStripSideSubtitle =>
+      'Sur quel bord se place la barre A–Z.';
+
+  @override
+  String get settingsLetterStripLeft => 'Gauche';
+
+  @override
+  String get settingsLetterStripRight => 'Droite';
+
+  @override
   String get settingsReset => 'Réinitialiser aux valeurs par défaut';
 
   @override
@@ -898,8 +911,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pistes dans la file',
-      one: '1 piste dans la file',
+      other: '$count pistes',
+      one: '1 piste',
     );
     return '$_temp0';
   }
@@ -2013,7 +2026,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Serveur $version';
+    return 'Serveur v$version';
   }
 
   @override
@@ -2027,7 +2040,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Ce serveur est en version $version. Certaines fonctions nécessitent 5.5 ou plus récent et seront indisponibles.';
+    return 'Ce serveur est en version v$version. Certaines fonctions nécessitent v5.5 ou plus récent et seront indisponibles.';
   }
 
   @override

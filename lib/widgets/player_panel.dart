@@ -6,10 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
-import '../media/cast_target.dart';
 import '../objects/player_layout.dart';
 import '../screens/visualizer_screen.dart';
-import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -17,9 +15,9 @@ import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import '../visualizer/shader_visualizer_screen.dart';
-import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'discover_queue_bar.dart';
+import 'fact_badge.dart';
 import 'queue_list.dart';
 import 'star_rating.dart';
 import 'waveform_progress.dart';
@@ -355,8 +353,7 @@ class _SheetHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const _DiscoveryButtons(),
-            ],
+                          ],
           ),
         ),
       ],
@@ -377,60 +374,6 @@ Widget _grabHandle() => Container(
     );
 
 /// Discoverable quick actions above the scrubber: Visualizer + Cast. (Cast
-/// especially — the expanded panel now covers the app-bar cast icon.)
-class _DiscoveryButtons extends StatelessWidget {
-  const _DiscoveryButtons();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    Widget btn(IconData icon, VoidCallback onTap,
-            {String? tooltip, bool active = false}) =>
-        IconButton(
-          icon: Icon(icon, size: 20),
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-          color: active ? VelvetColors.primary : VelvetColors.textSecondary,
-          tooltip: tooltip,
-          onPressed: onTap,
-        );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        btn(
-          Icons.auto_awesome,
-          // iOS has no native visualizer host; it gets the pure-Flutter
-          // shader engine (same module as desktop).
-          () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => Platform.isAndroid
-                  ? VisualizerScreen()
-                  : const ShaderVisualizerScreen())),
-          tooltip: l.visualizerTitle,
-        ),
-        StreamBuilder<CastTarget>(
-          stream: CastManager().activeTargetStream,
-          initialData: CastManager().activeTarget,
-          builder: (context, snap) {
-            final casting = !(snap.data ?? CastTarget.local).isLocal;
-            return btn(
-              casting ? Icons.cast_connected : Icons.cast,
-              () => showModalBottomSheet(
-                context: context,
-                backgroundColor: VelvetColors.surface,
-                isScrollControlled: true,
-                builder: (_) => CastPickerSheet(),
-              ),
-              tooltip: l.castPlayOnTooltip,
-              active: casting,
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Layout MEDIUM — art-left banner + slim seek bar (design "Banner", default).
 // ---------------------------------------------------------------------------
@@ -451,7 +394,6 @@ class _TopMedium extends StatelessWidget {
             builder: (context, snap) {
               final item = snap.data;
               final url = item?.extras?['artUrl'] as String?;
-              final year = item?.extras?['year']?.toString();
               return Row(
                 children: [
                   _albumArt(url, size: 92, radius: 8),
@@ -471,31 +413,9 @@ class _TopMedium extends StatelessWidget {
                                 height: 1.1,
                                 color: VelvetColors.textPrimary)),
                         const SizedBox(height: 3),
-                        Text(_artistAlbum(item),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 13.5,
-                                color: VelvetColors.textSecondary)),
+                        _artistAlbum(item, fontSize: 13.5),
                         const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            if (year != null && year.isNotEmpty)
-                              Text(year,
-                                  style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      letterSpacing: 0.3,
-                                      color: VelvetColors.textTertiary)),
-                            if (item != null) ...[
-                              if (year != null && year.isNotEmpty)
-                                const SizedBox(width: 10),
-                              MediaItemRating(item: item, size: 13),
-                            ],
-                            const Spacer(),
-                            const _DiscoveryButtons(),
-                          ],
-                        ),
+                        _TrackFacts(item: item),
                       ],
                     ),
                   ),
@@ -560,7 +480,6 @@ class _TopLarge extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
-              final year = item?.extras?['year']?.toString();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -574,31 +493,9 @@ class _TopLarge extends StatelessWidget {
                           letterSpacing: -0.2,
                           color: VelvetColors.textPrimary)),
                   const SizedBox(height: 3),
-                  Text(_artistAlbum(item),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13.5,
-                          color: VelvetColors.textSecondary)),
+                  _artistAlbum(item, fontSize: 13.5),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (year != null && year.isNotEmpty)
-                        Text(year,
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10,
-                                letterSpacing: 0.3,
-                                color: VelvetColors.textTertiary)),
-                      if (item != null) ...[
-                        if (year != null && year.isNotEmpty)
-                          const SizedBox(width: 10),
-                        MediaItemRating(item: item, size: 13),
-                      ],
-                      const Spacer(),
-                      const _DiscoveryButtons(),
-                    ],
-                  ),
+                  _TrackFacts(item: item),
                 ],
               );
             },
@@ -654,7 +551,6 @@ class _TopXL extends StatelessWidget {
             stream: MediaManager().audioHandler.mediaItem,
             builder: (context, snap) {
               final item = snap.data;
-              final year = item?.extras?['year']?.toString();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -669,31 +565,9 @@ class _TopXL extends StatelessWidget {
                           height: 1.12,
                           color: VelvetColors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text(_artistAlbum(item),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 14.5,
-                          color: VelvetColors.textSecondary)),
+                  _artistAlbum(item, fontSize: 14.5),
                   const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      if (year != null && year.isNotEmpty)
-                        Text(year,
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10.5,
-                                letterSpacing: 0.3,
-                                color: VelvetColors.textTertiary)),
-                      if (item != null) ...[
-                        if (year != null && year.isNotEmpty)
-                          const SizedBox(width: 10),
-                        MediaItemRating(item: item, size: 13),
-                      ],
-                      const Spacer(),
-                      const _DiscoveryButtons(),
-                    ],
-                  ),
+                  _TrackFacts(item: item),
                 ],
               );
             },
@@ -975,9 +849,7 @@ class _Scrubber extends StatelessWidget {
 
         if (!showTimes) return scrub;
 
-        final right = dur == null
-            ? ''
-            : (wave ? '-${_fmt(_remaining(dur, pos))}' : _fmt(dur));
+        const label = TextStyle(fontFamily: 'monospace', fontSize: 11);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -986,24 +858,34 @@ class _Scrubber extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Transcoding glyph (when active) sits just left of the elapsed
-                // time, out of the way.
+                // What you are hearing, under the left end of the bar: the
+                // transcoding glyph when it is on, then the source format and
+                // rate. The elapsed time used to live here, half a screen from
+                // the total it is measured against.
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _transcodeBadge(context, item),
-                    Text(_fmt(pos),
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: VelvetColors.primary)),
+                    Flexible(
+                      child: Text(_sourceLabel(item),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              label.copyWith(color: VelvetColors.textTertiary)),
+                    ),
                   ],
                 ),
-                Text(right,
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: VelvetColors.textTertiary)),
+                // Position over total, one reading rather than two: "how far
+                // in" only means something next to "how long".
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: _fmt(pos),
+                        style: TextStyle(color: VelvetColors.primary)),
+                    if (dur != null) TextSpan(text: ' / ${_fmt(dur)}'),
+                  ]),
+                  style: label.copyWith(color: VelvetColors.textTertiary),
+                ),
               ],
             ),
           ],
@@ -1423,16 +1305,97 @@ Widget _albumArt(String? url,
 
 Widget _fallback(double size) => albumArtFallback(iconSize: size);
 
-String _artistAlbum(MediaItem? item) {
-  if (item == null) return '';
-  final a = item.artist, al = item.album;
-  if (a != null && al != null) return '$a · $al';
-  return a ?? al ?? '';
+/// The rating, then what the file knows about the song: key, tempo, whether it
+/// has words.
+///
+/// Same badges the track sheet shows, at header size, so a song reads the same
+/// wherever you meet it. Only the rating takes input. A [Wrap] rather than a
+/// [Row] because the medium layout's column is narrow — a long key or a
+/// four-digit tempo drops to a second line instead of overflowing.
+class _TrackFacts extends StatelessWidget {
+  final MediaItem? item;
+  const _TrackFacts({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final e = item?.extras;
+    final key = (e?['musicalKey'] as String?)?.trim() ?? '';
+    final bpm = (e?['bpm'] as num?)?.round();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        // canRate rather than letting the widget render nothing: an empty
+        // SizedBox still takes a Wrap slot, and the spacing either side of it.
+        if (item != null && MediaItemRating.canRate(item!))
+          MediaItemRating(item: item!, size: 13),
+        if (key.isNotEmpty) factBadge(Icons.piano, key, compact: true),
+        // A tempo of 0 is "the scanner found no BPM", not a 0-BPM song.
+        if (bpm != null && bpm > 0)
+          factBadge(Icons.speed, '$bpm BPM', compact: true),
+        if (e?['hasLyrics'] == true)
+          factBadge(Icons.lyrics_rounded, l.lyricsTitle, compact: true),
+      ],
+    );
+  }
 }
 
-Duration _remaining(Duration dur, Duration pos) {
-  final r = dur - pos;
-  return r.isNegative ? Duration.zero : r;
+/// Who made it, then which record it came from and when — one per line.
+///
+/// Joined on a single line as "Icarus · Be Somebody" the reader has to work
+/// out where the performer ends and the record begins, and the album is what
+/// gets truncated because it happens to come second. Stacking says which is
+/// which by position instead, and the header has the room for it now that the
+/// visualizer and cast glyphs have moved into the queue menu.
+///
+/// The year rides on the album line because that is what it dates — it used to
+/// sit down in the rating row, where it read as a fact about the song.
+Widget _artistAlbum(MediaItem? item, {required double fontSize}) {
+  final artist = item?.artist?.trim() ?? '';
+  final album = item?.album?.trim() ?? '';
+  final year = item?.extras?['year']?.toString().trim() ?? '';
+  final lines = [
+    if (artist.isNotEmpty) artist,
+    if (year.isNotEmpty || album.isNotEmpty)
+      [if (year.isNotEmpty) year, if (album.isNotEmpty) album].join(' · '),
+  ];
+  // One line's worth of height even with nothing to say, so the header does
+  // not jump as the track changes.
+  if (lines.isEmpty) lines.add('');
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var i = 0; i < lines.length; i++)
+        Text(lines[i],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: i == 0 ? fontSize : fontSize - 0.5,
+                // Tight, because two lines here cost header height that the
+                // XL layout does not have much of.
+                height: 1.25,
+                // The album a step back: it tells you where the song came
+                // from, not what you are listening to.
+                color: i == 0
+                    ? VelvetColors.textSecondary
+                    : VelvetColors.textTertiary)),
+    ],
+  );
+}
+
+/// "FLAC · 960 kbps" for the playing track — what the file is, from the same
+/// extras the Song Info screen reads. Empty when the server told us neither,
+/// which is what an old server and a local file both look like.
+String _sourceLabel(MediaItem? item) {
+  final fmt = (item?.extras?['format'] as String?)?.trim();
+  final bitrate = (item?.extras?['bitrate'] as num?)?.toInt();
+  return [
+    if (fmt != null && fmt.isNotEmpty) fmt.toUpperCase(),
+    if (bitrate != null && bitrate > 0) formatBitrate(bitrate),
+  ].join(' · ');
 }
 
 class _MediaPos {
@@ -1463,6 +1426,12 @@ final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
       // refreshes when it lands after the track first appears.
       a.item?.id == b.item?.id &&
       a.item?.duration == b.item?.duration &&
+      // Extras by IDENTITY, not contents: copyWith(duration:) hands the same
+      // map through, so ticks still collapse, while anything that REPLACES the
+      // map gets a frame. Without this the row below is invisible to an
+      // extras-only change — a metadata top-up, a download landing — because
+      // neither the id nor the duration moves.
+      identical(a.item?.extras, b.item?.extras) &&
       a.position.inMilliseconds ~/ 500 == b.position.inMilliseconds ~/ 500));
 
 String _fmt(Duration d) => formatDuration(d);
