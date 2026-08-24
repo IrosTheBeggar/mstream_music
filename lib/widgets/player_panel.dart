@@ -849,9 +849,7 @@ class _Scrubber extends StatelessWidget {
 
         if (!showTimes) return scrub;
 
-        final right = dur == null
-            ? ''
-            : (wave ? '-${_fmt(_remaining(dur, pos))}' : _fmt(dur));
+        const label = TextStyle(fontFamily: 'monospace', fontSize: 11);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -860,24 +858,34 @@ class _Scrubber extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Transcoding glyph (when active) sits just left of the elapsed
-                // time, out of the way.
+                // What you are hearing, under the left end of the bar: the
+                // transcoding glyph when it is on, then the source format and
+                // rate. The elapsed time used to live here, half a screen from
+                // the total it is measured against.
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _transcodeBadge(context, item),
-                    Text(_fmt(pos),
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: VelvetColors.primary)),
+                    Flexible(
+                      child: Text(_sourceLabel(item),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              label.copyWith(color: VelvetColors.textTertiary)),
+                    ),
                   ],
                 ),
-                Text(right,
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: VelvetColors.textTertiary)),
+                // Position over total, one reading rather than two: "how far
+                // in" only means something next to "how long".
+                Text.rich(
+                  TextSpan(children: [
+                    TextSpan(
+                        text: _fmt(pos),
+                        style: TextStyle(color: VelvetColors.primary)),
+                    if (dur != null) TextSpan(text: ' / ${_fmt(dur)}'),
+                  ]),
+                  style: label.copyWith(color: VelvetColors.textTertiary),
+                ),
               ],
             ),
           ],
@@ -1351,7 +1359,7 @@ Widget _artistAlbum(MediaItem? item, {required double fontSize}) {
   final lines = [
     if (artist.isNotEmpty) artist,
     if (year.isNotEmpty || album.isNotEmpty)
-      [if (year.isNotEmpty) year, if (album.isNotEmpty) album].join(' - '),
+      [if (year.isNotEmpty) year, if (album.isNotEmpty) album].join(' · '),
   ];
   // One line's worth of height even with nothing to say, so the header does
   // not jump as the track changes.
@@ -1378,9 +1386,16 @@ Widget _artistAlbum(MediaItem? item, {required double fontSize}) {
   );
 }
 
-Duration _remaining(Duration dur, Duration pos) {
-  final r = dur - pos;
-  return r.isNegative ? Duration.zero : r;
+/// "FLAC · 960 kbps" for the playing track — what the file is, from the same
+/// extras the Song Info screen reads. Empty when the server told us neither,
+/// which is what an old server and a local file both look like.
+String _sourceLabel(MediaItem? item) {
+  final fmt = (item?.extras?['format'] as String?)?.trim();
+  final bitrate = (item?.extras?['bitrate'] as num?)?.toInt();
+  return [
+    if (fmt != null && fmt.isNotEmpty) fmt.toUpperCase(),
+    if (bitrate != null && bitrate > 0) formatBitrate(bitrate),
+  ].join(' · ');
 }
 
 class _MediaPos {
