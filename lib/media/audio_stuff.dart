@@ -29,6 +29,7 @@ import '../singletons/log_manager.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
 import '../singletons/server_capabilities.dart';
+import '../singletons/api.dart';
 import '../singletons/server_list.dart';
 import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
@@ -531,6 +532,79 @@ class AudioPlayerHandler extends BaseAudioHandler
     final item = queue.value[i];
     final dur = _backend.duration;
     mediaItem.add(dur != null ? item.copyWith(duration: dur) : item);
+    _topUpExtras(item);
+  }
+
+  // Tracks we have already asked the server about this session, as
+  // server\u0000path. This method runs on every duration tick, so without it a
+  // track whose fetch comes back empty is re-requested several times a second.
+  final Set<String> _extrasToppedUp = {};
+
+  /// Fill in what an OLD queue entry never stored.
+  ///
+  /// Queue items are persisted with the extras they were built from, so a
+  /// track queued by a build that wrote fewer keys keeps that shape forever —
+  /// and until [queueExtras] existed, Auto DJ wrote its own shorter map. Those
+  /// items play fine but have no hasLyrics, bitrate, sampleRate or format, so
+  /// the now-playing badges and Song Info show a thinner track than the same
+  /// file added by hand.
+  ///
+  /// Rather than back-fill the whole queue at restore — hundreds of requests
+  /// racing the tunnel that may not be up yet — each track tops itself up as
+  /// it becomes current: one small request, at a moment the server is
+  /// demonstrably reachable, for the one item anything is about to read.
+  /// Fire-and-forget; a failure just leaves the item as it was.
+  void _topUpExtras(MediaItem m) {
+    final e = m.extras;
+    // hasLyrics is written unconditionally by queueExtras, so its ABSENCE
+    // (not its value) is what marks an entry as predating it.
+    if (e == null || e.containsKey('hasLyrics')) return;
+    final serverName = e['server'] as String?;
+    final path = e['path'] as String?;
+    if (serverName == null || path == null) return; // local file
+    if (!_extrasToppedUp.add('$serverName\u0000$path')) return;
+    final server = ServerManager().byLocalname(serverName);
+    if (server == null) return;
+    () async {
+      final meta = await ApiManager().fetchTrackMetadata(server, path);
+      if (meta == null) return;
+      final patched =
+          patchQueueExtras(queue.value, serverName: serverName, path: path, meta: meta);
+      if (patched == null) return;
+      appLog('[queue] topped up metadata for ${path.split('/').last}');
+      queue.add(patched);
+      _emitCurrentMediaItem();
+    }();
+  }
+
+  /// The queue with every copy of [serverName]+[path] that predates
+  /// [queueExtras] given the full key set, or null when nothing needed it.
+  ///
+  /// The item's OWN extras are spread last on purpose: djPick, djSonic, a
+  /// localPath from a finished download and a rating the user changed while
+  /// the track sat in the queue all outrank a freshly fetched copy. Only the
+  /// keys that were never there get added. Pure; unit-tested.
+  static List<MediaItem>? patchQueueExtras(List<MediaItem> queue,
+      {required String serverName,
+      required String path,
+      required MusicMetadata meta}) {
+    var changed = false;
+    final patched = queue.map((m) {
+      final e = m.extras;
+      if (e == null ||
+          e['server'] != serverName ||
+          e['path'] != path ||
+          e.containsKey('hasLyrics')) {
+        return m;
+      }
+      changed = true;
+      return m.copyWith(extras: {
+        ...queueExtras(meta,
+            server: serverName, path: path, artUrl: e['artUrl'] as String?),
+        ...e,
+      });
+    }).toList();
+    return changed ? patched : null;
   }
 
   /// Switch playback to a [CastTarget] chosen in the cast picker. Builds the
