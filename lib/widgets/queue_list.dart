@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -412,11 +413,11 @@ class _QueueRow extends StatelessWidget {
                   ],
                 ),
               ),
-              // Drag-to-reorder grip — a comfortable 44px touch target. DRAG it
-              // (ReorderableDragStartListener) to reorder, or TAP it to open the
-              // action drawer (the start/left pane). The GestureDetector also
-              // keeps the tap from falling through to the row's play-on-tap.
-              ReorderableDragStartListener(
+              // Drag-to-reorder grip — a comfortable 44px touch target. HOLD
+              // then drag to reorder, or TAP it to open the action drawer (the
+              // start/left pane). The GestureDetector also keeps the tap from
+              // falling through to the row's play-on-tap.
+              _HeldDragStartListener(
                 index: index,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -684,6 +685,25 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
 /// pattern): lit while the DJ runs — explore icon when sonic similarity is
 /// shaping picks, album icon for the classic random DJ — dim when off.
 /// Tapping toggles the DJ for the current server.
+/// A reorder grip that waits to be held before it grabs the row.
+///
+/// The grip column runs the length of the queue, so a flick that happens to
+/// start on one used to pick the song up and drag it instead of scrolling.
+/// [ReorderableDragStartListener] claims the gesture on touch-down; this waits
+/// [_holdBeforeDrag] first, which lets the list's own drag win a quick scroll
+/// and leaves a deliberate hold to reorder. Shorter than a long-press: the
+/// grip's whole job is dragging, so 500ms of nothing reads as a dead control.
+class _HeldDragStartListener extends ReorderableDragStartListener {
+  static const _holdBeforeDrag = Duration(milliseconds: 220);
+
+  const _HeldDragStartListener({required super.child, required super.index});
+
+  @override
+  MultiDragGestureRecognizer createRecognizer() =>
+      DelayedMultiDragGestureRecognizer(
+          delay: _holdBeforeDrag, debugOwner: this);
+}
+
 /// The labelled Auto DJ toggle, lit while the DJ runs.
 ///
 /// One widget for both places it appears — the mini player and the queue
