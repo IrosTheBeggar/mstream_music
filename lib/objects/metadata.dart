@@ -1,3 +1,43 @@
+/// The queue's view of a server track's metadata.
+///
+/// Every path that queues one builds its extras here — browse, search, Auto DJ
+/// — so a song carries the same facts however it arrived. Auto DJ used to
+/// hand-roll its own map and quietly omitted hasLyrics, bitrate, sampleRate,
+/// format and the track/disc totals, which is why a DJ-picked track showed no
+/// lyrics badge and a thinner Song Info than the same file added by hand.
+///
+/// [meta] is nullable because a metadata fetch can fail; the keys are still
+/// written (as null) so readers can tell "no metadata" from "old queue entry".
+Map<String, dynamic> queueExtras(
+  MusicMetadata? meta, {
+  required String server,
+  required String path,
+  String? artUrl,
+}) =>
+    {
+      'server': server,
+      'path': path,
+      'year': meta?.year,
+      'track': meta?.track,
+      'disc': meta?.disc,
+      // Server-side per-user rating, so a queued track shows + persists stars.
+      'rating': meta?.rating,
+      'artUrl': artUrl,
+      // bpm + musicalKey power AutoDJ's BPM-continuity / harmonic-mixing modes,
+      // and the now-playing header's badges.
+      'bpm': meta?.bpm,
+      'musicalKey': meta?.musicalKey,
+      // Fidelity + counts for the Song Info screen (it reads only from extras).
+      'bitrate': meta?.bitrate,
+      'sampleRate': meta?.sampleRate,
+      'format': meta?.format,
+      'trackTotal': meta?.trackTotal,
+      'discTotal': meta?.discTotal,
+      'playCount': meta?.playCount,
+      // Drives the lyrics badge (tap → fetch via GET /api/v1/lyrics).
+      'hasLyrics': meta?.hasLyrics ?? false,
+    };
+
 class MusicMetadata {
   String hash;
 

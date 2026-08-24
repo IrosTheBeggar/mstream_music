@@ -2781,22 +2781,12 @@ class AudioPlayerHandler extends BaseAudioHandler
       // buildServerFileMediaItem — artUri mirrors extras['artUrl']).
       artUri: artUrl == null ? null : Uri.parse(artUrl),
       extras: {
-        // Tag with the source server so Share Playlist's multi-server
-        // detection recognises AutoDJ-added songs as shareable.
-        'server': autoDJServer!.localname,
-        'path': filepath,
-        // Server-side per-user rating, so an AutoDJ-added track shows + persists
-        // its rating the same as a browse-added one.
-        'rating': meta.rating,
-        'year': meta.year,
-        'track': meta.track,
-        'disc': meta.disc,
-        'artUrl': artUrl,
-        // bpm + musicalKey power the next AutoDJ pick's continuity payload
-        // (see autoDJ() above), stashed under our camelCase keys for
-        // consistency with browser-added items.
-        'bpm': meta.bpm,
-        'musicalKey': meta.musicalKey,
+        // The same map a browse-added track gets (queueExtras) — the source
+        // server for Share Playlist's multi-server detection, the rating, the
+        // bpm + key the next DJ pick's continuity payload reads, and the
+        // Song Info fields a hand-rolled map here used to drop.
+        ...queueExtras(meta,
+            server: autoDJServer!.localname, path: filepath, artUrl: artUrl),
         // Queue-transparency badge (persisted with the queue): this row was
         // chosen by Auto DJ, and whether the sonic pool shaped the pick —
         // the queue row renders the matching icon so DJ additions are
