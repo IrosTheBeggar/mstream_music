@@ -2029,7 +2029,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Server $version';
+    return 'Server v$version';
   }
 
   @override
@@ -2043,7 +2043,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Dieser Server hat Version $version. Einige Funktionen benötigen 5.5 oder neuer und sind nicht verfügbar.';
+    return 'Dieser Server hat Version v$version. Einige Funktionen benötigen v5.5 oder neuer und sind nicht verfügbar.';
   }
 
   @override

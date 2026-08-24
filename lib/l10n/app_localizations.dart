@@ -3525,7 +3525,7 @@ abstract class AppLocalizations {
   /// Server version / update flags
   ///
   /// In en, this message translates to:
-  /// **'Server {version}'**
+  /// **'Server v{version}'**
   String serverVersionLabel(String version);
 
   /// Server version / update flags
@@ -3549,7 +3549,7 @@ abstract class AppLocalizations {
   /// Server version / update flags
   ///
   /// In en, this message translates to:
-  /// **'This server is version {version}. Some features need 5.5 or newer and will be unavailable.'**
+  /// **'This server is v{version}. Some features need v5.5 or newer and will be unavailable.'**
   String serverTooOldWarning(String version);
 
   /// Auto DJ server-version gating notes

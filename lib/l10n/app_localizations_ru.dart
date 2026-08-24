@@ -2045,7 +2045,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'Сервер $version';
+    return 'Сервер v$version';
   }
 
   @override
@@ -2059,7 +2059,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Версия этого сервера — $version. Некоторым функциям нужна 5.5 или новее, они будут недоступны.';
+    return 'Версия этого сервера — v$version. Некоторым функциям нужна v5.5 или новее, они будут недоступны.';
   }
 
   @override

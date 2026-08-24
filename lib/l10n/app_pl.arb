@@ -498,11 +498,11 @@
   "autoDjOnEmptyQueue": "Przy pustej kolejce",
   "autoDjOnEmptyQueueSub": "Co robi Auto DJ, gdy włączysz go bez niczego w kolejce.",
   "autoDjStartAskShort": "Zapytaj",
-  "serverVersionLabel": "Serwer {version}",
+  "serverVersionLabel": "Serwer v{version}",
   "serverVersionUnknown": "Nieznana wersja serwera",
   "serverUpdateUrgent": "Zaktualizuj serwer",
   "serverUpdateAvailable": "Dostępna aktualizacja serwera",
-  "serverTooOldWarning": "Ten serwer ma wersję {version}. Niektóre funkcje wymagają 5.5 lub nowszej i będą niedostępne.",
+  "serverTooOldWarning": "Ten serwer ma wersję v{version}. Niektóre funkcje wymagają v5.5 lub nowszej i będą niedostępne.",
   "autoDjNeedsNewerServer": "Ciągłość BPM, miksowanie harmoniczne i filtr gatunków wymagają nowszego serwera. Zaktualizuj, aby z nich korzystać.",
   "autoDjSonicNeedsNewerServer": "Wymaga serwera 6.15.2 lub nowszego"
 }

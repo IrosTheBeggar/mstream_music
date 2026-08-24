@@ -498,11 +498,11 @@
   "autoDjOnEmptyQueue": "При пустой очереди",
   "autoDjOnEmptyQueueSub": "Что делает Auto DJ, когда вы включаете его с пустой очередью.",
   "autoDjStartAskShort": "Спрашивать",
-  "serverVersionLabel": "Сервер {version}",
+  "serverVersionLabel": "Сервер v{version}",
   "serverVersionUnknown": "Версия сервера неизвестна",
   "serverUpdateUrgent": "Обновите сервер",
   "serverUpdateAvailable": "Доступно обновление сервера",
-  "serverTooOldWarning": "Версия этого сервера — {version}. Некоторым функциям нужна 5.5 или новее, они будут недоступны.",
+  "serverTooOldWarning": "Версия этого сервера — v{version}. Некоторым функциям нужна v5.5 или новее, они будут недоступны.",
   "autoDjNeedsNewerServer": "Непрерывность BPM, гармоничное сведение и фильтр жанров требуют более новой версии сервера. Обновите, чтобы получить их.",
   "autoDjSonicNeedsNewerServer": "Требуется сервер 6.15.2 или новее"
 }

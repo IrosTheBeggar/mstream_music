@@ -1941,7 +1941,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return 'サーバー $version';
+    return 'サーバー v$version';
   }
 
   @override
@@ -1955,7 +1955,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'このサーバーはバージョン $version です。一部の機能には 5.5 以降が必要で、利用できません。';
+    return 'このサーバーはバージョン v$version です。一部の機能には v5.5 以降が必要で、利用できません。';
   }
 
   @override

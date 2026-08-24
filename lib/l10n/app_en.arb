@@ -1627,7 +1627,7 @@
   "@autoDjStartAskShort": {
     "description": "Segmented-button label: ask each time"
   },
-  "serverVersionLabel": "Server {version}",
+  "serverVersionLabel": "Server v{version}",
   "@serverVersionLabel": {
     "description": "Server version / update flags",
     "placeholders": {
@@ -1648,7 +1648,7 @@
   "@serverUpdateAvailable": {
     "description": "Server version / update flags"
   },
-  "serverTooOldWarning": "This server is version {version}. Some features need 5.5 or newer and will be unavailable.",
+  "serverTooOldWarning": "This server is v{version}. Some features need v5.5 or newer and will be unavailable.",
   "@serverTooOldWarning": {
     "description": "Server version / update flags",
     "placeholders": {

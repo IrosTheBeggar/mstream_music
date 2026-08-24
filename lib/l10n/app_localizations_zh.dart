@@ -1900,7 +1900,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String serverVersionLabel(String version) {
-    return '服务器 $version';
+    return '服务器 v$version';
   }
 
   @override
@@ -1914,7 +1914,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return '此服务器版本为 $version。部分功能需要 5.5 或更高版本，将不可用。';
+    return '此服务器版本为 v$version。部分功能需要 v5.5 或更高版本，将不可用。';
   }
 
   @override
