@@ -46,14 +46,30 @@ class DiscoverQueueBar extends StatefulWidget {
   State<DiscoverQueueBar> createState() => _DiscoverQueueBarState();
 }
 
-class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
+class _DiscoverQueueBarState extends State<DiscoverQueueBar>
+    with SingleTickerProviderStateMixin {
   static const int _limit = 6;
+
+  /// Header height. The panel never goes below this — it is the collapsed bar.
+  static const double _headerHeight = 44;
 
   StreamSubscription<MediaItem?>? _sub;
   Timer? _debounce;
   int _reqId = 0;
 
-  bool _expanded = false;
+  // 0.0 = collapsed strip, 1.0 = open panel. A continuous value rather than
+  // a bool, which is the whole difference between "commits on release" and
+  // "follows the finger" — the same thing PlayerPanelState does one layer up.
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+
+  /// Travel available to a drag, in logical px: set from layout each build,
+  /// so the finger moves the panel 1:1 whatever height the panel resolved to.
+  double _dragExtent = 1.0;
+
+  bool get _expanded => _ctrl.value > 0.5;
   bool _dirty = true; // seed changed while collapsed → refetch on expand
   bool _loading = false;
   // 403 → the ping flag said yes and the route said no. Latched so an
@@ -63,9 +79,6 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   bool _rechecking = false;
   bool _probed = false;
 
-  // Distance travelled by the current header drag, so a slow drag that never
-  // reaches a fling velocity still resolves by direction.
-  double _dragDy = 0;
 
   Server? _seedServer;
   String? _seedPath;
@@ -100,34 +113,43 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
   void dispose() {
     _debounce?.cancel();
     _sub?.cancel();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (_expanded && (_dirty || _tracks == null)) _refresh();
+  void _expand() {
+    _ctrl.animateTo(1.0, curve: Curves.easeOutCubic);
+    if (_dirty || _tracks == null) _refresh();
   }
 
-  void _setExpanded(bool open) {
-    if (open == _expanded) return;
-    _toggle();
+  void _collapse() => _ctrl.animateTo(0.0, curve: Curves.easeOutCubic);
+
+  void _toggle() => _expanded ? _collapse() : _expand();
+
+  /// Track the finger. Dividing by [_dragExtent] is what makes the panel move
+  /// exactly as far as the thumb does rather than at some invented rate.
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_dragExtent <= 0) return;
+    _ctrl.value =
+        (_ctrl.value - (d.primaryDelta ?? 0) / _dragExtent).clamp(0.0, 1.0);
   }
 
-  /// Same reading the player panel gives a release: a flick past ±300 px/s
-  /// wins outright, otherwise the drag has to have travelled far enough to
-  /// count — 24px, so a wobble on a tap does not flip the panel.
-  void _onHeaderDragEnd(DragEndDetails d) {
-    final v = d.primaryVelocity ?? 0; // negative = upward
+  /// The player panel's rule, and worth stating why it is not just "past
+  /// half wins": a fast flick is a decision even when it covered no distance,
+  /// and without the velocity arm a quick flick from rest would spring back
+  /// and feel broken. Distance only decides when the release was slow enough
+  /// to be a placement rather than a throw.
+  void _onDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0; // px/s, negative = upward
     if (v < -300) {
-      _setExpanded(true);
+      _expand();
     } else if (v > 300) {
-      _setExpanded(false);
-    } else if (_dragDy < -24) {
-      _setExpanded(true);
-    } else if (_dragDy > 24) {
-      _setExpanded(false);
+      _collapse();
+    } else if (_ctrl.value > 0.5) {
+      _expand();
+    } else {
+      _collapse();
     }
-    _dragDy = 0;
   }
 
   /// Same re-check as the Discover panel: re-ping FIRST, then retry.
@@ -257,16 +279,22 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
     final panelHeight =
         (MediaQuery.of(context).size.height * 0.34).clamp(200.0, 320.0);
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.topCenter,
-      child: Container(
+    _dragExtent = (panelHeight - _headerHeight).clamp(1.0, double.infinity);
+
+    // The body is built ONCE and handed to the builder as `child`: a drag
+    // then re-runs only the height wrapper, not the track list, the art or
+    // the row builders. AnimatedSize used to relayout the whole subtree on
+    // every animation tick, which is the expensive half of what made the old
+    // open feel heavier than the player panel's.
+    return AnimatedBuilder(
+      animation: _ctrl,
+      child: _body(l),
+      builder: (context, body) => Container(
         // +1: Container folds the decoration's border widths into padding,
         // so the top hairline insets the content box by a pixel — without
         // accounting for it the fixed-height header overflows by exactly
         // 1.00px while collapsed.
-        height: 1 + (_expanded ? panelHeight : 44),
+        height: 1 + _headerHeight + _ctrl.value * _dragExtent,
         decoration: BoxDecoration(
           // Tinted rather than the queue's own surface: this strip sat in
           // exactly the same colour as the list above it and read as part of
@@ -275,7 +303,8 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
           color: _discoverLight.withValues(alpha: 0.14),
           border: Border(top: BorderSide(color: _discoverAccent)),
         ),
-        child: Column(
+        child: ClipRect(
+            child: Column(
           children: [
             // Header — the whole strip toggles, like the webapp's panel
             // header. Extra actions appear only while expanded.
@@ -293,9 +322,8 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
             // anyone tries to make it rubber-band.
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onVerticalDragStart: (_) => _dragDy = 0,
-              onVerticalDragUpdate: (d) => _dragDy += d.primaryDelta ?? 0,
-              onVerticalDragEnd: _onHeaderDragEnd,
+              onVerticalDragUpdate: _onDragUpdate,
+              onVerticalDragEnd: _onDragEnd,
               child: InkWell(
               onTap: _toggle,
               child: SizedBox(
@@ -355,8 +383,29 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar> {
               ),
             ),
             ),
-            if (_expanded) Expanded(child: _body(l)),
+            // OverflowBox so the body always lays out at its FULL height and
+            // is clipped to whatever the panel currently shows. Without it a
+            // half-open panel would try to lay the content out in half the
+            // space — reflowing text and rows on every frame of the drag, and
+            // overflowing the ones that cannot shrink.
+            //
+            // Gated on the live controller value, not on `_expanded`: this
+            // runs inside the builder, so a fully-closed panel keeps the
+            // rows (and their album art) out of the tree entirely, while the
+            // first pixel of a drag brings them in. Reading a bool here
+            // instead would leave the list mounted-but-clipped whenever the
+            // panel had ever been open.
+            if (_ctrl.value > 0)
+              Expanded(
+                child: OverflowBox(
+                  alignment: Alignment.topCenter,
+                  minHeight: 0,
+                  maxHeight: panelHeight - _headerHeight,
+                  child: body,
+                ),
+              ),
           ],
+        ),
         ),
       ),
     );
