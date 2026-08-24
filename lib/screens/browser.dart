@@ -679,64 +679,91 @@ class _BrowserState extends State<Browser> {
             }));
   }
 
-  // ── Default browser landing: section shortcuts as a modern card grid ──
+  // ── Default browser landing: section shortcuts as a card grid ──
+  //
+  // Cards sit on VelvetColors.card, the token the palette has always defined
+  // and this screen never used: face and page were both `surface`, so a card
+  // was a 1px border around nothing and the grid read flat. On the real
+  // surface the border is redundant and gone.
+  //
+  // Laid out as rows rather than a GridView because an odd item count left
+  // the last card stranded beside a hole — the trailing one spans the row
+  // instead. IntrinsicHeight pairs each row to its taller card, so a row is
+  // as tall as its content needs and no taller: with a fixed aspect ratio the
+  // card height fell out of the screen WIDTH, which on a narrow phone (or at
+  // a large text scale) squeezed the tile and label into less room than they
+  // occupy and overflowed.
   Widget _homeView(BuildContext context, List<DisplayItem> items) {
-    final l = AppLocalizations.of(context);
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.3,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, i) {
-        final item = items[i];
-        final iconData = item.icon?.icon ?? Icons.chevron_right;
-        return Material(
-          color: VelvetColors.surface,
-          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => handleTap(items, i, context),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: VelvetColors.border),
-                borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-              ),
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: VelvetColors.primaryDim,
-                      borderRadius:
-                          BorderRadius.circular(VelvetColors.radiusSmall),
-                    ),
-                    child: Icon(iconData,
-                        color: VelvetColors.primary, size: 24),
-                  ),
-                  Text(
-                    browserChromeLabel(l, item.name),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: VelvetColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final rows = <Widget>[];
+    for (var i = 0; i < items.length; i += 2) {
+      final pair = items.skip(i).take(2).toList();
+      rows.add(Padding(
+        padding: EdgeInsets.only(top: i == 0 ? 0 : _homeCardGap),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var j = 0; j < pair.length; j++) ...[
+                if (j > 0) SizedBox(width: _homeCardGap),
+                Expanded(child: _homeCard(context, items, i + j)),
+              ],
+            ],
           ),
-        );
-      },
+        ),
+      ));
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+      children: rows,
+    );
+  }
+
+  static const double _homeCardGap = 10;
+
+  Widget _homeCard(BuildContext context, List<DisplayItem> items, int i) {
+    final l = AppLocalizations.of(context);
+    final item = items[i];
+    final iconData = item.icon?.icon ?? Icons.chevron_right;
+    return Material(
+      color: VelvetColors.card,
+      borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => handleTap(items, i, context),
+        child: Padding(
+          // Tighter vertically than horizontally: the vertical axis is the one
+          // that runs out first, and the tile already carries its own visual
+          // padding around the icon.
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: VelvetColors.primaryDim,
+                  borderRadius:
+                      BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+                child: Icon(iconData, color: VelvetColors.primary, size: 22),
+              ),
+              Text(
+                browserChromeLabel(l, item.name),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: VelvetColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
