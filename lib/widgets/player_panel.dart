@@ -1426,6 +1426,12 @@ final BehaviorSubject<_MediaPos> _mediaPos = BehaviorSubject<_MediaPos>()
       // refreshes when it lands after the track first appears.
       a.item?.id == b.item?.id &&
       a.item?.duration == b.item?.duration &&
+      // Extras by IDENTITY, not contents: copyWith(duration:) hands the same
+      // map through, so ticks still collapse, while anything that REPLACES the
+      // map gets a frame. Without this the row below is invisible to an
+      // extras-only change — a metadata top-up, a download landing — because
+      // neither the id nor the duration moves.
+      identical(a.item?.extras, b.item?.extras) &&
       a.position.inMilliseconds ~/ 500 == b.position.inMilliseconds ~/ 500));
 
 String _fmt(Duration d) => formatDuration(d);
