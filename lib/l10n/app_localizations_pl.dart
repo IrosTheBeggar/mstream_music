@@ -918,10 +918,10 @@ class AppLocalizationsPl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count utworów w kolejce',
-      many: '$count utworów w kolejce',
-      few: '$count utwory w kolejce',
-      one: '1 utwór w kolejce',
+      other: '$count utworów',
+      many: '$count utworów',
+      few: '$count utwory',
+      one: '1 utwór',
     );
     return '$_temp0';
   }

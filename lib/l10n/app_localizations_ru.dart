@@ -922,10 +922,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count треков в очереди',
-      many: '$count треков в очереди',
-      few: '$count трека в очереди',
-      one: '$count трек в очереди',
+      other: '$count треков',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
     );
     return '$_temp0';
   }

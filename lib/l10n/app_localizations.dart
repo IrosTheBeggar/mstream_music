@@ -1659,7 +1659,7 @@ abstract class AppLocalizations {
   /// Queue tab header count.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 track in queue} other{{count} tracks in queue}}'**
+  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
   String mainQueueCount(int count);
 
   /// Bottom-bar Auto DJ toggle snackbars.

@@ -243,7 +243,7 @@
   "visualizerTitle": "ビジュアライザー",
   "mainClearQueue": "キューをクリア",
   "mainSync": "同期",
-  "mainQueueCount": "{count, plural, other{キューに {count} 曲}}",
+  "mainQueueCount": "{count, plural, other{{count} 曲}}",
   "autoDjEnabled": "Auto DJ を有効にしました",
   "autoDjDisabled": "Auto DJ を無効にしました",
   "autoDjEnabledFor": "{url} で Auto DJ を有効にしました",

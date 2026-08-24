@@ -243,7 +243,7 @@
   "visualizerTitle": "Visualizador",
   "mainClearQueue": "Vaciar la cola",
   "mainSync": "Sincronizar",
-  "mainQueueCount": "{count, plural, =1{1 pista en la cola} other{{count} pistas en la cola}}",
+  "mainQueueCount": "{count, plural, =1{1 pista} other{{count} pistas}}",
   "autoDjEnabled": "Auto DJ activado",
   "autoDjDisabled": "Auto DJ desactivado",
   "autoDjEnabledFor": "Auto DJ activado para {url}",

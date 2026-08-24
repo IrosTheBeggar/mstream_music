@@ -667,7 +667,7 @@
   "@tabBrowser": {
     "description": "Main scaffold: tabs, drawer header, queue header, toolbar."
   },
-  "mainQueueCount": "{count, plural, =1{1 track in queue} other{{count} tracks in queue}}",
+  "mainQueueCount": "{count, plural, =1{1 track} other{{count} tracks}}",
   "@mainQueueCount": {
     "description": "Queue tab header count.",
     "placeholders": {

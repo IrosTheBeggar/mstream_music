@@ -882,7 +882,7 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'キューに $count 曲',
+      other: '$count 曲',
     );
     return '$_temp0';
   }

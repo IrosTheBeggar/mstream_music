@@ -910,8 +910,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count faixas na fila',
-      one: '1 faixa na fila',
+      other: '$count faixas',
+      one: '1 faixa',
     );
     return '$_temp0';
   }

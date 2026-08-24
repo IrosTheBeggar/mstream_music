@@ -243,7 +243,7 @@
   "visualizerTitle": "Visualizer",
   "mainClearQueue": "Warteschlange leeren",
   "mainSync": "Synchronisieren",
-  "mainQueueCount": "{count, plural, =1{1 Titel in der Warteschlange} other{{count} Titel in der Warteschlange}}",
+  "mainQueueCount": "{count, plural, =1{1 Titel} other{{count} Titel}}",
   "autoDjEnabled": "Auto DJ aktiviert",
   "autoDjDisabled": "Auto DJ deaktiviert",
   "autoDjEnabledFor": "Auto DJ aktiviert für {url}",

@@ -243,7 +243,7 @@
   "visualizerTitle": "Visualizzatore",
   "mainClearQueue": "Svuota la coda",
   "mainSync": "Sincronizza",
-  "mainQueueCount": "{count, plural, =1{1 brano in coda} other{{count} brani in coda}}",
+  "mainQueueCount": "{count, plural, =1{1 brano} other{{count} brani}}",
   "autoDjEnabled": "Auto DJ attivato",
   "autoDjDisabled": "Auto DJ disattivato",
   "autoDjEnabledFor": "Auto DJ attivato per {url}",

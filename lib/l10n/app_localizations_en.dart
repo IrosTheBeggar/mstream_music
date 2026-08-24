@@ -903,8 +903,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count tracks in queue',
-      one: '1 track in queue',
+      other: '$count tracks',
+      one: '1 track',
     );
     return '$_temp0';
   }

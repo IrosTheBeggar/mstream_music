@@ -243,7 +243,7 @@
   "visualizerTitle": "Visualiseur",
   "mainClearQueue": "Vider la file",
   "mainSync": "Synchroniser",
-  "mainQueueCount": "{count, plural, =1{1 piste dans la file} other{{count} pistes dans la file}}",
+  "mainQueueCount": "{count, plural, =1{1 piste} other{{count} pistes}}",
   "autoDjEnabled": "Auto DJ activé",
   "autoDjDisabled": "Auto DJ désactivé",
   "autoDjEnabledFor": "Auto DJ activé pour {url}",
