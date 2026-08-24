@@ -413,12 +413,7 @@ class _TopMedium extends StatelessWidget {
                                 height: 1.1,
                                 color: VelvetColors.textPrimary)),
                         const SizedBox(height: 3),
-                        Text(_artistAlbum(item),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 13.5,
-                                color: VelvetColors.textSecondary)),
+                        _artistAlbum(item, fontSize: 13.5),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -434,8 +429,7 @@ class _TopMedium extends StatelessWidget {
                                 const SizedBox(width: 10),
                               MediaItemRating(item: item, size: 13),
                             ],
-                            const Spacer(),
-                                                      ],
+                          ],
                         ),
                       ],
                     ),
@@ -515,12 +509,7 @@ class _TopLarge extends StatelessWidget {
                           letterSpacing: -0.2,
                           color: VelvetColors.textPrimary)),
                   const SizedBox(height: 3),
-                  Text(_artistAlbum(item),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13.5,
-                          color: VelvetColors.textSecondary)),
+                  _artistAlbum(item, fontSize: 13.5),
                   const SizedBox(height: 5),
                   Row(
                     children: [
@@ -536,8 +525,7 @@ class _TopLarge extends StatelessWidget {
                           const SizedBox(width: 10),
                         MediaItemRating(item: item, size: 13),
                       ],
-                      const Spacer(),
-                                          ],
+                    ],
                   ),
                 ],
               );
@@ -609,12 +597,7 @@ class _TopXL extends StatelessWidget {
                           height: 1.12,
                           color: VelvetColors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text(_artistAlbum(item),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 14.5,
-                          color: VelvetColors.textSecondary)),
+                  _artistAlbum(item, fontSize: 14.5),
                   const SizedBox(height: 5),
                   Row(
                     children: [
@@ -630,8 +613,7 @@ class _TopXL extends StatelessWidget {
                           const SizedBox(width: 10),
                         MediaItemRating(item: item, size: 13),
                       ],
-                      const Spacer(),
-                                          ],
+                    ],
                   ),
                 ],
               );
@@ -1362,11 +1344,43 @@ Widget _albumArt(String? url,
 
 Widget _fallback(double size) => albumArtFallback(iconSize: size);
 
-String _artistAlbum(MediaItem? item) {
-  if (item == null) return '';
-  final a = item.artist, al = item.album;
-  if (a != null && al != null) return '$a · $al';
-  return a ?? al ?? '';
+/// Artist and album stacked, one per line.
+///
+/// Joined on a single line as "Icarus · Be Somebody" the reader has to work
+/// out where the performer ends and the record begins, and the album is what
+/// gets truncated because it happens to come second. Stacking says which is
+/// which by position instead, and the header has the room for it now that the
+/// visualizer and cast glyphs have moved into the queue menu.
+Widget _artistAlbum(MediaItem? item, {required double fontSize}) {
+  final artist = item?.artist?.trim() ?? '';
+  final album = item?.album?.trim() ?? '';
+  final lines = [
+    if (artist.isNotEmpty) artist,
+    if (album.isNotEmpty) album,
+  ];
+  // One line's worth of height even with nothing to say, so the header does
+  // not jump as the track changes.
+  if (lines.isEmpty) lines.add('');
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var i = 0; i < lines.length; i++)
+        Text(lines[i],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: i == 0 ? fontSize : fontSize - 0.5,
+                // Tight, because two lines here cost header height that the
+                // XL layout does not have much of.
+                height: 1.25,
+                // The album a step back: it tells you where the song came
+                // from, not what you are listening to.
+                color: i == 0
+                    ? VelvetColors.textSecondary
+                    : VelvetColors.textTertiary)),
+    ],
+  );
 }
 
 Duration _remaining(Duration dur, Duration pos) {
