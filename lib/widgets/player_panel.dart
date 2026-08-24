@@ -6,10 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../l10n/app_localizations.dart';
-import '../media/cast_target.dart';
 import '../objects/player_layout.dart';
 import '../screens/visualizer_screen.dart';
-import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
@@ -17,7 +15,6 @@ import '../util/ambient_color.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import '../visualizer/shader_visualizer_screen.dart';
-import 'cast_picker_sheet.dart';
 import 'more_actions_sheet.dart';
 import 'discover_queue_bar.dart';
 import 'queue_list.dart';
@@ -355,8 +352,7 @@ class _SheetHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const _DiscoveryButtons(),
-            ],
+                          ],
           ),
         ),
       ],
@@ -377,60 +373,6 @@ Widget _grabHandle() => Container(
     );
 
 /// Discoverable quick actions above the scrubber: Visualizer + Cast. (Cast
-/// especially — the expanded panel now covers the app-bar cast icon.)
-class _DiscoveryButtons extends StatelessWidget {
-  const _DiscoveryButtons();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    Widget btn(IconData icon, VoidCallback onTap,
-            {String? tooltip, bool active = false}) =>
-        IconButton(
-          icon: Icon(icon, size: 20),
-          visualDensity: VisualDensity.compact,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-          color: active ? VelvetColors.primary : VelvetColors.textSecondary,
-          tooltip: tooltip,
-          onPressed: onTap,
-        );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        btn(
-          Icons.auto_awesome,
-          // iOS has no native visualizer host; it gets the pure-Flutter
-          // shader engine (same module as desktop).
-          () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => Platform.isAndroid
-                  ? VisualizerScreen()
-                  : const ShaderVisualizerScreen())),
-          tooltip: l.visualizerTitle,
-        ),
-        StreamBuilder<CastTarget>(
-          stream: CastManager().activeTargetStream,
-          initialData: CastManager().activeTarget,
-          builder: (context, snap) {
-            final casting = !(snap.data ?? CastTarget.local).isLocal;
-            return btn(
-              casting ? Icons.cast_connected : Icons.cast,
-              () => showModalBottomSheet(
-                context: context,
-                backgroundColor: VelvetColors.surface,
-                isScrollControlled: true,
-                builder: (_) => CastPickerSheet(),
-              ),
-              tooltip: l.castPlayOnTooltip,
-              active: casting,
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Layout MEDIUM — art-left banner + slim seek bar (design "Banner", default).
 // ---------------------------------------------------------------------------
@@ -493,8 +435,7 @@ class _TopMedium extends StatelessWidget {
                               MediaItemRating(item: item, size: 13),
                             ],
                             const Spacer(),
-                            const _DiscoveryButtons(),
-                          ],
+                                                      ],
                         ),
                       ],
                     ),
@@ -596,8 +537,7 @@ class _TopLarge extends StatelessWidget {
                         MediaItemRating(item: item, size: 13),
                       ],
                       const Spacer(),
-                      const _DiscoveryButtons(),
-                    ],
+                                          ],
                   ),
                 ],
               );
@@ -691,8 +631,7 @@ class _TopXL extends StatelessWidget {
                         MediaItemRating(item: item, size: 13),
                       ],
                       const Spacer(),
-                      const _DiscoveryButtons(),
-                    ],
+                                          ],
                   ),
                 ],
               );

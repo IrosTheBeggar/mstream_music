@@ -494,7 +494,8 @@ class QueueHeader extends StatelessWidget {
               children: [
                 // Auto DJ at a glance + one-tap toggle (the queue-header
                 // autoplay-control pattern) — lit while the DJ runs.
-                _DjHeaderButton(),
+                const AutoDjButton(),
+                const SizedBox(width: 4),
                 if (showOptions)
                   IconButton(
                     icon: const Icon(Icons.more_vert, size: 20),
@@ -683,8 +684,15 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
 /// pattern): lit while the DJ runs — explore icon when sonic similarity is
 /// shaping picks, album icon for the classic random DJ — dim when off.
 /// Tapping toggles the DJ for the current server.
-class _DjHeaderButton extends StatelessWidget {
-  const _DjHeaderButton();
+/// The labelled Auto DJ toggle, lit while the DJ runs.
+///
+/// One widget for both places it appears — the mini player and the queue
+/// header — because they are the same control and a word reads faster than a
+/// glyph nobody has learned. The header used to carry an icon that changed
+/// between a disc and a compass depending on whether sonic mode was on, which
+/// asked the reader to know two symbols to learn one fact.
+class AutoDjButton extends StatelessWidget {
+  const AutoDjButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -692,14 +700,22 @@ class _DjHeaderButton extends StatelessWidget {
     return StreamBuilder<dynamic>(
       stream: MediaManager().audioHandler.customState,
       builder: (context, snap) {
-        final Server? djServer = snap.data?.autoDJState as Server?;
-        final on = djServer != null;
-        final sonic = on && AutoDJManager().sonicSimilarityEnabled;
-        return IconButton(
-          icon: Icon(sonic ? Icons.explore : Icons.album, size: 20),
-          color: on ? VelvetColors.primary : VelvetColors.textSecondary,
-          tooltip: l.autoDjTitle,
+        final on = snap.data?.autoDJState != null;
+        return OutlinedButton(
           onPressed: () => toggleAutoDJ(context),
+          style: OutlinedButton.styleFrom(
+            foregroundColor:
+                on ? VelvetColors.primary : VelvetColors.appBarText,
+            backgroundColor: on ? VelvetColors.primaryDim : null,
+            side: BorderSide(
+                color: on ? VelvetColors.primary : VelvetColors.border2),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            minimumSize: const Size(0, 34),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            textStyle:
+                const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          child: Text(l.autoDjTitle),
         );
       },
     );
