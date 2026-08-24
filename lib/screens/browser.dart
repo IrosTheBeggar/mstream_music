@@ -833,21 +833,8 @@ class _BrowserState extends State<Browser> {
   // (Add next / Play now / Add to end) plus Find similar when the track's
   // server supports discovery. Long-press = item context menu is the
   // convention everywhere (Apple Music / Spotify / Symfonium).
-  void _showTrackActions(DisplayItem item, BuildContext c) {
-    showModalBottomSheet(
-      context: c,
-      backgroundColor: VelvetColors.surface,
-      // Without this the sheet is capped at 9/16 of the screen. A server track
-      // with discovery shows header + rating + six actions, which lands right
-      // on that cap and overflowed the last row. Scroll-controlled here, and
-      // the sheet scrolls internally, so the entry count can't overflow it.
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => TrackActionsSheet(item: item, parentContext: c),
-    );
-  }
+  void _showTrackActions(DisplayItem item, BuildContext c) =>
+      showTrackActionsSheet(c, item);
 
   Widget makeFileWidget(List<DisplayItem> b, int i, BuildContext c) {
     // Same wrap-on-small-list rule as folders: below the letter-strip

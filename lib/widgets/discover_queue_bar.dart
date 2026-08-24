@@ -13,6 +13,7 @@ import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/queue_actions.dart';
+import 'track_actions_sheet.dart';
 
 /// Collapsible Discover bar docked under the queue in the expanded player —
 /// the mobile counterpart of the webapp's Discover panel in the Now Playing
@@ -505,6 +506,11 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
                 ),
           trailing: MatchMeter(similarity: track.similarity),
           onTap: () => _queueRow(i),
+          // Same sheet as everywhere else. Guarded on the row existing: the
+          // DisplayItem list is rebuilt alongside the results and a long-press
+          // landing between the two would otherwise open a sheet on nothing.
+          onLongPress:
+              row == null ? null : () => showTrackActionsSheet(context, row),
         );
       },
     );

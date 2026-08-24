@@ -25,6 +25,28 @@ import 'star_rating.dart';
 /// [parentContext] is a context ABOVE this sheet (the browser's), used for
 /// follow-on navigation and snackbars after the sheet is popped — the
 /// sheet's own context is gone once it closes.
+/// Open the track sheet for [item].
+///
+/// Every surface that offers a song's actions calls this — browser rows,
+/// album detail, the Discover panel — because "the same actions wherever you
+/// meet a song" is the point, and three copies of the same showModalBottomSheet
+/// is how that quietly stops being true.
+void showTrackActionsSheet(BuildContext context, DisplayItem item) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: VelvetColors.surface,
+    // Without this the sheet is capped at 9/16 of the screen. A server track
+    // with discovery shows header + rating + six actions, which lands right on
+    // that cap and overflowed the last row. Scroll-controlled here, and the
+    // sheet scrolls internally, so the entry count can't overflow it.
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => TrackActionsSheet(item: item, parentContext: context),
+  );
+}
+
 class TrackActionsSheet extends StatelessWidget {
   final DisplayItem item;
   final BuildContext parentContext;
