@@ -136,10 +136,25 @@ class VelvetPalette {
   }
 }
 
-/// Black or white — whichever reads better on top of [c]. Keeps button / badge
-/// labels legible whatever accent the user picks.
-Color onAccent(Color c) =>
-    c.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+/// Black or white — whichever actually reads better on top of [c]. Keeps
+/// button / badge labels legible whatever accent the user picks.
+///
+/// The switch is at luminance 0.179, not the intuitive 0.5. WCAG contrast is
+/// (lighter + 0.05) / (darker + 0.05), so a fill scores 1.05 / (l + 0.05)
+/// under white ink and (l + 0.05) / 0.05 under black; those cross where
+/// (l + 0.05)² = 0.0525, i.e. l ≈ 0.179. Thresholding at 0.5 handed white ink
+/// to every mid-tone fill in between — measured on the running app, the
+/// error-red Stop Auto DJ button (#F87171, l = 0.33) came out at 2.77:1 with
+/// white ink where black gives 7.6:1.
+///
+/// Computed rather than compared against a magic 0.179, so the rule reads as
+/// what it is: pick the ink that wins.
+Color onAccent(Color c) {
+  final l = c.computeLuminance();
+  final withBlackInk = (l + 0.05) / 0.05;
+  final withWhiteInk = 1.05 / (l + 0.05);
+  return withBlackInk >= withWhiteInk ? Colors.black : Colors.white;
+}
 
 /// Ink for content on top of the accent-filled play button (e.g. the play/pause
 /// glyph): dark espresso on bright accents, white on a dark custom accent, so it
@@ -171,6 +186,11 @@ const _velvetPalette = VelvetPalette(
   primaryHover: Color(0xFF7C3AED),
   primaryDim: Color(0x268B5CF6),
   primaryGlow: Color(0x668B5CF6),
+  // Deliberately NOT onAccent(primary), which now returns black: #8B5CF6 sits
+  // at luminance 0.198, a hair over the 0.179 crossover, so the two inks are
+  // close (4.23:1 white against 4.96:1 black) and white is the skin's look.
+  // The amber palettes below are nowhere near the line, which is why they flip.
+  onPrimary: Colors.white,
   accent: Color(0xFF60A5FA),
   success: Color(0xFF34D399),
   error: Color(0xFFF87171),
@@ -202,6 +222,9 @@ const _darkPalette = VelvetPalette(
   primaryHover: Color(0xFFFFC233),
   primaryDim: Color(0x26FFAB00),
   primaryGlow: Color(0x66FFAB00),
+  // = onAccent(primary): amber is bright (luminance 0.50), so DARK ink. Was
+  // inheriting the Colors.white default, which put white on amber at ~1.9:1.
+  onPrimary: Colors.black,
   accent: Color(0xFFFFAB00),
   success: Color(0xFF34D399),
   error: Color(0xFFF87171),
@@ -235,6 +258,8 @@ const _lightPalette = VelvetPalette(
   primaryHover: Color(0xFFE69500),
   primaryDim: Color(0x26FFAB00),
   primaryGlow: Color(0x66FFAB00),
+  // = onAccent(primary) — same amber as the Dark palette.
+  onPrimary: Colors.black,
   accent: Color(0xFFFFAB00),
   success: Color(0xFF22C55E),
   error: Color(0xFFEF4444),

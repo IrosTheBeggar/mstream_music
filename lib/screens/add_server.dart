@@ -1082,7 +1082,6 @@ class MyCustomFormState extends State<MyCustomForm> {
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: VelvetColors.primary,
-                          foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 14),
                         ),
                         icon: Icon(Icons.check),
@@ -1876,7 +1875,6 @@ class MyCustomFormState extends State<MyCustomForm> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: VelvetColors.primary,
-                foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
@@ -1942,7 +1940,6 @@ class MyCustomFormState extends State<MyCustomForm> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: VelvetColors.primary,
-                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius:
@@ -2252,7 +2249,6 @@ class MyCustomFormState extends State<MyCustomForm> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: VelvetColors.primary,
-                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius:
@@ -2365,7 +2361,6 @@ class _LanLoginSheetState extends State<_LanLoginSheet> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: VelvetColors.primary,
-              foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 14),
             ),
             icon: Icon(Icons.login),

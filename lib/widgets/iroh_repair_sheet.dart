@@ -147,7 +147,6 @@ class _IrohRepairSheetState extends State<_IrohRepairSheet> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: VelvetColors.primary,
-                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                     borderRadius:
