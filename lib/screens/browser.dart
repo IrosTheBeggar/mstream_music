@@ -645,16 +645,12 @@ class _BrowserState extends State<Browser> {
                   leading: b[i].icon,
                   title: b[i].getText(truncate: !allowWrap),
                   subtitle: b[i].getSubText(),
-                  trailing: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_left,
-                      size: 20.0,
-                      color: VelvetColors.textTertiary,
-                    ),
-                    onPressed: () {
-                      Slidable.of(context)?.openEndActionPane();
-                    },
-                  ),
+                  // No caret: it opened the swipe pane, whose only action is
+                  // the Add all the long-press above now offers — two handles
+                  // on one action, the second sitting under the letter strip.
+                  // The swipe itself still works. makeLocalFolderWidget keeps
+                  // its caret: that pane is Delete, and nothing else reaches
+                  // it.
                   onTap: () {
                     handleTap(b, i, c);
                   }),
@@ -865,7 +861,18 @@ class _BrowserState extends State<Browser> {
             color: VelvetColors.bg,
             child: InkWell(
                 splashColor: VelvetColors.primaryDim,
-                onLongPress: () => _showTrackActions(b[i], c),
+                // Nothing for an .m3u: the track sheet rates, queues and finds
+                // similar music for the row it opens on, and none of that
+                // means anything for a playlist file.
+                //
+                // A no-op rather than null, deliberately. With no long-press
+                // recognizer the tap one wins and fires on release however
+                // long the press was, so `null` made holding an .m3u OPEN it
+                // — measured, not assumed. An empty handler claims the
+                // gesture and the press ends where it started: nothing.
+                onLongPress: isM3u(b[i].data)
+                    ? () {}
+                    : () => _showTrackActions(b[i], c),
                 child: IntrinsicHeight(
                     child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
