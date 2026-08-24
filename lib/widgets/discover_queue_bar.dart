@@ -317,16 +317,23 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
             // same reason the player panel hangs its drag off the grab area
             // rather than the sheet.
             //
-            // This is two states with an AnimatedSize between them, not a
-            // controller the finger drives, so the panel does not track the
-            // finger mid-drag; it commits on release. Worth knowing before
-            // anyone tries to make it rubber-band.
+            // The header's press feedback lands on RELEASE, not on touch: the
+            // drag recognizer here competes with the InkWell's tap in the
+            // gesture arena, and Flutter holds the tap's highlight until the
+            // arena resolves. Measured, not assumed — a held press on the
+            // header changes no pixels, while a queue row (no competing drag)
+            // highlights immediately. The rows inside this panel have no drag
+            // over them and behave normally.
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onVerticalDragUpdate: _onDragUpdate,
               onVerticalDragEnd: _onDragEnd,
-              child: InkWell(
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
               onTap: _toggle,
+              splashColor: _discoverLight.withValues(alpha: 0.18),
+              highlightColor: _discoverLight.withValues(alpha: 0.08),
               child: SizedBox(
                 height: 44,
                 child: Padding(
@@ -382,7 +389,8 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
                   ),
                 ),
               ),
-            ),
+                ),
+              ),
             ),
             // OverflowBox so the body always lays out at its FULL height and
             // is clipped to whatever the panel currently shows. Without it a
@@ -485,7 +493,30 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
           if (artist != null && artist.trim().isNotEmpty) artist.trim(),
           ?genre,
         ].join(' · ');
-        return ListTile(
+        // Material(transparency) + InkWell rather than ListTile's own
+        // onTap. The panel paints its tint with a Container decoration, and a
+        // Container's background sits ABOVE the Material that would draw the
+        // splash — so ListTile's ripple was being applied to a surface nobody
+        // could see. A transparent Material inside the Container gives the ink
+        // somewhere to land. Same shape the browser's file rows use.
+        //
+        // Splash in the panel's own periwinkle, not the user's accent: the
+        // Discover surface deliberately keeps one colour across both clients
+        // (see _discoverAccent), and a press that flashed amber here would
+        // break that on exactly the interaction that draws the eye.
+        return Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            splashColor: _discoverLight.withValues(alpha: 0.20),
+            highlightColor: _discoverLight.withValues(alpha: 0.10),
+            onTap: () => _queueRow(i),
+            // Same sheet as everywhere else. Guarded on the row existing: the
+            // DisplayItem list is rebuilt alongside the results and a
+            // long-press landing between the two would otherwise open a sheet
+            // on nothing.
+            onLongPress:
+                row == null ? null : () => showTrackActionsSheet(context, row),
+            child: ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
           leading: row?.getAlbumThumb(size: 36),
@@ -505,12 +536,8 @@ class _DiscoverQueueBarState extends State<DiscoverQueueBar>
                       fontSize: 12, color: VelvetColors.textSecondary),
                 ),
           trailing: MatchMeter(similarity: track.similarity),
-          onTap: () => _queueRow(i),
-          // Same sheet as everywhere else. Guarded on the row existing: the
-          // DisplayItem list is rebuilt alongside the results and a long-press
-          // landing between the two would otherwise open a sheet on nothing.
-          onLongPress:
-              row == null ? null : () => showTrackActionsSheet(context, row),
+            ),
+          ),
         );
       },
     );
