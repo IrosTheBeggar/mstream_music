@@ -93,13 +93,25 @@ class ServerManager {
   Future<void> loadServerList() async {
     List serversJson = await readServerManager();
 
+    var droppedEmbedded = false;
     for (var s in serversJson) {
       try {
+        // '__local__' entries were the app-managed embedded server, removed
+        // when serving moved to the standalone mstream-launcher. Drop them on
+        // sight (dev installs only — the flag never shipped); the launcher's
+        // server is added like any other, via Quick Connect or its URL.
+        if (s is Map && s['localname'] == '__local__') {
+          droppedEmbedded = true;
+          continue;
+        }
         serverList.add(Server.fromJson(s));
       } catch (e) {
         // Skip a corrupt entry instead of failing to load every server
         // that comes after it in the file.
       }
+    }
+    if (droppedEmbedded) {
+      unawaited(writeServerFile());
     }
 
     _serverListStream.sink.add(serverList);

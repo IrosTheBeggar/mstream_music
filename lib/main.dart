@@ -37,7 +37,6 @@ import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'desktop/desktop_integration.dart';
-import 'server/server_controller.dart';
 import 'util/app_data_dir.dart';
 import 'util/self_signed_overrides.dart';
 import 'util/startup_view.dart';
@@ -150,14 +149,6 @@ Future<void> _startApp() async {
   // the per-frame offscreen-GL render bridge is still desktop WIP.
   appLog('[projectm] ${ProjectMController.statusLine()}');
 
-  // Built-in mStream server (desktop): launch per the configured trigger
-  // (kServerStartTrigger in server_controller.dart — currently app-start).
-  // Fire-and-forget: ensureReady() may download the binary on first run, so we
-  // don't block first paint; watch ServerController.instance.status for progress.
-  // To start it on first local-folder add instead, flip kServerStartTrigger and
-  // call maybeStartFor(ServerStartTrigger.firstLocalFolder) from that flow.
-  ServerController.instance.maybeStartFor(ServerStartTrigger.appStart);
-
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
   // *inside* the builder, immediately before MaterialApp returns, so the
@@ -234,9 +225,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // True once the persisted server list has been read — before that, an empty
   // list just means "still loading", not "fresh install".
   bool _serversLoaded = false;
-  // Set while we're watching the bundled server to finish booting so we can
-  // retry the startup-view load once it's ready (see _armEmbeddedStartupRetry).
-  VoidCallback? _startupRetryListener;
 
   @override
   void initState() {
@@ -394,16 +382,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // The default-page load failed — reveal the offline placeholder now instead
     // of holding the spinner, so an offline server gives immediate feedback.
     _clearAwaitingSectionLoad();
-    // The bundled server may just be mid-boot (its start is fire-and-forget), so
-    // keep a background retry armed: when it reaches `running` it swaps the real
-    // page in over the placeholder. Skipped once it's errored out, and for any
-    // non-bundled server (a remote offline server just stays on the placeholder).
-    if (_isEmbeddedServer(server) &&
-        ServerController.instance.status.value.phase != ServerRunPhase.error) {
-      appLog('[startup] ${view.name} load failed; watching the bundled server '
-          'to retry once it is ready');
-      _armEmbeddedStartupRetry(view, server);
-    }
   }
 
   // Stop suppressing the home grid so the browser re-renders (the section on
@@ -414,69 +392,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       BrowserManager().awaitingSectionLoad = false;
       BrowserManager().updateStream();
     }
-  }
-
-  // True when [s] is the app's bundled loopback server — the only server the
-  // desktop app auto-starts. Matched on the controller's live port so a user's
-  // own manually-added loopback server on another port isn't mistaken for it.
-  bool _isEmbeddedServer(Server s) {
-    final u = Uri.tryParse(s.url);
-    if (u == null) return false;
-    final loopback =
-        u.host == '127.0.0.1' || u.host == 'localhost' || u.host == '::1';
-    return loopback && u.port == ServerController.instance.port;
-  }
-
-  // Background auto-recovery: the offline placeholder is already showing, so
-  // just watch the bundled server and, once it reaches `running`, retry the
-  // startup-view load to swap the real page in over it. Detaches on the first
-  // terminal transition (running / error); dispose() is the backstop if the boot
-  // wedges and neither ever arrives.
-  void _armEmbeddedStartupRetry(StartupView view, Server server) {
-    final ctl = ServerController.instance;
-    void detach() {
-      if (_startupRetryListener != null) {
-        ctl.status.removeListener(_startupRetryListener!);
-        _startupRetryListener = null;
-      }
-    }
-
-    void onStatus() {
-      switch (ctl.status.value.phase) {
-        case ServerRunPhase.running:
-          detach();
-          appLog('[startup] bundled server ready — retrying ${view.name} load');
-          unawaited(_retryStartupSection(view, server));
-          break;
-        case ServerRunPhase.error:
-          detach(); // boot failed — leave the placeholder up
-          break;
-        case ServerRunPhase.stopped:
-        case ServerRunPhase.preparing:
-        case ServerRunPhase.starting:
-          break; // still coming up — keep watching
-      }
-    }
-
-    detach(); // drop any prior watcher before arming a fresh one
-    _startupRetryListener = onStatus;
-    ctl.status.addListener(onStatus);
-    onStatus(); // it may already be running/errored
-  }
-
-  Future<void> _retryStartupSection(StartupView view, Server server) async {
-    if (!mounted) return;
-    // Bail if the user moved on during the wait — switched servers, or opened a
-    // section / folder (browserCache grew past the home menu). No flag work in
-    // either path: the launch flow already cleared awaitingSectionLoad before
-    // arming this watcher (the placeholder shows while we wait), and if the
-    // user is mid-switch the switch flow owns the flag — clearing it here
-    // would drop their spinner early.
-    if (!identical(ServerManager().currentServer, server) ||
-        BrowserManager().browserCache.length > 1) {
-      return;
-    }
-    await loadStartupSection(view, server);
   }
 
   @override
@@ -515,9 +430,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
     _serverListSub?.cancel();
-    if (_startupRetryListener != null) {
-      ServerController.instance.status.removeListener(_startupRetryListener!);
-    }
     DownloadManager().dispose();
     super.dispose();
   }
