@@ -242,7 +242,8 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
   Widget _accentPage(AppLocalizations l) {
     final current = SettingsManager().accentColor;
     // What reverting looks like: the active theme's own primary.
-    final themeDefault = paletteFor(SettingsManager().appTheme).primary;
+    final themeDefault =
+        paletteFor(SettingsManager().effectiveAppTheme).primary;
 
     void pick(int? argb) {
       // setAccentColor re-emits the accent stream, which rebuilds MaterialApp
