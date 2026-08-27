@@ -1993,6 +1993,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get torrentMagnetLabel => 'マグネットリンク';
 
   @override
+  String get torrentMagnetInvalid => '有効なマグネットリンクではありません';
+
+  @override
   String get torrentAutoDetect => 'メタデータを自動検出';
 
   @override

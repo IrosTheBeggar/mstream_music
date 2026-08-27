@@ -107,6 +107,11 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     }
   }
 
+  /// The rest of the form only means something once there is a torrent to
+  /// place, so it stays hidden until one of the two sources is real: a
+  /// picked file, or a magnet we can pull an infohash out of.
+  bool get _hasSource => _fileBytes != null || isValidMagnetLink(_magnet.text);
+
   bool get _featureOk =>
       _pre != null &&
       _pre!['active'] == true &&
@@ -488,37 +493,44 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                       )
                     else ...[
                       if (!_featureOk) _reasonBanner(l),
-                      _label(l.torrentLibraryLabel),
-                      _vpathDropdown(l),
-                      const SizedBox(height: 16),
+                      // A lone library is not a choice. Zero libraries still
+                      // renders, since the "no libraries" line is the
+                      // explanation for the dead form below it.
+                      if (_vpaths.length != 1) ...[
+                        _label(l.torrentLibraryLabel),
+                        _vpathDropdown(l),
+                        const SizedBox(height: 16),
+                      ],
                       _label(l.torrentSourceLabel),
                       _fileButton(l),
                       const SizedBox(height: 10),
                       _orDivider(l),
                       const SizedBox(height: 10),
                       _magnetField(l),
-                      if (_fileBytes != null) ...[
+                      if (_hasSource) ...[
+                        if (_fileBytes != null) ...[
+                          const SizedBox(height: 10),
+                          _autoDetectButton(l),
+                        ],
+                        const SizedBox(height: 16),
+                        _label(l.torrentMetadataLabel),
+                        _metaField(_artist, l.torrentArtistLabel),
                         const SizedBox(height: 10),
-                        _autoDetectButton(l),
+                        _metaField(_album, l.torrentAlbumLabel),
+                        const SizedBox(height: 10),
+                        _metaField(_year, l.torrentYearLabel,
+                            keyboard: TextInputType.number),
+                        const SizedBox(height: 16),
+                        _label(l.torrentDestinationLabel),
+                        _pathField(l),
+                        const SizedBox(height: 6),
+                        _preview(l),
+                        const SizedBox(height: 8),
+                        _renameToggle(l),
+                        if (_fileBytes != null) _forceFreshToggle(l),
+                        const SizedBox(height: 22),
+                        _submitButton(l),
                       ],
-                      const SizedBox(height: 16),
-                      _label(l.torrentMetadataLabel),
-                      _metaField(_artist, l.torrentArtistLabel),
-                      const SizedBox(height: 10),
-                      _metaField(_album, l.torrentAlbumLabel),
-                      const SizedBox(height: 10),
-                      _metaField(_year, l.torrentYearLabel,
-                          keyboard: TextInputType.number),
-                      const SizedBox(height: 16),
-                      _label(l.torrentDestinationLabel),
-                      _pathField(l),
-                      const SizedBox(height: 6),
-                      _preview(l),
-                      const SizedBox(height: 8),
-                      _renameToggle(l),
-                      if (_fileBytes != null) _forceFreshToggle(l),
-                      const SizedBox(height: 22),
-                      _submitButton(l),
                     ],
                   ],
                 ),
@@ -617,17 +629,25 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         Expanded(child: Divider(color: VelvetColors.border)),
       ]);
 
-  Widget _magnetField(AppLocalizations l) => TextField(
-        controller: _magnet,
-        autocorrect: false,
-        onChanged: (_) => _onMagnetChanged(),
-        style: TextStyle(color: VelvetColors.textPrimary),
-        decoration: InputDecoration(
-          labelText: l.torrentMagnetLabel,
-          hintText: 'magnet:?xt=urn:btih:…',
-          prefixIcon: Icon(Icons.link, color: VelvetColors.textSecondary),
-        ),
-      );
+  Widget _magnetField(AppLocalizations l) {
+    final typed = _magnet.text.trim();
+    return TextField(
+      controller: _magnet,
+      autocorrect: false,
+      onChanged: (_) => _onMagnetChanged(),
+      style: TextStyle(color: VelvetColors.textPrimary),
+      decoration: InputDecoration(
+        labelText: l.torrentMagnetLabel,
+        hintText: 'magnet:?xt=urn:btih:…',
+        prefixIcon: Icon(Icons.link, color: VelvetColors.textSecondary),
+        // Without this a typo just leaves the form hidden, which reads as
+        // a dead screen.
+        errorText: (typed.isNotEmpty && !isValidMagnetLink(typed))
+            ? l.torrentMagnetInvalid
+            : null,
+      ),
+    );
+  }
 
   Widget _autoDetectButton(AppLocalizations l) => OutlinedButton.icon(
         style: OutlinedButton.styleFrom(

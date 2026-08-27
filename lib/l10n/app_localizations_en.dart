@@ -2058,6 +2058,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get torrentMagnetLabel => 'Magnet link';
 
   @override
+  String get torrentMagnetInvalid => 'Not a valid magnet link';
+
+  @override
   String get torrentAutoDetect => 'Auto-detect metadata';
 
   @override

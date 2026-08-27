@@ -514,6 +514,7 @@
   "torrentChooseFile": "Elegir archivo .torrent",
   "torrentOr": "o",
   "torrentMagnetLabel": "Enlace magnet",
+  "torrentMagnetInvalid": "Enlace magnet no válido",
   "torrentAutoDetect": "Detectar metadatos",
   "torrentDetecting": "Detectando…",
   "torrentDetectNoMetadata": "Metadatos insuficientes — rellena los campos a mano",

@@ -52,6 +52,34 @@ String extractTorrentName(List<int> bytes) {
   return '';
 }
 
+/// A BitTorrent "exact topic": a v1 infohash (40 hex / 32 base32) or a
+/// v2 multihash. Anything else in an `xt` is a topic we can't add.
+bool _isInfoHashTopic(String xt) =>
+    RegExp(r'^urn:btih:([0-9a-f]{40}|[a-z2-7]{32})$', caseSensitive: false)
+        .hasMatch(xt) ||
+    RegExp(r'^urn:btmh:1220[0-9a-f]{64}$', caseSensitive: false).hasMatch(xt);
+
+/// True when [value] is a magnet link the server could actually act on:
+/// the scheme plus at least one `xt` naming an infohash. Trackers, `dn`
+/// and the rest are optional. Used to gate the form on a usable source,
+/// so a half-typed link doesn't look like a complete one.
+bool isValidMagnetLink(String value) {
+  final v = value.trim();
+  if (!v.toLowerCase().startsWith('magnet:?')) return false;
+  final Uri uri;
+  try {
+    uri = Uri.parse(v);
+  } catch (_) {
+    return false;
+  }
+  // A magnet may carry several topics ('xt', 'xt.1', 'xt.2'...); one
+  // usable infohash among them is enough.
+  return uri.queryParametersAll.entries
+      .where((e) => e.key == 'xt' || e.key.startsWith('xt.'))
+      .expand((e) => e.value)
+      .any(_isInfoHashTopic);
+}
+
 /// Metadata parsed from a torrent name. [confidence] is 'high'|'low'|'none'.
 class TorrentMeta {
   final String artist;

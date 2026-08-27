@@ -107,6 +107,83 @@ void main() {
     });
   });
 
+  group('isValidMagnetLink', () {
+    const v1Hex =
+        'magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567';
+
+    test('v1 hex infohash', () {
+      expect(isValidMagnetLink(v1Hex), isTrue);
+    });
+
+    test('uppercase hex and scheme', () {
+      expect(
+          isValidMagnetLink(
+              'MAGNET:?xt=urn:btih:0123456789ABCDEF0123456789ABCDEF01234567'),
+          isTrue);
+    });
+
+    test('v1 base32 infohash', () {
+      expect(
+          isValidMagnetLink(
+              'magnet:?xt=urn:btih:ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'),
+          isTrue);
+    });
+
+    test('v2 multihash', () {
+      expect(
+          isValidMagnetLink('magnet:?xt=urn:btmh:1220'
+              '${'ab' * 32}'),
+          isTrue);
+    });
+
+    test('extra params and surrounding whitespace are fine', () {
+      expect(
+          isValidMagnetLink(
+              '  $v1Hex&dn=Pink+Floyd&tr=udp%3A%2F%2Ftracker.example%3A80  '),
+          isTrue);
+    });
+
+    test('hybrid magnet: xt.1 / xt.2', () {
+      expect(
+          isValidMagnetLink('magnet:?xt.1=urn:btih:'
+              '0123456789abcdef0123456789abcdef01234567'
+              '&xt.2=urn:btmh:1220${'ab' * 32}'),
+          isTrue);
+    });
+
+    test('empty and non-magnet text', () {
+      expect(isValidMagnetLink(''), isFalse);
+      expect(isValidMagnetLink('   '), isFalse);
+      expect(isValidMagnetLink('https://example.com/x.torrent'), isFalse);
+      expect(isValidMagnetLink('Pink Floyd - The Wall'), isFalse);
+    });
+
+    test('scheme without a topic', () {
+      expect(isValidMagnetLink('magnet:?'), isFalse);
+      expect(isValidMagnetLink('magnet:?dn=Pink+Floyd'), isFalse);
+    });
+
+    test('truncated or malformed infohash', () {
+      expect(isValidMagnetLink('magnet:?xt=urn:btih:0123456789abcdef'), isFalse);
+      expect(
+          isValidMagnetLink(
+              'magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef012345678'),
+          isFalse);
+      // 'z' is outside both hex and base32.
+      expect(
+          isValidMagnetLink(
+              'magnet:?xt=urn:btih:z123456789abcdef0123456789abcdef01234567'),
+          isFalse);
+    });
+
+    test('a topic that is not a BitTorrent infohash', () {
+      expect(
+          isValidMagnetLink('magnet:?xt=urn:sha1:'
+              'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567&dn=x'),
+          isFalse);
+    });
+  });
+
   group('sanitizeTorrentSegment', () {
     test('replaces path separators', () {
       expect(sanitizeTorrentSegment('AC/DC'), 'AC-DC');

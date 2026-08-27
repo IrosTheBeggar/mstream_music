@@ -514,6 +514,7 @@
   "torrentChooseFile": "Выбрать файл .torrent",
   "torrentOr": "или",
   "torrentMagnetLabel": "Magnet-ссылка",
+  "torrentMagnetInvalid": "Недействительная magnet-ссылка",
   "torrentAutoDetect": "Определить метаданные",
   "torrentDetecting": "Определение…",
   "torrentDetectNoMetadata": "Недостаточно метаданных — заполните поля вручную",

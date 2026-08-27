@@ -3618,6 +3618,12 @@ abstract class AppLocalizations {
   /// **'Magnet link'**
   String get torrentMagnetLabel;
 
+  /// Error under the magnet field when the pasted text is not a usable magnet link.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a valid magnet link'**
+  String get torrentMagnetInvalid;
+
   /// Button asking the server to detect artist/album/year from the .torrent.
   ///
   /// In en, this message translates to:

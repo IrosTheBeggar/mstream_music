@@ -1951,6 +1951,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentMagnetLabel => '磁力链接';
 
   @override
+  String get torrentMagnetInvalid => '磁力链接无效';
+
+  @override
   String get torrentAutoDetect => '自动检测元数据';
 
   @override

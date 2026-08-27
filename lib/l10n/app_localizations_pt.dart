@@ -2076,6 +2076,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get torrentMagnetLabel => 'Link magnet';
 
   @override
+  String get torrentMagnetInvalid => 'Link magnet inválido';
+
+  @override
   String get torrentAutoDetect => 'Detectar metadados';
 
   @override
