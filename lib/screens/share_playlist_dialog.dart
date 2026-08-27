@@ -10,7 +10,7 @@
 // expressed as a single share. We surface a clear blocker dialog
 // rather than silently dropping items.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';

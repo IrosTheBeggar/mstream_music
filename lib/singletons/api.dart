@@ -13,7 +13,7 @@ import 'media.dart';
 import '../util/media_format.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 

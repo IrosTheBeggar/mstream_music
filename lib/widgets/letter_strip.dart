@@ -23,7 +23,7 @@
 // scroll offset, so the same strip works above a ListView, a
 // GridView, or anything else with a ScrollController.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../objects/display_item.dart';

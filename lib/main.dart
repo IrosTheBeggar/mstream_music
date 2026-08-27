@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show HttpOverrides;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:permission_handler/permission_handler.dart';
