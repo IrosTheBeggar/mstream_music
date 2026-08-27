@@ -85,6 +85,7 @@ dependencies:
   # model (built by rust/viz_decoder/build-ios.sh).
   viz_decoder_native:
     path: packages/viz_decoder_native
+  material_ui: ^1.1.0
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
@@ -92,6 +93,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
+  fake_async: any
 flutter_icons:
   android: true
   ios: true

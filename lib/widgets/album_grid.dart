@@ -6,7 +6,7 @@
 // to a passed-in handler so the same Browser navigation logic still
 // drives drilldown.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../objects/display_item.dart';
 import '../theme/velvet_theme.dart';

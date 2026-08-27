@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Global ScaffoldMessenger key so context-less singletons (e.g.
 // DownloadManager) can surface SnackBars. Wired into

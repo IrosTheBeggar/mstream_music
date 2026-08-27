@@ -1,7 +1,7 @@
 // Shared media-UI helpers, de-duplicated from player_panel / queue_list /
 // more_actions_sheet (each used to carry its own near-identical copy).
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/velvet_theme.dart';
 

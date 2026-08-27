@@ -10,7 +10,7 @@
 // MaterialApp rebuilds (see main.dart's StreamBuilder wrapping).
 // Existing callers (e.g. `VelvetColors.bg`) work unchanged.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 enum AppTheme {
   velvet,
