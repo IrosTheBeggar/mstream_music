@@ -254,7 +254,7 @@ class LocalMediaServer {
       final seg = req.uri.pathSegments;
       final token = seg.isEmpty ? null : seg.first;
       if (token != null && _proxies.containsKey(token)) {
-        return _proxyRequest(req, _proxies[token]!);
+        return await _proxyRequest(req, _proxies[token]!);
       }
       String? path;
       String? contentType;
@@ -270,9 +270,9 @@ class LocalMediaServer {
           }
         }
       }
-      if (path == null) return _notFound(res);
+      if (path == null) return await _notFound(res);
       final file = File(path);
-      if (!await file.exists()) return _notFound(res);
+      if (!await file.exists()) return await _notFound(res);
 
       final length = await file.length();
       res.headers
