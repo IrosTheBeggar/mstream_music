@@ -34,7 +34,12 @@ dependencies:
   audio_service: ^0.18.18
   just_audio: ^0.10.3
   flutter_slidable: ^4.0.3
-  background_downloader: ^9.4.4
+  # Pinned: 9.5.8 fails :background_downloader:compileDebugKotlin under the
+  # transitional android.builtInKotlin=false toolchain — its build.gradle tries
+  # to re-apply legacy KGP for that case but checks hasProperty('builtInKotlin')
+  # (missing the android. prefix), so the branch never fires. 9.5.5 is the last
+  # version verified to build here; unpin once upstream fixes the property check.
+  background_downloader: 9.5.5
   flutter_launcher_icons: ^0.14.2
   permission_handler: ^12.0.1
   url_launcher: ^6.3.1
