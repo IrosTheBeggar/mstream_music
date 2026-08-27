@@ -216,6 +216,18 @@ abstract class AppLocalizations {
   /// **'Light'**
   String get themeLight;
 
+  /// No description provided for @themeGraphite.
+  ///
+  /// In en, this message translates to:
+  /// **'Graphite'**
+  String get themeGraphite;
+
+  /// No description provided for @themeOnyx.
+  ///
+  /// In en, this message translates to:
+  /// **'Onyx'**
+  String get themeOnyx;
+
   /// TapBehavior option: append to queue.
   ///
   /// In en, this message translates to:
@@ -419,6 +431,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Light body with a dark app bar and amber accents — matches the older shipped theme.'**
   String get themeSubtitleLight;
+
+  /// No description provided for @themeSubtitleGraphite.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral grays with an amber accent line.'**
+  String get themeSubtitleGraphite;
+
+  /// No description provided for @themeSubtitleOnyx.
+  ///
+  /// In en, this message translates to:
+  /// **'Slate\'s blue-grays under a black top bar, with an amber accent line.'**
+  String get themeSubtitleOnyx;
 
   /// Transcode toggle row.
   ///
@@ -1925,6 +1949,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matches for \"{query}\"'**
   String browserNoMatches(String query);
+
+  /// Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured).
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get browserEmptyList;
 
   /// No description provided for @clear.
   ///

@@ -73,6 +73,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeLight => 'Light';
 
   @override
+  String get themeGraphite => 'Graphite';
+
+  @override
+  String get themeOnyx => 'Onyx';
+
+  @override
   String get tapAddToQueue => 'Add to queue';
 
   @override
@@ -181,6 +187,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Light body with a dark app bar and amber accents — matches the older shipped theme.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Neutral grays with an amber accent line.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Slate\'s blue-grays under a black top bar, with an amber accent line.';
 
   @override
   String get settingsTranscode => 'Transcode audio';
@@ -1080,6 +1094,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String browserNoMatches(String query) {
     return 'No matches for \"$query\"';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'Clear';

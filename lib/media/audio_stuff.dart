@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File;
+import 'dart:io' show File, Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -14,6 +14,7 @@ import 'playback_backend.dart';
 import 'local_playback_backend.dart';
 import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
+import 'desktop_chromecast_backend.dart';
 import 'local_media_server.dart';
 import 'auto_browse.dart';
 import 'cast_log.dart';
@@ -627,9 +628,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     } else if (target.kind == CastTargetKind.dlna) {
       next = DlnaPlaybackBackend(udn: target.id);
     } else if (target.kind == CastTargetKind.chromecast) {
-      // visualizer = stream the on-device visualizer (video) instead of audio.
-      next = ChromecastPlaybackBackend(
-          deviceId: target.id, visualizer: visualizer);
+      // Native Google Cast SDK on Android/iOS; pure-Dart CASTV2 on desktop.
+      // (visualizer = stream the on-device visualizer video — Android only.)
+      next = (Platform.isAndroid || Platform.isIOS)
+          ? ChromecastPlaybackBackend(
+              deviceId: target.id, visualizer: visualizer)
+          : DesktopChromecastPlaybackBackend(deviceId: target.id);
     } else {
       return;
     }
@@ -1740,6 +1744,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   // early and turn the stop's own idle into a bogus 'error' broadcast.
   bool _intentionalStop = false;
 
+  /// Set output volume (0.0–1.0) on the active backend. Used by the desktop
+  /// Now Playing bar's volume slider; the phone UI relies on hardware volume.
+  Future<void> setVolume(double volume) => _backend.setVolume(volume);
+
   @override
   Future<void> stop() async {
     appLog('[play] stop');
@@ -1904,7 +1912,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     _restoreSpot = null; // row indices shift — a parked index would lie
     if (plan.keep.isEmpty) {
       // The whole queue belonged to it: same teardown as clearPlaylist,
-      // including dropping the now-playing metadata.
+      // including dropping the now-playing metadata and the top-of-queue
+      // park (see _doClearPlaylist for why the park exists).
+      _restoreSpot = (index: 0, position: Duration.zero);
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
@@ -1940,7 +1950,13 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> _doClearPlaylist() async {
     appLog('[queue] cleared');
-    _restoreSpot = null; // the queue the spot described is gone
+    // Park the revive spot at top-of-queue rather than just dropping it:
+    // the deactivated just_audio platform keeps the LAST loaded index and
+    // position through the clear, so a play() on tracks added to the
+    // emptied queue would re-seed at that stale spot — clamped to the END
+    // of the new queue ("add all starts on the last song"). The park is
+    // superseded by user navigation and cleared once a track loads.
+    _restoreSpot = (index: 0, position: Duration.zero);
     _intentionalStop = true;
     await _backend.stop();
     await super.stop();

@@ -73,6 +73,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get themeLight => 'Claro';
 
   @override
+  String get themeGraphite => 'Grafite';
+
+  @override
+  String get themeOnyx => 'Ônix';
+
+  @override
   String get tapAddToQueue => 'Adicionar à fila';
 
   @override
@@ -181,6 +187,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Corpo claro com barra superior escura e detalhes em âmbar — combina com o tema antigo.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Cinzas neutros com uma linha de destaque âmbar.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Os cinza-azulados de Ardósia sob uma barra superior preta, com uma linha de destaque âmbar.';
 
   @override
   String get settingsTranscode => 'Transcodificar áudio';
@@ -1089,6 +1103,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String browserNoMatches(String query) {
     return 'Nenhum resultado para \"$query\"';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'Limpar';

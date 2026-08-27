@@ -75,6 +75,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeLight => 'Светлая';
 
   @override
+  String get themeGraphite => 'Графит';
+
+  @override
+  String get themeOnyx => 'Оникс';
+
+  @override
   String get tapAddToQueue => 'Добавить в очередь';
 
   @override
@@ -183,6 +189,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Светлый фон с тёмной панелью приложения и янтарными акцентами — совпадает с прежней темой.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Нейтральные серые тона с янтарной акцентной линией.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Сине-серые тона Сланца под чёрной верхней панелью с янтарной акцентной линией.';
 
   @override
   String get settingsTranscode => 'Перекодировать звук';
@@ -1111,6 +1125,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String browserNoMatches(String query) {
     return 'Нет совпадений по запросу «$query»';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'Очистить';

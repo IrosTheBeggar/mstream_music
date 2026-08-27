@@ -75,6 +75,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get themeLight => 'Jasny';
 
   @override
+  String get themeGraphite => 'Grafit';
+
+  @override
+  String get themeOnyx => 'Onyks';
+
+  @override
   String get tapAddToQueue => 'Dodaj do kolejki';
 
   @override
@@ -183,6 +189,14 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Jasne tło z ciemnym paskiem aplikacji i bursztynowymi akcentami — zgodny ze starszym, fabrycznym motywem.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Neutralne szarości z bursztynową linią akcentową.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Niebiesko-szare odcienie Łupka pod czarnym górnym paskiem, z bursztynową linią akcentową.';
 
   @override
   String get settingsTranscode => 'Transkoduj dźwięk';
@@ -1107,6 +1121,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String browserNoMatches(String query) {
     return 'Brak wyników dla „$query”';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'Wyczyść';

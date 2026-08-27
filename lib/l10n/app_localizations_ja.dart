@@ -71,6 +71,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get themeLight => 'ライト';
 
   @override
+  String get themeGraphite => 'グラファイト';
+
+  @override
+  String get themeOnyx => 'オニキス';
+
+  @override
   String get tapAddToQueue => 'キューに追加';
 
   @override
@@ -177,6 +183,12 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       '明るい本体にダークなアプリバーとアンバーのアクセント — 以前のテーマに合わせています。';
+
+  @override
+  String get themeSubtitleGraphite => 'ニュートラルなグレーにアンバーのアクセントライン。';
+
+  @override
+  String get themeSubtitleOnyx => 'スレートのブルーグレーに黒いトップバー、アンバーのアクセントライン。';
 
   @override
   String get settingsTranscode => '音声をトランスコード';
@@ -1053,6 +1065,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String browserNoMatches(String query) {
     return '「$query」に一致するものはありません';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'クリア';

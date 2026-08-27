@@ -48,9 +48,14 @@ class AlbumGrid extends StatelessWidget {
   /// tiles laid out under it are half-hidden, and the letter-jump offset is
   /// derived from row height, which moves as soon as the usable width does.
   /// Threading it through all three keeps the two in agreement.
+  ///
+  /// Phones keep their 2/3 columns; wider panes scale by a ~240px target tile
+  /// so album cards don't balloon on a desktop window.
   static int columnsFor(double width, [double gutter = 0]) {
     final w = width - gutter;
-    return w > 600 ? 4 : (w > 400 ? 3 : 2);
+    if (w <= 400) return 2;
+    if (w <= 600) return 3;
+    return (w ~/ 240).clamp(4, 12);
   }
 
   static double itemWidthFor(double width, [double gutter = 0]) {
@@ -87,7 +92,7 @@ class AlbumGrid extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (context, i) {
           final item = items[i];
-          return _AlbumCard(
+          return AlbumCard(
             item: item,
             onTap: () => onTap(i),
             cacheWidth: cacheW,
@@ -98,23 +103,56 @@ class AlbumGrid extends StatelessWidget {
   }
 }
 
-class _AlbumCard extends StatelessWidget {
+/// One album/artist tile: cover art (or placeholder) over a name line, with
+/// the desktop hover lift. Public so surfaces beyond the grid — the desktop
+/// search page's horizontal shelves — render identical cards.
+class AlbumCard extends StatefulWidget {
   final DisplayItem item;
   final VoidCallback onTap;
   final int cacheWidth;
 
-  const _AlbumCard(
-      {required this.item, required this.onTap, required this.cacheWidth});
+  const AlbumCard({
+    super.key,
+    required this.item,
+    required this.onTap,
+    required this.cacheWidth,
+  });
+
+  @override
+  State<AlbumCard> createState() => _AlbumCardState();
+}
+
+class _AlbumCardState extends State<AlbumCard> {
+  // Pointer hover (desktop): lift the card and brighten its surface. Inert on
+  // touch, so the phone grid is unchanged.
+  bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
     final image = _buildArt();
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: _hover ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: _card(image),
+      ),
+    );
+  }
+
+  Widget _card(Widget image) {
     return Material(
-      color: VelvetColors.card,
+      color: _hover ? VelvetColors.raised : VelvetColors.card,
+      // A little resting depth so cards read as cards on the dark bg; hover
+      // lifts further.
+      elevation: _hover ? 8 : 2,
+      shadowColor: Colors.black54,
       borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         splashColor: VelvetColors.primaryDim,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,34 +169,35 @@ class _AlbumCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(8, 6, 8, 8),
+                padding: EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
                       child: Text(
-                        item.name,
+                        widget.item.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: VelvetColors.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ),
-                    if (item.subtext != null && item.subtext!.isNotEmpty)
+                    if (widget.item.subtext != null &&
+                        widget.item.subtext!.isNotEmpty)
                       Flexible(
                         child: Padding(
-                          padding: EdgeInsets.only(top: 1),
+                          padding: EdgeInsets.only(top: 2),
                           child: Text(
-                            item.subtext!,
+                            widget.item.subtext!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: VelvetColors.textSecondary,
-                              fontSize: 10,
+                              fontSize: 11,
                             ),
                           ),
                         ),
@@ -174,13 +213,13 @@ class _AlbumCard extends StatelessWidget {
   }
 
   Widget _buildArt() {
-    final aaFile = item.altAlbumArt ?? item.metadata?.albumArt;
-    if (item.server != null && aaFile != null) {
-      final url = buildAlbumArtUrl(item.server!, aaFile, compress: 'm');
+    final aaFile = widget.item.altAlbumArt ?? widget.item.metadata?.albumArt;
+    if (widget.item.server != null && aaFile != null) {
+      final url = buildAlbumArtUrl(widget.item.server!, aaFile, compress: 'm');
       return Image.network(
         url,
         fit: BoxFit.cover,
-        cacheWidth: cacheWidth,
+        cacheWidth: widget.cacheWidth,
         errorBuilder: (_, _, _) => _NoArtPlaceholder(),
         loadingBuilder: (_, child, prog) => prog == null
             ? child
@@ -192,8 +231,7 @@ class _AlbumCard extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation(VelvetColors.primary),
+                      valueColor: AlwaysStoppedAnimation(VelvetColors.primary),
                     ),
                   ),
                 ),
@@ -239,14 +277,20 @@ class _WaveBarsPainter extends CustomPainter {
     final n = _heights.length;
     final gap = size.width * 0.04;
     final w = (size.width - gap * (n - 1)) / n;
-    final paint = Paint()..color = VelvetColors.textSecondary.withValues(alpha: 0.55);
+    final paint = Paint()
+      ..color = VelvetColors.textSecondary.withValues(alpha: 0.55);
     for (int i = 0; i < n; i++) {
       final h = _heights[i] * size.height;
       final left = i * (w + gap);
       final cy = size.height / 2;
       canvas.drawRRect(
-        RRect.fromLTRBR(left, cy - h / 2, left + w, cy + h / 2,
-            Radius.circular(w / 3)),
+        RRect.fromLTRBR(
+          left,
+          cy - h / 2,
+          left + w,
+          cy + h / 2,
+          Radius.circular(w / 3),
+        ),
         paint,
       );
     }

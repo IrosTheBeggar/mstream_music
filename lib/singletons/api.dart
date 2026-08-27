@@ -18,7 +18,39 @@ import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'dart:convert';
+import 'dart:io' show HttpClient;
+
+/// Structured results of a server-wide search — one DisplayItem list per
+/// category, built by ApiManager._mapSearchResponse with the exact
+/// conventions of the classic flat search. The desktop search page renders
+/// these sectioned; [flatten] reproduces the classic single-list order
+/// (artists, albums, titles, files, lyrics).
+class ServerSearchResults {
+  final List<DisplayItem> artists;
+  final List<DisplayItem> albums;
+  final List<DisplayItem> titles;
+  final List<DisplayItem> files;
+  final List<DisplayItem> lyrics;
+
+  const ServerSearchResults(
+      {required this.artists,
+      required this.albums,
+      required this.titles,
+      required this.files,
+      required this.lyrics});
+
+  bool get isEmpty =>
+      artists.isEmpty &&
+      albums.isEmpty &&
+      titles.isEmpty &&
+      files.isEmpty &&
+      lyrics.isEmpty;
+
+  List<DisplayItem> flatten() =>
+      [...artists, ...albums, ...titles, ...files, ...lyrics];
+}
 
 class ApiManager {
   ApiManager._privateConstructor();
@@ -127,7 +159,16 @@ class ApiManager {
     // just run to completion. The finally balances the in-flight set and closes
     // the client on every path (throw / HTTP error / cancel) so a socket is
     // never leaked.
-    final client = http.Client();
+    //
+    // The TCP connect is bounded (an offline/unreachable server — powered-off
+    // box, dropped SYNs — otherwise waits out the OS timeout, 20s+), so a dead
+    // server fails fast and the browser can show its offline state promptly:
+    // at startup that's the difference between the error page appearing in
+    // seconds and a long bare spinner. Only the CONNECT is bounded — slow
+    // responses on a live connection are unaffected. HttpClient() picks up
+    // HttpOverrides.global, so the self-signed-cert override still applies.
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
     final int loadToken = BrowserManager()
         .beginLoading(onCancel: cancelable ? client.close : null);
     try {
@@ -337,63 +378,118 @@ class ApiManager {
     BrowserManager().removeAll(playlistId, useThisServer!, 'playlist');
   }
 
+  /// Classic search: one flat list pushed onto the browse stack (mobile and
+  /// the browser toolbar's field). Request goes through makeServerCall so the
+  /// browse loading bar and auth handling behave exactly as before; the
+  /// category mapping is shared with [searchServerRaw] via
+  /// [_mapSearchResponse].
   Future<void> searchServer(String search) async {
     try {
-      // The user's ticked search categories map 1:1 onto the endpoint's five
-      // `no*` flags — the server only does the work that's asked. The default
-      // set (artists+albums+songs) reproduces mStream's classic search.
-      final cats = SettingsManager().searchCategories;
-      // noLyrics is the only one of the five worth gating: the other four
-      // date to 4.7.0, below the support floor, so no server we still talk to
-      // can reject them. noLyrics arrived at 6.13.1, and one unknown key 400s
-      // the whole search — losing artists and albums too, over a category the
-      // server cannot do either way. Dropping it just lets the server apply
-      // its default, which on those versions is "no lyrics search exists".
-      //
-      // Pre-filter only, no learn-and-retry: makeServerCall discards the
-      // response body on an error, so there is nothing here to read the
-      // rejected key out of. Widening that shared error contract is a bigger
-      // change than this one parameter justifies.
-      final server = ServerManager().currentServer;
-      final searchPayload = <String, dynamic>{
-        'search': search,
-        'noArtists': !cats.contains(SearchCategory.artists),
-        'noAlbums': !cats.contains(SearchCategory.albums),
-        'noTitles': !cats.contains(SearchCategory.songs),
-        'noFiles': !cats.contains(SearchCategory.files),
-        'noLyrics': !cats.contains(SearchCategory.lyrics),
-      };
-      final searchBody = server == null
-          ? searchPayload
-          : ServerCapabilities().filter(server, searchPayload).body;
-      var res =
-          await makeServerCall(null, '/api/v1/db/search', searchBody, 'POST');
-
+      var res = await makeServerCall(null, '/api/v1/db/search',
+          _searchBody(search, SettingsManager().searchCategories,
+              server: ServerManager().currentServer),
+          'POST');
+      final results =
+          _mapSearchResponse(res, ServerManager().currentServer);
       BrowserManager().setBrowserLabel('Search');
-      List<DisplayItem> newList = [];
-      res['artists'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'artist',
-            e['name'],
-            Icon(Icons.library_music, color: VelvetColors.textSecondary),
-            'artist');
-        newItem.altAlbumArt = e['album_art_file'];
-        newList.add(newItem);
-      });
+      // Stash the query on the frame so the results view shows a "Results for
+      // …" subheader (and it reverts on back-nav, like the file-explorer path).
+      BrowserManager().addListToStack(results.flatten(), searchTerm: search);
+    } catch (err) {
+      appLog('[api] searchServer failed: $err');
+    }
+  }
 
-      res['albums'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'album',
-            e['name'],
-            Icon(Icons.library_music, color: VelvetColors.textSecondary),
-            'album');
-        newItem.altAlbumArt = e['album_art_file'];
-        newList.add(newItem);
-      });
+  /// Side-effect-free search: returns structured per-category results and
+  /// touches NO browse state — the desktop search page renders these in
+  /// place. Quiet client (not makeServerCall) so the browse loading bar
+  /// doesn't flash for a fetch the browser never sees. Null on any failure.
+  Future<ServerSearchResults?> searchServerRaw(String search,
+      {Set<SearchCategory>? categories}) async {
+    final server = ServerManager().currentServer;
+    if (server == null) return null;
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
+    try {
+      final res = await client
+          .post(server.apiUri('/api/v1/db/search'),
+              headers: {
+                'x-access-token': server.jwt ?? '',
+                'Content-Type': 'application/json',
+              },
+              body: json.encode(_searchBody(
+                  search, categories ?? SettingsManager().searchCategories,
+                  server: server)))
+          .timeout(const Duration(seconds: 20));
+      if (res.statusCode != 200) return null;
+      return _mapSearchResponse(json.decode(res.body), server);
+    } catch (e) {
+      appLog('[api] searchServerRaw failed: $e');
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
+  // The user's ticked search categories map 1:1 onto the endpoint's five
+  // `no*` flags — the server only does the work that's asked. The default
+  // set (artists+albums+songs) reproduces mStream's classic search.
+  Map<String, dynamic> _searchBody(String search, Set<SearchCategory> cats,
+      {Server? server}) {
+    // The ticked categories map 1:1 onto the endpoint's five `no*` flags — the
+    // server only does the work that's asked. noLyrics is the only one worth
+    // capability-gating: the other four date to 4.7.0, below the support
+    // floor, while noLyrics arrived at 6.13.1 and one unknown key 400s the
+    // whole search. ServerCapabilities drops it for servers that predate it,
+    // letting the server apply its own default. Pre-filter only, no
+    // learn-and-retry: makeServerCall discards error bodies, so there is
+    // nothing to read a rejected key out of.
+    final payload = <String, dynamic>{
+      'search': search,
+      'noArtists': !cats.contains(SearchCategory.artists),
+      'noAlbums': !cats.contains(SearchCategory.albums),
+      'noTitles': !cats.contains(SearchCategory.songs),
+      'noFiles': !cats.contains(SearchCategory.files),
+      'noLyrics': !cats.contains(SearchCategory.lyrics),
+    };
+    return server == null
+        ? payload
+        : ServerCapabilities().filter(server, payload).body;
+  }
+
+  /// One search response → per-category DisplayItem lists, with the same
+  /// conventions the flat list always used (types artist/album/file, lite
+  /// metadata attached + flagged partial, lyric snippets as subtext).
+  ServerSearchResults _mapSearchResponse(dynamic res, Server? server) {
+    final artists = <DisplayItem>[];
+    final albums = <DisplayItem>[];
+    final titles = <DisplayItem>[];
+    final files = <DisplayItem>[];
+    final lyrics = <DisplayItem>[];
+
+    res['artists'].forEach((e) {
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'artist',
+          e['name'],
+          Icon(Icons.library_music, color: VelvetColors.textSecondary),
+          'artist');
+      newItem.altAlbumArt = e['album_art_file'];
+      artists.add(newItem);
+    });
+
+    res['albums'].forEach((e) {
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'album',
+          e['name'],
+          Icon(Icons.library_music, color: VelvetColors.textSecondary),
+          'album');
+      newItem.altAlbumArt = e['album_art_file'];
+      albums.add(newItem);
+    });
 
       // Track hits carry the LITE metadata subset (PR #685, same kebab-case keys
       // as the full block, so fromServerMap parses it directly). Attach it so the
@@ -402,21 +498,21 @@ class ApiManager {
       // omit the key → metadata stays null (still partial → still fetched). With
       // metadata the artist is the subtitle, so the 'song' type hint only matters
       // on the metadata-less path.
-      res['title'].forEach((e) {
-        final md = e['metadata'];
-        final meta = md is Map ? MusicMetadata.fromServerMap(md) : null;
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.music_note, color: VelvetColors.accent),
-            meta != null ? null : 'song');
-        newItem.altAlbumArt = e['album_art_file'];
-        newItem.metadata = meta;
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
+    res['title'].forEach((e) {
+      final md = e['metadata'];
+      final meta = md is Map ? MusicMetadata.fromServerMap(md) : null;
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'file',
+          '/${e['filepath']}',
+          Icon(Icons.music_note, color: VelvetColors.accent),
+          meta != null ? null : 'song');
+      newItem.altAlbumArt = e['album_art_file'];
+      newItem.metadata = meta;
+      newItem.partialMetadata = true;
+      titles.add(newItem);
+    });
 
       // Files (filepath matches) — only populated when the scope is `files`.
       // Carries the lite metadata block too (PR #685); `?.` because older servers
@@ -424,22 +520,22 @@ class ApiManager {
       // match context — getSubText shows an explicit subtext over the metadata
       // artist); getText shows the title once metadata is attached, the filename
       // otherwise. Flagged partial so the queue refetches the full block.
-      res['files']?.forEach((e) {
-        final String fp = e['filepath'];
-        final int slash = fp.lastIndexOf('/');
-        final md = e['metadata'];
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/$fp',
-            Icon(Icons.insert_drive_file, color: VelvetColors.accent),
-            slash > 0 ? fp.substring(0, slash) : null);
-        newItem.altAlbumArt = e['album_art_file'];
-        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
+    res['files']?.forEach((e) {
+      final String fp = e['filepath'];
+      final int slash = fp.lastIndexOf('/');
+      final md = e['metadata'];
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'file',
+          '/$fp',
+          Icon(Icons.insert_drive_file, color: VelvetColors.accent),
+          slash > 0 ? fp.substring(0, slash) : null);
+      newItem.altAlbumArt = e['album_art_file'];
+      if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+      newItem.partialMetadata = true;
+      files.add(newItem);
+    });
 
       // Lyric matches (only when the `lyrics` category is ticked; `?.` since
       // older servers omit the key). Carries the lite metadata block (PR #685)
@@ -448,28 +544,28 @@ class ApiManager {
       // metadata artist); getText shows the real title once metadata is attached.
       // `snippet` is null on the LIKE / non-FTS path → plain label. Flagged
       // partial so the queue refetches the full block.
-      res['lyrics']?.forEach((e) {
-        final snippet = (e['snippet'] as String?)?.trim();
-        final md = e['metadata'];
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.lyrics, color: VelvetColors.accent),
-            snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
-        newItem.altAlbumArt = e['album_art_file'];
-        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
+    res['lyrics']?.forEach((e) {
+      final snippet = (e['snippet'] as String?)?.trim();
+      final md = e['metadata'];
+      DisplayItem newItem = DisplayItem(
+          server,
+          e['name'],
+          'file',
+          '/${e['filepath']}',
+          Icon(Icons.lyrics, color: VelvetColors.accent),
+          snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
+      newItem.altAlbumArt = e['album_art_file'];
+      if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
+      newItem.partialMetadata = true;
+      lyrics.add(newItem);
+    });
 
-      // Stash the query on the frame so the results view shows a "Results for
-      // …" subheader (and it reverts on back-nav, like the file-explorer path).
-      BrowserManager().addListToStack(newList, searchTerm: search);
-    } catch (err) {
-      appLog('[api] searchServer failed: $err');
-    }
+    return ServerSearchResults(
+        artists: artists,
+        albums: albums,
+        titles: titles,
+        files: files,
+        lyrics: lyrics);
   }
 
   Future<void> getAlbums({Server? useThisServer}) async {
@@ -1047,6 +1143,41 @@ class ApiManager {
     // album-style controls, and an empty result reads as "playlist is empty"
     // rather than a blank list.
     BrowserManager().addListToStack(newList, playlist: playlistName);
+  }
+
+  /// Server-generated waveform peaks (0–255 per bucket) for a library file —
+  /// `GET /api/v1/db/waveform?filepath=…`, the same endpoint the web app's
+  /// waveform seek bar uses. Returns null when unavailable (no matching
+  /// server, generation failure, older server without the endpoint) so the
+  /// caller can fall back to a plain track.
+  ///
+  /// Deliberately NOT routed through [makeServerCall]: that brackets every
+  /// call with the browser's global loading bar and tap-block, and a seek-bar
+  /// backfill must never flash browse chrome. The server generates peaks on
+  /// first request (ffmpeg pass over the whole file), so the read timeout is
+  /// generous while the connect stays bounded.
+  Future<List<int>?> getWaveform(String filepath,
+      {required Server? useThisServer}) async {
+    final server = useThisServer;
+    if (server == null || filepath.startsWith('http')) return null;
+    final client =
+        IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 5));
+    try {
+      final uri = server.apiUri(
+          '/api/v1/db/waveform?filepath=${Uri.encodeQueryComponent(filepath)}');
+      final res = await client.get(uri, headers: {
+        'x-access-token': server.jwt ?? ''
+      }).timeout(const Duration(seconds: 45));
+      if (res.statusCode != 200) return null;
+      final wf = (json.decode(res.body) as Map)['waveform'];
+      if (wf is! List || wf.isEmpty) return null;
+      return wf.cast<num>().map((n) => n.toInt()).toList();
+    } catch (e) {
+      appLog('[api] waveform fetch failed for $filepath: $e');
+      return null;
+    } finally {
+      client.close();
+    }
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {

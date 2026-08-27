@@ -66,6 +66,8 @@
   "themeVelvet": "Velvet",
   "themeDark": "Dark",
   "themeLight": "Light",
+  "themeGraphite": "Graphite",
+  "themeOnyx": "Onyx",
   "@themeVelvet": {
     "description": "AppTheme option label."
   },
@@ -173,6 +175,8 @@
   "themeSubtitleVelvet": "Navy and purple — the signature dark theme.",
   "themeSubtitleDark": "Neutral dark with amber accents.",
   "themeSubtitleLight": "Light body with a dark app bar and amber accents — matches the older shipped theme.",
+  "themeSubtitleGraphite": "Neutral grays with an amber accent line.",
+  "themeSubtitleOnyx": "Slate's blue-grays under a black top bar, with an amber accent line.",
   "@settingsTheme": {
     "description": "Theme picker row label + per-theme subtitles."
   },
@@ -790,6 +794,10 @@
         "type": "String"
       }
     }
+  },
+  "browserEmptyList": "Nothing here yet",
+  "@browserEmptyList": {
+    "description": "Shown in place of the browse list when a loaded folder or section has no items (e.g. the file explorer of a server with no music folders configured)."
   },
   "clear": "Clear",
   "dlLocationUnavailable": "Download location unavailable",

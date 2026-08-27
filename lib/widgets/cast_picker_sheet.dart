@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
@@ -151,30 +152,34 @@ class _CastPickerSheetState extends State<CastPickerSheet> {
             // the TV instead of plain audio. Chromecast only; the choice is
             // sticky (persisted) and applied when a device is picked above. Works
             // for an iroh server too — the transcoder reads its loopback source
-            // directly on-device (re-origined to the live tunnel).
-            const Divider(height: 24),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              dense: true,
-              activeColor: VelvetColors.primary,
-              value: _visualizer,
-              onChanged: (v) {
-                setState(() => _visualizer = v ?? false);
-                SettingsManager().setCastVisualizerEnabled(_visualizer);
-              },
-              title: Text(
-                l.castVisualizer,
-                style: TextStyle(color: VelvetColors.textPrimary),
-              ),
-              subtitle: Text(
-                l.castVisualizerSubtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: VelvetColors.textSecondary,
+            // directly on-device (re-origined to the live tunnel). The on-device
+            // transcoder is Android-native, so this option only applies there;
+            // the desktop cast backend always streams plain audio.
+            if (Platform.isAndroid) ...[
+              const Divider(height: 24),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                activeColor: VelvetColors.primary,
+                value: _visualizer,
+                onChanged: (v) {
+                  setState(() => _visualizer = v ?? false);
+                  SettingsManager().setCastVisualizerEnabled(_visualizer);
+                },
+                title: Text(
+                  l.castVisualizer,
+                  style: TextStyle(color: VelvetColors.textPrimary),
+                ),
+                subtitle: Text(
+                  l.castVisualizerSubtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: VelvetColors.textSecondary,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

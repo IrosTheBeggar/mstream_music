@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:file_selector/file_selector.dart' show getDirectoryPath;
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import '../build_variant.dart';
 import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
+import '../util/desktop_platform.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/lan_discovery.dart';
 import '../singletons/server_list.dart';
@@ -26,7 +28,10 @@ import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
 
 class AddServerScreen extends StatelessWidget {
-  const AddServerScreen({super.key});
+  /// 0 = the standard URL/login tab, 1 = Quick Connect (LAN discovery).
+  /// The desktop onboarding deep-links each of its client options here.
+  final int initialTab;
+  const AddServerScreen({super.key, this.initialTab = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +39,7 @@ class AddServerScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text(AppLocalizations.of(context).addServerTitle),
         ),
-        body: MyCustomForm());
+        body: MyCustomForm(initialTab: initialTab));
   }
 }
 
@@ -54,7 +59,8 @@ class EditServerScreen extends StatelessWidget {
 
 class MyCustomForm extends StatefulWidget {
   final int? editThisServer;
-  const MyCustomForm({super.key, this.editThisServer});
+  final int initialTab;
+  const MyCustomForm({super.key, this.editThisServer, this.initialTab = 0});
 
   @override
   MyCustomFormState createState() => MyCustomFormState();
@@ -485,7 +491,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         // after an await and saveServer pops the form, so a context-bound
         // SnackBar would be lost / unsafe.
         showGlobalSnack(l.connectionSuccessful);
-        saveServer(lol);
+        await _saveServerGuarded(lol);
         return;
       }
     } catch (err) {
@@ -522,7 +528,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       var res = jsonDecode(response.body);
 
       // Save
-      saveServer(lol, res['token']);
+      await _saveServerGuarded(lol, res['token']);
     } catch (err) {
       appLog('[add-server] login failed: $err');
       try {
@@ -739,6 +745,21 @@ class MyCustomFormState extends State<MyCustomForm> {
         .replaceAll(RegExp(r'[\s._-]+$'), '');
   }
 
+  // saveServer does real work that can fail — disk writes (servers.json),
+  // download-dir creation, migrations — so run it guarded: a failure must
+  // reset the button and SAY what went wrong. Un-awaited and unguarded, a
+  // throw (e.g. macOS denying file access) was swallowed by the zone handler
+  // and left the form stuck on "Connecting…" forever.
+  Future<void> _saveServerGuarded(Uri url, [String jwt = '']) async {
+    try {
+      await saveServer(url, jwt);
+    } catch (e) {
+      appLog('[add-server] save failed: $e');
+      if (mounted) setState(() => submitPending = false);
+      showGlobalSnack('Could not save the server: $e');
+    }
+  }
+
   Future<void> saveServer(Uri lol, [String jwt = '']) async {
     // Permanent / SD card need a folder the app can actually write to. If the
     // mode was selected but no (writable) folder was picked, _storageBasePath
@@ -850,7 +871,14 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
 
     // Save Server List
-    if (mounted) Navigator.pop(context);
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      // Close the form — unless something already did: when this is the
+      // FIRST server, the desktop onboarding's server-list listener pops
+      // every route above home the moment addServer announces it. Popping
+      // again here would then remove the HOME route itself and leave an
+      // empty (black) Navigator — exactly the Quick Connect first-run bug.
+      Navigator.pop(context);
+    }
   }
 
   Map<String, String> parseQrCode(String qrValue) {
@@ -879,7 +907,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       // URL and would always fail. The pairing already validated the connection,
       // so persist the edited credentials/folder directly (URL stays unchanged).
       setState(() => submitPending = true);
-      saveServer(Uri.parse(_urlCtrl.text));
+      _saveServerGuarded(Uri.parse(_urlCtrl.text));
       return;
     }
     checkServer();
@@ -959,6 +987,26 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Future<void> _chooseStorageFolder() async {
     final l = AppLocalizations.of(context);
+    // Desktop: the OS directory dialog. The Android machinery below (all-files
+    // permission, volume roots, the in-app folder browser) has no meaning here.
+    // Picking a folder also flips the mode to 'permanent' — desktop has no
+    // mode dropdown; the location row's Browse/reset is the whole control.
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      final picked = await getDirectoryPath();
+      if (picked == null || !mounted) return;
+      if (!await _isWritable(picked)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l.storageNotWritable)));
+        }
+        return;
+      }
+      setState(() {
+        _storageMode = 'permanent';
+        _storageBasePath = picked;
+      });
+      return;
+    }
     if (!await _ensureAllFilesAccess()) return;
     final root = _storageMode == 'sdCard' ? _sdCardRoot : _sharedStorageRoot;
     if (root == null) {
@@ -1159,12 +1207,94 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
+  // Desktop Storage-location control, shared by the standard form and the
+  // Quick Connect view: the app data folder by default, or any folder via the
+  // OS dialog (stored as the 'permanent' mode + base path; ✕ resets).
+  Widget _desktopStorageSection(AppLocalizations l, {required bool enabled}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.storageLocationLabel,
+            style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+        SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(Icons.folder_outlined,
+                size: 18, color: VelvetColors.textSecondary),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _storageBasePath ?? l.storageAppLocal,
+                style: TextStyle(
+                    color: _storageBasePath == null
+                        ? VelvetColors.textSecondary
+                        : VelvetColors.textPrimary,
+                    fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_storageBasePath != null) ...[
+              SizedBox(width: 4),
+              IconButton(
+                icon: Icon(Icons.close,
+                    size: 16, color: VelvetColors.textSecondary),
+                tooltip: l.clear,
+                onPressed: !enabled
+                    ? null
+                    : () => setState(() {
+                          _storageMode = 'appLocal';
+                          _storageBasePath = null;
+                        }),
+              ),
+            ],
+            SizedBox(width: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: VelvetColors.textPrimary,
+                side: BorderSide(color: VelvetColors.border2),
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(VelvetColors.radiusSmall),
+                ),
+              ),
+              icon: Icon(Icons.folder_open, size: 18),
+              label: Text(l.storageChooseFolder),
+              onPressed: !enabled ? null : _chooseStorageFolder,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Cap the form content to the desktop onboarding's centered 560px column —
+  // a desktop window is far wider than a form wants to be. Phones are
+  // narrower than the cap, so this is a no-op there.
+  Widget _constrainForm(Widget child) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: child,
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     // Add mode shows two tabs (Server URL / iroh); edit mode targets one
     // existing URL server, so it skips the pairing tab.
     if (widget.editThisServer != null) {
-      return _buildStandardForm(context);
+      return _constrainForm(_buildStandardForm(context));
+    }
+    // Desktop: no tab strip — every entry point (the onboarding's Client Mode
+    // cards, the sidebar's Add server) already picks its mode via initialTab,
+    // so the screen shows just that mode's content.
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return _constrainForm(widget.initialTab == 1
+          ? _buildIrohTab(context)
+          : _buildStandardForm(context));
     }
     return DefaultTabController(
       length: 2,
@@ -1178,7 +1308,9 @@ class MyCustomFormState extends State<MyCustomForm> {
         children: [
           Material(
             color: VelvetColors.surface,
-            child: TabBar(
+            // The band spans the window; the tabs themselves sit in the same
+            // centered column as the form below them.
+            child: _constrainForm(TabBar(
               labelColor: VelvetColors.primary,
               unselectedLabelColor: VelvetColors.textSecondary,
               indicatorColor: VelvetColors.primary,
@@ -1186,13 +1318,13 @@ class MyCustomFormState extends State<MyCustomForm> {
                 Tab(text: AppLocalizations.of(context).addServerTabUrl),
                 Tab(text: AppLocalizations.of(context).addServerTabQuickConnect),
               ],
-            ),
+            )),
           ),
           Expanded(
             child: TabBarView(
               children: [
-                _buildStandardForm(context),
-                _buildIrohTab(context),
+                _constrainForm(_buildStandardForm(context)),
+                _constrainForm(_buildIrohTab(context)),
               ],
             ),
           ),
@@ -1262,7 +1394,11 @@ class MyCustomFormState extends State<MyCustomForm> {
 
   Future<void> _scanQr() async {
     final l = AppLocalizations.of(context);
-    if (!IrohTunnel.isSupported) {
+    // QR scanning is a camera feature (mobile_scanner → Android/iOS); on desktop
+    // there's no scanner, so fall back to the paste-the-code path. This is gated
+    // on the platform, NOT IrohTunnel.isSupported — the tunnel lib now loads on
+    // desktop too, but the camera scanner doesn't exist there.
+    if (!Platform.isAndroid && !Platform.isIOS) {
       _showIrohResult(false, l.irohQrAndroidOnly);
       return;
     }
@@ -1451,11 +1587,17 @@ class MyCustomFormState extends State<MyCustomForm> {
     final id = code.hashCode.toUnsigned(32).toRadixString(16);
     final username = _irohPublic ? '' : _irohUserCtrl.text;
     final password = _irohPublic ? '' : _irohPassCtrl.text;
+    // Desktop honors the Storage-location row on the Quick Connect view;
+    // mobile keeps the app sandbox (no storage control on its iroh tab).
+    final desktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final server = Server('iroh://$id', username, password, jwt, 'iroh-$id')
       ..connectionType = 'iroh'
       ..irohPairingCode = code
       ..tunnelPort = port
-      ..storageMode = 'appLocal';
+      ..storageMode = desktop ? _storageMode : 'appLocal'
+      ..storageBasePath =
+          desktop && _storageMode == 'permanent' ? _storageBasePath : null;
     // Ping through the live tunnel to populate vpaths / transcode caps.
     await ServerManager().getServerPaths(server);
     await ServerManager().addServer(server);
@@ -1464,7 +1606,14 @@ class MyCustomFormState extends State<MyCustomForm> {
     _irohSaved = true; // dispose() must not stop the now-active tunnel
     final idx = ServerManager().serverList.indexOf(server);
     if (idx >= 0) await ServerManager().changeCurrentServer(idx);
-    if (mounted) Navigator.pop(context);
+    if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) {
+      // Close the form — unless something already did: when this is the
+      // FIRST server, the desktop onboarding's server-list listener pops
+      // every route above home the moment addServer announces it. Popping
+      // again here would then remove the HOME route itself and leave an
+      // empty (black) Navigator — exactly the Quick Connect first-run bug.
+      Navigator.pop(context);
+    }
   }
 
   // --- mDNS-discovered Quick Connect ---
@@ -1832,25 +1981,31 @@ class MyCustomFormState extends State<MyCustomForm> {
             SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: VelvetColors.textPrimary,
-                      side: BorderSide(color: VelvetColors.border2),
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(VelvetColors.radiusSmall),
+                // Camera scanning exists only on mobile (mobile_scanner); on
+                // desktop the button would be a dead control, so Paste takes
+                // the full row there. Desktop QR pairing is planned to go the
+                // other way (desktop displays, phone scans).
+                if (Platform.isAndroid || Platform.isIOS) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: VelvetColors.textPrimary,
+                        side: BorderSide(color: VelvetColors.border2),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(VelvetColors.radiusSmall),
+                        ),
                       ),
+                      icon: Icon(Icons.qr_code_scanner, size: 18),
+                      label: Text(l.irohScanQr),
+                      onPressed: (_irohTesting || _connectingId != null)
+                          ? null
+                          : _scanQr,
                     ),
-                    icon: Icon(Icons.qr_code_scanner, size: 18),
-                    label: Text(l.irohScanQr),
-                    onPressed: (_irohTesting || _connectingId != null)
-                        ? null
-                        : _scanQr,
                   ),
-                ),
-                SizedBox(width: 8),
+                  SizedBox(width: 8),
+                ],
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -1962,10 +2117,44 @@ class MyCustomFormState extends State<MyCustomForm> {
                 onPressed: _irohSaving ? null : _signInAndSaveIroh,
               ),
             ],
+            // Desktop: same Storage-location control as the standard form —
+            // where this server's downloads go. Read by _saveIrohServer.
+            if (Platform.isWindows ||
+                Platform.isLinux ||
+                Platform.isMacOS) ...[
+              SizedBox(height: 20),
+              Divider(color: VelvetColors.border2),
+              SizedBox(height: 12),
+              _desktopStorageSection(l,
+                  enabled: !_irohSaving && _connectingId == null),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  // "Server on this computer" convenience (desktop): a launcher-managed
+  // mStream server answering on the default local port. Probed once per
+  // screen; ANY HTTP answer (200, 401, ...) means something is serving —
+  // ping requires no auth but this shouldn't depend on that.
+  static const String _localProbeUrl = 'http://localhost:3000';
+  late final Future<bool> _localServerProbe = _probeLocalServer();
+
+  Future<bool> _probeLocalServer() async {
+    if (!isDesktopPlatform || widget.editThisServer != null) return false;
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 2);
+    try {
+      final req = await client.getUrl(Uri.parse('$_localProbeUrl/api/v1/ping'));
+      final res = await req.close().timeout(const Duration(seconds: 3));
+      await res.drain<void>();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close();
+    }
   }
 
   Widget _buildStandardForm(BuildContext context) {
@@ -1981,6 +2170,37 @@ class MyCustomFormState extends State<MyCustomForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // The launcher's server, one tap away (see _probeLocalServer).
+              FutureBuilder<bool>(
+                future: _localServerProbe,
+                builder: (context, snap) {
+                  if (snap.data != true) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Material(
+                      color: VelvetColors.primaryDim,
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(VelvetColors.radiusSmall),
+                        ),
+                        leading: Icon(Icons.dns, color: VelvetColors.primary),
+                        title:
+                            const Text('mStream Server found on this computer'),
+                        subtitle: Text(
+                          '$_localProbeUrl — tap to use it',
+                          style: TextStyle(
+                              color: VelvetColors.textSecondary, fontSize: 12),
+                        ),
+                        onTap: () =>
+                            setState(() => _urlCtrl.text = _localProbeUrl),
+                      ),
+                    ),
+                  );
+                },
+              ),
               TextFormField(
                 controller: _urlCtrl,
                 // iroh server: reached through the loopback tunnel, not this URL
@@ -2131,6 +2351,15 @@ class MyCustomFormState extends State<MyCustomForm> {
               if (!Platform.isAndroid) ...[
                 // iOS: downloads always live in the app sandbox ('appLocal');
                 // no SD cards or shared-storage modes, so no picker at all.
+                // Desktop: the shared Storage-location row (also on the Quick
+                // Connect view) — app data folder by default, or any folder
+                // via the OS dialog ('permanent' mode + base path).
+                if (Platform.isWindows ||
+                    Platform.isLinux ||
+                    Platform.isMacOS) ...[
+                  SizedBox(height: 16),
+                  _desktopStorageSection(l, enabled: !submitPending),
+                ],
               ] else if (isPlayBuild) ...[
                 if (_hasSdCard) ...[
                   SizedBox(height: 16),
@@ -2200,8 +2429,13 @@ class MyCustomFormState extends State<MyCustomForm> {
                 SizedBox(height: 8),
                 _storageHelp(),
               ],
-              if (_storageMode == 'permanent' ||
-                  _storageMode == 'sdCard') ...[
+              // Android's chosen-folder row for the permanent/sdCard modes.
+              // Desktop shows the path inside its own Storage-location row
+              // above, so this would double up there ('permanent' is exactly
+              // what the desktop Browse sets).
+              if (Platform.isAndroid &&
+                  (_storageMode == 'permanent' ||
+                      _storageMode == 'sdCard')) ...[
                 SizedBox(height: 10),
                 // Button first, chosen path underneath on its own full-width
                 // line: these paths are long, and sharing a row with the button

@@ -73,6 +73,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeLight => 'Hell';
 
   @override
+  String get themeGraphite => 'Graphit';
+
+  @override
+  String get themeOnyx => 'Onyx';
+
+  @override
   String get tapAddToQueue => 'Zur Warteschlange hinzufügen';
 
   @override
@@ -183,6 +189,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get themeSubtitleLight =>
       'Heller Hintergrund mit dunkler App-Leiste und bernsteinfarbenen Akzenten – passt zum älteren mitgelieferten Design.';
+
+  @override
+  String get themeSubtitleGraphite =>
+      'Neutrale Grautöne mit bernsteinfarbener Akzentlinie.';
+
+  @override
+  String get themeSubtitleOnyx =>
+      'Blaugraue Slate-Töne unter schwarzer Titelleiste, mit bernsteinfarbener Akzentlinie.';
 
   @override
   String get settingsTranscode => 'Audio transkodieren';
@@ -1095,6 +1109,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String browserNoMatches(String query) {
     return 'Keine Treffer für \"$query\"';
   }
+
+  @override
+  String get browserEmptyList => 'Nothing here yet';
 
   @override
   String get clear => 'Leeren';
