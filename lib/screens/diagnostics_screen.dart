@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../desktop/desktop_integration.dart';
+import '../util/desktop_platform.dart';
 import '../l10n/app_localizations.dart';
 import '../server/server_log.dart';
 import '../singletons/log_manager.dart';
@@ -82,7 +82,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         title: Text(l.diagnosticsTitle),
         // App diagnostics vs the bundled-server console — only where a server
         // can exist (desktop). Sits in the top bar under the title.
-        bottom: DesktopIntegration.isDesktop
+        bottom: isDesktopPlatform
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(52),
                 child: Padding(
