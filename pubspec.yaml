@@ -155,8 +155,6 @@ flutter:
     - graphics/default.png
     - assets/presets/
     - assets/shaders/
-    # System-tray icon for the desktop build (tray_manager).
-    - assets/tray_icon.ico
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

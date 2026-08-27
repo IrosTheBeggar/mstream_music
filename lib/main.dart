@@ -36,7 +36,8 @@ import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
-import 'desktop/desktop_integration.dart';
+import 'desktop/window_setup.dart';
+import 'util/desktop_platform.dart';
 import 'util/app_data_dir.dart';
 import 'util/self_signed_overrides.dart';
 import 'util/startup_view.dart';
@@ -87,7 +88,7 @@ Future<void> _startApp() async {
   // Desktop window + system tray + launch-at-startup (sized window, close-to-
   // tray so the app keeps running). No-op on mobile (the plugins have no
   // Android/iOS implementation); must run before runApp shows the window.
-  await DesktopIntegration.instance.init();
+  await initDesktopWindow();
   // Desktop playback: route just_audio through media_kit (libmpv) on
   // Windows/Linux, where just_audio has no native backend. No-op on
   // Android/iOS/macOS (those keep just_audio's own native implementation), so
@@ -249,7 +250,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       unawaited(_maybeOpenStartupView());
       // Mobile first-run flow (welcome + setup) — desktop has its own
       // onboarding cover, gated in build() off _serversLoaded below.
-      if (!DesktopIntegration.isDesktop) {
+      if (!isDesktopPlatform) {
         _maybeShowWelcome();
         // Armed only after the saved list has landed, so the first-run flow
         // keys off the user adding a server — not off startup restoring one.

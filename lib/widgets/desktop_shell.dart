@@ -20,7 +20,7 @@ import 'package:flutter/services.dart'
     show FilteringTextInputFormatter, KeyDownEvent, LogicalKeyboardKey;
 import 'package:rxdart/rxdart.dart';
 
-import '../desktop/desktop_integration.dart';
+import '../util/desktop_platform.dart';
 import '../l10n/app_localizations.dart';
 import '../media/cast_target.dart';
 import '../objects/display_item.dart';
@@ -66,9 +66,9 @@ import 'queue_list.dart';
 // Width of the fixed left navigation rail. The right queue panel's width is
 // computed at build time to match the now-playing view (see _DesktopShellState).
 const double _kSidebarWidth = 208;
-// App-drawn window title bar (DesktopIntegration.usesCustomTitleBar
-// platforms): the chrome-black band carrying the wordmark, with the native
-// traffic lights floating over its left end.
+// App-drawn window title bar (usesCustomTitleBar platforms): the
+// chrome-black band carrying the wordmark, with the native traffic lights
+// floating over its left end.
 const double _kTitleBarHeight = 52;
 // Now Playing bar, top to bottom: breathing room, the elapsed/duration row,
 // the waveform seek strip, then the controls row (which keeps the original
@@ -411,7 +411,7 @@ class _DesktopShellState extends State<DesktopShell> {
           // stack, so the full-screen Now Playing overlay still covers the
           // whole window, chrome included. Native-chrome platforms skip the
           // wrapper and keep the plain shell tree.
-          if (DesktopIntegration.usesCustomTitleBar)
+          if (usesCustomTitleBar)
             Column(
               children: [
                 const _WindowTitleBar(),
@@ -553,7 +553,7 @@ class _DesktopSidebar extends StatelessWidget {
           // elsewhere it heads the sidebar, pinned to the shared top-bar
           // height so it stays one band with the browse toolbar and the
           // queue header.
-          if (!DesktopIntegration.usesCustomTitleBar)
+          if (!usesCustomTitleBar)
             const SizedBox(
               height: VelvetColors.desktopTopBarHeight,
               child: _SidebarLogo(),
@@ -729,7 +729,7 @@ class _SidebarLogo extends StatelessWidget {
 
 /// The app-drawn title bar: a chrome-black band with the mStream wordmark,
 /// the standard traffic-light buttons floating natively over its left end
-/// (TitleBarStyle.hidden — set in DesktopIntegration.init). DragToMoveArea
+/// (TitleBarStyle.hidden — set in initDesktopWindow). DragToMoveArea
 /// gives the whole band window-drag plus double-click zoom, matching a native
 /// title bar's behaviour.
 class _WindowTitleBar extends StatelessWidget {
