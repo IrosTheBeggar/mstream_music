@@ -1742,9 +1742,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'El escaneo de QR no está disponible en este dispositivo.';
 
   @override
-  String get serverBadgeBuiltIn => 'Built-in';
-
-  @override
   String get irohAndroidOnly =>
       'Conexión rápida no está disponible en este dispositivo.';
 

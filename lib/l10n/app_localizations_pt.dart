@@ -1738,9 +1738,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'A leitura de QR não está disponível neste dispositivo.';
 
   @override
-  String get serverBadgeBuiltIn => 'Built-in';
-
-  @override
   String get irohAndroidOnly =>
       'A Conexão rápida não está disponível neste dispositivo.';
 

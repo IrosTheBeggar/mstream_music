@@ -1629,9 +1629,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohQrAndroidOnly => '此设备不支持扫描二维码。';
 
   @override
-  String get serverBadgeBuiltIn => 'Built-in';
-
-  @override
   String get irohAndroidOnly => '此设备不支持快速连接。';
 
   @override
