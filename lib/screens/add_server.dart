@@ -16,6 +16,7 @@ import '../build_variant.dart';
 import '../native/iroh_tunnel.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
+import '../util/desktop_platform.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/lan_discovery.dart';
 import '../singletons/server_list.dart';
@@ -2133,6 +2134,29 @@ class MyCustomFormState extends State<MyCustomForm> {
     );
   }
 
+  // "Server on this computer" convenience (desktop): a launcher-managed
+  // mStream server answering on the default local port. Probed once per
+  // screen; ANY HTTP answer (200, 401, ...) means something is serving —
+  // ping requires no auth but this shouldn't depend on that.
+  static const String _localProbeUrl = 'http://localhost:3000';
+  late final Future<bool> _localServerProbe = _probeLocalServer();
+
+  Future<bool> _probeLocalServer() async {
+    if (!isDesktopPlatform || widget.editThisServer != null) return false;
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 2);
+    try {
+      final req = await client.getUrl(Uri.parse('$_localProbeUrl/api/v1/ping'));
+      final res = await req.close().timeout(const Duration(seconds: 3));
+      await res.drain<void>();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close();
+    }
+  }
+
   Widget _buildStandardForm(BuildContext context) {
     final l = AppLocalizations.of(context);
     return SafeArea(
@@ -2146,6 +2170,37 @@ class MyCustomFormState extends State<MyCustomForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // The launcher's server, one tap away (see _probeLocalServer).
+              FutureBuilder<bool>(
+                future: _localServerProbe,
+                builder: (context, snap) {
+                  if (snap.data != true) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Material(
+                      color: VelvetColors.primaryDim,
+                      borderRadius:
+                          BorderRadius.circular(VelvetColors.radiusSmall),
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(VelvetColors.radiusSmall),
+                        ),
+                        leading: Icon(Icons.dns, color: VelvetColors.primary),
+                        title:
+                            const Text('mStream Server found on this computer'),
+                        subtitle: Text(
+                          '$_localProbeUrl — tap to use it',
+                          style: TextStyle(
+                              color: VelvetColors.textSecondary, fontSize: 12),
+                        ),
+                        onTap: () =>
+                            setState(() => _urlCtrl.text = _localProbeUrl),
+                      ),
+                    ),
+                  );
+                },
+              ),
               TextFormField(
                 controller: _urlCtrl,
                 // iroh server: reached through the loopback tunnel, not this URL

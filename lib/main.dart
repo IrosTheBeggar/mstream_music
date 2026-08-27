@@ -37,7 +37,6 @@ import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'desktop/window_setup.dart';
-import 'util/desktop_platform.dart';
 import 'util/app_data_dir.dart';
 import 'util/self_signed_overrides.dart';
 import 'util/startup_view.dart';
@@ -56,7 +55,6 @@ import 'l10n/app_localizations.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
-import 'screens/desktop_onboarding.dart';
 import 'widgets/desktop_shell.dart';
 
 void main() {
@@ -223,9 +221,6 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // Guards the first-run setup push: serverListStream re-emits on every server
   // edit, and the flow marks onboarding complete only once it's dismissed.
   bool _setupShown = false;
-  // True once the persisted server list has been read — before that, an empty
-  // list just means "still loading", not "fresh install".
-  bool _serversLoaded = false;
 
   @override
   void initState() {
@@ -248,18 +243,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
       unawaited(_maybeOpenStartupView());
-      // Mobile first-run flow (welcome + setup) — desktop has its own
-      // onboarding cover, gated in build() off _serversLoaded below.
-      if (!isDesktopPlatform) {
-        _maybeShowWelcome();
-        // Armed only after the saved list has landed, so the first-run flow
-        // keys off the user adding a server — not off startup restoring one.
-        _armFirstRunSetup();
-      }
-      // Desktop first-run: only after the list has actually LOADED can "no
-      // servers" mean "fresh install" (and not "still reading the file") —
-      // gate the onboarding cover on this. See build().
-      if (mounted) setState(() => _serversLoaded = true);
+      _maybeShowWelcome();
+      // Armed only after the saved list has landed, so the first-run flow
+      // keys off the user adding a server — not off startup restoring one.
+      _armFirstRunSetup();
     });
     // (DownloadManager().initDownloader() moved to _startApp so headless
     // boots track download completions too — a second call here would attach
@@ -656,21 +643,12 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
             MediaQuery.sizeOf(context).width >= 900;
     if (useDesktop) {
-      // First run (no servers configured): a full-window mode chooser —
-      // Client Mode (connect to an existing server) or Server Mode (set this
-      // PC up as one). Swaps back to the shell the moment a server exists;
-      // also reappears if the user ever deletes every server.
-      return StreamBuilder<List<Server>>(
-        stream: ServerManager().serverListStream,
-        initialData: ServerManager().serverList,
-        builder: (context, snap) {
-          final servers = snap.data ?? ServerManager().serverList;
-          if (_serversLoaded && servers.isEmpty) {
-            return const DesktopOnboardingScreen();
-          }
-          return const DesktopShell();
-        },
-      );
+      // First run rides the same welcome/setup flow as the phones (pushed as
+      // routes over the shell); with no servers the browse pane shows its
+      // add-server affordances. Serving this machine is the standalone
+      // mstream-launcher's job now — the add-server form offers a detected
+      // local server as a one-tap row.
+      return const DesktopShell();
     }
     return PopScope(
         canPop: false,
