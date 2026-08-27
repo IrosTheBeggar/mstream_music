@@ -56,6 +56,12 @@ files, downloads.
 
 ## Sequencing — each step lands green on its own
 
+> **Progress (2026-08-26): steps 1–6 landed.** Verified on macOS: boot with
+> no reachable server (clean offline placeholder, zero exceptions) and boot
+> against the launcher's live localhost server (connects, browses, queue
+> restores). The stored `__local__` entry was already gone from this install;
+> the load-time drop stays as a guard for other dev checkouts.
+
 1. **Decouple boot**: remove `ServerController` from `main.dart` (spawn
    trigger, status gates, startup retry); app boots straight to the shell;
    `__local__` migration runs here. The stale-binary breakage disappears.

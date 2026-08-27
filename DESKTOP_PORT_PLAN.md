@@ -8,6 +8,15 @@ feature, effort estimates, and the concrete technical path + gotchas for each.
 **Toolchain verified:** Flutter 3.44.0 stable, Visual Studio 2022 (C++ desktop
 workload), Windows 10. `flutter build windows` works end-to-end.
 
+> **Scope (2026-08): pure desktop player.** The app no longer manages a server:
+> the embedded-server stack (binary download/spawn/supervision, tray icon,
+> close-to-tray, launch-at-login, the Server Mode onboarding, the diagnostics
+> server console) was removed per `DESKTOP_SERVER_REMOVAL_PLAN.md` — serving a
+> machine is the standalone **mstream-launcher**'s job (server repo,
+> `rust-launcher/`). The player connects to it like any server; the add-server
+> form offers a detected `localhost:3000` server as a one-tap row. Sections
+> below that describe tray/server behaviour predate this and are historical.
+
 Legend: ✅ done · 🟢 easy · 🟡 moderate · 🔴 hard · ⛔ blocked-by-environment
 
 ---
