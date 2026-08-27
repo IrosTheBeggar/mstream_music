@@ -1,4 +1,4 @@
-﻿import 'package:file_selector/file_selector.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -8,11 +8,11 @@ import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/torrent_meta.dart';
 
-/// The "smart" Add Torrent screen â€” the webapp's standalone panel: pick a
+/// The "smart" Add Torrent screen — the webapp's standalone panel: pick a
 /// server + library, drop a magnet or .torrent, and it detects
 /// artist/album/year (client-side name parse + optional server auto-detect)
 /// and resolves the per-library path template into a destination.
-/// Everything stays editable. Availability comes from /torrent/preflight â€”
+/// Everything stays editable. Availability comes from /torrent/preflight —
 /// there is no ping flag for torrents, so the screen itself is the gate
 /// (a banner explains why when the server can't take one).
 class AddTorrentScreen extends StatefulWidget {
@@ -72,7 +72,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     });
 
     try {
-      // Empty path â†’ global gates (client active, user allowed, uploads
+      // Empty path → global gates (client active, user allowed, uploads
       // enabled). Per-vpath confirmation is enforced by /torrent/add.
       final pre = await ApiManager().torrentPreflight('', server: s);
       if (!mounted || _server != s) return;
@@ -103,7 +103,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
       setState(() => _templates = map);
       _recomputePath();
     } catch (_) {
-      // No templates â€” the legacy artist/album fallback still applies.
+      // No templates — the legacy artist/album fallback still applies.
     }
   }
 
@@ -269,7 +269,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         return;
       }
       if (outcome == 'daemon_error') {
-        // The seed-check itself failed (a server/daemon hiccup) â€” not a
+        // The seed-check itself failed (a server/daemon hiccup) — not a
         // reason to block the add. Fall through to a normal fresh download,
         // just letting the user know the existing-files check was skipped.
         messenger
@@ -280,7 +280,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         _showPartialMatch((res['matches'] as List?) ?? const []);
         return;
       }
-      // no_match (or anything unexpected) â†’ fall through to a fresh add.
+      // no_match (or anything unexpected) → fall through to a fresh add.
     }
 
     await _doAdd(
@@ -527,7 +527,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     );
   }
 
-  // â”€â”€ widget helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── widget helpers ──────────────────────────────────────────────────
 
   Widget _label(String s) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -624,7 +624,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         style: TextStyle(color: VelvetColors.textPrimary),
         decoration: InputDecoration(
           labelText: l.torrentMagnetLabel,
-          hintText: 'magnet:?xt=urn:btih:â€¦',
+          hintText: 'magnet:?xt=urn:btih:…',
           prefixIcon: Icon(Icons.link, color: VelvetColors.textSecondary),
         ),
       );
