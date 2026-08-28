@@ -157,16 +157,20 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   Future<void> _pickFile() async {
     final l = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    // Everything is selectable on purpose. SAF filters on the MIME the
-    // DocumentsProvider reports, and a real .torrent is routinely reported
-    // as octet-stream — a narrow filter greys out the very file the user
-    // came for. `*/*` is a single type, so the plugin sets it directly with
-    // no EXTRA_MIME_TYPES; isTorrentFile below is the actual gate. Windows
-    // reads `extensions` only and still shows a *.torrent filter.
+    // A single MIME type, so file_selector_android setType()s it directly
+    // and the picker lists nothing but torrents — which also means the
+    // folder's sort order stops mattering, since two files can't be lost in
+    // it. Verified against a real Downloads folder: browser-downloaded
+    // .torrent files are reported as application/x-bittorrent, while the
+    // APKs/PNGs/PDFs/zips around them carry their own types and drop out.
+    // If a torrent ever fails to appear, its provider reported something
+    // else — add 'application/octet-stream' here to widen. isTorrentFile()
+    // below still gates the bytes, which is what catches a mistyped file on
+    // desktop, where the filter is by extension.
     const group = XTypeGroup(
       label: 'Torrent',
       extensions: ['torrent'],
-      mimeTypes: ['*/*'],
+      mimeTypes: ['application/x-bittorrent'],
     );
     final XFile? file = await openFile(
       acceptedTypeGroups: const [group],
