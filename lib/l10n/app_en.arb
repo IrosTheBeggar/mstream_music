@@ -1726,6 +1726,30 @@
   "@torrentOpenWithFailed": {
     "description": "Snackbar when the hand-off to another app errored."
   },
+  "torrentIntentTitle": "Torrent received",
+  "@torrentIntentTitle": {
+    "description": "Title of the sheet shown when a torrent is opened with mStream."
+  },
+  "torrentIntentBody": "Add it to a library on your mStream server, or hand it to another app.",
+  "@torrentIntentBody": {
+    "description": "Body of that sheet, explaining the two choices."
+  },
+  "torrentIntentAdd": "Add to mStream",
+  "@torrentIntentAdd": {
+    "description": "Sheet button: keep the torrent and open the Add Torrent screen."
+  },
+  "torrentIntentDontAsk": "Always add to mStream, don’t ask again",
+  "@torrentIntentDontAsk": {
+    "description": "Sheet checkbox suppressing the sheet from now on."
+  },
+  "settingsTorrentAskTitle": "Ask what to do with torrents",
+  "@settingsTorrentAskTitle": {
+    "description": "Settings switch re-enabling the torrent chooser sheet."
+  },
+  "settingsTorrentAskSub": "When a torrent is opened with mStream, offer to hand it to another app",
+  "@settingsTorrentAskSub": {
+    "description": "Subtitle for that settings switch."
+  },
   "torrentAutoDetect": "Auto-detect metadata",
   "@torrentAutoDetect": {
     "description": "Button asking the server to detect artist/album/year from the .torrent."

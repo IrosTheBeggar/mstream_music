@@ -2116,6 +2116,27 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось передать торрент другому приложению';
 
   @override
+  String get torrentIntentTitle => 'Торрент получен';
+
+  @override
+  String get torrentIntentBody =>
+      'Добавьте его в библиотеку на сервере mStream или передайте другому приложению.';
+
+  @override
+  String get torrentIntentAdd => 'Добавить в mStream';
+
+  @override
+  String get torrentIntentDontAsk =>
+      'Всегда добавлять в mStream и больше не спрашивать';
+
+  @override
+  String get settingsTorrentAskTitle => 'Спрашивать, что делать с торрентами';
+
+  @override
+  String get settingsTorrentAskSub =>
+      'При открытии торрента в mStream предлагать передать его другому приложению';
+
+  @override
   String get torrentAutoDetect => 'Определить метаданные';
 
   @override

@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../l10n/app_localizations.dart';
-import '../native/torrent_passoff.dart';
+import '../native/torrent_channel.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/server_list.dart';
@@ -21,7 +21,12 @@ import '../util/torrent_meta.dart';
 /// there is no ping flag for torrents, so the screen itself is the gate
 /// (a banner explains why when the server can't take one).
 class AddTorrentScreen extends StatefulWidget {
-  const AddTorrentScreen({super.key});
+  const AddTorrentScreen({super.key, this.initial});
+
+  /// A torrent the app was opened *with* (browser download, file manager,
+  /// share sheet, magnet link) rather than one picked here. Pre-fills the
+  /// source so the screen opens ready to submit.
+  final IncomingTorrent? initial;
 
   @override
   State<AddTorrentScreen> createState() => _AddTorrentScreenState();
@@ -66,6 +71,36 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
       _loadForServer(_server!);
     } else {
       _preLoading = false;
+    }
+
+    // Set the source fields directly — initState mutations land in the first
+    // build, whereas the metadata parse below goes through setState and has to
+    // wait for that build to exist.
+    final init = widget.initial;
+    if (init != null) {
+      if (init.hasFile) {
+        _fileBytes = init.bytes;
+        _fileName = init.filename;
+      } else if (init.hasMagnet) {
+        _magnet.text = init.magnet!;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitial(init));
+    }
+  }
+
+  /// Parse artist/album/year out of whatever arrived by intent, exactly as
+  /// picking the same file or pasting the same link would have.
+  void _applyInitial(IncomingTorrent init) {
+    if (!mounted) return;
+    if (init.hasFile) {
+      final name = extractTorrentName(init.bytes!);
+      if (name.isNotEmpty) {
+        _applyMeta(parseMusicTorrentName(name), resetPathEdited: true);
+      } else {
+        _recomputePath();
+      }
+    } else if (init.hasMagnet) {
+      _onMagnetChanged();
     }
   }
 
@@ -271,7 +306,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _passingOff = true);
     final outcome =
-        await TorrentPassOffChannel.openWith(Uint8List.fromList(bytes), _fileName);
+        await TorrentChannel.openWith(Uint8List.fromList(bytes), _fileName);
     if (!mounted) return;
     setState(() => _passingOff = false);
     switch (outcome) {
@@ -585,7 +620,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                         _orDivider(l),
                         const SizedBox(height: 10),
                         _magnetField(l),
-                      ] else if (TorrentPassOffChannel.isSupported) ...[
+                      ] else if (TorrentChannel.isSupported) ...[
                         const SizedBox(height: 10),
                         _orDivider(l),
                         const SizedBox(height: 10),

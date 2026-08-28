@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../l10n/language_names.dart';
+import '../native/torrent_channel.dart';
 import '../objects/player_layout.dart';
 import '../singletons/downloads.dart';
 import '../singletons/media.dart';
@@ -551,6 +552,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+          // Android-only: nothing else can be opened *with* a torrent, so on
+          // other platforms this switch would control nothing.
+          if (TorrentChannel.isSupported)
+            SwitchListTile(
+              title: Text(l.settingsTorrentAskTitle),
+              subtitle: Text(
+                l.settingsTorrentAskSub,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              // Stored as "skip", shown as "ask" — the sheet's own checkbox is
+              // what sets it, and this is the only way back from that box.
+              value: !SettingsManager().torrentSkipChooser,
+              onChanged: (v) async {
+                setState(() {});
+                await SettingsManager().setTorrentSkipChooser(!v);
+                setState(() {});
+              },
+              activeThumbColor: VelvetColors.primary,
+            ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionAbout),
           ListTile(

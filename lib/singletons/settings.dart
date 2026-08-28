@@ -163,6 +163,12 @@ class SettingsManager {
   // server drops back to the browser's plain add-server row instead of
   // replaying the welcome. Same missing-key-means-true rule as above.
   bool welcomeShown = false;
+  /// Skip the "add here or hand it on?" sheet when a torrent arrives by
+  /// intent and go straight to Add Torrent. Set by the sheet's own "don't ask
+  /// again"; the Settings screen exposes it so a user who ticked that box can
+  /// still get the choice back — a one-way opt-out you can only undo by
+  /// clearing app data is a trap.
+  bool torrentSkipChooser = false;
   // Which categories the whole-server search queries. The default
   // (artists + albums + songs; files + lyrics off) reproduces mStream's classic
   // search; files and lyrics are opt-in because bare filepath matches and full-
@@ -323,6 +329,7 @@ class SettingsManager {
       // by a fresh install that saved a setting mid-flow) re-runs it.
       onboardingComplete = m['onboardingComplete'] ?? true;
       welcomeShown = m['welcomeShown'] ?? true;
+      torrentSkipChooser = m['torrentSkipChooser'] ?? false;
       startupView = _readStartupView(m);
       searchCategories = _readSearchCategories(m);
       appTheme = _readTheme(m);
@@ -527,6 +534,7 @@ class SettingsManager {
       'tapBehavior': tapBehavior.name,
       'onboardingComplete': onboardingComplete,
       'welcomeShown': welcomeShown,
+      'torrentSkipChooser': torrentSkipChooser,
       'startupView': startupView.name,
       'searchCategories': searchCategories.map((c) => c.name).toList(),
       'theme': appTheme.name,
@@ -622,6 +630,11 @@ class SettingsManager {
   /// pushed, so an interrupted first run doesn't replay it.
   Future<void> setWelcomeShown(bool v) async {
     welcomeShown = v;
+    await _save();
+  }
+
+  Future<void> setTorrentSkipChooser(bool v) async {
+    torrentSkipChooser = v;
     await _save();
   }
 

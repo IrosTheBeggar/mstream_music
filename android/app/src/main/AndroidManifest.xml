@@ -115,6 +115,35 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Opening a .torrent: a browser download notification, a file
+                 manager, or the share sheet. Very few apps claim these, so on
+                 most devices this lands here directly — the Add Torrent
+                 screen's own hand-off is what passes it on again. BROWSABLE so
+                 a link tapped in a browser can reach us. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="content" android:mimeType="application/x-bittorrent"/>
+                <data android:scheme="file" android:mimeType="application/x-bittorrent"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="application/x-bittorrent"/>
+            </intent-filter>
+
+            <!-- Magnet links. Nothing else on a stock device claims this
+                 scheme, so tapping one in a browser opens mStream with the
+                 link already in the form. No mimeType: a magnet is a bare URI
+                 with nothing to fetch. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="magnet"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

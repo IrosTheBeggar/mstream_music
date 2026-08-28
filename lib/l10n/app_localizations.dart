@@ -3648,6 +3648,42 @@ abstract class AppLocalizations {
   /// **'Could not hand the torrent to another app'**
   String get torrentOpenWithFailed;
 
+  /// Title of the sheet shown when a torrent is opened with mStream.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent received'**
+  String get torrentIntentTitle;
+
+  /// Body of that sheet, explaining the two choices.
+  ///
+  /// In en, this message translates to:
+  /// **'Add it to a library on your mStream server, or hand it to another app.'**
+  String get torrentIntentBody;
+
+  /// Sheet button: keep the torrent and open the Add Torrent screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to mStream'**
+  String get torrentIntentAdd;
+
+  /// Sheet checkbox suppressing the sheet from now on.
+  ///
+  /// In en, this message translates to:
+  /// **'Always add to mStream, don’t ask again'**
+  String get torrentIntentDontAsk;
+
+  /// Settings switch re-enabling the torrent chooser sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask what to do with torrents'**
+  String get settingsTorrentAskTitle;
+
+  /// Subtitle for that settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'When a torrent is opened with mStream, offer to hand it to another app'**
+  String get settingsTorrentAskSub;
+
   /// Button asking the server to detect artist/album/year from the .torrent.
   ///
   /// In en, this message translates to:

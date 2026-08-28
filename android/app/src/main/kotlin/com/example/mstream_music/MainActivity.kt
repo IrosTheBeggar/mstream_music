@@ -2,8 +2,11 @@ package com.example.mstream_music
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.StatFs
+import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,6 +20,29 @@ import java.io.File
 // The manifest must point at this class instead of
 // com.ryanheise.audioservice.AudioServiceActivity directly.
 class MainActivity : AudioServiceActivity() {
+    // A torrent that arrived by intent and hasn't been handed to Dart yet.
+    // Always staged here rather than pushed: on a cold start Dart isn't
+    // listening yet, and staging + an explicit drain means one delivery in
+    // both cases instead of a race between a push and a pull.
+    private var pendingTorrent: Map<String, Any?>? = null
+    private var torrentChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        captureTorrentIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Keep getIntent() current — anything later that re-reads it should see
+        // the intent that actually brought us forward.
+        setIntent(intent)
+        if (captureTorrentIntent(intent)) {
+            // Warm start: Dart is already up, so tell it to come and drain.
+            torrentChannel?.invokeMethod("torrentWaiting", null)
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -77,9 +103,17 @@ class MainActivity : AudioServiceActivity() {
                 }
             }
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mstream/torrent")
+        torrentChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mstream/torrent")
+        torrentChannel!!
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // Drain whatever arrived by intent. Returns null when
+                    // nothing is waiting, which is the normal launch case.
+                    "getInitialTorrent" -> {
+                        result.success(pendingTorrent)
+                        pendingTorrent = null
+                    }
                     // Hand a picked .torrent off to another app instead of
                     // adding it to an mStream server. Returns which chooser was
                     // shown so Dart can say something useful: "view" (a real
@@ -101,6 +135,82 @@ class MainActivity : AudioServiceActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// Pull a torrent out of an incoming intent, if it carries one. Returns
+    /// true when something was staged.
+    ///
+    /// Marks the intent consumed rather than trusting that onCreate and
+    /// onNewIntent can never see the same one — a re-delivered intent adding
+    /// the same torrent twice is the failure mode worth spending an extra to
+    /// rule out.
+    private fun captureTorrentIntent(intent: Intent?): Boolean {
+        if (intent == null || intent.getBooleanExtra(CONSUMED, false)) return false
+        intent.putExtra(CONSUMED, true)
+
+        val payload: Map<String, Any?>? = when (intent.action) {
+            Intent.ACTION_VIEW -> {
+                val uri = intent.data ?: return false
+                if (uri.scheme.equals("magnet", ignoreCase = true)) {
+                    mapOf("magnet" to uri.toString())
+                } else {
+                    readTorrent(uri)
+                }
+            }
+            Intent.ACTION_SEND -> {
+                val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                }
+                // A shared magnet arrives as text, not a stream.
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()
+                when {
+                    uri != null -> readTorrent(uri)
+                    text != null && text.startsWith("magnet:", ignoreCase = true) ->
+                        mapOf("magnet" to text)
+                    else -> null
+                }
+            }
+            else -> null
+        }
+
+        if (payload == null) return false
+        pendingTorrent = payload
+        return true
+    }
+
+    /// Read a .torrent's bytes plus its display name. Null on anything we
+    /// can't read or that is too big to be a torrent — a torrent is tens of
+    /// KB, so a large file here is a mistake or an attack, not a torrent, and
+    /// it would cross the method channel into Dart's heap.
+    private fun readTorrent(uri: Uri): Map<String, Any?>? = try {
+        val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        when {
+            bytes == null || bytes.isEmpty() -> null
+            bytes.size > MAX_TORRENT_BYTES -> {
+                android.util.Log.w("torrent", "ignoring ${bytes.size}-byte intent payload")
+                null
+            }
+            else -> mapOf("bytes" to bytes, "filename" to displayName(uri))
+        }
+    } catch (e: Exception) {
+        android.util.Log.w("torrent", "unreadable intent uri", e)
+        null
+    }
+
+    private fun displayName(uri: Uri): String? {
+        try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { c ->
+                    if (c.moveToFirst() && !c.isNull(0)) return c.getString(0)
+                }
+        } catch (e: Exception) {
+            // Providers are allowed to refuse the query; the path is a fine
+            // fallback and the user can rename the destination anyway.
+        }
+        return uri.lastPathSegment?.substringAfterLast('/')
     }
 
     private fun passOffTorrent(bytes: ByteArray?, filename: String?): String {
@@ -165,5 +275,10 @@ class MainActivity : AudioServiceActivity() {
 
     private companion object {
         const val TORRENT_MIME = "application/x-bittorrent"
+        const val CONSUMED = "mstream.torrentConsumed"
+
+        // Torrents are tens of KB. 8 MB is far past any real one and still
+        // safe to hold twice (here and across the channel).
+        const val MAX_TORRENT_BYTES = 8 * 1024 * 1024
     }
 }

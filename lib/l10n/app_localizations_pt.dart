@@ -2095,6 +2095,27 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível passar o torrent para outro aplicativo';
 
   @override
+  String get torrentIntentTitle => 'Torrent recebido';
+
+  @override
+  String get torrentIntentBody =>
+      'Adicione-o a uma biblioteca no seu servidor mStream ou passe-o para outro aplicativo.';
+
+  @override
+  String get torrentIntentAdd => 'Adicionar ao mStream';
+
+  @override
+  String get torrentIntentDontAsk =>
+      'Sempre adicionar ao mStream, não perguntar novamente';
+
+  @override
+  String get settingsTorrentAskTitle => 'Perguntar o que fazer com torrents';
+
+  @override
+  String get settingsTorrentAskSub =>
+      'Quando um torrent for aberto com o mStream, oferecer passá-lo para outro aplicativo';
+
+  @override
   String get torrentAutoDetect => 'Detectar metadados';
 
   @override

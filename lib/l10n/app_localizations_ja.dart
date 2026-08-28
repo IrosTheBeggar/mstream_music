@@ -2010,6 +2010,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get torrentOpenWithFailed => 'トレントを別のアプリに渡せませんでした';
 
   @override
+  String get torrentIntentTitle => 'トレントを受信しました';
+
+  @override
+  String get torrentIntentBody => 'mStream サーバーのライブラリに追加するか、別のアプリに渡します。';
+
+  @override
+  String get torrentIntentAdd => 'mStream に追加';
+
+  @override
+  String get torrentIntentDontAsk => '常に mStream に追加し、今後確認しない';
+
+  @override
+  String get settingsTorrentAskTitle => 'トレントの処理方法を確認する';
+
+  @override
+  String get settingsTorrentAskSub => 'mStream でトレントを開いたとき、別のアプリに渡す選択肢を表示します';
+
+  @override
   String get torrentAutoDetect => 'メタデータを自動検出';
 
   @override

@@ -1968,6 +1968,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentOpenWithFailed => '无法将种子文件交给其他应用';
 
   @override
+  String get torrentIntentTitle => '已接收种子';
+
+  @override
+  String get torrentIntentBody => '将其添加到 mStream 服务器上的媒体库，或交给其他应用处理。';
+
+  @override
+  String get torrentIntentAdd => '添加到 mStream';
+
+  @override
+  String get torrentIntentDontAsk => '始终添加到 mStream，不再询问';
+
+  @override
+  String get settingsTorrentAskTitle => '询问如何处理种子文件';
+
+  @override
+  String get settingsTorrentAskSub => '使用 mStream 打开种子时，提供交给其他应用的选项';
+
+  @override
   String get torrentAutoDetect => '自动检测元数据';
 
   @override

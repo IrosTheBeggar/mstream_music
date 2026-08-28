@@ -2077,6 +2077,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not hand the torrent to another app';
 
   @override
+  String get torrentIntentTitle => 'Torrent received';
+
+  @override
+  String get torrentIntentBody =>
+      'Add it to a library on your mStream server, or hand it to another app.';
+
+  @override
+  String get torrentIntentAdd => 'Add to mStream';
+
+  @override
+  String get torrentIntentDontAsk => 'Always add to mStream, don’t ask again';
+
+  @override
+  String get settingsTorrentAskTitle => 'Ask what to do with torrents';
+
+  @override
+  String get settingsTorrentAskSub =>
+      'When a torrent is opened with mStream, offer to hand it to another app';
+
+  @override
   String get torrentAutoDetect => 'Auto-detect metadata';
 
   @override
