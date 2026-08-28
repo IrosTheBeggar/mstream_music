@@ -3624,6 +3624,12 @@ abstract class AppLocalizations {
   /// **'Not a valid magnet link'**
   String get torrentMagnetInvalid;
 
+  /// Snackbar when the picked file fails the bencode check.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” is not a .torrent file'**
+  String torrentNotATorrent(String name);
+
   /// Button asking the server to detect artist/album/year from the .torrent.
   ///
   /// In en, this message translates to:

@@ -1954,6 +1954,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentMagnetInvalid => '磁力链接无效';
 
   @override
+  String torrentNotATorrent(String name) {
+    return '「$name」不是 .torrent 文件';
+  }
+
+  @override
   String get torrentAutoDetect => '自动检测元数据';
 
   @override

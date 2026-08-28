@@ -155,17 +155,18 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   }
 
   Future<void> _pickFile() async {
-    // One MIME type on purpose: file_selector_android narrows the SAF intent
-    // to a single type, so the picker lists .torrent files only. Stated
-    // explicitly rather than left to MimeTypeMap, which may or may not know
-    // the extension. The cost is that a .torrent whose DocumentsProvider
-    // reports octet-stream is greyed out — adding a second type here forces
-    // the permissive */* + EXTRA_MIME_TYPES path if that ever shows up.
-    // Windows reads `extensions` only and ignores mimeTypes.
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    // Everything is selectable on purpose. SAF filters on the MIME the
+    // DocumentsProvider reports, and a real .torrent is routinely reported
+    // as octet-stream — a narrow filter greys out the very file the user
+    // came for. `*/*` is a single type, so the plugin sets it directly with
+    // no EXTRA_MIME_TYPES; isTorrentFile below is the actual gate. Windows
+    // reads `extensions` only and still shows a *.torrent filter.
     const group = XTypeGroup(
       label: 'Torrent',
       extensions: ['torrent'],
-      mimeTypes: ['application/x-bittorrent'],
+      mimeTypes: ['*/*'],
     );
     final XFile? file = await openFile(
       acceptedTypeGroups: const [group],
@@ -174,6 +175,11 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
+    if (!isTorrentFile(bytes)) {
+      messenger.showSnackBar(
+          SnackBar(content: Text(l.torrentNotATorrent(file.name))));
+      return;
+    }
     setState(() {
       _fileBytes = bytes;
       _fileName = file.name;

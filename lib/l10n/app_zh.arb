@@ -515,6 +515,7 @@
   "torrentOr": "或",
   "torrentMagnetLabel": "磁力链接",
   "torrentMagnetInvalid": "磁力链接无效",
+  "torrentNotATorrent": "「{name}」不是 .torrent 文件",
   "torrentAutoDetect": "自动检测元数据",
   "torrentDetecting": "检测中…",
   "torrentDetectNoMetadata": "元数据不足——请手动填写",

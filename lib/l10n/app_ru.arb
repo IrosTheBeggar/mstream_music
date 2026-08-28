@@ -515,6 +515,7 @@
   "torrentOr": "или",
   "torrentMagnetLabel": "Magnet-ссылка",
   "torrentMagnetInvalid": "Недействительная magnet-ссылка",
+  "torrentNotATorrent": "«{name}» не является файлом .torrent",
   "torrentAutoDetect": "Определить метаданные",
   "torrentDetecting": "Определение…",
   "torrentDetectNoMetadata": "Недостаточно метаданных — заполните поля вручную",

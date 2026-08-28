@@ -515,6 +515,7 @@
   "torrentOr": "oder",
   "torrentMagnetLabel": "Magnet-Link",
   "torrentMagnetInvalid": "Kein gültiger Magnet-Link",
+  "torrentNotATorrent": "„{name}“ ist keine .torrent-Datei",
   "torrentAutoDetect": "Metadaten automatisch erkennen",
   "torrentDetecting": "Erkenne…",
   "torrentDetectNoMetadata": "Zu wenig Metadaten — bitte Felder von Hand ausfüllen",

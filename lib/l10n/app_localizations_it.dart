@@ -2083,6 +2083,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get torrentMagnetInvalid => 'Link magnet non valido';
 
   @override
+  String torrentNotATorrent(String name) {
+    return '«$name» non è un file .torrent';
+  }
+
+  @override
   String get torrentAutoDetect => 'Rileva metadati';
 
   @override

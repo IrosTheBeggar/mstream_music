@@ -515,6 +515,7 @@
   "torrentOr": "または",
   "torrentMagnetLabel": "マグネットリンク",
   "torrentMagnetInvalid": "有効なマグネットリンクではありません",
+  "torrentNotATorrent": "「{name}」は .torrent ファイルではありません",
   "torrentAutoDetect": "メタデータを自動検出",
   "torrentDetecting": "検出中…",
   "torrentDetectNoMetadata": "メタデータが不足しています — 手動で入力してください",

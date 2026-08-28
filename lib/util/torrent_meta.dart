@@ -6,48 +6,61 @@ import 'dart:convert';
 /// so the live path preview matches what `/torrent/add` will accept (the
 /// server re-validates, so any drift surfaces as a save-time error).
 
-/// Pull the suggested folder name out of a .torrent file's info dict:
-/// scan the bencode bytes for "4:info" then `4:name<len>:<value>`.
-/// Returns '' on any parse failure (the user can still type a name).
-String extractTorrentName(List<int> bytes) {
-  int i = 0;
-  while (i < bytes.length - 8) {
-    // "4:info"
+/// Index of the dict opener ('d') belonging to a bencoded `4:info` key, or
+/// -1 when there isn't one. A scan rather than a parse — the info dict is
+/// the one structure both the name extractor and the file check need.
+int indexOfTorrentInfoDict(List<int> bytes) {
+  for (int i = 0; i < bytes.length - 8; i++) {
+    // "4:info" followed by a dict opener
     if (bytes[i] == 0x34 &&
         bytes[i + 1] == 0x3a &&
         bytes[i + 2] == 0x69 &&
         bytes[i + 3] == 0x6e &&
         bytes[i + 4] == 0x66 &&
-        bytes[i + 5] == 0x6f) {
-      if (bytes[i + 6] != 0x64) {
-        i++;
-        continue; // expect a dict opener 'd'
-      }
-      for (int j = i + 7; j < bytes.length - 8; j++) {
-        // "4:name"
-        if (bytes[j] == 0x34 &&
-            bytes[j + 1] == 0x3a &&
-            bytes[j + 2] == 0x6e &&
-            bytes[j + 3] == 0x61 &&
-            bytes[j + 4] == 0x6d &&
-            bytes[j + 5] == 0x65) {
-          int k = j + 6;
-          final lenBuf = StringBuffer();
-          while (k < bytes.length && bytes[k] != 0x3a) {
-            lenBuf.writeCharCode(bytes[k]);
-            k++;
-          }
-          final len = int.tryParse(lenBuf.toString());
-          if (len == null || len <= 0 || len > 1024) return '';
-          final start = k + 1;
-          if (start + len > bytes.length) return '';
-          return utf8.decode(bytes.sublist(start, start + len),
-              allowMalformed: true);
-        }
-      }
-      return '';
+        bytes[i + 5] == 0x6f &&
+        bytes[i + 6] == 0x64) {
+      return i + 6;
     }
-    i++;
+  }
+  return -1;
+}
+
+/// True when [bytes] look like a real .torrent: a bencoded dict carrying an
+/// "info" dict. Structural only — enough to reject an mp3 or a PDF the user
+/// picked by mistake, not a full bencode validation. The picker lets any
+/// file through (SAF greys out real torrents otherwise), so this is the gate.
+bool isTorrentFile(List<int> bytes) =>
+    bytes.isNotEmpty &&
+    bytes[0] == 0x64 && // 'd' — the outer bencode dict
+    indexOfTorrentInfoDict(bytes) >= 0;
+
+/// Pull the suggested folder name out of a .torrent file's info dict:
+/// scan the bencode bytes for "4:info" then `4:name<len>:<value>`.
+/// Returns '' on any parse failure (the user can still type a name).
+String extractTorrentName(List<int> bytes) {
+  final int info = indexOfTorrentInfoDict(bytes);
+  if (info < 0) return '';
+  for (int j = info + 1; j < bytes.length - 8; j++) {
+    // "4:name"
+    if (bytes[j] == 0x34 &&
+        bytes[j + 1] == 0x3a &&
+        bytes[j + 2] == 0x6e &&
+        bytes[j + 3] == 0x61 &&
+        bytes[j + 4] == 0x6d &&
+        bytes[j + 5] == 0x65) {
+      int k = j + 6;
+      final lenBuf = StringBuffer();
+      while (k < bytes.length && bytes[k] != 0x3a) {
+        lenBuf.writeCharCode(bytes[k]);
+        k++;
+      }
+      final len = int.tryParse(lenBuf.toString());
+      if (len == null || len <= 0 || len > 1024) return '';
+      final start = k + 1;
+      if (start + len > bytes.length) return '';
+      return utf8.decode(bytes.sublist(start, start + len),
+          allowMalformed: true);
+    }
   }
   return '';
 }

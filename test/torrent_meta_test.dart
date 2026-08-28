@@ -107,6 +107,52 @@ void main() {
     });
   });
 
+  group('isTorrentFile', () {
+    List<int> bencode(String s) => utf8.encode(s);
+
+    test('a minimal real torrent', () {
+      expect(isTorrentFile(bencode('d4:infod4:name5:Album6:lengthi1eee')),
+          isTrue);
+    });
+
+    test('announce before the info dict', () {
+      expect(
+          isTorrentFile(bencode(
+              'd8:announce20:http://tracker.test4:infod4:name5:Albumee')),
+          isTrue);
+    });
+
+    test('empty file', () {
+      expect(isTorrentFile(const <int>[]), isFalse);
+    });
+
+    test('an mp3 (ID3 header) is rejected', () {
+      expect(isTorrentFile(bencode('ID3\u0004\u0000some audio payload here')),
+          isFalse);
+    });
+
+    test('a PDF is rejected', () {
+      expect(isTorrentFile(bencode('%PDF-1.7 and a lot of trailing bytes')),
+          isFalse);
+    });
+
+    test('bencode dict without an info dict is rejected', () {
+      expect(isTorrentFile(bencode('d8:announce20:http://tracker.teste')),
+          isFalse);
+    });
+
+    test('"4:info" not followed by a dict opener is rejected', () {
+      expect(isTorrentFile(bencode('d4:info5:hellosome more padding here')),
+          isFalse);
+    });
+
+    test('info dict present but not the outer type is rejected', () {
+      // Starts with a list, not a dict — not a torrent even though the
+      // "4:infod" bytes appear inside it.
+      expect(isTorrentFile(bencode('l4:infod4:name5:Albumee')), isFalse);
+    });
+  });
+
   group('isValidMagnetLink', () {
     const v1Hex =
         'magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567';

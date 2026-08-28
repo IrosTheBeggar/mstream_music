@@ -1705,6 +1705,15 @@
   "@torrentMagnetInvalid": {
     "description": "Error under the magnet field when the pasted text is not a usable magnet link."
   },
+  "torrentNotATorrent": "“{name}” is not a .torrent file",
+  "@torrentNotATorrent": {
+    "description": "Snackbar when the picked file fails the bencode check.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "torrentAutoDetect": "Auto-detect metadata",
   "@torrentAutoDetect": {
     "description": "Button asking the server to detect artist/album/year from the .torrent."
