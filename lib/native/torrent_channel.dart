@@ -82,6 +82,21 @@ class TorrentChannel {
     }
   }
 
+  /// Opens Android's per-app "open by default" screen, where the user can
+  /// make mStream the app that handles torrents (or hand that back to another
+  /// app). An app cannot set this itself — taking the user there is the most
+  /// it may do. False when no settings screen would open at all.
+  static Future<bool> openDefaultSettings() async {
+    if (!isSupported) return false;
+    try {
+      return await _channel.invokeMethod<bool>('openDefaultSettings') ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   /// Take whatever arrived by intent, or null when nothing is waiting (the
   /// normal launch). Draining is one-shot on the native side, so calling this
   /// from both the cold-start path and the warm notification can't

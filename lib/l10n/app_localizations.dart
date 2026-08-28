@@ -3684,6 +3684,24 @@ abstract class AppLocalizations {
   /// **'When a torrent is opened with mStream, offer to hand it to another app'**
   String get settingsTorrentAskSub;
 
+  /// Settings row opening Android per-app default-handler settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Default app for torrents'**
+  String get settingsTorrentDefaultTitle;
+
+  /// Subtitle for that row.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens Android settings, where you can choose which app handles torrents and magnet links'**
+  String get settingsTorrentDefaultSub;
+
+  /// Snackbar when no settings screen would open.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Android settings'**
+  String get settingsTorrentDefaultFailed;
+
   /// Button asking the server to detect artist/album/year from the .torrent.
   ///
   /// In en, this message translates to:

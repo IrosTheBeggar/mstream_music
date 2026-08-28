@@ -1750,6 +1750,18 @@
   "@settingsTorrentAskSub": {
     "description": "Subtitle for that settings switch."
   },
+  "settingsTorrentDefaultTitle": "Default app for torrents",
+  "@settingsTorrentDefaultTitle": {
+    "description": "Settings row opening Android per-app default-handler settings."
+  },
+  "settingsTorrentDefaultSub": "Opens Android settings, where you can choose which app handles torrents and magnet links",
+  "@settingsTorrentDefaultSub": {
+    "description": "Subtitle for that row."
+  },
+  "settingsTorrentDefaultFailed": "Could not open Android settings",
+  "@settingsTorrentDefaultFailed": {
+    "description": "Snackbar when no settings screen would open."
+  },
   "torrentAutoDetect": "Auto-detect metadata",
   "@torrentAutoDetect": {
     "description": "Button asking the server to detect artist/album/year from the .torrent."

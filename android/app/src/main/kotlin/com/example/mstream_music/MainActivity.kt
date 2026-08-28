@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.StatFs
 import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -108,6 +109,10 @@ class MainActivity : AudioServiceActivity() {
         torrentChannel!!
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // Open Android's own "open by default" screen for us.
+                    // We can't set the default ourselves — only the user can —
+                    // so the most an app may do is take them there.
+                    "openDefaultSettings" -> result.success(openDefaultSettings())
                     // Drain whatever arrived by intent. Returns null when
                     // nothing is waiting, which is the normal launch case.
                     "getInitialTorrent" -> {
@@ -135,6 +140,27 @@ class MainActivity : AudioServiceActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun openDefaultSettings(): Boolean {
+        val uri = Uri.fromParts("package", packageName, null)
+        val candidates = mutableListOf<Intent>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            candidates.add(Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, uri))
+        }
+        // Every device has the app-details page and it carries the same
+        // controls one step deeper — the fallback for pre-12, and for OEM
+        // builds (Samsung among them) where the direct screen doesn't resolve.
+        candidates.add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+        for (intent in candidates) {
+            try {
+                startActivity(intent)
+                return true
+            } catch (e: Exception) {
+                android.util.Log.w("torrent", "settings screen unavailable: ${'$'}{intent.action}")
+            }
+        }
+        return false
     }
 
     /// Pull a torrent out of an incoming intent, if it carries one. Returns

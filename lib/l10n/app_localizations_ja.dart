@@ -2028,6 +2028,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTorrentAskSub => 'mStream でトレントを開いたとき、別のアプリに渡す選択肢を表示します';
 
   @override
+  String get settingsTorrentDefaultTitle => 'トレントの既定のアプリ';
+
+  @override
+  String get settingsTorrentDefaultSub =>
+      'Android の設定を開き、トレントとマグネットリンクを開くアプリを選べます';
+
+  @override
+  String get settingsTorrentDefaultFailed => 'Android の設定を開けませんでした';
+
+  @override
   String get torrentAutoDetect => 'メタデータを自動検出';
 
   @override

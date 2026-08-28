@@ -572,6 +572,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               activeThumbColor: VelvetColors.primary,
             ),
+          // Paired with the switch above: that one decides what mStream does
+          // with a torrent it receives, this one decides whether it receives
+          // them at all. Also the only in-app way back from having made some
+          // other app the default, which is otherwise a silent dead end.
+          if (TorrentChannel.isSupported)
+            ListTile(
+              leading: Icon(Icons.open_in_browser),
+              title: Text(l.settingsTorrentDefaultTitle),
+              subtitle: Text(
+                l.settingsTorrentDefaultSub,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final failed = !await TorrentChannel.openDefaultSettings();
+                if (failed && context.mounted) {
+                  messenger.showSnackBar(SnackBar(
+                      content: Text(AppLocalizations.of(context)
+                          .settingsTorrentDefaultFailed)));
+                }
+              },
+            ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionAbout),
           ListTile(

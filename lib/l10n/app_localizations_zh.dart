@@ -1986,6 +1986,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTorrentAskSub => '使用 mStream 打开种子时，提供交给其他应用的选项';
 
   @override
+  String get settingsTorrentDefaultTitle => '种子文件的默认应用';
+
+  @override
+  String get settingsTorrentDefaultSub => '打开 Android 设置，在其中选择由哪个应用处理种子文件和磁力链接';
+
+  @override
+  String get settingsTorrentDefaultFailed => '无法打开 Android 设置';
+
+  @override
   String get torrentAutoDetect => '自动检测元数据';
 
   @override

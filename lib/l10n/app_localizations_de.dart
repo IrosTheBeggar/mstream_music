@@ -2121,6 +2121,17 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wenn ein Torrent mit mStream geöffnet wird, Übergabe an eine andere App anbieten';
 
   @override
+  String get settingsTorrentDefaultTitle => 'Standard-App für Torrents';
+
+  @override
+  String get settingsTorrentDefaultSub =>
+      'Öffnet die Android-Einstellungen, wo du wählst, welche App Torrents und Magnet-Links öffnet';
+
+  @override
+  String get settingsTorrentDefaultFailed =>
+      'Android-Einstellungen konnten nicht geöffnet werden';
+
+  @override
   String get torrentAutoDetect => 'Metadaten automatisch erkennen';
 
   @override
