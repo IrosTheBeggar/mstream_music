@@ -83,13 +83,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         .customAction('setAutoDJ', {'autoDJServer': server});
   }
 
-  // Use the AutoDJ server when configured; fall back to the current
-  // server so the genre picker works before AutoDJ is enabled.
-  Server? get _genreFetchTarget =>
-      _autoDJServer ?? ServerManager().currentServer;
-
   Future<void> _ensureGenresLoaded() async {
-    final server = _genreFetchTarget;
+    // _panelServer, so the genre picker works before AutoDJ is enabled.
+    final server = _panelServer;
     if (server == null) return;
     if (_loadingGenres) return;
     if (_availableGenres != null && _genresLoadedFor == server) return;
@@ -173,7 +169,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             _olderServerNote(l),
             Divider(color: VelvetColors.border, height: 1),
             _sectionHeader(l.autoDjSectionFilters),
-            if (enabled) _minRatingTile(_autoDJServer!),
+            if (_panelServer != null) _minRatingTile(_panelServer!),
             if (!_durationHidden) _durationFilterSection(),
             // Keyword filter survives: it is applied client-side, so it works
             // against any server however old.
@@ -185,7 +181,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             _harmonicMixingSection(),
             Divider(color: VelvetColors.border, height: 1),
             _sectionHeader(l.autoDjSectionFilters),
-            if (enabled) _minRatingTile(_autoDJServer!),
+            if (_panelServer != null) _minRatingTile(_panelServer!),
             if (!_durationHidden) _durationFilterSection(),
             _genreFilterSection(),
             _keywordFilterSection(),
@@ -198,20 +194,32 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 
   // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
 
+  /// The server this panel is talking about: the DJ's when it is armed, the
+  /// current one when it isn't.
+  ///
+  /// Both the per-server controls and the version gates key off this. It
+  /// matters most for minRating, which lives on the Server rather than in
+  /// AutoDJManager — a rating is only meaningful against the library it was
+  /// set in — so unlike the genre, keyword and length filters that tile needs
+  /// a server to point at, and would otherwise vanish whenever the DJ was off.
+  /// Null only when nothing is configured at all.
+  Server? get _panelServer => _autoDJServer ?? ServerManager().currentServer;
+
+  ServerVersion? get _panelServerVersion =>
+      ServerVersion.tryParse(_panelServer?.serverVersion);
+
   /// True when the DJ server is KNOWN to predate 6.7.1. Unknown versions and
   /// forks read false — they can't be compared, so the controls stay and the
   /// capability learner handles any rejection.
+  bool get _filtersHidden =>
+      autoDjFiltersKnownUnsupported(_panelServerVersion);
+
   /// True when the DJ server is KNOWN to predate the track-length window.
   /// Gated separately from [_filtersHidden]: the duration params landed long
   /// after the 6.7.1 block, so a server can have every other filter and still
   /// not this one.
-  bool get _durationHidden => autoDjDurationKnownUnsupported(
-      ServerVersion.tryParse(
-          (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
-
-  bool get _filtersHidden => autoDjFiltersKnownUnsupported(
-      ServerVersion.tryParse(
-          (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
+  bool get _durationHidden =>
+      autoDjDurationKnownUnsupported(_panelServerVersion);
 
   Widget _olderServerNote(AppLocalizations l) {
     return Padding(
