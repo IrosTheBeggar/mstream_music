@@ -3630,6 +3630,24 @@ abstract class AppLocalizations {
   /// **'“{name}” is not a .torrent file'**
   String torrentNotATorrent(String name);
 
+  /// Button handing the picked .torrent to another app instead of adding it.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in another app'**
+  String get torrentOpenWith;
+
+  /// Snackbar when nothing on the device handles torrents.
+  ///
+  /// In en, this message translates to:
+  /// **'No app on this device can open a .torrent file'**
+  String get torrentOpenWithNone;
+
+  /// Snackbar when the hand-off to another app errored.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not hand the torrent to another app'**
+  String get torrentOpenWithFailed;
+
   /// Button asking the server to detect artist/album/year from the .torrent.
   ///
   /// In en, this message translates to:

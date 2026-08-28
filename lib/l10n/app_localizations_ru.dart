@@ -2105,6 +2105,17 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get torrentOpenWith => 'Открыть в другом приложении';
+
+  @override
+  String get torrentOpenWithNone =>
+      'На этом устройстве нет приложения, способного открыть файл .torrent';
+
+  @override
+  String get torrentOpenWithFailed =>
+      'Не удалось передать торрент другому приложению';
+
+  @override
   String get torrentAutoDetect => 'Определить метаданные';
 
   @override

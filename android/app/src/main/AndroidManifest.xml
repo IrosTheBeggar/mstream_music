@@ -59,6 +59,22 @@
     <!-- allowBackup=false: servers.json holds credentials (JWT, password, and the
          iroh pairing code's connect secret), so keep it out of adb / cloud backups
          where another process could exfiltrate it. -->
+    <!-- Package visibility (API 30+): without this, queryIntentActivities
+         comes back empty and the Add Torrent screen's "open in another app"
+         hand-off can't tell whether a torrent client is installed — it would
+         silently fall back to the share sheet forever. Narrow on purpose:
+         this reveals only apps that already declare they handle torrents. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/x-bittorrent" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="application/x-bittorrent" />
+        </intent>
+    </queries>
+
     <!-- MainApplication (not the Flutter default ${applicationName}):
          process-wide native init (IrohNative/ndk_context) that must also run
          on HEADLESS service binds — media-resumption chip, Bluetooth media
@@ -164,6 +180,23 @@
             android:authorities="${applicationId}.art"
             android:exported="true"
             android:grantUriPermissions="true" />
+
+        <!-- Hands a picked .torrent to another app (Add Torrent screen's
+             "open in another app"). We copy the bytes into cache/torrents and
+             serve THAT rather than forwarding the picker's own content:// URI:
+             a grant we received isn't reliably re-delegatable, and a torrent is
+             a few tens of KB so the copy is free. Not exported — access is only
+             ever the per-Intent grant. Authority is flavor-scoped so full +
+             play can be installed side by side. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.torrents"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/torrent_paths" />
+        </provider>
 
     </application>
 </manifest>

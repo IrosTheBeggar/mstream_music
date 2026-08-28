@@ -2103,6 +2103,17 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get torrentOpenWith => 'Otwórz w innej aplikacji';
+
+  @override
+  String get torrentOpenWithNone =>
+      'Żadna aplikacja na tym urządzeniu nie otworzy pliku .torrent';
+
+  @override
+  String get torrentOpenWithFailed =>
+      'Nie udało się przekazać torrenta innej aplikacji';
+
+  @override
   String get torrentAutoDetect => 'Wykryj metadane';
 
   @override

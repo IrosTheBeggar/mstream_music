@@ -1714,6 +1714,18 @@
       }
     }
   },
+  "torrentOpenWith": "Open in another app",
+  "@torrentOpenWith": {
+    "description": "Button handing the picked .torrent to another app instead of adding it."
+  },
+  "torrentOpenWithNone": "No app on this device can open a .torrent file",
+  "@torrentOpenWithNone": {
+    "description": "Snackbar when nothing on the device handles torrents."
+  },
+  "torrentOpenWithFailed": "Could not hand the torrent to another app",
+  "@torrentOpenWithFailed": {
+    "description": "Snackbar when the hand-off to another app errored."
+  },
   "torrentAutoDetect": "Auto-detect metadata",
   "@torrentAutoDetect": {
     "description": "Button asking the server to detect artist/album/year from the .torrent."

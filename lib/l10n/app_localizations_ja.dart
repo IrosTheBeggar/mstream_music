@@ -2001,6 +2001,15 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get torrentOpenWith => '別のアプリで開く';
+
+  @override
+  String get torrentOpenWithNone => 'このデバイスには .torrent ファイルを開けるアプリがありません';
+
+  @override
+  String get torrentOpenWithFailed => 'トレントを別のアプリに渡せませんでした';
+
+  @override
   String get torrentAutoDetect => 'メタデータを自動検出';
 
   @override

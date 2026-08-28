@@ -1959,6 +1959,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get torrentOpenWith => '在其他应用中打开';
+
+  @override
+  String get torrentOpenWithNone => '此设备上没有应用可以打开 .torrent 文件';
+
+  @override
+  String get torrentOpenWithFailed => '无法将种子文件交给其他应用';
+
+  @override
   String get torrentAutoDetect => '自动检测元数据';
 
   @override

@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../native/torrent_passoff.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/server_list.dart';
@@ -51,6 +53,7 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   bool _renameRoot = true;
   bool _forceFresh = false;
   bool _detecting = false;
+  bool _passingOff = false;
   bool _submitting = false;
 
   @override
@@ -254,6 +257,33 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
       }
     } finally {
       if (mounted) setState(() => _detecting = false);
+    }
+  }
+
+  // Escape hatch: this torrent isn't one for the server after all. Hand the
+  // file to a torrent client (or, if none is installed, the share sheet) and
+  // leave the screen as it is — nothing has been submitted, so backing out or
+  // picking a different file both still work.
+  Future<void> _openWith() async {
+    final bytes = _fileBytes;
+    if (bytes == null) return;
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _passingOff = true);
+    final outcome =
+        await TorrentPassOffChannel.openWith(Uint8List.fromList(bytes), _fileName);
+    if (!mounted) return;
+    setState(() => _passingOff = false);
+    switch (outcome) {
+      case TorrentPassOff.view:
+      case TorrentPassOff.send:
+        break; // the chooser is up; nothing to say
+      case TorrentPassOff.none:
+        messenger
+            .showSnackBar(SnackBar(content: Text(l.torrentOpenWithNone)));
+      case TorrentPassOff.error:
+        messenger
+            .showSnackBar(SnackBar(content: Text(l.torrentOpenWithFailed)));
     }
   }
 
@@ -571,6 +601,9 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                         if (_fileBytes != null) _forceFreshToggle(l),
                         const SizedBox(height: 22),
                         _submitButton(l),
+                        if (_fileBytes != null &&
+                            TorrentPassOffChannel.isSupported)
+                          _openWithButton(l),
                       ],
                     ],
                   ],
@@ -787,6 +820,24 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
             : const Icon(Icons.downloading),
         label: Text(_submitting ? l.torrentSubmitting : l.torrentSubmit),
         onPressed: (_featureOk && !_submitting) ? _submit : null,
+      );
+
+  Widget _openWithButton(AppLocalizations l) => TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: VelvetColors.textSecondary,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        icon: _passingOff
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor:
+                        AlwaysStoppedAnimation(VelvetColors.textSecondary)))
+            : const Icon(Icons.open_in_new, size: 18),
+        label: Text(l.torrentOpenWith),
+        onPressed: (_passingOff || _submitting) ? null : _openWith,
       );
 
   Widget _reasonBanner(AppLocalizations l) {
