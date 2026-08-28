@@ -188,6 +188,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         SettingsManager().startupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
+      unawaited(_restoreAutoDj());
       unawaited(_maybeOpenStartupView());
       _maybeShowWelcome();
       // Armed only after the saved list has landed, so the first-run flow keys
@@ -232,6 +233,26 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   /// leave welcomeShown == true, so the browser row is the only first-run
   /// affordance from then on. welcomeShown reads `true` for any settings.json
   /// written before this existed, so upgrades never see it.
+  /// Auto DJ comes back on wherever it was left. Runs after the server list
+  /// has landed, since the stored value is a Server.localname that has to be
+  /// resolved against it — and drops the memory if that server is gone, so a
+  /// deleted server can't leave the DJ permanently trying to restore.
+  ///
+  /// Arms only; see AudioPlayerHandler.restoreAutoDJ for why this must not go
+  /// through the setAutoDJ action.
+  Future<void> _restoreAutoDj() async {
+    await AutoDJManager().load();
+    final name = AutoDJManager().enabledServer;
+    if (name == null) return;
+    final matches =
+        ServerManager().serverList.where((s) => s.localname == name);
+    if (matches.isEmpty) {
+      await AutoDJManager().setEnabledServer(null);
+      return;
+    }
+    MediaManager().audioHandler.restoreAutoDJ(matches.first);
+  }
+
   void _maybeShowWelcome() {
     if (!mounted || SettingsManager().welcomeShown) return;
     unawaited(SettingsManager().setWelcomeShown(true));

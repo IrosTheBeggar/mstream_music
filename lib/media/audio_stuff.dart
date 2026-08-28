@@ -1656,6 +1656,23 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!_restoreSettled.isCompleted) _restoreSettled.complete();
   }
 
+  /// Bring Auto DJ back up on [server] after a restart — armed only.
+  ///
+  /// Deliberately NOT the setAutoDJ custom action: that one fills an empty
+  /// queue and calls autoDJ(autoPlay: true), so restoring through it would
+  /// start playing music every time the app is opened. "Remembered as on"
+  /// means the toggle is on; the DJ then engages by itself at the next
+  /// queue-end top-up, exactly as it would have before the restart.
+  ///
+  /// A no-op once anything has already armed the DJ, so a user toggle that
+  /// beats the launch restore wins.
+  void restoreAutoDJ(Server server) {
+    if (autoDJServer != null) return;
+    autoDJServer = server;
+    customState.add(CustomEvent(autoDJServer));
+    appLog('[autodj] restored on ${server.localname}');
+  }
+
   // Cold-boot resume race: a PLAY from the media-resumption chip, Bluetooth,
   // or Android Auto can reach a headless-booted service before QueueStore has
   // restored the saved queue — a bare play on an empty player silently no-ops
@@ -1892,6 +1909,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (autoDJServer?.localname == localname) {
       // Auto-DJ would keep topping the queue back up from the deleted server.
       autoDJServer = null;
+      // Forget it too, or the next launch would try to restore a server that
+      // no longer exists.
+      unawaited(AutoDJManager().setEnabledServer(null));
       customState.add(CustomEvent(autoDJServer));
     }
     final q = queue.value;
@@ -2064,6 +2084,9 @@ class AudioPlayerHandler extends BaseAudioHandler
           _sonicWarned = false;
         }
         autoDJServer = nextDJ;
+        // Remembered across restarts. Every toggle path funnels through here,
+        // so this is the one place that has to record it.
+        unawaited(AutoDJManager().setEnabledServer(nextDJ?.localname));
 
         customState.add(CustomEvent(autoDJServer));
 
