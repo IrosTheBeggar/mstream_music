@@ -155,15 +155,17 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   }
 
   Future<void> _pickFile() async {
-    // Two MIME types on purpose. file_selector_android converts extensions
-    // via MimeTypeMap and, when exactly one type comes out, narrows the
-    // intent to it — which greys out any .torrent whose provider reports
-    // octet-stream. Two forces the permissive */* + EXTRA_MIME_TYPES path.
-    // Windows reads `extensions` only and ignores these.
+    // One MIME type on purpose: file_selector_android narrows the SAF intent
+    // to a single type, so the picker lists .torrent files only. Stated
+    // explicitly rather than left to MimeTypeMap, which may or may not know
+    // the extension. The cost is that a .torrent whose DocumentsProvider
+    // reports octet-stream is greyed out — adding a second type here forces
+    // the permissive */* + EXTRA_MIME_TYPES path if that ever shows up.
+    // Windows reads `extensions` only and ignores mimeTypes.
     const group = XTypeGroup(
       label: 'Torrent',
       extensions: ['torrent'],
-      mimeTypes: ['application/x-bittorrent', 'application/octet-stream'],
+      mimeTypes: ['application/x-bittorrent'],
     );
     final XFile? file = await openFile(
       acceptedTypeGroups: const [group],
