@@ -251,7 +251,15 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     if (!TorrentChannel.isSupported) return;
     final torrent = await TorrentChannel.takePending();
     if (torrent == null || !mounted) return;
-    if (SettingsManager().torrentSkipChooser) {
+    // Logged because this path is otherwise invisible: "I opened a torrent and
+    // nothing happened" is untriageable without knowing whether it even
+    // arrived, and this lands in the Diagnostics screen.
+    final what = torrent.hasFile
+        ? 'file ${torrent.filename ?? '?'} (${torrent.bytes!.length}B)'
+        : 'magnet';
+    final skip = SettingsManager().torrentSkipChooser;
+    appLog('[torrent] intent: $what -> ${skip ? 'add' : 'chooser'}');
+    if (skip) {
       _openAddTorrent(torrent);
     } else {
       await _showTorrentChooser(torrent);
