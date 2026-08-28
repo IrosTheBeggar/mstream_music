@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
@@ -139,9 +142,33 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
     _recomputePath();
   }
 
+  // A .torrent almost always arrives through the browser, so start the picker
+  // in Downloads. Android's SAF wants a content:// URI, the desktop pickers
+  // want a real path, and null just leaves the picker where it was last.
+  Future<String?> _pickerStartDirectory() async {
+    if (Platform.isAndroid) {
+      return 'content://com.android.externalstorage.documents'
+          '/document/primary%3ADownload';
+    }
+    if (Platform.isIOS) return null;
+    return (await getDownloadsDirectory())?.path;
+  }
+
   Future<void> _pickFile() async {
-    final group = XTypeGroup(label: 'Torrent', extensions: const ['torrent']);
-    final XFile? file = await openFile(acceptedTypeGroups: [group]);
+    // Two MIME types on purpose. file_selector_android converts extensions
+    // via MimeTypeMap and, when exactly one type comes out, narrows the
+    // intent to it — which greys out any .torrent whose provider reports
+    // octet-stream. Two forces the permissive */* + EXTRA_MIME_TYPES path.
+    // Windows reads `extensions` only and ignores these.
+    const group = XTypeGroup(
+      label: 'Torrent',
+      extensions: ['torrent'],
+      mimeTypes: ['application/x-bittorrent', 'application/octet-stream'],
+    );
+    final XFile? file = await openFile(
+      acceptedTypeGroups: const [group],
+      initialDirectory: await _pickerStartDirectory(),
+    );
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
