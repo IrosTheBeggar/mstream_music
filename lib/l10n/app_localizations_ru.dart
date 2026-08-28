@@ -722,6 +722,42 @@ class AppLocalizationsRu extends AppLocalizations {
       'Предпочитать выбор в тональностях, хорошо сочетающихся с закреплённым треком (соседи по колесу Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Длительность трека';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Пропускает интерлюдии и длинные миксы, выбирая треки только заданной длительности';
+
+  @override
+  String get autoDjDurationRange => 'Длительность';
+
+  @override
+  String get autoDjDurationAny => 'Любая длительность';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Больше $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Меньше $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'От $min до $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Включать треки неизвестной длительности';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Иначе треки, длительность которых сервер не определил, пропускаются';
+
+  @override
   String get autoDjStatusOn => 'Авто-DJ включён';
 
   @override

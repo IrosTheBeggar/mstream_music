@@ -693,6 +693,39 @@ class AppLocalizationsJa extends AppLocalizations {
       '固定した曲とよく調和するキーの候補を優先します（Camelot ホイールの隣接キー）。';
 
   @override
+  String get autoDjDurationTitle => '曲の長さ';
+
+  @override
+  String get autoDjDurationSubtitle => 'インタールードや長いミックスを避け、指定した長さの曲だけを選びます';
+
+  @override
+  String get autoDjDurationRange => '長さ';
+
+  @override
+  String get autoDjDurationAny => '長さの指定なし';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return '$min 以上';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return '$max 以下';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return '$min〜$max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown => '長さが不明な曲も含める';
+
+  @override
+  String get autoDjDurationAllowUnknownSub => 'サーバーが長さを読み取れなかった曲は、通常はスキップされます';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ はオンです';
 
   @override

@@ -174,6 +174,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Divider(color: VelvetColors.border, height: 1),
             _sectionHeader(l.autoDjSectionFilters),
             if (enabled) _minRatingTile(_autoDJServer!),
+            if (!_durationHidden) _durationFilterSection(),
             // Keyword filter survives: it is applied client-side, so it works
             // against any server however old.
             _keywordFilterSection(),
@@ -185,6 +186,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Divider(color: VelvetColors.border, height: 1),
             _sectionHeader(l.autoDjSectionFilters),
             if (enabled) _minRatingTile(_autoDJServer!),
+            if (!_durationHidden) _durationFilterSection(),
             _genreFilterSection(),
             _keywordFilterSection(),
           ],
@@ -199,6 +201,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// True when the DJ server is KNOWN to predate 6.7.1. Unknown versions and
   /// forks read false — they can't be compared, so the controls stay and the
   /// capability learner handles any rejection.
+  /// True when the DJ server is KNOWN to predate the track-length window.
+  /// Gated separately from [_filtersHidden]: the duration params landed long
+  /// after the 6.7.1 block, so a server can have every other filter and still
+  /// not this one.
+  bool get _durationHidden => autoDjDurationKnownUnsupported(
+      ServerVersion.tryParse(
+          (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
+
   bool get _filtersHidden => autoDjFiltersKnownUnsupported(
       ServerVersion.tryParse(
           (_autoDJServer ?? ServerManager().currentServer)?.serverVersion));
@@ -461,6 +471,141 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 onChanged: (v) => mgr.setBpmTolerance(v.round()),
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// mm:ss for a bound on the slider. Seconds are the server's unit, but
+  /// nobody thinks about track length in raw seconds.
+  static String _fmtDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  /// Reads back the window in words, because the rails mean "unbounded" and a
+  /// bare "0:00 – 20:00" would look like a constraint when it is the opposite.
+  String _durationSummary(AppLocalizations l, int minSec, int maxSec) {
+    final hasMin = minSec > AutoDJManager.durationFloorSec;
+    final hasMax = maxSec < AutoDJManager.durationCeilSec;
+    if (hasMin && hasMax) {
+      return l.autoDjDurationBetween(_fmtDuration(minSec), _fmtDuration(maxSec));
+    }
+    if (hasMin) return l.autoDjDurationOver(_fmtDuration(minSec));
+    if (hasMax) return l.autoDjDurationUnder(_fmtDuration(maxSec));
+    return l.autoDjDurationAny;
+  }
+
+  Widget _durationFilterSection() {
+    final l = AppLocalizations.of(context);
+    final mgr = AutoDJManager();
+    const floor = AutoDJManager.durationFloorSec;
+    const ceil = AutoDJManager.durationCeilSec;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.autoDjDurationTitle,
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text(
+                      l.autoDjDurationSubtitle,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: mgr.durationFilterEnabled,
+                onChanged: (v) => mgr.setDurationFilterEnabled(v),
+                activeThumbColor: VelvetColors.primary,
+              ),
+            ],
+          ),
+          if (mgr.durationFilterEnabled) ...[
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  l.autoDjDurationRange,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 13),
+                ),
+                Spacer(),
+                Text(
+                  _durationSummary(l, mgr.minDurationSec, mgr.maxDurationSec),
+                  style: TextStyle(
+                    color: VelvetColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: VelvetColors.primary,
+                thumbColor: VelvetColors.primary,
+                overlayColor: VelvetColors.primaryDim,
+              ),
+              child: RangeSlider(
+                values: RangeValues(
+                  mgr.minDurationSec.toDouble().clamp(
+                      floor.toDouble(), ceil.toDouble()),
+                  mgr.maxDurationSec.toDouble().clamp(
+                      floor.toDouble(), ceil.toDouble()),
+                ),
+                min: floor.toDouble(),
+                max: ceil.toDouble(),
+                divisions: (ceil - floor) ~/ AutoDJManager.durationStepSec,
+                onChanged: (v) =>
+                    mgr.setDurationRange(v.start.round(), v.end.round()),
+              ),
+            ),
+            // Only meaningful once a bound is actually set — with the window
+            // wide open the server ignores it, so saying otherwise would lie.
+            if (mgr.activeDurationBounds != null)
+              Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l.autoDjDurationAllowUnknown,
+                              style: TextStyle(
+                                  color: VelvetColors.textPrimary,
+                                  fontSize: 14)),
+                          SizedBox(height: 2),
+                          Text(
+                            l.autoDjDurationAllowUnknownSub,
+                            style: TextStyle(
+                                color: VelvetColors.textSecondary,
+                                fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: mgr.allowUnknownDuration,
+                      onChanged: (v) => mgr.setAllowUnknownDuration(v),
+                      activeThumbColor: VelvetColors.primary,
+                    ),
+                  ],
+                ),
+              ),
           ],
         ],
       ),

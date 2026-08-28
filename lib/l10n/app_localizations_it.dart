@@ -714,6 +714,42 @@ class AppLocalizationsIt extends AppLocalizations {
       'Preferisci scelte in tonalità che si mixano bene con il brano bloccato (vicini sulla ruota Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Durata del brano';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Salta intermezzi e lunghi mix scegliendo solo brani entro un intervallo di durata';
+
+  @override
+  String get autoDjDurationRange => 'Durata';
+
+  @override
+  String get autoDjDurationAny => 'Qualsiasi durata';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Oltre $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Meno di $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'Da $min a $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Includi brani di durata sconosciuta';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'I brani di cui il server non ha letto la durata vengono altrimenti saltati';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ è attivo';
 
   @override

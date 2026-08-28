@@ -717,6 +717,42 @@ class AppLocalizationsDe extends AppLocalizations {
       'Bevorzugt Titel in Tonarten, die gut zum gesperrten Song passen (Camelot-Rad-Nachbarn).';
 
   @override
+  String get autoDjDurationTitle => 'Titellänge';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Überspringt Interludes und lange Mixe — es werden nur Titel im Längenbereich gewählt';
+
+  @override
+  String get autoDjDurationRange => 'Länge';
+
+  @override
+  String get autoDjDurationAny => 'Beliebige Länge';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Über $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Unter $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return '$min bis $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Titel mit unbekannter Länge einbeziehen';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Titel, deren Länge dein Server nicht gelesen hat, werden sonst übersprungen';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ ist an';
 
   @override

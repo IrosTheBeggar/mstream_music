@@ -714,6 +714,42 @@ class AppLocalizationsEs extends AppLocalizations {
       'Prefiere selecciones en tonalidades que mezclen bien con la canción fijada (vecinos de la rueda Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Duración de la pista';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Omite interludios y mezclas largas eligiendo solo pistas dentro de un rango de duración';
+
+  @override
+  String get autoDjDurationRange => 'Duración';
+
+  @override
+  String get autoDjDurationAny => 'Cualquier duración';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Más de $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Menos de $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'De $min a $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Incluir pistas de duración desconocida';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Las pistas cuya duración tu servidor no ha leído se omiten en caso contrario';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ está activado';
 
   @override

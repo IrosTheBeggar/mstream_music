@@ -118,6 +118,44 @@ void main() {
     });
   });
 
+  group('autoDjDurationKnownUnsupported', () {
+    test('below 6.25.0 the length control is hidden', () {
+      // Includes servers that have every OTHER Auto DJ filter: the duration
+      // params landed long after the 6.7.1 block, so passing that gate says
+      // nothing about this one.
+      for (final v in ['6.7.1', '6.15.2', '6.24.0']) {
+        expect(autoDjDurationKnownUnsupported(ServerVersion.tryParse(v)),
+            isTrue, reason: v);
+      }
+    });
+
+    test('6.25.0 and up show it', () {
+      for (final v in ['6.25.0', '6.25.1', '7.0.0']) {
+        expect(autoDjDurationKnownUnsupported(ServerVersion.tryParse(v)),
+            isFalse, reason: v);
+      }
+    });
+
+    test('a fork and an unknown version both keep it', () {
+      // Same rule as every other gate: neither can be compared to an upstream
+      // milestone, so neither is KNOWN to be too old. Show the control and let
+      // a rejection teach us, rather than hiding something that may work.
+      for (final v in ['6.24.0-velvet', 'not-a-version', '']) {
+        expect(autoDjDurationKnownUnsupported(ServerVersion.tryParse(v)),
+            isFalse, reason: v);
+      }
+      expect(autoDjDurationKnownUnsupported(null), isFalse);
+    });
+
+    test('it is gated apart from the 6.7.1 filter block', () {
+      // A 6.24.0 server passes the older gate and fails this one — the whole
+      // reason this is a separate helper.
+      final v = ServerVersion.tryParse('6.24.0');
+      expect(autoDjFiltersKnownUnsupported(v), isFalse);
+      expect(autoDjDurationKnownUnsupported(v), isTrue);
+    });
+  });
+
   group('metadataBatchKnownUnsupported', () {
     test('below 5.11.0 the batch request is skipped', () {
       for (final v in ['5.5.0', '5.10.9']) {

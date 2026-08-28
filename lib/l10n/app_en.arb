@@ -525,6 +525,60 @@
   "@autoDjHarmonicTitle": {
     "description": "Harmonic mixing row."
   },
+  "autoDjDurationTitle": "Track length",
+  "@autoDjDurationTitle": {
+    "description": "Auto DJ track-length filter switch title."
+  },
+  "autoDjDurationSubtitle": "Skip interludes and long mixes by only picking tracks in a length range",
+  "@autoDjDurationSubtitle": {
+    "description": "Subtitle for that switch."
+  },
+  "autoDjDurationRange": "Length",
+  "@autoDjDurationRange": {
+    "description": "Label beside the length range slider."
+  },
+  "autoDjDurationAny": "Any length",
+  "@autoDjDurationAny": {
+    "description": "Range readout when neither bound is set."
+  },
+  "autoDjDurationOver": "Over {min}",
+  "@autoDjDurationOver": {
+    "description": "Range readout with only a minimum, e.g. Over 2:00.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDjDurationUnder": "Under {max}",
+  "@autoDjDurationUnder": {
+    "description": "Range readout with only a maximum, e.g. Under 6:00.",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDjDurationBetween": "{min} to {max}",
+  "@autoDjDurationBetween": {
+    "description": "Range readout with both bounds, e.g. 2:00 to 6:00.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDjDurationAllowUnknown": "Include tracks of unknown length",
+  "@autoDjDurationAllowUnknown": {
+    "description": "Sub-switch letting unknown-length tracks through."
+  },
+  "autoDjDurationAllowUnknownSub": "Tracks your server has not read a length for are skipped otherwise",
+  "@autoDjDurationAllowUnknownSub": {
+    "description": "Subtitle for that sub-switch."
+  },
   "autoDjStatusOn": "Auto DJ is on",
   "autoDjStatusOff": "Auto DJ is off",
   "autoDjStatusOffDetail": "Tap below to start. The current server's library will be used.",

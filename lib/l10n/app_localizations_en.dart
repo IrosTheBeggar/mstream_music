@@ -708,6 +708,41 @@ class AppLocalizationsEn extends AppLocalizations {
       'Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).';
 
   @override
+  String get autoDjDurationTitle => 'Track length';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Skip interludes and long mixes by only picking tracks in a length range';
+
+  @override
+  String get autoDjDurationRange => 'Length';
+
+  @override
+  String get autoDjDurationAny => 'Any length';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Over $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Under $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return '$min to $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown => 'Include tracks of unknown length';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Tracks your server has not read a length for are skipped otherwise';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ is on';
 
   @override

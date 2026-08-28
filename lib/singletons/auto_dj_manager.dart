@@ -75,6 +75,35 @@ class AutoDJManager {
   bool bpmContinuityEnabled = false;
   int bpmTolerance = 8;
 
+  // Track-length window — server-side via `minDuration` / `maxDuration` on
+  // POST /api/v1/db/random-songs, in SECONDS. The server applies it at the
+  // base-conditions layer and NEVER relaxes it in the waterfall (unlike the
+  // BPM windows), so an over-tight window 400s rather than quietly widening.
+  //
+  // The rails are the off positions: [durationFloorSec] means "no minimum"
+  // and [durationCeilSec] means "no maximum", so a bound at either end is
+  // simply not sent. That keeps one control able to express min-only,
+  // max-only, both, or neither — which is exactly the server's contract.
+  bool durationFilterEnabled = false;
+  int minDurationSec = 120; // the "skip interludes" default
+  int maxDurationSec = durationCeilSec;
+  // Tracks the scanner never read a length for are EXCLUDED by default,
+  // matching the server: an unknown length can't be shown to satisfy the
+  // bound. On a partially-scanned library that can shrink the pool much more
+  // than intended, which is what this opts back out of.
+  bool allowUnknownDuration = false;
+
+  /// Bottom rail of the length slider — "no minimum".
+  static const int durationFloorSec = 0;
+
+  /// Top rail — "no maximum". 20 minutes covers ordinary tracks with room to
+  /// spare; anything longer is the case the user wants to keep, not exclude.
+  static const int durationCeilSec = 1200;
+
+  /// Slider granularity. 15s steps give 80 divisions — fine enough to land on
+  /// a real intent ("over 90 seconds") without pretending to per-second aim.
+  static const int durationStepSec = 15;
+
   // Harmonic mixing — prefer keys that mix well with the currently
   // locked Camelot anchor (which AudioPlayerHandler sets from the
   // first DJ-picked song of a session). Server-side via
@@ -190,11 +219,27 @@ class AutoDJManager {
       emptyQueueStart =
           EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
               EmptyQueueStart.ask;
+      durationFilterEnabled = m['durationFilterEnabled'] ?? false;
+      // Clamped on read: a hand-edited or future-written file must not put the
+      // slider off its own track, and an inverted pair would send a window
+      // nothing can satisfy.
+      minDurationSec = _clampDuration(m['minDurationSec'], 120);
+      maxDurationSec = _clampDuration(m['maxDurationSec'], durationCeilSec);
+      if (minDurationSec > maxDurationSec) {
+        minDurationSec = durationFloorSec;
+        maxDurationSec = durationCeilSec;
+      }
+      allowUnknownDuration = m['allowUnknownDuration'] ?? false;
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
     }
+  }
+
+  static int _clampDuration(dynamic raw, int fallback) {
+    final v = raw is num ? raw.round() : fallback;
+    return v.clamp(durationFloorSec, durationCeilSec);
   }
 
   Future<void> _save() async {
@@ -216,6 +261,10 @@ class AutoDJManager {
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
+      'durationFilterEnabled': durationFilterEnabled,
+      'minDurationSec': minDurationSec,
+      'maxDurationSec': maxDurationSec,
+      'allowUnknownDuration': allowUnknownDuration,
     }));
   }
 
@@ -228,6 +277,47 @@ class AutoDJManager {
     if (enabledServer == localname) return;
     enabledServer = localname;
     await _save();
+  }
+
+  // --- Track-length window ---
+
+  Future<void> setDurationFilterEnabled(bool v) async {
+    durationFilterEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  /// Both bounds move together — the slider is one control, and letting them
+  /// cross would produce a window with no possible match.
+  Future<void> setDurationRange(int minSec, int maxSec) async {
+    minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
+    maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
+    if (minDurationSec > maxDurationSec) {
+      final swap = minDurationSec;
+      minDurationSec = maxDurationSec;
+      maxDurationSec = swap;
+    }
+    _notify();
+    await _save();
+  }
+
+  Future<void> setAllowUnknownDuration(bool v) async {
+    allowUnknownDuration = v;
+    _notify();
+    await _save();
+  }
+
+  /// The bounds actually worth sending. A rail means "unbounded", so it is
+  /// omitted; the server treats a missing bound as no constraint on that side.
+  /// Null when the window is wide open, which is the cue to send nothing at
+  /// all — including allowUnknownDuration, which the server no-ops without a
+  /// window to apply it to.
+  ({int? min, int? max})? get activeDurationBounds {
+    if (!durationFilterEnabled) return null;
+    final min = minDurationSec > durationFloorSec ? minDurationSec : null;
+    final max = maxDurationSec < durationCeilSec ? maxDurationSec : null;
+    if (min == null && max == null) return null;
+    return (min: min, max: max);
   }
 
   // --- Keyword filter ---

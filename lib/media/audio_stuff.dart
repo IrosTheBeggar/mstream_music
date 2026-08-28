@@ -2640,6 +2640,21 @@ class AudioPlayerHandler extends BaseAudioHandler
         // to BPM-unknown picks when our windows return nothing.
         payload['requireBpm'] = true;
       }
+      // Track-length window. Only the bounds that aren't on a rail go on the
+      // wire, and allowUnknownDuration rides along only when there IS a bound
+      // — the server no-ops it otherwise, so sending it alone would be noise.
+      final durationBounds = mgr.activeDurationBounds;
+      if (durationBounds != null) {
+        if (durationBounds.min != null) {
+          payload['minDuration'] = durationBounds.min;
+        }
+        if (durationBounds.max != null) {
+          payload['maxDuration'] = durationBounds.max;
+        }
+        if (mgr.allowUnknownDuration) {
+          payload['allowUnknownDuration'] = true;
+        }
+      }
       if (mgr.harmonicMixingEnabled) {
         if (_camelotAnchor != null) {
           payload['musicalKeys'] = camelotNeighbours(_camelotAnchor!);
