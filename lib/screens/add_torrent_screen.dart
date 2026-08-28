@@ -43,7 +43,9 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   List<int>? _fileBytes;
   String? _fileName;
   bool _pathEdited = false;
-  bool _renameRoot = false;
+  // On by default: the whole point of the resolved destination path is that
+  // the folder on disk matches it, and a scene release name rarely does.
+  bool _renameRoot = true;
   bool _forceFresh = false;
   bool _detecting = false;
   bool _submitting = false;
