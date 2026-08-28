@@ -2050,4 +2050,207 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get autoDjSonicNeedsNewerServer =>
       'Nécessite un serveur 6.15.2 ou plus récent';
+
+  @override
+  String get torrentScreenTitle => 'Ajouter un torrent';
+
+  @override
+  String get torrentNoServer => 'Aucun serveur configuré.';
+
+  @override
+  String get torrentServerLabel => 'Serveur';
+
+  @override
+  String get torrentLibraryLabel => 'Bibliothèque';
+
+  @override
+  String get torrentNoLibraries => 'Aucune bibliothèque sur ce serveur';
+
+  @override
+  String get torrentSourceLabel => 'Source';
+
+  @override
+  String get torrentChooseFile => 'Choisir un fichier .torrent';
+
+  @override
+  String get torrentOr => 'ou';
+
+  @override
+  String get torrentMagnetLabel => 'Lien magnet';
+
+  @override
+  String get torrentMagnetInvalid => 'Lien magnet non valide';
+
+  @override
+  String torrentNotATorrent(String name) {
+    return '« $name » n’est pas un fichier .torrent';
+  }
+
+  @override
+  String get torrentOpenWith => 'Ouvrir dans une autre application';
+
+  @override
+  String get torrentOpenWithNone =>
+      'Aucune application de cet appareil ne peut ouvrir un fichier .torrent';
+
+  @override
+  String get torrentOpenWithFailed =>
+      'Impossible de transmettre le torrent à une autre application';
+
+  @override
+  String get torrentIntentTitle => 'Torrent reçu';
+
+  @override
+  String get torrentIntentBody =>
+      'Ajoutez-le à une bibliothèque de votre serveur mStream, ou confiez-le à une autre application.';
+
+  @override
+  String get torrentIntentAdd => 'Ajouter à mStream';
+
+  @override
+  String get torrentIntentDontAsk =>
+      'Toujours ajouter à mStream, ne plus demander';
+
+  @override
+  String get settingsTorrentAskTitle => 'Demander quoi faire des torrents';
+
+  @override
+  String get settingsTorrentAskSub =>
+      'À l’ouverture d’un torrent avec mStream, proposer de le confier à une autre application';
+
+  @override
+  String get settingsTorrentDefaultTitle =>
+      'Application par défaut pour les torrents';
+
+  @override
+  String get settingsTorrentDefaultSub =>
+      'Ouvre les paramètres Android, où vous choisissez quelle application ouvre les torrents et les liens magnet';
+
+  @override
+  String get settingsTorrentDefaultFailed =>
+      'Impossible d’ouvrir les paramètres Android';
+
+  @override
+  String get torrentAutoDetect => 'Détecter les métadonnées';
+
+  @override
+  String get torrentDetecting => 'Détection…';
+
+  @override
+  String get torrentDetectNoMetadata =>
+      'Métadonnées insuffisantes — remplis les champs à la main';
+
+  @override
+  String get torrentDetected => 'Métadonnées détectées';
+
+  @override
+  String get torrentDetectGuess =>
+      'Estimation approximative — vérifie les champs';
+
+  @override
+  String get torrentMetadataLabel => 'Métadonnées';
+
+  @override
+  String get torrentArtistLabel => 'Artiste';
+
+  @override
+  String get torrentAlbumLabel => 'Album';
+
+  @override
+  String get torrentYearLabel => 'Année';
+
+  @override
+  String get torrentDestinationLabel => 'Destination';
+
+  @override
+  String get torrentPathLabel => 'Chemin dans la bibliothèque';
+
+  @override
+  String torrentPreviewNoLibrary(String path) {
+    return '‹aucune bibliothèque›/$path';
+  }
+
+  @override
+  String get torrentPreviewContents => '‹contenu du torrent›';
+
+  @override
+  String get torrentRenameRoot => 'Renommer le dossier racine du torrent';
+
+  @override
+  String get torrentRenameRootSub =>
+      'L\'aligner sur le nom du dossier de destination';
+
+  @override
+  String get torrentForceFresh => 'Forcer un téléchargement complet';
+
+  @override
+  String get torrentForceFreshSub =>
+      'Ne pas vérifier les fichiers déjà sur le serveur';
+
+  @override
+  String get torrentSubmit => 'Ajouter le torrent';
+
+  @override
+  String get torrentSubmitting => 'Ajout…';
+
+  @override
+  String get torrentUnavailable =>
+      'Les torrents ne sont pas disponibles sur ce serveur.';
+
+  @override
+  String get torrentPickLibrary => 'Choisis une bibliothèque';
+
+  @override
+  String get torrentOneSource =>
+      'Ajoute un lien magnet ou un fichier .torrent (un seul)';
+
+  @override
+  String get torrentPathEmpty => 'Le chemin de destination est vide';
+
+  @override
+  String get torrentSeeded => 'Déjà sur le disque — partage en cours';
+
+  @override
+  String get torrentAlreadyInClient => 'Déjà dans le client torrent';
+
+  @override
+  String get torrentInvalidFile => 'Fichier torrent invalide';
+
+  @override
+  String get torrentSeedCheckFailed =>
+      'Impossible de vérifier les fichiers existants — téléchargement complet';
+
+  @override
+  String get torrentPartialTitle => 'Certains fichiers existent déjà';
+
+  @override
+  String get torrentPartialBody =>
+      'Pointe le torrent vers une copie existante pour la partager et ne télécharger que ce qui manque.';
+
+  @override
+  String torrentPartialCount(String matched, String total) {
+    return '$matched/$total fichiers ici';
+  }
+
+  @override
+  String torrentPartialMissing(String missing) {
+    return ' · $missing à télécharger';
+  }
+
+  @override
+  String get torrentDownloadFresh => 'Télécharger quand même';
+
+  @override
+  String get torrentMatchNoFolder =>
+      'Cette correspondance n\'a pas de nom de dossier — utilise \'Télécharger quand même\'';
+
+  @override
+  String torrentAdded(String name) {
+    return '« $name » ajouté';
+  }
+
+  @override
+  String torrentDuplicate(String name) {
+    return '« $name » est déjà dans le client';
+  }
 }

@@ -21,6 +21,7 @@ import 'singletons/file_explorer.dart';
 import 'singletons/app_messenger.dart';
 import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
+import 'screens/add_torrent_screen.dart';
 import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
 import 'screens/setup_flow.dart';
@@ -31,6 +32,7 @@ import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
 import 'screens/transcode_screen.dart';
 import 'screens/share_playlist_dialog.dart';
+import 'native/torrent_channel.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/queue_store.dart';
@@ -171,6 +173,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Warm start: a torrent opened while the app is already running arrives
+    // through onNewIntent, which only signals that one is staged — the drain
+    // is the same call the cold-start path makes, so there is one delivery
+    // route rather than a race between a push and a pull.
+    TorrentChannel.onTorrentWaiting(() => unawaited(_handleIncomingTorrent()));
     // Keep the system navigation/status bars visible (drawn edge-to-edge behind
     // the app) whenever the main screen is up. The Visualizer flips to immersive
     // and restores this on exit, but a kill mid-immersive can leak that mode to
@@ -187,6 +194,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         SettingsManager().startupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
+      unawaited(_restoreAutoDj());
+      unawaited(_handleIncomingTorrent());
       unawaited(_maybeOpenStartupView());
       _maybeShowWelcome();
       // Armed only after the saved list has landed, so the first-run flow keys
@@ -231,6 +240,148 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   /// leave welcomeShown == true, so the browser row is the only first-run
   /// affordance from then on. welcomeShown reads `true` for any settings.json
   /// written before this existed, so upgrades never see it.
+  /// A torrent opened *with* mStream — a browser download, a file manager, the
+  /// share sheet, a magnet link. Either goes straight to Add Torrent or offers
+  /// the hand-off first, depending on whether the user has ticked "don't ask
+  /// again".
+  ///
+  /// Lives on the widget, so it can only run where there is a UI to route to —
+  /// headless service binds (media resumption, Android Auto) never reach it.
+  Future<void> _handleIncomingTorrent() async {
+    if (!TorrentChannel.isSupported) return;
+    final torrent = await TorrentChannel.takePending();
+    if (torrent == null || !mounted) return;
+    // Logged because this path is otherwise invisible: "I opened a torrent and
+    // nothing happened" is untriageable without knowing whether it even
+    // arrived, and this lands in the Diagnostics screen.
+    final what = torrent.hasFile
+        ? 'file ${torrent.filename ?? '?'} (${torrent.bytes!.length}B)'
+        : 'magnet';
+    final skip = SettingsManager().torrentSkipChooser;
+    appLog('[torrent] intent: $what -> ${skip ? 'add' : 'chooser'}');
+    if (skip) {
+      _openAddTorrent(torrent);
+    } else {
+      await _showTorrentChooser(torrent);
+    }
+  }
+
+  void _openAddTorrent(IncomingTorrent torrent) {
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => AddTorrentScreen(initial: torrent)),
+    );
+  }
+
+  /// "Add it here, or hand it on?" — mStream takes most torrents but not all,
+  /// and it can only be the app that asks if it is the app the system opened.
+  Future<void> _showTorrentChooser(IncomingTorrent torrent) async {
+    final l = AppLocalizations.of(context);
+    bool dontAsk = false;
+    final handOff = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: VelvetColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(VelvetColors.radiusLarge)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+                child: Text(l.torrentIntentTitle,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(l.torrentIntentBody,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 12)),
+              ),
+              ListTile(
+                leading: Icon(Icons.downloading, color: VelvetColors.primary),
+                title: Text(l.torrentIntentAdd,
+                    style: TextStyle(color: VelvetColors.textPrimary)),
+                onTap: () => Navigator.of(sheetCtx).pop(false),
+              ),
+              // A magnet has no file to hand over, and nothing on a stock
+              // device claims the magnet: scheme anyway.
+              if (torrent.hasFile)
+                ListTile(
+                  leading: Icon(Icons.open_in_new,
+                      color: VelvetColors.textSecondary),
+                  title: Text(l.torrentOpenWith,
+                      style: TextStyle(color: VelvetColors.textPrimary)),
+                  onTap: () => Navigator.of(sheetCtx).pop(true),
+                ),
+              Divider(height: 1, color: VelvetColors.border),
+              CheckboxListTile(
+                value: dontAsk,
+                onChanged: (v) => setSheetState(() => dontAsk = v ?? false),
+                title: Text(l.torrentIntentDontAsk,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 13)),
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: VelvetColors.primary,
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Only ever set on the "keep it here" path: ticking the box while handing
+    // this one away would silently disable the choice that was just used.
+    if (dontAsk && handOff == false) {
+      unawaited(SettingsManager().setTorrentSkipChooser(true));
+    }
+    if (!mounted) return;
+    if (handOff == true) {
+      final outcome = await TorrentChannel.openWith(
+          torrent.bytes!, torrent.filename);
+      if (!mounted) return;
+      if (outcome == TorrentPassOff.none) {
+        showGlobalSnack(AppLocalizations.of(context).torrentOpenWithNone);
+      } else if (outcome == TorrentPassOff.error) {
+        showGlobalSnack(AppLocalizations.of(context).torrentOpenWithFailed);
+      }
+      return;
+    }
+    // Dismissed by back/scrim (null) as well as an explicit Add — either way
+    // the torrent is here, and dropping it silently would lose the file.
+    _openAddTorrent(torrent);
+  }
+
+  /// Auto DJ comes back on wherever it was left. Runs after the server list
+  /// has landed, since the stored value is a Server.localname that has to be
+  /// resolved against it — and drops the memory if that server is gone, so a
+  /// deleted server can't leave the DJ permanently trying to restore.
+  ///
+  /// Arms only; see AudioPlayerHandler.restoreAutoDJ for why this must not go
+  /// through the setAutoDJ action.
+  Future<void> _restoreAutoDj() async {
+    await AutoDJManager().load();
+    final name = AutoDJManager().enabledServer;
+    if (name == null) return;
+    final matches =
+        ServerManager().serverList.where((s) => s.localname == name);
+    if (matches.isEmpty) {
+      await AutoDJManager().setEnabledServer(null);
+      return;
+    }
+    MediaManager().audioHandler.restoreAutoDJ(matches.first);
+  }
+
   void _maybeShowWelcome() {
     if (!mounted || SettingsManager().welcomeShown) return;
     unawaited(SettingsManager().setWelcomeShown(true));
@@ -948,6 +1099,21 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           onTap: () {
             Navigator.of(context).pop();
             showSharePlaylistDialog(context);
+          },
+        ),
+        // Add torrent — the webapp's torrent panel. No ping flag exists for
+        // torrents, so the entry is always shown and the screen's
+        // /torrent/preflight probe is the gate (it explains why when the
+        // server can't take one).
+        ListTile(
+          leading: Icon(Icons.downloading),
+          title: Text(l.torrentScreenTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddTorrentScreen()),
+            );
           },
         ),
         // Local playlists drawer entry hidden — having both this and

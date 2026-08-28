@@ -124,6 +124,12 @@ class AutoDJManager {
   /// didn't ask for.
   EmptyQueueStart emptyQueueStart = EmptyQueueStart.ask;
 
+  /// [Server.localname] Auto DJ was last switched on for, or null when it was
+  /// off. Written by the audio handler on every setAutoDJ, and read once at
+  /// launch to bring the DJ back up where it was left — armed only, never
+  /// playing (see AudioPlayerHandler.restoreAutoDJ).
+  String? enabledServer;
+
   // Single "something changed" stream — the AutoDJ screen subscribes
   // once and rebuilds on each emit. Cheaper than one stream per field
   // for the small surface area here.
@@ -141,7 +147,14 @@ class AutoDJManager {
     return File('${dir.path}/$_filename');
   }
 
-  Future<void> load() async {
+  // Memoized: the launch path reads this file from two places (the off-the-
+  // critical-path warm-up and the Auto DJ restore, which needs the value to
+  // actually be there), and one disk round-trip is enough for both.
+  Future<void>? _loading;
+
+  Future<void> load() => _loading ??= _load();
+
+  Future<void> _load() async {
     try {
       final f = await _file;
       if (!await f.exists()) return;
@@ -177,6 +190,7 @@ class AutoDJManager {
       emptyQueueStart =
           EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
               EmptyQueueStart.ask;
+      enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -201,7 +215,19 @@ class AutoDJManager {
       'sonicSeedTitle': sonicSeedTitle,
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
+      'enabledServer': enabledServer,
     }));
+  }
+
+  /// Remember which server Auto DJ is running on (null = off). Called from the
+  /// audio handler's setAutoDJ, so every path that toggles the DJ — the queue
+  /// header, the Auto DJ screen, Android Auto — records itself with no extra
+  /// plumbing. No _notify(): the screens read the live on/off state off the
+  /// handler's customState, not this field.
+  Future<void> setEnabledServer(String? localname) async {
+    if (enabledServer == localname) return;
+    enabledServer = localname;
+    await _save();
   }
 
   // --- Keyword filter ---

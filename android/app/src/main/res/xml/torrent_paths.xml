@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Exposes only cache/torrents/ — the staging dir the Add Torrent screen
+     writes a picked .torrent into before handing it to another app. Scoped
+     this tightly on purpose: a FileProvider rooted any higher would let a
+     receiving app read whatever else lives in the cache. -->
+<paths>
+    <cache-path name="torrents" path="torrents/" />
+</paths>

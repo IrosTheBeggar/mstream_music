@@ -3563,6 +3563,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Needs server 6.15.2 or newer'**
   String get autoDjSonicNeedsNewerServer;
+
+  /// Drawer entry + screen title for adding a torrent to the server's client.
+  ///
+  /// In en, this message translates to:
+  /// **'Add torrent'**
+  String get torrentScreenTitle;
+
+  /// Add-torrent empty state when the app has no servers.
+  ///
+  /// In en, this message translates to:
+  /// **'No server is configured.'**
+  String get torrentNoServer;
+
+  /// Section label over the server dropdown (shown with 2+ servers).
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get torrentServerLabel;
+
+  /// Section label over the destination-library (vpath) dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get torrentLibraryLabel;
+
+  /// Shown instead of the library dropdown when the server reports no vpaths.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries on this server'**
+  String get torrentNoLibraries;
+
+  /// Section label over the .torrent-file / magnet inputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get torrentSourceLabel;
+
+  /// Button that opens the .torrent file picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose .torrent file'**
+  String get torrentChooseFile;
+
+  /// Divider word between the file button and the magnet field.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get torrentOr;
+
+  /// Label of the magnet-URI text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Magnet link'**
+  String get torrentMagnetLabel;
+
+  /// Error under the magnet field when the pasted text is not a usable magnet link.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a valid magnet link'**
+  String get torrentMagnetInvalid;
+
+  /// Snackbar when the picked file fails the bencode check.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” is not a .torrent file'**
+  String torrentNotATorrent(String name);
+
+  /// Button handing the picked .torrent to another app instead of adding it.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in another app'**
+  String get torrentOpenWith;
+
+  /// Snackbar when nothing on the device handles torrents.
+  ///
+  /// In en, this message translates to:
+  /// **'No app on this device can open a .torrent file'**
+  String get torrentOpenWithNone;
+
+  /// Snackbar when the hand-off to another app errored.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not hand the torrent to another app'**
+  String get torrentOpenWithFailed;
+
+  /// Title of the sheet shown when a torrent is opened with mStream.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrent received'**
+  String get torrentIntentTitle;
+
+  /// Body of that sheet, explaining the two choices.
+  ///
+  /// In en, this message translates to:
+  /// **'Add it to a library on your mStream server, or hand it to another app.'**
+  String get torrentIntentBody;
+
+  /// Sheet button: keep the torrent and open the Add Torrent screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to mStream'**
+  String get torrentIntentAdd;
+
+  /// Sheet checkbox suppressing the sheet from now on.
+  ///
+  /// In en, this message translates to:
+  /// **'Always add to mStream, don’t ask again'**
+  String get torrentIntentDontAsk;
+
+  /// Settings switch re-enabling the torrent chooser sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask what to do with torrents'**
+  String get settingsTorrentAskTitle;
+
+  /// Subtitle for that settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'When a torrent is opened with mStream, offer to hand it to another app'**
+  String get settingsTorrentAskSub;
+
+  /// Settings row opening Android per-app default-handler settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Default app for torrents'**
+  String get settingsTorrentDefaultTitle;
+
+  /// Subtitle for that row.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens Android settings, where you can choose which app handles torrents and magnet links'**
+  String get settingsTorrentDefaultSub;
+
+  /// Snackbar when no settings screen would open.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Android settings'**
+  String get settingsTorrentDefaultFailed;
+
+  /// Button asking the server to detect artist/album/year from the .torrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-detect metadata'**
+  String get torrentAutoDetect;
+
+  /// Auto-detect button label while the server request runs.
+  ///
+  /// In en, this message translates to:
+  /// **'Detecting…'**
+  String get torrentDetecting;
+
+  /// Toast when server auto-detect could not identify the release.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough metadata — fill the fields in manually'**
+  String get torrentDetectNoMetadata;
+
+  /// Toast when server auto-detect succeeded with high confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata detected'**
+  String get torrentDetected;
+
+  /// Toast when server auto-detect returned a low-confidence result.
+  ///
+  /// In en, this message translates to:
+  /// **'Best-effort guess — please verify the fields'**
+  String get torrentDetectGuess;
+
+  /// Section label over the artist/album/year fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata'**
+  String get torrentMetadataLabel;
+
+  /// Label of the artist text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get torrentArtistLabel;
+
+  /// Label of the album text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get torrentAlbumLabel;
+
+  /// Label of the year text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get torrentYearLabel;
+
+  /// Section label over the path-in-library field.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get torrentDestinationLabel;
+
+  /// Label of the destination-path text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Path in library'**
+  String get torrentPathLabel;
+
+  /// Destination preview line when no library is selected.
+  ///
+  /// In en, this message translates to:
+  /// **'‹no library›/{path}'**
+  String torrentPreviewNoLibrary(String path);
+
+  /// Placeholder tail of the destination preview standing in for the torrent's files.
+  ///
+  /// In en, this message translates to:
+  /// **'‹torrent contents›'**
+  String get torrentPreviewContents;
+
+  /// Toggle: rename the torrent's top folder to the destination folder name.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename the torrent\'s root folder'**
+  String get torrentRenameRoot;
+
+  /// Subtitle of the rename-root toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Match the destination folder name'**
+  String get torrentRenameRootSub;
+
+  /// Toggle: skip the seed-existing pre-check and download everything.
+  ///
+  /// In en, this message translates to:
+  /// **'Force fresh download'**
+  String get torrentForceFresh;
+
+  /// Subtitle of the force-fresh toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip checking for files already on the server'**
+  String get torrentForceFreshSub;
+
+  /// Primary submit button.
+  ///
+  /// In en, this message translates to:
+  /// **'Add torrent'**
+  String get torrentSubmit;
+
+  /// Submit button label while the add request runs.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get torrentSubmitting;
+
+  /// Fallback reason banner when preflight fails without a server-provided reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrents are unavailable on this server.'**
+  String get torrentUnavailable;
+
+  /// Toast when submitting without a destination library selected.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a library'**
+  String get torrentPickLibrary;
+
+  /// Toast when neither or both of magnet/file are provided.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a magnet link or a .torrent file (one)'**
+  String get torrentOneSource;
+
+  /// Toast when the destination path resolves to nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination path is empty'**
+  String get torrentPathEmpty;
+
+  /// Toast when the seed-existing check found all files and started seeding in place.
+  ///
+  /// In en, this message translates to:
+  /// **'Already on disk — seeding it now'**
+  String get torrentSeeded;
+
+  /// Toast when the torrent is already loaded in the server's client.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in the torrent client'**
+  String get torrentAlreadyInClient;
+
+  /// Toast when the uploaded .torrent cannot be parsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid torrent file'**
+  String get torrentInvalidFile;
+
+  /// Toast when the seed-existing pre-check errored; the add continues as a fresh download.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check for existing files — downloading fresh'**
+  String get torrentSeedCheckFailed;
+
+  /// Title of the partial-match sheet (some of the torrent's files are already on the server).
+  ///
+  /// In en, this message translates to:
+  /// **'Some files already exist'**
+  String get torrentPartialTitle;
+
+  /// Explainer under the partial-match sheet title.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the torrent at an existing copy to seed it and download only what is missing.'**
+  String get torrentPartialBody;
+
+  /// Per-match line: how many of the torrent's files exist at this location.
+  ///
+  /// In en, this message translates to:
+  /// **'{matched}/{total} files here'**
+  String torrentPartialCount(String matched, String total);
+
+  /// Appended to the per-match line: how many files would still download. Leading separator included.
+  ///
+  /// In en, this message translates to:
+  /// **' · {missing} to download'**
+  String torrentPartialMissing(String missing);
+
+  /// Partial-match sheet action that ignores the matches and downloads everything.
+  ///
+  /// In en, this message translates to:
+  /// **'Download fresh anyway'**
+  String get torrentDownloadFresh;
+
+  /// Toast when a partial match's path has no usable folder segment.
+  ///
+  /// In en, this message translates to:
+  /// **'That match has no folder name — use \'Download fresh\' instead'**
+  String get torrentMatchNoFolder;
+
+  /// Toast after a successful torrent add.
+  ///
+  /// In en, this message translates to:
+  /// **'Added \"{name}\"'**
+  String torrentAdded(String name);
+
+  /// Toast when the add found the torrent already present.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" is already in the client'**
+  String torrentDuplicate(String name);
 }
 
 class _AppLocalizationsDelegate
