@@ -574,10 +574,23 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                       ],
                       _label(l.torrentSourceLabel),
                       _fileButton(l),
-                      const SizedBox(height: 10),
-                      _orDivider(l),
-                      const SizedBox(height: 10),
-                      _magnetField(l),
+                      // With a file chosen the magnet input is dead space, so
+                      // the hand-off takes its place: a torrent that was never
+                      // meant for the server can leave from the same spot it
+                      // arrived, without hunting past the rest of the form.
+                      // Nothing to swap in where there's no hand-off, so the
+                      // divider goes with it.
+                      if (_fileBytes == null) ...[
+                        const SizedBox(height: 10),
+                        _orDivider(l),
+                        const SizedBox(height: 10),
+                        _magnetField(l),
+                      ] else if (TorrentPassOffChannel.isSupported) ...[
+                        const SizedBox(height: 10),
+                        _orDivider(l),
+                        const SizedBox(height: 10),
+                        _openWithButton(l),
+                      ],
                       if (_hasSource) ...[
                         if (_fileBytes != null) ...[
                           const SizedBox(height: 10),
@@ -601,9 +614,6 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
                         if (_fileBytes != null) _forceFreshToggle(l),
                         const SizedBox(height: 22),
                         _submitButton(l),
-                        if (_fileBytes != null &&
-                            TorrentPassOffChannel.isSupported)
-                          _openWithButton(l),
                       ],
                     ],
                   ],
@@ -822,10 +832,13 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
         onPressed: (_featureOk && !_submitting) ? _submit : null,
       );
 
-  Widget _openWithButton(AppLocalizations l) => TextButton.icon(
-        style: TextButton.styleFrom(
+  Widget _openWithButton(AppLocalizations l) => OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
           foregroundColor: VelvetColors.textSecondary,
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          side: BorderSide(color: VelvetColors.border2),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(VelvetColors.radiusSmall)),
         ),
         icon: _passingOff
             ? SizedBox(
