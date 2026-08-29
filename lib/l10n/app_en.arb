@@ -596,13 +596,7 @@
       }
     }
   },
-  "autoDjActiveSource": "Active source",
-  "autoDjActiveSourceTap": "Active source — tap to switch",
-  "autoDjSwitch": "Switch",
   "autoDjOneSourceRequired": "At least one source is required.",
-  "@autoDjActiveSource": {
-    "description": "Server-picker + sources section."
-  },
   "autoDjMinRating": "Minimum rating",
   "autoDjMinRatingSubtitle": "Only pick songs at or above this rating.",
   "autoDjRatingAny": "Any",

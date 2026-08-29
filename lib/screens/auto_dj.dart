@@ -714,41 +714,33 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Server picker (multi-server only, when enabled) ─────────────
 
   Widget _serverPickerTile(Server autoDJServer) {
-    final l = AppLocalizations.of(context);
-    final otherServers = ServerManager()
-        .serverList
-        .where((s) => s != autoDJServer)
-        .toList();
-    if (otherServers.isEmpty) {
-      return ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 20),
-        title: Text(autoDJServer.url,
-            style: TextStyle(color: VelvetColors.textPrimary)),
-        subtitle: Text(l.autoDjActiveSource,
-            style: TextStyle(
-                color: VelvetColors.textSecondary, fontSize: 12)),
-      );
-    }
-    return ListTile(
-      contentPadding: EdgeInsets.symmetric(horizontal: 20),
-      title: Text(autoDJServer.url,
-          style: TextStyle(color: VelvetColors.textPrimary)),
-      subtitle: Text(l.autoDjActiveSourceTap,
-          style:
-              TextStyle(color: VelvetColors.textSecondary, fontSize: 12)),
-      trailing: DropdownButton<Server>(
+    final servers = ServerManager().serverList;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: DropdownButton<Server>(
+        isExpanded: true,
         underline: SizedBox.shrink(),
-        hint: Text(l.autoDjSwitch, style: TextStyle(color: VelvetColors.primary)),
+        // The DJ's own server is the value, so the closed dropdown reads as a
+        // statement of what is playing rather than an instruction. That means
+        // it has to be among the items — DropdownButton asserts otherwise —
+        // so the list is every server, not just the alternatives.
+        value: servers.contains(autoDJServer) ? autoDJServer : null,
         dropdownColor: VelvetColors.surface,
-        items: otherServers
+        style: TextStyle(color: VelvetColors.textPrimary),
+        items: servers
             .map((s) => DropdownMenuItem(
                   value: s,
                   child: Text(s.url,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: VelvetColors.textPrimary)),
                 ))
             .toList(),
         onChanged: (newValue) {
-          if (newValue != null) _setAutoDJ(newValue);
+          // Re-selecting the current server would restart the session for no
+          // reason (fresh ignore list, dropped sonic history).
+          if (newValue != null && newValue != autoDJServer) {
+            _setAutoDJ(newValue);
+          }
         },
       ),
     );

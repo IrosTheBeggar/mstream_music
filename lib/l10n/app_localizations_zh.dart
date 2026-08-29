@@ -733,15 +733,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => '当前来源';
-
-  @override
-  String get autoDjActiveSourceTap => '当前来源 — 点击切换';
-
-  @override
-  String get autoDjSwitch => '切换';
-
-  @override
   String get autoDjOneSourceRequired => '至少需要一个来源。';
 
   @override

@@ -771,15 +771,6 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => 'Sorgente attiva';
-
-  @override
-  String get autoDjActiveSourceTap => 'Sorgente attiva — tocca per cambiare';
-
-  @override
-  String get autoDjSwitch => 'Cambia';
-
-  @override
   String get autoDjOneSourceRequired => 'È richiesta almeno una sorgente.';
 
   @override

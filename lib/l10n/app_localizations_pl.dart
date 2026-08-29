@@ -773,16 +773,6 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => 'Aktywne źródło';
-
-  @override
-  String get autoDjActiveSourceTap =>
-      'Aktywne źródło — dotknij, aby przełączyć';
-
-  @override
-  String get autoDjSwitch => 'Przełącz';
-
-  @override
   String get autoDjOneSourceRequired =>
       'Wymagane jest co najmniej jedno źródło.';
 

@@ -779,16 +779,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => 'Активный источник';
-
-  @override
-  String get autoDjActiveSourceTap =>
-      'Активный источник — нажмите, чтобы сменить';
-
-  @override
-  String get autoDjSwitch => 'Сменить';
-
-  @override
   String get autoDjOneSourceRequired => 'Требуется хотя бы один источник.';
 
   @override

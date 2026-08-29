@@ -746,15 +746,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => 'アクティブなソース';
-
-  @override
-  String get autoDjActiveSourceTap => 'アクティブなソース — タップで切り替え';
-
-  @override
-  String get autoDjSwitch => '切り替え';
-
-  @override
   String get autoDjOneSourceRequired => 'ソースが少なくとも 1 つ必要です。';
 
   @override

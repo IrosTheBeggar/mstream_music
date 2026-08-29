@@ -1428,24 +1428,6 @@ abstract class AppLocalizations {
   /// **'Songs are picked from {url} when the queue runs low.'**
   String autoDjStatusOnDetail(String url);
 
-  /// Server-picker + sources section.
-  ///
-  /// In en, this message translates to:
-  /// **'Active source'**
-  String get autoDjActiveSource;
-
-  /// No description provided for @autoDjActiveSourceTap.
-  ///
-  /// In en, this message translates to:
-  /// **'Active source — tap to switch'**
-  String get autoDjActiveSourceTap;
-
-  /// No description provided for @autoDjSwitch.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch'**
-  String get autoDjSwitch;
-
   /// No description provided for @autoDjOneSourceRequired.
   ///
   /// In en, this message translates to:

@@ -764,15 +764,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get autoDjActiveSource => 'Active source';
-
-  @override
-  String get autoDjActiveSourceTap => 'Active source — tap to switch';
-
-  @override
-  String get autoDjSwitch => 'Switch';
-
-  @override
   String get autoDjOneSourceRequired => 'At least one source is required.';
 
   @override
