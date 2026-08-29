@@ -505,6 +505,47 @@
   "@autoDjTitle": {
     "description": "Auto DJ screen title + section headers."
   },
+  "autoDjMultiServerTitle": "Play from every server",
+  "@autoDjMultiServerTitle": {
+    "description": "Switch enabling cross-server Auto DJ."
+  },
+  "autoDjMultiServerSubtitle": "Auto DJ picks from every server at once, matching the sound of what is playing",
+  "@autoDjMultiServerSubtitle": {
+    "description": "Subtitle for that switch."
+  },
+  "autoDjSectionShared": "The session",
+  "@autoDjSectionShared": {
+    "description": "Header for settings that apply to every server."
+  },
+  "autoDjSectionPerServer": "Each library",
+  "@autoDjSectionPerServer": {
+    "description": "Header for settings that differ per server."
+  },
+  "autoDjEditingServer": "Settings for",
+  "@autoDjEditingServer": {
+    "description": "Label above the dropdown choosing whose settings are shown."
+  },
+  "autoDjMultiServerAllIn": "{count} servers are taking part",
+  "@autoDjMultiServerAllIn": {
+    "description": "Readout when every server can take part.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "autoDjMultiServerSomeExcluded": "{count} of {total} servers are taking part — the rest need discovery enabled and a newer server version",
+  "@autoDjMultiServerSomeExcluded": {
+    "description": "Readout when some servers cannot take part, and why.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "autoDjBpmTitle": "BPM continuity",
   "autoDjBpmSubtitle": "Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.",
   "autoDjTolerance": "Tolerance",

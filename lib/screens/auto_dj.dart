@@ -43,6 +43,12 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 
   Server? _autoDJServer;
 
+  /// Which server's own settings the bottom section is editing, in
+  /// multi-server mode. Unlike the single-server picker this does NOT move
+  /// the DJ — every eligible server is playing; this only chooses whose
+  /// rating, genre and library toggles are on screen.
+  Server? _editServer;
+
   // Genre autocomplete cache. Fetched once when the screen mounts
   // (background) so the picker sheet shows results without waiting.
   // Re-fetched if the AutoDJ server changes.
@@ -147,54 +153,201 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         children: [
           _statusSection(enabled, _autoDJServer),
           Divider(color: VelvetColors.border, height: 1),
-          if (ServerManager().serverList.length > 1 && enabled) ...[
-            _sectionHeader(l.autoDjSectionServer),
-            _serverPickerTile(_autoDJServer!),
+          // First, because turning it on rearranges everything below it —
+          // a control that reorganises a form belongs above the form.
+          if (ServerManager().serverList.length > 1) ...[
+            _multiServerSwitch(l),
             Divider(color: VelvetColors.border, height: 1),
           ],
-          if (enabled && _autoDJServer!.autoDJPaths.length > 1) ...[
-            _sectionHeader(l.autoDjSectionSources),
-            ..._vpathTiles(_autoDJServer!),
-            Divider(color: VelvetColors.border, height: 1),
-          ],
-          // BPM continuity, harmonic mixing and the genre filter all arrived
-          // in 6.7.1. On a server known to predate them the controls are
-          // HIDDEN rather than shown-and-ignored: the app strips those
-          // parameters before sending, so a switch left visible would sit
-          // there saying "on" while the picks were plain random.
-          //
-          // Sonic similarity is separate — it landed in 6.15.2 — so a
-          // 6.7.1..6.14 server keeps this whole block and only that one
-          // switch is disabled.
-          if (_filtersHidden) ...[
-            _sectionHeader(l.autoDjSectionContinuity),
-            _olderServerNote(l),
-            Divider(color: VelvetColors.border, height: 1),
-            _sectionHeader(l.autoDjSectionFilters),
-            if (_panelServer != null) _minRatingTile(_panelServer!),
-            if (!_durationHidden) _durationFilterSection(),
-            // Keyword filter survives: it is applied client-side, so it works
-            // against any server however old.
-            _keywordFilterSection(),
-          ] else ...[
-            _sectionHeader(l.autoDjSectionContinuity),
-            _sonicSimilaritySection(),
-            _bpmContinuitySection(),
-            _harmonicMixingSection(),
-            Divider(color: VelvetColors.border, height: 1),
-            _sectionHeader(l.autoDjSectionFilters),
-            if (_panelServer != null) _minRatingTile(_panelServer!),
-            if (!_durationHidden) _durationFilterSection(),
-            if (_panelServer != null) _genreFilterSection(_panelServer!),
-            _keywordFilterSection(),
-          ],
+          if (_multiServerMode)
+            ..._multiServerBody(l)
+          else
+            ..._singleServerBody(l, enabled),
         ],
       ),
       ),
     );
   }
 
+  /// True when the panel should show the multi-server layout: the mode is on
+  /// AND there is more than one server for it to mean anything with.
+  bool get _multiServerMode =>
+      AutoDJManager().multiServerEnabled &&
+      ServerManager().serverList.length > 1;
+
+  /// The server whose own settings the bottom section edits. Falls back to
+  /// the panel's server so the section is never empty, and re-resolves if the
+  /// chosen one has since been deleted.
+  Server? get _editTarget {
+    final servers = ServerManager().serverList;
+    if (_editServer != null && servers.contains(_editServer)) return _editServer;
+    return _panelServer;
+  }
+
+  /// One server plays; its settings and the shared ones sit in one list,
+  /// because with a single source there is nothing to tell apart.
+  List<Widget> _singleServerBody(AppLocalizations l, bool enabled) => [
+        if (ServerManager().serverList.length > 1 && enabled) ...[
+          _sectionHeader(l.autoDjSectionServer),
+          _serverPickerTile(_autoDJServer!),
+          Divider(color: VelvetColors.border, height: 1),
+        ],
+        if (enabled && _autoDJServer!.autoDJPaths.length > 1) ...[
+          _sectionHeader(l.autoDjSectionSources),
+          ..._vpathTiles(_autoDJServer!),
+          Divider(color: VelvetColors.border, height: 1),
+        ],
+        // BPM continuity, harmonic mixing and the genre filter all arrived
+        // in 6.7.1. On a server known to predate them the controls are
+        // HIDDEN rather than shown-and-ignored: the app strips those
+        // parameters before sending, so a switch left visible would sit
+        // there saying "on" while the picks were plain random.
+        //
+        // Sonic similarity is separate — it landed in 6.15.2 — so a
+        // 6.7.1..6.14 server keeps this whole block and only that one
+        // switch is disabled.
+        if (_filtersHidden) ...[
+          _sectionHeader(l.autoDjSectionContinuity),
+          _olderServerNote(l),
+          Divider(color: VelvetColors.border, height: 1),
+          _sectionHeader(l.autoDjSectionFilters),
+          if (_panelServer != null) _minRatingTile(_panelServer!),
+          if (!_durationHidden) _durationFilterSection(),
+          // Keyword filter survives: it is applied client-side, so it works
+          // against any server however old.
+          _keywordFilterSection(),
+        ] else ...[
+          _sectionHeader(l.autoDjSectionContinuity),
+          _sonicSimilaritySection(),
+          _bpmContinuitySection(),
+          _harmonicMixingSection(),
+          Divider(color: VelvetColors.border, height: 1),
+          _sectionHeader(l.autoDjSectionFilters),
+          if (_panelServer != null) _minRatingTile(_panelServer!),
+          if (!_durationHidden) _durationFilterSection(),
+          if (_panelServer != null) _genreFilterSection(_panelServer!),
+          _keywordFilterSection(),
+        ],
+      ];
+
+  /// Every eligible server plays, so the form splits by what a setting
+  /// actually governs: the session's own behaviour on top, and each library's
+  /// own rules underneath, one server at a time.
+  List<Widget> _multiServerBody(AppLocalizations l) {
+    final target = _editTarget;
+    return [
+      _sectionHeader(l.autoDjSectionShared),
+      if (_filtersHidden)
+        _olderServerNote(l)
+      else ...[
+        _sonicSimilaritySection(),
+        _bpmContinuitySection(),
+        _harmonicMixingSection(),
+      ],
+      // Length and keywords are app-level: seconds and words mean the same
+      // thing on every server, so they belong with the session, not a library.
+      if (!_durationHidden) _durationFilterSection(),
+      _keywordFilterSection(),
+      Divider(color: VelvetColors.border, height: 1),
+      _sectionHeader(l.autoDjSectionPerServer),
+      _participantsLine(l),
+      if (target != null) ...[
+        _editServerPickerTile(target),
+        if (target.autoDJPaths.length > 1) ..._vpathTiles(target),
+        _minRatingTile(target),
+        if (!_filtersHidden) _genreFilterSection(target),
+      ],
+    ];
+  }
+
   // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
+
+  Widget _multiServerSwitch(AppLocalizations l) {
+    final mgr = AutoDJManager();
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.autoDjMultiServerTitle,
+                    style: TextStyle(
+                        color: VelvetColors.textPrimary, fontSize: 15)),
+                SizedBox(height: 2),
+                Text(l.autoDjMultiServerSubtitle,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary, fontSize: 12)),
+              ],
+            ),
+          ),
+          Switch(
+            value: mgr.multiServerEnabled,
+            onChanged: (v) => mgr.setMultiServerEnabled(v),
+            activeThumbColor: VelvetColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// How many servers can actually take part, and — when some can't — why.
+  /// Silently dropping a server would look like the feature not working.
+  Widget _participantsLine(AppLocalizations l) {
+    final total = ServerManager().serverList.length;
+    final eligible =
+        MediaManager().audioHandler.multiServerCandidates().length;
+    final short = eligible < total;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+      child: Text(
+        short
+            ? l.autoDjMultiServerSomeExcluded(eligible, total)
+            : l.autoDjMultiServerAllIn(eligible),
+        style: TextStyle(
+            color: short ? VelvetColors.warning : VelvetColors.textSecondary,
+            fontSize: 12),
+      ),
+    );
+  }
+
+  /// Chooses whose settings are on screen — NOT where the music comes from.
+  /// In this mode every eligible server is already playing.
+  Widget _editServerPickerTile(Server target) {
+    final l = AppLocalizations.of(context);
+    final servers = ServerManager().serverList;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.autoDjEditingServer,
+              style: TextStyle(
+                  color: VelvetColors.textSecondary, fontSize: 12)),
+          DropdownButton<Server>(
+            isExpanded: true,
+            underline: SizedBox.shrink(),
+            value: servers.contains(target) ? target : null,
+            dropdownColor: VelvetColors.surface,
+            style: TextStyle(color: VelvetColors.textPrimary),
+            items: servers
+                .map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.url,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              TextStyle(color: VelvetColors.textPrimary)),
+                    ))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _editServer = v);
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   /// The server this panel is talking about: the DJ's when it is armed, the
   /// current one when it isn't.

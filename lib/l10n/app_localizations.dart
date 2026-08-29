@@ -1302,6 +1302,48 @@ abstract class AppLocalizations {
   /// **'Filters'**
   String get autoDjSectionFilters;
 
+  /// Switch enabling cross-server Auto DJ.
+  ///
+  /// In en, this message translates to:
+  /// **'Play from every server'**
+  String get autoDjMultiServerTitle;
+
+  /// Subtitle for that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto DJ picks from every server at once, matching the sound of what is playing'**
+  String get autoDjMultiServerSubtitle;
+
+  /// Header for settings that apply to every server.
+  ///
+  /// In en, this message translates to:
+  /// **'The session'**
+  String get autoDjSectionShared;
+
+  /// Header for settings that differ per server.
+  ///
+  /// In en, this message translates to:
+  /// **'Each library'**
+  String get autoDjSectionPerServer;
+
+  /// Label above the dropdown choosing whose settings are shown.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings for'**
+  String get autoDjEditingServer;
+
+  /// Readout when every server can take part.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} servers are taking part'**
+  String autoDjMultiServerAllIn(int count);
+
+  /// Readout when some servers cannot take part, and why.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of {total} servers are taking part — the rest need discovery enabled and a newer server version'**
+  String autoDjMultiServerSomeExcluded(int count, int total);
+
   /// BPM continuity row.
   ///
   /// In en, this message translates to:

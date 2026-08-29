@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
@@ -34,6 +36,7 @@ import '../singletons/server_list.dart';
 import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
 import '../util/camelot.dart';
+import '../util/server_version.dart';
 import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
@@ -109,6 +112,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   // session's own recent sound (webapp auto-dj.js parity). Reset alongside
   // the ignoreList on setAutoDJ off / server switch.
   List<String> _sonicHistory = const [];
+  // Which server each sonic-history path came from. A single-server session
+  // could assume autoDJServer, but a multi-server one draws picks from
+  // several — and a seed path only resolves on the server that holds it.
+  final Map<String, String> _sonicSeedOwners = {};
   // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
   // lazily locked on the session's first pick (explicit seed, else the
   // playing track; same pattern as [_camelotAnchor]) and reused for every
@@ -2080,6 +2087,8 @@ class AudioPlayerHandler extends BaseAudioHandler
           _camelotAnchor = null;
           _autoDJAuthWarned = false; // fresh server, fresh warning budget
           _sonicHistory = const []; // fresh server, fresh sonic session
+          _sonicSeedOwners.clear();
+          _multiServerExcluded.clear();
           _sonicLockedAnchor = null;
           _sonicWarned = false;
         }
@@ -2530,6 +2539,196 @@ class AudioPlayerHandler extends BaseAudioHandler
     return true;
   }
 
+  // ── Multi-server picking ────────────────────────────────────────
+  //
+  // A single-server session seeds from a FILEPATH, which names a row on the
+  // server that holds it and means nothing anywhere else. A multi-server
+  // session seeds from the VECTOR behind that path, so every server can
+  // answer "something like this" out of its own library.
+  //
+  // Servers that can't take part are dropped for the rest of the session
+  // rather than retried every pick: too old, discovery off, or — the case
+  // that can only be discovered by asking — indexed with a different
+  // embedding model, which the server refuses with a 400 because comparing
+  // across model spaces returns confident nonsense.
+  final Set<String> _multiServerExcluded = {};
+
+  /// Servers that could contribute to a multi-server session right now.
+  /// Public so the Auto DJ screen can show who is taking part without
+  /// duplicating the rules.
+  List<Server> multiServerCandidates() {
+    return ServerManager().serverList.where((s) {
+      if (_multiServerExcluded.contains(s.localname)) return false;
+      if (s.discoveryAvailable != true) return false;
+      return !crossServerSeedKnownUnsupported(
+          ServerVersion.tryParse(s.serverVersion));
+    }).toList();
+  }
+
+  /// Average the seed tracks' embeddings into one unit vector.
+  ///
+  /// Fetched from the server that OWNS each seed — that's the whole point:
+  /// the anchor may hold tracks from several servers, and averaging them is
+  /// what makes the session one session rather than several running side by
+  /// side. Null when nothing usable came back, which drops this pick to the
+  /// single-server path rather than playing something unrelated.
+  Future<({String modelId, String base64})?> _multiServerSeed(
+      List<String> seedPaths) async {
+    if (seedPaths.isEmpty) return null;
+    // Seeds are stored as "<localname>/<path>"-free vpath strings belonging to
+    // the DJ's server; a cross-server anchor records where each came from.
+    final byServer = <Server, List<String>>{};
+    for (final p in seedPaths) {
+      final ownerName = _sonicSeedOwners[p];
+      final owner = ownerName == null
+          ? autoDJServer
+          : (ServerManager().byLocalname(ownerName) ?? autoDJServer);
+      if (owner == null) continue;
+      byServer.putIfAbsent(owner, () => []).add(p);
+    }
+
+    String? modelId;
+    int? dim;
+    final vectors = <Float32List>[];
+    for (final entry in byServer.entries) {
+      final got = await ApiManager().fetchEmbeddings(entry.key, entry.value);
+      if (got == null) continue;
+      // Mixing model spaces would average vectors that mean different
+      // things — worse than using fewer seeds.
+      if (modelId == null) {
+        modelId = got.modelId;
+        dim = got.dim;
+      } else if (got.modelId != modelId || got.dim != dim) {
+        appLog('[dj] seed from ${entry.key.localname} is model '
+            '${got.modelId}, session is $modelId — skipped');
+        continue;
+      }
+      vectors.addAll(got.vectors);
+    }
+    if (modelId == null || dim == null || vectors.isEmpty) return null;
+
+    final centroid = Float64List(dim);
+    for (final v in vectors) {
+      for (var i = 0; i < dim; i++) {
+        centroid[i] += v[i];
+      }
+    }
+    var sumSq = 0.0;
+    for (var i = 0; i < dim; i++) {
+      centroid[i] /= vectors.length;
+      sumSq += centroid[i] * centroid[i];
+    }
+    final norm = math.sqrt(sumSq);
+    // Averaging near-opposite vectors can land on zero; the server would
+    // refuse it, so don't spend the round trip.
+    if (norm == 0 || !norm.isFinite) return null;
+
+    final out = Float32List(dim);
+    for (var i = 0; i < dim; i++) {
+      out[i] = centroid[i] / norm;
+    }
+    return (
+      modelId: modelId,
+      base64: base64Encode(out.buffer.asUint8List()),
+    );
+  }
+
+  /// One pick, chosen across every eligible server.
+  ///
+  /// Returns false when the session can't run this way right now (no seed, no
+  /// eligible servers, nobody answered) — the caller then falls back to the
+  /// ordinary single-server pick, so switching this on can never leave the
+  /// queue empty where it would otherwise have filled.
+  Future<bool> _autoDJMultiServer(List<String> seedPaths,
+      {bool autoPlay = false, bool incrementIndex = false}) async {
+    final candidates = multiServerCandidates();
+    if (candidates.length < 2) return false;
+
+    final seed = await _multiServerSeed(seedPaths);
+    if (seed == null) return false;
+
+    final mgr = AutoDJManager();
+    final ignore = jsonAutoDJIgnoreList ?? [];
+
+    // Every server is asked at once — a session that waited for each in turn
+    // would stall the queue on the slowest one. A server that times out or
+    // errors simply doesn't compete for this pick.
+    final answers = await Future.wait(candidates.map((server) async {
+      final payload = <String, dynamic>{
+        'ignoreList': ignore,
+        'similarToVector': seed.base64,
+        'similarToModelId': seed.modelId,
+        'minSimilarity': mgr.sonicMinSimilarity,
+        // Each server's own library rules — rating, vpaths, genre — plus the
+        // app-level ones that mean the same everywhere.
+        ...mgr.libraryFilters(server),
+      };
+      final filtered = ServerCapabilities().filter(server, payload);
+      try {
+        final res = await http
+            .post(
+              server.apiUri('/api/v1/db/random-songs'),
+              headers: {
+                'Content-Type': 'application/json',
+                'x-access-token': server.jwt ?? '',
+              },
+              body: jsonEncode(filtered.body),
+            )
+            .timeout(const Duration(seconds: 12));
+        if (res.statusCode > 299) {
+          // A model-space refusal is permanent for this session: the library
+          // is indexed with a different model and rescanning is the only
+          // cure, so stop asking rather than burning a request per pick.
+          if (res.statusCode == 400 && res.body.contains('Sonic seed is from model')) {
+            _multiServerExcluded.add(server.localname);
+            appLog('[dj] ${server.localname} indexes a different embedding '
+                'model — dropped from this session');
+          }
+          return null;
+        }
+        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+        final songs = decoded['songs'] as List?;
+        if (songs == null || songs.isEmpty) return null;
+        if (mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) return null;
+        final sim = (decoded['sonic'] as Map?)?['similarity'];
+        return (
+          server: server,
+          decoded: decoded,
+          // A server that somehow answered without a score still competes,
+          // just never beats one that did.
+          similarity: sim is num ? sim.toDouble() : -1.0,
+        );
+      } catch (e) {
+        verboseLog('[dj] ${server.localname} did not answer: $e');
+        return null;
+      }
+    }));
+
+    final scored = answers.nonNulls.toList();
+    if (scored.isEmpty) return false;
+
+    // Best match wins. The whole reason for asking everyone is that one of
+    // them holds something closer to the seed than the DJ's own server does.
+    scored.sort((a, b) => b.similarity.compareTo(a.similarity));
+    final best = scored.first;
+
+    appLog('[dj] multi-server: ${scored.length}/${candidates.length} answered, '
+        'best ${best.similarity.toStringAsFixed(4)} from ${best.server.localname}');
+
+    // The ignore list is per-server on the wire but the session is one queue,
+    // so carry the winner's forward — and it is what keeps a vector seed off
+    // the song already playing, since a vector has no hashes for the server
+    // to exclude on its own.
+    jsonAutoDJIgnoreList = best.decoded['ignoreList'];
+
+    _queueAutoDJSong(best.decoded,
+        autoPlay: autoPlay,
+        incrementIndex: incrementIndex,
+        sonicPick: true,
+        source: best.server);
+    return true;
+  }
+
   Future<void> autoDJ(
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (autoDJServer == null) return;
@@ -2602,6 +2801,21 @@ class AudioPlayerHandler extends BaseAudioHandler
       currentPath: sonicCurrent,
       minSimilarity: mgr.sonicMinSimilarity,
     );
+
+    // Multi-server first, when it's on and there is a sonic seed to carry.
+    // It returns false whenever it can't run — no seed, too few eligible
+    // servers, nobody answered — and the ordinary single-server pick below
+    // then runs unchanged, so switching this on can never leave the queue
+    // empty where it would otherwise have filled.
+    if (mgr.multiServerEnabled && sonic != null) {
+      final seedPaths =
+          (sonic['similarTo'] as List?)?.whereType<String>().toList() ??
+              const <String>[];
+      if (await _autoDJMultiServer(seedPaths,
+          autoPlay: autoPlay, incrementIndex: incrementIndex)) {
+        return;
+      }
+    }
 
     // Keyword filter is client-side (the server doesn't see it).
     // Retry up to 5 times if responses get blocked, using the
@@ -2834,10 +3048,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  /// [source] is the server the pick came FROM, which is only the DJ's own
+  /// server in a single-server session — a multi-server session draws from
+  /// whichever server answered best, and the stream URL, album art and the
+  /// queue item's `server` extra all have to name that one or the track won't
+  /// play.
   void _queueAutoDJSong(Map<String, dynamic> decoded,
       {bool autoPlay = false,
       bool incrementIndex = false,
-      bool sonicPick = false}) {
+      bool sonicPick = false,
+      Server? source}) {
+    final from = source ?? autoDJServer!;
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String?;
@@ -2845,10 +3066,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     // Transcode-aware stream URL (honors the /transcode endpoint + codec/bitrate
     // when transcoding is on), shared with browse / queue-restore / recursive.
-    final mediaUrl = buildServerStreamUrl(autoDJServer!, filepath);
+    final mediaUrl = buildServerStreamUrl(from, filepath);
 
     final artUrl = metadata['album-art'] != null
-        ? buildAlbumArtUrl(autoDJServer!, metadata['album-art'] as String,
+        ? buildAlbumArtUrl(from, metadata['album-art'] as String,
             compress: 'l')
         : null;
 
@@ -2876,7 +3097,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // bpm + key the next DJ pick's continuity payload reads, and the
         // Song Info fields a hand-rolled map here used to drop.
         ...queueExtras(meta,
-            server: autoDJServer!.localname, path: filepath, artUrl: artUrl),
+            server: from.localname, path: filepath, artUrl: artUrl),
         // Queue-transparency badge (persisted with the queue): this row was
         // chosen by Auto DJ, and whether the sonic pool shaped the pick —
         // the queue row renders the matching icon so DJ additions are
@@ -2901,6 +3122,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     // mode is off, so toggling it on mid-session already has the session's
     // recent sound to centroid on).
     _sonicHistory = pushSonicHistory(_sonicHistory, filepath);
+    _sonicSeedOwners[filepath] = from.localname;
+    // The history is a bounded ring; drop owners that fell out of it.
+    _sonicSeedOwners.removeWhere((path, _) => !_sonicHistory.contains(path));
 
     if (incrementIndex == true && index != null) {
       _backend.seek(Duration.zero, index: index! + 1);
