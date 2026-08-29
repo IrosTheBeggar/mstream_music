@@ -1851,6 +1851,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de récupérer un titre depuis le serveur.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Aucun morceau ne correspond à vos filtres Auto DJ — essayez de les assouplir';
+
+  @override
   String get discoverFindSimilar => 'Titres similaires';
 
   @override

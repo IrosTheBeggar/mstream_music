@@ -3204,6 +3204,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t fetch a song from the server.'**
   String get autoDjSonicSeedFailed;
 
+  /// Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs match your Auto DJ filters — try loosening them'**
+  String get autoDjSeedNoMatch;
+
   /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
   ///
   /// In en, this message translates to:

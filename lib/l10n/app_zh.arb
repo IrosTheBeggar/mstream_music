@@ -440,6 +440,7 @@
   "autoDjSonicSeedRandom": "随机歌曲",
   "autoDjSonicSeedRemove": "移除种子歌曲",
   "autoDjSonicSeedFailed": "无法从服务器获取歌曲。",
+  "autoDjSeedNoMatch": "没有歌曲符合你的 Auto DJ 筛选条件，请放宽条件",
   "discoverFindSimilar": "查找相似歌曲",
   "discoverStartSession": "开始声音会话",
   "discoverStartSessionSubtitle": "无尽播放与此相似的音乐 — 将替换当前队列。",

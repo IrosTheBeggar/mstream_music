@@ -1869,6 +1869,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjSonicSeedFailed => 'Не удалось получить трек с сервера.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Нет треков, подходящих под фильтры Auto DJ — попробуйте смягчить их';
+
+  @override
   String get discoverFindSimilar => 'Найти похожие';
 
   @override

@@ -440,6 +440,7 @@
   "autoDjSonicSeedRandom": "Zufälliger Titel",
   "autoDjSonicSeedRemove": "Ausgangssong entfernen",
   "autoDjSonicSeedFailed": "Es konnte kein Titel vom Server geladen werden.",
+  "autoDjSeedNoMatch": "Keine Titel entsprechen deinen Auto-DJ-Filtern — lockere sie etwas",
   "discoverFindSimilar": "Ähnliches finden",
   "discoverStartSession": "Sonic-Session starten",
   "discoverStartSessionSubtitle": "Endlos Musik, die so klingt wie dieser Titel — ersetzt deine Warteschlange.",

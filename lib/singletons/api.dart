@@ -5,6 +5,7 @@ import './app_messenger.dart';
 import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
+import 'auto_dj_manager.dart';
 import '../objects/discovery.dart';
 import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
@@ -907,6 +908,66 @@ class ApiManager {
   /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
   /// min rating) so a random seed can't come from an excluded library.
   /// Null on any error.
+  /// Pick Auto DJ's opening track for a "Surprise me" start.
+  ///
+  /// Unlike [fetchRandomSong] this honours the Auto DJ library filters. The
+  /// opener is part of the session, and handing back a track the user has
+  /// explicitly filtered out is the one thing this must not do — which is
+  /// exactly what it did before, since the plain random fetch sends only
+  /// vpaths and rating.
+  ///
+  /// `noMatch` distinguishes "your filters leave nothing" from a network or
+  /// auth failure. The server refuses an empty pool with a 400 rather than
+  /// relaxing the window, so that is a real answer the user can act on, not
+  /// an error to swallow.
+  Future<({DisplayItem? item, bool noMatch})> fetchAutoDjSeed(
+      Server server) async {
+    final wanted = AutoDJManager().libraryFilters(server);
+    // The same drop-what-this-server-cannot-take pass the DJ makes: one
+    // unrecognised key 400s the whole request on a Joi-validated server, so
+    // an older server would fail here for the wrong reason entirely.
+    final filtered = ServerCapabilities().filter(server, wanted);
+    final constrained = filtered.body.isNotEmpty;
+    try {
+      final response = await http
+          .post(
+            server.apiUri('/api/v1/db/random-songs'),
+            body: jsonEncode(filtered.body),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode > 299) {
+        verboseLog('[api] auto-dj seed HTTP ${response.statusCode}');
+        // Only a 400 means "nothing matched" — anything else (401, 5xx) is a
+        // failure the user can't fix by loosening a filter.
+        return (item: null, noMatch: response.statusCode == 400 && constrained);
+      }
+      final decoded = jsonDecode(response.body);
+      final songs = decoded is Map ? decoded['songs'] : null;
+      if (songs is! List || songs.isEmpty) {
+        return (item: null, noMatch: constrained);
+      }
+      final song = songs.first;
+      if (song is! Map) return (item: null, noMatch: false);
+      final fp = song['filepath'];
+      if (fp is! String || fp.isEmpty) return (item: null, noMatch: false);
+      final md = song['metadata'];
+      final item = DisplayItem(server, fp.split('/').last, 'file', '/$fp',
+          Icon(Icons.music_note, color: VelvetColors.accent), null);
+      item.metadata = md is Map ? MusicMetadata.fromServerMap(md) : null;
+      return (item: item, noMatch: false);
+    } catch (err) {
+      verboseLog('[api] auto-dj seed failed: $err');
+      return (item: null, noMatch: false);
+    }
+  }
+
+  /// An unconstrained random track. Used by Discover and the song picker,
+  /// which are not Auto DJ sessions and must not inherit its filters — see
+  /// [fetchAutoDjSeed] for the one caller that should.
   Future<DisplayItem?> fetchRandomSong(Server server) async {
     final ignoreVPaths = <String>[
       for (final e in server.autoDJPaths.entries)

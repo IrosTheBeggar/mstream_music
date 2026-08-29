@@ -1853,6 +1853,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Es konnte kein Titel vom Server geladen werden.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Keine Titel entsprechen deinen Auto-DJ-Filtern — lockere sie etwas';
+
+  @override
   String get discoverFindSimilar => 'Ähnliches finden';
 
   @override

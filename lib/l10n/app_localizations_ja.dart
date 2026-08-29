@@ -1777,6 +1777,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjSonicSeedFailed => 'サーバーから曲を取得できませんでした。';
 
   @override
+  String get autoDjSeedNoMatch => 'Auto DJ のフィルターに一致する曲がありません。条件を緩めてください';
+
+  @override
   String get discoverFindSimilar => '似ている曲を探す';
 
   @override

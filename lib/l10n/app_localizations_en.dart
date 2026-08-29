@@ -1831,6 +1831,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get autoDjSonicSeedFailed => 'Couldn\'t fetch a song from the server.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'No songs match your Auto DJ filters — try loosening them';
+
+  @override
   String get discoverFindSimilar => 'Find similar';
 
   @override

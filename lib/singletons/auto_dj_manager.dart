@@ -362,6 +362,42 @@ class AutoDJManager {
     await _save();
   }
 
+  /// The Auto DJ constraints that describe the LIBRARY rather than the
+  /// session: excluded vpaths, minimum rating, genre, track length.
+  ///
+  /// Shared by the DJ's own picks and by the "Surprise me" opening track so
+  /// the two cannot drift. They had: the opener sent only vpaths and rating,
+  /// so a genre blacklist or a track-length window was silently skipped for
+  /// track one and honoured from track two onward. Anything added here now
+  /// reaches both.
+  ///
+  /// Deliberately EXCLUDES BPM continuity, harmonic mixing and sonic
+  /// similarity. Each of those keys off a currently playing track or a locked
+  /// anchor, and the caller that needs this most — a cold start on an empty
+  /// queue — has neither.
+  Map<String, dynamic> libraryFilters(Server server) {
+    final out = <String, dynamic>{};
+    final ignoreVPaths = <String>[
+      for (final e in server.autoDJPaths.entries)
+        if (e.value == false) e.key,
+    ];
+    if (ignoreVPaths.isNotEmpty) out['ignoreVPaths'] = ignoreVPaths;
+    if (server.autoDJminRating != null) {
+      out['minRating'] = server.autoDJminRating;
+    }
+    if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {
+      out['genres'] = server.autoDJGenres;
+      out['genreMode'] = server.autoDJGenreMode;
+    }
+    final bounds = activeDurationBounds;
+    if (bounds != null) {
+      if (bounds.min != null) out['minDuration'] = bounds.min;
+      if (bounds.max != null) out['maxDuration'] = bounds.max;
+      if (allowUnknownDuration) out['allowUnknownDuration'] = true;
+    }
+    return out;
+  }
+
   // --- Genre filter migration (global -> per-server) ---
 
   /// Copy a pre-move global genre filter onto [servers], once.

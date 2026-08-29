@@ -1851,6 +1851,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile recuperare un brano dal server.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Nessun brano corrisponde ai filtri di Auto DJ — prova ad allentarli';
+
+  @override
   String get discoverFindSimilar => 'Trova simili';
 
   @override

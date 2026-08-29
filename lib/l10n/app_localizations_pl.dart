@@ -1866,6 +1866,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjSonicSeedFailed => 'Nie udało się pobrać utworu z serwera.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Żaden utwór nie pasuje do filtrów Auto DJ — spróbuj je poluzować';
+
+  @override
   String get discoverFindSimilar => 'Znajdź podobne';
 
   @override

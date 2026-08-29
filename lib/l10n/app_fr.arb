@@ -440,6 +440,7 @@
   "autoDjSonicSeedRandom": "Titre aléatoire",
   "autoDjSonicSeedRemove": "Retirer le titre de départ",
   "autoDjSonicSeedFailed": "Impossible de récupérer un titre depuis le serveur.",
+  "autoDjSeedNoMatch": "Aucun morceau ne correspond à vos filtres Auto DJ — essayez de les assouplir",
   "discoverFindSimilar": "Titres similaires",
   "discoverStartSession": "Lancer une session sonore",
   "discoverStartSessionSubtitle": "De la musique sans fin qui sonne comme ce titre — remplace votre file d'attente.",

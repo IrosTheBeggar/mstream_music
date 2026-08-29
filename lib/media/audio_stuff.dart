@@ -2534,13 +2534,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (autoDJServer == null) return;
 
-    // Build per-call ignoreVPaths once (cheap, doesn't change across
-    // retry attempts).
-    final ignoreVPaths = <String>[];
-    autoDJServer!.autoDJPaths.forEach((key, value) {
-      if (value == false) ignoreVPaths.add(key);
-    });
-
     final mgr = AutoDJManager();
     Map<String, dynamic>? lastDecoded;
 
@@ -2620,19 +2613,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       final payload = <String, dynamic>{
         'ignoreList': jsonAutoDJIgnoreList ?? [],
         ...?sonic,
+        // Rating, vpaths, genre and track length — shared with the
+        // "Surprise me" opener so the two can't drift apart again.
+        ...mgr.libraryFilters(autoDJServer!),
       };
-      if (autoDJServer!.autoDJminRating != null) {
-        payload['minRating'] = autoDJServer!.autoDJminRating;
-      }
-      if (ignoreVPaths.isNotEmpty) {
-        payload['ignoreVPaths'] = ignoreVPaths;
-      }
-      // Per-server now: the list belongs to the library it was built against.
-      if (autoDJServer!.autoDJGenreEnabled &&
-          autoDJServer!.autoDJGenres.isNotEmpty) {
-        payload['genres'] = autoDJServer!.autoDJGenres;
-        payload['genreMode'] = autoDJServer!.autoDJGenreMode;
-      }
       if (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0) {
         payload['bpmRanges'] =
             _bpmWindows(currentBpm, mgr.bpmTolerance);
@@ -2641,21 +2625,6 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Require tagged tracks so the waterfall doesn't fall back
         // to BPM-unknown picks when our windows return nothing.
         payload['requireBpm'] = true;
-      }
-      // Track-length window. Only the bounds that aren't on a rail go on the
-      // wire, and allowUnknownDuration rides along only when there IS a bound
-      // — the server no-ops it otherwise, so sending it alone would be noise.
-      final durationBounds = mgr.activeDurationBounds;
-      if (durationBounds != null) {
-        if (durationBounds.min != null) {
-          payload['minDuration'] = durationBounds.min;
-        }
-        if (durationBounds.max != null) {
-          payload['maxDuration'] = durationBounds.max;
-        }
-        if (mgr.allowUnknownDuration) {
-          payload['allowUnknownDuration'] = true;
-        }
       }
       if (mgr.harmonicMixingEnabled) {
         if (_camelotAnchor != null) {

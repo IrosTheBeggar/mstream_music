@@ -1423,6 +1423,10 @@
   "@autoDjSonicSeedFailed": {
     "description": "Error when the random-seed request fails."
   },
+  "autoDjSeedNoMatch": "No songs match your Auto DJ filters — try loosening them",
+  "@autoDjSeedNoMatch": {
+    "description": "Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked."
+  },
   "discoverFindSimilar": "Find similar",
   "@discoverFindSimilar": {
     "description": "Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track."

@@ -440,6 +440,7 @@
   "autoDjSonicSeedRandom": "Brano casuale",
   "autoDjSonicSeedRemove": "Rimuovi brano di partenza",
   "autoDjSonicSeedFailed": "Impossibile recuperare un brano dal server.",
+  "autoDjSeedNoMatch": "Nessun brano corrisponde ai filtri di Auto DJ — prova ad allentarli",
   "discoverFindSimilar": "Trova simili",
   "discoverStartSession": "Avvia una sessione sonora",
   "discoverStartSessionSubtitle": "Musica senza fine che suona come questa — sostituisce la coda.",

@@ -1851,6 +1851,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo obtener una canción del servidor.';
 
   @override
+  String get autoDjSeedNoMatch =>
+      'Ninguna canción coincide con tus filtros de Auto DJ; prueba a relajarlos';
+
+  @override
   String get discoverFindSimilar => 'Buscar similares';
 
   @override
