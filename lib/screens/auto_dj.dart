@@ -4,14 +4,16 @@
 //   * Status / enable button at top
 //   * Server picker (if multi-server)
 //   * Sources — per-server vpath toggles
-//   * Filters — min rating (per-server), genre filter (app-level),
+//   * Filters — min rating + genre (per-server), track length +
 //     keyword filter (app-level)
 //
-// Per-server fields (minRating, autoDJPaths) live on Server objects.
-// App-level filters (genre, keyword) live in AutoDJManager and
-// persist to auto_dj.json. Genre filter is server-side via the
-// `genres`/`genreMode` request fields; keyword filter is client-
-// side, applied in audio_stuff.dart's autoDJ() retry loop.
+// Per-server fields (minRating, autoDJPaths, the genre filter) live on
+// Server objects, because each is the library's own vocabulary — a rating
+// scale, a set of vpath names, a set of genre tags. App-level filters
+// (track length, keyword) live in AutoDJManager and persist to auto_dj.json;
+// seconds mean the same thing on every server. Genre and length are
+// server-side request fields; the keyword filter is client-side, applied in
+// audio_stuff.dart's autoDJ() retry loop.
 
 import 'dart:async';
 
@@ -183,7 +185,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             _sectionHeader(l.autoDjSectionFilters),
             if (_panelServer != null) _minRatingTile(_panelServer!),
             if (!_durationHidden) _durationFilterSection(),
-            _genreFilterSection(),
+            if (_panelServer != null) _genreFilterSection(_panelServer!),
             _keywordFilterSection(),
           ],
         ],
@@ -832,10 +834,17 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 
   // ── Genre Filter ─────────────────────────────────────────────────
 
-  Widget _genreFilterSection() {
+  /// Persist a genre-filter edit and let a running DJ session see it. Mirrors
+  /// what the min-rating dropdown does — both write straight to the Server.
+  void _commitServerEdit() {
+    setState(() {});
+    MediaManager().audioHandler.customAction('forceAutoDJRefresh');
+    ServerManager().callAfterEditServer();
+  }
+
+  Widget _genreFilterSection(Server server) {
     final l = AppLocalizations.of(context);
-    final mgr = AutoDJManager();
-    final selected = mgr.genreFilterValues;
+    final selected = server.autoDJGenres;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -860,23 +869,27 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 ),
               ),
               Switch(
-                value: mgr.genreFilterEnabled,
-                onChanged: (v) => mgr.setGenreFilterEnabled(v),
+                value: server.autoDJGenreEnabled,
+                onChanged: (v) {
+                  server.autoDJGenreEnabled = v;
+                  _commitServerEdit();
+                },
                 activeThumbColor: VelvetColors.primary,
               ),
             ],
           ),
-          if (mgr.genreFilterEnabled) ...[
+          if (server.autoDJGenreEnabled) ...[
             SizedBox(height: 8),
             SegmentedButton<String>(
               segments: [
                 ButtonSegment(value: 'whitelist', label: Text(l.autoDjWhitelist)),
                 ButtonSegment(value: 'blacklist', label: Text(l.autoDjBlacklist)),
               ],
-              selected: {mgr.genreFilterMode},
+              selected: {server.autoDJGenreMode},
               onSelectionChanged: (set) {
                 if (set.isNotEmpty) {
-                  mgr.setGenreFilterMode(set.first);
+                  server.autoDJGenreMode = set.first;
+                  _commitServerEdit();
                 }
               },
               showSelectedIcon: false,
@@ -915,7 +928,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                           backgroundColor: VelvetColors.raised,
                           side: BorderSide(color: VelvetColors.border),
                           deleteIconColor: VelvetColors.textSecondary,
-                          onDeleted: () => mgr.removeGenre(g),
+                          onDeleted: () {
+                            server.autoDJGenres.remove(g);
+                            _commitServerEdit();
+                          },
                           visualDensity: VisualDensity.compact,
                         ))
                     .toList(),
@@ -924,7 +940,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: _openGenrePicker,
+                onPressed: () => _openGenrePicker(server),
                 icon: Icon(Icons.add, size: 18),
                 label: Text(l.autoDjPickGenres),
                 style: TextButton.styleFrom(
@@ -938,7 +954,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     );
   }
 
-  Future<void> _openGenrePicker() async {
+  Future<void> _openGenrePicker(Server server) async {
     await _ensureGenresLoaded();
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -949,11 +965,15 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => _GenrePickerSheet(
+        server: server,
         available: _availableGenres ?? const [],
         loading: _loadingGenres,
         error: _genreLoadError,
       ),
     );
+    // The sheet writes onto the Server directly, so the chip list here is
+    // stale until we rebuild.
+    if (mounted) _commitServerEdit();
   }
 
   // ── Keyword Filter ───────────────────────────────────────────────
@@ -1090,10 +1110,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
 // ─────────────────────────────────────────────────────────────────────
 
 class _GenrePickerSheet extends StatefulWidget {
+  /// The server whose genre list this edits — the same one the section
+  /// behind it is showing.
+  final Server server;
   final List<String> available;
   final bool loading;
   final String? error;
   const _GenrePickerSheet({
+    required this.server,
     required this.available,
     required this.loading,
     this.error,
@@ -1127,7 +1151,7 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final selected = AutoDJManager().genreFilterValues.toSet();
+    final selected = widget.server.autoDJGenres.toSet();
     final q = _query.trim().toLowerCase();
     final filtered = q.isEmpty
         ? widget.available
@@ -1242,12 +1266,21 @@ class _GenrePickerSheetState extends State<_GenrePickerSheet> {
           activeColor: VelvetColors.primary,
           checkColor: Colors.white,
           controlAffinity: ListTileControlAffinity.leading,
-          onChanged: (v) async {
+          onChanged: (v) {
+            final genres = widget.server.autoDJGenres;
             if (v == true) {
-              await AutoDJManager().addGenre(g);
+              // Same cap the server Joi-validates at, so an over-long list
+              // can't 400 the whole random-songs request.
+              if (!genres.contains(g) &&
+                  genres.length < AutoDJManager.maxGenres) {
+                genres.add(g);
+              }
             } else {
-              await AutoDJManager().removeGenre(g);
+              genres.remove(g);
             }
+            // Persisted when the sheet closes (the caller commits), but shown
+            // now — this checkbox is its own source of truth while open.
+            setState(() {});
           },
         );
       },

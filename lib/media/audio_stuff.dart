@@ -2627,9 +2627,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (ignoreVPaths.isNotEmpty) {
         payload['ignoreVPaths'] = ignoreVPaths;
       }
-      if (mgr.genreFilterEnabled && mgr.genreFilterValues.isNotEmpty) {
-        payload['genres'] = mgr.genreFilterValues;
-        payload['genreMode'] = mgr.genreFilterMode;
+      // Per-server now: the list belongs to the library it was built against.
+      if (autoDJServer!.autoDJGenreEnabled &&
+          autoDJServer!.autoDJGenres.isNotEmpty) {
+        payload['genres'] = autoDJServer!.autoDJGenres;
+        payload['genreMode'] = autoDJServer!.autoDJGenreMode;
       }
       if (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0) {
         payload['bpmRanges'] =
