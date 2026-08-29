@@ -1338,6 +1338,60 @@ abstract class AppLocalizations {
   /// **'Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).'**
   String get autoDjHarmonicSubtitle;
 
+  /// Auto DJ track-length filter switch title.
+  ///
+  /// In en, this message translates to:
+  /// **'Track length'**
+  String get autoDjDurationTitle;
+
+  /// Subtitle for that switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip interludes and long mixes by only picking tracks in a length range'**
+  String get autoDjDurationSubtitle;
+
+  /// Label beside the length range slider.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get autoDjDurationRange;
+
+  /// Range readout when neither bound is set.
+  ///
+  /// In en, this message translates to:
+  /// **'Any length'**
+  String get autoDjDurationAny;
+
+  /// Range readout with only a minimum, e.g. Over 2:00.
+  ///
+  /// In en, this message translates to:
+  /// **'Over {min}'**
+  String autoDjDurationOver(String min);
+
+  /// Range readout with only a maximum, e.g. Under 6:00.
+  ///
+  /// In en, this message translates to:
+  /// **'Under {max}'**
+  String autoDjDurationUnder(String max);
+
+  /// Range readout with both bounds, e.g. 2:00 to 6:00.
+  ///
+  /// In en, this message translates to:
+  /// **'{min} to {max}'**
+  String autoDjDurationBetween(String min, String max);
+
+  /// Sub-switch letting unknown-length tracks through.
+  ///
+  /// In en, this message translates to:
+  /// **'Include tracks of unknown length'**
+  String get autoDjDurationAllowUnknown;
+
+  /// Subtitle for that sub-switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks your server has not read a length for are skipped otherwise'**
+  String get autoDjDurationAllowUnknownSub;
+
   /// Auto DJ status block + enable button.
   ///
   /// In en, this message translates to:
@@ -1373,24 +1427,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Songs are picked from {url} when the queue runs low.'**
   String autoDjStatusOnDetail(String url);
-
-  /// Server-picker + sources section.
-  ///
-  /// In en, this message translates to:
-  /// **'Active source'**
-  String get autoDjActiveSource;
-
-  /// No description provided for @autoDjActiveSourceTap.
-  ///
-  /// In en, this message translates to:
-  /// **'Active source — tap to switch'**
-  String get autoDjActiveSourceTap;
-
-  /// No description provided for @autoDjSwitch.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch'**
-  String get autoDjSwitch;
 
   /// No description provided for @autoDjOneSourceRequired.
   ///
@@ -3149,6 +3185,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t fetch a song from the server.'**
   String get autoDjSonicSeedFailed;
+
+  /// Snackbar when the Auto DJ filters exclude every track, so no opening song can be picked.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs match your Auto DJ filters — try loosening them'**
+  String get autoDjSeedNoMatch;
 
   /// Context action on a track (album rows, Song Info chip, browser long-press): open Discover pinned to that track.
   ///

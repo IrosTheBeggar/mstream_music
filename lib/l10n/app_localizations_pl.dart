@@ -716,6 +716,42 @@ class AppLocalizationsPl extends AppLocalizations {
       'Preferuj wybory w tonacjach dobrze pasujących do zablokowanego utworu (sąsiedzi na kole Camelota).';
 
   @override
+  String get autoDjDurationTitle => 'Długość utworu';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Pomija interludia i długie miksy, wybierając tylko utwory o określonej długości';
+
+  @override
+  String get autoDjDurationRange => 'Długość';
+
+  @override
+  String get autoDjDurationAny => 'Dowolna długość';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Powyżej $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Poniżej $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'Od $min do $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Uwzględnij utwory o nieznanej długości';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Utwory, których długości serwer nie odczytał, są w przeciwnym razie pomijane';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ jest włączony';
 
   @override
@@ -735,16 +771,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'Utwory są wybierane z $url, gdy kolejka się wyczerpuje.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Aktywne źródło';
-
-  @override
-  String get autoDjActiveSourceTap =>
-      'Aktywne źródło — dotknij, aby przełączyć';
-
-  @override
-  String get autoDjSwitch => 'Przełącz';
 
   @override
   String get autoDjOneSourceRequired =>
@@ -1828,6 +1854,10 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'Nie udało się pobrać utworu z serwera.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'Żaden utwór nie pasuje do filtrów Auto DJ — spróbuj je poluzować';
 
   @override
   String get discoverFindSimilar => 'Znajdź podobne';

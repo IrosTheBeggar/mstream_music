@@ -164,6 +164,13 @@ enum ServerParam {
   similarTo,
   minSimilarity,
 
+  /// random-songs: track-length window. Both bounds are independent and
+  /// optional; allowUnknownDuration decides whether rows the scanner never
+  /// read a length for survive the filter.
+  minDuration,
+  maxDuration,
+  allowUnknownDuration,
+
   /// db/search: restrict the lyrics category. The endpoint's other four
   /// `no*` flags all date to 4.7.0 — below the support floor, so they are
   /// never worth gating; this one arrived at 6.13.1 and is the only search
@@ -193,6 +200,16 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   ServerParam.similarTo: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.minSimilarity: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.noLyrics: ServerVersion(6, 13, 1, '6.13.1'),
+  // ASSUMPTION — the duration params are merged on the server's master but
+  // NOT in any tag yet (v6.24.0 is the newest, and they landed after it), so
+  // 6.25.0 is the expected next minor rather than an observed floor. If the
+  // release that carries them is numbered differently, these three are the
+  // only thing to change. Erring high is the safe direction: too high hides a
+  // working control, too low sends a parameter that 400s the whole request —
+  // though ServerCapabilities would then learn and drop it.
+  ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
+  ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
+  ServerParam.allowUnknownDuration: ServerVersion(6, 25, 0, '6.25.0'),
 };
 
 /// Whether [v] is known to be too old for [p].
@@ -227,6 +244,16 @@ bool knownOlderThan(ServerVersion? v, ServerVersion floor) =>
 /// would be worse than offering it and learning from a rejection.
 bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.bpmRanges);
+
+/// The Auto DJ track-length window. True when the server is KNOWN to predate
+/// it, which is the cue to hide the control rather than let it claim to work
+/// — the app strips the parameters before sending, so a visible switch would
+/// sit there saying "on" while every pick ignored it.
+///
+/// Same fork/unknown rule as the rest: neither is known to be too old, so both
+/// keep the control and learn from a rejection instead.
+bool autoDjDurationKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.minDuration);
 
 /// `POST /api/v1/db/metadata/batch` arrived at 5.11.0 — many filepaths in
 /// one request instead of one per track.

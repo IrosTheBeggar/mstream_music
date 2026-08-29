@@ -714,6 +714,42 @@ class AppLocalizationsPt extends AppLocalizations {
       'Prefere escolhas em tons que combinam bem com a música travada (vizinhos na roda Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Duração da faixa';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Ignora interlúdios e mixes longos, escolhendo apenas faixas dentro de uma faixa de duração';
+
+  @override
+  String get autoDjDurationRange => 'Duração';
+
+  @override
+  String get autoDjDurationAny => 'Qualquer duração';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Acima de $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Abaixo de $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'De $min a $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Incluir faixas de duração desconhecida';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Faixas cuja duração seu servidor não leu são ignoradas caso contrário';
+
+  @override
   String get autoDjStatusOn => 'O Auto DJ está ligado';
 
   @override
@@ -733,15 +769,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'As músicas são escolhidas de $url quando a fila fica curta.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Fonte ativa';
-
-  @override
-  String get autoDjActiveSourceTap => 'Fonte ativa — toque para trocar';
-
-  @override
-  String get autoDjSwitch => 'Trocar';
 
   @override
   String get autoDjOneSourceRequired => 'É necessária pelo menos uma fonte.';
@@ -1809,6 +1836,10 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'Não foi possível obter uma música do servidor.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'Nenhuma música corresponde aos seus filtros do Auto DJ — tente afrouxá-los';
 
   @override
   String get discoverFindSimilar => 'Encontrar semelhantes';

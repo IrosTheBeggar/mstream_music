@@ -708,6 +708,41 @@ class AppLocalizationsEn extends AppLocalizations {
       'Prefer picks in keys that mix well with the locked song (Camelot wheel neighbours).';
 
   @override
+  String get autoDjDurationTitle => 'Track length';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Skip interludes and long mixes by only picking tracks in a length range';
+
+  @override
+  String get autoDjDurationRange => 'Length';
+
+  @override
+  String get autoDjDurationAny => 'Any length';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Over $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Under $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return '$min to $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown => 'Include tracks of unknown length';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Tracks your server has not read a length for are skipped otherwise';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ is on';
 
   @override
@@ -727,15 +762,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'Songs are picked from $url when the queue runs low.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Active source';
-
-  @override
-  String get autoDjActiveSourceTap => 'Active source — tap to switch';
-
-  @override
-  String get autoDjSwitch => 'Switch';
 
   @override
   String get autoDjOneSourceRequired => 'At least one source is required.';
@@ -1794,6 +1820,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'Couldn\'t fetch a song from the server.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'No songs match your Auto DJ filters — try loosening them';
 
   @override
   String get discoverFindSimilar => 'Find similar';

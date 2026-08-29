@@ -16,6 +16,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../objects/server.dart';
+
 /// Which paths feed random-songs' `similarTo` when sonic mode is on — a
 /// pure client-side policy (the server statelessly averages whatever
 /// arrives; webapp auto-dj.js parity):
@@ -62,11 +64,20 @@ class AutoDJManager {
   bool keywordFilterEnabled = false;
   List<String> keywordFilterWords = [];
 
-  // Genre filter — server-side via the `genres` + `genreMode` fields
-  // on POST /api/v1/db/random-songs.
-  bool genreFilterEnabled = false;
-  String genreFilterMode = 'whitelist'; // 'whitelist' | 'blacklist'
-  List<String> genreFilterValues = [];
+  // Genre filter — MOVED to the Server object (autoDJGenreEnabled /
+  // autoDJGenreMode / autoDJGenres). Genre strings are a library's own
+  // vocabulary, so a list built against one server never made sense applied
+  // to another.
+  //
+  // These three hold what an older auto_dj.json still carries, in memory
+  // only, until migrateGenreFilterToServers copies it onto the servers. Null
+  // means "nothing left to migrate", which is also the state of every file
+  // written since: _save only writes the legacy keys while they are non-null,
+  // so the first save after migrating drops them for good. Their presence in
+  // the file IS the migration flag — no separate bookkeeping key.
+  bool? _legacyGenreEnabled;
+  String? _legacyGenreMode;
+  List<String>? _legacyGenreValues;
 
   // BPM continuity — prefer next picks within ±tolerance of the
   // currently playing track's BPM. Server-side via `bpmRanges` (a
@@ -74,6 +85,35 @@ class AutoDJManager {
   // raw BPM units (1–20, default 8 matching the webapp slider).
   bool bpmContinuityEnabled = false;
   int bpmTolerance = 8;
+
+  // Track-length window — server-side via `minDuration` / `maxDuration` on
+  // POST /api/v1/db/random-songs, in SECONDS. The server applies it at the
+  // base-conditions layer and NEVER relaxes it in the waterfall (unlike the
+  // BPM windows), so an over-tight window 400s rather than quietly widening.
+  //
+  // The rails are the off positions: [durationFloorSec] means "no minimum"
+  // and [durationCeilSec] means "no maximum", so a bound at either end is
+  // simply not sent. That keeps one control able to express min-only,
+  // max-only, both, or neither — which is exactly the server's contract.
+  bool durationFilterEnabled = false;
+  int minDurationSec = 120; // the "skip interludes" default
+  int maxDurationSec = durationCeilSec;
+  // Tracks the scanner never read a length for are EXCLUDED by default,
+  // matching the server: an unknown length can't be shown to satisfy the
+  // bound. On a partially-scanned library that can shrink the pool much more
+  // than intended, which is what this opts back out of.
+  bool allowUnknownDuration = false;
+
+  /// Bottom rail of the length slider — "no minimum".
+  static const int durationFloorSec = 0;
+
+  /// Top rail — "no maximum". 20 minutes covers ordinary tracks with room to
+  /// spare; anything longer is the case the user wants to keep, not exclude.
+  static const int durationCeilSec = 1200;
+
+  /// Slider granularity. 15s steps give 80 divisions — fine enough to land on
+  /// a real intent ("over 90 seconds") without pretending to per-second aim.
+  static const int durationStepSec = 15;
 
   // Harmonic mixing — prefer keys that mix well with the currently
   // locked Camelot anchor (which AudioPlayerHandler sets from the
@@ -162,9 +202,13 @@ class AutoDJManager {
       final m = jsonDecode(raw) as Map<String, dynamic>;
       keywordFilterEnabled = m['keywordFilterEnabled'] ?? false;
       keywordFilterWords = List<String>.from(m['keywordFilterWords'] ?? []);
-      genreFilterEnabled = m['genreFilterEnabled'] ?? false;
-      genreFilterMode = m['genreFilterMode'] ?? 'whitelist';
-      genreFilterValues = List<String>.from(m['genreFilterValues'] ?? []);
+      if (m.containsKey('genreFilterValues') ||
+          m.containsKey('genreFilterEnabled')) {
+        _legacyGenreEnabled = m['genreFilterEnabled'] == true;
+        _legacyGenreMode =
+            m['genreFilterMode'] == 'blacklist' ? 'blacklist' : 'whitelist';
+        _legacyGenreValues = List<String>.from(m['genreFilterValues'] ?? []);
+      }
       bpmContinuityEnabled = m['bpmContinuityEnabled'] ?? false;
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
@@ -190,6 +234,17 @@ class AutoDJManager {
       emptyQueueStart =
           EmptyQueueStart.values.asNameMap()[m['emptyQueueStart']] ??
               EmptyQueueStart.ask;
+      durationFilterEnabled = m['durationFilterEnabled'] ?? false;
+      // Clamped on read: a hand-edited or future-written file must not put the
+      // slider off its own track, and an inverted pair would send a window
+      // nothing can satisfy.
+      minDurationSec = _clampDuration(m['minDurationSec'], 120);
+      maxDurationSec = _clampDuration(m['maxDurationSec'], durationCeilSec);
+      if (minDurationSec > maxDurationSec) {
+        minDurationSec = durationFloorSec;
+        maxDurationSec = durationCeilSec;
+      }
+      allowUnknownDuration = m['allowUnknownDuration'] ?? false;
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
       _notify();
     } catch (_) {
@@ -197,14 +252,22 @@ class AutoDJManager {
     }
   }
 
+  static int _clampDuration(dynamic raw, int fallback) {
+    final v = raw is num ? raw.round() : fallback;
+    return v.clamp(durationFloorSec, durationCeilSec);
+  }
+
   Future<void> _save() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
+      // Held only until the migration runs; see the field declarations.
+      if (_legacyGenreValues != null) ...{
+        'genreFilterEnabled': _legacyGenreEnabled ?? false,
+        'genreFilterMode': _legacyGenreMode ?? 'whitelist',
+        'genreFilterValues': _legacyGenreValues,
+      },
       'keywordFilterEnabled': keywordFilterEnabled,
       'keywordFilterWords': keywordFilterWords,
-      'genreFilterEnabled': genreFilterEnabled,
-      'genreFilterMode': genreFilterMode,
-      'genreFilterValues': genreFilterValues,
       'bpmContinuityEnabled': bpmContinuityEnabled,
       'bpmTolerance': bpmTolerance,
       'harmonicMixingEnabled': harmonicMixingEnabled,
@@ -216,6 +279,10 @@ class AutoDJManager {
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
+      'durationFilterEnabled': durationFilterEnabled,
+      'minDurationSec': minDurationSec,
+      'maxDurationSec': maxDurationSec,
+      'allowUnknownDuration': allowUnknownDuration,
     }));
   }
 
@@ -228,6 +295,47 @@ class AutoDJManager {
     if (enabledServer == localname) return;
     enabledServer = localname;
     await _save();
+  }
+
+  // --- Track-length window ---
+
+  Future<void> setDurationFilterEnabled(bool v) async {
+    durationFilterEnabled = v;
+    _notify();
+    await _save();
+  }
+
+  /// Both bounds move together — the slider is one control, and letting them
+  /// cross would produce a window with no possible match.
+  Future<void> setDurationRange(int minSec, int maxSec) async {
+    minDurationSec = minSec.clamp(durationFloorSec, durationCeilSec);
+    maxDurationSec = maxSec.clamp(durationFloorSec, durationCeilSec);
+    if (minDurationSec > maxDurationSec) {
+      final swap = minDurationSec;
+      minDurationSec = maxDurationSec;
+      maxDurationSec = swap;
+    }
+    _notify();
+    await _save();
+  }
+
+  Future<void> setAllowUnknownDuration(bool v) async {
+    allowUnknownDuration = v;
+    _notify();
+    await _save();
+  }
+
+  /// The bounds actually worth sending. A rail means "unbounded", so it is
+  /// omitted; the server treats a missing bound as no constraint on that side.
+  /// Null when the window is wide open, which is the cue to send nothing at
+  /// all — including allowUnknownDuration, which the server no-ops without a
+  /// window to apply it to.
+  ({int? min, int? max})? get activeDurationBounds {
+    if (!durationFilterEnabled) return null;
+    final min = minDurationSec > durationFloorSec ? minDurationSec : null;
+    final max = maxDurationSec < durationCeilSec ? maxDurationSec : null;
+    if (min == null && max == null) return null;
+    return (min: min, max: max);
   }
 
   // --- Keyword filter ---
@@ -254,33 +362,78 @@ class AutoDJManager {
     await _save();
   }
 
-  // --- Genre filter ---
-
-  Future<void> setGenreFilterEnabled(bool v) async {
-    genreFilterEnabled = v;
-    _notify();
-    await _save();
+  /// The Auto DJ constraints that describe the LIBRARY rather than the
+  /// session: excluded vpaths, minimum rating, genre, track length.
+  ///
+  /// Shared by the DJ's own picks and by the "Surprise me" opening track so
+  /// the two cannot drift. They had: the opener sent only vpaths and rating,
+  /// so a genre blacklist or a track-length window was silently skipped for
+  /// track one and honoured from track two onward. Anything added here now
+  /// reaches both.
+  ///
+  /// Deliberately EXCLUDES BPM continuity, harmonic mixing and sonic
+  /// similarity. Each of those keys off a currently playing track or a locked
+  /// anchor, and the caller that needs this most — a cold start on an empty
+  /// queue — has neither.
+  Map<String, dynamic> libraryFilters(Server server) {
+    final out = <String, dynamic>{};
+    final ignoreVPaths = <String>[
+      for (final e in server.autoDJPaths.entries)
+        if (e.value == false) e.key,
+    ];
+    if (ignoreVPaths.isNotEmpty) out['ignoreVPaths'] = ignoreVPaths;
+    if (server.autoDJminRating != null) {
+      out['minRating'] = server.autoDJminRating;
+    }
+    if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {
+      out['genres'] = server.autoDJGenres;
+      out['genreMode'] = server.autoDJGenreMode;
+    }
+    final bounds = activeDurationBounds;
+    if (bounds != null) {
+      if (bounds.min != null) out['minDuration'] = bounds.min;
+      if (bounds.max != null) out['maxDuration'] = bounds.max;
+      if (allowUnknownDuration) out['allowUnknownDuration'] = true;
+    }
+    return out;
   }
 
-  Future<void> setGenreFilterMode(String mode) async {
-    if (mode != 'whitelist' && mode != 'blacklist') return;
-    genreFilterMode = mode;
-    _notify();
-    await _save();
-  }
+  // --- Genre filter migration (global -> per-server) ---
 
-  Future<void> addGenre(String genre) async {
-    final trimmed = genre.trim();
-    if (trimmed.isEmpty) return;
-    if (genreFilterValues.contains(trimmed)) return;
-    if (genreFilterValues.length >= maxGenres) return;
-    genreFilterValues.add(trimmed);
-    _notify();
-    await _save();
-  }
+  /// Copy a pre-move global genre filter onto [servers], once.
+  ///
+  /// It goes onto EVERY server rather than a chosen one: globally it applied
+  /// to whichever server the DJ happened to run on, so writing it everywhere
+  /// is what actually preserves the behaviour the user had. A server that
+  /// already carries its own genre list is left alone.
+  ///
+  /// No-ops when there is nothing to migrate, and — importantly — when
+  /// [servers] is empty: the values stay in the file for a later launch
+  /// rather than being dropped on a boot that raced the server list.
+  /// [persistServers] must write the server list to disk — the caller owns
+  /// that, so this stays free of ServerManager.
+  Future<void> migrateGenreFilterToServers(
+      List<Server> servers, Future<void> Function() persistServers) async {
+    final values = _legacyGenreValues;
+    if (values == null) return;
+    if (servers.isEmpty) return;
 
-  Future<void> removeGenre(String genre) async {
-    genreFilterValues.remove(genre);
+    for (final s in servers) {
+      if (s.autoDJGenres.isNotEmpty) continue;
+      s.autoDJGenres = List<String>.from(values.take(maxGenres));
+      s.autoDJGenreMode = _legacyGenreMode ?? 'whitelist';
+      s.autoDJGenreEnabled = _legacyGenreEnabled ?? false;
+    }
+
+    // Order matters, and getting it wrong loses the filter outright: the new
+    // home has to be on disk BEFORE the old one is cleared. Writing auto_dj
+    // first would mean a failed or interrupted server write left the values
+    // in neither file.
+    await persistServers();
+
+    _legacyGenreEnabled = null;
+    _legacyGenreMode = null;
+    _legacyGenreValues = null;
     _notify();
     await _save();
   }

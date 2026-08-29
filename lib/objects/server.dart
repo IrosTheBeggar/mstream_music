@@ -88,6 +88,15 @@ class Server {
   // Auto DJ
   int? autoDJminRating;
   Map<String, bool> autoDJPaths = {};
+  // Genre filter — per-server for the same reason as the two above: genre
+  // strings are the library's own vocabulary, so a whitelist built from one
+  // server's tags means nothing against another's (the picker even fetches
+  // its autocomplete list per-server). Sent server-side as `genres` +
+  // `genreMode` on random-songs. Migrated out of auto_dj.json, where it used
+  // to live globally — see AutoDJManager.migrateGenreFilterToServers.
+  bool autoDJGenreEnabled = false;
+  String autoDJGenreMode = 'whitelist'; // 'whitelist' | 'blacklist'
+  List<String> autoDJGenres = [];
   List<String> playlists = [];
 
   Server(this.url, this.username, this.password, this.jwt, this.localname);
@@ -127,6 +136,12 @@ class Server {
         localname = json['localname'],
         autoDJPaths = json['autoDJPaths']?.cast<String, bool>() ?? {},
         autoDJminRating = json['autoDJminRating'],
+        autoDJGenreEnabled = json['autoDJGenreEnabled'] == true,
+        // Anything unrecognised falls back to whitelist rather than rippling
+        // a junk value into the request body.
+        autoDJGenreMode =
+            json['autoDJGenreMode'] == 'blacklist' ? 'blacklist' : 'whitelist',
+        autoDJGenres = List<String>.from(json['autoDJGenres'] ?? []),
         playlists = List<String>.from(json['playlists'] ?? []),
         allowSelfSigned = json['allowSelfSigned'] == true,
         // Migrate the old boolean: absent/false → appLocal; true → the
@@ -168,6 +183,9 @@ class Server {
         'localname': localname,
         'autoDJPaths': autoDJPaths,
         'autoDJminRating': autoDJminRating,
+        'autoDJGenreEnabled': autoDJGenreEnabled,
+        'autoDJGenreMode': autoDJGenreMode,
+        'autoDJGenres': autoDJGenres,
         'playlists': playlists,
         'allowSelfSigned': allowSelfSigned,
         'storageMode': storageMode,

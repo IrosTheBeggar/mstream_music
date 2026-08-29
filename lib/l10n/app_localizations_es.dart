@@ -714,6 +714,42 @@ class AppLocalizationsEs extends AppLocalizations {
       'Prefiere selecciones en tonalidades que mezclen bien con la canción fijada (vecinos de la rueda Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Duración de la pista';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Omite interludios y mezclas largas eligiendo solo pistas dentro de un rango de duración';
+
+  @override
+  String get autoDjDurationRange => 'Duración';
+
+  @override
+  String get autoDjDurationAny => 'Cualquier duración';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Más de $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Menos de $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'De $min a $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Incluir pistas de duración desconocida';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Las pistas cuya duración tu servidor no ha leído se omiten en caso contrario';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ está activado';
 
   @override
@@ -733,15 +769,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'Las canciones se seleccionan de $url cuando la cola se está quedando corta.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Fuente activa';
-
-  @override
-  String get autoDjActiveSourceTap => 'Fuente activa — toca para cambiar';
-
-  @override
-  String get autoDjSwitch => 'Cambiar';
 
   @override
   String get autoDjOneSourceRequired => 'Se requiere al menos una fuente.';
@@ -1813,6 +1840,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'No se pudo obtener una canción del servidor.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'Ninguna canción coincide con tus filtros de Auto DJ; prueba a relajarlos';
 
   @override
   String get discoverFindSimilar => 'Buscar similares';

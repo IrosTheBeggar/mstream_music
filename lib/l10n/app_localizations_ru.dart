@@ -722,6 +722,42 @@ class AppLocalizationsRu extends AppLocalizations {
       'Предпочитать выбор в тональностях, хорошо сочетающихся с закреплённым треком (соседи по колесу Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Длительность трека';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Пропускает интерлюдии и длинные миксы, выбирая треки только заданной длительности';
+
+  @override
+  String get autoDjDurationRange => 'Длительность';
+
+  @override
+  String get autoDjDurationAny => 'Любая длительность';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Больше $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Меньше $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'От $min до $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Включать треки неизвестной длительности';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Иначе треки, длительность которых сервер не определил, пропускаются';
+
+  @override
   String get autoDjStatusOn => 'Авто-DJ включён';
 
   @override
@@ -741,16 +777,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'Треки выбираются из $url, когда очередь подходит к концу.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Активный источник';
-
-  @override
-  String get autoDjActiveSourceTap =>
-      'Активный источник — нажмите, чтобы сменить';
-
-  @override
-  String get autoDjSwitch => 'Сменить';
 
   @override
   String get autoDjOneSourceRequired => 'Требуется хотя бы один источник.';
@@ -1831,6 +1857,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => 'Не удалось получить трек с сервера.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'Нет треков, подходящих под фильтры Auto DJ — попробуйте смягчить их';
 
   @override
   String get discoverFindSimilar => 'Найти похожие';

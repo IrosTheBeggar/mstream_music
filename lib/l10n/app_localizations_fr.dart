@@ -714,6 +714,42 @@ class AppLocalizationsFr extends AppLocalizations {
       'Privilégier les choix dans des tonalités qui se mixent bien avec le morceau verrouillé (voisins de la roue Camelot).';
 
   @override
+  String get autoDjDurationTitle => 'Durée des morceaux';
+
+  @override
+  String get autoDjDurationSubtitle =>
+      'Ignore les interludes et les longs mixes en ne choisissant que des morceaux dans une plage de durée';
+
+  @override
+  String get autoDjDurationRange => 'Durée';
+
+  @override
+  String get autoDjDurationAny => 'Toute durée';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return 'Plus de $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return 'Moins de $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return 'De $min à $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown =>
+      'Inclure les morceaux de durée inconnue';
+
+  @override
+  String get autoDjDurationAllowUnknownSub =>
+      'Les morceaux dont votre serveur n’a pas lu la durée sont sinon ignorés';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ activé';
 
   @override
@@ -733,15 +769,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return 'Les morceaux sont choisis depuis $url lorsque la file s\'épuise.';
   }
-
-  @override
-  String get autoDjActiveSource => 'Source active';
-
-  @override
-  String get autoDjActiveSourceTap => 'Source active — touchez pour changer';
-
-  @override
-  String get autoDjSwitch => 'Changer';
 
   @override
   String get autoDjOneSourceRequired => 'Au moins une source est requise.';
@@ -1813,6 +1840,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get autoDjSonicSeedFailed =>
       'Impossible de récupérer un titre depuis le serveur.';
+
+  @override
+  String get autoDjSeedNoMatch =>
+      'Aucun morceau ne correspond à vos filtres Auto DJ — essayez de les assouplir';
 
   @override
   String get discoverFindSimilar => 'Titres similaires';

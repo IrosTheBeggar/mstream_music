@@ -637,19 +637,26 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
   }
 
   if (choice == EmptyQueueStart.random) {
-    final item = await ApiManager().fetchRandomSong(server);
-    final path = item?.data;
+    // The FILTERED pick, not the plain random one: this track opens the
+    // session, so it has to obey the same rating/genre/length rules every
+    // later pick does.
+    final seed = await ApiManager().fetchAutoDjSeed(server);
+    final path = seed.item?.data;
     if (path == null) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(AppLocalizations.of(context)
-                .autoDjSonicSeedFailed)));
+        final l = AppLocalizations.of(context);
+        // "Nothing matched" is a different problem from "the request
+        // failed", and only one of them the user can do anything about.
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                seed.noMatch ? l.autoDjSeedNoMatch : l.autoDjSonicSeedFailed)));
       }
       return false;
     }
+    final item = seed.item!;
     await mgr.setSonicSeed(
         path: path,
-        title: item!.metadata?.title ?? item.name.split('/').last,
+        title: item.metadata?.title ?? item.name.split('/').last,
         server: server.localname);
     return true;
   }

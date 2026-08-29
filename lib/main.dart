@@ -194,6 +194,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         SettingsManager().startupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
+      unawaited(_migrateAutoDjGenreFilter());
       unawaited(_restoreAutoDj());
       unawaited(_handleIncomingTorrent());
       unawaited(_maybeOpenStartupView());
@@ -360,6 +361,16 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // Dismissed by back/scrim (null) as well as an explicit Add — either way
     // the torrent is here, and dropping it silently would lose the file.
     _openAddTorrent(torrent);
+  }
+
+  /// One-time move of the genre filter out of auto_dj.json and onto each
+  /// Server. Runs after the server list has landed, since it has servers to
+  /// write to — and no-ops entirely once there is nothing left to migrate,
+  /// which is every launch after the first.
+  Future<void> _migrateAutoDjGenreFilter() async {
+    await AutoDJManager().load();
+    await AutoDJManager().migrateGenreFilterToServers(
+        ServerManager().serverList, ServerManager().callAfterEditServer);
   }
 
   /// Auto DJ comes back on wherever it was left. Runs after the server list

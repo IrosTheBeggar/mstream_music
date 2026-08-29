@@ -680,6 +680,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjHarmonicSubtitle => '优先选择与锁定歌曲调性相配的曲目（Camelot 轮盘相邻调）。';
 
   @override
+  String get autoDjDurationTitle => '曲目时长';
+
+  @override
+  String get autoDjDurationSubtitle => '仅选择时长在指定范围内的曲目，跳过间奏和长混音';
+
+  @override
+  String get autoDjDurationRange => '时长';
+
+  @override
+  String get autoDjDurationAny => '不限时长';
+
+  @override
+  String autoDjDurationOver(String min) {
+    return '超过 $min';
+  }
+
+  @override
+  String autoDjDurationUnder(String max) {
+    return '少于 $max';
+  }
+
+  @override
+  String autoDjDurationBetween(String min, String max) {
+    return '$min 至 $max';
+  }
+
+  @override
+  String get autoDjDurationAllowUnknown => '包含时长未知的曲目';
+
+  @override
+  String get autoDjDurationAllowUnknownSub => '否则将跳过服务器未读取到时长的曲目';
+
+  @override
   String get autoDjStatusOn => 'Auto DJ 已开启';
 
   @override
@@ -698,15 +731,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String autoDjStatusOnDetail(String url) {
     return '当队列即将播完时，将从 $url 挑选歌曲。';
   }
-
-  @override
-  String get autoDjActiveSource => '当前来源';
-
-  @override
-  String get autoDjActiveSourceTap => '当前来源 — 点击切换';
-
-  @override
-  String get autoDjSwitch => '切换';
 
   @override
   String get autoDjOneSourceRequired => '至少需要一个来源。';
@@ -1706,6 +1730,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedFailed => '无法从服务器获取歌曲。';
+
+  @override
+  String get autoDjSeedNoMatch => '没有歌曲符合你的 Auto DJ 筛选条件，请放宽条件';
 
   @override
   String get discoverFindSimilar => '查找相似歌曲';
