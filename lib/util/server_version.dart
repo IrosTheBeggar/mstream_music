@@ -171,6 +171,14 @@ enum ServerParam {
   maxDuration,
   allowUnknownDuration,
 
+  /// random-songs: a sonic seed carried from ANOTHER server, as a raw
+  /// vector rather than a filepath (which only names a row on the server
+  /// that holds it). Paired with the /discovery/local/embeddings route that
+  /// reads the vector out in the first place — a server needs both or
+  /// neither, so one floor covers the pair.
+  similarToVector,
+  similarToModelId,
+
   /// db/search: restrict the lyrics category. The endpoint's other four
   /// `no*` flags all date to 4.7.0 — below the support floor, so they are
   /// never worth gating; this one arrived at 6.13.1 and is the only search
@@ -207,6 +215,10 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   // only thing to change. Erring high is the safe direction: too high hides a
   // working control, too low sends a parameter that 400s the whole request —
   // though ServerCapabilities would then learn and drop it.
+  // Same unreleased-floor caveat as the duration params below: the vector
+  // seed is merged on the server's master but carried by no tag yet.
+  ServerParam.similarToVector: ServerVersion(6, 25, 0, '6.25.0'),
+  ServerParam.similarToModelId: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.allowUnknownDuration: ServerVersion(6, 25, 0, '6.25.0'),
@@ -254,6 +266,16 @@ bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
 /// keep the control and learn from a rejection instead.
 bool autoDjDurationKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.minDuration);
+
+/// True when the server is KNOWN to predate portable sonic seeds — the
+/// /discovery/local/embeddings route and random-songs' vector seed, which
+/// ship together. Such a server can still run Auto DJ on its own; it just
+/// can't take part in a session seeded from somewhere else.
+///
+/// Same fork/unknown rule as every other gate: neither is known to be too
+/// old, so both are offered the session and answer for themselves.
+bool crossServerSeedKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.similarToVector);
 
 /// `POST /api/v1/db/metadata/batch` arrived at 5.11.0 — many filepaths in
 /// one request instead of one per track.

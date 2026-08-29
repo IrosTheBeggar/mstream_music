@@ -694,6 +694,32 @@ class AppLocalizationsPl extends AppLocalizations {
   String get autoDjSectionFilters => 'Filtry';
 
   @override
+  String get autoDjMultiServerTitle => 'Odtwarzaj ze wszystkich serwerów';
+
+  @override
+  String get autoDjMultiServerSubtitle =>
+      'Auto DJ wybiera ze wszystkich serwerów naraz, dopasowując się do brzmienia';
+
+  @override
+  String get autoDjSectionShared => 'Sesja';
+
+  @override
+  String get autoDjSectionPerServer => 'Każda biblioteka';
+
+  @override
+  String get autoDjEditingServer => 'Ustawienia dla';
+
+  @override
+  String autoDjMultiServerAllIn(int count) {
+    return 'Uczestniczy $count serwerów';
+  }
+
+  @override
+  String autoDjMultiServerSomeExcluded(int count, int total) {
+    return 'Uczestniczy $count z $total serwerów — pozostałe wymagają discovery i nowszej wersji serwera';
+  }
+
+  @override
   String get autoDjBpmTitle => 'Ciągłość BPM';
 
   @override

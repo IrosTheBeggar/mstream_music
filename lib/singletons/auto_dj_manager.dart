@@ -164,6 +164,16 @@ class AutoDJManager {
   /// didn't ask for.
   EmptyQueueStart emptyQueueStart = EmptyQueueStart.ask;
 
+  /// Draw picks from EVERY eligible server, not just the one the DJ was
+  /// armed on.
+  ///
+  /// The seed still comes from what is playing, but it travels as a vector
+  /// (see ApiManager.fetchEmbeddings) so servers that have never seen that
+  /// file can still answer "something like this". Off by default: it changes
+  /// where music comes from, needs servers new enough to take a vector seed,
+  /// and only makes sense with more than one server configured.
+  bool multiServerEnabled = false;
+
   /// [Server.localname] Auto DJ was last switched on for, or null when it was
   /// off. Written by the audio handler on every setAutoDJ, and read once at
   /// launch to bring the DJ back up where it was left — armed only, never
@@ -246,6 +256,7 @@ class AutoDJManager {
       }
       allowUnknownDuration = m['allowUnknownDuration'] ?? false;
       enabledServer = m['enabledServer'] is String ? m['enabledServer'] : null;
+      multiServerEnabled = m['multiServerEnabled'] ?? false;
       _notify();
     } catch (_) {
       // Corrupt or missing — defaults stand.
@@ -279,6 +290,7 @@ class AutoDJManager {
       'sonicSeedServer': sonicSeedServer,
       'emptyQueueStart': emptyQueueStart.name,
       'enabledServer': enabledServer,
+      'multiServerEnabled': multiServerEnabled,
       'durationFilterEnabled': durationFilterEnabled,
       'minDurationSec': minDurationSec,
       'maxDurationSec': maxDurationSec,
@@ -358,6 +370,12 @@ class AutoDJManager {
 
   Future<void> removeKeyword(String word) async {
     keywordFilterWords.remove(word);
+    _notify();
+    await _save();
+  }
+
+  Future<void> setMultiServerEnabled(bool v) async {
+    multiServerEnabled = v;
     _notify();
     await _save();
   }

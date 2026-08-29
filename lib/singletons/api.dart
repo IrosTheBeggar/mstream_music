@@ -20,6 +20,7 @@ import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:typed_data';
 
 class ApiManager {
   ApiManager._privateConstructor();
@@ -908,6 +909,67 @@ class ApiManager {
   /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
   /// min rating) so a random seed can't come from an excluded library.
   /// Null on any error.
+  /// The discovery embeddings for [filePaths] on [server], so a seed can be
+  /// carried to a server that has never seen those files.
+  ///
+  /// Returns the model identity alongside the vectors: embeddings only
+  /// compare within one model space, so a caller must know which space it is
+  /// holding before offering the seed to anyone else. Null when the server
+  /// can't answer at all (too old, discovery off, unreachable) — the caller
+  /// treats that as "this server sits this session out", not an error.
+  ///
+  /// Vectors come back base64 float32 little-endian, the same wire form the
+  /// server's federation routes use.
+  Future<({String modelId, int dim, List<Float32List> vectors})?>
+      fetchEmbeddings(Server server, List<String> filePaths) async {
+    if (filePaths.isEmpty) return null;
+    try {
+      final res = await http
+          .post(
+            server.apiUri('/api/v1/discovery/local/embeddings'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.jwt ?? '',
+            },
+            // The route caps at 8 to match the sonic seed cap; trim here
+            // rather than let the whole request 400 on a longer anchor.
+            body: jsonEncode({'filePaths': filePaths.take(8).toList()}),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode > 299) {
+        verboseLog('[dj] embeddings HTTP ${res.statusCode} on ${server.localname}');
+        return null;
+      }
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final modelId = (decoded['model'] is Map)
+          ? decoded['model']['id']?.toString()
+          : null;
+      final dim = decoded['dim'];
+      if (modelId == null || dim is! int || dim <= 0) return null;
+
+      final vectors = <Float32List>[];
+      for (final t in (decoded['tracks'] as List? ?? const [])) {
+        if (t is! Map) continue;
+        final b64 = t['embedding'];
+        // notAnalyzed tracks come back with a null embedding — a normal
+        // transient state while the worker catches up, not a failure.
+        if (b64 is! String || b64.isEmpty) continue;
+        final bytes = base64Decode(b64);
+        if (bytes.lengthInBytes != dim * 4) continue;
+        // Copy into an aligned buffer: the decoded list's offset is not
+        // guaranteed to suit a Float32List view.
+        final aligned = Uint8List.fromList(bytes);
+        vectors.add(aligned.buffer.asFloat32List());
+      }
+      if (vectors.isEmpty) return null;
+      return (modelId: modelId, dim: dim, vectors: vectors);
+    } catch (e) {
+      verboseLog('[dj] embeddings failed on ${server.localname}: $e');
+      return null;
+    }
+  }
+
   /// Pick Auto DJ's opening track for a "Surprise me" start.
   ///
   /// Unlike [fetchRandomSong] this honours the Auto DJ library filters. The
