@@ -2707,9 +2707,16 @@ class AudioPlayerHandler extends BaseAudioHandler
         // since the version table is only a pre-filter — was inert on exactly
         // the older servers it exists for. Verified against a live 6.11.0 and
         // a live 6.22.0.
-        while (res.statusCode > 299 &&
-            ServerCapabilities().noteRejection(autoDJServer!, res.body) !=
-                null) {
+        while (res.statusCode > 299) {
+          final learned =
+              ServerCapabilities().noteRejection(autoDJServer!, res.body);
+          if (learned == null) break;
+          // Logged because the learner is otherwise invisible: a parameter
+          // silently dropped for the rest of the session looks exactly like a
+          // filter that does nothing, and the only clue is a "dropped" line
+          // whose cause has already scrolled past.
+          appLog('[dj] server rejected "$learned" (HTTP ${res.statusCode}) '
+              '— retrying without it');
           final retry = ServerCapabilities().filter(autoDJServer!, payload);
           res = await http.post(
             autoDJServer!.apiUri('/api/v1/db/random-songs'),
