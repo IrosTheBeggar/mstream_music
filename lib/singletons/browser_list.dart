@@ -287,80 +287,56 @@ class BrowserManager {
     searchTermCache.clear();
     playlistCache.clear();
 
-    if (ServerManager().currentServer == null) {
+    final Server? server = ServerManager().currentServer;
+    if (server == null) {
       return;
     }
 
-    DisplayItem newItem1 = DisplayItem(
-        ServerManager().currentServer!,
-        'File Explorer',
-        'execAction',
-        'fileExplorer',
-        Icon(Icons.folder, color: VelvetColors.warning),
-        null);
+    // A federated server is a read-only view of someone else's library: the
+    // playlist routes and db/rated are off the federation allowlist, so those
+    // two sections could only ever 403. Everything else here is allowlisted,
+    // and Local Files is this device's own downloads either way.
+    final bool federated = server.isFederated;
 
-    DisplayItem newItem2 = DisplayItem(
-        ServerManager().currentServer!,
-        'Playlists',
-        'execAction',
-        'playlists',
-        Icon(Icons.queue_music, color: VelvetColors.textSecondary),
-        null);
+    final List<DisplayItem> sections = [
+      if (federated)
+        DisplayItem(
+            server,
+            'Read-only server',
+            'note',
+            null,
+            Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
+            'Playlists and ratings stay on your own'),
+      DisplayItem(server, 'File Explorer', 'execAction', 'fileExplorer',
+          Icon(Icons.folder, color: VelvetColors.warning), null),
+      if (!federated)
+        DisplayItem(server, 'Playlists', 'execAction', 'playlists',
+            Icon(Icons.queue_music, color: VelvetColors.textSecondary), null),
+      DisplayItem(server, 'Albums', 'execAction', 'albums',
+          Icon(Icons.album, color: VelvetColors.textSecondary), null),
+      DisplayItem(server, 'Artists', 'execAction', 'artists',
+          Icon(Icons.library_music, color: VelvetColors.textSecondary), null),
+      if (!federated)
+        DisplayItem(server, 'Rated', 'execAction', 'rated',
+            Icon(Icons.star, color: VelvetColors.textSecondary), null),
+      DisplayItem(server, 'Recent', 'execAction', 'recent',
+          Icon(Icons.query_builder, color: VelvetColors.textSecondary), null),
+      DisplayItem(
+          server,
+          'Local Files',
+          'execAction',
+          'localFiles',
+          Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
+          null),
+    ];
 
-    DisplayItem newItem3 = DisplayItem(
-        ServerManager().currentServer!,
-        'Albums',
-        'execAction',
-        'albums',
-        Icon(Icons.album, color: VelvetColors.textSecondary),
-        null);
-
-    DisplayItem newItem4 = DisplayItem(
-        ServerManager().currentServer!,
-        'Artists',
-        'execAction',
-        'artists',
-        Icon(Icons.library_music, color: VelvetColors.textSecondary),
-        null);
-
-    DisplayItem newItem5 = DisplayItem(
-        ServerManager().currentServer!,
-        'Rated',
-        'execAction',
-        'rated',
-        Icon(Icons.star, color: VelvetColors.textSecondary),
-        null);
-
-    DisplayItem newItem6 = DisplayItem(
-        ServerManager().currentServer!,
-        'Recent',
-        'execAction',
-        'recent',
-        Icon(Icons.query_builder, color: VelvetColors.textSecondary),
-        null);
-
-    DisplayItem newItem7 = DisplayItem(
-        ServerManager().currentServer!,
-        'Local Files',
-        'execAction',
-        'localFiles',
-        Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
-        null);
-
-    browserCache.add(
-        [newItem1, newItem2, newItem3, newItem4, newItem5, newItem6, newItem7]);
+    browserCache.add(sections);
     // Nav screen isn't alphabetical content — just the section list.
     alphabeticalCache.add(false);
     pathCache.add(null); // home nav isn't the file explorer — no path row
     searchTermCache.add(null); // home nav isn't a search result — no term row
     playlistCache.add(null); // ...nor a playlist — no name row
-    browserList.add(newItem1);
-    browserList.add(newItem2);
-    browserList.add(newItem3);
-    browserList.add(newItem4);
-    browserList.add(newItem5);
-    browserList.add(newItem6);
-    browserList.add(newItem7);
+    browserList.addAll(sections);
 
     _browserLabel.sink.add('Browser');
     _browserStream.sink.add(browserList);

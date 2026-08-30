@@ -2135,4 +2135,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String torrentDuplicate(String name) {
     return '「$name」已在客户端中';
   }
+
+  @override
+  String serverPickerVia(String parent) {
+    return 'via $parent';
+  }
+
+  @override
+  String get browserFederatedReadOnly => 'Read-only server';
+
+  @override
+  String get browserFederatedReadOnlyNote =>
+      'A peer shared with your server. Playlists, ratings and Auto DJ stay on your own.';
 }

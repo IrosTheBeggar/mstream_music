@@ -180,7 +180,7 @@ Older servers (pre-#932) return the old flat `/api/` shape — version only, no
 `features`/`user`. Keep the ping call as the fallback when the response has no
 `features` key, so the app still works against every released server.
 
-### Phase 2 — the server picker
+### Phase 2 — the server picker ✅ done
 
 The picker at `main.dart` iterates `serverList` by index, so federated servers
 appear the moment they are in the list. Refinements:
@@ -212,16 +212,54 @@ through (`makeServerCall(useThisServer, …)`) and `POST
 the one place the webapp found a path-namespace collision, so verify it on a
 peer before deciding to keep the rows.
 
-### Phase 4 — playback, queue, downloads
+### Phase 4 — the `isIroh` / transport split (blocks release on iroh)
+
+Bigger than "verify playback". A federated server has
+`connectionType == 'http'`, so **`isIroh` is false for it even when its parent
+is iroh** — and every site that asks "is this an iroh server?" in order to
+apply loopback handling will answer wrong for a peer of an iroh parent.
+
+There are ~29 `isIroh` call sites and they are asking two different questions:
+
+- **"Is this server itself an iroh server?"** — config and identity: the
+  one-iroh-max rule, the pairing-code menu item, the edit form, the whole
+  tunnel lifecycle in `ServerManager`. These stay on `isIroh`, untouched.
+- **"Do this server's bytes travel over a loopback tunnel?"** — transport.
+  For a peer of an iroh parent the answer is *yes*, and these are wrong today.
+
+The fix is to make that distinction explicit on `Server` — a `transportServer`
+getter (`parentServer ?? this`) and an `isIrohTransport` built on it — then
+audit each site for which question it is asking. `getServerPaths` already
+computes exactly this as a local; it wants promoting to the model.
+
+Triage list for the transport half (from a grep — confirm per site, this is
+not a find-and-replace):
+
+| Site | Why it matters |
+|---|---|
+| `cast_origin.dart:23` `irohServerFor` | hands a DLNA renderer an unreachable `127.0.0.1` URL |
+| `audio_stuff.dart` ×5 (231, 890, 905, 1378, 2407) | URL rebinding and tunnel waits on the playback path |
+| `downloads.dart:231` | "only loopback URLs rotate this way" — a federated URL through an iroh parent IS one, and needs the same stale-port rotation |
+| `queue_store.dart:340`, `playlist.dart:89` | art URL rebinding |
+| `api.dart:148` | the retry-on-tunnel-drop branch in `makeServerCall` |
+| `auto_browse.dart:810` | tunnel-serving check |
+
+**Blast radius is bounded but the failure mode is nasty.** Only peers of an
+*iroh* parent are affected; with a plain HTTP parent every one of these sites
+answers correctly today. But iroh is the roaming transport, so it is a real
+configuration — and the symptom is that browsing works fine while playback,
+casting and downloads break in ways that do not point at federation.
+
+Treat this as **blocking release for iroh users**, not as cleanup. Phases 2
+and 3 are shippable against an HTTP parent without it.
+
+Also in this phase:
 
 - queue restore across a restart (a federated server must resolve by
   localname before `QueueStore.init`)
-- **cast fix:** `irohServerFor` tests `s.isIroh` on the item's own server. A
-  federated server whose *parent* is iroh answers `false`, so casting would
-  hand a DLNA renderer a `127.0.0.1` URL it cannot reach. That resolution has
-  to follow the parent chain.
-- downloads: `/media` and ranges are allowlisted, so this should work once the
-  URL is rewritten — verify the `media/<localname>` directory is created.
+- downloads: `/media` and ranges are allowlisted and `_ensureDownloadDir` now
+  covers both entry points, so this should work once the URL is rewritten —
+  verify on a peer.
 
 ### Phase 5 — optional: make Discover leads actionable
 

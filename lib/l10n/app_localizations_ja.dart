@@ -2179,4 +2179,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String torrentDuplicate(String name) {
     return '「$name」は既にクライアントにあります';
   }
+
+  @override
+  String serverPickerVia(String parent) {
+    return 'via $parent';
+  }
+
+  @override
+  String get browserFederatedReadOnly => 'Read-only server';
+
+  @override
+  String get browserFederatedReadOnlyNote =>
+      'A peer shared with your server. Playlists, ratings and Auto DJ stay on your own.';
 }
