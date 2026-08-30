@@ -61,7 +61,18 @@ String buildServerStreamUrl(Server server, String path) {
     p += '/${Uri.encodeComponent(element)}';
   }
   final tm = TranscodeManager();
-  final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
+  final String token =
+      server.authToken == null ? '' : '&token=${server.authToken!}';
+  // A federated server's tracks live on a peer, reached through the parent's
+  // byte proxy (which forwards Range, so seeking still works). /transcode is
+  // off the federation allowlist entirely — there is no transcode branch to
+  // take here, and transcodeAvailable is pinned false for these servers so the
+  // check below would land on /media regardless. Explicit anyway: the endpoint
+  // differs, not just the flag.
+  if (server.isFederated) {
+    return '${server.effectiveBaseUrl}${server.federationPrefix}/stream$p'
+        '?app_uuid=${Uuid().v4()}$token${server.localTokenQuery}';
+  }
   // iOS codec fallback: formats AVPlayer can't decode (ogg/opus & co) stream
   // through /transcode even with the user's transcode setting OFF — the
   // alternative is a track that silently fails. Device-verified that AVPlayer
@@ -116,6 +127,34 @@ bool sameStreamUrl(String a, String b) {
   return mapEquals(qa, qb);
 }
 
+/// The URL to fetch a server file's ORIGINAL bytes, for downloading.
+///
+/// Deliberately not [buildServerStreamUrl]: a download is stored on disk, so it
+/// must never arrive transcoded whatever the playback setting says. It shares
+/// the escaping and the federated rewrite — a peer's bytes come through the
+/// parent's byte proxy, the same route playback uses.
+///
+/// The query is assembled from parts rather than concatenated so a server with
+/// no token still produces `?__lt=…` and not `?&__lt=…` — an iroh server can be
+/// public, and then the loopback token is the only param.
+String buildServerDownloadUrl(Server server, String path) {
+  String p = '';
+  for (final element in path.split('/')) {
+    if (element.isEmpty) continue;
+    p += '/${Uri.encodeComponent(element)}';
+  }
+  final String base = server.isFederated
+      ? '${server.effectiveBaseUrl}${server.federationPrefix}/stream$p'
+      : '${server.effectiveBaseUrl}/media$p';
+  final parts = <String>[
+    if (server.authToken != null) 'token=${server.authToken!}',
+    // localTokenQuery is built for string concatenation onto an existing
+    // query, so it carries a leading '&' this join supplies itself.
+    if (server.localTokenQuery.isNotEmpty) server.localTokenQuery.substring(1),
+  ];
+  return parts.isEmpty ? base : '$base?${parts.join('&')}';
+}
+
 /// Single source of truth for a server's album-art URL.
 ///
 /// [artFile] is the `album_art_file` / metadata `album-art` value. [compress]
@@ -125,7 +164,17 @@ bool sameStreamUrl(String a, String b) {
 /// percent-encoded. Assumes [Server.url] carries no trailing slash — the app's
 /// stored convention, shared with the stream-URL builder above.
 String buildAlbumArtUrl(Server server, String artFile, {String compress = 's'}) {
-  final String token = server.jwt == null ? '' : '&token=${server.jwt!}';
+  final String token =
+      server.authToken == null ? '' : '&token=${server.authToken!}';
+  // The art proxy takes the file as ONE path segment — the peer serves
+  // /album-art/:file, a single hash name — and forwards only `compress`.
+  // encodeComponent, not encodeFull: the segment is escaped exactly once, the
+  // way the webapp's peerArtUrl does it.
+  if (server.isFederated) {
+    return '${server.effectiveBaseUrl}${server.federationPrefix}'
+        '/art/${Uri.encodeComponent(artFile)}'
+        '?compress=$compress$token${server.localTokenQuery}';
+  }
   return Uri.encodeFull(
       '${server.effectiveBaseUrl}/album-art/$artFile?compress=$compress$token${server.localTokenQuery}');
 }

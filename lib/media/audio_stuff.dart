@@ -3230,7 +3230,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           autoDJServer!.apiUri('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': autoDJServer?.jwt ?? '',
+            'x-access-token': autoDJServer?.authToken ?? '',
           },
           body: jsonEncode(filtered.body),
         ).timeout(const Duration(seconds: 15));
@@ -3265,7 +3265,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             autoDJServer!.apiUri('/api/v1/db/random-songs'),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': autoDJServer?.jwt ?? '',
+              'x-access-token': autoDJServer?.authToken ?? '',
             },
             body: jsonEncode(retry.body),
           ).timeout(const Duration(seconds: 15));
