@@ -152,9 +152,14 @@ class AutoDJManager {
   // sonicSeed parity). It wins over the playing track for a session's
   // first pick; the rolling history takes over after that. Tied to the
   // server it was picked from ([sonicSeedServer], a Server.localname) —
-  // audio_stuff only sends it when the DJ runs on that server. Setting or
-  // clearing it is a "new lane": the screen also asks the audio handler to
-  // clear its rolling history (customAction 'clearSonicSession').
+  // audio_stuff only sends it when the DJ runs on that server.
+  //
+  // ONE-SHOT, like the webapp's (resetAnchors consumes it there): set by the
+  // empty-queue start flow moments before the DJ is armed, and consumed by
+  // the seeded start's own queue clear (_doClearPlaylist), so it never
+  // outlives the session it opened. It used to persist forever, which made
+  // any later empty-queue setAutoDJ — Android Auto's Shuffle All — silently
+  // replay the last seed song instead of starting fresh.
   String? sonicSeedPath; // vpath-form, no leading slash
   String? sonicSeedTitle; // display only
   String? sonicSeedServer;
@@ -496,6 +501,15 @@ class AutoDJManager {
   }
 
   Future<void> clearSonicSeed() async {
+    // No-op when nothing is stored: the seed is one-shot and this runs on
+    // every queue clear (see AudioPlayerHandler._doClearPlaylist), so an
+    // unconditional body would rewrite auto_dj.json and rebuild the Auto DJ
+    // screen on each clear for nothing.
+    if (sonicSeedPath == null &&
+        sonicSeedTitle == null &&
+        sonicSeedServer == null) {
+      return;
+    }
     sonicSeedPath = null;
     sonicSeedTitle = null;
     sonicSeedServer = null;
