@@ -33,7 +33,8 @@ class _FakeDlnaApi extends MediaCastDlnaApi {
   Future<void> stop(DeviceUdn deviceUdn) async => calls.add('stop');
 
   @override
-  Future<void> seek(DeviceUdn deviceUdn, TimePosition position) async {}
+  Future<void> seek(DeviceUdn deviceUdn, TimePosition position) async =>
+      calls.add('seek:${position.seconds}');
 
   @override
   Future<void> setVolume(DeviceUdn deviceUdn, VolumeLevel volume) async {}
@@ -173,6 +174,31 @@ void main() {
       final pollsAtLoss = api.pollCount;
       fa.elapse(const Duration(seconds: 5));
       expect(api.pollCount, pollsAtLoss); // polling quiesced
+    });
+  });
+
+  test('seek to a track whose load fails walks on WITHOUT seeking the substitute',
+      () {
+    fakeAsync((fa) {
+      final api = _FakeDlnaApi();
+      final b = _TestDlnaBackend(udn: 'udn', api: api);
+      b.setSources(List.generate(3, (i) => _track(i)));
+      fa.flushMicrotasks();
+      b.play();
+      fa.flushMicrotasks();
+
+      // A cast-handoff-style seek: jump to track 1 at 90s, but track 1
+      // refuses to load — the failure walk lands on track 2 instead.
+      api.setMediaUriOk = (uri) => !uri.contains('/1.mp3');
+      b.seek(const Duration(seconds: 90), index: 1);
+      fa.flushMicrotasks();
+
+      expect(api.calls, contains('set:http://server/media/2.mp3'));
+      // Regression: seek() used to fall through after the walk and yank the
+      // SUBSTITUTE track to the failed track's 90s offset (and report that
+      // position). The substitute must start from its own beginning.
+      expect(api.calls.where((c) => c.startsWith('seek:')), isEmpty);
+      expect(b.position, Duration.zero);
     });
   });
 }

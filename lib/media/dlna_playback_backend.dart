@@ -166,7 +166,14 @@ class DlnaPlaybackBackend extends EmulatedPlaylistBackend {
       final ok = await loadIndex(target, play: intent);
       // A failed user-driven load would otherwise strand the backend in
       // 'loading' with no watchdog running (polling only starts on success).
-      if (!ok) await trackFailed('load failed', play: intent);
+      // Return after the walk (mirroring the Chromecast seek): falling
+      // through yanked the SUBSTITUTE track the walk just loaded to the
+      // failed track's offset. The success path still falls through — DLNA's
+      // loadIndex has no startAt, so the position is applied below.
+      if (!ok) {
+        await trackFailed('load failed', play: intent);
+        return;
+      }
     }
     try {
       await _api.seek(_udn, TimePosition(seconds: position.inSeconds));

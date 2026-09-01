@@ -59,5 +59,18 @@ void main() {
     bm.beginLoading(); // non-cancelable mutation — no canceler registered
     expect(bm.cancelLoading(), isTrue);
     expect(cancelerFires, 1, reason: 'only the cancelable load is aborted');
+
+    // 6. A stack reset (server switch / removal / make-default all route
+    //    through goToNavScreen) cancels in-flight loads: without this, the OLD
+    //    server's late browse response pushed its rows onto the NEW server's
+    //    home screen. (No server configured in tests → it resets and returns.)
+    var resetCancelerFired = false;
+    final e = bm.beginLoading(onCancel: () => resetCancelerFired = true);
+    bm.goToNavScreen();
+    expect(resetCancelerFired, isTrue,
+        reason: 'the in-flight fetch must be aborted by the stack reset');
+    expect(bm.isLoadCancelled(e), isTrue,
+        reason: 'a late response must be dropped, not pushed');
+    expect(bm.isLoading, isFalse);
   });
 }

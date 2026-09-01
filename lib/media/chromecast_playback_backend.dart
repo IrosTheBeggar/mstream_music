@@ -461,9 +461,17 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
   /// [waitForTeardown], also wait (bounded) for the session stream to settle
   /// on null — starting a new session against a half-torn-down one collides
   /// and times out its connect wait.
+  ///
+  /// The SDK call itself is timeboxed: plugin calls against a broken session
+  /// can hang FOREVER (see the re-attach doctrine above), and this runs on
+  /// dispose — which the handler awaits on _switchChain, exactly when the
+  /// session is most likely broken. An unbounded hang there would wedge every
+  /// future cast switch and fallback until app restart.
   Future<void> _endSessionQuietly({bool waitForTeardown = false}) async {
     try {
-      await _sessions.endSessionAndStopCasting();
+      await _sessions
+          .endSessionAndStopCasting()
+          .timeout(const Duration(seconds: 10));
     } catch (_) {}
     if (!waitForTeardown) return;
     try {
