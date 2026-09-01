@@ -107,7 +107,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   // Session-only: rolling sonic anchor — the last few DJ-picked filepaths,
   // sent as random-songs' `similarTo` seeds so the server centroids the
   // session's own recent sound (webapp auto-dj.js parity). Reset alongside
-  // the ignoreList on setAutoDJ off / server switch.
+  // the ignoreList on every new-lane event (see _resetAutoDJSession).
   List<String> _sonicHistory = const [];
   // Session-only: the pinned anchor for LOCKED sonic mode ("stay on seed") —
   // lazily locked on the session's first pick (explicit seed, else the
@@ -124,8 +124,43 @@ class AudioPlayerHandler extends BaseAudioHandler
   // the first DJ-picked song with a recognised key (after that, every
   // subsequent pick uses the anchor's 6 Camelot neighbours, keeping
   // the session musically coherent rather than drifting). Reset on
-  // setAutoDJ off or server switch.
+  // every new-lane event (see _resetAutoDJSession).
   String? _camelotAnchor;
+
+  // Bumped by _resetAutoDJSession; autoDJ() captures it per call and drops a
+  // response that comes back under a different value. A request is nearly
+  // always in flight during a session (every advance onto the last row fires
+  // the top-up), so without this a queue clear gets repopulated by the
+  // landing pick — which also overwrites the just-reset ignoreList and
+  // pushes a dead-session track into the fresh sonic history, quietly
+  // undoing the reset it raced. The same check is what keeps a late pick
+  // from dereferencing autoDJServer after the DJ was switched off.
+  int _djSessionEpoch = 0;
+
+  /// Start a new Auto-DJ "lane": forget everything the session learned from
+  /// the queue it was working, and invalidate any in-flight pick.
+  ///
+  /// Webapp parity — resetAnchors() there wipes the same set whenever a
+  /// manual (non-DJ) pick becomes current while the DJ is on. The mobile
+  /// equivalents of "the user steered somewhere new" all funnel through
+  /// here: setAutoDJ off / on / server switch, a queue clear (which
+  /// playFromHere also routes through), and a server removal that empties
+  /// the queue. The next pick then anchors on whatever the user plays, not
+  /// on the dead session.
+  ///
+  /// The stored sonic seed is deliberately NOT cleared here: setAutoDJ
+  /// resets BEFORE _startAutoDJFromSeed reads the seed, so clearing it in
+  /// this helper would break every seeded start. The clear path consumes it
+  /// separately (see _doClearPlaylist).
+  void _resetAutoDJSession() {
+    _djSessionEpoch++;
+    jsonAutoDJIgnoreList = null;
+    _camelotAnchor = null;
+    _sonicHistory = const [];
+    _sonicLockedAnchor = null;
+    _autoDJAuthWarned = false; // fresh lane, fresh warning budget
+    _sonicWarned = false;
+  }
 
   // The repeat mode requested by the UI / Android Auto, and the source of truth
   // for the published PlaybackState: it preserves all of none/all/one (and
@@ -1912,6 +1947,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Forget it too, or the next launch would try to restore a server that
       // no longer exists.
       unawaited(AutoDJManager().setEnabledServer(null));
+      // Drop the session state and any in-flight pick with it — a response
+      // landing after this would re-plant the dead session's anchors and
+      // null-deref autoDJServer trying to queue the track.
+      _resetAutoDJSession();
       customState.add(CustomEvent(autoDJServer));
     }
     final q = queue.value;
@@ -1924,7 +1963,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     _restoreSpot = null; // row indices shift — a parked index would lie
     if (plan.keep.isEmpty) {
       // The whole queue belonged to it: same teardown as clearPlaylist,
-      // including dropping the now-playing metadata.
+      // including dropping the now-playing metadata and starting a new
+      // Auto-DJ lane — the DJ can be armed on a DIFFERENT server than the
+      // deleted one, and its session state described a queue that no
+      // longer exists.
+      _resetAutoDJSession();
+      unawaited(AutoDJManager().clearSonicSeed());
       _intentionalStop = true;
       await _backend.stop();
       await super.stop();
@@ -1960,6 +2004,21 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> _doClearPlaylist() async {
     appLog('[queue] cleared');
+    // A cleared queue is a new Auto-DJ lane — the user threw the old one
+    // away. The DJ stays ARMED and adds nothing here (no start menu, no
+    // surprise pick): it resumes from a clean slate when the user queues
+    // something, via the queue-end listener. Reset FIRST, synchronously —
+    // an in-flight pick can land during the awaits below, and it must
+    // already see the new epoch to be discarded.
+    _resetAutoDJSession();
+    // The one-shot sonic seed is spent with the lane (webapp resetAnchors
+    // "the seed is consumed" semantics). This is also what ends a seeded
+    // start's use of it: _startAutoDJFromSeed reads the path into a local
+    // before its own clearPlaylist lands here, so the opener still plays —
+    // but the stored value never outlives the session it opened. A stale
+    // one used to hijack any later empty-queue setAutoDJ (Android Auto's
+    // Shuffle All replayed the last seed song instead of shuffling).
+    unawaited(AutoDJManager().clearSonicSeed());
     _restoreSpot = null; // the queue the spot described is gone
     _intentionalStop = true;
     await _backend.stop();
@@ -2075,14 +2134,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         // change resets the session state — and only a real change is allowed
         // to take the queue, below.
         final freshSession = autoDJServer == null || autoDJServer != nextDJ;
-        if (freshSession) {
-          jsonAutoDJIgnoreList = null;
-          _camelotAnchor = null;
-          _autoDJAuthWarned = false; // fresh server, fresh warning budget
-          _sonicHistory = const []; // fresh server, fresh sonic session
-          _sonicLockedAnchor = null;
-          _sonicWarned = false;
-        }
+        if (freshSession) _resetAutoDJSession();
         autoDJServer = nextDJ;
         // Remembered across restarts. Every toggle path funnels through here,
         // so this is the one place that has to record it.
@@ -2516,7 +2568,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         null));
     if (seed == null) return false;
     // Same order as playFromHere — the one flow in the app that replaces a
-    // queue and starts it.
+    // queue and starts it. The clear also CONSUMES the stored seed (it is a
+    // one-shot opener; see _doClearPlaylist) — [path] and [seed] are already
+    // in hand above, and the follow-up picks anchor the same either way: with
+    // the seed gone and the history fresh, sonicParams falls back to the
+    // playing track, which IS the seed song.
     await customAction('clearPlaylist');
     await addQueueItem(seed);
     await skipToQueueItem(0);
@@ -2533,6 +2589,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> autoDJ(
       {bool autoPlay = false, bool incrementIndex = false}) async {
     if (autoDJServer == null) return;
+    // The lane this call belongs to — checked when each response lands.
+    final epoch = _djSessionEpoch;
 
     final mgr = AutoDJManager();
     Map<String, dynamic>? lastDecoded;
@@ -2808,6 +2866,13 @@ class AudioPlayerHandler extends BaseAudioHandler
         appLog('[dj] random-songs failed: $e');
         return;
       }
+
+      // The lane changed while the request was out — the queue was cleared,
+      // or the DJ was switched off / to another server. Drop the pick:
+      // landing it would smuggle a dead-session track into the fresh queue,
+      // overwrite the just-reset ignoreList with the old session's, and push
+      // the pick into the new lane's sonic history.
+      if (epoch != _djSessionEpoch) return;
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
       final songs = decoded['songs'] as List?;

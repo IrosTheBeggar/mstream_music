@@ -16,7 +16,9 @@
 // test to serve audio bytes for /media/*).
 //
 // Handler return values: null → 404; List<int> → returned as
-// audio/wav bytes (used for media); anything else → JSON-encoded.
+// audio/wav bytes (used for media); anything else → JSON-encoded. A
+// Future of any of these is awaited first, so a handler can read the
+// request body or hold its response to stage a race.
 //
 // seedServer writes a single-server servers.json so MStreamApp's
 // initState loads it on startup, skipping the welcome screen.
@@ -87,7 +89,12 @@ class MockServer {
         return;
       }
 
-      final body = handler(req);
+      // A handler may be async — to read the request body, or to delay its
+      // response so a test can race it against another action (the Auto-DJ
+      // clear test does both). A returned Future is resolved before the
+      // type dispatch below, so sync handlers behave exactly as before.
+      var body = handler(req);
+      if (body is Future) body = await body;
       if (body == null) {
         req.response.statusCode = 404;
       } else if (body is List<int>) {
