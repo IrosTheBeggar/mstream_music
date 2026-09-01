@@ -17,6 +17,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../objects/server.dart';
+import '../util/write_chain.dart';
 
 /// Which paths feed random-songs' `similarTo` when sonic mode is on — a
 /// pure client-side policy (the server statelessly averages whatever
@@ -262,7 +263,11 @@ class AutoDJManager {
     return v.clamp(durationFloorSec, durationCeilSec);
   }
 
-  Future<void> _save() async {
+  // Serialized so overlapping saves can't interleave truncate+writes on
+  // auto_dj.json (load() silently resets every setting on a corrupt file).
+  final WriteChain _writeChain = WriteChain();
+
+  Future<void> _save() => _writeChain.run(() async {
     final f = await _file;
     await f.writeAsString(jsonEncode({
       // Held only until the migration runs; see the field declarations.
@@ -289,7 +294,7 @@ class AutoDJManager {
       'maxDurationSec': maxDurationSec,
       'allowUnknownDuration': allowUnknownDuration,
     }));
-  }
+  });
 
   /// Remember which server Auto DJ is running on (null = off). Called from the
   /// audio handler's setAutoDJ, so every path that toggles the DJ — the queue

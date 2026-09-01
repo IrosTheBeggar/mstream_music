@@ -243,4 +243,71 @@ void main() {
       expect(item!.title, 'Second');
     });
   });
+
+  group('QueueStore.snapshotJson', () {
+    // The checkpoint path splices a cached pre-encoded items array into a
+    // freshly encoded header — the result must stay byte-identical to a full
+    // jsonEncode of the equivalent snapshot map, or restore/peek would drift.
+    test('splice is byte-identical to a full jsonEncode', () {
+      final items = [
+        QueueStore.itemToJson(MediaItem(
+          id: 'http://host/media/a',
+          title: 'A "quoted" title', // exercise JSON escaping
+          duration: const Duration(milliseconds: 91000),
+          extras: {'server': 's1', 'path': '/music/a.mp3'},
+        )),
+        QueueStore.itemToJson(
+            MediaItem(id: 'local-1', title: 'B', extras: {'localPath': '/x'})),
+      ];
+
+      final spliced = QueueStore.snapshotJson(
+        index: 1,
+        positionMs: 4200,
+        shuffle: true,
+        repeat: 'one',
+        itemsJson: jsonEncode(items),
+      );
+      final full = jsonEncode({
+        'version': 1,
+        'index': 1,
+        'positionMs': 4200,
+        'shuffle': true,
+        'repeat': 'one',
+        'items': items,
+      });
+
+      expect(spliced, full);
+    });
+
+    test('splice output feeds the restore-side readers', () {
+      final items = [
+        {
+          'title': 'Only',
+          'extras': {'server': 's1', 'path': '/a', 'artUrl': 'http://h/a.jpg'},
+        },
+      ];
+      final decoded = jsonDecode(QueueStore.snapshotJson(
+        index: 0,
+        positionMs: 0,
+        shuffle: false,
+        repeat: 'none',
+        itemsJson: jsonEncode(items),
+      ));
+      final entry = QueueStore.currentEntryFromSnapshot(decoded);
+      expect(entry, isNotNull);
+      expect(QueueStore.resumeItemFromSnapshot(entry)!.title, 'Only');
+    });
+
+    test('empty items array splices cleanly', () {
+      final decoded = jsonDecode(QueueStore.snapshotJson(
+        index: 0,
+        positionMs: 0,
+        shuffle: false,
+        repeat: 'all',
+        itemsJson: '[]',
+      ));
+      expect(decoded['items'], isEmpty);
+      expect(decoded['version'], 1);
+    });
+  });
 }

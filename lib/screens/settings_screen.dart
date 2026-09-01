@@ -28,6 +28,13 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // In-flight letter-strip slider drag value. Updated locally per drag tick;
+  // committed via setLetterStripThreshold only in onChangeEnd — the setter
+  // rewrites all of settings.json AND re-emits the whole browser list per
+  // call, which used to run on every tick of a drag.
+  int? _letterStripDrag;
+
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -477,7 +484,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     Text(
-                      '${SettingsManager().letterStripThreshold}',
+                      '${_letterStripDrag ?? SettingsManager().letterStripThreshold}',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -499,18 +506,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     overlayColor: VelvetColors.primaryDim,
                   ),
                   child: Slider(
-                    value: SettingsManager()
-                        .letterStripThreshold
-                        .toDouble()
-                        .clamp(0.0, 100.0),
+                    value:
+                        (_letterStripDrag ?? SettingsManager().letterStripThreshold)
+                            .toDouble()
+                            .clamp(0.0, 100.0),
                     min: 0,
                     max: 100,
                     divisions: 20,
-                    onChanged: (v) async {
-                      setState(() {});
-                      await SettingsManager()
-                          .setLetterStripThreshold(v.round());
-                      setState(() {});
+                    // Local during the drag; committed once on release — the
+                    // setter rewrites settings.json and re-emits the entire
+                    // browser list, so it must not run per tick.
+                    onChanged: (v) =>
+                        setState(() => _letterStripDrag = v.round()),
+                    onChangeEnd: (v) async {
+                      await SettingsManager().setLetterStripThreshold(v.round());
+                      if (mounted) setState(() => _letterStripDrag = null);
                     },
                   ),
                 ),
