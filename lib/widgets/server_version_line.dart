@@ -31,7 +31,7 @@ class _ServerVersionLineState extends State<ServerVersionLine> {
     try {
       // Straight through ensureServerCapabilities' sibling: one unauthenticated
       // GET, and the result is persisted by the caller.
-      final v = await ServerManager().fetchServerVersion(server);
+      final v = (await ServerManager().fetchServerVersion(server)).version;
       if (v != null) {
         server.serverVersion = v;
         server.versionCheckedAt = DateTime.now();

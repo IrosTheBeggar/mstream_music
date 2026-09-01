@@ -1508,6 +1508,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       ..connectionType = 'iroh'
       ..irohPairingCode = code
       ..tunnelPort = port
+      // The loopback token too, not just the port: the ping below and the
+      // add-time version probe build their URIs off THIS object, and without
+      // the token apiUri omits `__lt` — whether such a request passes the
+      // shim then depends on landing on an already-authenticated pooled
+      // socket. The version probe usually drew a fresh one, failed, and
+      // toasted "older than 5.5" at a brand-new server. registerActiveTunnel
+      // still runs after addServer and re-sets the same values.
+      ..tunnelToken = IrohTunnel.instance.localToken
       ..storageMode = 'appLocal';
     // Ping through the live tunnel to populate vpaths / transcode caps.
     await ServerManager().getServerPaths(server);
