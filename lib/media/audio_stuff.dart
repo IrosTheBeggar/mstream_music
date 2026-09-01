@@ -235,7 +235,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       // otherwise dragging the playing track to the last slot would append a
       // spurious Auto-DJ track.
       if (_reordering || _rebuilding || _restoring) return;
-      if (index == queue.value.length - 1) {
+      if (shouldTopUpAutoDJ(
+          index: index,
+          queueLength: queue.value.length,
+          state: _backend.processingState)) {
         autoDJ();
       }
       if (index != null && index >= 0 && index < queue.value.length) {
@@ -1677,6 +1680,30 @@ class AudioPlayerHandler extends BaseAudioHandler
   // the backend's `playing` to false). A recovery uses this so a launch-time
   // re-seed resumes PAUSED rather than autoplaying on open.
   bool _playIntent = false;
+
+  /// Whether a currentIndex emission landing on the LAST queue row should
+  /// fire the Auto-DJ top-up.
+  ///
+  /// The index alone is not enough: an IDLE player's stub emissions also land
+  /// there without any playback behind them — a batch "Add all" onto a
+  /// fresh-boot player emitted the last index, the DJ appended a pick, the
+  /// idle player emitted the NEW last index, and the loop appended eleven
+  /// picks in nine seconds while the now-playing surface flashed through
+  /// them (the "skipping every few seconds" report). Requiring a real
+  /// playback session keeps both legitimate triggers: advancing INTO the
+  /// last track (ready), and the queue finishing on it (completed — the
+  /// infinite-play top-up). The idle arm/empty-queue starts don't come
+  /// through here at all; setAutoDJ drives those explicitly. Pure;
+  /// unit-tested.
+  static bool shouldTopUpAutoDJ({
+    required int? index,
+    required int queueLength,
+    required BackendProcessingState state,
+  }) =>
+      index != null &&
+      queueLength > 0 &&
+      index == queueLength - 1 &&
+      state != BackendProcessingState.idle;
 
   /// Whether play() must re-seed the local player instead of issuing a bare
   /// backend.play(): just_audio parked idle (a playback error tears the
