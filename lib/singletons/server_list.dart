@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
+import './api.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
 import './log_manager.dart';
@@ -883,12 +884,17 @@ class ServerManager {
     await ensureActiveTunnel();
     await writeServerFile();
     syncInsecureTls();
+    // Pooled keep-alive sockets to the removed server would otherwise linger.
+    ApiManager().resetDirectClient();
   }
 
   Future<void> callAfterEditServer() async {
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
     await writeServerFile();
+    // The edit may have changed URL/credentials — drop pooled connections so
+    // nothing rides a socket opened under the old identity.
+    ApiManager().resetDirectClient();
   }
 
   Future<void> makeDefault(int i) async {

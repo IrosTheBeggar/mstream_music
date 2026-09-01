@@ -235,7 +235,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       // otherwise dragging the playing track to the last slot would append a
       // spurious Auto-DJ track.
       if (_reordering || _rebuilding || _restoring) return;
-      if (index == queue.value.length - 1) {
+      if (shouldTopUpAutoDJ(
+          index: index,
+          queueLength: queue.value.length,
+          state: _backend.processingState,
+          inFailureWalk: _skipPending || _failedSkips > 0)) {
         autoDJ();
       }
       if (index != null && index >= 0 && index < queue.value.length) {
@@ -1660,10 +1664,76 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[queue] add: ${mediaItem.title} (now ${queue.value.length})');
   }
 
+  @override
+  Future<void> addQueueItems(List<MediaItem> mediaItems) async {
+    if (mediaItems.isEmpty) return;
+    final wasEmpty = queue.value.isEmpty;
+    // ONE queue emission + ONE backend call for the whole batch. Appending a
+    // big folder per-item re-ran every whole-queue listener (iroh scan,
+    // keep-queue-offline sweep) and a platform round-trip per track — O(N²)
+    // work that stalled the UI on large "Add all"s.
+    queue.add(queue.value..addAll(mediaItems));
+    // Batch-adding onto an empty IDLE player: park now-playing on track 1
+    // before the backend append. just_audio's idle stub emits an index for
+    // the appended batch — observed landing on the LAST row — and without a
+    // parked spot the now-playing surfaces and a later play()'s re-seed both
+    // follow it ("added a folder, and it opened on the last song"). The spot
+    // is the existing failed-restore machinery: read first by
+    // _emitCurrentMediaItem and _reviveSpot, overwritten by an explicit tap
+    // (skipToQueueItem's idle park — playFromHere's jump still wins), and
+    // cleared when a real load reaches ready. Parked BEFORE addSources so
+    // the stub emission's own now-playing emit already reads it.
+    if (wasEmpty &&
+        _backend.processingState == BackendProcessingState.idle) {
+      _restoreSpot = (index: 0, position: Duration.zero);
+    }
+    await _backend.addSources(mediaItems);
+    appLog('[queue] add ${mediaItems.length} tracks '
+        '(now ${queue.value.length})');
+  }
+
   // The user's intended play state, tracked across just_audio errors (which flip
   // the backend's `playing` to false). A recovery uses this so a launch-time
   // re-seed resumes PAUSED rather than autoplaying on open.
   bool _playIntent = false;
+
+  /// Whether a currentIndex emission landing on the LAST queue row should
+  /// fire the Auto-DJ top-up.
+  ///
+  /// The index alone is not enough: an IDLE player's stub emissions also land
+  /// there without any playback behind them — a batch "Add all" onto a
+  /// fresh-boot player emitted the last index, the DJ appended a pick, the
+  /// idle player emitted the NEW last index, and the loop appended eleven
+  /// picks in nine seconds while the now-playing surface flashed through
+  /// them (the "skipping every few seconds" report). Requiring a real
+  /// playback session keeps both legitimate triggers: advancing INTO the
+  /// last track (ready), and the queue finishing on it (completed — the
+  /// infinite-play top-up). The idle arm/empty-queue starts don't come
+  /// through here at all; setAutoDJ drives those explicitly.
+  ///
+  /// [inFailureWalk] suppresses the top-up while the failed-track skip walk
+  /// is live (_skipPending, or a non-zero skip budget). Without it the walk
+  /// and the DJ feed each other unboundedly when streams are broken but the
+  /// random-songs API is fine (transcode down, media mount lost): each skip
+  /// lands on the last row with a non-idle (loading) state → pick appended →
+  /// pick fails → skip — and BOTH of the walk's exits chase the growing
+  /// queue: `_failedSkips >= q.length` never catches up (each cycle
+  /// increments both by one), and seekToNext never reaches the end because a
+  /// fresh pick is always ahead. Starved of picks, the walk terminates
+  /// through its own end-of-queue outage-vs-bad-source logic, and any track
+  /// reaching `ready` clears the budget and re-enables the DJ. Pure;
+  /// unit-tested.
+  static bool shouldTopUpAutoDJ({
+    required int? index,
+    required int queueLength,
+    required BackendProcessingState state,
+    required bool inFailureWalk,
+  }) =>
+      index != null &&
+      queueLength > 0 &&
+      index == queueLength - 1 &&
+      state != BackendProcessingState.idle &&
+      !inFailureWalk;
 
   /// Whether play() must re-seed the local player instead of issuing a bare
   /// backend.play(): just_audio parked idle (a playback error tears the

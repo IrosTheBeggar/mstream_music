@@ -75,6 +75,10 @@ class LocalPlaybackBackend implements PlaybackBackend {
   Future<void> addSource(MediaItem item) =>
       _player.addAudioSource(AudioSource.uri(_uriFor(item)));
 
+  @override
+  Future<void> addSources(List<MediaItem> items) => _player
+      .addAudioSources([for (final i in items) AudioSource.uri(_uriFor(i))]);
+
   // Play the offline copy when it's actually on disk; otherwise stream
   // (item.id is the server URL). Re-checking existence means a file moved or
   // deleted after the item was built (mid-migration, SD removed) falls back to

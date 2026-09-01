@@ -38,6 +38,7 @@ class _FakeBackend extends EmulatedPlaylistBackend {
   }
 
   // Public wrappers for the protected advance API.
+  int get sourceCount => items.length;
   Future<void> endOfTrack() => advanceOnComplete();
   Future<void> failTrack(String reason, {bool play = true}) =>
       trackFailed(reason, play: play);
@@ -208,6 +209,34 @@ void main() {
       await b.endOfTrack();
       await b.failTrack('straggler poll');
       expect(b.loads, isEmpty);
+    });
+  });
+
+  group('addSources (batch append)', () {
+    // Must match addSource-per-item semantics: one call appends the whole
+    // batch and, on an empty list, promotes index 0 to current/ready.
+    test('appends in order onto an empty list and readies index 0', () async {
+      final b = _FakeBackend();
+      await b.addSources([_item(0), _item(1), _item(2)]);
+      expect(b.sourceCount, 3);
+      expect(b.currentIndex, 0);
+      expect(b.processingState, BackendProcessingState.ready);
+    });
+
+    test('appends onto a non-empty list without touching the current index',
+        () async {
+      final b = await _seeded(2); // playing index 0 of 2
+      await b.addSources([_item(2), _item(3)]);
+      expect(b.sourceCount, 4);
+      expect(b.currentIndex, 0);
+    });
+
+    test('empty batch is a no-op', () async {
+      final b = _FakeBackend();
+      await b.addSources(const []);
+      expect(b.sourceCount, 0);
+      expect(b.currentIndex, isNull);
+      expect(b.processingState, BackendProcessingState.idle);
     });
   });
 }

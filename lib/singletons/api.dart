@@ -1,3 +1,6 @@
+import 'dart:io' show File;
+
+import './file_explorer.dart';
 import './server_capabilities.dart';
 import './server_list.dart';
 import './browser_list.dart';
@@ -11,7 +14,9 @@ import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
+import '../util/decode_json.dart';
 import '../util/media_format.dart';
+import '../util/server_version.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,6 +31,22 @@ class ApiManager {
   static final ApiManager _instance = ApiManager._privateConstructor();
   factory ApiManager() {
     return _instance;
+  }
+
+  // One keep-alive client for the direct (non-browse) calls — ratings,
+  // metadata / lyrics / discovery / search fetches fire in bursts (queue
+  // enrichment posts one per track, the Discover screen 3-4 per seed), and
+  // the top-level http.* functions create and close a Client per call, paying
+  // a fresh TCP+TLS handshake every time. makeServerCall deliberately keeps
+  // its per-request Client: closing that one is what makes Back-cancel
+  // actually abort a browse fetch.
+  http.Client _direct = http.Client();
+
+  /// Drop pooled connections. Called when the server list changes so sockets
+  /// to a removed or re-credentialed server don't linger.
+  void resetDirectClient() {
+    _direct.close();
+    _direct = http.Client();
   }
 
   /// POST /api/v1/db/genres — returns the server's distinct genre
@@ -45,14 +66,16 @@ class ApiManager {
       body['ignoreVPaths'] = ignoreVPaths;
     }
 
-    final response = await http.post(
-      server.apiUri('/api/v1/db/genres'),
-      body: jsonEncode(body),
-      headers: {
-        'Content-Type': 'application/json',
-        'x-access-token': server.jwt ?? '',
-      },
-    );
+    final response = await _direct
+        .post(
+          server.apiUri('/api/v1/db/genres'),
+          body: jsonEncode(body),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode > 299) {
       throw Exception('Failed to fetch genres (HTTP ${response.statusCode})');
     }
@@ -72,14 +95,16 @@ class ApiManager {
     final body = <String, dynamic>{'playlist': filepaths};
     if (expiresInDays != null) body['time'] = expiresInDays;
 
-    final response = await http.post(
-      uri,
-      body: json.encode(body),
-      headers: {
-        'Content-Type': 'application/json',
-        'x-access-token': server.jwt ?? '',
-      },
-    );
+    final response = await _direct
+        .post(
+          uri,
+          body: json.encode(body),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode > 299) {
       throw Exception('Share failed (HTTP ${response.statusCode})');
@@ -104,8 +129,9 @@ class ApiManager {
     final uri = Uri.parse('${server.effectiveBaseUrl}/api/v1/lyrics'
         '?path=$encodedPath${server.localTokenQuery}');
 
-    final response =
-        await http.get(uri, headers: {'x-access-token': server.jwt ?? ''});
+    final response = await _direct
+        .get(uri, headers: {'x-access-token': server.jwt ?? ''})
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode == 404) return null; // no lyrics for this track
     if (response.statusCode > 299) {
       throw Exception('Lyrics fetch failed (HTTP ${response.statusCode})');
@@ -148,9 +174,11 @@ class ApiManager {
       final bool isIroh = server.isIroh;
       try {
         // For iroh, bound the request so a wedged tunnel fails fast instead of
-        // hanging the global loading bar.
-        response =
-            isIroh ? await send().timeout(const Duration(seconds: 20)) : await send();
+        // hanging the global loading bar. HTTP gets a generous bound too — a
+        // black-holed server (wrong LAN IP, firewalled port) used to hang the
+        // bar for the OS TCP timeout, minutes. Back-cancel still aborts sooner.
+        response = await send()
+            .timeout(Duration(seconds: isIroh ? 20 : 30));
       } catch (e) {
         // An iroh connection error usually means the tunnel is mid-drop; give the
         // self-healing tunnel a moment to recover, then retry once. (Skip on a
@@ -185,7 +213,9 @@ class ApiManager {
         throw Exception('Navigation cancelled');
       }
 
-      return jsonDecode(response.body);
+      // Whole-library payloads (artists / albums / playlist loads / recursive
+      // listings) run multi-MB — decode those off the UI isolate.
+      return decodeJsonBody(response.body);
     } finally {
       client.close();
       BrowserManager().endLoading(loadToken);
@@ -193,31 +223,88 @@ class ApiManager {
   }
 
   Future<void> getRecursiveFiles(String directory,
-      {Server? useThisServer}) async {
-    dynamic res;
+      {required Server useThisServer}) async {
     try {
-      res = await makeServerCall(useThisServer,
+      final res = await makeServerCall(useThisServer,
           '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
-    } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] getRecursiveFiles failed: $err');
-      return;
-    }
 
-    res.forEach((e) {
-      // Same transcode-aware stream URL as the rest of the app (honors the
-      // /transcode endpoint + codec/bitrate when transcoding is on).
-      final String streamUrl =
-          buildServerStreamUrl(useThisServer!, e.toString());
-      // The recursive endpoint returns bare paths (no metadata), so these items
-      // carry only server + path — no rating / fidelity / tags. They populate
-      // if the same track is later reached via a metadata-bearing browse.
-      MediaItem lol = MediaItem(
-          id: streamUrl,
-          title: e.split("/").last,
-          extras: {'server': useThisServer.localname, 'path': e});
-      MediaManager().audioHandler.addQueueItem(lol);
-    });
+      final paths = [for (final e in res as List) e.toString()];
+      if (paths.isEmpty) return;
+
+      // The recursive endpoint returns bare paths, so fetch the metadata in
+      // ONE batched request — never per row, because a recursive folder can
+      // be thousands of files. Version-gated and best-effort exactly like
+      // prefillMetadata: on an older server, a request failure, or a track
+      // the DB doesn't know, the row queues bare (today's behaviour) and
+      // tops itself up as it becomes current.
+      var meta = const <String, MusicMetadata>{};
+      if (!metadataBatchKnownUnsupported(
+          ServerVersion.tryParse(useThisServer.serverVersion))) {
+        meta = await fetchTrackMetadataBatch(useThisServer, paths);
+      }
+
+      // Resolve the download dir ONCE; the per-file existence check is a
+      // cheap stat. Carrying localPath means an already-downloaded copy
+      // plays from disk immediately, instead of streaming until the offline
+      // sweep happens to re-mark it.
+      final dir = await FileExplorer().getDownloadDir(
+          useThisServer.storageMode, useThisServer.storageBasePath);
+
+      final items = <MediaItem>[];
+      for (final p in paths) {
+        final m = meta[p.startsWith('/') ? p.substring(1) : p];
+        final artUrl = m?.albumArt != null
+            ? buildAlbumArtUrl(useThisServer, m!.albumArt!, compress: 'l')
+            : null;
+        // Same on-disk formula as downloadOneFile (serverName + filepath,
+        // concatenated verbatim), so existing downloads are found exactly
+        // where the sweep put them.
+        final localPath = dir == null
+            ? null
+            : '${dir.path}/media/${useThisServer.localname}$p';
+        final isLocal = localPath != null && File(localPath).existsSync();
+        items.add(MediaItem(
+          // Same transcode-aware stream URL as the rest of the app (honors
+          // the /transcode endpoint + codec/bitrate when transcoding is on).
+          id: buildServerStreamUrl(useThisServer, p),
+          title: m?.title ?? p.split("/").last,
+          album: m?.album,
+          artist: m?.artist,
+          genre: m?.genreLabel,
+          duration: m?.duration,
+          artUri: artUrl == null ? null : Uri.parse(artUrl),
+          extras: {
+            if (m != null)
+              // The same full map a browse-added track gets.
+              ...queueExtras(m,
+                  server: useThisServer.localname, path: p, artUrl: artUrl)
+            else ...{
+              // No metadata block — keep the bare shape. Deliberately NOT
+              // queueExtras(null): that writes hasLyrics, whose presence
+              // marks an item as complete and would stop _topUpExtras from
+              // lazily filling it in as it plays.
+              'server': useThisServer.localname,
+              'path': p,
+            },
+            if (isLocal) 'localPath': localPath,
+          },
+        ));
+      }
+      final handler = MediaManager().audioHandler;
+      final wasEmpty = handler.queue.value.isEmpty;
+      // One batch append: a single queue emission + one backend call, instead
+      // of N of each (every per-item add re-ran the whole-queue listeners —
+      // iroh scan + offline sweep — making a big "Add all" O(N²)).
+      await handler.addQueueItems(items);
+      // "Add all" onto an EMPTY queue starts playing from the first track —
+      // the same contract addRowsToQueue documents (a first add from a fresh
+      // state shouldn't require a separate play press). addQueueItems parked
+      // the spot on track 1, so the idle re-seed opens there rather than on
+      // the idle stub's landing row.
+      if (wasEmpty) await handler.play();
+    } catch (err) {
+      appLog('[api] getRecursiveFiles failed: $err');
+    }
   }
 
   // Builds 'playlist' DisplayItems from a getall response.
@@ -231,33 +318,33 @@ class ApiManager {
   }
 
   Future<void> getPlaylists({Server? useThisServer}) async {
-    dynamic res;
+    // Parsing runs INSIDE the try (here and in the other browse fetches): a
+    // response-shape surprise (error object with a 2xx, older server) used to
+    // throw NoSuchMethodError past the guard and abort the browse silently.
     try {
-      res = await makeServerCall(
+      final res = await makeServerCall(
           useThisServer, '/api/v1/playlist/getall', {}, 'GET');
+
+      BrowserManager().setBrowserLabel('Playlists');
+      BrowserManager().addListToStack(_playlistItems(res, useThisServer));
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getPlaylists failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('Playlists');
-    BrowserManager().addListToStack(_playlistItems(res, useThisServer));
   }
 
   /// Re-fetches playlists and replaces the current view in place (no new
   /// back-stack frame) — used after a create / rename so the list updates
   /// without pushing a navigation entry.
   Future<void> refreshPlaylists() async {
-    dynamic res;
     try {
-      res = await makeServerCall(null, '/api/v1/playlist/getall', {}, 'GET');
+      final res =
+          await makeServerCall(null, '/api/v1/playlist/getall', {}, 'GET');
+      BrowserManager()
+          .replaceTop(_playlistItems(res, ServerManager().currentServer));
     } catch (err) {
       appLog('[api] refreshPlaylists failed: $err');
-      return;
     }
-    BrowserManager()
-        .replaceTop(_playlistItems(res, ServerManager().currentServer));
   }
 
   /// Creates an empty playlist (POST /playlist/new). Throws on failure (e.g. the
@@ -474,42 +561,41 @@ class ApiManager {
   }
 
   Future<void> getAlbums({Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
+      final res =
+          await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
+
+      BrowserManager().setBrowserLabel('Albums');
+
+      List<DisplayItem> newList = [];
+      res['albums'].forEach((e) {
+        // Newer servers include `album_artist`; fold it into the subtitle as
+        // "Artist · Year" for the browse card/list. Older servers omit it, so
+        // the subtitle gracefully falls back to just the year.
+        final artist = (e['album_artist'] ?? e['albumArtist'] ?? e['artist'])
+            ?.toString()
+            .trim();
+        final year = e['year']?.toString().trim();
+        final subtitle = [
+          if (artist != null && artist.isNotEmpty) artist,
+          if (year != null && year.isNotEmpty) year,
+        ].join(' · ');
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['name'],
+            'album',
+            e['name'],
+            Icon(Icons.album, color: VelvetColors.textSecondary),
+            subtitle);
+        newItem.altAlbumArt = e['album_art_file'];
+        newList.add(newItem);
+      });
+
+      BrowserManager().addListToStack(newList, alphabetical: true);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getAlbums failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('Albums');
-
-    List<DisplayItem> newList = [];
-    res['albums'].forEach((e) {
-      // Newer servers include `album_artist`; fold it into the subtitle as
-      // "Artist · Year" for the browse card/list. Older servers omit it, so the
-      // subtitle gracefully falls back to just the year.
-      final artist = (e['album_artist'] ?? e['albumArtist'] ?? e['artist'])
-          ?.toString()
-          .trim();
-      final year = e['year']?.toString().trim();
-      final subtitle = [
-        if (artist != null && artist.isNotEmpty) artist,
-        if (year != null && year.isNotEmpty) year,
-      ].join(' · ');
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['name'],
-          'album',
-          e['name'],
-          Icon(Icons.album, color: VelvetColors.textSecondary),
-          subtitle);
-      newItem.altAlbumArt = e['album_art_file'];
-      newList.add(newItem);
-    });
-
-    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   /// Fetches an album's songs as a list of `file` DisplayItems WITHOUT touching
@@ -553,66 +639,63 @@ class ApiManager {
   }
 
   Future<void> getRecentlyAdded({Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(
+      final res = await makeServerCall(
           useThisServer, '/api/v1/db/recent/added', {'limit': 100}, 'POST');
+
+      BrowserManager().setBrowserLabel('Recent');
+
+      List<DisplayItem> newList = [];
+      res.forEach((e) {
+        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
+
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['filepath'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            null);
+
+        newItem.metadata = m;
+
+        newList.add(newItem);
+      });
+      BrowserManager().addListToStack(newList);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRecentlyAdded failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('Recent');
-
-    List<DisplayItem> newList = [];
-    res.forEach((e) {
-      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['filepath'],
-          'file',
-          '/${e['filepath']}',
-          Icon(Icons.music_note, color: VelvetColors.accent),
-          null);
-
-      newItem.metadata = m;
-
-      newList.add(newItem);
-    });
-    BrowserManager().addListToStack(newList);
   }
 
   Future<void> getRated({Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
+      final res =
+          await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
+
+      BrowserManager().setBrowserLabel('Rated');
+
+      List<DisplayItem> newList = [];
+      res.forEach((e) {
+        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
+
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['filepath'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            m.artist);
+
+        newItem.metadata = m;
+
+        newList.add(newItem);
+      });
+      BrowserManager().addListToStack(newList);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRated failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('Rated');
-
-    List<DisplayItem> newList = [];
-    res.forEach((e) {
-      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['filepath'],
-          'file',
-          '/${e['filepath']}',
-          Icon(Icons.music_note, color: VelvetColors.accent),
-          m.artist);
-
-      newItem.metadata = m;
-
-      newList.add(newItem);
-    });
-    BrowserManager().addListToStack(newList);
   }
 
   /// POST /api/v1/db/rate-song — set [rating] (0–10 server scale, or null to
@@ -623,14 +706,19 @@ class ApiManager {
   /// a leading "/").
   Future<void> rateSong(Server server, String filepath, int? rating) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
-    final response = await http.post(
-      server.apiUri('/api/v1/db/rate-song'),
-      body: jsonEncode({'filepath': fp, 'rating': rating}),
-      headers: {
-        'Content-Type': 'application/json',
-        'x-access-token': server.jwt ?? '',
-      },
-    );
+    // Timeout matters here: the star-rating UI updates optimistically and its
+    // catch is the ONLY revert path — an unbounded hang against a black-holed
+    // server left a rating showing that the server never received.
+    final response = await _direct
+        .post(
+          server.apiUri('/api/v1/db/rate-song'),
+          body: jsonEncode({'filepath': fp, 'rating': rating}),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-token': server.jwt ?? '',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode > 299) {
       throw Exception('Rating failed (HTTP ${response.statusCode})');
     }
@@ -710,7 +798,7 @@ class ApiManager {
       // defeats the bounded wait AutoApi._call exists to provide. Returns
       // null on timeout like every other failure here — the caller falls back
       // to the row's own lite metadata.
-      final response = await http
+      final response = await _direct
           .post(
             server.apiUri('/api/v1/db/metadata'),
             body: jsonEncode({'filepath': fp}),
@@ -743,7 +831,7 @@ class ApiManager {
       Map<String, dynamic> body,
       T Function(Map) parse) async {
     try {
-      final response = await http
+      final response = await _direct
           .post(
             server.apiUri(location),
             body: jsonEncode(body),
@@ -849,7 +937,7 @@ class ApiManager {
   Future<List<DisplayItem>> fetchSongSearch(Server server, String search,
       {int limit = 25}) async {
     try {
-      final response = await http
+      final response = await _direct
           .post(
             server.apiUri('/api/v1/db/search'),
             // Pre-filtered for the same reason as [searchServer]: an
@@ -974,7 +1062,7 @@ class ApiManager {
         if (e.value == false) e.key,
     ];
     try {
-      final response = await http
+      final response = await _direct
           .post(
             server.apiUri('/api/v1/db/random-songs'),
             body: jsonEncode({
@@ -1024,96 +1112,89 @@ class ApiManager {
   }
 
   Future<void> getArtists({Server? useThisServer}) async {
-    dynamic res;
     try {
-      res =
+      final res =
           await makeServerCall(useThisServer, '/api/v1/db/artists', {}, 'GET');
+
+      BrowserManager().setBrowserLabel('Artists');
+
+      List<DisplayItem> newList = [];
+      res['artists'].forEach((e) {
+        DisplayItem newItem = DisplayItem(useThisServer, e, 'artist', e,
+            Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
+        newList.add(newItem);
+      });
+      BrowserManager().addListToStack(newList, alphabetical: true);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtists failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('Artists');
-
-    List<DisplayItem> newList = [];
-    res['artists'].forEach((e) {
-      DisplayItem newItem = DisplayItem(useThisServer, e, 'artist', e,
-          Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
-      newList.add(newItem);
-    });
-    BrowserManager().addListToStack(newList, alphabetical: true);
   }
 
   Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/db/artists-albums',
-          {'artist': artist}, 'POST');
+      final res = await makeServerCall(useThisServer,
+          '/api/v1/db/artists-albums', {'artist': artist}, 'POST');
+
+      List<DisplayItem> newList = [];
+      res['albums'].forEach((e) {
+        String name = e['name'] ?? 'SINGLES';
+
+        // TODO: Errors on singles
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            name,
+            'album',
+            e['name'],
+            Icon(Icons.album, color: VelvetColors.textSecondary),
+            e['year']?.toString() ?? '');
+        newItem.altAlbumArt = e['album_art_file'];
+
+        newList.add(newItem);
+      });
+
+      BrowserManager().addListToStack(newList);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtistAlbums failed: $err');
-      return;
     }
-
-    List<DisplayItem> newList = [];
-    res['albums'].forEach((e) {
-      String name = e['name'] ?? 'SINGLES';
-
-      // TODO: Errors on singles
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          name,
-          'album',
-          e['name'],
-          Icon(Icons.album, color: VelvetColors.textSecondary),
-          e['year']?.toString() ?? '');
-      newItem.altAlbumArt = e['album_art_file'];
-
-      newList.add(newItem);
-    });
-
-    BrowserManager().addListToStack(newList);
   }
 
   Future<void> getPlaylistContents(String playlistName,
       {Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/playlist/load',
+      final res = await makeServerCall(useThisServer, '/api/v1/playlist/load',
           {'playlistname': playlistName}, 'POST');
+
+      List<DisplayItem> newList = [];
+      res.forEach((e) {
+        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
+
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['filepath'],
+            'file',
+            '/${e['filepath']}',
+            Icon(Icons.music_note, color: VelvetColors.accent),
+            null);
+
+        newItem.metadata = m;
+        newList.add(newItem);
+      });
+
+      // Name the frame so the subheader can label it, the toolbar can offer
+      // the album-style controls, and an empty result reads as "playlist is
+      // empty" rather than a blank list.
+      BrowserManager().addListToStack(newList, playlist: playlistName);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getPlaylistContents failed: $err');
-      return;
     }
-
-    List<DisplayItem> newList = [];
-    res.forEach((e) {
-      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['filepath'],
-          'file',
-          '/${e['filepath']}',
-          Icon(Icons.music_note, color: VelvetColors.accent),
-          null);
-
-      newItem.metadata = m;
-      newList.add(newItem);
-    });
-
-    // Name the frame so the subheader can label it, the toolbar can offer the
-    // album-style controls, and an empty result reads as "playlist is empty"
-    // rather than a blank list.
-    BrowserManager().addListToStack(newList, playlist: playlistName);
   }
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
-    dynamic res;
     try {
-      res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
+      final res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
         "directory": directory,
         // Server defaults this to false (cheap listing). When the user
         // has the setting on, the server returns a `metadata` field on
@@ -1124,55 +1205,54 @@ class ApiManager {
         // notification.
         "pullMetadata": SettingsManager().fileExplorerMetadata,
       }, 'POST');
+
+      BrowserManager().setBrowserLabel('File Explorer');
+
+      List<DisplayItem> newList = [];
+      res['directories'].forEach((e) {
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['name'],
+            'directory',
+            path.join(res['path'], e['name']),
+            Icon(Icons.folder, color: VelvetColors.warning),
+            null);
+        newList.add(newItem);
+      });
+
+      res['files'].forEach((e) {
+        // A playlist file opens a list rather than playing, so it should not
+        // wear the same icon as the tracks around it.
+        final isPlaylistFile = isM3u(e['name']?.toString());
+        DisplayItem newItem = DisplayItem(
+            useThisServer,
+            e['name'],
+            'file',
+            path.join(res['path'], e['name']),
+            Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
+                color: VelvetColors.accent),
+            null);
+
+        // The server wraps each file's metadata as { filepath, metadata:
+        // {…actual fields…} } — drill in one level. Only set when
+        // pullMetadata=true was sent AND the file is in the library DB
+        // (unscanned files still arrive without an inner metadata
+        // object; we tolerate that and fall back to filename display).
+        final outer = e['metadata'];
+        final inner = outer is Map ? outer['metadata'] : null;
+        if (inner is Map) {
+          newItem.metadata = MusicMetadata.fromServerMap(inner);
+        }
+
+        newList.add(newItem);
+      });
+
+      BrowserManager()
+          .addListToStack(newList, alphabetical: true, path: res['path']);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getFileList failed: $err');
-      return;
     }
-
-    BrowserManager().setBrowserLabel('File Explorer');
-
-    List<DisplayItem> newList = [];
-    res['directories'].forEach((e) {
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['name'],
-          'directory',
-          path.join(res['path'], e['name']),
-          Icon(Icons.folder, color: VelvetColors.warning),
-          null);
-      newList.add(newItem);
-    });
-
-    res['files'].forEach((e) {
-      // A playlist file opens a list rather than playing, so it should not
-      // wear the same icon as the tracks around it.
-      final isPlaylistFile = isM3u(e['name']?.toString());
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['name'],
-          'file',
-          path.join(res['path'], e['name']),
-          Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
-              color: VelvetColors.accent),
-          null);
-
-      // The server wraps each file's metadata as { filepath, metadata:
-      // {…actual fields…} } — drill in one level. Only set when
-      // pullMetadata=true was sent AND the file is in the library DB
-      // (unscanned files still arrive without an inner metadata
-      // object; we tolerate that and fall back to filename display).
-      final outer = e['metadata'];
-      final inner = outer is Map ? outer['metadata'] : null;
-      if (inner is Map) {
-        newItem.metadata = MusicMetadata.fromServerMap(inner);
-      }
-
-      newList.add(newItem);
-    });
-
-    BrowserManager()
-        .addListToStack(newList, alphabetical: true, path: res['path']);
   }
 
   /// POST /api/v1/file-explorer/m3u — read a playlist FILE and push what it

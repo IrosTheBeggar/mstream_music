@@ -13,6 +13,7 @@ import 'package:uuid/uuid.dart';
 
 import '../objects/display_item.dart';
 import '../objects/metadata.dart';
+import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/file_explorer.dart';
 import '../singletons/media.dart';
@@ -46,6 +47,16 @@ MediaItem buildLocalFileMediaItem(DisplayItem i) {
 /// full block and skip the fetch. Best-effort: on a miss we keep whatever the row
 /// had (the lite block, or null) and fall back to its altAlbumArt for the cover.
 Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
+  final dir = await FileExplorer()
+      .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
+  return _buildServerFileMediaItemWithDir(i, dir);
+}
+
+/// [buildServerFileMediaItem] with the download dir already resolved — the
+/// batch builder resolves it once per server instead of paying the
+/// path_provider platform round-trip per row.
+Future<MediaItem?> _buildServerFileMediaItemWithDir(
+    DisplayItem i, Directory? dir) async {
   MusicMetadata? meta = i.metadata;
   if (meta == null || i.partialMetadata) {
     final full = await ApiManager().fetchTrackMetadata(i.server!, i.data!);
@@ -53,8 +64,6 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
   }
 
   final String downloadDirectory = i.server!.localname + i.data!;
-  final dir = await FileExplorer()
-      .getDownloadDir(i.server!.storageMode, i.server!.storageBasePath);
   final String? finalString =
       dir == null ? null : '${dir.path}/media/$downloadDirectory';
   final bool isLocal =
@@ -96,6 +105,49 @@ Future<MediaItem?> buildServerFileMediaItem(DisplayItem i) async {
 Future<MediaItem?> buildMediaItemForRow(DisplayItem i) => i.type == 'localFile'
     ? Future.value(buildLocalFileMediaItem(i))
     : buildServerFileMediaItem(i);
+
+/// MediaItem builds allowed in flight at once. Each partial-metadata row (all
+/// search hits) posts /db/metadata during its build, so a bulk action used to
+/// run one SERIAL network round-trip per row before playback could start.
+const int _kBuildPool = 4;
+
+/// Builds MediaItems for [rows] with bounded concurrency, preserving order:
+/// the returned list is index-aligned with [rows] (null = build failed /
+/// download dir unavailable — callers compact it). The download dir is
+/// resolved once per server up front instead of once per row (path_provider
+/// re-does the platform call every time).
+Future<List<MediaItem?>> buildMediaItemsForRows(List<DisplayItem> rows) async {
+  final dirs = <Server, Directory?>{};
+  for (final r in rows) {
+    final s = r.server;
+    if (r.type == 'localFile' || s == null) continue;
+    if (!dirs.containsKey(s)) {
+      dirs[s] =
+          await FileExplorer().getDownloadDir(s.storageMode, s.storageBasePath);
+    }
+  }
+
+  final out = List<MediaItem?>.filled(rows.length, null);
+  var next = 0;
+  Future<void> worker() async {
+    while (true) {
+      final k = next++;
+      if (k >= rows.length) return;
+      final r = rows[k];
+      try {
+        out[k] = r.type == 'localFile'
+            ? buildLocalFileMediaItem(r)
+            : await _buildServerFileMediaItemWithDir(r, dirs[r.server]);
+      } catch (_) {
+        // Drop just this row; the serial path would have aborted the whole
+        // action on a throw.
+      }
+    }
+  }
+
+  await Future.wait([for (var i = 0; i < _kBuildPool; i++) worker()]);
+  return out;
+}
 
 /// Clears the queue, fills it with every playable item from [rows] (in order),
 /// jumps to the one at [tappedIndex], and plays. When [shuffle] is true the
@@ -174,20 +226,29 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
     newIndex = 0;
   }
 
+  // One batched metadata request per server first (search/discovery rows),
+  // then the concurrent builds below fetch only what the batch missed.
   await prefillMetadata(playable);
 
+  final built = await buildMediaItemsForRows(playable);
+
+  // Compact the nulls while remapping the tapped index onto the survivors —
+  // a failed build used to shift every later index, landing the jump on the
+  // wrong track. If the tapped row itself failed, land on the nearest earlier
+  // survivor (or the top).
   final items = <MediaItem>[];
-  for (final i in playable) {
-    final m = await buildMediaItemForRow(i);
-    if (m != null) items.add(m);
+  int jumpTo = 0;
+  for (var k = 0; k < built.length; k++) {
+    final m = built[k];
+    if (m == null) continue;
+    if (k <= newIndex) jumpTo = items.length;
+    items.add(m);
   }
   if (items.isEmpty) return;
 
   await MediaManager().audioHandler.customAction('clearPlaylist');
-  for (final m in items) {
-    await MediaManager().audioHandler.addQueueItem(m);
-  }
-  await MediaManager().audioHandler.skipToQueueItem(newIndex);
+  await MediaManager().audioHandler.addQueueItems(items);
+  await MediaManager().audioHandler.skipToQueueItem(jumpTo);
   await MediaManager().audioHandler.play();
 }
 
@@ -196,20 +257,20 @@ Future<void> playFromHere(List<DisplayItem> rows, int tappedIndex,
 /// from a fresh state doesn't require a separate play press). Returns the
 /// number of tracks enqueued.
 Future<int> addRowsToQueue(List<DisplayItem> rows) async {
-  final wasEmpty = MediaManager().audioHandler.queue.value.isEmpty;
-  await prefillMetadata(rows);
-  int n = 0;
-  for (final i in rows) {
-    if (i.type != 'file' && i.type != 'localFile') continue;
-    final m = await buildMediaItemForRow(i);
-    if (m == null) continue;
-    await MediaManager().audioHandler.addQueueItem(m);
-    n++;
-  }
-  if (n > 0 && wasEmpty) {
-    await MediaManager().audioHandler.play();
-  }
-  return n;
+  final handler = MediaManager().audioHandler;
+  final wasEmpty = handler.queue.value.isEmpty;
+  final playable = [
+    for (final i in rows)
+      if (i.type == 'file' || i.type == 'localFile') i,
+  ];
+  // Same order as playFromHere: batch-prefill, then concurrent builds.
+  await prefillMetadata(playable);
+  final built = await buildMediaItemsForRows(playable);
+  final items = built.whereType<MediaItem>().toList();
+  if (items.isEmpty) return 0;
+  await handler.addQueueItems(items);
+  if (wasEmpty) await handler.play();
+  return items.length;
 }
 
 /// Applies the user's TapBehavior (Settings — the same setting the file browser
