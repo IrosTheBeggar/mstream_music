@@ -6,6 +6,8 @@
 // there too ("added a folder, and it opened on the last song"). The batch
 // add must park the queue on track 1, and playback must start there.
 
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -58,18 +60,20 @@ void main() {
     await waitFor(() => handler.mediaItem.valueOrNull?.title == 'Track 1',
         'now-playing to settle on the first track');
 
-    // And play() must start there — the idle re-seed reads the same spot.
-    await handler.play();
-    // Generous: the iOS simulator's AVPlayer probes each source serially
-    // before ready — well over the Android emulator's near-instant start.
+    // And play must start there. NOT awaited: on iOS the batch add primes
+    // the player (non-idle), so play() takes the bare backend.play() branch —
+    // and just_audio's play() future resolves only when playback ENDS.
+    // Awaiting it here serialized the test behind five full tracks of audio
+    // while the poll below never got a turn (Android stays idle → the
+    // re-seed branch returns immediately, which is why only the simulator
+    // hit this). Production callers fire play() from taps without awaiting.
+    unawaited(handler.play());
     await waitFor(
         () =>
-            handler.playbackState.value.processingState ==
-                AudioProcessingState.ready &&
             handler.playbackState.value.playing &&
-            handler.playbackState.value.queueIndex == 0,
+            handler.mediaItem.valueOrNull?.title == 'Track 1',
         'playback to start on track 1',
-        timeout: const Duration(seconds: 90));
+        timeout: const Duration(seconds: 45));
     expect(handler.mediaItem.valueOrNull?.title, 'Track 1');
 
     await handler.customAction('clearPlaylist');

@@ -238,7 +238,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (shouldTopUpAutoDJ(
           index: index,
           queueLength: queue.value.length,
-          state: _backend.processingState)) {
+          state: _backend.processingState,
+          inFailureWalk: _skipPending || _failedSkips > 0)) {
         autoDJ();
       }
       if (index != null && index >= 0 && index < queue.value.length) {
@@ -1708,17 +1709,31 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// playback session keeps both legitimate triggers: advancing INTO the
   /// last track (ready), and the queue finishing on it (completed — the
   /// infinite-play top-up). The idle arm/empty-queue starts don't come
-  /// through here at all; setAutoDJ drives those explicitly. Pure;
+  /// through here at all; setAutoDJ drives those explicitly.
+  ///
+  /// [inFailureWalk] suppresses the top-up while the failed-track skip walk
+  /// is live (_skipPending, or a non-zero skip budget). Without it the walk
+  /// and the DJ feed each other unboundedly when streams are broken but the
+  /// random-songs API is fine (transcode down, media mount lost): each skip
+  /// lands on the last row with a non-idle (loading) state → pick appended →
+  /// pick fails → skip — and BOTH of the walk's exits chase the growing
+  /// queue: `_failedSkips >= q.length` never catches up (each cycle
+  /// increments both by one), and seekToNext never reaches the end because a
+  /// fresh pick is always ahead. Starved of picks, the walk terminates
+  /// through its own end-of-queue outage-vs-bad-source logic, and any track
+  /// reaching `ready` clears the budget and re-enables the DJ. Pure;
   /// unit-tested.
   static bool shouldTopUpAutoDJ({
     required int? index,
     required int queueLength,
     required BackendProcessingState state,
+    required bool inFailureWalk,
   }) =>
       index != null &&
       queueLength > 0 &&
       index == queueLength - 1 &&
-      state != BackendProcessingState.idle;
+      state != BackendProcessingState.idle &&
+      !inFailureWalk;
 
   /// Whether play() must re-seed the local player instead of issuing a bare
   /// backend.play(): just_audio parked idle (a playback error tears the

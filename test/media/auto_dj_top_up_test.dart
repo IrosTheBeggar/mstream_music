@@ -9,9 +9,13 @@ import 'package:mstream_music/media/playback_backend.dart';
 // loop stacked eleven picks in nine seconds while the now-playing surface
 // flashed through them. Only a real playback session may top up.
 void main() {
-  bool topUp(int? index, int len, BackendProcessingState s) =>
+  bool topUp(int? index, int len, BackendProcessingState s,
+          {bool inFailureWalk = false}) =>
       AudioPlayerHandler.shouldTopUpAutoDJ(
-          index: index, queueLength: len, state: s);
+          index: index,
+          queueLength: len,
+          state: s,
+          inFailureWalk: inFailureWalk);
 
   test('advancing into the last track tops up', () {
     expect(topUp(29, 30, BackendProcessingState.ready), isTrue);
@@ -36,5 +40,19 @@ void main() {
   test('null index / empty queue never top up', () {
     expect(topUp(null, 30, BackendProcessingState.ready), isFalse);
     expect(topUp(0, 0, BackendProcessingState.ready), isFalse);
+  });
+
+  test('a live failure walk must NOT be fed picks', () {
+    // The other runaway: streams broken but the random-songs API healthy.
+    // Each failed-track skip lands on the last row LOADING (non-idle), so
+    // without this input the walk and the DJ feed each other unboundedly —
+    // the walk's exit conditions both chase the queue the DJ keeps growing.
+    expect(topUp(29, 30, BackendProcessingState.loading, inFailureWalk: true),
+        isFalse);
+    expect(topUp(29, 30, BackendProcessingState.ready, inFailureWalk: true),
+        isFalse);
+    // A recovered player (any track reached ready → the budget reset) tops
+    // up again as normal.
+    expect(topUp(29, 30, BackendProcessingState.ready), isTrue);
   });
 }
