@@ -808,6 +808,11 @@ class ChromecastPlaybackBackend extends EmulatedPlaylistBackend {
     try {
       await _client.stop();
     } catch (_) {}
+    // _client.stop() unloads the receiver's media session, so the loaded track
+    // is gone on the renderer side. Without resetting loadedIndex, the next
+    // play() takes the fast path and issues a bare _client.play() against a
+    // session-less receiver — a swallowed no-op reported as "playing".
+    loadedIndex = -1;
     playing = false;
     setProcessingState(BackendProcessingState.idle);
     change();

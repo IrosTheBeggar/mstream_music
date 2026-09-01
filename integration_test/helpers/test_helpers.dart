@@ -69,9 +69,18 @@ class MockServer {
   static Future<MockServer> start(
     Map<String, MockRoute> routes, {
     MockRoute? defaultHandler,
+    // When set, the server binds TLS with this context (self-signed test
+    // cert) and the url is https:// — used to exercise the native
+    // per-host TLS bypass (ExoPlayer streams via the platform stack, which
+    // is exactly what a plain-HTTP mock can never reach).
+    SecurityContext? securityContext,
   }) async {
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    final url = 'http://127.0.0.1:${server.port}';
+    final server = securityContext == null
+        ? await HttpServer.bind(InternetAddress.loopbackIPv4, 0)
+        : await HttpServer.bindSecure(
+            InternetAddress.loopbackIPv4, 0, securityContext);
+    final scheme = securityContext == null ? 'http' : 'https';
+    final url = '$scheme://127.0.0.1:${server.port}';
 
     final allRoutes = <String, MockRoute>{
       '/api/v1/ping': (_) => {
