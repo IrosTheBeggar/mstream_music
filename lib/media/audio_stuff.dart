@@ -1666,11 +1666,26 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> addQueueItems(List<MediaItem> mediaItems) async {
     if (mediaItems.isEmpty) return;
+    final wasEmpty = queue.value.isEmpty;
     // ONE queue emission + ONE backend call for the whole batch. Appending a
     // big folder per-item re-ran every whole-queue listener (iroh scan,
     // keep-queue-offline sweep) and a platform round-trip per track — O(N²)
     // work that stalled the UI on large "Add all"s.
     queue.add(queue.value..addAll(mediaItems));
+    // Batch-adding onto an empty IDLE player: park now-playing on track 1
+    // before the backend append. just_audio's idle stub emits an index for
+    // the appended batch — observed landing on the LAST row — and without a
+    // parked spot the now-playing surfaces and a later play()'s re-seed both
+    // follow it ("added a folder, and it opened on the last song"). The spot
+    // is the existing failed-restore machinery: read first by
+    // _emitCurrentMediaItem and _reviveSpot, overwritten by an explicit tap
+    // (skipToQueueItem's idle park — playFromHere's jump still wins), and
+    // cleared when a real load reaches ready. Parked BEFORE addSources so
+    // the stub emission's own now-playing emit already reads it.
+    if (wasEmpty &&
+        _backend.processingState == BackendProcessingState.idle) {
+      _restoreSpot = (index: 0, position: Duration.zero);
+    }
     await _backend.addSources(mediaItems);
     appLog('[queue] add ${mediaItems.length} tracks '
         '(now ${queue.value.length})');

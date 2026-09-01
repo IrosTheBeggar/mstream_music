@@ -237,10 +237,19 @@ class ApiManager {
               title: e.toString().split("/").last,
               extras: {'server': useThisServer.localname, 'path': e.toString()}),
       ];
+      if (items.isEmpty) return;
+      final handler = MediaManager().audioHandler;
+      final wasEmpty = handler.queue.value.isEmpty;
       // One batch append: a single queue emission + one backend call, instead
       // of N of each (every per-item add re-ran the whole-queue listeners —
       // iroh scan + offline sweep — making a big "Add all" O(N²)).
-      await MediaManager().audioHandler.addQueueItems(items);
+      await handler.addQueueItems(items);
+      // "Add all" onto an EMPTY queue starts playing from the first track —
+      // the same contract addRowsToQueue documents (a first add from a fresh
+      // state shouldn't require a separate play press). addQueueItems parked
+      // the spot on track 1, so the idle re-seed opens there rather than on
+      // the idle stub's landing row.
+      if (wasEmpty) await handler.play();
     } catch (err) {
       appLog('[api] getRecursiveFiles failed: $err');
     }
