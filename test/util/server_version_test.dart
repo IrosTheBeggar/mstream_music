@@ -182,4 +182,35 @@ void main() {
       expect(metadataBatchKnownUnsupported(null), isFalse);
     });
   });
+
+  group('floorVerdictFor (the add-time warning)', () {
+    FloorVerdict verdict(String? raw, {bool notFound = false}) =>
+        floorVerdictFor(ServerVersion.tryParse(raw), notFound: notFound);
+
+    test('a current server says nothing', () {
+      expect(verdict('6.25.0'), FloorVerdict.ok);
+      // Patch part optional on the wire.
+      expect(verdict('6.25'), FloorVerdict.ok);
+      expect(verdict('v6.25.0'), FloorVerdict.ok);
+    });
+
+    test('a reported version below the floor warns with the number', () {
+      expect(verdict('5.4.2'), FloorVerdict.belowFloor);
+    });
+
+    test('a 404 is the one no-version answer that means old', () {
+      expect(verdict(null, notFound: true), FloorVerdict.preVersionEndpoint);
+    });
+
+    test('a FAILED probe must not read as "older than 5.5"', () {
+      // The regression this pins: a just-added Quick Connect server whose
+      // tunnel auth had not settled (or any network blip at add time)
+      // produced a null version and toasted "older than 5.5" at a v6.25
+      // server. No 404 → no age claim.
+      expect(verdict(null), FloorVerdict.unknown);
+      // Junk body → parse fails → same rule: a server that answered /api/
+      // is self-evidently not pre-5.4.2.
+      expect(verdict('<!doctype html>'), FloorVerdict.unknown);
+    });
+  });
 }

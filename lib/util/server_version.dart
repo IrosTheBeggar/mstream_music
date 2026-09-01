@@ -112,6 +112,35 @@ UpdateBand updateBandFor(ServerVersion? v) {
 /// warning, and the reason a null version is not treated as "probably fine".
 bool isBelowSupportFloor(ServerVersion? v) => v == null || v < supportFloor;
 
+/// What the add-time floor check learned about a server.
+enum FloorVerdict {
+  /// Reported a version at or above the floor — say nothing.
+  ok,
+
+  /// Reported a version below the floor — warn with the number.
+  belowFloor,
+
+  /// `/api/` answered 404: the endpoint does not exist, which genuinely puts
+  /// the server before 5.4.2 — warn "older than 5.5".
+  preVersionEndpoint,
+
+  /// The probe failed or the body was junk. Says nothing about the server's
+  /// age — a tunnel whose auth hadn't settled and a Wi-Fi blip both land
+  /// here, and both used to toast "older than 5.5" at brand-new servers.
+  /// Say nothing; later re-probes fill the version in.
+  unknown,
+}
+
+/// Classify an add-time version probe. [notFound] is the probe's "404"
+/// signal; [parsed] is the parsed version when one came back. Pure;
+/// unit-tested.
+FloorVerdict floorVerdictFor(ServerVersion? parsed, {required bool notFound}) {
+  if (parsed != null) {
+    return isBelowSupportFloor(parsed) ? FloorVerdict.belowFloor : FloorVerdict.ok;
+  }
+  return notFound ? FloorVerdict.preVersionEndpoint : FloorVerdict.unknown;
+}
+
 
 // ---------------------------------------------------------------------------
 // Feature table

@@ -177,21 +177,37 @@ class ServerManager {
   }
 
   Future<void> _warnIfBelowFloor(Server server) async {
-    final raw = await fetchServerVersion(server);
-    if (raw != null) {
-      server.serverVersion = raw;
+    final probe = await fetchServerVersion(server);
+    if (probe.version != null) {
+      server.serverVersion = probe.version;
       server.versionCheckedAt = DateTime.now();
       await writeServerFile();
       _serverListStream.sink.add(serverList);
     }
-    final parsed = ServerVersion.tryParse(raw);
-    if (!isBelowSupportFloor(parsed)) return;
-    // Null reads as the endpoint being absent, which puts the server before
-    // 5.4.2 — older than the floor, so it lands here too.
-    showGlobalSnack(parsed == null
-        ? 'This server is older than 5.5. Some features will be unavailable.'
-        : 'This server is version ${parsed.raw}. Some features need 5.5 or '
-            'newer and will be unavailable.');
+    final parsed = ServerVersion.tryParse(probe.version);
+    // Only two outcomes are evidence of age: a version below the floor, and
+    // a 404 (pre-5.4.2 has no /api/ at all). A probe that FAILED — the
+    // just-added iroh server whose tunnel auth hadn't settled, a Wi-Fi blip
+    // on an HTTP add — says nothing about the server, and greeting a new
+    // user's current server with "older than 5.5" is exactly the wrong
+    // first impression. Stay quiet there: the capability re-check re-probes
+    // and stores the version when it lands, and the nav-drawer update flag
+    // reads that.
+    switch (floorVerdictFor(parsed, notFound: probe.notFound)) {
+      case FloorVerdict.ok:
+        return;
+      case FloorVerdict.belowFloor:
+        showGlobalSnack(
+            'This server is version ${parsed!.raw}. Some features need 5.5 '
+            'or newer and will be unavailable.');
+      case FloorVerdict.preVersionEndpoint:
+        showGlobalSnack(
+            'This server is older than 5.5. Some features will be '
+            'unavailable.');
+      case FloorVerdict.unknown:
+        appLog('[api] add-time version probe inconclusive for '
+            '${server.localname} — not warning');
+    }
   }
 
   // Storage mode + base path are set directly on the Server in the
@@ -336,7 +352,7 @@ class ServerManager {
       // stored value alone rather than blanking it — a momentary blip should
       // not make a known-good server look ancient.
       final prevVersion = server.serverVersion;
-      final fetched = await fetchServerVersion(server);
+      final fetched = (await fetchServerVersion(server)).version;
       if (fetched != null) {
         server.serverVersion = fetched;
         server.versionCheckedAt = DateTime.now();
@@ -573,7 +589,14 @@ class ServerManager {
   /// Logs its failures. This runs unattended and its only visible symptom is
   /// a version that never appears, which is indistinguishable from an old
   /// server unless something says otherwise.
-  Future<String?> fetchServerVersion(Server s) async {
+  /// Probe `GET /api/` for the server's version. [notFound] is true only for
+  /// a 404 — the one answer that genuinely means "pre-5.4.2, the endpoint
+  /// does not exist". Every other empty outcome (timeout, connection failure,
+  /// an auth layer answering for the route, junk body) is a FAILED probe, not
+  /// evidence of age — the two used to collapse into one null, and a blip at
+  /// add time toasted "older than 5.5" at a current server.
+  Future<({String? version, bool notFound})> fetchServerVersion(
+      Server s) async {
     try {
       final resp = await http.get(
         s.apiUri('/api/'),
@@ -590,16 +613,18 @@ class ServerManager {
           appLog('[api] version probe ${s.localname} → '
               'HTTP ${resp.statusCode}');
         }
-        return null;
+        return (version: null, notFound: resp.statusCode == 404);
       }
       final decoded = jsonDecode(resp.body);
       final v = decoded is Map ? decoded['server'] : null;
-      if (v is String && v.trim().isNotEmpty) return v.trim();
+      if (v is String && v.trim().isNotEmpty) {
+        return (version: v.trim(), notFound: false);
+      }
       appLog('[api] version probe ${s.localname} → no version in response');
-      return null;
+      return (version: null, notFound: false);
     } catch (e) {
       appLog('[api] version probe ${s.localname} failed: $e');
-      return null;
+      return (version: null, notFound: false);
     }
   }
 
