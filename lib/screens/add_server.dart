@@ -24,6 +24,7 @@ import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
+import 'iroh_login_screen.dart';
 
 class AddServerScreen extends StatelessWidget {
   const AddServerScreen({super.key});
@@ -1382,6 +1383,14 @@ class MyCustomFormState extends State<MyCustomForm> {
         // the one-iroh cap backstop in _saveIrohServer clears state otherwise).
         showGlobalSnack(l.connectionSuccessful);
         await _saveIrohServer(code: code, port: port, jwt: '');
+      } else {
+        // Private server: go straight to the sign-in PAGE. The old inline
+        // reveal put the credential fields at the bottom of this (long,
+        // scrollable) tab — under the fold on most phones, so the test
+        // reported success and nothing visibly happened next. A pushed page
+        // can't be missed; backing out of it lands here with the tunnel
+        // still up and the Sign in & save button as the way back in.
+        await _openIrohSignIn();
       }
     } on IrohTunnelException catch (e) {
       IrohTunnel.instance.stop();
@@ -1402,6 +1411,45 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohTestSuccess = success;
       _irohTestResult = message;
     });
+  }
+
+  // Collect credentials on the dedicated sign-in page (validated there,
+  // through the live tunnel, so a wrong password is retryable in place), then
+  // run the unchanged sign-in-and-save. The extra login POST inside
+  // _signInAndSaveIroh re-uses the just-validated credentials, so it is one
+  // cheap request in exchange for keeping every save/error path identical.
+  Future<void> _openIrohSignIn() async {
+    final l = AppLocalizations.of(context);
+    final port = _irohPort;
+    if (port == null) return;
+    final lt = IrohTunnel.instance.localToken ?? '';
+    final creds = await Navigator.of(context).push<(String, String)>(
+      MaterialPageRoute(
+        builder: (_) => IrohLoginScreen(
+          title: l.irohSignInHeader,
+          validate: (username, password) async {
+            try {
+              final login = await http.post(
+                Uri.parse('http://127.0.0.1:$port/api/v1/auth/login?__lt=$lt'),
+                body: {'username': username, 'password': password},
+              ).timeout(Duration(seconds: 8));
+              if (login.statusCode != 200) {
+                return l.irohSignInFailedHttp(login.statusCode);
+              }
+              return null;
+            } on TimeoutException {
+              return l.irohSignInTimeout;
+            } catch (e) {
+              return l.irohSignInFailed('$e');
+            }
+          },
+        ),
+      ),
+    );
+    if (creds == null || !mounted) return; // backed out — tunnel stays up
+    _irohUserCtrl.text = creds.$1;
+    _irohPassCtrl.text = creds.$2;
+    await _signInAndSaveIroh();
   }
 
   // Authenticate THROUGH the live tunnel (mirrors the standard login), then save
@@ -1559,7 +1607,7 @@ class MyCustomFormState extends State<MyCustomForm> {
 
       String jwt = '';
       if (!isPublic) {
-        creds = await _promptDiscoveredLogin(server);
+        creds = await _promptDiscoveredLogin(server, baseUri);
         if (creds == null) {
           if (mounted) setState(() => _connectingId = null);
           return; // user cancelled
@@ -1632,14 +1680,39 @@ class MyCustomFormState extends State<MyCustomForm> {
     }
   }
 
-  // Modal sheet collecting credentials for a discovered private server.
-  // Returns (username, password), or null if cancelled.
-  Future<(String, String)?> _promptDiscoveredLogin(DiscoveredServer server) {
-    return showModalBottomSheet<(String, String)>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: VelvetColors.surface,
-      builder: (ctx) => _LanLoginSheet(serverName: server.name),
+  // Full-screen sign-in for a discovered private server; returns
+  // (username, password) validated against [baseUri], or null if cancelled.
+  // Used to be a modal bottom sheet — easy to lose behind the keyboard and,
+  // per user feedback, missed outright on most phones. The page validates
+  // the login itself, so a typo'd password retries in place instead of
+  // bouncing back to the server list; the caller's own login POST then runs
+  // against known-good credentials (kept as a backstop rather than plumbing
+  // the token out of the page).
+  Future<(String, String)?> _promptDiscoveredLogin(
+      DiscoveredServer server, Uri baseUri) {
+    final l = AppLocalizations.of(context);
+    return Navigator.of(context).push<(String, String)>(
+      MaterialPageRoute(
+        builder: (_) => IrohLoginScreen(
+          title: l.lanLoginTitle(server.name),
+          validate: (username, password) async {
+            try {
+              final login = await http.post(
+                baseUri.resolve('/api/v1/auth/login'),
+                body: {'username': username, 'password': password},
+              ).timeout(Duration(seconds: 8));
+              if (login.statusCode != 200) {
+                return l.irohSignInFailedHttp(login.statusCode);
+              }
+              return null;
+            } on TimeoutException {
+              return l.irohSignInTimeout;
+            } catch (e) {
+              return l.irohSignInFailed('$e');
+            }
+          },
+        ),
+      ),
     );
   }
 
@@ -1906,41 +1979,12 @@ class MyCustomFormState extends State<MyCustomForm> {
               _statusBanner(_irohTestResult!, _irohTestSuccess ?? false),
             ],
             if (_irohSignedInReady) ...[
-              SizedBox(height: 20),
-              Divider(color: VelvetColors.border2),
-              SizedBox(height: 12),
-              Text(l.irohSignInHeader,
-                  style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700)),
-              SizedBox(height: 12),
-              // No public-server toggle: the test already determined this server
-              // needs auth (a public one would have skipped straight to saved).
-              TextField(
-                controller: _irohUserCtrl,
-                enabled: !_irohSaving,
-                autocorrect: false,
-                keyboardType: TextInputType.emailAddress,
-                style: TextStyle(color: VelvetColors.textPrimary),
-                decoration: InputDecoration(
-                  labelText: l.fieldUsername,
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-              ),
-              SizedBox(height: 12),
-              TextField(
-                controller: _irohPassCtrl,
-                enabled: !_irohSaving,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                style: TextStyle(color: VelvetColors.textPrimary),
-                decoration: InputDecoration(
-                  labelText: l.fieldPassword,
-                  prefixIcon: Icon(Icons.lock_outline),
-                ),
-              ),
+              // The credentials themselves are collected on the pushed
+              // sign-in PAGE (see _openIrohSignIn — the inline fields that
+              // used to live here sat under the fold and were missed). The
+              // page opens automatically when the test finds a private
+              // server; this button is the way back in after backing out of
+              // it — the tunnel is still up.
               SizedBox(height: 16),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
@@ -1964,7 +2008,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       )
                     : Icon(Icons.login),
                 label: Text(_irohSaving ? l.irohSigningIn : l.irohSignInSave),
-                onPressed: _irohSaving ? null : _signInAndSaveIroh,
+                onPressed: _irohSaving ? null : _openIrohSignIn,
               ),
             ],
           ],
@@ -2293,94 +2337,10 @@ class MyCustomFormState extends State<MyCustomForm> {
 // The QR scanner page moved to lib/widgets/iroh_scanner.dart (IrohScannerPage),
 // shared with the re-pair sheet.
 
-// Login sheet for a discovered private server; pops with (username, password).
-// A StatefulWidget so the TextEditingControllers live until the route is fully
-// gone: disposing them in whenComplete() runs when the pop STARTS, but the
-// closing sheet keeps rebuilding through its exit animation (the collapsing
-// keyboard changes viewInsets), and a TextField building with a disposed
-// controller throws — a full-screen error page over the still-running flow.
-class _LanLoginSheet extends StatefulWidget {
-  final String serverName;
-
-  const _LanLoginSheet({required this.serverName});
-
-  @override
-  State<_LanLoginSheet> createState() => _LanLoginSheetState();
-}
-
-class _LanLoginSheetState extends State<_LanLoginSheet> {
-  final _userCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _userCtrl.dispose();
-    _passCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() =>
-      Navigator.of(context).pop((_userCtrl.text, _passCtrl.text));
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l.lanLoginTitle(widget.serverName),
-              style: TextStyle(
-                  color: VelvetColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700)),
-          SizedBox(height: 16),
-          TextField(
-            controller: _userCtrl,
-            autofocus: true,
-            autocorrect: false,
-            keyboardType: TextInputType.emailAddress,
-            style: TextStyle(color: VelvetColors.textPrimary),
-            decoration: InputDecoration(
-              labelText: l.fieldUsername,
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-          ),
-          SizedBox(height: 12),
-          TextField(
-            controller: _passCtrl,
-            obscureText: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            onSubmitted: (_) => _submit(),
-            style: TextStyle(color: VelvetColors.textPrimary),
-            decoration: InputDecoration(
-              labelText: l.fieldPassword,
-              prefixIcon: Icon(Icons.lock_outline),
-            ),
-          ),
-          SizedBox(height: 16),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: VelvetColors.primary,
-              padding: EdgeInsets.symmetric(vertical: 14),
-            ),
-            icon: Icon(Icons.login),
-            label: Text(l.irohSignInSave),
-            onPressed: _submit,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // "New folder" prompt for the download-folder browser; pops with the trimmed
-// name. Stateful for the same reason as _LanLoginSheet: the controller must
-// outlive the dialog's exit animation.
+// name. Stateful because the controller must outlive the dialog's exit
+// animation (disposing in whenComplete() runs when the pop STARTS, and a
+// TextField building with a disposed controller throws).
 class _NewFolderDialog extends StatefulWidget {
   const _NewFolderDialog();
 
