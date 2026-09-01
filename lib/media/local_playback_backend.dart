@@ -3,6 +3,7 @@ import 'dart:io' show File, Platform;
 
 import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:just_audio/just_audio.dart';
+import 'package:rxdart/rxdart.dart';
 
 import 'playback_backend.dart';
 
@@ -161,8 +162,51 @@ class LocalPlaybackBackend implements PlaybackBackend {
         LoopMode.one => BackendRepeat.one,
       };
 
+  // ── Duration-less streams ──
+  // A chunked, length-less stream (the iOS /transcode fallback's transport)
+  // has no knowable duration, but it reaches Dart as Duration.ZERO, not null
+  // (AVPlayer reports "indefinite"; the bridge lands it as 0). Zero then
+  // defeats every null-means-unknown guard downstream: just_audio's position
+  // getter clamps its extrapolated position to any non-null duration — so the
+  // whole track "plays at 00:00" — and the handler stamps "/ 00:00" into the
+  // MediaItem. Normalize zero to null at this boundary and, while the player
+  // claims a zero duration, compute the position with just_audio's own
+  // extrapolation formula minus the clamp. A genuinely zero-length file has
+  // no audio to position through, so treating it as unknown loses nothing.
+
+  bool get _durationUnknown => _player.duration == Duration.zero;
+
+  Duration _unclampedPosition(DateTime now) => unclampedPositionFor(
+      updatePosition: _player.playbackEvent.updatePosition,
+      updateTime: _player.playbackEvent.updateTime,
+      now: now,
+      speed: _player.speed,
+      extrapolating:
+          _player.playing && _player.processingState == ProcessingState.ready);
+
+  /// Duration.zero means "unknown", never "instant" — see the note above.
+  /// Pure; unit-tested.
+  static Duration? normalizeReportedDuration(Duration? d) =>
+      d == Duration.zero ? null : d;
+
+  /// just_audio's position extrapolation without its clamp-to-duration:
+  /// while playing-and-ready the position advances from the last platform
+  /// event in wall-clock time (scaled by [speed]); otherwise it holds at the
+  /// event's position. Pure; unit-tested.
+  static Duration unclampedPositionFor({
+    required Duration updatePosition,
+    required DateTime updateTime,
+    required DateTime now,
+    required double speed,
+    required bool extrapolating,
+  }) =>
+      extrapolating
+          ? updatePosition + now.difference(updateTime) * speed
+          : updatePosition;
+
   @override
-  Duration get position => _player.position;
+  Duration get position =>
+      _durationUnknown ? _unclampedPosition(DateTime.now()) : _player.position;
 
   @override
   Duration get bufferedPosition => _player.bufferedPosition;
@@ -171,7 +215,7 @@ class LocalPlaybackBackend implements PlaybackBackend {
   double get speed => _player.speed;
 
   @override
-  Duration? get duration => _player.duration;
+  Duration? get duration => normalizeReportedDuration(_player.duration);
 
   @override
   int? get currentIndex => _player.currentIndex;
@@ -184,11 +228,22 @@ class LocalPlaybackBackend implements PlaybackBackend {
   @override
   Stream<int?> get currentIndexStream => _player.currentIndexStream;
 
+  // just_audio's stream carries its clamped position — for a zero-duration
+  // stream that is a constant 0 (see the duration-less note above) — so while
+  // the duration reads zero, tick the unclamped reading ourselves at
+  // just_audio's slowest own cadence. durationStream replays its current
+  // value on listen, so each subscriber starts on the right branch, and a
+  // track change flips the branch via switchMap.
   @override
-  Stream<Duration> get positionStream => _player.positionStream;
+  Stream<Duration> get positionStream =>
+      _player.durationStream.switchMap((d) => d == Duration.zero
+          ? Stream<Duration>.periodic(const Duration(milliseconds: 200),
+              (_) => _unclampedPosition(DateTime.now()))
+          : _player.positionStream);
 
   @override
-  Stream<Duration?> get durationStream => _player.durationStream;
+  Stream<Duration?> get durationStream =>
+      _player.durationStream.map(normalizeReportedDuration);
 
   @override
   Stream<BackendProcessingState> get processingStateStream =>
