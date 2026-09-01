@@ -1,3 +1,6 @@
+import 'dart:io' show File;
+
+import './file_explorer.dart';
 import './server_capabilities.dart';
 import './server_list.dart';
 import './browser_list.dart';
@@ -13,6 +16,7 @@ import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/decode_json.dart';
 import '../util/media_format.dart';
+import '../util/server_version.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:material_ui/material_ui.dart';
@@ -224,20 +228,68 @@ class ApiManager {
       final res = await makeServerCall(useThisServer,
           '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
 
-      final items = <MediaItem>[
-        for (final e in res as List)
-          // Same transcode-aware stream URL as the rest of the app (honors the
-          // /transcode endpoint + codec/bitrate when transcoding is on). The
-          // recursive endpoint returns bare paths (no metadata), so these items
-          // carry only server + path — no rating / fidelity / tags. They
-          // populate if the same track is later reached via a metadata-bearing
-          // browse.
-          MediaItem(
-              id: buildServerStreamUrl(useThisServer, e.toString()),
-              title: e.toString().split("/").last,
-              extras: {'server': useThisServer.localname, 'path': e.toString()}),
-      ];
-      if (items.isEmpty) return;
+      final paths = [for (final e in res as List) e.toString()];
+      if (paths.isEmpty) return;
+
+      // The recursive endpoint returns bare paths, so fetch the metadata in
+      // ONE batched request — never per row, because a recursive folder can
+      // be thousands of files. Version-gated and best-effort exactly like
+      // prefillMetadata: on an older server, a request failure, or a track
+      // the DB doesn't know, the row queues bare (today's behaviour) and
+      // tops itself up as it becomes current.
+      var meta = const <String, MusicMetadata>{};
+      if (!metadataBatchKnownUnsupported(
+          ServerVersion.tryParse(useThisServer.serverVersion))) {
+        meta = await fetchTrackMetadataBatch(useThisServer, paths);
+      }
+
+      // Resolve the download dir ONCE; the per-file existence check is a
+      // cheap stat. Carrying localPath means an already-downloaded copy
+      // plays from disk immediately, instead of streaming until the offline
+      // sweep happens to re-mark it.
+      final dir = await FileExplorer().getDownloadDir(
+          useThisServer.storageMode, useThisServer.storageBasePath);
+
+      final items = <MediaItem>[];
+      for (final p in paths) {
+        final m = meta[p.startsWith('/') ? p.substring(1) : p];
+        final artUrl = m?.albumArt != null
+            ? buildAlbumArtUrl(useThisServer, m!.albumArt!, compress: 'l')
+            : null;
+        // Same on-disk formula as downloadOneFile (serverName + filepath,
+        // concatenated verbatim), so existing downloads are found exactly
+        // where the sweep put them.
+        final localPath = dir == null
+            ? null
+            : '${dir.path}/media/${useThisServer.localname}$p';
+        final isLocal = localPath != null && File(localPath).existsSync();
+        items.add(MediaItem(
+          // Same transcode-aware stream URL as the rest of the app (honors
+          // the /transcode endpoint + codec/bitrate when transcoding is on).
+          id: buildServerStreamUrl(useThisServer, p),
+          title: m?.title ?? p.split("/").last,
+          album: m?.album,
+          artist: m?.artist,
+          genre: m?.genreLabel,
+          duration: m?.duration,
+          artUri: artUrl == null ? null : Uri.parse(artUrl),
+          extras: {
+            if (m != null)
+              // The same full map a browse-added track gets.
+              ...queueExtras(m,
+                  server: useThisServer.localname, path: p, artUrl: artUrl)
+            else ...{
+              // No metadata block — keep the bare shape. Deliberately NOT
+              // queueExtras(null): that writes hasLyrics, whose presence
+              // marks an item as complete and would stop _topUpExtras from
+              // lazily filling it in as it plays.
+              'server': useThisServer.localname,
+              'path': p,
+            },
+            if (isLocal) 'localPath': localPath,
+          },
+        ));
+      }
       final handler = MediaManager().audioHandler;
       final wasEmpty = handler.queue.value.isEmpty;
       // One batch append: a single queue emission + one backend call, instead

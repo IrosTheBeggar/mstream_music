@@ -367,14 +367,30 @@ class DownloadManager {
   /// session (terminal failures un-mark themselves so a recovery re-sweep
   /// retries them). Quiet: no per-file snackbars — the user didn't tap
   /// anything, and a whole-queue sweep can fail dozens of times at once.
+  // Last clipped-count logged by autoDownloadQueue, so the sweep says it
+  // once per change instead of on every queue emission / advance.
+  int _lastClippedLogged = 0;
+
   Future<void> autoDownloadQueue(List<MediaItem> items) async {
     if (!SettingsManager().offlineQueue) return;
     final wifiOnly = SettingsManager().offlineQueueWifiOnly;
     // Only fetch what the cap actually allows on disk. Tracks outside the
     // window are never marked in _autoAttempted, so they become candidates the
     // moment playback advances far enough to pull them into it.
-    final window =
-        cacheWindow(items, SettingsManager().autoDownloadCap, _playingIndex());
+    final cap = SettingsManager().autoDownloadCap;
+    final window = cacheWindow(items, cap, _playingIndex());
+    // Say when the cap clips a sweep — once per distinct count, not per
+    // sweep (this runs on every queue change and advance). "Added N,
+    // setting's on, two never downloaded" is indistinguishable from a
+    // download bug without this line; the two were simply beyond the window.
+    final clipped = items.length - window.length;
+    if (clipped != _lastClippedLogged) {
+      _lastClippedLogged = clipped;
+      if (clipped > 0) {
+        appLog('[auto-dl] $clipped queued track(s) beyond the cache window '
+            '(cap $cap) — they download as playback approaches them');
+      }
+    }
     for (final m in autoDownloadCandidates(window, _autoAttempted,
         fileExists: (p) => File(p).existsSync())) {
       await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
