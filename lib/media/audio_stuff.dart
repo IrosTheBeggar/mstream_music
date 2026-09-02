@@ -17,6 +17,7 @@ import 'chromecast_playback_backend.dart';
 import 'local_media_server.dart';
 import 'auto_browse.dart';
 import 'cast_origin.dart' show rebindLoopbackArt;
+import 'output_devices.dart' show isExternalOutput;
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../native/iroh_tunnel.dart';
@@ -45,6 +46,10 @@ import '../util/stream_url.dart';
 /// or retry the pick right now when the tunnel is serving and the earlier
 /// failure was transient. See [AudioPlayerHandler.queueEndAction].
 enum QueueEndAction { stop, park, retryPick }
+
+/// What a media-button toggle (play/pause key) does — see
+/// [AudioPlayerHandler.mediaToggleAction].
+enum MediaToggleAction { play, pause, ignore }
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 /// What [AudioPlayerHandler.healAction] decided the tunnel heal should do:
@@ -235,7 +240,23 @@ class AudioPlayerHandler extends BaseAudioHandler
         // actually playing.
         if (!identical(_backend, _localBackend)) return;
         appLog('[audio] output disconnected — pausing');
+        _outputLostAt = DateTime.now();
         unawaited(pause());
+      });
+      session.devicesChangedEventStream.listen((event) {
+        // A new output the user can hear (earbuds after the car, the car
+        // again) makes the next toggle theirs again. The built-in speaker
+        // "appearing" is only the route falling back and keeps the window.
+        final added = event.devicesAdded
+            .where((d) => d.isOutput && isExternalOutput(d.type))
+            .map((d) => d.type.name)
+            .toList();
+        if (added.isEmpty) return;
+        if (_outputLostAt != null) {
+          appLog('[audio] output connected (${added.join(', ')}) — '
+              'media toggles are live again');
+        }
+        _outputLostAt = null;
       });
     } catch (e) {
       appLog('[audio] audio session configure failed: $e');
@@ -1825,6 +1846,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Timer? _parkTimer;
   // When an audio-focus interruption began (see the session listener).
   DateTime? _interruptedAt;
+  // When the audio output went away (becoming-noisy: the car's Bluetooth, a
+  // headset); null once a new output appears or the user plays in the app.
+  // Gates media-button toggles — see click().
+  DateTime? _outputLostAt;
   BackendProcessingState? _lastLoggedProcState;
   DateTime? _bufferingSince;
 
@@ -2004,6 +2029,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// server's problem, not the path's; stop retrying after this many.
   static const int kMaxDeferredPickFailures = 5;
 
+  /// After an output loss, how long a media-button toggle that would start
+  /// playback is treated as the old output's late PAUSE rather than the
+  /// user's request. Head units keep their remote-control link up for a few
+  /// seconds after the audio link drops (11s in the drive log).
+  static const Duration kOutputLostToggleWindow = Duration(seconds: 30);
+
   /// Whether play() must re-seed the local player instead of issuing a bare
   /// backend.play(): just_audio parked idle (a playback error tears the
   /// platform player down) with tracks still queued, so a bare play() would
@@ -2072,6 +2103,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _playIntent = true;
     _intentionalStop = false;
     _interruptedAt = null; // the user wants audio; an old interruption is moot
+    _outputLostAt = null; // …and wherever it comes out is their choice now
     if (_parkedForDJ) {
       // The user pressed play on a parked queue end: leave the park (a pick
       // landing later appends without hijacking them) and replay the last
@@ -2114,6 +2146,50 @@ class AudioPlayerHandler extends BaseAudioHandler
     _playIntent = false;
     _releasePark(); // their intent wins; a landing pick appends only
     return _backend.pause();
+  }
+
+  /// Media buttons. audio_service folds every external PLAY / PAUSE /
+  /// PLAY_PAUSE / HEADSETHOOK key into this one toggle (only its own
+  /// notification buttons carry an explicit play or pause), so a head unit's
+  /// explicit PAUSE on ignition-off reaches us as "toggle". That PAUSE rides
+  /// the remote-control link, which outlives the audio link by seconds; when
+  /// it lands after the audio drop has already paused us, the toggle used to
+  /// un-pause onto the phone's own speaker (drive log 2026-08-31: output
+  /// disconnected 19:23:38, play 19:23:49). Inside the window after an output
+  /// loss, a toggle that would START playback is ignored; a new output device
+  /// or the user's own play in the app ends the window early. Playing → pause
+  /// is always honoured.
+  @override
+  Future<void> click([MediaButton button = MediaButton.media]) async {
+    if (button != MediaButton.media) return super.click(button);
+    final lost = _outputLostAt;
+    final sinceLost = lost == null ? null : DateTime.now().difference(lost);
+    switch (mediaToggleAction(
+        playing: playbackState.valueOrNull?.playing ?? false,
+        sinceOutputLost: sinceLost)) {
+      case MediaToggleAction.pause:
+        appLog('[audio] media button → pause');
+        await pause();
+      case MediaToggleAction.play:
+        appLog('[audio] media button → play');
+        await play();
+      case MediaToggleAction.ignore:
+        appLog('[audio] media button toggle ignored — output lost '
+            '${sinceLost!.inSeconds}s ago (a late PAUSE from the old output)');
+    }
+  }
+
+  /// Pure: what a media-button toggle does. [sinceOutputLost] is null when no
+  /// output has been lost, or a new one has appeared since.
+  static MediaToggleAction mediaToggleAction({
+    required bool playing,
+    required Duration? sinceOutputLost,
+  }) {
+    if (playing) return MediaToggleAction.pause;
+    if (sinceOutputLost != null && sinceOutputLost < kOutputLostToggleWindow) {
+      return MediaToggleAction.ignore;
+    }
+    return MediaToggleAction.play;
   }
 
   @override
