@@ -10,6 +10,7 @@ import 'package:rxdart/rxdart.dart';
 import 'screens/browser.dart';
 import 'screens/album_detail_view.dart';
 import 'objects/display_item.dart';
+import 'native/carplay_bridge.dart';
 import 'singletons/server_list.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
@@ -71,6 +72,18 @@ void main() {
   ));
 }
 
+/// See the runApp call site: on iOS the phone window can arrive long after
+/// the engine started (CarPlay-only launch). Polling is fine — it is a rare
+/// path and nothing else is waiting.
+Future<void> _implicitViewReady() async {
+  final dispatcher = WidgetsBinding.instance.platformDispatcher;
+  if (dispatcher.implicitView != null) return;
+  appLog('[app] no window yet (CarPlay-only launch?) — UI waits for the phone scene');
+  while (dispatcher.implicitView == null) {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+}
+
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Full flavor only: route API HTTPS through an override that accepts a
@@ -95,6 +108,9 @@ Future<void> _startApp() async {
   // so Android Auto cover art works on any build (not just VARIANT=play ones).
   await initAutoArt();
   await MediaManager().start();
+  // CarPlay: serve the browse tree + queue to the Swift scene, and tell it Dart
+  // is up (the car may have connected before main() ran). iOS only.
+  await CarPlayBridge.init();
   // Download status/progress listener. Here — not the widget's initState — so
   // HEADLESS boots (media resumption, Android Auto) also track completions:
   // the keep-queue-offline sweep runs from the handler's queue listener in
@@ -114,6 +130,11 @@ Future<void> _startApp() async {
   // ThemeData and any direct VelvetColors lookups stay in sync.
   // combineLatest2 (rxdart) merges the two streams into one record so a
   // single StreamBuilder drives both; locale == null follows the device.
+  // A CarPlay-only launch (phone locked, icon tapped on the car) has no phone
+  // window yet, and runApp needs one. Everything above — audio handler,
+  // servers, tunnel, CarPlay bridge — is already up and serving the car; the
+  // UI waits for the phone scene to attach.
+  await _implicitViewReady();
   runApp(StreamBuilder<(AppTheme, Locale?, int?)>(
     stream: Rx.combineLatest3(
       SettingsManager().themeStream,

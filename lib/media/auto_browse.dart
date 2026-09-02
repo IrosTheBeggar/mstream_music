@@ -20,6 +20,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:http/http.dart' as http;
@@ -111,6 +112,9 @@ Future<void> initAutoArt() async {
 /// items ("Invalid album art uri") but loads a local content:// one — the
 /// provider downloads + caches the bytes.
 String _artContentUri(String remoteUrl) {
+  // CarPlay's Swift side fetches the remote URL itself (CarPlayArtLoader);
+  // content:// is Android's ArtContentProvider.
+  if (Platform.isIOS) return remoteUrl;
   final authority = _artAuthority ??
       '${isPlayBuild ? 'mstream.music' : 'mstream.music.plus'}.art';
   return Uri(
@@ -123,6 +127,10 @@ String _artContentUri(String remoteUrl) {
 
 /// Android Auto browse + playback for the active mStream server.
 class AutoBrowse {
+  /// The id every informational row carries (no server, load failed, empty
+  /// list); tapping it yields no children. CarPlay reads it to disable the row.
+  static const String noticeId = '$_scheme://notice';
+
   // Short-lived per-server cache of the full albums/artists lists, so A–Z
   // bucket drill-ins reuse the parent tab's fetch instead of re-GETting the
   // whole library on every letter tap.
@@ -703,7 +711,7 @@ class AutoBrowse {
   /// A non-playable informational row (no server / load error). Tapping it
   /// returns no children (the id isn't in our scheme).
   static MediaItem _notice(String title, String subtitle) => MediaItem(
-        id: '$_scheme://notice',
+        id: noticeId,
         title: title,
         artist: subtitle,
         playable: false,
