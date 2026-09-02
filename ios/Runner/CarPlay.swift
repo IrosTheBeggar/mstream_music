@@ -1,5 +1,6 @@
 import CarPlay
 import Flutter
+import MediaPlayer
 import UIKit
 
 /// The CarPlay scene. CarPlay hands us an interface controller; everything the
@@ -38,6 +39,10 @@ final class CarPlayBridge: NSObject {
   private var rootTemplate: CPListTemplate?
   private var dartReady = false
   private var observingNowPlaying = false
+  /// shuffle / repeat ("none" | "all" | "one") / Auto DJ, as last pushed by Dart.
+  private var modes: (shuffle: Bool, repeat: String, autoDJ: Bool) = (false, "none", false)
+  /// The Now Playing buttons' actions in display order (the debug hook presses them).
+  private var nowPlayingActions: [() -> Void] = []
 
   init(messenger: FlutterBinaryMessenger) {
     channel = FlutterMethodChannel(name: "mstream/carplay", binaryMessenger: messenger)
@@ -50,6 +55,15 @@ final class CarPlayBridge: NSObject {
         self?.dartReady = true
         NSLog("[carplay] dart ready (car connected: %d)", self?.interfaceController == nil ? 0 : 1)
         self?.loadRoot()
+        result(nil)
+      case "modes":
+        if let m = call.arguments as? [String: Any] {
+          self?.modes = (
+            m["shuffle"] as? Bool ?? false,
+            m["repeat"] as? String ?? "none",
+            m["autoDJ"] as? Bool ?? false)
+          self?.applyModes()
+        }
         result(nil)
       default:
         #if DEBUG
@@ -75,6 +89,7 @@ final class CarPlayBridge: NSObject {
         "dartReady": dartReady,
         "depth": ic?.templates.count ?? 0,
         "top": top.map { String(describing: type(of: $0)) } ?? "none",
+        "modes": ["shuffle": modes.shuffle, "repeat": modes.repeat, "autoDJ": modes.autoDJ],
       ]
       if let list = top as? CPListTemplate {
         state["title"] = list.title ?? ""
@@ -100,6 +115,14 @@ final class CarPlayBridge: NSObject {
       ic.popTemplate(animated: false) { _, _ in result(nil) }
     case "debugUpNext":
       showQueue()
+      result(nil)
+    case "debugButton":
+      let index = call.arguments as? Int ?? 0
+      guard index < nowPlayingActions.count else {
+        result(FlutterError(code: "no-button", message: "no Now Playing button \(index)", details: nil))
+        return true
+      }
+      nowPlayingActions[index]()
       result(nil)
     default:
       return false
@@ -215,6 +238,34 @@ final class CarPlayBridge: NSObject {
       nowPlaying.add(self)
       observingNowPlaying = true
     }
+    applyModes()
+  }
+
+  /// Shuffle, repeat and Auto DJ on the Now Playing screen. CarPlay draws the
+  /// two system buttons from the remote command center's current shuffle /
+  /// repeat types (audio_service never sets those on iOS, so this does), and
+  /// Auto DJ is an image button whose selected state mirrors the app's.
+  private func applyModes() {
+    let center = MPRemoteCommandCenter.shared()
+    center.changeShuffleModeCommand.currentShuffleType = modes.shuffle ? .items : .off
+    center.changeRepeatModeCommand.currentRepeatType =
+      modes.repeat == "one" ? .one : (modes.repeat == "all" ? .all : .off)
+    guard interfaceController != nil else { return }
+    let shuffle = CPNowPlayingShuffleButton { [weak self] _ in self?.toggle("toggleShuffle") }
+    let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in self?.toggle("cycleRepeat") }
+    let djImage = UIImage(systemName: "sparkles") ?? UIImage()
+    let autoDJ = CPNowPlayingImageButton(image: djImage) { [weak self] _ in self?.toggle("toggleAutoDJ") }
+    autoDJ.isSelected = modes.autoDJ
+    nowPlayingActions = [
+      { [weak self] in self?.toggle("toggleShuffle") },
+      { [weak self] in self?.toggle("cycleRepeat") },
+      { [weak self] in self?.toggle("toggleAutoDJ") },
+    ]
+    CPNowPlayingTemplate.shared.updateNowPlayingButtons([shuffle, repeatButton, autoDJ])
+  }
+
+  private func toggle(_ method: String) {
+    invoke(method, nil) { _ in }
   }
 
   private func showQueue() {

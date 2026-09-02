@@ -4,6 +4,7 @@ import 'package:mstream_music/media/auto_browse.dart';
 import 'package:mstream_music/native/carplay_bridge.dart';
 
 void main() {
+  _modesTests();
   group('CarPlayBridge.encodeItem', () {
     test('a browse node: not playable, not a notice, no art', () {
       const m = MediaItem(
@@ -46,6 +47,38 @@ void main() {
       final e = CarPlayBridge.encodeItem(m);
       expect(e['notice'], isTrue);
       expect(e['playable'], isFalse);
+    });
+  });
+}
+
+void _modesTests() {
+  group('CarPlayBridge.nextRepeatMode', () {
+    test('cycles off → all → one → off, like the player panel', () {
+      expect(CarPlayBridge.nextRepeatMode(AudioServiceRepeatMode.none),
+          AudioServiceRepeatMode.all);
+      expect(CarPlayBridge.nextRepeatMode(AudioServiceRepeatMode.all),
+          AudioServiceRepeatMode.one);
+      expect(CarPlayBridge.nextRepeatMode(AudioServiceRepeatMode.one),
+          AudioServiceRepeatMode.none);
+      expect(CarPlayBridge.nextRepeatMode(AudioServiceRepeatMode.group),
+          AudioServiceRepeatMode.one);
+    });
+  });
+
+  group('CarPlayBridge.encodeModes', () {
+    test('plain values for the car', () {
+      expect(
+          CarPlayBridge.encodeModes(
+              shuffle: true, repeat: AudioServiceRepeatMode.one, autoDJ: false),
+          {'shuffle': true, 'repeat': 'one', 'autoDJ': false});
+      expect(
+          CarPlayBridge.encodeModes(
+              shuffle: false, repeat: AudioServiceRepeatMode.group, autoDJ: true),
+          {'shuffle': false, 'repeat': 'all', 'autoDJ': true});
+      expect(
+          CarPlayBridge.encodeModes(
+              shuffle: false, repeat: AudioServiceRepeatMode.none, autoDJ: false)['repeat'],
+          'none');
     });
   });
 }
