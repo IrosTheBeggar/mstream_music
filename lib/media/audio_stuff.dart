@@ -2977,6 +2977,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seekBackward,
         // Lets Google Assistant route "play <X> on mStream" to playFromSearch.
         MediaAction.playFromSearch,
+        // Enables the OS shuffle / repeat remote commands (lock screen,
+        // CarPlay's Now Playing draws its shuffle and repeat buttons from
+        // them). Both handler methods exist and are safe headless.
+        MediaAction.setShuffleMode,
+        MediaAction.setRepeatMode,
       },
       shuffleMode: shuffle,
       repeatMode: repeat,

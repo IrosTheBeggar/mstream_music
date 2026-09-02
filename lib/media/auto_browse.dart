@@ -20,6 +20,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:http/http.dart' as http;
@@ -111,6 +112,9 @@ Future<void> initAutoArt() async {
 /// items ("Invalid album art uri") but loads a local content:// one — the
 /// provider downloads + caches the bytes.
 String _artContentUri(String remoteUrl) {
+  // CarPlay's Swift side fetches the remote URL itself (CarPlayArtLoader);
+  // content:// is Android's ArtContentProvider.
+  if (Platform.isIOS) return remoteUrl;
   final authority = _artAuthority ??
       '${isPlayBuild ? 'mstream.music' : 'mstream.music.plus'}.art';
   return Uri(
@@ -123,6 +127,59 @@ String _artContentUri(String remoteUrl) {
 
 /// Android Auto browse + playback for the active mStream server.
 class AutoBrowse {
+  /// The id every informational row carries (no server, load failed, empty
+  /// list); tapping it yields no children. CarPlay reads it to disable the row.
+  static const String noticeId = '$_scheme://notice';
+
+  /// The browse node for [artist] on the server [localname] (its albums) —
+  /// what CarPlay's Now Playing artist button opens.
+  static String artistId(String localname, String artist) =>
+      _id('artist', {'s': localname, 'v': artist});
+
+  /// What kind of node an id is: track, album, artist, shuffle, … (the id's
+  /// host), or null for anything outside our scheme.
+  static String? nodeKind(String id) {
+    final u = Uri.tryParse(id);
+    return (u != null && u.scheme == _scheme) ? u.host : null;
+  }
+
+  /// Plays a node of any playable kind — a track (its container from that
+  /// point), an album or an artist (first album) from the top, shuffle. The
+  /// Siri "play `<X>` on mStream" handler lands here with whatever [search]
+  /// result was chosen. Never throws.
+  static Future<void> playNode(String id) async {
+    try {
+      await ServerManager().ensureLoaded();
+      final Uri? u = Uri.tryParse(id);
+      if (u == null || u.scheme != _scheme) return;
+      switch (u.host) {
+        case 'track':
+        case 'shuffle':
+        case 'resume':
+          await play(id);
+          return;
+      }
+      final qp = u.queryParameters;
+      final Server? srv = _serverForId(qp['s']);
+      final String? v = qp['v'];
+      if (srv == null || v == null) return;
+      List<DisplayItem> songs = const [];
+      if (u.host == 'album') {
+        songs = await AutoApi.albumSongs(srv, v);
+      } else if (u.host == 'artist') {
+        final album = _firstNamed(await AutoApi.artistAlbums(srv, v));
+        if (album != null) songs = await AutoApi.albumSongs(srv, album);
+      }
+      if (songs.isEmpty) {
+        appLog('[auto] playNode($id): nothing playable');
+        return;
+      }
+      await playFromHere(songs, 0);
+    } catch (e) {
+      appLog('[auto] playNode($id) failed: $e');
+    }
+  }
+
   // Short-lived per-server cache of the full albums/artists lists, so A–Z
   // bucket drill-ins reuse the parent tab's fetch instead of re-GETting the
   // whole library on every letter tap.
@@ -703,7 +760,7 @@ class AutoBrowse {
   /// A non-playable informational row (no server / load error). Tapping it
   /// returns no children (the id isn't in our scheme).
   static MediaItem _notice(String title, String subtitle) => MediaItem(
-        id: '$_scheme://notice',
+        id: noticeId,
         title: title,
         artist: subtitle,
         playable: false,
