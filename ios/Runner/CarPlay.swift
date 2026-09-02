@@ -254,11 +254,12 @@ final class CarPlayBridge: NSObject {
     center.changeShuffleModeCommand.currentShuffleType = modes.shuffle ? .items : .off
     center.changeRepeatModeCommand.currentRepeatType =
       modes.repeat == "one" ? .one : (modes.repeat == "all" ? .all : .off)
-    guard interfaceController != nil else { return }
+    guard let ic = interfaceController else { return }
     let shuffle = CPNowPlayingShuffleButton { [weak self] _ in self?.toggle("toggleShuffle") }
     let repeatButton = CPNowPlayingRepeatButton { [weak self] _ in self?.toggle("cycleRepeat") }
-    let djImage = UIImage(systemName: "sparkles") ?? UIImage()
-    let autoDJ = CPNowPlayingImageButton(image: djImage) { [weak self] _ in self?.toggle("toggleAutoDJ") }
+    let autoDJ = CPNowPlayingImageButton(image: autoDJImage(for: ic)) { [weak self] _ in
+      self?.toggle("toggleAutoDJ")
+    }
     autoDJ.isSelected = modes.autoDJ
     nowPlayingActions = [
       { [weak self] in self?.toggle("toggleShuffle") },
@@ -270,6 +271,43 @@ final class CarPlayBridge: NSObject {
 
   private func toggle(_ method: String) {
     invoke(method, nil) { _ in }
+  }
+
+  /// The app's Auto DJ control is a text pill. CarPlay's Now Playing has no
+  /// text button type — every custom button is an image button, capped at
+  /// CPNowPlayingButtonMaximumImageSize — so the label is rendered into the
+  /// image. Rendered at the car display's own scale: the display uses the
+  /// bitmap's pixels as-is, so a 3x bitmap came out cropped to its top-left
+  /// corner (the letter "A" of a two-line "Auto DJ"). A template image, so
+  /// CarPlay tints it and draws the selected-state pill behind it.
+  private var autoDJImageCache: (scale: CGFloat, image: UIImage)?
+  private func autoDJImage(for ic: CPInterfaceController) -> UIImage {
+    let scale = max(1, ic.carTraitCollection.displayScale)
+    if let cached = autoDJImageCache, cached.scale == scale { return cached.image }
+    let size = CPNowPlayingButtonMaximumImageSize
+    NSLog("[carplay] button image %.0fx%.0f @%.0fx", size.width, size.height, scale)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = scale
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.alignment = .center
+    let text = NSAttributedString(
+      string: "DJ",
+      attributes: [
+        .font: UIFont.systemFont(ofSize: min(20, size.height * 0.6), weight: .bold),
+        .foregroundColor: UIColor.white,
+        .paragraphStyle: paragraph,
+      ])
+    let bounds = text.boundingRect(
+      with: CGSize(width: size.width, height: .greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin], context: nil)
+    let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+      let origin = CGPoint(x: 0, y: max(0, (size.height - bounds.height) / 2))
+      text.draw(
+        with: CGRect(origin: origin, size: CGSize(width: size.width, height: bounds.height)),
+        options: [.usesLineFragmentOrigin], context: nil)
+    }.withRenderingMode(.alwaysTemplate)
+    autoDJImageCache = (scale, image)
+    return image
   }
 
   private func showQueue() {
