@@ -69,15 +69,24 @@ void _modesTests() {
     test('plain values for the car', () {
       expect(
           CarPlayBridge.encodeModes(
-              shuffle: true, repeat: AudioServiceRepeatMode.one, autoDJ: false),
-          {'shuffle': true, 'repeat': 'one', 'autoDJ': false});
+              shuffle: true,
+              repeat: AudioServiceRepeatMode.one,
+              autoDJ: false,
+              playing: true),
+          {'shuffle': true, 'repeat': 'one', 'autoDJ': false, 'playing': true});
       expect(
           CarPlayBridge.encodeModes(
-              shuffle: false, repeat: AudioServiceRepeatMode.group, autoDJ: true),
-          {'shuffle': false, 'repeat': 'all', 'autoDJ': true});
+              shuffle: false,
+              repeat: AudioServiceRepeatMode.group,
+              autoDJ: true,
+              playing: false),
+          {'shuffle': false, 'repeat': 'all', 'autoDJ': true, 'playing': false});
       expect(
           CarPlayBridge.encodeModes(
-              shuffle: false, repeat: AudioServiceRepeatMode.none, autoDJ: false)['repeat'],
+              shuffle: false,
+              repeat: AudioServiceRepeatMode.none,
+              autoDJ: false,
+              playing: false)['repeat'],
           'none');
     });
   });

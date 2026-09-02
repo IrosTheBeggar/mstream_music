@@ -62,6 +62,10 @@ final class CarPlayBridge: NSObject {
             m["shuffle"] as? Bool ?? false,
             m["repeat"] as? String ?? "none",
             m["autoDJ"] as? Bool ?? false)
+          // CarPlay's play/pause button reads this, not the playback rate;
+          // audio_service only sets it on macOS.
+          MPNowPlayingInfoCenter.default().playbackState =
+            (m["playing"] as? Bool ?? false) ? .playing : .paused
           self?.applyModes()
         }
         result(nil)

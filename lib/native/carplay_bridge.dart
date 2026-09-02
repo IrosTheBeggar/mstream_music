@@ -145,7 +145,7 @@ class CarPlayBridge {
   static void _watchModes() {
     final handler = MediaManager().audioHandler;
     _playbackSub ??= handler.playbackState
-        .map((s) => (s.shuffleMode, s.repeatMode))
+        .map((s) => (s.shuffleMode, s.repeatMode, s.playing))
         .distinct()
         .listen((_) => _pushModes());
     _customSub ??= handler.customState.listen((_) => _pushModes());
@@ -161,7 +161,8 @@ class CarPlayBridge {
           encodeModes(
               shuffle: state.shuffleMode == AudioServiceShuffleMode.all,
               repeat: state.repeatMode,
-              autoDJ: handler.autoDJServer != null));
+              autoDJ: handler.autoDJServer != null,
+              playing: state.playing));
     } catch (e) {
       appLog('[carplay] modes push failed: $e');
     }
@@ -178,11 +179,15 @@ class CarPlayBridge {
         AudioServiceRepeatMode.one => AudioServiceRepeatMode.none,
       };
 
-  /// What the car is told about the three toggles.
+  /// What the car is told about the three toggles, plus whether playback is
+  /// running: CarPlay's Now Playing draws its play/pause button from
+  /// MPNowPlayingInfoCenter.playbackState, which audio_service sets only on
+  /// macOS, so the Swift side sets it from this.
   static Map<String, Object?> encodeModes({
     required bool shuffle,
     required AudioServiceRepeatMode repeat,
     required bool autoDJ,
+    required bool playing,
   }) =>
       {
         'shuffle': shuffle,
@@ -192,6 +197,7 @@ class CarPlayBridge {
           AudioServiceRepeatMode.none => 'none',
         },
         'autoDJ': autoDJ,
+        'playing': playing,
       };
 
   /// The subset of a MediaItem the car needs, as plain values. `notice` marks
