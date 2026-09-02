@@ -3398,7 +3398,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     // add followed by seek(index + 1) reached ExoPlayer with an index past the
     // end (IllegalSeekPositionException) and left the darwin player's index
     // out of range.
-    await addQueueItem(item);
+    // Tolerant of the platform insert throwing (Android's known just_audio
+    // IllegalArgumentException on concatenatingInsertAll): the item is already
+    // in the queue subject by then, and an unawaited add used to let the pick
+    // proceed regardless — awaiting it must not turn that into an aborted
+    // pick with no resume.
+    try {
+      await addQueueItem(item);
+    } catch (e) {
+      appLog('[dj] queue insert threw (continuing): $e');
+    }
     final resume = wasParked && _parkedForDJ;
     _releasePark();
 

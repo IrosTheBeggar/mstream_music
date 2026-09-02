@@ -291,7 +291,8 @@ class ServerManager {
         await awaitTunnelReady(
             server: server,
             timeout: const Duration(seconds: 12),
-            extendWhileDialing: false);
+            extendWhileDialing: false,
+            caller: 'ping');
       }
       if (server.tunnelPort == null) {
         if (throwErr) throw Exception('iroh tunnel not connected');
@@ -444,7 +445,11 @@ class ServerManager {
     final next = (s != null && s.isIroh) ? s : null;
     if (next?.localname == _queueIrohServer?.localname) return;
     _queueIrohServer = next;
-    unawaited(ensureActiveTunnel(reason: 'queue-server', bypassBackoff: true));
+    // No backoff bypass: this fires from the launch queue restore as well as
+    // from a user queuing songs, and a bypass here re-dialed a REJECTED code
+    // 0.3s after the launch dial was refused (simulator run 2026-09-01).
+    // When nothing failed it dials right away; otherwise the timer owns it.
+    unawaited(ensureActiveTunnel(reason: 'queue-server'));
   }
 
   // Which iroh server the single tunnel should serve: the browsed server when it
@@ -782,7 +787,9 @@ class ServerManager {
         appLog('[iroh] pairing rejected — waiting for a repair, not re-dialing');
         return;
       case NetworkChangeRemedy.leaveToSupervisor:
-        appLog('[iroh] leaving the reconnect to the supervisor');
+        appLog(native == IrohTunnelStatus.connected
+            ? '[iroh] network just re-attached — leaving the connection to iroh'
+            : '[iroh] leaving the reconnect to the supervisor');
         return;
       case NetworkChangeRemedy.escalate:
         await _hardRebuild(s,
