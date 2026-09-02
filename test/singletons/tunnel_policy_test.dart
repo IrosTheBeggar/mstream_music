@@ -149,6 +149,55 @@ void main() {
     });
   });
 
+  group('TunnelPolicy.onUserEscalate', () {
+    test('Retry on a reconnecting tunnel kicks in place first', () {
+      expect(TunnelPolicy.onUserEscalate(canKick: true, sinceKick: null),
+          DeadTunnelRemedy.kick);
+      expect(
+          TunnelPolicy.onUserEscalate(
+              canKick: true, sinceKick: const Duration(seconds: 45)),
+          DeadTunnelRemedy.kick);
+    });
+
+    test('a second tap inside the post-kick window → fresh endpoint', () {
+      expect(
+          TunnelPolicy.onUserEscalate(
+              canKick: true, sinceKick: const Duration(seconds: 20)),
+          DeadTunnelRemedy.hardRebuild);
+    });
+
+    test('no kick support → hard rebuild', () {
+      expect(TunnelPolicy.onUserEscalate(canKick: false, sinceKick: null),
+          DeadTunnelRemedy.hardRebuild);
+    });
+  });
+
+  group('TunnelPolicy.probeIsDefinitive', () {
+    test('only "refused" skips the second probe', () {
+      expect(TunnelPolicy.probeIsDefinitive('refused'), isTrue);
+      expect(TunnelPolicy.probeIsDefinitive('timeout'), isFalse);
+      expect(TunnelPolicy.probeIsDefinitive('reset'), isFalse);
+      expect(TunnelPolicy.probeIsDefinitive('http 500'), isFalse);
+    });
+  });
+
+  group('TunnelPolicy.retryAfterFailedDial', () {
+    test('a dial the network returned under restarts the ladder at 2s', () {
+      final r = TunnelPolicy.retryAfterFailedDial(
+          attempt: 3, networkReturnedDuringDial: true);
+      expect(r.attempt, 0);
+      expect(r.delay, TunnelTiming.retryAfterNetworkReturn);
+      expect(r.delay, const Duration(seconds: 2));
+    });
+
+    test('otherwise the ladder continues from the same rung', () {
+      final r = TunnelPolicy.retryAfterFailedDial(
+          attempt: 2, networkReturnedDuringDial: false);
+      expect(r.attempt, 2);
+      expect(r.delay, const Duration(seconds: 20));
+    });
+  });
+
   group('TunnelPolicy.shouldEscalate', () {
     bool esc({
       IrohTunnelStatus native = IrohTunnelStatus.reconnecting,

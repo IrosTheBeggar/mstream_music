@@ -74,6 +74,11 @@ class TunnelTiming {
   static const Duration retryLongDelay = Duration(minutes: 5);
   static const int retryLongAfter = 10;
 
+  /// A cold dial that was in flight when the network came back failed for
+  /// reasons that are gone; the next one goes out almost at once (a small gap
+  /// so a flapping transport does not stack dials).
+  static const Duration retryAfterNetworkReturn = Duration(seconds: 2);
+
   /// Bound on a queue-end park waiting for the tunnel to come back.
   static const Duration parkMax = Duration(minutes: 30);
 
@@ -178,6 +183,29 @@ class TunnelPolicy {
     return DeadTunnelRemedy.wait;
   }
 
+  /// The banner's Retry on a tunnel whose supervisor is already re-dialing.
+  /// A kick first — same port and token: the native side nudges iroh, re-binds
+  /// the loopback listener and re-dials at once — because a fresh endpoint
+  /// would cold-dial into the same dead zone (33s per attempt on cellular,
+  /// Galaxy S25 round) and rotate every URL. A second tap inside the
+  /// post-kick window means the kick did not take: the user gets the fresh
+  /// endpoint.
+  static DeadTunnelRemedy onUserEscalate({
+    required bool canKick,
+    required Duration? sinceKick,
+  }) {
+    if (canKick &&
+        (sinceKick == null || sinceKick >= TunnelTiming.postKickWatchdog)) {
+      return DeadTunnelRemedy.kick;
+    }
+    return DeadTunnelRemedy.hardRebuild;
+  }
+
+  /// A probe outcome that needs no second opinion: "refused" means the
+  /// loopback listener is gone (iOS reaps it during a suspension while the
+  /// QUIC connection under it survives), which no path migration produces.
+  static bool probeIsDefinitive(String reason) => reason == 'refused';
+
   /// Status-poll watchdog: escalate a supervisor that is not converging.
   ///
   /// [relayReachable] is the native side's word on whether its home relay is
@@ -215,6 +243,22 @@ class TunnelPolicy {
     }
     final i = attempt.clamp(0, TunnelTiming.retryDelaySeconds.length - 1);
     return Duration(seconds: TunnelTiming.retryDelaySeconds[i]);
+  }
+
+  /// After a failed cold dial: where the retry ladder continues. A dial that
+  /// was already in flight when the network came back was doomed from its
+  /// first packet (lost in the dead zone; QUIC's retransmit backoff does the
+  /// rest — Galaxy S25: Wi-Fi back at :19, that dial still timed out at :25,
+  /// the next one took 3s), so the ladder restarts with a near-immediate
+  /// attempt instead of taking the next rung.
+  static ({int attempt, Duration delay}) retryAfterFailedDial({
+    required int attempt,
+    required bool networkReturnedDuringDial,
+  }) {
+    if (networkReturnedDuringDial) {
+      return (attempt: 0, delay: TunnelTiming.retryAfterNetworkReturn);
+    }
+    return (attempt: attempt, delay: retryDelay(attempt));
   }
 
   /// Whether an ensure should skip a cold dial because one failed recently and

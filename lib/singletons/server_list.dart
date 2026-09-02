@@ -55,6 +55,9 @@ class ServerManager {
   // while an iroh server is the tunnel's target.
   Timer? _retryTimer;
   int _retryAttempt = 0;
+  // A connectivity event landed while a cold dial was in flight: that dial
+  // was doomed from its first packet, so its failure restarts the ladder fast.
+  bool _networkReturnedDuringDial = false;
   // Ensures queued on _tunnelChain but not finished (awaitTunnelReady extends
   // its deadline while one is pending, not just while a dial is in flight).
   int _pendingEnsures = 0;
@@ -580,6 +583,7 @@ class ServerManager {
         _stopTunnel('switch/$reason');
       }
       _tunnelStarting = true;
+      _networkReturnedDuringDial = false;
       _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
       final sw = Stopwatch()..start();
       try {
@@ -640,7 +644,15 @@ class ServerManager {
         if (_startRejected) {
           _cancelRetry();
         } else {
-          _scheduleRetry();
+          final next = TunnelPolicy.retryAfterFailedDial(
+              attempt: _retryAttempt,
+              networkReturnedDuringDial: _networkReturnedDuringDial);
+          _retryAttempt = next.attempt;
+          _scheduleRetry(
+              delay: next.delay,
+              note: _networkReturnedDuringDial
+                  ? ' — the network came back mid-dial'
+                  : '');
         }
       } finally {
         _tunnelStarting = false;
@@ -689,10 +701,10 @@ class ServerManager {
   /// Arm the retry after a failed cold dial (invariant 4). The attempt index is
   /// only reset by a success or a target change, so a burst of callers cannot
   /// shorten the backoff.
-  void _scheduleRetry() {
+  void _scheduleRetry({Duration? delay, String note = ''}) {
     _retryTimer?.cancel();
-    final d = TunnelPolicy.retryDelay(_retryAttempt);
-    appLog('[iroh] retry #${_retryAttempt + 1} in ${d.inSeconds}s');
+    final d = delay ?? TunnelPolicy.retryDelay(_retryAttempt);
+    appLog('[iroh] retry #${_retryAttempt + 1} in ${d.inSeconds}s$note');
     _retryTimer = Timer(d, () {
       _retryTimer = null;
       final s = _tunnelTargetServer();
@@ -771,6 +783,9 @@ class ServerManager {
     final s = _tunnelTargetServer();
     if (!IrohTunnel.isSupported || s == null) return;
     IrohTunnel.instance.networkChanged();
+    if (!user && reason.startsWith('connectivity:') && _tunnelStarting) {
+      _networkReturnedDuringDial = true;
+    }
     final native = IrohTunnel.instance.status;
     final code = _activeTunnelCode;
     final port = s.tunnelPort;
@@ -792,8 +807,20 @@ class ServerManager {
             : '[iroh] leaving the reconnect to the supervisor');
         return;
       case NetworkChangeRemedy.escalate:
-        await _hardRebuild(s,
-            code: code, port: port, reason: 'escalate/$reason', user: user);
+        // The banner's Retry while the supervisor re-dials: kick in place
+        // first (same port — a fresh endpoint cold-dials into the same dead
+        // zone and rotates every URL; Galaxy S25 round: 24s vs 8s); a second
+        // tap inside the post-kick window gets the fresh endpoint.
+        switch (TunnelPolicy.onUserEscalate(
+            canKick: IrohTunnel.instance.hasKick,
+            sinceKick: _since(_kickedAt))) {
+          case DeadTunnelRemedy.kick:
+            await _kickTunnel(s, code: code, port: port, reason: reason);
+          case DeadTunnelRemedy.hardRebuild:
+          case DeadTunnelRemedy.wait:
+            await _hardRebuild(s,
+                code: code, port: port, reason: 'escalate/$reason', user: user);
+        }
         return;
       case NetworkChangeRemedy.probe:
         if (await _probeTwice(s, code: code, port: port)) {
@@ -837,6 +864,15 @@ class ServerManager {
     appLog('[iroh] probe #1 ${r1.ok ? 'passed' : 'failed'} '
         '(${r1.reason}, ${r1.ms}ms, native=${IrohTunnel.instance.status.name})');
     if (r1.ok) return false;
+    // "refused" on loopback is definitive — nothing listens on the port any
+    // more. The second probe exists to tell a path migration from a zombie,
+    // and a migration never refuses, so waiting for it would only add 7s to
+    // every iOS thaw (iPhone X round: kick at +10s → +3s).
+    if (TunnelPolicy.probeIsDefinitive(r1.reason) &&
+        _sameTunnel(s, code, port) &&
+        IrohTunnel.instance.status == IrohTunnelStatus.connected) {
+      return true;
+    }
     final wait = TunnelTiming.probeSecondAt - DateTime.now().difference(t0);
     if (wait > Duration.zero) await Future<void>.delayed(wait);
     if (!_sameTunnel(s, code, port) ||
@@ -863,13 +899,7 @@ class ServerManager {
         sinceKick: _since(_kickedAt),
         userInitiated: user)) {
       case DeadTunnelRemedy.kick:
-        await _mutateTunnel('kick/$reason', () {
-          if (!_sameTunnel(s, code, port)) return;
-          _kickedAt = DateTime.now();
-          _notConnectedSince ??= _kickedAt;
-          appLog('[iroh] kicking the tunnel in place ($reason) — port $port kept');
-          IrohTunnel.instance.kick();
-        });
+        await _kickTunnel(s, code: code, port: port, reason: reason);
       case DeadTunnelRemedy.hardRebuild:
         await _hardRebuild(s,
             code: code,
@@ -881,6 +911,22 @@ class ServerManager {
         appLog('[iroh] tunnel dead but a rebuild ran '
             '${_since(_lastHardRebuildAt)?.inSeconds}s ago — waiting');
     }
+  }
+
+  /// The in-place remedy: the native force-reconnect (network nudge, loopback
+  /// listener re-bind, close + immediate re-dial) on the same port and token,
+  /// so nothing built against the tunnel goes stale.
+  Future<void> _kickTunnel(Server s,
+      {required String? code,
+      required int? port,
+      required String reason}) async {
+    await _mutateTunnel('kick/$reason', () {
+      if (!_sameTunnel(s, code, port)) return;
+      _kickedAt = DateTime.now();
+      _notConnectedSince ??= _kickedAt;
+      appLog('[iroh] kicking the tunnel in place ($reason) — port $port kept');
+      IrohTunnel.instance.kick();
+    });
   }
 
   /// Stop the native tunnel and dial fresh (new port + token). The one path
