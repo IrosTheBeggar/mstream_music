@@ -1897,10 +1897,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
     unawaited(() async {
       await autoDJ();
-      if (_djPickPending) {
-        _releasePark();
-        stop();
-      }
+      if (!_djPickPending) return; // landed; the park-derived resume ran
+      // The tunnel SAID it was serving and the pick still failed. On real
+      // cellular the native status can read connected for ~70s after the
+      // link dies (Galaxy S25, airplane mode), so this is most often the
+      // dead-but-connected window, not a broken server: park (bounded) and
+      // ask the tunnel for ground truth — a failed probe rebuilds it, and the
+      // resulting connected edge retries the pick and resumes.
+      appLog('[dj] queue-end retry failed — parking and re-checking the tunnel');
+      _parkForDeferredPick();
+      final dj = autoDJServer;
+      if (dj != null) unawaited(ServerManager().reverifyTunnel(dj));
     }());
   }
 
@@ -1960,10 +1967,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     required bool tunnelServes,
     required bool pickInFlight,
   }) {
-    if (!(onLocalBackend && isIrohDJ && djPickPending && playIntent)) {
+    // A pick still in flight is owed too: it lands with the park-derived
+    // resume, or fails and sets the pending flag for the tunnel's edge. On
+    // a Galaxy the last track ended 3s after its top-up POST went out.
+    final owed = djPickPending || pickInFlight;
+    if (!(onLocalBackend && isIrohDJ && owed && playIntent)) {
       return QueueEndAction.stop;
     }
-    if (tunnelServes && !pickInFlight) return QueueEndAction.retryPick;
+    if (pickInFlight) return QueueEndAction.park;
+    if (tunnelServes) return QueueEndAction.retryPick;
     return QueueEndAction.park;
   }
 
@@ -2993,6 +3005,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     final dj = autoDJServer!;
     if (shouldDeferDJPick(
         isIroh: dj.isIroh, tunnelServes: ServerManager().tunnelServes(dj))) {
+      // Owed from THIS moment, not from when the wait gives up: a track that
+      // ends inside the 12s wait (a short track, a seek to the end — seen on
+      // a Galaxy: completed 11s after the top-up started) would otherwise
+      // reach the queue end with nothing pending and stop instead of park.
+      // Cleared only by a pick that lands.
+      _djPickPending = true;
       final ready = await ServerManager().awaitTunnelReady(
           server: dj,
           timeout: const Duration(seconds: 12),
@@ -3000,11 +3018,11 @@ class AudioPlayerHandler extends BaseAudioHandler
           caller: 'dj');
       if (epoch != _djSessionEpoch) return;
       if (!ready) {
-        if (!_djPickPending) {
+        if (!_djFailLogged) {
+          _djFailLogged = true;
           appLog('[dj] tunnel not serving ${dj.localname} — '
               'pick deferred until it is back');
         }
-        _djPickPending = true;
         return;
       }
     }
@@ -3291,6 +3309,12 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
         _djPickPending = true;
         _deferredPickFailures++;
+        // Parked on this pick and the tunnel still claims to serve: ask for
+        // ground truth now rather than waiting up to a minute for the idle
+        // timeout to flip the status (see _retryPickAtQueueEnd).
+        if (_parkedForDJ && dj.isIroh && ServerManager().tunnelServes(dj)) {
+          unawaited(ServerManager().reverifyTunnel(dj));
+        }
         return;
       }
 

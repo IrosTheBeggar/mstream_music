@@ -37,6 +37,15 @@ void main() {
       expect(act(tunnelServes: true, pickInFlight: true), QueueEndAction.park);
     });
 
+    // The top-up POST is out but has not failed yet (nothing pending): the
+    // pick is still owed — it lands and resumes, or fails into pending.
+    test('pick in flight with nothing pending yet → park', () {
+      expect(act(djPickPending: false, pickInFlight: true), QueueEndAction.park);
+      expect(
+          act(djPickPending: false, pickInFlight: true, tunnelServes: true),
+          QueueEndAction.park);
+    });
+
     test('no pick pending (a normal end) → stop', () {
       expect(act(djPickPending: false), QueueEndAction.stop);
       expect(act(djPickPending: false, tunnelServes: true),
