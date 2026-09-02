@@ -126,6 +126,10 @@ class MyCustomFormState extends State<MyCustomForm> {
   bool? _irohTestSuccess;
   // Live tunnel port after a passing test (null = no tunnel up).
   int? _irohPort;
+  // The exact pairing code the test tunnel was dialed for — tunnels are keyed
+  // by code natively, and the text field can be edited after a test, so stops
+  // must use this, not the field's current text.
+  String? _irohTestedCode;
   // Test passed → reveal the sign-in form.
   bool _irohSignedInReady = false;
   bool _irohPublic = false;
@@ -460,7 +464,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     _irohUserCtrl.dispose();
     _irohPassCtrl.dispose();
     // A tunnel left running from a test that was never saved is torn down here.
-    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    _stopTestTunnel();
     ServerManager().clearPendingSelfSigned();
     LanDiscovery().stop();
 
@@ -1236,13 +1240,22 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Strings are intentionally plain English for this first slice; localize via
   // the .arb files once the flow is confirmed end to end.
 
+  // Stop the not-yet-adopted test tunnel, if this screen has one up. Safe to
+  // call any time: no-ops when nothing was dialed, and never touches the
+  // tunnel once the server was saved (it belongs to ServerManager then).
+  void _stopTestTunnel() {
+    final code = _irohTestedCode;
+    if (code != null && !_irohSaved) IrohTunnel.instance.stop(code);
+    _irohTestedCode = null;
+  }
+
   // Editing/replacing the code invalidates a prior test: drop the (now stale)
   // tunnel and hide the sign-in form.
   void _clearIrohTestResult() {
     if (_irohTestResult == null && !_irohSignedInReady && _irohPort == null) {
       return;
     }
-    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    _stopTestTunnel();
     setState(() {
       _irohTestResult = null;
       _irohTestSuccess = null;
@@ -1255,7 +1268,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
     if (text != null && text.isNotEmpty && mounted) {
-      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+      _stopTestTunnel();
       setState(() {
         _irohCodeCtrl.text = text;
         _irohTestResult = null;
@@ -1284,7 +1297,7 @@ class MyCustomFormState extends State<MyCustomForm> {
     final code = await Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const IrohScannerPage()));
     if (code != null && code.trim().isNotEmpty && mounted) {
-      if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+      _stopTestTunnel();
       setState(() {
         _irohCodeCtrl.text = code.trim();
         _irohTestResult = null;
@@ -1310,7 +1323,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       return;
     }
     // Re-test: drop any tunnel left from a previous test (the code may differ).
-    if (_irohPort != null && !_irohSaved) IrohTunnel.instance.stop();
+    _stopTestTunnel();
     if (_connectingId != null) return; // a discovered pairing is mid-flight
     setState(() {
       _irohTesting = true;
@@ -1320,8 +1333,9 @@ class MyCustomFormState extends State<MyCustomForm> {
       _irohPort = null;
     });
     try {
+      _irohTestedCode = code;
       final port = await IrohTunnel.instance.start(code);
-      final lt = IrohTunnel.instance.localToken ?? '';
+      final lt = IrohTunnel.instance.localTokenOf(code) ?? '';
       final resp = await http
           .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
           .timeout(Duration(seconds: 10));
@@ -1334,14 +1348,14 @@ class MyCustomFormState extends State<MyCustomForm> {
         } catch (_) {}
       }
       if (!mounted) {
-        IrohTunnel.instance.stop();
+        _stopTestTunnel();
         return;
       }
       // Any response proves the tunnel carried HTTP to the server → keep it up
       // for sign-in + save.
       // Report the path the handshake landed on (it may upgrade direct↔relay
       // shortly after; this is the snapshot at test time).
-      final pathSuffix = switch (IrohTunnel.instance.pathKind) {
+      final pathSuffix = switch (IrohTunnel.instance.pathKindOf(code)) {
         IrohPathKind.direct => l.irohPathSuffixDirect,
         IrohPathKind.relay => l.irohPathSuffixRelay,
         IrohPathKind.unknown => '',
@@ -1364,7 +1378,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         // rather than wrongly saving a public server.
       }
       if (!mounted) {
-        IrohTunnel.instance.stop();
+        _stopTestTunnel();
         return;
       }
       setState(() {
@@ -1393,13 +1407,13 @@ class MyCustomFormState extends State<MyCustomForm> {
         await _openIrohSignIn();
       }
     } on IrohTunnelException catch (e) {
-      IrohTunnel.instance.stop();
+      _stopTestTunnel();
       _showIrohResult(false, e.message);
     } on TimeoutException {
-      IrohTunnel.instance.stop();
+      _stopTestTunnel();
       _showIrohResult(false, l.irohTunnelTimeout);
     } catch (e) {
-      IrohTunnel.instance.stop();
+      _stopTestTunnel();
       _showIrohResult(false, l.irohTunnelTestFailed('$e'));
     }
   }
@@ -1468,7 +1482,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       if (!_irohPublic) {
         final login = await http.post(
           Uri.parse(
-              'http://127.0.0.1:$port/api/v1/auth/login?__lt=${IrohTunnel.instance.localToken ?? ''}'),
+              'http://127.0.0.1:$port/api/v1/auth/login?__lt=${IrohTunnel.instance.localTokenOf(code) ?? ''}'),
           body: {
             'username': _irohUserCtrl.text,
             'password': _irohPassCtrl.text,
@@ -1537,9 +1551,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   Future<void> _connectDiscovered(DiscoveredServer server) async {
     final l = AppLocalizations.of(context);
     if (_connectingId != null) return; // one pairing at a time
-    // The manual paste/scan Test dials the SAME single native tunnel; two
-    // concurrent dials hand one flow the other's port and it silently binds
-    // the wrong server. The tiles and the Test button also disable while the
+    // The manual paste/scan Test shares this screen's single set of test-state
+    // fields (_irohPort/_irohTestedCode) — two concurrent flows would clobber
+    // each other's state. The tiles and the Test button also disable while the
     // sibling flow runs — this is the backstop.
     if (_irohTesting) return;
     if (ServerManager().hasIrohServer) {
@@ -1555,12 +1569,10 @@ class MyCustomFormState extends State<MyCustomForm> {
       _showIrohResult(false, l.lanUnreachable);
       return;
     }
-    // A leftover tunnel from a paste/scan test would collide (single native
-    // tunnel) — drop it first.
-    if (_irohPort != null && !_irohSaved) {
-      IrohTunnel.instance.stop();
-      _irohPort = null;
-    }
+    // This flow replaces the test state wholesale, so a leftover tunnel from a
+    // paste/scan test would leak — drop it first.
+    _stopTestTunnel();
+    _irohPort = null;
 
     // Full flavor: trust each candidate host's self-signed cert for the
     // bootstrap HTTP probes only (none is in serverList yet; the saved server
@@ -1654,13 +1666,14 @@ class MyCustomFormState extends State<MyCustomForm> {
       // 3) Start the tunnel from the code and prove it carries HTTP, mirroring
       //    _testIrohConnection.
       dialed = true;
+      _irohTestedCode = code;
       final port = await IrohTunnel.instance.start(code);
-      final lt = IrohTunnel.instance.localToken ?? '';
+      final lt = IrohTunnel.instance.localTokenOf(code) ?? '';
       await http
           .get(Uri.parse('http://127.0.0.1:$port/api/?__lt=$lt'))
           .timeout(Duration(seconds: 10));
       if (!mounted) {
-        IrohTunnel.instance.stop();
+        _stopTestTunnel();
         return;
       }
 
@@ -1672,13 +1685,13 @@ class MyCustomFormState extends State<MyCustomForm> {
       showGlobalSnack(l.connectionSuccessful);
       await _saveIrohServer(code: code, port: port, jwt: jwt);
     } on IrohTunnelException catch (e) {
-      if (dialed) IrohTunnel.instance.stop();
+      if (dialed) _stopTestTunnel();
       _showIrohResult(false, e.message);
     } on TimeoutException {
-      if (dialed) IrohTunnel.instance.stop();
+      if (dialed) _stopTestTunnel();
       _showIrohResult(false, l.irohTunnelTimeout);
     } catch (e) {
-      if (dialed) IrohTunnel.instance.stop();
+      if (dialed) _stopTestTunnel();
       _showIrohResult(false, l.irohTunnelTestFailed('$e'));
     } finally {
       for (final h in trusted) {

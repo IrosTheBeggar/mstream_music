@@ -30,10 +30,10 @@ fn main() {
         .unwrap_or(0);
 
     eprintln!("[client] starting iroh endpoint…");
-    match tunnel_start(code, local_port) {
+    match tunnel_start(code.clone(), local_port) {
         Ok(port) => {
             println!("LOCAL_PORT={port}");
-            if let Some(t) = tunnel_local_token() {
+            if let Some(t) = tunnel_local_token(&code) {
                 println!("LOCAL_TOKEN={t}");
             }
             println!("mStream reachable at http://127.0.0.1:{port}/api/");
@@ -47,7 +47,7 @@ fn main() {
 
     // Best-effort graceful close on Ctrl-C; the accept loop runs on the owned runtime.
     let _ = ctrlc_block();
-    tunnel_stop();
+    tunnel_stop(&code);
 }
 
 /// Park until SIGINT/Ctrl-C without pulling in an async runtime here.

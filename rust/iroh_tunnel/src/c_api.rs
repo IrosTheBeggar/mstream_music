@@ -5,6 +5,15 @@
 //! flutter_rust_bridge codegen step — no generator in the build, just one `.so`
 //! and a small Dart wrapper.
 //!
+//! ABI v2: tunnels are keyed by pairing code, so every per-tunnel entry point
+//! takes the code as its first argument and distinct codes can run concurrently.
+//! The symbol NAMES are unchanged from v1 on purpose: against a stale v1 binary
+//! (the committed iOS framework until build-ios.sh is re-run on a Mac) the extra
+//! argument lands in an unused register and the old single-tunnel semantics
+//! apply — exactly right while the app drives one tunnel at a time. The Dart
+//! side detects v1 via the absent [`mstream_iroh_abi_version`] symbol and keeps
+//! its one-iroh-server behavior there.
+//!
 //! Every entry point is **panic-guarded**: a panic in the tunnel/iroh code is
 //! captured (message + location) into the last-error slot and returned as an
 //! error, instead of unwinding across the `extern "C"` boundary and aborting the
@@ -22,6 +31,10 @@ use crate::ffi::{
     tunnel_is_active, tunnel_local_token, tunnel_network_changed, tunnel_path_kind, tunnel_start,
     tunnel_status, tunnel_stop,
 };
+
+/// Bumped whenever the C ABI changes shape. v2 = pairing-code-keyed tunnels.
+/// The symbol itself is the version probe: v1 binaries don't export it.
+const ABI_VERSION: i32 = 2;
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
 static LAST_PANIC: Mutex<Option<String>> = Mutex::new(None);
@@ -70,22 +83,37 @@ fn guard<T>(default: T, body: impl FnOnce() -> T) -> T {
     }
 }
 
-/// Start the tunnel from a NUL-terminated UTF-8 composite pairing code.
+// Borrow a NUL-terminated UTF-8 pairing code; None on null / invalid UTF-8.
+//
+// # Safety
+// `p` must be null or a valid NUL-terminated C string for the duration of use.
+unsafe fn code_arg<'a>(p: *const c_char) -> Option<&'a str> {
+    if p.is_null() {
+        return None;
+    }
+    CStr::from_ptr(p).to_str().ok()
+}
+
+/// The C ABI version (see [`ABI_VERSION`]). New in v2 — probe for this symbol to
+/// distinguish a v1 binary (absent → single-tunnel, key arguments ignored).
+#[no_mangle]
+pub extern "C" fn mstream_iroh_abi_version() -> i32 {
+    ABI_VERSION
+}
+
+/// Start the tunnel for a NUL-terminated UTF-8 composite pairing code.
 /// Returns the loopback port (> 0) on success, or -1 on error — then call
-/// [`mstream_iroh_last_error`]. Idempotent (returns the existing port if running).
+/// [`mstream_iroh_last_error`]. Idempotent per code (returns the existing port
+/// if that code's tunnel is running).
 ///
 /// # Safety
 /// `pairing_code` must be a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
 pub unsafe extern "C" fn mstream_iroh_start(pairing_code: *const c_char, local_port: u16) -> i32 {
-    if pairing_code.is_null() {
-        set_last_error("pairing_code is null".into());
-        return -1;
-    }
-    let code = match CStr::from_ptr(pairing_code).to_str() {
-        Ok(s) => s.to_owned(),
-        Err(_) => {
-            set_last_error("pairing_code is not valid UTF-8".into());
+    let code = match code_arg(pairing_code) {
+        Some(s) => s.to_owned(),
+        None => {
+            set_last_error("pairing_code is null or not valid UTF-8".into());
             return -1;
         }
     };
@@ -98,50 +126,81 @@ pub unsafe extern "C" fn mstream_iroh_start(pairing_code: *const c_char, local_p
     })
 }
 
-/// Stop the tunnel (graceful). Safe to call when nothing is running.
+/// Stop `pairing_code`'s tunnel (graceful). Safe to call when it isn't running.
+///
+/// # Safety
+/// `pairing_code` must be null or a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn mstream_iroh_stop() {
-    guard((), tunnel_stop);
+pub unsafe extern "C" fn mstream_iroh_stop(pairing_code: *const c_char) {
+    let code = code_arg(pairing_code);
+    guard((), || {
+        if let Some(c) = code {
+            tunnel_stop(c);
+        }
+    });
 }
 
-/// Whether the tunnel is currently CONNECTED.
+/// Whether `pairing_code`'s tunnel is currently CONNECTED.
+///
+/// # Safety
+/// `pairing_code` must be null or a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn mstream_iroh_is_active() -> bool {
-    guard(false, tunnel_is_active)
+pub unsafe extern "C" fn mstream_iroh_is_active(pairing_code: *const c_char) -> bool {
+    let code = code_arg(pairing_code);
+    guard(false, || code.is_some_and(tunnel_is_active))
 }
 
-/// Current status: one of the STATUS_* codes (0=connecting, 1=connected,
-/// 2=reconnecting, 3=rejected/re-pair, 4=down). Mirrors lib.rs STATUS_* and the
-/// Dart `IrohTunnelStatus` enum.
+/// `pairing_code`'s tunnel status: one of the STATUS_* codes (0=connecting,
+/// 1=connected, 2=reconnecting, 3=rejected/re-pair, 4=down). Mirrors lib.rs
+/// STATUS_* and the Dart `IrohTunnelStatus` enum.
+///
+/// # Safety
+/// `pairing_code` must be null or a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn mstream_iroh_status() -> i32 {
-    guard(crate::STATUS_DOWN as i32, || tunnel_status() as i32)
+pub unsafe extern "C" fn mstream_iroh_status(pairing_code: *const c_char) -> i32 {
+    let code = code_arg(pairing_code);
+    guard(crate::STATUS_DOWN as i32, || {
+        code.map_or(crate::STATUS_DOWN as i32, |c| tunnel_status(c) as i32)
+    })
 }
 
-/// Tell the tunnel the device network changed (call on connectivity transitions
-/// — iroh can't self-detect them on Android).
+/// Tell every running tunnel the device network changed (call on connectivity
+/// transitions — iroh can't self-detect them on Android).
 #[no_mangle]
 pub extern "C" fn mstream_iroh_network_changed() {
     guard((), tunnel_network_changed);
 }
 
-/// Current path kind: 0=unknown, 1=direct (hole-punched), 2=relayed. Mirrors the
-/// PATH_* constants in lib.rs and the Dart `IrohPathKind` enum.
+/// `pairing_code`'s tunnel path kind: 0=unknown, 1=direct (hole-punched),
+/// 2=relayed. Mirrors the PATH_* constants in lib.rs and the Dart `IrohPathKind`
+/// enum.
+///
+/// # Safety
+/// `pairing_code` must be null or a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn mstream_iroh_path_kind() -> i32 {
-    guard(crate::PATH_UNKNOWN as i32, || tunnel_path_kind() as i32)
+pub unsafe extern "C" fn mstream_iroh_path_kind(pairing_code: *const c_char) -> i32 {
+    let code = code_arg(pairing_code);
+    guard(crate::PATH_UNKNOWN as i32, || {
+        code.map_or(crate::PATH_UNKNOWN as i32, |c| tunnel_path_kind(c) as i32)
+    })
 }
 
-/// The running tunnel's loopback auth token as a heap NUL-terminated C string the
-/// caller must free with [`mstream_iroh_string_free`], or null if no tunnel is
-/// running. The app appends it to loopback URLs as `__lt=<token>`.
+/// `pairing_code`'s tunnel loopback auth token as a heap NUL-terminated C string
+/// the caller must free with [`mstream_iroh_string_free`], or null if that tunnel
+/// isn't running. The app appends it to loopback URLs as `__lt=<token>`.
+///
+/// # Safety
+/// `pairing_code` must be null or a valid NUL-terminated C string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn mstream_iroh_local_token() -> *mut c_char {
-    guard(std::ptr::null_mut(), || match tunnel_local_token() {
-        Some(t) => CString::new(t)
-            .map(|c| c.into_raw())
-            .unwrap_or(std::ptr::null_mut()),
-        None => std::ptr::null_mut(),
+pub unsafe extern "C" fn mstream_iroh_local_token(pairing_code: *const c_char) -> *mut c_char {
+    let code = code_arg(pairing_code);
+    guard(std::ptr::null_mut(), || {
+        match code.and_then(tunnel_local_token) {
+            Some(t) => CString::new(t)
+                .map(|c| c.into_raw())
+                .unwrap_or(std::ptr::null_mut()),
+            None => std::ptr::null_mut(),
+        }
     })
 }
 
