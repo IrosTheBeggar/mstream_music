@@ -198,6 +198,48 @@ void main() {
     });
   });
 
+  group('TunnelPolicy.showTunnelBanner', () {
+    test('browsing the iroh server shows every state', () {
+      for (final st in IrohTunnelStatus.values) {
+        expect(
+            TunnelPolicy.showTunnelBanner(
+                status: st, browsingTunnelServer: true),
+            isTrue,
+            reason: '$st');
+      }
+    });
+
+    // The regression: a standard default with the queue on the Quick Connect
+    // server showed "Connecting to server…" over a browser that was usable.
+    test('a background playback tunnel shows only the actionable states', () {
+      expect(
+          TunnelPolicy.showTunnelBanner(
+              status: IrohTunnelStatus.connecting, browsingTunnelServer: false),
+          isFalse);
+      expect(
+          TunnelPolicy.showTunnelBanner(
+              status: IrohTunnelStatus.reconnecting,
+              browsingTunnelServer: false),
+          isFalse);
+      expect(
+          TunnelPolicy.showTunnelBanner(
+              status: IrohTunnelStatus.connected, browsingTunnelServer: false),
+          isFalse);
+      expect(
+          TunnelPolicy.showTunnelBanner(
+              status: IrohTunnelStatus.down, browsingTunnelServer: false),
+          isTrue);
+      expect(
+          TunnelPolicy.showTunnelBanner(
+              status: IrohTunnelStatus.rejected, browsingTunnelServer: false),
+          isTrue);
+    });
+
+    test('the queue release grace is long enough to cover a restore', () {
+      expect(TunnelTiming.queueReleaseGrace, const Duration(seconds: 10));
+    });
+  });
+
   group('TunnelPolicy.shouldEscalate', () {
     bool esc({
       IrohTunnelStatus native = IrohTunnelStatus.reconnecting,

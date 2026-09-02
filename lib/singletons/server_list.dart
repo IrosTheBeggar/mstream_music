@@ -138,12 +138,21 @@ class ServerManager {
 
     if (serverList.isNotEmpty) {
       currentServer = serverList[0];
-      // Bring up the tunnel for an iroh default server BEFORE the browser queries
-      // it — bounded: a cold dial in a dead zone takes up to ~43s and the retry
-      // loop owns failures now, so launch must not wait on it. The dial keeps
-      // running on the chain; the first browse/playback awaits the tunnel itself.
-      await ensureActiveTunnel(reason: 'launch', bypassBackoff: true)
-          .timeout(const Duration(seconds: 12), onTimeout: () {});
+      // An iroh default: bring its tunnel up BEFORE the browser queries it —
+      // bounded: a cold dial in a dead zone takes up to ~43s and the retry
+      // loop owns failures, so launch must not wait on it. The dial keeps
+      // running on the chain; the first browse/playback awaits the tunnel
+      // itself. A standard default needs nothing and must not wait on the
+      // chain either (a queued iroh server's dial may already be running on it).
+      if (currentServer!.isIroh) {
+        await ensureActiveTunnel(reason: 'launch', bypassBackoff: true)
+            .timeout(const Duration(seconds: 12), onTimeout: () {});
+      }
+      // Publish the default to the UI now: it is usable as soon as it is
+      // known. Everything below is background tunnel work for the queue and
+      // used to hold the browser (blank panel, "Connecting…") for up to 12s.
+      BrowserManager().goToNavScreen();
+      _currentServerStream.sink.add(currentServer);
       // Pre-warm the saved queue's iroh server (if it's a DIFFERENT server) in the
       // BACKGROUND — without selecting it — so the queue restores against a live
       // tunnel instead of a dead loopback port. The default stays selected; this
@@ -158,8 +167,6 @@ class ServerManager {
               server: rs, caller: 'launch', extendWhileDialing: false);
         }
       }
-      BrowserManager().goToNavScreen();
-      _currentServerStream.sink.add(currentServer);
       for (var s in serverList) {
         getServerPaths(s);
       }
@@ -440,13 +447,38 @@ class ServerManager {
   // This holds the iroh server the queue currently references (pushed by the
   // audio handler on queue changes); null when no queued song is from it.
   Server? _queueIrohServer;
+  // Pending release of _queueIrohServer (see setQueueIrohServer).
+  Timer? _queueReleaseTimer;
 
   /// Record the iroh server the play queue references ([s]), or null when no
   /// queued song is from an iroh server. No-op when unchanged; otherwise
   /// re-evaluates the tunnel target. Called by the audio handler on queue changes.
+  ///
+  /// A null is applied after [TunnelTiming.queueReleaseGrace], not at once:
+  /// the handler's initial empty queue, a restore and a clear-then-refill all
+  /// pass through "nothing from the iroh server queued" for a moment, and an
+  /// immediate release tore a launch tunnel down mid-dial (a full rebuild —
+  /// new port, reloaded URLs — seconds later). A server arriving inside the
+  /// grace period simply cancels the release.
   void setQueueIrohServer(Server? s) {
     final next = (s != null && s.isIroh) ? s : null;
+    if (next != null) {
+      _queueReleaseTimer?.cancel();
+      _queueReleaseTimer = null;
+    }
     if (next?.localname == _queueIrohServer?.localname) return;
+    if (next == null) {
+      _queueReleaseTimer ??= Timer(TunnelTiming.queueReleaseGrace, () {
+        _queueReleaseTimer = null;
+        final was = _queueIrohServer;
+        if (was == null) return;
+        appLog('[iroh] queue no longer references ${was.localname} — '
+            'releasing the tunnel');
+        _queueIrohServer = null;
+        unawaited(ensureActiveTunnel(reason: 'queue-server'));
+      });
+      return;
+    }
     _queueIrohServer = next;
     // No backoff bypass: this fires from the launch queue restore as well as
     // from a user queuing songs, and a bypass here re-dialed a REJECTED code

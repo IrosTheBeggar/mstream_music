@@ -12,6 +12,7 @@ import 'screens/album_detail_view.dart';
 import 'objects/display_item.dart';
 import 'native/carplay_bridge.dart';
 import 'singletons/server_list.dart';
+import 'singletons/tunnel_policy.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/auto_dj.dart';
@@ -580,10 +581,16 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       initialData: ServerManager().tunnelStatus,
       builder: (context, snap) {
         final st = snap.data ?? IrohTunnelStatus.down;
-        // Show whenever the tunnel has a server to serve — including a background
-        // playback server while a non-iroh default is the selected server (the
-        // tunnel "follows playback").
-        if (!ServerManager().tunnelActive) {
+        // Only while the tunnel has a server to serve. Browsing the iroh
+        // server: every state. Browsing a standard server while the tunnel
+        // serves queued playback in the background: only the actionable
+        // states — a spinner over a server that is already usable reads as
+        // that server being unreachable (TunnelPolicy.showTunnelBanner).
+        if (!ServerManager().tunnelActive ||
+            !TunnelPolicy.showTunnelBanner(
+                status: st,
+                browsingTunnelServer:
+                    ServerManager().currentServer?.isIroh ?? false)) {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);
