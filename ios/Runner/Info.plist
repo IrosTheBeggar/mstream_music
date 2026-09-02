@@ -23,6 +23,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSSiriUsageDescription</key>
+	<string>Play your music by voice: "Hey Siri, play &lt;song, album or artist&gt; on mStream."</string>
+	<key>INIntentsSupported</key>
+	<array>
+		<string>INPlayMediaIntent</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>mStream does not use the microphone</string>
 	<key>NSCameraUsageDescription</key>

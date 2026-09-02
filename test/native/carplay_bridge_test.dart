@@ -5,6 +5,7 @@ import 'package:mstream_music/native/carplay_bridge.dart';
 
 void main() {
   _modesTests();
+  _artistTests();
   group('CarPlayBridge.encodeItem', () {
     test('a browse node: not playable, not a notice, no art', () {
       const m = MediaItem(
@@ -88,6 +89,24 @@ void _modesTests() {
               autoDJ: false,
               playing: false)['repeat'],
           'none');
+    });
+  });
+}
+
+void _artistTests() {
+  group('AutoBrowse.artistId / nodeKind', () {
+    test('artist node id round-trips through nodeKind', () {
+      final id = AutoBrowse.artistId('iroh-demo', 'Color Out');
+      expect(id, startsWith('mstreamauto://artist?'));
+      expect(Uri.parse(id).queryParameters, {'s': 'iroh-demo', 'v': 'Color Out'});
+      expect(AutoBrowse.nodeKind(id), 'artist');
+    });
+
+    test('kinds of the ids the search tree mints; foreign ids are null', () {
+      expect(AutoBrowse.nodeKind('mstreamauto://track?s=a&p=%2Fx.mp3'), 'track');
+      expect(AutoBrowse.nodeKind('mstreamauto://album?s=a&v=EP'), 'album');
+      expect(AutoBrowse.nodeKind('https://demo/stream/1'), isNull);
+      expect(AutoBrowse.nodeKind('not a uri at all'), isNull);
     });
   });
 }

@@ -74,6 +74,34 @@ class CarPlayBridge {
         appLog('[carplay] skipToQueueItem($index)');
         await MediaManager().audioHandler.skipToQueueItem(index);
         return null;
+      case 'artistNode':
+        // The Now Playing artist button: the current track's artist on the
+        // server it came from, as the browse node of that artist's albums.
+        final item = MediaManager().audioHandler.mediaItem.value;
+        final artist = item?.artist;
+        final server = item?.extras?['server'] as String?;
+        if (item == null || artist == null || artist.isEmpty || server == null) {
+          return null;
+        }
+        return {'id': AutoBrowse.artistId(server, artist), 'title': artist};
+      // ── Siri: "play <X> on mStream". Resolution is the browse tree's search
+      // (tracks, then albums, then artists); the chosen node plays through
+      // the same path a car tap would.
+      case 'searchMedia':
+        final query = (call.arguments as String).trim();
+        final items = await AutoBrowse.search(query);
+        final rows = items
+            .where((m) => m.id != AutoBrowse.noticeId)
+            .map((m) => {...encodeItem(m), 'kind': AutoBrowse.nodeKind(m.id)})
+            .toList();
+        appLog('[siri] search("$query"): ${rows.length} results');
+        return rows;
+      case 'playMedia':
+        final id = call.arguments as String;
+        appLog('[siri] play($id)');
+        // Not awaited: play() futures complete when playback later pauses.
+        unawaited(AutoBrowse.playNode(id));
+        return null;
       // ── Now Playing buttons: the same toggles as the player panel and the
       // queue header, so the car and the phone never disagree on what a tap
       // means. The new state reaches the car through the modes push below.
@@ -115,7 +143,9 @@ class CarPlayBridge {
 
   /// Debug builds only: `ext.mstream.carplay` on the VM service, so a test
   /// run can drive the car's templates (the Simulator's CarPlay window takes
-  /// no synthetic taps). Params: `action=state|tap|back|upnext|button`, `index=<row or button>`.
+  /// no synthetic taps). Params:
+  /// `action=state|tap|back|upnext|button|artist|siri`, `index=<row or button>`,
+  /// `query=<siri phrase>`.
   static void _registerDebugExtension() {
     developer.registerExtension('ext.mstream.carplay',
         (String method, Map<String, String> params) async {
@@ -128,6 +158,9 @@ class CarPlayBridge {
           'upnext' => await _channel.invokeMethod<dynamic>('debugUpNext'),
           'button' => await _channel.invokeMethod<dynamic>(
               'debugButton', int.parse(params['index'] ?? '0')),
+          'artist' => await _channel.invokeMethod<dynamic>('debugArtist'),
+          'siri' => await _channel.invokeMethod<dynamic>(
+              'debugSiri', params['query'] ?? ''),
           _ => await _channel.invokeMethod<dynamic>('debugState'),
         };
         return developer.ServiceExtensionResponse.result(

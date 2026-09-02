@@ -120,6 +120,14 @@ final class CarPlayBridge: NSObject {
     case "debugUpNext":
       showQueue()
       result(nil)
+    case "debugArtist":
+      showArtist()
+      result(nil)
+    case "debugSiri":
+      // Dry-run of the Siri handler minus speech: resolve the phrase, then
+      // handle the resolved items exactly as Siri would.
+      let query = call.arguments as? String ?? ""
+      AppDelegate.shared.siri.dryRun(query: query) { summary in result(summary) }
     case "debugButton":
       let index = call.arguments as? Int ?? 0
       guard index < nowPlayingActions.count else {
@@ -238,6 +246,8 @@ final class CarPlayBridge: NSObject {
     let nowPlaying = CPNowPlayingTemplate.shared
     nowPlaying.isUpNextButtonEnabled = true
     nowPlaying.upNextTitle = "Queue"
+    // Tapping the artist name opens that artist's albums.
+    nowPlaying.isAlbumArtistButtonEnabled = true
     if !observingNowPlaying {
       nowPlaying.add(self)
       observingNowPlaying = true
@@ -310,6 +320,24 @@ final class CarPlayBridge: NSObject {
     return image
   }
 
+  /// The current track's artist → that artist's albums (a browse push).
+  private func showArtist() {
+    invoke("artistNode", nil) { [weak self] payload in
+      guard let self = self, let node = payload as? [String: Any],
+        let id = node["id"] as? String, let title = node["title"] as? String
+      else {
+        NSLog("[carplay] artist button: no artist for the current track")
+        return
+      }
+      self.browse(id: id, title: title) {}
+    }
+  }
+
+  /// Swift → Dart for other native callers (Siri).
+  func call(_ method: String, _ arguments: Any?, completion: @escaping (Any?) -> Void) {
+    invoke(method, arguments, completion: completion)
+  }
+
   private func showQueue() {
     invoke("getQueue", nil) { [weak self] payload in
       guard let self = self, let ic = self.interfaceController,
@@ -363,6 +391,10 @@ final class CarPlayBridge: NSObject {
 extension CarPlayBridge: CPNowPlayingTemplateObserver {
   func nowPlayingTemplateUpNextButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
     showQueue()
+  }
+
+  func nowPlayingTemplateAlbumArtistButtonTapped(_ nowPlayingTemplate: CPNowPlayingTemplate) {
+    showArtist()
   }
 }
 

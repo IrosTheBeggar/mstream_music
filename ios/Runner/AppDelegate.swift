@@ -1,4 +1,5 @@
 import Flutter
+import Intents
 import UIKit
 
 @main
@@ -15,6 +16,7 @@ import UIKit
   /// isolates would split the audio state.
   private(set) var engine: FlutterEngine!
   private(set) var carPlay: CarPlayBridge!
+  private(set) var siri: SiriMediaHandler!
 
   override func application(
     _ application: UIApplication,
@@ -26,7 +28,16 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engine)
     self.engine = engine
     carPlay = CarPlayBridge(messenger: engine.binaryMessenger)
+    siri = SiriMediaHandler(bridge: carPlay)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// SiriKit media intents are handled in-app (iOS 14+): "play <X> on
+  /// mStream" resolves against the library and plays through the audio
+  /// handler, with the app launched in the background if it was not running.
+  override func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
+    if intent is INPlayMediaIntent { return siri }
+    return nil
   }
 
   // Keep downloaded music out of iCloud backups: it's re-fetchable from the
