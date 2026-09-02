@@ -164,6 +164,8 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  // Coalesces the burst connectivity_plus emits for one transport switch.
+  Timer? _connectivityDebounce;
   StreamSubscription<List<Server>>? _serverListSub;
   // Guards the first-run setup push: serverListStream re-emits on every server
   // edit, and the flow marks onboarding complete only once it's dismissed.
@@ -222,13 +224,28 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // An iroh tunnel is a long-lived QUIC connection; unlike fresh per-request
     // HTTP sockets it needs an explicit kick when the device network changes.
     // Nudge it on every connectivity transition that has a usable network.
+    // Every result is logged, including [none]: the drive logs could not say
+    // what fired each network change, and a [none]→[mobile] edge is a modem
+    // re-attach the tunnel policy treats differently from a hand-off.
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
-      if (results.any((r) => r != ConnectivityResult.none)) {
-        unawaited(ServerManager().handleNetworkChange());
+      final names = results.map((r) => r.name).join('+');
+      appLog('[net] connectivity → [$names]');
+      if (results.every((r) => r == ConnectivityResult.none)) {
+        // A usable result seconds ago must not fire into an offline device.
+        _connectivityDebounce?.cancel();
+        _connectivityDebounce = null;
+        ServerManager().noteConnectivityLost();
+        return;
+      }
+      _connectivityDebounce?.cancel();
+      _connectivityDebounce = Timer(const Duration(milliseconds: 1500), () {
+        _connectivityDebounce = null;
+        unawaited(ServerManager()
+            .handleNetworkChange(reason: 'connectivity:$names'));
         // Resume on-device playback if a network outage had paused it (no-op
         // unless the audio handler is in the network-stalled state).
         MediaManager().audioHandler.onNetworkRegained();
-      }
+      });
     });
   }
 
@@ -510,7 +527,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // resume, nudge iroh + rebuild it if it's hard-down. Fire-and-forget — the
     // native start can block for tens of seconds.
     if (state == AppLifecycleState.resumed) {
-      unawaited(ServerManager().handleNetworkChange());
+      unawaited(ServerManager().handleNetworkChange(reason: 'resume'));
     }
     // Flush the queue/position to disk when leaving the foreground, so a
     // backgrounded app that's later killed by the OS still reopens in place.
@@ -526,6 +543,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
+    _connectivityDebounce?.cancel();
     _serverListSub?.cancel();
     DownloadManager().dispose();
     super.dispose();
@@ -579,8 +597,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             return _bannerStrip(
                 Icons.cloud_off, VelvetColors.warning, l.irohBannerDisconnected,
                 action: TextButton(
-                  onPressed: () =>
-                      unawaited(ServerManager().handleNetworkChange()),
+                  onPressed: () => unawaited(ServerManager()
+                      .handleNetworkChange(
+                          reason: 'retry-tap', userInitiated: true)),
                   child: Text(l.irohRetry,
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
@@ -593,12 +612,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ));
           default: // reconnecting
+            // Retry here forces a fresh endpoint (the policy's `escalate`):
+            // the supervisor keeps re-dialing on its own, but a user who has
+            // watched the spinner long enough gets to cut it short.
             return _bannerStrip(
                 Icons.sync_problem, VelvetColors.warning, l.irohBannerReconnecting,
-                action: const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                action: TextButton(
+                  onPressed: () => unawaited(ServerManager()
+                      .handleNetworkChange(
+                          reason: 'retry-tap', userInitiated: true)),
+                  child: Text(l.irohRetry,
+                      style: TextStyle(color: VelvetColors.primary)),
                 ));
         }
       },

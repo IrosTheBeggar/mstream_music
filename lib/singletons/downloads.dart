@@ -232,7 +232,10 @@ class DownloadManager {
 
     // Bring the tunnel up (rebuilds it if hard-down) and wait for a live port;
     // if it can't connect, this is a real failure.
-    if (!await ServerManager().awaitTunnelReady(server: server)) return false;
+    if (!await ServerManager()
+        .awaitTunnelReady(server: server, caller: 'download')) {
+      return false;
+    }
     final freshUrl = irohLoopbackUri(server, dt.serverUrl).toString();
     if (freshUrl == dt.serverUrl) return false; // port + token didn't rotate
 

@@ -4,7 +4,7 @@ import 'dart:io' show File;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart'
-    show AudioSession, AudioSessionConfiguration;
+    show AudioSession, AudioSessionConfiguration, AudioInterruptionType;
 import 'package:just_audio/just_audio.dart';
 import 'package:mstream_music/main.dart';
 import 'package:rxdart/rxdart.dart';
@@ -16,6 +16,7 @@ import 'dlna_playback_backend.dart';
 import 'chromecast_playback_backend.dart';
 import 'local_media_server.dart';
 import 'auto_browse.dart';
+import 'cast_origin.dart' show rebindLoopbackArt;
 import 'cast_log.dart';
 import 'cast_target.dart';
 import '../native/iroh_tunnel.dart';
@@ -31,12 +32,19 @@ import '../singletons/settings.dart';
 import '../singletons/server_capabilities.dart';
 import '../singletons/api.dart';
 import '../singletons/server_list.dart';
+import '../singletons/tunnel_policy.dart';
 import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
 import '../util/camelot.dart';
 import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
+
+/// What the queue's end does: stop (the normal end, or the user's intent is
+/// pause); park waiting for a deferred Auto DJ pick while the tunnel is down;
+/// or retry the pick right now when the tunnel is serving and the earlier
+/// failure was transient. See [AudioPlayerHandler.queueEndAction].
+enum QueueEndAction { stop, park, retryPick }
 
 /// An [AudioHandler] for playing a list of podcast episodes.
 /// What [AudioPlayerHandler.healAction] decided the tunnel heal should do:
@@ -160,6 +168,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _sonicLockedAnchor = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
     _sonicWarned = false;
+    _clearDeferredPick();
   }
 
   // The repeat mode requested by the UI / Android Auto, and the source of truth
@@ -207,6 +216,17 @@ class AudioPlayerHandler extends BaseAudioHandler
       session.interruptionEventStream.listen((event) {
         appLog('[audio] interruption '
             '${event.begin ? 'begin' : 'end'} type=${event.type}');
+        // Remembered as a TIMESTAMP, not a flag: Android never delivers the
+        // matching `end` for a permanent loss (6 begins, 0 ends across two
+        // drive logs), so a boolean would stick and disable every later
+        // auto-resume. The auto URL rebuild reads it (it must not blast
+        // audio over a call); play() and the window elapsing clear it.
+        if (!event.begin) {
+          _interruptedAt = null;
+        } else if (event.type != AudioInterruptionType.duck &&
+            identical(_backend, _localBackend)) {
+          _interruptedAt = DateTime.now();
+        }
       });
       session.becomingNoisyEventStream.listen((_) {
         // Local playback only. On a cast the audio is coming out of the
@@ -315,15 +335,55 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
+      // Transitions only (a few lines per track). Without them the drive logs
+      // could not tell "playing from the buffer" from "buffering on a dead
+      // tunnel" during the 30s the native status still says connected.
+      if (state != _lastLoggedProcState) {
+        final prev = _lastLoggedProcState;
+        _lastLoggedProcState = state;
+        if (state == BackendProcessingState.buffering) {
+          _bufferingSince ??= DateTime.now(); // logged on the way out
+        } else {
+          final since = _bufferingSince;
+          _bufferingSince = null;
+          if (prev == BackendProcessingState.buffering &&
+              state == BackendProcessingState.ready) {
+            // A weak link flaps buffering↔ready every few seconds; only a
+            // stall long enough to hear gets a line, so the 2000-line log
+            // ring keeps the tunnel lifecycle instead of the flaps.
+            final stall = since == null ? null : DateTime.now().difference(since);
+            if (stall != null && stall >= const Duration(seconds: 3)) {
+              appLog('[play] rebuffered ${stall.inSeconds}s');
+            }
+          } else {
+            appLog('[play] state → ${state.name}');
+          }
+        }
+      }
       if (state == BackendProcessingState.completed) {
         // Log the context so a "stopped on its own" report can be told apart
         // from a genuine end-of-queue stop: how far into the track we were vs.
         // its duration, and where we were in the queue.
-        appLog('[play] completed → stop '
+        final dj = autoDJServer;
+        final action = queueEndAction(
+            onLocalBackend: identical(_backend, _localBackend),
+            isIrohDJ: dj != null && dj.isIroh,
+            djPickPending: _djPickPending,
+            playIntent: _playIntent,
+            tunnelServes: dj != null && ServerManager().tunnelServes(dj),
+            pickInFlight: _djInFlight);
+        appLog('[play] completed → ${action.name} '
             'pos=${_backend.position.inSeconds}s/'
             '${_backend.duration?.inSeconds ?? '?'}s '
             'index=${_backend.currentIndex} of ${queue.value.length}');
-        stop();
+        switch (action) {
+          case QueueEndAction.park:
+            _parkForDeferredPick();
+          case QueueEndAction.retryPick:
+            _retryPickAtQueueEnd();
+          case QueueEndAction.stop:
+            stop();
+        }
       }
       // Playback just parked (idle with tracks still queued). The tunnel may
       // ALREADY be connected — a status edge that landed while this load was
@@ -878,7 +938,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   List<MediaItem> _queueWithFreshUrls() {
     final q = queue.value;
     if (q.isEmpty) return q;
-    final rebuilt = q.map(_withRebuiltUrl).toList();
+    final rebuilt =
+        q.map((m) => _withRebuiltArt(_withRebuiltUrl(m))).toList();
     var changed = false;
     for (int i = 0; i < q.length; i++) {
       if (!identical(rebuilt[i], q[i])) changed = true;
@@ -1059,8 +1120,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     // queued, so it's already the target); just wait for it and re-seed.
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty) return;
-      final ready = await ServerManager().awaitTunnelReady(server: server);
-      if (!ready) return; // tunnel didn't come up; the banner shows why
+      final ready = await ServerManager()
+          .awaitTunnelReady(server: server, caller: 'playback');
+      if (!ready) {
+        // Parked. The tunnel's next `→ connected` edge (from the supervisor
+        // or the retry loop's fresh dial) fires _onTunnelReconnected.
+        appLog('[play] iroh recovery: tunnel not ready for '
+            '${server.localname} — parked until it reconnects');
+        return;
+      }
       // Spot read AFTER the wait, not before: awaitTunnelReady re-arms its
       // deadline for as long as a dial is in flight and can run tens of
       // seconds, so a skip or seek landing in that window is the newer truth.
@@ -1072,12 +1140,17 @@ class AudioPlayerHandler extends BaseAudioHandler
       // queue.value: a hard restart may have changed the port/token, and the
       // concurrent rebuild-on-(re)bind might not have refreshed queue.value yet —
       // _withRebuiltUrl uses the current effectiveBaseUrl, so these are always live.
-      final fresh = queue.value.map(_withRebuiltUrl).toList();
+      final fresh = queue.value
+          .map((m) => _withRebuiltArt(_withRebuiltUrl(m)))
+          .toList();
       queue.add(fresh);
       await _loadAtSpot(_localBackend, fresh, spot);
       // Resume with the user's intent: a mid-stream drop while playing resumes
-      // playing; a launch-time recovery (never played) stays paused.
-      if (_playIntent) unawaited(_localBackend.play());
+      // playing; a launch-time recovery (never played) stays paused. Never
+      // over a call (the interruption window).
+      if (_playIntent && !_recentlyInterrupted) {
+        unawaited(_localBackend.play());
+      }
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
@@ -1347,7 +1420,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     // doesn't flash track 0 on the reload.
     await _localBackend.setSources(fresh,
         initialIndex: idx, initialPosition: spot.position);
-    if (_playIntent) unawaited(_localBackend.play());
+    if (_playIntent && !_recentlyInterrupted) {
+      unawaited(_localBackend.play());
+    }
   }
 
   // Resume playback parked by an iroh server outage, fired on the tunnel's
@@ -1397,6 +1472,38 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _onTunnelReconnected() {
     _tunnelHealRetry?.cancel();
     _tunnelHealRetry = null;
+    // A pick owed from the outage comes first: the queue may have ENDED while
+    // the tunnel was down (parked on `completed`, not idle — healAction alone
+    // would only re-arm forever). The pick appends the next track and, when
+    // the park held the play intent, seeks to it and plays. A failing retry
+    // re-sets the pending flag and the 11s re-arm brings us back here,
+    // bounded by kMaxDeferredPickFailures and the park timer.
+    final dj = autoDJServer;
+    if (dj != null &&
+        shouldRetryDeferredPick(
+            pending: _djPickPending,
+            tunnelServes: ServerManager().tunnelServes(dj),
+            onLocalBackend: identical(_backend, _localBackend),
+            intentionalStop: _intentionalStop,
+            failures: _deferredPickFailures)) {
+      if (_djInFlight) {
+        // A pick is already running (an index re-emission beat the status
+        // edge to the tunnel); it lands with the park-derived resume below.
+        _rearmTunnelHeal();
+        return;
+      }
+      final parked = _stillParked;
+      _djPickPending = false;
+      appLog('[dj] tunnel back — retrying the deferred pick'
+          '${parked ? ' and resuming' : ''}');
+      // No flags: whether the landing pick resumes is decided by the park
+      // (see _queueAutoDJSong), so a pick started by someone else resumes too.
+      unawaited(autoDJ());
+      if (parked) {
+        _rearmTunnelHeal();
+        return;
+      }
+    }
     final q = queue.value;
     switch (healAction(
       onLocalBackend: identical(_backend, _localBackend),
@@ -1530,6 +1637,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Explicit navigation supersedes a failed-restore park -- without this a
     // stale spot would hijack the next re-seed back to the old track.
     _restoreSpot = null;
+    _releasePark(); // explicit navigation supersedes a queue-end park too
     // Deliberately re-tapping a track that failed from disk is a request to
     // try it again, so don't let the one-attempt guard deny it.
     _localRetryKey = null;
@@ -1703,6 +1811,99 @@ class AudioPlayerHandler extends BaseAudioHandler
   // re-seed resumes PAUSED rather than autoplaying on open.
   bool _playIntent = false;
 
+  // ── Auto DJ across a tunnel outage ──
+  // A pick was due but the tunnel wasn't serving (or the POST failed); the
+  // tunnel's connected edge retries it (_onTunnelReconnected).
+  bool _djPickPending = false;
+  // One "random-songs failed" line per outage — the player's index
+  // re-emissions re-fire the pick every ~30s.
+  bool _djFailLogged = false;
+  int _deferredPickFailures = 0;
+  // The queue ended while a pick was pending: paused with the play intent
+  // kept, so the retried pick resumes playback (see queueEndAction).
+  bool _parkedForDJ = false;
+  Timer? _parkTimer;
+  // When an audio-focus interruption began (see the session listener).
+  DateTime? _interruptedAt;
+  BackendProcessingState? _lastLoggedProcState;
+  DateTime? _bufferingSince;
+
+  bool get _recentlyInterrupted {
+    final t = _interruptedAt;
+    return t != null &&
+        DateTime.now().difference(t) < TunnelTiming.interruptionWindow;
+  }
+
+  void _clearDeferredPick() {
+    _djPickPending = false;
+    _djFailLogged = false;
+    _deferredPickFailures = 0;
+    _releasePark();
+  }
+
+  /// Leave the queue-end park without forgetting that a pick is owed: the
+  /// user moved on (play/pause/skip/seek), so the tunnel's return must
+  /// neither re-seek them nor stop them thirty minutes later.
+  void _releasePark() {
+    _parkedForDJ = false;
+    _parkTimer?.cancel();
+    _parkTimer = null;
+  }
+
+  /// True while the park is real: the local player is still sitting at the
+  /// completed last row, paused. Anything else means the user moved on.
+  bool get _stillParked =>
+      _parkedForDJ &&
+      identical(_backend, _localBackend) &&
+      _localBackend.processingState == BackendProcessingState.completed &&
+      !_localBackend.playing;
+
+  /// The queue ended while an Auto DJ pick is owed to a tunnel outage: hold
+  /// the spot instead of stopping. The BACKEND's pause, not the handler's —
+  /// _playIntent must survive so the retried pick can resume — and the
+  /// foreground service stays up (bounded by parkMax). stop() used to run
+  /// here unconditionally, which set _intentionalStop and made healAction
+  /// discard every later tunnel-back edge: an outage-drained queue looked
+  /// exactly like the user pressing stop.
+  void _parkForDeferredPick() {
+    _parkedForDJ = true;
+    unawaited(_localBackend.pause());
+    _broadcastState();
+    _parkTimer?.cancel();
+    _parkTimer = Timer(TunnelTiming.parkMax, () {
+      _parkTimer = null;
+      // Only a park that is still real gets stopped: if the user queued an
+      // album and pressed play meanwhile, this must not cut it off.
+      if (!_stillParked) {
+        _parkedForDJ = false;
+        return;
+      }
+      appLog('[play] parked ${TunnelTiming.parkMax.inMinutes} min waiting '
+          'for the tunnel — stopping');
+      _parkedForDJ = false;
+      stop();
+    });
+    unawaited(ServerManager()
+        .ensureActiveTunnel(verify: true, reason: 'queue-end-park'));
+  }
+
+  /// The queue ended with a pick owed although the tunnel IS serving (the
+  /// earlier POST failed transiently, or an in-place reconnect has since
+  /// healed): try once, now, and stop as before if it fails — never a silent
+  /// park with nothing scheduled. The park flag makes the landing pick resume.
+  void _retryPickAtQueueEnd() {
+    _parkedForDJ = true;
+    unawaited(_localBackend.pause());
+    _broadcastState();
+    unawaited(() async {
+      await autoDJ();
+      if (_djPickPending) {
+        _releasePark();
+        stop();
+      }
+    }());
+  }
+
   /// Whether a currentIndex emission landing on the LAST queue row should
   /// fire the Auto-DJ top-up.
   ///
@@ -1740,6 +1941,56 @@ class AudioPlayerHandler extends BaseAudioHandler
       index == queueLength - 1 &&
       state != BackendProcessingState.idle &&
       !inFailureWalk;
+
+  /// What the queue's end does. Park only when a pick is actually owed to a
+  /// tunnel outage AND playback is wanted AND this backend/server pair can be
+  /// healed by the tunnel coming back: the local player with an iroh Auto DJ
+  /// server. A cast session or an HTTP DJ server has no tunnel edge to wait
+  /// for, so parking would be a silent 30-minute wait — strictly worse than
+  /// today's stop. Pure; unit-tested.
+  ///
+  /// With the tunnel already serving there is no edge to wait for, so the
+  /// pick is retried on the spot ([QueueEndAction.retryPick]) — unless one is
+  /// already in flight, which lands on its own and resumes from the park.
+  static QueueEndAction queueEndAction({
+    required bool onLocalBackend,
+    required bool isIrohDJ,
+    required bool djPickPending,
+    required bool playIntent,
+    required bool tunnelServes,
+    required bool pickInFlight,
+  }) {
+    if (!(onLocalBackend && isIrohDJ && djPickPending && playIntent)) {
+      return QueueEndAction.stop;
+    }
+    if (tunnelServes && !pickInFlight) return QueueEndAction.retryPick;
+    return QueueEndAction.park;
+  }
+
+  /// Whether an Auto DJ pick should wait for the tunnel instead of POSTing
+  /// at a loopback that cannot answer. Pure; unit-tested.
+  static bool shouldDeferDJPick(
+          {required bool isIroh, required bool tunnelServes}) =>
+      isIroh && !tunnelServes;
+
+  /// Whether the tunnel-back heal should retry a deferred pick. Pure;
+  /// unit-tested.
+  static bool shouldRetryDeferredPick({
+    required bool pending,
+    required bool tunnelServes,
+    required bool onLocalBackend,
+    required bool intentionalStop,
+    required int failures,
+  }) =>
+      pending &&
+      tunnelServes &&
+      onLocalBackend &&
+      !intentionalStop &&
+      failures < kMaxDeferredPickFailures;
+
+  /// A deferred pick that keeps failing against a serving tunnel is the
+  /// server's problem, not the path's; stop retrying after this many.
+  static const int kMaxDeferredPickFailures = 5;
 
   /// Whether play() must re-seed the local player instead of issuing a bare
   /// backend.play(): just_audio parked idle (a playback error tears the
@@ -1808,6 +2059,18 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[play] play');
     _playIntent = true;
     _intentionalStop = false;
+    _interruptedAt = null; // the user wants audio; an old interruption is moot
+    if (_parkedForDJ) {
+      // The user pressed play on a parked queue end: leave the park (a pick
+      // landing later appends without hijacking them) and replay the last
+      // track from the top, which is what the old completed→stop→play did.
+      final wasParked = _stillParked;
+      _releasePark();
+      if (wasParked) {
+        final idx = _localBackend.currentIndex;
+        if (idx != null) await _localBackend.seek(Duration.zero, index: idx);
+      }
+    }
     if (queue.value.isEmpty && !_restoreSettled.isCompleted) {
       await _awaitQueueRestore();
       // The wait can run tens of seconds — a pause/stop that arrived during
@@ -1837,18 +2100,21 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> pause() {
     appLog('[play] pause');
     _playIntent = false;
+    _releasePark(); // their intent wins; a landing pick appends only
     return _backend.pause();
   }
 
   @override
   Future<void> skipToNext() async {
     _restoreSpot = null; // user navigation supersedes a failed-restore park
+    _releasePark();
     _backend.seekToNext();
   }
 
   @override
   Future<void> skipToPrevious() async {
     _restoreSpot = null; // user navigation supersedes a failed-restore park
+    _releasePark();
     _backend.seekToPrevious();
   }
 
@@ -1857,6 +2123,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // A manual scrub supersedes the parked position (keep nothing: the next
     // re-seed should read the live player, which this seek just updated).
     _restoreSpot = null;
+    _releasePark();
     return _backend.seek(position);
   }
 
@@ -1873,6 +2140,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[play] stop');
     _playIntent = false;
     _intentionalStop = true;
+    _clearDeferredPick();
     // Don't touch the tunnel here: it follows the QUEUE, not the play/stop state,
     // so a stopped-but-still-queued iroh song keeps its tunnel (the queue listener
     // tears it down when the iroh songs are actually removed/cleared).
@@ -2272,6 +2540,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     return sameStreamUrl(newId, m.id) ? m : m.copyWith(id: newId);
   }
 
+  /// Re-derive [m]'s album-art URL against the live tunnel (iroh items only;
+  /// downloaded items included). Same instance when nothing changes.
+  MediaItem _withRebuiltArt(MediaItem m) {
+    final server = _serverFor(m);
+    if (server == null || !server.isIroh) return m;
+    return rebindLoopbackArt(m, server);
+  }
+
   /// The URI the CURRENT item actually plays from: the downloaded file when
   /// one exists (mirroring LocalPlaybackBackend's source resolution), else the
   /// stream URL re-derived against the live tunnel / transcode state —
@@ -2347,7 +2623,23 @@ class AudioPlayerHandler extends BaseAudioHandler
       for (int i = 0; i < q.length; i++) {
         if (!identical(rebuilt[i], q[i])) changed = true;
       }
-      if (!changed) return;
+      // Album art carries the loopback port + token too, and (unlike the
+      // stream URL) it matters for DOWNLOADED items — the notification and
+      // lock screen fetch it. Rebind it; when nothing else changed, publish
+      // the art without a player reload.
+      final withArt = rebuilt.map(_withRebuiltArt).toList();
+      bool artChanged = false;
+      for (int i = 0; i < q.length; i++) {
+        if (!identical(withArt[i], rebuilt[i])) artChanged = true;
+      }
+      if (!changed) {
+        if (artChanged) {
+          appLog('[queue] album-art URLs rebound to the live tunnel');
+          queue.add(withArt);
+          _emitCurrentMediaItem();
+        }
+        return;
+      }
       // _reviveSpot, not the backend's index: this runs on a tunnel re-bind,
       // which is exactly when a previous load may have failed and left the
       // player reporting track 1. Reading that back would relocate the
@@ -2359,13 +2651,16 @@ class AudioPlayerHandler extends BaseAudioHandler
       // after a tunnel bind would reload the track and sit silent. _playIntent
       // is the user's actual intent (cleared by pause/stop, false at boot), so
       // OR-ing it in resumes only where playback was genuinely wanted.
-      final wasPlaying = _backend.playing || (auto && _playIntent);
+      // …and not over an audio-focus interruption (a call): the rebuild's
+      // resume used to re-request focus mid-call (log: 19:30:43 → 19:30:47).
+      final wasPlaying =
+          _backend.playing || (auto && _playIntent && !_recentlyInterrupted);
       final wasShuffle = _backend.shuffleEnabled;
       final wasRepeat = _backend.repeat;
       _reordering = true;
       try {
-        queue.add(rebuilt);
-        await _loadAtSpot(_backend, rebuilt, spot);
+        queue.add(withArt);
+        await _loadAtSpot(_backend, withArt, spot);
         // Re-read the intent AFTER the load: the load is network-bound and can
         // run for seconds over a fresh tunnel, and a pause landing inside that
         // window must win over what we captured before it. Same doctrine as
@@ -2690,6 +2985,30 @@ class AudioPlayerHandler extends BaseAudioHandler
     // The lane this call belongs to — checked when each response lands.
     final epoch = _djSessionEpoch;
 
+    // The tunnel isn't serving the DJ server (an outage, or a dial in
+    // flight): wait briefly rather than POSTing at a dead loopback. Not ready
+    // → remember that a pick is owed; the tunnel's connected edge retries it
+    // (_onTunnelReconnected), and a queue that ends meanwhile parks instead
+    // of stopping (queueEndAction).
+    final dj = autoDJServer!;
+    if (shouldDeferDJPick(
+        isIroh: dj.isIroh, tunnelServes: ServerManager().tunnelServes(dj))) {
+      final ready = await ServerManager().awaitTunnelReady(
+          server: dj,
+          timeout: const Duration(seconds: 12),
+          extendWhileDialing: false,
+          caller: 'dj');
+      if (epoch != _djSessionEpoch) return;
+      if (!ready) {
+        if (!_djPickPending) {
+          appLog('[dj] tunnel not serving ${dj.localname} — '
+              'pick deferred until it is back');
+        }
+        _djPickPending = true;
+        return;
+      }
+    }
+
     final mgr = AutoDJManager();
     Map<String, dynamic>? lastDecoded;
 
@@ -2958,10 +3277,20 @@ class AudioPlayerHandler extends BaseAudioHandler
         // fail-loud toast.
         _autoDJAuthWarned = false;
         _sonicWarned = false;
+        _djPickPending = false;
+        _djFailLogged = false;
+        _deferredPickFailures = 0;
       } catch (e) {
         // Network error → bail without a toast (an offline queue-end is
-        // normal), but leave a trace for Diagnostics.
-        appLog('[dj] random-songs failed: $e');
+        // normal). Logged once per outage — the player's index re-emissions
+        // re-fire this every ~30s — and remembered, so the tunnel's return
+        // retries it instead of leaving the queue one track short.
+        if (!_djFailLogged) {
+          _djFailLogged = true;
+          appLog('[dj] random-songs failed: $e');
+        }
+        _djPickPending = true;
+        _deferredPickFailures++;
         return;
       }
 
@@ -2979,7 +3308,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       lastDecoded = decoded;
 
       if (!mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) {
-        _queueAutoDJSong(decoded,
+        await _queueAutoDJSong(decoded,
             autoPlay: autoPlay,
             incrementIndex: incrementIndex,
             sonicPick: sonic != null);
@@ -2990,17 +3319,17 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
 
     if (lastDecoded != null) {
-      _queueAutoDJSong(lastDecoded,
+      await _queueAutoDJSong(lastDecoded,
           autoPlay: autoPlay,
           incrementIndex: incrementIndex,
           sonicPick: sonic != null);
     }
   }
 
-  void _queueAutoDJSong(Map<String, dynamic> decoded,
+  Future<void> _queueAutoDJSong(Map<String, dynamic> decoded,
       {bool autoPlay = false,
       bool incrementIndex = false,
-      bool sonicPick = false}) {
+      bool sonicPick = false}) async {
     final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String?;
@@ -3058,18 +3387,42 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (code != null) _camelotAnchor = code;
     }
 
-    addQueueItem(item);
+    // Whether this pick resumes a parked queue end is a property of the PARK,
+    // not of the caller's flags: the pick that lands may be one an index
+    // re-emission started (no flags) while the tunnel-back retry was dropped
+    // by _djInFlight. Read before the append (the append can move a completed
+    // player to ready) and re-checked after it (the user may have moved on).
+    final wasParked = _stillParked;
+    // Awaited: just_audio delivers the insert to the platform only after its
+    // own bookkeeping, while a seek gets there after one await — an unawaited
+    // add followed by seek(index + 1) reached ExoPlayer with an index past the
+    // end (IllegalSeekPositionException) and left the darwin player's index
+    // out of range.
+    await addQueueItem(item);
+    final resume = wasParked && _parkedForDJ;
+    _releasePark();
 
     // Feed the rolling sonic anchor with every DJ pick (kept even while the
     // mode is off, so toggling it on mid-session already has the session's
     // recent sound to centroid on).
     _sonicHistory = pushSonicHistory(_sonicHistory, filepath);
 
-    if (incrementIndex == true && index != null) {
-      _backend.seek(Duration.zero, index: index! + 1);
+    if ((incrementIndex || resume) && queue.value.isNotEmpty) {
+      final last = queue.value.length - 1;
+      final target = (index != null ? index! + 1 : last).clamp(0, last);
+      try {
+        await _backend.seek(Duration.zero, index: target);
+      } catch (e) {
+        appLog('[dj] seek to the new pick failed: $e');
+      }
     }
-    if (autoPlay == true) {
-      play();
+    if (autoPlay) {
+      await play();
+    } else if (resume && _playIntent && !_recentlyInterrupted) {
+      // The backend's play, not the handler's: this is automatic, so it must
+      // not erase the interruption window the way a user's play does.
+      appLog('[dj] pick landed — resuming the parked queue');
+      unawaited(_localBackend.play());
     }
   }
 

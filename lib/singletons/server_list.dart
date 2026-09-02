@@ -13,6 +13,7 @@ import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
 import '../util/write_chain.dart';
 import '../native/iroh_tunnel.dart';
+import './tunnel_policy.dart';
 import '../media/cast_target.dart';
 import 'cast_manager.dart';
 import './media.dart';
@@ -31,6 +32,41 @@ class ServerManager {
   // or null when no tunnel is running. Drives (re)start decisions in
   // [ensureActiveTunnel]; the shim holds one tunnel at a time, for the active server.
   String? _activeTunnelCode;
+
+  // ── Reconnect bookkeeping (the rules live in tunnel_policy.dart) ──
+  // Single-flight handleNetworkChange: a burst (app resume + a connectivity
+  // event) runs once, plus one re-run if anything landed while it was busy.
+  Future<void>? _networkChangeInFlight;
+  bool _networkChangeRerun = false;
+  String _rerunReason = '';
+  // When the reported status last left `connected` (null while connected).
+  DateTime? _notConnectedSince;
+  // Last in-place kick (native force-reconnect; null when never/unsupported).
+  DateTime? _kickedAt;
+  // Last hard rebuild (stop + fresh dial) from ANY caller — rate-limited, since
+  // it rotates the loopback port and token.
+  DateTime? _lastHardRebuildAt;
+  // Last `[none]` connectivity event, to tell a modem re-attach from a hand-off.
+  DateTime? _lastOfflineAt;
+  // Last failed cold dial; gates every non-user ensure behind the retry timer.
+  DateTime? _lastFailedDialAt;
+  DateTime? _lastSkipLogAt;
+  // The retry loop that makes "no tunnel and nothing scheduled" unreachable
+  // while an iroh server is the tunnel's target.
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+  // Ensures queued on _tunnelChain but not finished (awaitTunnelReady extends
+  // its deadline while one is pending, not just while a dial is in flight).
+  int _pendingEnsures = 0;
+  // A cold dial answered "NO": surface Repair (not Retry) and stop re-dialing
+  // on every network event — no native tunnel exists to report `rejected`.
+  bool _startRejected = false;
+  // The launch ping was skipped because the tunnel was not up yet; the next
+  // successful dial runs it (vpaths, transcode defaults, version).
+  String? _pingPendingFor;
+  // A Retry tap that lands while a network change is in flight must not be
+  // downgraded to an automatic re-run.
+  bool _rerunUser = false;
 
   // streams
   late final BehaviorSubject<List<Server>> _serverListStream =
@@ -100,8 +136,11 @@ class ServerManager {
     if (serverList.isNotEmpty) {
       currentServer = serverList[0];
       // Bring up the tunnel for an iroh default server BEFORE the browser queries
-      // it.
-      await ensureActiveTunnel();
+      // it — bounded: a cold dial in a dead zone takes up to ~43s and the retry
+      // loop owns failures now, so launch must not wait on it. The dial keeps
+      // running on the chain; the first browse/playback awaits the tunnel itself.
+      await ensureActiveTunnel(reason: 'launch', bypassBackoff: true)
+          .timeout(const Duration(seconds: 12), onTimeout: () {});
       // Pre-warm the saved queue's iroh server (if it's a DIFFERENT server) in the
       // BACKGROUND — without selecting it — so the queue restores against a live
       // tunnel instead of a dead loopback port. The default stays selected; this
@@ -112,7 +151,8 @@ class ServerManager {
         final rs = byLocalname(resumeName);
         if (rs != null && rs.isIroh) {
           setQueueIrohServer(rs);
-          await awaitTunnelReady(server: rs);
+          await awaitTunnelReady(
+              server: rs, caller: 'launch', extendWhileDialing: false);
         }
       }
       BrowserManager().goToNavScreen();
@@ -228,7 +268,7 @@ class ServerManager {
     _currentServerStream.sink.add(currentServer);
     // Bring the tunnel up for the newly-active iroh server (or tear it down when
     // switching to HTTP) before the browser queries it.
-    await ensureActiveTunnel();
+    await ensureActiveTunnel(reason: 'server-switch', bypassBackoff: true);
     BrowserManager().goToNavScreen();
     unawaited(getServerPaths(currentServer!));
   }
@@ -255,6 +295,7 @@ class ServerManager {
       }
       if (server.tunnelPort == null) {
         if (throwErr) throw Exception('iroh tunnel not connected');
+        _pingPendingFor = server.localname; // re-run when the dial lands
         return;
       }
     }
@@ -403,7 +444,7 @@ class ServerManager {
     final next = (s != null && s.isIroh) ? s : null;
     if (next?.localname == _queueIrohServer?.localname) return;
     _queueIrohServer = next;
-    unawaited(ensureActiveTunnel());
+    unawaited(ensureActiveTunnel(reason: 'queue-server', bypassBackoff: true));
   }
 
   // Which iroh server the single tunnel should serve: the browsed server when it
@@ -436,13 +477,41 @@ class ServerManager {
   /// also force a rebuild when the native tunnel is fully *down* despite our
   /// bookkeeping (the shim's supervisor self-heals transient drops, so this only
   /// fires for a hard-down tunnel). Serialized against concurrent callers.
-  Future<void> ensureActiveTunnel({bool verify = false}) {
-    final next = _tunnelChain.then((_) => _ensureActiveTunnel(verify));
+  ///
+  /// [reason] is logged with every start/stop so the next incident log says who
+  /// asked. [bypassBackoff] lets the retry timer and user-driven callers dial
+  /// even when a cold dial failed moments ago; everything else waits for the
+  /// timer (see [TunnelPolicy.shouldSkipColdDial]).
+  ///
+  /// Invariants (hold them when touching anything below):
+  ///  1. Every native mutation — start, stop, kick, pairing-code swap — runs
+  ///     inside _tunnelChain. Probes may run outside it, but a consequence of a
+  ///     probe re-checks the tunnel identity (code, port) inside the chain
+  ///     before acting (see _sameTunnel).
+  ///  2. A native tunnel reporting `reconnecting` is never stopped unless the
+  ///     user asked (Retry) or the watchdog says the relay is reachable and the
+  ///     supervisor is not converging.
+  ///  3. s.tunnelPort / s.tunnelToken / _activeTunnelCode change only inside
+  ///     the chain; a kick leaves all three unchanged.
+  ///  4. While the target is an iroh server and no native tunnel exists, a retry
+  ///     Timer is armed (unless the pairing was rejected). There is no "down
+  ///     with nothing scheduled" state.
+  ///  5. At most one hard rebuild per hardRebuildMinGap across all callers; a
+  ///     user-initiated Retry/Repair bypasses the gap.
+  Future<void> ensureActiveTunnel(
+      {bool verify = false,
+      String reason = 'ensure',
+      bool bypassBackoff = false}) {
+    _pendingEnsures++;
+    final next = _tunnelChain
+        .then((_) => _ensureActiveTunnel(verify, reason, bypassBackoff))
+        .whenComplete(() => _pendingEnsures--);
     _tunnelChain = next.catchError((_) {});
     return next;
   }
 
-  Future<void> _ensureActiveTunnel(bool verify) async {
+  Future<void> _ensureActiveTunnel(
+      bool verify, String reason, bool bypassBackoff) async {
     if (!IrohTunnel.isSupported) return;
     final s = _tunnelTargetServer();
     if (s != null && s.isIroh && s.irohPairingCode != null) {
@@ -465,6 +534,33 @@ class ServerManager {
           return;
         }
       }
+      // A cold dial answered "NO" (wrong/rotated secret): only a repair or a
+      // user tap may dial again. Otherwise every automatic caller — a DJ pick
+      // re-fired every ~30s, a playback error, a download — would re-dial
+      // into the same rejection and flicker the banner Repair↔Connecting.
+      if (_activeTunnelCode == null && _startRejected && !bypassBackoff) {
+        return;
+      }
+      // No tunnel and a cold dial failed recently: the retry timer owns the
+      // next attempt. Without this gate every caller that wants the tunnel
+      // would queue its own 33–43s dial behind the last one, so a dead zone
+      // became back-to-back radio time with no backoff at all.
+      if (_activeTunnelCode == null &&
+          TunnelPolicy.shouldSkipColdDial(
+              sinceFailedDial: _since(_lastFailedDialAt),
+              nextRetry: TunnelPolicy.retryDelay(_retryAttempt),
+              bypassBackoff: bypassBackoff)) {
+        final now = DateTime.now();
+        if (_lastSkipLogAt == null ||
+            now.difference(_lastSkipLogAt!) >= const Duration(seconds: 60)) {
+          _lastSkipLogAt = now;
+          appLog('[iroh] start skipped ($reason) — a dial failed '
+              '${_since(_lastFailedDialAt)!.inSeconds}s ago; '
+              'retry #${_retryAttempt + 1} owns the next attempt');
+        }
+        if (_retryTimer == null && !_startRejected) _scheduleRetry();
+        return;
+      }
       // The shim holds one tunnel; switching servers (or rebuilding a dead one)
       // requires dropping the old one first (start() returns the stale port otherwise).
       if (_activeTunnelCode != null) {
@@ -476,16 +572,30 @@ class ServerManager {
         if (_activeTunnelCode != s.irohPairingCode && CastManager().isCasting) {
           unawaited(CastManager().selectTarget(CastTarget.local));
         }
-        IrohTunnel.instance.stop();
-        _activeTunnelCode = null;
+        _stopTunnel('switch/$reason');
       }
       _tunnelStarting = true;
       _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
+      final sw = Stopwatch()..start();
       try {
         final port = await IrohTunnel.instance.start(s.irohPairingCode!);
         s.tunnelPort = port;
         s.tunnelToken = IrohTunnel.instance.localToken;
         _activeTunnelCode = s.irohPairingCode;
+        _cancelRetry();
+        _startRejected = false;
+        _lastFailedDialAt = null;
+        _notConnectedSince = null;
+        _kickedAt = null;
+        appLog('[iroh] tunnel up port=$port '
+            'path=${IrohTunnel.instance.pathKind.name} '
+            'in ${sw.elapsedMilliseconds}ms ($reason)');
+        // The launch sweep no longer waits for a slow dial; run the ping it
+        // skipped so vpaths / transcode / version are not stale all session.
+        if (_pingPendingFor == s.localname) {
+          _pingPendingFor = null;
+          unawaited(getServerPaths(s));
+        }
         // This bind set a loopback port + token. Any queued iroh stream URL built
         // before now is stale, so rebuild them off the live effectiveBaseUrl.
         // Unconditional on purpose: besides a port that changed on a reconnect /
@@ -516,51 +626,292 @@ class ServerManager {
         s.tunnelPort = null;
         s.tunnelToken = null;
         _activeTunnelCode = null;
-        // Leave it down; requests fail fast via effectiveBaseUrl until retried.
-        appLog('[iroh] tunnel start failed: $e');
+        _lastFailedDialAt = DateTime.now();
+        // The native side distinguishes a "NO" handshake (wrong/rotated secret)
+        // from an unreachable server; only the latter is worth retrying.
+        _startRejected = '$e'.contains('rejected');
+        appLog('[iroh] tunnel start failed after ${sw.elapsedMilliseconds}ms '
+            '($reason): $e');
+        if (_startRejected) {
+          _cancelRetry();
+        } else {
+          _scheduleRetry();
+        }
       } finally {
         _tunnelStarting = false;
       }
       _refreshTunnelStatus();
     } else if (_activeTunnelCode != null) {
-      IrohTunnel.instance.stop();
-      _activeTunnelCode = null;
+      _stopTunnel('no-target/$reason');
+      _cancelRetry();
       _stopStatusPolling();
     } else {
+      _cancelRetry();
       _stopStatusPolling();
     }
   }
 
-  /// React to a device network change / app resume: nudge iroh to re-probe paths
-  /// (it can't self-detect on Android) and rebuild the tunnel if it's hard-down.
-  /// Cheap and safe when the active server isn't iroh.
-  Future<void> handleNetworkChange() async {
-    // Nudge whichever server the tunnel serves (a background playback server, not
-    // just the browsed one) so a Wi-Fi/cellular switch re-probes the live tunnel.
+  Duration? _since(DateTime? t) =>
+      t == null ? null : DateTime.now().difference(t);
+
+  /// Run [fn] on the tunnel chain (invariant 1). Returns the chained future so
+  /// the caller can await the mutation; the chain itself swallows errors.
+  Future<void> _mutateTunnel(String reason, FutureOr<void> Function() fn) {
+    final next = _tunnelChain.then((_) => fn());
+    _tunnelChain = next.catchError((_) {});
+    return next;
+  }
+
+  /// Stop the native tunnel and forget its assignment. ONLY from inside the
+  /// chain (invariant 3).
+  void _stopTunnel(String reason) {
+    if (_activeTunnelCode != null) {
+      appLog('[iroh] tunnel stopped ($reason) '
+          'port=${_tunnelTargetServer()?.tunnelPort}');
+    }
+    IrohTunnel.instance.stop();
+    _activeTunnelCode = null;
+  }
+
+  /// True when the tunnel is still the one a probe was taken against — the
+  /// re-check every probe consequence runs inside the chain before acting.
+  bool _sameTunnel(Server s, String? code, int? port) =>
+      code != null &&
+      _activeTunnelCode == code &&
+      s.tunnelPort == port &&
+      s.irohPairingCode == code;
+
+  /// Arm the retry after a failed cold dial (invariant 4). The attempt index is
+  /// only reset by a success or a target change, so a burst of callers cannot
+  /// shorten the backoff.
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    final d = TunnelPolicy.retryDelay(_retryAttempt);
+    appLog('[iroh] retry #${_retryAttempt + 1} in ${d.inSeconds}s');
+    _retryTimer = Timer(d, () {
+      _retryTimer = null;
+      final s = _tunnelTargetServer();
+      if (s == null ||
+          !s.isIroh ||
+          _activeTunnelCode != null ||
+          _tunnelStarting ||
+          _startRejected) {
+        return;
+      }
+      _retryAttempt++;
+      unawaited(ensureActiveTunnel(
+          verify: true, reason: 'retry#$_retryAttempt', bypassBackoff: true));
+    });
+  }
+
+  void _cancelRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retryAttempt = 0;
+  }
+
+  /// Called by the connectivity listener on a `[none]` result (invariant: the
+  /// only place _lastOfflineAt is written).
+  void noteConnectivityLost() {
+    _lastOfflineAt = DateTime.now();
+  }
+
+  /// React to a device network change / app resume / the banner's Retry tap:
+  /// nudge iroh to re-probe paths (it can't self-detect on Android), then let
+  /// the pure [TunnelPolicy] decide — leave a reconnecting tunnel to its
+  /// supervisor, probe a connected-reporting one for ground truth, or (re)start
+  /// a missing one. Single-flight: overlapping calls (a resume plus a
+  /// connectivity burst) coalesce into one run plus at most one re-run.
+  ///
+  /// History: this used to probe the loopback unconditionally and hard-drop on
+  /// any failure. During a reconnect the shim fails every loopback request
+  /// within a second, so the probe always failed, and the app killed the very
+  /// supervisor that would have healed the tunnel in place — replacing it with
+  /// one cold dial (drive log: 15:08:50 "resume probe failed" → 15:09:23
+  /// "tunnel start failed", then nothing until the user tapped a track). The
+  /// probe is now reserved for the case it was written for (98d06c8): native
+  /// status `connected` on a QUIC connection that is actually dead after an
+  /// iOS thaw — and it has to fail twice, with a grace window for iroh's own
+  /// path migration, before anything is torn down.
+  Future<void> handleNetworkChange(
+      {String reason = 'unknown', bool userInitiated = false}) {
+    if (_networkChangeInFlight != null) {
+      _networkChangeRerun = true;
+      _rerunReason = reason;
+      _rerunUser = _rerunUser || userInitiated;
+      return _networkChangeInFlight!;
+    }
+    Future<void> run() async {
+      var r = reason;
+      var user = userInitiated;
+      do {
+        _networkChangeRerun = false;
+        try {
+          await _handleNetworkChangeOnce(r, user);
+        } catch (e) {
+          appLog('[iroh] network change ($r) failed: $e');
+        }
+        r = _rerunReason;
+        user = _rerunUser;
+        _rerunUser = false;
+      } while (_networkChangeRerun);
+    }
+
+    final f = run().whenComplete(() => _networkChangeInFlight = null);
+    _networkChangeInFlight = f;
+    return f;
+  }
+
+  Future<void> _handleNetworkChangeOnce(String reason, bool user) async {
     final s = _tunnelTargetServer();
     if (!IrohTunnel.isSupported || s == null) return;
     IrohTunnel.instance.networkChanged();
-    // A suspension thaw can leave the native side REPORTING connected on a
-    // dead QUIC connection — nothing has exercised it yet, so the supervisor
-    // hasn't noticed (observed on iPhone: pause, background a few minutes,
-    // resume → streaming dead, status still "connected"). That stale status
-    // makes verify's is-it-down check a no-op, so probe ground truth through
-    // the loopback and hard-drop the tunnel when the path is dead —
-    // ensureActiveTunnel below then rebuilds it and re-derives the queue's
-    // stream URLs on the fresh bind.
-    if (_activeTunnelCode != null &&
-        s.isIroh &&
-        s.tunnelPort != null &&
-        !await _probeTunnel(s)) {
-      appLog('[iroh] resume probe failed — rebuilding the tunnel');
-      final drop = _tunnelChain.then((_) {
-        IrohTunnel.instance.stop();
-        _activeTunnelCode = null;
-      });
-      _tunnelChain = drop.catchError((_) {});
-      await drop;
+    final native = IrohTunnel.instance.status;
+    final code = _activeTunnelCode;
+    final port = s.tunnelPort;
+    appLog('[iroh] network change ($reason) native=${native.name} port=$port '
+        'notConnectedFor=${_since(_notConnectedSince)?.inSeconds ?? 0}s');
+    switch (TunnelPolicy.onNetworkChange(
+        native: native,
+        assigned: tunnelAssignedTo(s) && port != null,
+        starting: _tunnelStarting,
+        rejected: native == IrohTunnelStatus.rejected || _startRejected,
+        sinceOffline: _since(_lastOfflineAt),
+        userInitiated: user)) {
+      case NetworkChangeRemedy.leaveRejected:
+        appLog('[iroh] pairing rejected — waiting for a repair, not re-dialing');
+        return;
+      case NetworkChangeRemedy.leaveToSupervisor:
+        appLog('[iroh] leaving the reconnect to the supervisor');
+        return;
+      case NetworkChangeRemedy.escalate:
+        await _hardRebuild(s,
+            code: code, port: port, reason: 'escalate/$reason', user: user);
+        return;
+      case NetworkChangeRemedy.probe:
+        if (await _probeTwice(s, code: code, port: port)) {
+          await _remedyDeadTunnel(s,
+              code: code, port: port, reason: reason, user: user);
+        }
+        return;
+      case NetworkChangeRemedy.ensureOnly:
+        break;
     }
-    await ensureActiveTunnel(verify: true);
+    // No tunnel (or a dial in flight): make sure one is coming. An automatic
+    // trigger with a failed dial behind it does not dial on the spot — the
+    // network just changed and is often not usable yet (log: the re-attach at
+    // 15:08:49 landed while service was still dead) — but it restarts the
+    // retry schedule so the next attempt is seconds away, not a minute.
+    if (!user &&
+        _activeTunnelCode == null &&
+        !_tunnelStarting &&
+        _lastFailedDialAt != null &&
+        !_startRejected) {
+      // Clamp rather than zero: a flapping dead zone emits a transport event
+      // every few minutes, and a full 5/10/20/40s ramp per event would keep
+      // the radio busy; one quick attempt per event is enough.
+      _retryAttempt = _retryAttempt.clamp(0, 1);
+      _scheduleRetry();
+      return;
+    }
+    await ensureActiveTunnel(verify: true, reason: reason, bypassBackoff: user);
+  }
+
+  /// True only when two probes, spaced across iroh's migration window, both
+  /// failed AND the tunnel is still the same one reporting connected. A
+  /// supervisor that noticed the drop in between (status → reconnecting) owns
+  /// the recovery, so that is a "false" too.
+  Future<bool> _probeTwice(Server s,
+      {required String? code, required int? port}) async {
+    final t0 = DateTime.now();
+    await Future<void>.delayed(TunnelTiming.probeFirstDelay);
+    if (!_sameTunnel(s, code, port)) return false;
+    final r1 = await _probeTunnel(s);
+    appLog('[iroh] probe #1 ${r1.ok ? 'passed' : 'failed'} '
+        '(${r1.reason}, ${r1.ms}ms, native=${IrohTunnel.instance.status.name})');
+    if (r1.ok) return false;
+    final wait = TunnelTiming.probeSecondAt - DateTime.now().difference(t0);
+    if (wait > Duration.zero) await Future<void>.delayed(wait);
+    if (!_sameTunnel(s, code, port) ||
+        IrohTunnel.instance.status != IrohTunnelStatus.connected) {
+      return false;
+    }
+    final r2 = await _probeTunnel(s);
+    appLog('[iroh] probe #2 ${r2.ok ? 'passed' : 'failed'} '
+        '(${r2.reason}, ${r2.ms}ms)');
+    return !r2.ok;
+  }
+
+  /// A connected-reporting tunnel is dead (two probes, or repeated load
+  /// failures): kick it in place when the binary can, else rebuild — rate
+  /// limited, because a rebuild rotates the port and token.
+  Future<void> _remedyDeadTunnel(Server s,
+      {required String? code,
+      required int? port,
+      required String reason,
+      required bool user}) async {
+    switch (TunnelPolicy.onProbeFailedTwice(
+        canKick: IrohTunnel.instance.hasKick,
+        sinceHardRebuild: _since(_lastHardRebuildAt),
+        sinceKick: _since(_kickedAt),
+        userInitiated: user)) {
+      case DeadTunnelRemedy.kick:
+        await _mutateTunnel('kick/$reason', () {
+          if (!_sameTunnel(s, code, port)) return;
+          _kickedAt = DateTime.now();
+          _notConnectedSince ??= _kickedAt;
+          appLog('[iroh] kicking the tunnel in place ($reason) — port $port kept');
+          IrohTunnel.instance.kick();
+        });
+      case DeadTunnelRemedy.hardRebuild:
+        await _hardRebuild(s,
+            code: code,
+            port: port,
+            reason: 'dead/$reason',
+            user: user,
+            onlyIfConnected: !user);
+      case DeadTunnelRemedy.wait:
+        appLog('[iroh] tunnel dead but a rebuild ran '
+            '${_since(_lastHardRebuildAt)?.inSeconds}s ago — waiting');
+    }
+  }
+
+  /// Stop the native tunnel and dial fresh (new port + token). The one path
+  /// that discards the supervisor, so it re-checks the tunnel identity inside
+  /// the chain and honours hardRebuildMinGap unless the user asked.
+  ///
+  /// [onlyIfConnected]: a probe-derived rebuild must not stop a supervisor
+  /// that flipped to `reconnecting` while the probe was running (the QUIC
+  /// idle timeout lands inside that window) — it is already healing on the
+  /// same port. The watchdog and a user tap target a reconnecting tunnel on
+  /// purpose and leave this false.
+  Future<void> _hardRebuild(Server s,
+      {required String? code,
+      required int? port,
+      required String reason,
+      required bool user,
+      bool onlyIfConnected = false}) async {
+    final gap = _since(_lastHardRebuildAt);
+    if (!user && gap != null && gap < TunnelTiming.hardRebuildMinGap) {
+      appLog('[iroh] hard rebuild ($reason) skipped — last one '
+          '${gap.inSeconds}s ago');
+      return;
+    }
+    var dropped = false;
+    await _mutateTunnel('drop/$reason', () {
+      if (!_sameTunnel(s, code, port)) return; // already rebuilt or dropped
+      if (onlyIfConnected &&
+          IrohTunnel.instance.status != IrohTunnelStatus.connected) {
+        appLog('[iroh] rebuild ($reason) skipped — the supervisor took over');
+        return;
+      }
+      _lastHardRebuildAt = DateTime.now();
+      _stopTunnel('rebuild/$reason');
+      dropped = true;
+    });
+    if (!dropped) return;
+    await ensureActiveTunnel(
+        verify: true, reason: 'rebuild/$reason', bypassBackoff: true);
   }
 
   /// Read the server's version from `GET /api/` — public, no auth, and served
@@ -634,19 +985,31 @@ class ServerManager {
   /// error status — proves the path; only a connect failure/timeout means
   /// dead. A FRESH client per probe is load-bearing: the shim authenticates
   /// per TCP connection, and a pooled socket would test yesterday's
-  /// connection instead of the tunnel.
-  Future<bool> _probeTunnel(Server s) async {
+  /// connection instead of the tunnel. Returns WHY it failed, classified by
+  /// [TunnelPolicy.classifyProbeError], because "refused", "reset" and
+  /// "timeout" are three different tunnel states.
+  Future<({bool ok, String reason, int ms})> _probeTunnel(Server s) async {
+    final sw = Stopwatch()..start();
     final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 4);
+      ..connectionTimeout = TunnelTiming.probeLoopbackTimeout;
     try {
       final req = await client
           .getUrl(s.apiUri('/api/v1/ping'))
-          .timeout(const Duration(seconds: 4));
-      final resp = await req.close().timeout(const Duration(seconds: 6));
+          .timeout(TunnelTiming.probeLoopbackTimeout);
+      final resp =
+          await req.close().timeout(TunnelTiming.probeResponseTimeout);
       await resp.drain<void>();
-      return true;
-    } catch (_) {
-      return false;
+      return (
+        ok: true,
+        reason: 'http ${resp.statusCode}',
+        ms: sw.elapsedMilliseconds
+      );
+    } catch (e) {
+      return (
+        ok: false,
+        reason: TunnelPolicy.classifyProbeError(e),
+        ms: sw.elapsedMilliseconds
+      );
     } finally {
       client.close(force: true);
     }
@@ -678,14 +1041,57 @@ class ServerManager {
       st = IrohTunnelStatus.down;
     } else if (_tunnelStarting) {
       st = IrohTunnelStatus.connecting;
+    } else if (_startRejected && _activeTunnelCode == null) {
+      // A cold dial answered "NO": no native tunnel exists to say so, but the
+      // banner must offer Repair, not Retry.
+      st = IrohTunnelStatus.rejected;
     } else {
       st = IrohTunnel.instance.status;
     }
-    if (st != _tunnelStatus.value) _tunnelStatus.add(st);
     final pk = (isIroh && !_tunnelStarting)
         ? IrohTunnel.instance.pathKind
         : IrohPathKind.unknown;
+    final now = DateTime.now();
+    if (st != _tunnelStatus.value) {
+      final was = _notConnectedSince;
+      final after = (st == IrohTunnelStatus.connected && was != null)
+          ? ' after ${now.difference(was).inSeconds}s'
+          : '';
+      appLog('[iroh] status ${_tunnelStatus.value.name} → ${st.name}$after '
+          'path=${pk.name} port=${_tunnelTargetServer()?.tunnelPort}');
+      _tunnelStatus.add(st);
+    }
+    if (st == IrohTunnelStatus.connected) {
+      _notConnectedSince = null;
+      _kickedAt = null;
+    } else if (isIroh) {
+      _notConnectedSince ??= now;
+    }
     if (pk != _pathKind.value) _pathKind.add(pk);
+    // Native supervisor events (a binary with the events ring); nothing on
+    // older binaries.
+    for (final line in IrohTunnel.instance.drainEvents()) {
+      appLog('[iroh-native] $line');
+    }
+    // Watchdog: a supervisor that is not converging although the relay is
+    // reachable (or a kick that did not take) gets a fresh endpoint. Never in
+    // a dead zone — see TunnelPolicy.shouldEscalate — and never more than one
+    // rebuild per minute (_hardRebuild), so the 2s poll is a safe caller.
+    final s = _tunnelTargetServer();
+    if (s != null &&
+        !_tunnelStarting &&
+        _activeTunnelCode != null &&
+        TunnelPolicy.shouldEscalate(
+            native: IrohTunnel.instance.status,
+            notConnectedFor: _since(_notConnectedSince),
+            sinceKick: _since(_kickedAt),
+            relayReachable: IrohTunnel.instance.relayOnline)) {
+      unawaited(_hardRebuild(s,
+          code: _activeTunnelCode,
+          port: s.tunnelPort,
+          reason: 'watchdog',
+          user: false));
+    }
   }
 
   void _startStatusPolling() {
@@ -699,6 +1105,7 @@ class ServerManager {
   void _stopStatusPolling() {
     _statusPoll?.cancel();
     _statusPoll = null;
+    _notConnectedSince = null;
     if (_tunnelStatus.value != IrohTunnelStatus.down) {
       _tunnelStatus.add(IrohTunnelStatus.down);
     }
@@ -717,15 +1124,29 @@ class ServerManager {
   Future<bool> awaitTunnelReady(
       {Server? server,
       Duration timeout = const Duration(seconds: 12),
-      bool extendWhileDialing = true}) async {
+      bool extendWhileDialing = true,
+      String caller = '?',
+      bool bypassBackoff = false}) async {
     // Default to the browsed server; callers on the playback path pass the
     // track's server (which the single tunnel may be serving instead).
     final s = server ?? currentServer;
     if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
-    unawaited(ensureActiveTunnel(verify: true));
-    // start() can take ~30s; don't report not-ready while a dial is in flight.
-    // Keep extending the window while connecting, bounded by a hard cap.
-    final hardCap = DateTime.now().add(const Duration(seconds: 45));
+    // A rejected cold dial leaves no native tunnel to report it; answer
+    // before firing an ensure that would only re-dial into the rejection.
+    if (_startRejected &&
+        !bypassBackoff &&
+        s.localname == _tunnelTargetServer()?.localname) {
+      return false;
+    }
+    unawaited(ensureActiveTunnel(
+        verify: true, reason: 'await-ready:$caller', bypassBackoff: bypassBackoff));
+    // start() can take ~30s; don't report not-ready while a dial is in flight
+    // — or while an ensure is still queued behind one (a rebuild's fresh dial
+    // runs after the drop). Keep extending the window while so, bounded by a
+    // hard cap that fits two full attempts.
+    final hardCap = DateTime.now().add(extendWhileDialing
+        ? const Duration(seconds: 90)
+        : const Duration(seconds: 45));
     var deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline) && DateTime.now().isBefore(hardCap)) {
       // Ready only when the tunnel is connected AND serving THIS server — with one
@@ -735,7 +1156,12 @@ class ServerManager {
           IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
         return false; // this server's code was rejected (needs re-pair)
       }
-      if (_tunnelStarting && extendWhileDialing) {
+      // A rejected cold dial leaves no native tunnel to report it.
+      if (_startRejected &&
+          s.localname == _tunnelTargetServer()?.localname) {
+        return false;
+      }
+      if (extendWhileDialing && (_tunnelStarting || _pendingEnsures > 0)) {
         deadline = DateTime.now().add(timeout);
       }
       await Future.delayed(const Duration(milliseconds: 300));
@@ -743,23 +1169,17 @@ class ServerManager {
     return tunnelServes(s);
   }
 
-  // At most one forced rebuild per minute. A hard stop/start rotates the
-  // loopback port AND the per-connection token: every in-flight download
-  // fails, and _reEnqueueOnLiveTunnel only re-resolves twice before giving
-  // up. Worth paying once for a tunnel that is lying about being up; a loop
-  // of them is worse than the outage it is trying to fix.
-  DateTime? _lastForcedRebuild;
   bool _reverifying = false;
 
   /// Ground-truth check for a tunnel that REPORTS connected while nothing can
   /// actually stream through it — the shim only flips to reconnecting once the
-  /// QUIC connection's close arrives, so a link that vanished underneath it
-  /// keeps claiming to be up, and the playback heal fires on a status
-  /// TRANSITION that therefore never comes.
+  /// QUIC connection's close arrives (≤30s idle timeout), so a link that
+  /// vanished underneath it keeps claiming to be up, and the playback heal
+  /// fires on a status TRANSITION that therefore never comes.
   ///
-  /// Probes the loopback and, only when the probe fails, hard-drops and
-  /// rebuilds — the same sequence [handleNetworkChange] runs, which is the one
-  /// path that has ever recovered this state. A passing probe means the tunnel
+  /// Probes the loopback and, only when the probe fails, hands the tunnel to
+  /// [_remedyDeadTunnel] (kick in place when the binary can, else a hard
+  /// rebuild rate-limited to one per minute). A passing probe means the tunnel
   /// is fine and the failures were the source's own problem, so nothing moves.
   Future<void> reverifyTunnel(Server s) async {
     if (!IrohTunnel.isSupported || !s.isIroh || _reverifying) return;
@@ -767,26 +1187,27 @@ class ServerManager {
     // Already known down: ensureActiveTunnel / awaitTunnelReady own that case
     // and this would only race them.
     if (!tunnelServes(s)) return;
-    final now = DateTime.now();
-    final last = _lastForcedRebuild;
-    if (last != null && now.difference(last) < const Duration(seconds: 60)) {
-      return;
-    }
+    final gap = _since(_lastHardRebuildAt);
+    if (gap != null && gap < TunnelTiming.hardRebuildMinGap) return;
     _reverifying = true;
     try {
-      if (await _probeTunnel(s)) {
-        appLog('[iroh] tunnel probe passed — the failures were not the path');
+      final code = _activeTunnelCode;
+      final port = s.tunnelPort;
+      final r = await _probeTunnel(s);
+      if (r.ok) {
+        appLog('[iroh] tunnel probe passed (${r.reason}, ${r.ms}ms) — '
+            'the failures were not the path');
         return;
       }
-      _lastForcedRebuild = DateTime.now();
-      appLog('[iroh] tunnel says connected but the path is dead — rebuilding');
-      final drop = _tunnelChain.then((_) {
-        IrohTunnel.instance.stop();
-        _activeTunnelCode = null;
-      });
-      _tunnelChain = drop.catchError((_) {});
-      await drop;
-      await ensureActiveTunnel(verify: true);
+      if (!tunnelServes(s)) {
+        appLog('[iroh] probe failed (${r.reason}) but the supervisor '
+            'noticed meanwhile — leaving it');
+        return;
+      }
+      appLog('[iroh] tunnel says connected but the probe failed '
+          '(${r.reason}, ${r.ms}ms) after repeated load failures');
+      await _remedyDeadTunnel(s,
+          code: code, port: port, reason: 'reverify', user: false);
     } finally {
       _reverifying = false;
     }
@@ -806,12 +1227,18 @@ class ServerManager {
     final oldCode = s.irohPairingCode;
 
     Future<void> activate(String? code) async {
-      s.irohPairingCode = code;
-      IrohTunnel.instance.stop();
-      _activeTunnelCode = null;
-      s.tunnelPort = null;
-      s.tunnelToken = null;
-      await ensureActiveTunnel(verify: true);
+      // The swap runs on the chain (invariant 1) so an in-flight ensure can't
+      // record the OLD code as the one it dialed.
+      await _mutateTunnel('repair', () {
+        s.irohPairingCode = code;
+        _stopTunnel('repair');
+        s.tunnelPort = null;
+        s.tunnelToken = null;
+        _startRejected = false;
+        _cancelRetry();
+      });
+      await ensureActiveTunnel(
+          verify: true, reason: 'repair', bypassBackoff: true);
     }
 
     // Try the new code WITHOUT persisting yet.
@@ -838,6 +1265,9 @@ class ServerManager {
       s.tunnelPort = port;
       s.tunnelToken = token;
       _activeTunnelCode = s.irohPairingCode;
+      _cancelRetry();
+      _startRejected = false;
+      _lastFailedDialAt = null;
     }).catchError((_) {});
   }
 
@@ -881,7 +1311,7 @@ class ServerManager {
     }
 
     // Start/stop the tunnel to match the (possibly changed) active server.
-    await ensureActiveTunnel();
+    await ensureActiveTunnel(reason: 'remove-server');
     await writeServerFile();
     syncInsecureTls();
     // Pooled keep-alive sockets to the removed server would otherwise linger.
@@ -909,7 +1339,7 @@ class ServerManager {
     // changeCurrentServer().
     currentServer = s;
     _currentServerStream.sink.add(currentServer);
-    await ensureActiveTunnel();
+    await ensureActiveTunnel(reason: 'make-default', bypassBackoff: true);
     BrowserManager().goToNavScreen();
 
     // Persist the new order so serverList[0] — the default loaded on the

@@ -42,6 +42,38 @@ Uri irohLoopbackUri(Server server, String stored) {
   );
 }
 
+/// [item] with its album-art URL (artUri + extras['artUrl']) rebound to
+/// [server]'s LIVE tunnel when it points at the phone's loopback. Returns the
+/// same instance when nothing changes (same port and token already). Unlike
+/// the stream URL, art matters for DOWNLOADED items too — the notification and
+/// lock screen fetch it — so there is no localPath skip. Pure given [server]'s
+/// current port + token; unit-tested.
+///
+/// Without this, every tunnel rebuild left the queue's art on the dead port:
+/// "Error loading artUri … Connection refused" every ~30s for minutes.
+MediaItem rebindLoopbackArt(MediaItem item, Server server) {
+  if (!server.isIroh || server.tunnelPort == null) return item;
+  bool stale(String? u) {
+    if (u == null) return false;
+    final p = Uri.tryParse(u);
+    if (p == null || p.host != '127.0.0.1') return false;
+    return p.port != server.tunnelPort ||
+        p.queryParameters['__lt'] != server.tunnelToken;
+  }
+
+  final art = item.artUri?.toString();
+  final extraArt = item.extras?['artUrl'] as String?;
+  final artStale = stale(art);
+  final extraStale = stale(extraArt);
+  if (!artStale && !extraStale) return item;
+  return item.copyWith(
+    artUri: artStale ? irohLoopbackUri(server, art!) : item.artUri,
+    extras: extraStale
+        ? {...?item.extras, 'artUrl': irohLoopbackUri(server, extraArt!).toString()}
+        : item.extras,
+  );
+}
+
 /// Re-origin a loopback iroh URL through the LAN proxy so a renderer can reach
 /// it. [loopback] is a stored `http://127.0.0.1:<port>/...` URL, rebound to the
 /// LIVE tunnel ([irohLoopbackUri]) so a stale port/token self-heals; the loopback
