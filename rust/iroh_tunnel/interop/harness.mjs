@@ -196,6 +196,49 @@ async function main() {
   check('server accepted a NEW connection (re-dial)', serverConns.length > connsBefore,
       `${connsBefore} -> ${serverConns.length}`);
 
+  // 7) KICK: a second client instance forces an in-place reconnect after 2s.
+  //    Same LOCAL_PORT must keep answering afterwards, the server must see
+  //    exactly one more connection, and the events ring must narrate it.
+  console.log('\n=== KICK TEST (in-place reconnect) ===');
+  const connsBeforeKick = serverConns.length;
+  const child2 = spawn(exe, [code, '--kick-after', '2', '--events'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let events2 = '';
+  child2.stderr.on('data', (d) => { events2 += d.toString(); process.stdout.write(`    [rust2] ${d}`); });
+  const port2 = await new Promise((resolve, reject) => {
+    let buf = '';
+    const to = setTimeout(() => reject(new Error('client2 did not report LOCAL_PORT within 45s')), 45000);
+    child2.stdout.on('data', (d) => {
+      buf += d.toString();
+      const mp = /LOCAL_PORT=(\d+)/.exec(buf);
+      const mt = /LOCAL_TOKEN=([0-9a-f]+)/.exec(buf);
+      if (mp && mt) { clearTimeout(to); resolve({ port: Number(mp[1]), token: mt[1] }); }
+    });
+    child2.once('exit', (c) => { clearTimeout(to); reject(new Error(`client2 exited early (code ${c})`)); });
+  });
+  const lurl2 = (p) => `http://127.0.0.1:${port2.port}${p}${p.includes('?') ? '&' : '?'}__lt=${port2.token}`;
+  const before = await fetch(lurl2('/probe/before-kick'));
+  check('client2 serves before the kick', before.status === 200, `status ${before.status}`);
+  let kicked = false, reconnected = false;
+  for (let i = 0; i < 20 && !reconnected; i++) {
+    await delay(1000);
+    kicked = kicked || /app kick/.test(events2);
+    reconnected = /reconnected: attempt/.test(events2);
+  }
+  check('events ring narrates the kick', kicked, kicked ? 'app kick seen' : 'no "app kick" event');
+  check('supervisor reconnected after the kick', reconnected, reconnected ? 'seen' : 'no "reconnected" event within 20s');
+  let afterOk = false;
+  for (let i = 0; i < 10 && !afterOk; i++) {
+    try {
+      const r = await fetch(lurl2('/probe/after-kick'), { signal: AbortSignal.timeout(2500) });
+      afterOk = r.status === 200;
+    } catch { /* not yet */ }
+    if (!afterOk) await delay(1000);
+  }
+  check('same LOCAL_PORT answers after the kick', afterOk, afterOk ? `port ${port2.port} kept` : 'no answer');
+  check('server accepted exactly one more connection for the kick', serverConns.length === connsBeforeKick + 2,
+      `${connsBeforeKick} -> ${serverConns.length} (client2 first dial + re-dial)`);
+  child2.kill();
+
   console.log(`\n=== RESULT: ${failures === 0 ? 'ALL PASS' : failures + ' FAILURE(S)'} ===`);
 
   child.kill();

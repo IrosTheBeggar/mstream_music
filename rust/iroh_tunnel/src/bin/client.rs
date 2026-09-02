@@ -4,12 +4,16 @@
 //! with NO ambient Tokio runtime, so the owned-runtime model is exercised exactly
 //! as flutter_rust_bridge will exercise it.
 //!
-//!   iroh-tunnel-client <pairing-code> [--local <port>]
+//!   iroh-tunnel-client <pairing-code> [--local <port>] [--kick-after <secs>] [--events]
 //!
 //! Prints `LOCAL_PORT=<n>` on stdout (for the interop harness), then blocks until
-//! killed.
+//! killed. `--kick-after` forces an in-place reconnect after N seconds (the
+//! harness's kick test); `--events` prints the native events ring to stderr
+//! every second (`[event] …`).
 
-use iroh_tunnel::ffi::{tunnel_local_token, tunnel_start, tunnel_stop};
+use iroh_tunnel::ffi::{
+    tunnel_drain_events, tunnel_force_reconnect, tunnel_local_token, tunnel_start, tunnel_stop,
+};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -28,6 +32,12 @@ fn main() {
         .and_then(|i| args.get(i + 1))
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(0);
+    let kick_after = args
+        .iter()
+        .position(|a| a == "--kick-after")
+        .and_then(|i| args.get(i + 1))
+        .and_then(|p| p.parse::<u64>().ok());
+    let print_events = args.iter().any(|a| a == "--events");
 
     eprintln!("[client] starting iroh endpoint…");
     match tunnel_start(code, local_port) {
@@ -38,6 +48,23 @@ fn main() {
             }
             println!("mStream reachable at http://127.0.0.1:{port}/api/");
             eprintln!("[client] connected ✅  (Ctrl-C to quit)");
+            if print_events {
+                std::thread::spawn(|| loop {
+                    if let Some(events) = tunnel_drain_events() {
+                        for line in events.lines() {
+                            eprintln!("[event] {line}");
+                        }
+                    }
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                });
+            }
+            if let Some(secs) = kick_after {
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(secs));
+                    eprintln!("[client] kicking the tunnel (in-place reconnect)");
+                    tunnel_force_reconnect();
+                });
+            }
         }
         Err(e) => {
             eprintln!("[client] {e}");

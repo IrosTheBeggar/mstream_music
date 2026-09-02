@@ -29,20 +29,23 @@ mod apple_compat;
 #[cfg(target_os = "android")]
 mod android_init;
 
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
 use base64::Engine;
 use iroh::endpoint::{presets, Connection, RecvStream, SendStream};
-use iroh::{Endpoint, EndpointAddr};
+use iroh::{Endpoint, EndpointAddr, Watcher as _};
 use iroh_tickets::endpoint::EndpointTicket;
 use iroh_tickets::Ticket as _;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{watch, Notify};
 use tokio::task::JoinHandle;
+use tokio::time::Instant;
 
 /// ALPN both ends must present. Bump if the server bumps `mstream/tunnel/N`.
 pub const TUNNEL_ALPN: &[u8] = b"mstream/tunnel/2";
@@ -60,11 +63,26 @@ const SECRET_LEN: usize = 32;
 /// version (the `mstr<V>:` envelope) is independent of the tunnel ALPN version.
 const PAIRING_VERSION: u32 = 1;
 
-// Per-inbound-TCP open_bi retry: lets a request ride a reconnect (the supervisor
-// swaps the live connection) instead of hard-failing during a brief drop.
-const BRIDGE_OPEN_ATTEMPTS: u32 = 3;
-const BRIDGE_RETRY_DELAY: Duration = Duration::from_millis(400);
-const RECONNECT_BACKOFF_MAX: Duration = Duration::from_secs(30);
+// A request that lands while the supervisor is mid-reconnect waits (bounded)
+// for the swapped-in connection instead of hard-failing: ExoPlayer's read
+// timeout is 8s and the app's API calls allow 15-20s, so a 1-3s reconnect is
+// invisible to them. Past the deadline the socket is drained and closed
+// cleanly (FIN, not RST) so the caller sees a plain connection close.
+const BRIDGE_WAIT_FOR_CONN: Duration = Duration::from_secs(10);
+// Sleep between failed reconnect attempts, doubling from 1s. Short on
+// purpose: the sleep is cut even shorter by an app kick or by the home relay
+// coming back (see wait_backoff), so it rarely matters — while a long cap was
+// what made a reconnect trail service return by up to ~65s on real cellular
+// (Galaxy S25, 2026-09-01: 108s from the drop, 65s after service was back).
+const RECONNECT_BACKOFF_MAX: Duration = Duration::from_secs(10);
+// The loopback listener is re-bound in place (same port) when it dies — iOS
+// kills it during app suspension while the QUIC connection survives (iPhone
+// X, 2026-09-01) — and on an app kick. The old socket is released when its
+// accept task is aborted; a few short retries cover that window.
+const REBIND_ATTEMPTS: u32 = 12;
+const REBIND_DELAY: Duration = Duration::from_millis(250);
+// Bounded native event ring the app drains into its diagnostics log.
+const EVENT_RING_CAP: usize = 64;
 
 // Graceful teardown: on stop/switch, let in-flight bridges finish before closing
 // the connection, bounded so a long media stream can't hold the old endpoint open.
@@ -102,16 +120,105 @@ struct Shared {
     secret: Vec<u8>,
     conn: Mutex<Connection>,
     status: AtomicU8,
+    /// Same value as [`Shared::status`], as a watch channel so bridges can
+    /// await the next status change instead of polling.
+    status_tx: watch::Sender<u8>,
     /// In-flight TCP⇆bi-stream bridges, so teardown can drain them gracefully.
     active_bridges: AtomicUsize,
     /// Random per-tunnel token the local HTTP client must echo as `__lt=<token>`,
     /// so only this app (not other apps on the device) can use the loopback proxy.
     local_token: String,
+    /// The loopback port, fixed for the tunnel's lifetime: the accept loop
+    /// re-binds it in place when the listener dies, so the app's URLs stay valid.
+    local_port: u16,
+    /// The accept task, replaceable: a kick aborts it (dropping the listener)
+    /// and spawns a fresh one on the same port.
+    accept: Mutex<Option<JoinHandle<()>>>,
+    /// App kick: wakes a supervisor that is sleeping out a backoff.
+    kick: Notify,
+    /// Native events for the app's diagnostics log (drained by the status poll).
+    events: Mutex<EventRing>,
+    started: Instant,
+    /// Bridges that gave up waiting for a connection / were rejected at the
+    /// loopback token check, reported in the drained events when they change.
+    bridges_open_failed: AtomicU32,
+    bridges_token_rejected: AtomicU32,
+    reported_open_failed: AtomicU32,
+    reported_token_rejected: AtomicU32,
+}
+
+/// Bounded ring of native events (newest last). `push` drops the oldest past
+/// the cap and counts the drops so the app can see the ring overflowed.
+struct EventRing {
+    lines: VecDeque<String>,
+    dropped: u32,
+}
+
+impl EventRing {
+    fn new() -> Self {
+        EventRing {
+            lines: VecDeque::with_capacity(EVENT_RING_CAP),
+            dropped: 0,
+        }
+    }
+    fn push(&mut self, line: String) {
+        if self.lines.len() >= EVENT_RING_CAP {
+            self.lines.pop_front();
+            self.dropped += 1;
+        }
+        self.lines.push_back(line);
+    }
+    /// Everything since the last drain, one event per line; None when empty.
+    fn drain(&mut self) -> Option<String> {
+        if self.lines.is_empty() {
+            return None;
+        }
+        let mut out = String::new();
+        if self.dropped > 0 {
+            out.push_str(&format!("({} older events dropped)\n", self.dropped));
+            self.dropped = 0;
+        }
+        for l in self.lines.drain(..) {
+            out.push_str(&l);
+            out.push('\n');
+        }
+        Some(out)
+    }
 }
 
 impl Shared {
     fn set_status(&self, s: u8) {
         self.status.store(s, Ordering::Relaxed);
+        let _ = self.status_tx.send_replace(s);
+    }
+    /// Record a native event (with seconds since bind) for the app's log and
+    /// mirror it to the platform log (logcat on Android).
+    fn event(&self, msg: impl AsRef<str>) {
+        let line = format!("+{:.1}s {}", self.started.elapsed().as_secs_f32(), msg.as_ref());
+        platform_log(PLATFORM_LOG_INFO, &line);
+        if let Ok(mut ring) = self.events.lock() {
+            ring.push(line);
+        }
+    }
+    /// Whether any home relay is currently connected — the discriminator
+    /// between "dead zone" (leave the supervisor alone) and "relay fine but the
+    /// dial keeps failing" (worth a fresh endpoint) for the app's watchdog.
+    fn relay_online(&self) -> bool {
+        let mut w = self.endpoint.home_relay_status();
+        w.get().iter().any(|r| r.is_connected())
+    }
+    /// Drain the events ring, appending the bridge counters when they moved.
+    fn drain_events(&self) -> Option<String> {
+        let mut out = self.events.lock().ok().and_then(|mut r| r.drain());
+        let of = self.bridges_open_failed.load(Ordering::Relaxed);
+        let tr = self.bridges_token_rejected.load(Ordering::Relaxed);
+        if of != self.reported_open_failed.swap(of, Ordering::Relaxed)
+            || tr != self.reported_token_rejected.swap(tr, Ordering::Relaxed)
+        {
+            let line = format!("bridges: open_failed={of} token_rejected={tr}\n");
+            out = Some(out.unwrap_or_default() + &line);
+        }
+        out
     }
     fn current_conn(&self) -> Connection {
         self.conn.lock().unwrap().clone()
@@ -131,6 +238,25 @@ impl Shared {
         PATH_UNKNOWN
     }
 }
+
+pub(crate) const PLATFORM_LOG_INFO: i32 = 4; // ANDROID_LOG_INFO
+pub(crate) const PLATFORM_LOG_ERROR: i32 = 6; // ANDROID_LOG_ERROR
+
+/// Mirror a line to the platform log (`adb logcat -s iroh_tunnel`). No-op
+/// elsewhere; iOS reads these through the app's drained events instead.
+#[cfg(target_os = "android")]
+pub(crate) fn platform_log(prio: i32, msg: &str) {
+    use std::ffi::{c_char, CString};
+    #[link(name = "log")]
+    extern "C" {
+        fn __android_log_write(prio: i32, tag: *const c_char, text: *const c_char) -> i32;
+    }
+    if let (Ok(tag), Ok(text)) = (CString::new("iroh_tunnel"), CString::new(msg)) {
+        unsafe { __android_log_write(prio, tag.as_ptr(), text.as_ptr()) };
+    }
+}
+#[cfg(not(target_os = "android"))]
+pub(crate) fn platform_log(_prio: i32, _msg: &str) {}
 
 /// RAII counter for [`Shared::active_bridges`]: increments on creation and
 /// decrements on drop, so teardown can wait for in-flight bridges to finish on
@@ -164,13 +290,13 @@ async fn drain_and_close(shared: Arc<Shared>) {
 }
 
 /// A running tunnel. The loopback port is STABLE for the tunnel's lifetime (it
-/// survives reconnects), so URLs the app builds against it stay valid across a
-/// network blip / server restart. Prefer [`Tunnel::shutdown`]; `Drop` is a fallback.
+/// survives reconnects AND listener re-binds), so URLs the app builds against it
+/// stay valid across a network blip / server restart / app suspension. Prefer
+/// [`Tunnel::shutdown`]; `Drop` is a fallback.
 pub struct Tunnel {
     /// Loopback port the app should treat as the server base URL.
     pub local_port: u16,
     shared: Arc<Shared>,
-    accept_task: JoinHandle<()>,
     supervisor: JoinHandle<()>,
     /// Set by [`Tunnel::begin_shutdown`] so [`Drop`] doesn't slam the connection
     /// shut after a graceful, drained teardown was already scheduled.
@@ -193,6 +319,17 @@ impl Tunnel {
         self.shared.local_token.clone()
     }
 
+    /// Whether any home relay is connected right now.
+    pub fn relay_online(&self) -> bool {
+        self.shared.relay_online()
+    }
+
+    /// Native events since the last call (one per line), or None when nothing
+    /// happened. Drained by the app's status poll into its diagnostics log.
+    pub fn drain_events(&self) -> Option<String> {
+        self.shared.drain_events()
+    }
+
     /// Fire-and-forget network nudge: tell iroh the network may have changed (Android
     /// can't self-detect) so it re-homes the relay + re-probes paths. Runs on `rt`
     /// and holds no lock during the re-probe — `tunnel_network_changed` is reached
@@ -204,13 +341,40 @@ impl Tunnel {
         });
     }
 
+    /// Reconnect IN PLACE — same endpoint, same loopback port, same token — so
+    /// nothing the app built against the tunnel goes stale: nudge iroh about
+    /// the network, re-bind the loopback listener (iOS kills it during a
+    /// suspension while the QUIC connection survives), then close the current
+    /// connection so the supervisor wakes and re-dials at once, cutting any
+    /// backoff sleep short. The app calls this after two failed liveness
+    /// probes on a tunnel that still REPORTS connected; a hard stop/start is
+    /// its fallback when this does not converge. Non-blocking (runs on `rt`).
+    pub fn force_reconnect(&self, rt: &tokio::runtime::Runtime) {
+        let shared = self.shared.clone();
+        rt.spawn(async move {
+            shared.event("app kick: network_change, listener re-bind, close");
+            shared.endpoint.network_change().await;
+            if !respawn_listener(&shared).await {
+                // Port taken by something else: nothing in-place can fix that.
+                shared.event("listener re-bind failed after kick — tunnel down");
+                shared.set_status(STATUS_DOWN);
+                return;
+            }
+            // No-op if the supervisor already saw this connection close.
+            shared.current_conn().close(0u32.into(), b"app kick");
+            shared.kick.notify_one();
+        });
+    }
+
     /// Begin a graceful, NON-BLOCKING teardown: stop accepting + supervising, then on
     /// `rt` run [`drain_and_close`] (drain in-flight bridges, then close conn +
     /// endpoint — see it for the bounded teardown window). The app calls stop()
     /// synchronously on the UI isolate, so this must return promptly — hence the
     /// work runs on the runtime instead of blocking the caller.
     pub fn begin_shutdown(self, rt: &tokio::runtime::Runtime) {
-        self.accept_task.abort();
+        if let Some(h) = self.shared.accept.lock().unwrap().take() {
+            h.abort();
+        }
         self.supervisor.abort();
         // Suppress the immediate-close Drop; the spawned drain owns the close now.
         self.shutting_down.store(true, Ordering::Relaxed);
@@ -224,7 +388,11 @@ impl Drop for Tunnel {
         if self.shutting_down.load(Ordering::Relaxed) {
             return;
         }
-        self.accept_task.abort();
+        if let Ok(mut guard) = self.shared.accept.lock() {
+            if let Some(h) = guard.take() {
+                h.abort();
+            }
+        }
         self.supervisor.abort();
         // Closing the connection makes in-flight bridge streams error out promptly.
         if let Ok(conn) = self.shared.conn.lock() {
@@ -241,8 +409,8 @@ impl Drop for Tunnel {
 /// Outcome of a dial + secret handshake.
 enum DialResult {
     Connected(Connection),
-    Rejected, // server said "NO" → wrong/rotated secret
-    Failed,   // transient: unreachable / timeout / mid-handshake error
+    Rejected,       // server said "NO" → wrong/rotated secret
+    Failed(String), // transient: unreachable / timeout / mid-handshake error, with why
 }
 
 /// Connect on the ALPN and run the 32-byte secret handshake on the first bi-stream.
@@ -254,29 +422,35 @@ async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[
     .await
     {
         Ok(Ok(c)) => c,
-        _ => return DialResult::Failed,
+        Ok(Err(e)) => return DialResult::Failed(format!("connect error: {e}")),
+        Err(_) => {
+            return DialResult::Failed(format!(
+                "connect timed out after {}s",
+                CONNECT_TIMEOUT.as_secs()
+            ))
+        }
     };
     // Bound the handshake so a stalled/half-dead server can't park the supervisor.
     let handshake = async {
         let (mut send, mut recv) = match conn.open_bi().await {
             Ok(pair) => pair,
-            Err(_) => return DialResult::Failed,
+            Err(e) => return DialResult::Failed(format!("open_bi: {e}")),
         };
         if send.write_all(secret).await.is_err() || send.finish().is_err() {
-            return DialResult::Failed;
+            return DialResult::Failed("handshake write failed".into());
         }
         match recv.read_to_end(HANDSHAKE_RESP_LIMIT).await {
             Ok(resp) if resp == b"OK" => DialResult::Connected(conn),
             Ok(resp) if resp == b"NO" => DialResult::Rejected,
             // Empty / unexpected reply (truncation, a non-conforming server) is
             // transient — retry rather than declaring a permanent "re-pair".
-            Ok(_) => DialResult::Failed,
-            Err(_) => DialResult::Failed,
+            Ok(resp) => DialResult::Failed(format!("unexpected handshake reply ({} bytes)", resp.len())),
+            Err(e) => DialResult::Failed(format!("handshake read: {e}")),
         }
     };
     match tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake).await {
         Ok(result) => result,
-        Err(_) => DialResult::Failed, // handshake stalled → treat as transient
+        Err(_) => DialResult::Failed("handshake stalled".into()), // transient
     }
 }
 
@@ -284,31 +458,95 @@ async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[
 /// (reusing the warmed relay + discovered addrs) and swaps in the new connection —
 /// so a network change / server restart recovers without the app re-pairing and
 /// without the loopback port changing. Exits only on a rejected handshake.
+///
+/// Between failed attempts it sleeps a short, doubling backoff that is cut
+/// short by an app kick or by the home relay coming back ([`wait_backoff`]),
+/// so an attempt that overlapped service returning costs at most one more
+/// dial, not a timer's worth of silence. Every attempt is recorded in the
+/// events ring with its elapsed time, relay state and failure reason.
 async fn supervise(shared: Arc<Shared>) {
     loop {
         // Park until the current connection closes for any reason.
-        shared.current_conn().closed().await;
+        let why = shared.current_conn().closed().await;
         shared.set_status(STATUS_RECONNECTING);
+        shared.event(format!("conn closed: {why}"));
 
         let mut backoff = Duration::from_secs(1);
+        let mut attempt = 0u32;
         loop {
+            attempt += 1;
+            let t0 = Instant::now();
             // Re-warm a relay path before re-dialing (cheap if already online).
-            let _ = tokio::time::timeout(ONLINE_TIMEOUT, shared.endpoint.online()).await;
+            let relay_online = tokio::time::timeout(ONLINE_TIMEOUT, shared.endpoint.online())
+                .await
+                .is_ok();
             match dial_and_handshake(&shared.endpoint, &shared.addr, &shared.secret).await {
                 DialResult::Connected(c) => {
                     *shared.conn.lock().unwrap() = c;
                     shared.set_status(STATUS_CONNECTED);
+                    shared.event(format!(
+                        "reconnected: attempt {attempt} in {:.1}s relay_online={relay_online}",
+                        t0.elapsed().as_secs_f32()
+                    ));
                     break; // resume watching the new connection
                 }
                 DialResult::Rejected => {
                     shared.set_status(STATUS_REJECTED);
+                    shared.event("handshake rejected — re-pair needed");
                     return; // rotated/wrong secret — the app must re-pair
                 }
-                DialResult::Failed => {
-                    tokio::time::sleep(backoff).await;
-                    backoff = (backoff * 2).min(RECONNECT_BACKOFF_MAX);
+                DialResult::Failed(reason) => {
+                    shared.event(format!(
+                        "attempt {attempt} failed after {:.1}s relay_online={relay_online}: {reason}; backoff {}s",
+                        t0.elapsed().as_secs_f32(),
+                        backoff.as_secs()
+                    ));
+                    let woke = wait_backoff(&shared, backoff).await;
+                    backoff = next_backoff(backoff, woke);
                 }
             }
+        }
+    }
+}
+
+/// The backoff after a failed attempt: back to 1s when something woke us
+/// (the relay came back, the app kicked) — the next dial is likely to work —
+/// else doubled and capped. Pure; unit-tested.
+fn next_backoff(prev: Duration, woke: bool) -> Duration {
+    if woke {
+        Duration::from_secs(1)
+    } else {
+        (prev * 2).min(RECONNECT_BACKOFF_MAX)
+    }
+}
+
+/// Sleep `backoff`, returning early (true) on an app kick or on the home relay
+/// going from down to up. Only a DOWN→UP relay edge counts: a relay that was
+/// already up when the attempt failed says nothing about the next attempt.
+async fn wait_backoff(shared: &Shared, backoff: Duration) -> bool {
+    let mut relay = shared.endpoint.home_relay_status();
+    let relay_was_up = relay.get().iter().any(|r| r.is_connected());
+    let relay_back = async {
+        if relay_was_up {
+            std::future::pending::<()>().await;
+        }
+        loop {
+            match relay.updated().await {
+                Ok(v) if v.iter().any(|r| r.is_connected()) => return,
+                Ok(_) => continue,
+                Err(_) => std::future::pending::<()>().await,
+            }
+        }
+    };
+    tokio::select! {
+        _ = tokio::time::sleep(backoff) => false,
+        _ = shared.kick.notified() => {
+            shared.event("backoff cut short: app kick");
+            true
+        }
+        _ = relay_back => {
+            shared.event("backoff cut short: home relay back");
+            true
         }
     }
 }
@@ -400,14 +638,25 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
     let addr = ticket.endpoint_addr().clone();
 
     // First dial + handshake; distinguish a rejected secret for a clear error.
+    // The failure reason and relay state ride along: "may be offline" used to
+    // hide "no home relay within 8s; connect timed out after 25s".
+    let t0 = Instant::now();
     let conn = match dial_and_handshake(&endpoint, &addr, &pairing.secret).await {
         DialResult::Connected(c) => c,
         DialResult::Rejected => bail!(
             "tunnel handshake rejected — wrong or rotated connect secret; re-pair from the server's Remote Access panel"
         ),
-        DialResult::Failed => bail!(
-            "could not reach the server through the tunnel — it may be offline or the pairing code is stale"
-        ),
+        DialResult::Failed(reason) => {
+            let relay = if endpoint.home_relay_status().get().iter().any(|r| r.is_connected()) {
+                "online"
+            } else {
+                "not reached"
+            };
+            bail!(
+                "could not reach the server through the tunnel ({reason}; home relay {relay}; {:.1}s) — it may be offline or the pairing code is stale",
+                t0.elapsed().as_secs_f32()
+            )
+        }
     };
 
     let listener = TcpListener::bind(("127.0.0.1", local_port))
@@ -415,38 +664,113 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         .context("failed to bind local proxy port")?;
     let bound_port = listener.local_addr()?.port();
 
+    let (status_tx, _status_rx) = watch::channel(STATUS_CONNECTED);
+    let path = {
+        let mut kind = "unknown";
+        for p in conn.paths().iter() {
+            if p.is_selected() {
+                kind = if p.is_relay() { "relay" } else { "direct" };
+            }
+        }
+        kind
+    };
     let shared = Arc::new(Shared {
         endpoint,
         addr,
         secret: pairing.secret,
         conn: Mutex::new(conn),
         status: AtomicU8::new(STATUS_CONNECTED),
+        status_tx,
         active_bridges: AtomicUsize::new(0),
         local_token: gen_local_token()?,
+        local_port: bound_port,
+        accept: Mutex::new(None),
+        kick: Notify::new(),
+        events: Mutex::new(EventRing::new()),
+        started: Instant::now(),
+        bridges_open_failed: AtomicU32::new(0),
+        bridges_token_rejected: AtomicU32::new(0),
+        reported_open_failed: AtomicU32::new(0),
+        reported_token_rejected: AtomicU32::new(0),
     });
+    shared.event(format!(
+        "bound 127.0.0.1:{bound_port}, first dial OK in {:.1}s path={path}",
+        t0.elapsed().as_secs_f32()
+    ));
 
-    let accept_shared = shared.clone();
-    let accept_task = tokio::spawn(async move {
-        loop {
-            match listener.accept().await {
-                Ok((sock, _)) => {
-                    let s = accept_shared.clone();
-                    tokio::spawn(async move { bridge_socket(sock, s).await });
-                }
-                Err(_) => break,
-            }
-        }
-    });
+    let accept = tokio::spawn(serve_loopback(shared.clone(), listener));
+    *shared.accept.lock().unwrap() = Some(accept);
 
     let supervisor = tokio::spawn(supervise(shared.clone()));
 
     Ok(Tunnel {
         local_port: bound_port,
         shared,
-        accept_task,
         supervisor,
         shutting_down: AtomicBool::new(false),
     })
+}
+
+/// The loopback accept loop. A failed accept used to end it silently while
+/// the status kept saying connected — that is how an iOS suspension (which
+/// kills the listener socket but not the QUIC connection) left every local
+/// request refused. Now it re-binds the SAME port in place and carries on;
+/// only a port that cannot be re-bound takes the tunnel down.
+async fn serve_loopback(shared: Arc<Shared>, mut listener: TcpListener) {
+    loop {
+        match listener.accept().await {
+            Ok((sock, _)) => {
+                let s = shared.clone();
+                tokio::spawn(async move { bridge_socket(sock, s).await });
+            }
+            Err(e) => {
+                shared.event(format!(
+                    "accept failed: {e} — re-binding 127.0.0.1:{}",
+                    shared.local_port
+                ));
+                match rebind_listener(&shared).await {
+                    Some(l) => {
+                        listener = l;
+                        shared.event("listener re-bound");
+                    }
+                    None => {
+                        shared.event("listener re-bind failed — tunnel down");
+                        shared.set_status(STATUS_DOWN);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Bind the tunnel's loopback port again, retrying briefly while a dying
+/// socket still holds it.
+async fn rebind_listener(shared: &Shared) -> Option<TcpListener> {
+    for _ in 0..REBIND_ATTEMPTS {
+        match TcpListener::bind(("127.0.0.1", shared.local_port)).await {
+            Ok(l) => return Some(l),
+            Err(_) => tokio::time::sleep(REBIND_DELAY).await,
+        }
+    }
+    None
+}
+
+/// Replace the accept task with a fresh listener on the same port (the kick
+/// path). True when the port was re-bound.
+async fn respawn_listener(shared: &Arc<Shared>) -> bool {
+    if let Some(h) = shared.accept.lock().unwrap().take() {
+        h.abort(); // drops the old listener, releasing the port
+    }
+    match rebind_listener(shared).await {
+        Some(l) => {
+            let h = tokio::spawn(serve_loopback(shared.clone(), l));
+            *shared.accept.lock().unwrap() = Some(h);
+            shared.event("listener re-bound");
+            true
+        }
+        None => false,
+    }
 }
 
 /// Generate a random 128-bit loopback token, hex-encoded (32 chars).
@@ -494,20 +818,36 @@ async fn bridge_socket(sock: TcpStream, shared: Arc<Shared>) {
     // Authenticate the local hop first: only our app knows the token, so other apps
     // on the device that connect to 127.0.0.1:<port> are dropped before any bi-stream.
     if !local_token_ok(&sock, &shared.local_token).await {
+        shared.bridges_token_rejected.fetch_add(1, Ordering::Relaxed);
         return;
     }
-    // Open a bi-stream on the CURRENT connection, retrying briefly so a request
-    // mid-reconnect can ride the swapped-in connection instead of hard-failing.
-    let mut attempt = 0u32;
+    // Open a bi-stream on the CURRENT connection. While the supervisor is
+    // mid-reconnect, wait (bounded) for the swapped-in connection rather than
+    // hard-failing, so a request landing inside a 1-3s reconnect rides it.
+    let mut rx = shared.status_tx.subscribe();
+    let deadline = Instant::now() + BRIDGE_WAIT_FOR_CONN;
     let (send, recv) = loop {
-        match shared.current_conn().open_bi().await {
-            Ok(pair) => break pair,
-            Err(_) => {
-                attempt += 1;
-                if attempt >= BRIDGE_OPEN_ATTEMPTS {
+        if shared.status.load(Ordering::Relaxed) == STATUS_CONNECTED {
+            if let Ok(pair) = shared.current_conn().open_bi().await {
+                break pair;
+            }
+            // The connection died between the status read and open_bi: fall
+            // through and wait for the supervisor's swap.
+        }
+        tokio::select! {
+            r = rx.changed() => {
+                if r.is_err() {
                     return;
                 }
-                tokio::time::sleep(BRIDGE_RETRY_DELAY).await;
+            }
+            _ = tokio::time::sleep_until(deadline) => {
+                shared.bridges_open_failed.fetch_add(1, Ordering::Relaxed);
+                // Consume what the client sent so the drop is a clean FIN, not
+                // an RST with unread bytes.
+                let mut sink = vec![0u8; 8192];
+                let _ = tokio::time::timeout(Duration::from_millis(50), sock.readable()).await;
+                let _ = sock.try_read(&mut sink);
+                return;
             }
         }
     };
@@ -609,6 +949,33 @@ mod tests {
             .to_string();
         assert!(err.contains("version 2"), "got: {err}");
         assert!(err.to_lowercase().contains("update"), "got: {err}");
+    }
+
+    #[test]
+    fn backoff_doubles_and_caps_unless_woken() {
+        let mut b = Duration::from_secs(1);
+        let mut seen = vec![];
+        for _ in 0..6 {
+            b = next_backoff(b, false);
+            seen.push(b.as_secs());
+        }
+        assert_eq!(seen, vec![2, 4, 8, 10, 10, 10]);
+        assert_eq!(next_backoff(Duration::from_secs(10), true).as_secs(), 1);
+    }
+
+    #[test]
+    fn event_ring_caps_and_counts_drops() {
+        let mut r = EventRing::new();
+        assert!(r.drain().is_none());
+        for i in 0..(EVENT_RING_CAP + 3) {
+            r.push(format!("e{i}"));
+        }
+        let out = r.drain().unwrap();
+        assert!(out.starts_with("(3 older events dropped)\n"), "got: {out}");
+        assert!(out.contains("e3\n"));
+        assert!(!out.contains("e2\n"));
+        assert!(out.trim_end().ends_with(&format!("e{}", EVENT_RING_CAP + 2)));
+        assert!(r.drain().is_none(), "drain empties the ring");
     }
 
     #[test]

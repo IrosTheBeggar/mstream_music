@@ -17,7 +17,7 @@ path = "src/bin/client.rs"
 # iroh CORE only — no iroh-blobs/docs/gossip/rpc (keeps the Android .so small).
 iroh = "1"
 iroh-tickets = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros", "sync"] }
 serde_json = "1"
 base64 = "0.22"
 anyhow = "1"

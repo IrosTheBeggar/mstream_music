@@ -115,3 +115,29 @@ pub fn tunnel_network_changed() {
         t.nudge_network(rt());
     }
 }
+
+/// Reconnect in place (same endpoint / port / token): re-bind the loopback
+/// listener and close the current connection so the supervisor re-dials at
+/// once. Fire-and-forget; no-op when nothing is running.
+pub fn tunnel_force_reconnect() {
+    let guard = TUNNEL.lock().unwrap();
+    if let Some(t) = guard.as_ref() {
+        t.force_reconnect(rt());
+    }
+}
+
+/// Native events since the last call (one per line), or None when nothing
+/// happened / nothing is running. Cheap: the ring is drained under a short lock.
+pub fn tunnel_drain_events() -> Option<String> {
+    TUNNEL.lock().unwrap().as_ref().and_then(|t| t.drain_events())
+}
+
+/// Whether a home relay is currently connected: 1 = yes, 0 = no, -1 = no
+/// tunnel running (unknown). The app's reconnect watchdog reads this to tell a
+/// dead zone from a supervisor that is failing with the relay reachable.
+pub fn tunnel_relay_online() -> i32 {
+    match TUNNEL.lock().unwrap().as_ref() {
+        Some(t) => i32::from(t.relay_online()),
+        None => -1,
+    }
+}

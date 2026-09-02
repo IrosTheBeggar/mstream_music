@@ -19,8 +19,9 @@ use std::panic::{self, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
 
 use crate::ffi::{
-    tunnel_is_active, tunnel_local_token, tunnel_network_changed, tunnel_path_kind, tunnel_start,
-    tunnel_status, tunnel_stop,
+    tunnel_drain_events, tunnel_force_reconnect, tunnel_is_active, tunnel_local_token,
+    tunnel_network_changed, tunnel_path_kind, tunnel_relay_online, tunnel_start, tunnel_status,
+    tunnel_stop,
 };
 
 static LAST_ERROR: Mutex<Option<CString>> = Mutex::new(None);
@@ -132,6 +133,33 @@ pub extern "C" fn mstream_iroh_path_kind() -> i32 {
     guard(crate::PATH_UNKNOWN as i32, || tunnel_path_kind() as i32)
 }
 
+/// Reconnect the running tunnel in place — same loopback port and token — after
+/// the app has confirmed (two failed liveness probes) that a tunnel reporting
+/// connected is dead. Non-blocking; no-op when nothing is running.
+#[no_mangle]
+pub extern "C" fn mstream_iroh_force_reconnect() {
+    guard((), tunnel_force_reconnect);
+}
+
+/// Native events since the last call as a heap NUL-terminated C string (one
+/// event per line) the caller must free with [`mstream_iroh_string_free`], or
+/// null when there is nothing new. The app appends them to its diagnostics log.
+#[no_mangle]
+pub extern "C" fn mstream_iroh_drain_events() -> *mut c_char {
+    guard(std::ptr::null_mut(), || match tunnel_drain_events() {
+        Some(s) => CString::new(s)
+            .map(|c| c.into_raw())
+            .unwrap_or(std::ptr::null_mut()),
+        None => std::ptr::null_mut(),
+    })
+}
+
+/// Whether a home relay is connected: 1 yes, 0 no, -1 unknown (no tunnel).
+#[no_mangle]
+pub extern "C" fn mstream_iroh_relay_online() -> i32 {
+    guard(-1, tunnel_relay_online)
+}
+
 /// The running tunnel's loopback auth token as a heap NUL-terminated C string the
 /// caller must free with [`mstream_iroh_string_free`], or null if no tunnel is
 /// running. The app appends it to loopback URLs as `__lt=<token>`.
@@ -170,16 +198,6 @@ pub unsafe extern "C" fn mstream_iroh_string_free(p: *mut c_char) {
 }
 
 // Mirror panics/errors to logcat (`adb logcat -s iroh_tunnel`) on Android.
-#[cfg(target_os = "android")]
 fn log_android(msg: &str) {
-    #[link(name = "log")]
-    extern "C" {
-        fn __android_log_write(prio: i32, tag: *const c_char, text: *const c_char) -> i32;
-    }
-    if let (Ok(tag), Ok(text)) = (CString::new("iroh_tunnel"), CString::new(msg)) {
-        // 6 == ANDROID_LOG_ERROR
-        unsafe { __android_log_write(6, tag.as_ptr(), text.as_ptr()) };
-    }
+    crate::platform_log(crate::PLATFORM_LOG_ERROR, msg);
 }
-#[cfg(not(target_os = "android"))]
-fn log_android(_msg: &str) {}

@@ -83,12 +83,12 @@ xcodebuild -create-xcframework \
   -framework "$STAGE/ios-arm64-simulator/$FW.framework" \
   -output "$DEST/$FW.xcframework"
 
-# Smoke-check: all 9 C ABI symbols must be exported from both slices (the
+# Smoke-check: all 12 C ABI symbols must be exported from both slices (the
 # export trie is authoritative — dyld_info, not nm).
 for slice in ios-arm64 ios-arm64-simulator; do
   n=$(xcrun dyld_info -exports "$DEST/$FW.xcframework/$slice/$FW.framework/$FW" | grep -c ' _mstream_iroh_')
-  [ "$n" -eq 9 ] || {
-    echo "ERROR: $slice exports $n/9 mstream_iroh_ symbols"
+  [ "$n" -eq 12 ] || {
+    echo "ERROR: $slice exports $n/12 mstream_iroh_ symbols"
     exit 1
   }
 done
