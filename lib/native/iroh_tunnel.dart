@@ -68,6 +68,13 @@ class _Bindings {
   final _LastErrNative lastError;
   final _FreeDart stringFree;
   final _LastErrNative localTokenPtr;
+  // Optional symbols (Phase 2 of the reconnect work): looked up defensively so
+  // the Dart side runs against a committed binary that predates them — a
+  // missing symbol degrades to "no kick / no native events" instead of a
+  // lookupFunction crash at first use.
+  final _VoidDart? forceReconnect;
+  final _LastErrNative? drainEventsPtr;
+  final _Int32Dart? relayOnlineCode;
 
   factory _Bindings.open() {
     final lib = _openNativeLib();
@@ -81,12 +88,42 @@ class _Bindings {
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_last_error'),
       lib.lookupFunction<_FreeNative, _FreeDart>('mstream_iroh_string_free'),
       lib.lookupFunction<_LastErrNative, _LastErrNative>('mstream_iroh_local_token'),
+      forceReconnect: _tryVoid(lib, 'mstream_iroh_force_reconnect'),
+      drainEventsPtr: _tryString(lib, 'mstream_iroh_drain_events'),
+      relayOnlineCode: _tryInt32(lib, 'mstream_iroh_relay_online'),
     );
   }
 
   _Bindings._(this.start, this.stop, this.isActive, this.statusCode,
       this.pathKindCode, this.networkChanged, this.lastError, this.stringFree,
-      this.localTokenPtr);
+      this.localTokenPtr,
+      {this.forceReconnect, this.drainEventsPtr, this.relayOnlineCode});
+
+  // dart:ffi needs the native signature spelled out at each lookup (no generic
+  // helper), so one small try/catch per optional signature.
+  static _VoidDart? _tryVoid(DynamicLibrary lib, String name) {
+    try {
+      return lib.lookupFunction<_VoidNative, _VoidDart>(name);
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  static _LastErrNative? _tryString(DynamicLibrary lib, String name) {
+    try {
+      return lib.lookupFunction<_LastErrNative, _LastErrNative>(name);
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  static _Int32Dart? _tryInt32(DynamicLibrary lib, String name) {
+    try {
+      return lib.lookupFunction<_Int32Native, _Int32Dart>(name);
+    } on ArgumentError {
+      return null;
+    }
+  }
 
   String? takeLastError() {
     final p = lastError();
@@ -103,6 +140,24 @@ class _Bindings {
     if (p == nullptr) return null;
     try {
       return p.toDartString();
+    } finally {
+      stringFree(p);
+    }
+  }
+
+  /// Native supervisor events since the last drain (one per line), or an
+  /// empty list when the binary has no events ring / nothing happened.
+  List<String> takeEvents() {
+    final fn = drainEventsPtr;
+    if (fn == null) return const [];
+    final p = fn();
+    if (p == nullptr) return const [];
+    try {
+      return p
+          .toDartString()
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
     } finally {
       stringFree(p);
     }
@@ -194,6 +249,33 @@ class IrohTunnel {
   /// Android). Cheap; safe to call when nothing is running.
   void networkChanged() {
     if (isSupported) _b.networkChanged();
+  }
+
+  /// Whether the running native binary offers an in-place reconnect (close the
+  /// current QUIC connection so the supervisor re-dials on the SAME
+  /// endpoint/port/token). False on a binary that predates it, in which case
+  /// the Dart side falls back to a rate-limited hard rebuild.
+  bool get hasKick => isSupported && _b.forceReconnect != null;
+
+  /// Force an in-place reconnect (see [hasKick]). No-op when unsupported.
+  void kick() {
+    if (hasKick) _b.forceReconnect!();
+  }
+
+  /// Native supervisor events since the last call, for the app log. Empty on
+  /// a binary without the events ring.
+  List<String> drainEvents() => isSupported ? _b.takeEvents() : const [];
+
+  /// Whether the native endpoint's home relay is currently reachable, or null
+  /// when the binary cannot say. Drives the reconnect watchdog: a reconnect
+  /// failing WITH the relay up is worth a fresh endpoint; one failing without
+  /// it is a dead zone the supervisor handles better.
+  bool? get relayOnline {
+    if (!isSupported) return null;
+    final fn = _b.relayOnlineCode;
+    if (fn == null) return null;
+    final code = fn();
+    return code < 0 ? null : code != 0;
   }
 }
 

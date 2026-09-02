@@ -811,7 +811,8 @@ class AutoApi {
       await ServerManager().awaitTunnelReady(
           server: server,
           timeout: const Duration(seconds: 12),
-          extendWhileDialing: false);
+          extendWhileDialing: false,
+          caller: 'auto-browse');
     }
     final uri = server.apiUri(location);
     final headers = <String, String>{'x-access-token': server.jwt ?? ''};
