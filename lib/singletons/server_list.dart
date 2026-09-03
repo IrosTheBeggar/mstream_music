@@ -276,11 +276,27 @@ class ServerManager {
   Future<void> changeCurrentServer(int currentServerIndex) async {
     currentServer = serverList[currentServerIndex];
     _currentServerStream.sink.add(currentServer);
-    // Bring the tunnel up for the newly-active iroh server (or tear it down when
-    // switching to HTTP) before the browser queries it.
-    await ensureActiveTunnel(reason: 'server-switch', bypassBackoff: true);
+    await _settleTunnelForSwitch('server-switch');
+  }
+
+  /// After [currentServer] changed: reset the browser onto it and point the
+  /// tunnel where it now belongs. An iroh server is brought up BEFORE the
+  /// browser queries it. A standard server needs no tunnel, so the browser
+  /// resets at once — the old server's stack must not sit under the new
+  /// header, and it must not wait on the chain, where a cold dial for the
+  /// queue's iroh server may be running; the ensure (keep the tunnel for the
+  /// queue, or release it) runs behind.
+  Future<void> _settleTunnelForSwitch(String reason) async {
+    final s = currentServer!;
+    if (!s.isIroh) {
+      BrowserManager().goToNavScreen();
+      unawaited(getServerPaths(s));
+      unawaited(ensureActiveTunnel(reason: reason, bypassBackoff: true));
+      return;
+    }
+    await ensureActiveTunnel(reason: reason, bypassBackoff: true);
     BrowserManager().goToNavScreen();
-    unawaited(getServerPaths(currentServer!));
+    unawaited(getServerPaths(s));
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
@@ -1424,8 +1440,7 @@ class ServerManager {
     // changeCurrentServer().
     currentServer = s;
     _currentServerStream.sink.add(currentServer);
-    await ensureActiveTunnel(reason: 'make-default', bypassBackoff: true);
-    BrowserManager().goToNavScreen();
+    await _settleTunnelForSwitch('make-default');
 
     // Persist the new order so serverList[0] — the default loaded on the
     // next launch — is this server. Without this the choice was lost on

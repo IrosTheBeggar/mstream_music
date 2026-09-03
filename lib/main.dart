@@ -576,10 +576,24 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // that we're on a slower relay path (the optimal direct path stays hidden, so
   // everyday use is clean). Hidden entirely for non-iroh servers. Plain English.
   Widget _tunnelBanner() {
-    return StreamBuilder<IrohTunnelStatus>(
-      stream: ServerManager().tunnelStatusStream,
-      initialData: ServerManager().tunnelStatus,
-      builder: (context, snap) {
+    // Re-evaluated on a server switch too, not only on tunnel events: whether
+    // the strip belongs on screen depends on which server is being browsed
+    // (a "Reconnecting…" strip used to outlive a switch to a standard server
+    // until the tunnel's next status change).
+    return StreamBuilder<Server?>(
+      stream: ServerManager().currentServerStream,
+      initialData: ServerManager().currentServer,
+      builder: (context, _) => StreamBuilder<IrohTunnelStatus>(
+        stream: ServerManager().tunnelStatusStream,
+        initialData: ServerManager().tunnelStatus,
+        builder: _tunnelBannerBody,
+      ),
+    );
+  }
+
+  Widget _tunnelBannerBody(
+      BuildContext context, AsyncSnapshot<IrohTunnelStatus> snap) {
+    {
         final st = snap.data ?? IrohTunnelStatus.down;
         // Only while the tunnel has a server to serve. Browsing the iroh
         // server: every state. Browsing a standard server while the tunnel
@@ -653,8 +667,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
         }
-      },
-    );
+    }
   }
 
   // Thin iroh status strip — matches the migration banner's Material + padding +
