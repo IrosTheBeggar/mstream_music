@@ -175,3 +175,5 @@ l10n_untranslated.txt
 # Hidden root-level dev screenshots: visualizer / UI verification shots get
 # saved as `.<name>.png` during development. Local scratch, not the app.
 /.*.png
+# smoke-test artifacts (screenshots, logs, device config backups)
+smoke/out/
