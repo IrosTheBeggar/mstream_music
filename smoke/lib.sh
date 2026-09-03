@@ -80,7 +80,14 @@ key()       { adbx shell input keyevent "$1"; }
 airplane()  { adbx shell cmd connectivity airplane-mode "$1" >/dev/null; log "airplane $1"; }
 wifi()      { adbx shell svc wifi "$1"; log "wifi $1"; }
 bluetooth() { adbx shell svc bluetooth "$1" >/dev/null; log "bluetooth $1"; }
-media_key() { adbx shell cmd media_session dispatch "$1" >/dev/null 2>&1; log "media key: $1"; }
+# Media keys go through the input pipeline (KEYCODE_MEDIA_*), which the
+# session manager routes to the app's registered media button receiver even
+# when the app is paused or dead. `cmd media_session dispatch` only reaches a
+# session that is currently the media-button session (i.e. played recently).
+media_key() { # play | pause | play-pause
+  local code; case "$1" in play) code=126;; pause) code=127;; *) code=85;; esac
+  adbx shell input keyevent "$code"; log "media key: $1"
+}
 wake()      { adbx shell input keyevent KEYCODE_WAKEUP; }
 bt_connected() { adbx shell dumpsys bluetooth_manager 2>/dev/null | grep -m1 -E "ConnectionState:" | grep -q STATE_CONNECTED; }
 a2dp_route()   { adbx shell dumpsys audio 2>/dev/null | grep -m1 -oE 'Devices: (bt_a2dp|speaker)[^ ]*'; }
