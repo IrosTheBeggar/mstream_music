@@ -72,7 +72,7 @@ class ApiManager {
           body: jsonEncode(body),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? '',
+            'x-access-token': server.authToken ?? '',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -101,7 +101,7 @@ class ApiManager {
           body: json.encode(body),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? '',
+            'x-access-token': server.authToken ?? '',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -130,7 +130,7 @@ class ApiManager {
         '?path=$encodedPath${server.localTokenQuery}');
 
     final response = await _direct
-        .get(uri, headers: {'x-access-token': server.jwt ?? ''})
+        .get(uri, headers: {'x-access-token': server.authToken ?? ''})
         .timeout(const Duration(seconds: 15));
     if (response.statusCode == 404) return null; // no lyrics for this track
     if (response.statusCode > 299) {
@@ -165,10 +165,10 @@ class ApiManager {
 
       final sw = Stopwatch()..start();
       Future<http.Response> send() => getOrPost == 'GET'
-          ? client.get(currentUri, headers: {'x-access-token': server.jwt ?? ''})
+          ? client.get(currentUri, headers: {'x-access-token': server.authToken ?? ''})
           : client.post(currentUri, body: json.encode(payload), headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? ''
+              'x-access-token': server.authToken ?? ''
             });
       http.Response response;
       final bool isIroh = server.isIroh;
@@ -372,7 +372,7 @@ class ApiManager {
           body: jsonEncode({'playlist': playlist, 'song': fp}),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? '',
+            'x-access-token': server.authToken ?? '',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -396,7 +396,7 @@ class ApiManager {
           body: jsonEncode({'title': playlist, 'songs': songs}),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? '',
+            'x-access-token': server.authToken ?? '',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -716,7 +716,7 @@ class ApiManager {
           body: jsonEncode({'filepath': fp, 'rating': rating}),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': server.jwt ?? '',
+            'x-access-token': server.authToken ?? '',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -756,7 +756,7 @@ class ApiManager {
             body: jsonEncode(fps),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           // Longer than the single-track 15s because it stands in for N of
@@ -805,7 +805,7 @@ class ApiManager {
             body: jsonEncode({'filepath': fp}),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -838,7 +838,7 @@ class ApiManager {
             body: jsonEncode(body),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -958,7 +958,7 @@ class ApiManager {
             }).body),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -1024,7 +1024,7 @@ class ApiManager {
             body: jsonEncode(filtered.body),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -1073,7 +1073,7 @@ class ApiManager {
             }),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
           )
           .timeout(const Duration(seconds: 15));
@@ -1327,7 +1327,7 @@ class ApiManager {
     final uri = s.apiUri(
         '/api/v1/torrent/preflight?path=${Uri.encodeQueryComponent(path)}');
     final res = await http
-        .get(uri, headers: {'x-access-token': s.jwt ?? ''})
+        .get(uri, headers: {'x-access-token': s.authToken ?? ''})
         .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) {
       throw Exception(_torrentError(res) ?? 'Torrent unavailable');
@@ -1342,7 +1342,7 @@ class ApiManager {
     if (s == null) throw Exception('No server selected');
     final res = await http
         .get(s.apiUri('/api/v1/torrent/path-templates'),
-            headers: {'x-access-token': s.jwt ?? ''})
+            headers: {'x-access-token': s.authToken ?? ''})
         .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) {
       throw Exception(_torrentError(res) ?? 'Could not load path templates');
@@ -1366,7 +1366,7 @@ class ApiManager {
     final s = server ?? ServerManager().currentServer;
     if (s == null) throw Exception('No server selected');
     final req = http.MultipartRequest('POST', s.apiUri('/api/v1/torrent/add'));
-    req.headers['x-access-token'] = s.jwt ?? '';
+    req.headers['x-access-token'] = s.authToken ?? '';
     req.fields['vpath'] = vpath;
     if (subPath != null && subPath.isNotEmpty) req.fields['subPath'] = subPath;
     req.fields['directoryName'] = directoryName;
@@ -1409,7 +1409,7 @@ class ApiManager {
     if (s == null) throw Exception('No server selected');
     final req = http.MultipartRequest(
         'POST', s.apiUri('/api/v1/torrent/auto-detect'));
-    req.headers['x-access-token'] = s.jwt ?? '';
+    req.headers['x-access-token'] = s.authToken ?? '';
     if (vpath != null && vpath.isNotEmpty) req.fields['vpath'] = vpath;
     req.files.add(http.MultipartFile.fromBytes('torrentFile', torrentBytes,
         filename: torrentFilename ?? 'upload.torrent'));
@@ -1440,7 +1440,7 @@ class ApiManager {
     if (s == null) throw Exception('No server selected');
     final req = http.MultipartRequest(
         'POST', s.apiUri('/api/v1/torrent/seed-existing'));
-    req.headers['x-access-token'] = s.jwt ?? '';
+    req.headers['x-access-token'] = s.authToken ?? '';
     if (vpaths != null && vpaths.isNotEmpty) {
       req.fields['vpaths'] = jsonEncode(vpaths);
     }

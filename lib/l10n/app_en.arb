@@ -1981,5 +1981,22 @@
         "type": "String"
       }
     }
+  },
+  "serverPickerVia": "via {parent}",
+  "@serverPickerVia": {
+    "description": "Subtitle under a federated peer in the server picker, naming the server it is reached through.",
+    "placeholders": {
+      "parent": {
+        "type": "String"
+      }
+    }
+  },
+  "browserFederatedReadOnly": "Read-only server",
+  "@browserFederatedReadOnly": {
+    "description": "Title of the note row on a federated peer's section list."
+  },
+  "browserFederatedReadOnlyNote": "Playlists and ratings stay on your own",
+  "@browserFederatedReadOnlyNote": {
+    "description": "Subtitle of the note row explaining what a federated peer cannot do."
   }
 }

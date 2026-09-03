@@ -3953,6 +3953,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'\"{name}\" is already in the client'**
   String torrentDuplicate(String name);
+
+  /// Subtitle under a federated peer in the server picker, naming the server it is reached through.
+  ///
+  /// In en, this message translates to:
+  /// **'via {parent}'**
+  String serverPickerVia(String parent);
+
+  /// Title of the note row on a federated peer's section list.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only server'**
+  String get browserFederatedReadOnly;
+
+  /// Subtitle of the note row explaining what a federated peer cannot do.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists and ratings stay on your own'**
+  String get browserFederatedReadOnlyNote;
 }
 
 class _AppLocalizationsDelegate

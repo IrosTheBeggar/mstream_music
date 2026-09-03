@@ -825,6 +825,10 @@ class MyCustomFormState extends State<MyCustomForm> {
         if (mounted) setState(() => submitPending = false);
         return;
       }
+      // Any federated server reached through this one links to it BY
+      // localname, so re-point them before the rename lands or they resolve
+      // against a name nothing answers to.
+      ServerManager().renameFederationParent(s.localname, folder);
       // localname + storage aren't part of editServer's signature — set
       // them directly (callAfterEditServer below persists the change).
       s.localname = folder;

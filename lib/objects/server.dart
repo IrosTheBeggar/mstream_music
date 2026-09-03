@@ -70,6 +70,60 @@ class Server {
   // server, the role [url] plays for an HTTP server). Null for HTTP servers.
   String? irohPairingCode;
 
+  // ─── Federation ────────────────────────────────────────────────────────
+  // A federated server is another server's PEER, reached through that
+  // parent's browse proxy (mStream #927) instead of by a URL of its own. It
+  // has no credentials, no transport and no version of its own — every one
+  // of those is the parent's, which is why the accessors below delegate
+  // rather than storing copies.
+  //
+  // [federationParent] is the parent's localname: the durable link, resolved
+  // to a live object by ServerManager. [federationPeerId] is the peer's row
+  // id ON THAT PARENT, which is what every proxy route keys on.
+  String? federationParent;
+  int? federationPeerId;
+
+  // The peer's name as the parent reports it. A federated server has no URL to
+  // show — [url] holds a synthetic `federated://…` identity — so this is what
+  // the UI displays. Refreshed on every reconcile; a rename on the parent is
+  // just a new label, and never moves [localname].
+  String? federationPeerName;
+
+  // The parent stopped listing this peer. Flagged rather than deleted: a
+  // queued track and a downloaded file both point at this localname, and
+  // dropping the record would strand them. Hidden from the picker; removed
+  // only when the user says so, or with the parent.
+  bool federationMissing = false;
+
+  // Runtime-only (never persisted): the live parent, linked by ServerManager
+  // after the list loads and on every peer reconcile. Same contract as
+  // [tunnelPort] — null means "not resolvable yet", and every accessor below
+  // fails closed onto an unroutable origin rather than guessing.
+  Server? parentServer;
+
+  bool get isFederated => federationParent != null;
+
+  /// The server whose transport carries this server's bytes: the parent for a
+  /// federated server, itself for everything else. Null only for a federated
+  /// server whose parent is not linked yet (nothing can be addressed then).
+  ///
+  /// Two different questions hide behind "is this an iroh server?": identity
+  /// (the pairing-code menu, the one-iroh cap, the edit form — [isIroh]) and
+  /// transport (does a request for it ride a loopback tunnel, and whose —
+  /// [isIrohTransport]). A peer of an iroh parent answers no to the first and
+  /// yes to the second.
+  Server? get transportServer => isFederated ? parentServer : this;
+
+  /// True when requests for this server travel over an iroh loopback tunnel —
+  /// its own, or its parent's for a federated server.
+  bool get isIrohTransport => transportServer?.isIroh == true;
+
+  /// What to call this server in the UI: a peer's name, or the URL that
+  /// identifies every other kind of server.
+  String get displayName => isFederated
+      ? (federationPeerName ?? 'Peer $federationPeerId')
+      : url;
+
   /// Raw `server` string from `GET /api/` — display as reported, compare via
   /// ServerVersion.tryParse. Null means the server has never answered that
   /// endpoint, which puts it before 5.4.2 (see util/server_version.dart).
@@ -103,23 +157,58 @@ class Server {
 
   bool get isIroh => connectionType == 'iroh';
 
-  /// The base origin to use for requests/streams right now. For an iroh server
-  /// this is the live local tunnel (`http://127.0.0.1:<tunnelPort>`, set by
-  /// ServerManager when the server is active); for HTTP it's [url]. When an iroh
-  /// tunnel isn't up yet [tunnelPort] is null and this returns an unroutable
-  /// origin, so a stray request fails fast instead of hitting the placeholder url.
-  String get effectiveBaseUrl =>
-      isIroh ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
+  /// Origin a request falls back to when this server can't be addressed yet —
+  /// a dialing iroh tunnel, or a federated server whose parent isn't linked.
+  /// Unroutable on purpose: a stray request fails fast instead of reaching
+  /// something that isn't this server.
+  static const String _unroutable = 'http://127.0.0.1:0';
+
+  /// Prefix shared by every route the parent proxies on a peer's behalf
+  /// (`/api/…`, `/art/…`, `/stream/…`). Meaningless unless [isFederated].
+  String get federationPrefix => '/api/v1/federation/peers/$federationPeerId';
+
+  /// The token that authenticates requests for this server. A federated server
+  /// has none of its own: the proxy runs normal local-user auth on the PARENT,
+  /// and the peer beyond it is reached with the parent's federation key, which
+  /// never leaves the parent. Read this — not [jwt] — for anything that ends up
+  /// on the wire.
+  String? get authToken => isFederated ? parentServer?.jwt : jwt;
+
+  /// The base origin to use for requests/streams right now. A federated server
+  /// borrows its parent's, which is what makes an iroh parent work for free —
+  /// the request rides the parent's loopback tunnel and the proxy dials the
+  /// peer from there. For an iroh server it's the live local tunnel
+  /// (`http://127.0.0.1:<tunnelPort>`, set by ServerManager when the server is
+  /// active); for HTTP it's [url]. Before an iroh tunnel is up, or before a
+  /// federated server's parent is linked, this is [_unroutable].
+  String get effectiveBaseUrl {
+    if (isFederated) return parentServer?.effectiveBaseUrl ?? _unroutable;
+    return isIroh ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
+  }
 
   /// Query suffix authenticating a loopback request to the iroh tunnel
   /// (`&__lt=<token>`); empty for HTTP servers or before the token is known. For
   /// URLs built as strings that ALREADY carry a `?` (stream / art / download).
-  String get localTokenQuery =>
-      (isIroh && tunnelToken != null) ? '&__lt=$tunnelToken' : '';
+  /// A federated server inherits its parent's: the URL lands on the parent's
+  /// loopback, and the browse proxy forwards no query params onward, so the
+  /// loopback token can't ride through to the peer.
+  String get localTokenQuery {
+    if (isFederated) return parentServer?.localTokenQuery ?? '';
+    return (isIroh && tunnelToken != null) ? '&__lt=$tunnelToken' : '';
+  }
 
   /// Resolve [location] against [effectiveBaseUrl], adding the loopback token for
   /// an iroh server so the shim accepts the request. Use for all API calls.
+  ///
+  /// A federated server rewrites [location] onto the parent's browse proxy and
+  /// then defers to the parent — so an iroh parent's `__lt` is applied once, to
+  /// the outer loopback URL, and the peer sees only the proxied path.
   Uri apiUri(String location) {
+    if (isFederated) {
+      final parent = parentServer;
+      if (parent == null) return Uri.parse(_unroutable);
+      return parent.apiUri('$federationPrefix/api$location');
+    }
     final u = Uri.parse(effectiveBaseUrl).resolve(location);
     if (!isIroh || tunnelToken == null) return u;
     return u.replace(queryParameters: {
@@ -170,6 +259,11 @@ class Server {
             : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?,
+        federationParent = json['federationParent'] as String?,
+        federationPeerId =
+            json['federationPeerId'] is int ? json['federationPeerId'] : null,
+        federationPeerName = json['federationPeerName'] as String?,
+        federationMissing = json['federationMissing'] == true,
         serverVersion = json['serverVersion'] as String?,
         versionCheckedAt = json['versionCheckedAt'] is int
             ? DateTime.fromMillisecondsSinceEpoch(json['versionCheckedAt'])
@@ -199,6 +293,10 @@ class Server {
         'discoveryPathAvailable': discoveryPathAvailable,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode,
+        'federationParent': federationParent,
+        'federationPeerId': federationPeerId,
+        'federationPeerName': federationPeerName,
+        'federationMissing': federationMissing,
         'serverVersion': serverVersion,
         'versionCheckedAt': versionCheckedAt?.millisecondsSinceEpoch
       };

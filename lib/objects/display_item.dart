@@ -121,7 +121,8 @@ class DisplayItem {
       // item (addServer) carry fixed English names; localize them.
       // Server folder/file names pass through browserChromeLabel
       // unchanged (default case), so real data is never mistranslated.
-      (l != null && (type == 'execAction' || type == 'addServer'))
+      (l != null &&
+              (type == 'execAction' || type == 'addServer' || type == 'note'))
           ? browserChromeLabel(l, name)
           : name,
       // Same style as the metadata and file branches above. This used to
@@ -143,7 +144,7 @@ class DisplayItem {
     // itself), so those fall through to the artist exactly as before.
     if (subtext != null) {
       return Text(
-        (l != null && type == 'addServer')
+        (l != null && (type == 'addServer' || type == 'note'))
             ? browserChromeLabel(l, subtext!)
             : subtext!,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),

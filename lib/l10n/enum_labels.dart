@@ -152,6 +152,10 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserRated;
     case 'Search':
       return l.browserSearch;
+    case 'Read-only server':
+      return l.browserFederatedReadOnly;
+    case 'Playlists and ratings stay on your own':
+      return l.browserFederatedReadOnlyNote;
     case 'Welcome To mStream':
       return l.browserWelcomeTitle;
     case 'Click here to add server':

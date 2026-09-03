@@ -307,7 +307,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     queue.listen((items) {
       Server? iroh;
       for (final it in items) {
-        final s = _serverFor(it);
+        // A federated peer's songs ride its parent's tunnel: that is the
+        // server to keep connected, not the peer (which has no tunnel).
+        final s = _serverFor(it)?.transportServer;
         if (s != null && s.isIroh) {
           iroh = s;
           break;
@@ -3230,7 +3232,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           autoDJServer!.apiUri('/api/v1/db/random-songs'),
           headers: {
             'Content-Type': 'application/json',
-            'x-access-token': autoDJServer?.jwt ?? '',
+            'x-access-token': autoDJServer?.authToken ?? '',
           },
           body: jsonEncode(filtered.body),
         ).timeout(const Duration(seconds: 15));
@@ -3265,7 +3267,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             autoDJServer!.apiUri('/api/v1/db/random-songs'),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': autoDJServer?.jwt ?? '',
+              'x-access-token': autoDJServer?.authToken ?? '',
             },
             body: jsonEncode(retry.body),
           ).timeout(const Duration(seconds: 15));

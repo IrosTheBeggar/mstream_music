@@ -30,6 +30,7 @@ import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
+import '../util/stream_url.dart';
 import 'local_search_bar.dart';
 
 // Combined snapshot the toolbar renders from.
@@ -149,9 +150,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
             onPressed: () {
               Navigator.of(ctx).pop();
               for (final e in files) {
-                final downloadUrl = '${e.server!.effectiveBaseUrl}/media${e.data!}'
-                    '${e.server!.jwt == null ? '' : '?token=${e.server!.jwt!}'}'
-                    '${e.server!.localTokenQuery}';
+                final downloadUrl =
+                    buildServerDownloadUrl(e.server!, e.data!);
                 DownloadManager().downloadOneFile(
                     downloadUrl, e.server!.localname, e.data!,
                     referenceItem: e);

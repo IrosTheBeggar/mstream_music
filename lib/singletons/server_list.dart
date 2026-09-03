@@ -66,7 +66,10 @@ class ServerManager {
   bool _startRejected = false;
   // The launch ping was skipped because the tunnel was not up yet; the next
   // successful dial runs it (vpaths, transcode defaults, version).
-  String? _pingPendingFor;
+  // Servers whose launch-time capability refresh skipped because their
+  // TRANSPORT's tunnel was not up: the iroh server itself, and any federated
+  // peer riding it. A set, not a slot — one dial serves all of them.
+  final Set<String> _pingPendingFor = {};
   // A Retry tap that lands while a network change is in flight must not be
   // downgraded to an automatic re-run.
   bool _rerunUser = false;
@@ -133,6 +136,11 @@ class ServerManager {
       }
     }
 
+    // Before ANYTHING resolves a URL: a federated server addresses itself
+    // through its parent, and QueueStore.init restores tracks against these
+    // objects moments from now.
+    _linkFederatedParents();
+
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
 
@@ -144,7 +152,7 @@ class ServerManager {
       // running on the chain; the first browse/playback awaits the tunnel
       // itself. A standard default needs nothing and must not wait on the
       // chain either (a queued iroh server's dial may already be running on it).
-      if (currentServer!.isIroh) {
+      if (currentServer!.isIrohTransport) {
         await ensureActiveTunnel(reason: 'launch', bypassBackoff: true)
             .timeout(const Duration(seconds: 12), onTimeout: () {});
       }
@@ -162,7 +170,8 @@ class ServerManager {
       // that on loadServerList completing). Bounded by awaitTunnelReady's cap.
       final resumeName = await QueueStore().peekResumeServer();
       if (resumeName != null && resumeName != currentServer?.localname) {
-        final rs = byLocalname(resumeName);
+        // A federated resume server needs its PARENT's tunnel.
+        final rs = byLocalname(resumeName)?.transportServer;
         if (rs != null && rs.isIroh) {
           setQueueIrohServer(rs);
           await awaitTunnelReady(
@@ -197,21 +206,7 @@ class ServerManager {
       BrowserManager().goToNavScreen();
     }
 
-    // Create server directory (for downloads)
-    Directory? file = await FileExplorer()
-        .getDownloadDir(newServer.storageMode, newServer.storageBasePath);
-    if (file != null) {
-      try {
-        String dir = path.join(file.path, "media/${newServer.localname}");
-        await Directory(dir).create(recursive: true);
-      } catch (e) {
-        // A permanent/SD path can fail to create (unmounted, read-only).
-        // Don't let that abort the save below and lose the server entirely.
-        showGlobalSnack(
-            'Saved, but the download folder could not be created — storage '
-            'may be unavailable.');
-      }
-    }
+    await _ensureDownloadDir(newServer);
 
     await writeServerFile();
 
@@ -227,6 +222,28 @@ class ServerManager {
     // that the user finds out from us rather than from a feature quietly
     // doing nothing.
     unawaited(_warnIfBelowFloor(newServer));
+  }
+
+  /// Create `media/<localname>`, where this server's downloads land.
+  ///
+  /// Every server needs one, but they arrive by two doors: the add-server form
+  /// ([addServer]) and the peer reconcile ([refreshFederatedPeers]), which adds
+  /// its servers to the list directly.
+  Future<void> _ensureDownloadDir(Server server) async {
+    Directory? file = await FileExplorer()
+        .getDownloadDir(server.storageMode, server.storageBasePath);
+    if (file == null) return;
+    try {
+      String dir = path.join(file.path, "media/${server.localname}");
+      await Directory(dir).create(recursive: true);
+    } catch (e) {
+      // A permanent/SD path can fail to create (unmounted, read-only).
+      // Don't let that abort the save that follows and lose the server
+      // entirely.
+      showGlobalSnack(
+          'Saved, but the download folder could not be created — storage '
+          'may be unavailable.');
+    }
   }
 
   Future<void> _warnIfBelowFloor(Server server) async {
@@ -291,7 +308,7 @@ class ServerManager {
   Future<void> _settleTunnelForSwitch(String reason) async {
     final s = currentServer!;
     appLog('[srv] switched to ${s.localname} ($reason)');
-    if (!s.isIroh) {
+    if (!s.isIrohTransport) {
       BrowserManager().goToNavScreen();
       unawaited(getServerPaths(s));
       unawaited(ensureActiveTunnel(reason: reason, bypassBackoff: true));
@@ -303,8 +320,18 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
-    // An iroh server can only be pinged through its live tunnel.
-    if (server.isIroh && server.tunnelPort == null) {
+    // Whatever actually carries this server's bytes. A federated server has no
+    // transport of its own — it rides the parent's, so a peer of an iroh
+    // server has to wait on the PARENT's tunnel, not its own (it has none).
+    final transport = server.isFederated ? server.parentServer : server;
+    // A federated server whose parent isn't linked yet can't be addressed at
+    // all; every URL would resolve to the unroutable origin.
+    if (transport == null) {
+      if (throwErr) throw Exception('federation parent not linked');
+      return;
+    }
+    // An iroh server can only be reached through its live tunnel.
+    if (transport.isIroh && transport.tunnelPort == null) {
       // At launch this fires for the ACTIVE server too: loadServerList pings
       // every server as soon as the list is read, and the tunnel is still
       // dialling. Skipping meant its capabilities and — since the version
@@ -316,117 +343,66 @@ class ServerManager {
       // other iroh server's is never coming up and waiting on it would stall
       // the launch sweep for nothing. extendWhileDialing:false keeps the bound
       // real — the default re-arms for as long as a dial is in flight.
-      if (identical(server, currentServer)) {
+      if (identical(transport, currentServer) ||
+          identical(server, currentServer)) {
         await awaitTunnelReady(
-            server: server,
+            server: transport,
             timeout: const Duration(seconds: 12),
             extendWhileDialing: false,
             caller: 'ping');
       }
-      if (server.tunnelPort == null) {
+      if (transport.tunnelPort == null) {
         if (throwErr) throw Exception('iroh tunnel not connected');
-        _pingPendingFor = server.localname; // re-run when the dial lands
+        _pingPendingFor.add(server.localname); // re-run when the dial lands
         return;
       }
     }
     try {
-      var response = await http
-          .get(server.apiUri('/api/v1/ping'),
-              headers: {
-        'Content-Type': 'application/json',
-        'x-access-token': server.jwt ?? ''
-      }).timeout(Duration(seconds: 5));
+      // GET /api — version, server-wide `features` and the caller-scoped
+      // `user` block in ONE call (mStream #932/#934). Also the only capability
+      // route a federated server answers: /api/v1/ping is off the federation
+      // allowlist and 403s a peer key.
+      final info = await _fetchServerInfo(server);
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to connect to server');
-      }
-
-      var res = jsonDecode(response.body);
-
-      Set<String> pathCompare = {};
-      final vpaths = res['vpaths'];
-      if (vpaths is List) {
-        for (final raw in vpaths) {
-          if (raw is! String) continue; // tolerate unexpected element shapes
-          pathCompare.add(raw);
-          // add new keys
-          if (!server.autoDJPaths.containsKey(raw)) {
-            server.autoDJPaths[raw] = true;
-          }
-        }
-      }
-
-      // Remove outdated entries
-      server.autoDJPaths
-          .removeWhere((key, value) => !pathCompare.contains(key));
-
-      // Make sure all entries are not false
-      bool falseFlag = true;
-      server.autoDJPaths.forEach((key, value) {
-        if (value == true) {
-          falseFlag = false;
-        }
-      });
-      if (falseFlag == true) {
-        server.autoDJPaths.forEach((key, value) {
-          server.autoDJPaths[key] = true;
-        });
-      }
-
-      // Update Playlists. Accept both the bare-name form (["A", "B"]) and the
-      // object form ([{"name": "A"}, ...]) that some builds (e.g. Velvet) return.
-      server.playlists.clear();
-      final pls = res['playlists'];
-      if (pls is List) {
-        for (final raw in pls) {
-          final name = raw is String ? raw : (raw is Map ? raw['name'] : null);
-          if (name is String && name.isNotEmpty) server.playlists.add(name);
-        }
-      }
-
-      // Transcoding capability (mStream/Velvet /api/v1/ping): `transcode` is
-      // false when the server has no working ffmpeg, otherwise
-      // { defaultCodec, defaultBitrate } — the values /transcode falls back to
-      // when we omit the codec/bitrate params.
       final bool? prevAvail = server.transcodeAvailable;
       final String? prevCodec = server.transcodeDefaultCodec;
       final String? prevBitrate = server.transcodeDefaultBitrate;
-      final transcodeInfo = res['transcode'];
-      if (transcodeInfo is Map) {
-        server.transcodeAvailable = true;
-        // Coerce defensively: a fork may return these as objects/numbers rather
-        // than strings. A shape mismatch must never throw here — it would surface
-        // as a bogus "failed to connect" on a server that actually responded 200.
-        final codec = transcodeInfo['defaultCodec'];
-        final bitrate = transcodeInfo['defaultBitrate'];
-        server.transcodeDefaultCodec = codec is String ? codec : null;
-        server.transcodeDefaultBitrate = bitrate is String ? bitrate : null;
-      } else {
-        server.transcodeAvailable = false;
-        server.transcodeDefaultCodec = null;
-        server.transcodeDefaultBitrate = null;
-      }
-      // Discovery (sonic-similarity) capability flags. Older servers omit the
-      // keys entirely → false. The UI gates strictly on == true — the webapp
-      // never calls a /discovery endpoint unless the ping advertised it, and
-      // the app follows the same rule (see Server.discoveryAvailable).
       final bool? prevDiscovery = server.discoveryAvailable;
       final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
-      server.discoveryAvailable = res['discovery'] == true;
-      server.discoveryP2pAvailable = res['discoveryP2p'] == true;
-      server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
-      server.discoveryPathAvailable = res['discoveryPath'] == true;
-
-      // Version rides along with the capability refresh: same moment, same
-      // persistence, and it is a cheap unauthenticated GET. Failure leaves the
-      // stored value alone rather than blanking it — a momentary blip should
-      // not make a known-good server look ancient.
       final prevVersion = server.serverVersion;
-      final fetched = (await fetchServerVersion(server)).version;
-      if (fetched != null) {
-        server.serverVersion = fetched;
+
+      // Whichever payload carried the caller-scoped flags. A layered answer
+      // has `user`; a pre-#932 server answers the same route with a flat
+      // {server, apiVersions, features:{subsonic}} and keeps its capabilities
+      // on ping.
+      Map? scoped;
+      if (info != null && info['user'] is Map) {
+        _applyServerInfo(server, info);
+        scoped = info['user'] as Map;
+        // Playlists left the boot payload in #932 — a resource, not a
+        // capability. Federated servers skip it: every playlist route is off
+        // the federation allowlist.
+        if (!server.isFederated) await _refreshPlaylists(server);
+      } else if (server.isFederated) {
+        // A peer too old for #932 has nothing else to offer — ping would 403
+        // even if we asked. Keep the federated defaults rather than invent
+        // capabilities we cannot confirm.
+        appLog('[server] ${server.localname}: peer has no layered /api; '
+            'keeping federated defaults');
+        _applyFederatedDefaults(server);
+      } else {
+        scoped = await _applyPing(server);
+      }
+
+      // The version rides along with whichever shape answered — both carry
+      // `server` — so it costs no extra round trip. Failure leaves the stored
+      // value alone rather than blanking it: a momentary blip should not make
+      // a known-good server look ancient.
+      final fetched = info?['server'];
+      if (fetched is String && fetched.trim().isNotEmpty) {
+        server.serverVersion = fetched.trim();
         server.versionCheckedAt = DateTime.now();
       } else {
         // Never successfully checked AND it just failed: record the attempt so
@@ -435,7 +411,8 @@ class ServerManager {
       }
 
       // Persist the capabilities so the NEXT launch knows them before the queue
-      // is restored — otherwise restore races the ping and bakes in /media URLs.
+      // is restored — otherwise restore races the refresh and bakes in /media
+      // URLs.
       if (server.serverVersion != prevVersion ||
           server.transcodeAvailable != prevAvail ||
           server.transcodeDefaultCodec != prevCodec ||
@@ -446,10 +423,167 @@ class ServerManager {
           server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
       }
+
+      // Peers are the parent's data, so only a parent reconciles them — and
+      // only when it says it has some (flags, never probes).
+      if (!server.isFederated && scoped?['federationBrowse'] == true) {
+        unawaited(refreshFederatedPeers(server));
+      }
     } catch (err) {
       if (throwErr) {
         rethrow;
       }
+    }
+  }
+
+  /// `GET /api/` — the layered server-info endpoint (mStream #932/#934):
+  /// version, server-wide `features`, and the caller-scoped `user` block in one
+  /// call.
+  ///
+  /// Returns the decoded body, or null when the server answered but had nothing
+  /// to say (404 on a pre-5.4.2 build, 403 from a peer whose allowlist predates
+  /// #932). Transport failures throw, so [getServerPaths]'s throwErr still
+  /// reports a server that is simply down.
+  ///
+  /// Sent WITH the access token: #934 put this route back behind the auth wall,
+  /// where a tokenless request is a 401 by contract — that 401 is how a client
+  /// detects "this server needs a login", deliberately not a silent downgrade
+  /// to a public payload.
+  Future<Map<String, dynamic>?> _fetchServerInfo(Server server) async {
+    final response = await http.get(
+      server.apiUri('/api/'),
+      headers: {'x-access-token': server.authToken ?? ''},
+    ).timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      appLog('[server] /api on ${server.localname} -> '
+          'HTTP ${response.statusCode}');
+      return null;
+    }
+    final decoded = jsonDecode(response.body);
+    return decoded is Map<String, dynamic> ? decoded : null;
+  }
+
+  /// Fold a layered `GET /api/` response into [server].
+  ///
+  /// `features` is server-wide; `user` is scoped to the credential that asked —
+  /// for a federated server that credential is the parent's federation key, so
+  /// `user.vpaths` arrives already narrowed to the libraries the key was
+  /// granted.
+  void _applyServerInfo(Server server, Map info) {
+    final features = info['features'];
+    final user = info['user'];
+
+    _applyVpaths(server, user is Map ? user['vpaths'] : null);
+    _applyTranscode(server, features is Map ? features['transcode'] : null);
+
+    server.discoveryAvailable = features is Map && features['discovery'] == true;
+    server.discoveryP2pAvailable =
+        features is Map && features['discoveryP2p'] == true;
+    server.federationDiscoveryAvailable =
+        user is Map && user['federationDiscovery'] == true;
+    // /api carries no discoveryPath. It was only ever a "this server VERSION
+    // has the sonic-path route" gate, and mStream #934 records that it is
+    // identical to `discovery` on every build carrying that code.
+    server.discoveryPathAvailable = server.discoveryAvailable;
+
+    if (server.isFederated) _applyFederatedDefaults(server);
+  }
+
+  /// `GET /api/v1/ping` — the pre-#932 boot payload, still served (frozen) by
+  /// every mStream build. The fallback when `/api/` answers with the old flat
+  /// shape, so the app keeps working against servers released before the
+  /// layered endpoint. Returns the decoded body for its caller-scoped flags.
+  Future<Map?> _applyPing(Server server) async {
+    final response = await http.get(
+      server.apiUri('/api/v1/ping'),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-access-token': server.authToken ?? '',
+      },
+    ).timeout(const Duration(seconds: 5));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to connect to server');
+    }
+    final res = jsonDecode(response.body);
+    if (res is! Map) throw Exception('Failed to connect to server');
+
+    _applyVpaths(server, res['vpaths']);
+    _applyPlaylists(server, res['playlists']);
+    _applyTranscode(server, res['transcode']);
+    server.discoveryAvailable = res['discovery'] == true;
+    server.discoveryP2pAvailable = res['discoveryP2p'] == true;
+    server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
+    server.discoveryPathAvailable = res['discoveryPath'] == true;
+    return res;
+  }
+
+  /// Reconcile [server]'s Auto DJ path map against the library list it just
+  /// reported: add new vpaths (enabled), drop ones that are gone, and re-enable
+  /// everything if the user's selection has emptied out.
+  void _applyVpaths(Server server, dynamic vpaths) {
+    final Set<String> reported = {};
+    if (vpaths is List) {
+      for (final raw in vpaths) {
+        if (raw is! String) continue; // tolerate unexpected element shapes
+        reported.add(raw);
+        if (!server.autoDJPaths.containsKey(raw)) {
+          server.autoDJPaths[raw] = true;
+        }
+      }
+    }
+    server.autoDJPaths.removeWhere((key, value) => !reported.contains(key));
+    if (server.autoDJPaths.values.every((v) => v != true)) {
+      server.autoDJPaths.updateAll((key, value) => true);
+    }
+  }
+
+  /// Accept both the bare-name form (["A", "B"]) and the object form
+  /// ([{"name": "A"}, ...]) that some builds (e.g. Velvet) return.
+  void _applyPlaylists(Server server, dynamic pls) {
+    server.playlists.clear();
+    if (pls is! List) return;
+    for (final raw in pls) {
+      final name = raw is String ? raw : (raw is Map ? raw['name'] : null);
+      if (name is String && name.isNotEmpty) server.playlists.add(name);
+    }
+  }
+
+  /// `transcode` is false when the server has no working ffmpeg, otherwise
+  /// { defaultCodec, defaultBitrate } — the values /transcode falls back to
+  /// when the client omits those params. Same field on ping's flat payload and
+  /// on /api's `features`.
+  void _applyTranscode(Server server, dynamic transcodeInfo) {
+    if (transcodeInfo is! Map) {
+      server.transcodeAvailable = false;
+      server.transcodeDefaultCodec = null;
+      server.transcodeDefaultBitrate = null;
+      return;
+    }
+    server.transcodeAvailable = true;
+    // Coerce defensively: a fork may return these as objects/numbers rather
+    // than strings. A shape mismatch must never throw here — it would surface
+    // as a bogus "failed to connect" on a server that actually responded 200.
+    final codec = transcodeInfo['defaultCodec'];
+    final bitrate = transcodeInfo['defaultBitrate'];
+    server.transcodeDefaultCodec = codec is String ? codec : null;
+    server.transcodeDefaultBitrate = bitrate is String ? bitrate : null;
+  }
+
+  /// `GET /api/v1/playlist/getall` — the playlist names ping used to carry.
+  ///
+  /// Fetched separately since #932 moved playlists off the boot payload (a
+  /// resource, not a capability). Best-effort: the names only feed pickers, and
+  /// losing them must not cost a capability refresh that already succeeded.
+  Future<void> _refreshPlaylists(Server server) async {
+    try {
+      final response = await http.get(
+        server.apiUri('/api/v1/playlist/getall'),
+        headers: {'x-access-token': server.authToken ?? ''},
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return;
+      _applyPlaylists(server, jsonDecode(response.body));
+    } catch (err) {
+      appLog('[server] playlist refresh for ${server.localname} failed: $err');
     }
   }
 
@@ -510,10 +644,14 @@ class ServerManager {
   // IS the iroh server, OR the iroh server whose songs are queued. Null → no
   // tunnel. (One-iroh-server cap, so these resolve to the same server when both
   // apply — there's never a second iroh server to contend for the tunnel.)
+  //
+  // Both sides resolve through the TRANSPORT server: a federated peer has no
+  // tunnel of its own and rides its parent's, so browsing a peer (or queuing
+  // its songs) must keep the parent's tunnel up, not release it.
   Server? _tunnelTargetServer() {
-    final c = currentServer;
+    final c = currentServer?.transportServer;
     if (c != null && c.isIroh) return c;
-    final q = _queueIrohServer;
+    final q = _queueIrohServer?.transportServer;
     return (q != null && q.isIroh) ? q : null;
   }
 
@@ -652,9 +790,14 @@ class ServerManager {
             'in ${sw.elapsedMilliseconds}ms ($reason)');
         // The launch sweep no longer waits for a slow dial; run the ping it
         // skipped so vpaths / transcode / version are not stale all session.
-        if (_pingPendingFor == s.localname) {
-          _pingPendingFor = null;
-          unawaited(getServerPaths(s));
+        for (final name in _pingPendingFor.toList()) {
+          final pending = byLocalname(name);
+          if (pending == null) {
+            _pingPendingFor.remove(name);
+          } else if (identical(pending.transportServer, s)) {
+            _pingPendingFor.remove(name);
+            unawaited(getServerPaths(pending));
+          }
         }
         // This bind set a loopback port + token. Any queued iroh stream URL built
         // before now is stale, so rebuild them off the live effectiveBaseUrl.
@@ -1061,7 +1204,7 @@ class ServerManager {
         // the ping in the same call — identical URL builder, but carrying
         // this header — came back 200. Sent unconditionally; a plain HTTP
         // server ignores it on a route that never asked.
-        headers: {'x-access-token': s.jwt ?? ''},
+        headers: {'x-access-token': s.authToken ?? ''},
       ).timeout(const Duration(seconds: 8));
       if (resp.statusCode > 299) {
         // 404 is the expected answer from a pre-5.4.2 server, not a fault.
@@ -1378,6 +1521,12 @@ class ServerManager {
   Future<void> removeServer(
       Server removeThisServer, bool removeSyncedFiles) async {
     serverList.remove(removeThisServer);
+    // A peer is only reachable through its parent, so removing the parent
+    // removes them too — leaving them would strand entries that can no longer
+    // resolve a URL. Done before the queue cleanup below so their tracks go in
+    // the same sweep.
+    final orphans = federatedChildren(removeThisServer);
+    serverList.removeWhere(orphans.contains);
     _serverListStream.sink.add(serverList);
     // Deleting a server also deletes its queued tracks — they can't stream
     // anymore and their metadata context (ratings, art, URL re-resolution)
@@ -1388,9 +1537,11 @@ class ServerManager {
     // writeServerFile, and the server the user just deleted would be back on
     // the next launch.
     try {
-      await MediaManager()
-          .audioHandler
-          .removeServerQueueItems(removeThisServer.localname);
+      for (final gone in [removeThisServer, ...orphans]) {
+        await MediaManager()
+            .audioHandler
+            .removeServerQueueItems(gone.localname);
+      }
     } catch (err) {
       appLog('[server] clearing queued tracks failed: $err');
     }
@@ -1407,7 +1558,9 @@ class ServerManager {
 
       currentServer = null;
       _currentServerStream.sink.add(currentServer);
-    } else if (removeThisServer == currentServer) {
+    } else if (!serverList.contains(currentServer)) {
+      // The active server went — either it IS the one being removed, or it was
+      // one of its peers, swept out with it.
       currentServer = serverList[0];
       // clear the browser
       BrowserManager().goToNavScreen();
@@ -1460,6 +1613,181 @@ class ServerManager {
       if (s.localname == localname) return s;
     }
     return null;
+  }
+
+  // ─── Federation ──────────────────────────────────────────────────────────
+  // A federated server stands in for one PEER of a configured server, reached
+  // through that parent's browse proxy (mStream #927). It is an ordinary entry
+  // in [serverList] — which is what makes the picker, queue restore and the
+  // download folder work without a parallel code path — but it owns no
+  // transport, credentials or peer list of its own.
+
+  /// Point every federated server at its live parent. Must run after the list
+  /// is read and after anything that changes it: [Server.parentServer] is
+  /// runtime-only, and every federated URL resolves through it.
+  void _linkFederatedParents() {
+    for (final s in serverList) {
+      if (s.isFederated) s.parentServer = byLocalname(s.federationParent);
+    }
+  }
+
+  /// The federated servers reached through [parent].
+  List<Server> federatedChildren(Server parent) => serverList
+      .where((s) => s.isFederated && s.federationParent == parent.localname)
+      .toList();
+
+  Server? _childByPeerId(Server parent, int peerId) {
+    for (final s in serverList) {
+      if (s.isFederated &&
+          s.federationParent == parent.localname &&
+          s.federationPeerId == peerId) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  /// Follow a parent's rename through to its peers. [Server.federationParent]
+  /// stores the parent's localname, and the edit screen lets the user change
+  /// it; without this the children would point at a name nothing answers to.
+  void renameFederationParent(String oldName, String newName) {
+    if (oldName == newName) return;
+    for (final s in serverList) {
+      if (s.federationParent == oldName) s.federationParent = newName;
+    }
+    _linkFederatedParents();
+  }
+
+  /// `GET /api/v1/federation/peers` on [parent] — the read-only projection any
+  /// logged-in user may read (never api_key or the endpoint ticket) — folded
+  /// into the servers we already hold for that parent.
+  ///
+  /// A mirror, not a source: peers are the parent admin's data. New ones
+  /// appear, renames follow, and a peer that stops being listed is FLAGGED,
+  /// not deleted — a queued track and a downloaded file both point at its
+  /// localname, so deleting the record would strand them. It goes when the
+  /// user says so, or with its parent.
+  Future<void> refreshFederatedPeers(Server parent) async {
+    if (parent.isFederated) return; // a peer has no peers of its own
+    final List peers;
+    try {
+      final response = await http.get(
+        parent.apiUri('/api/v1/federation/peers'),
+        headers: {'x-access-token': parent.authToken ?? ''},
+      ).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) {
+        appLog('[federation] peer list on ${parent.localname} -> '
+            'HTTP ${response.statusCode}');
+        return;
+      }
+      final decoded = jsonDecode(response.body);
+      final raw = decoded is Map ? decoded['peers'] : null;
+      if (raw is! List) return;
+      peers = raw;
+    } catch (err) {
+      appLog('[federation] peer list on ${parent.localname} failed: $err');
+      return;
+    }
+
+    bool changed = false;
+    final Set<int> listed = {};
+    for (final p in peers) {
+      if (p is! Map) continue;
+      final id = p['id'];
+      final name = p['name'];
+      if (id is! int || name is! String || name.isEmpty) continue;
+      listed.add(id);
+
+      final existing = _childByPeerId(parent, id);
+      if (existing == null) {
+        final fresh = _newFederatedServer(parent, id, name);
+        serverList.add(fresh);
+        await _ensureDownloadDir(fresh);
+        changed = true;
+        continue;
+      }
+      // A rename on the parent is just a new label; the localname (and so the
+      // download folder and every queued track) deliberately stays put.
+      if (existing.federationPeerName != name || existing.federationMissing) {
+        existing.federationPeerName = name;
+        existing.federationMissing = false;
+        changed = true;
+      }
+    }
+
+    for (final child in federatedChildren(parent)) {
+      final gone = !listed.contains(child.federationPeerId);
+      if (gone != child.federationMissing) {
+        child.federationMissing = gone;
+        changed = true;
+      }
+    }
+
+    if (!changed) return;
+    _linkFederatedParents();
+    _serverListStream.sink.add(serverList);
+    await writeServerFile();
+    // Capabilities for anything new or newly back: one /api through the proxy.
+    for (final child in federatedChildren(parent)) {
+      if (!child.federationMissing) unawaited(getServerPaths(child));
+    }
+  }
+
+  /// A Server standing in for peer [id] of [parent], named [name].
+  ///
+  /// Storage follows the parent so a peer's downloads land beside it. The
+  /// capabilities start at the federated floor rather than unknown: the
+  /// allowlist already rules them out, and leaving transcodeAvailable null
+  /// would send the first stream URL to /transcode optimistically.
+  Server _newFederatedServer(Server parent, int id, String name) {
+    final s = Server('federated://${parent.localname}/$id', null, null, null,
+        _federatedLocalname(name))
+      ..federationParent = parent.localname
+      ..federationPeerId = id
+      ..federationPeerName = name
+      ..parentServer = parent
+      ..storageMode = parent.storageMode
+      ..storageBasePath = parent.storageBasePath;
+    _applyFederatedDefaults(s);
+    return s;
+  }
+
+  /// Pin the capabilities a federated server cannot have, whatever the peer
+  /// says about itself.
+  ///
+  /// A peer's answer describes what IT can do; the federation allowlist decides
+  /// what we can reach through the parent's proxy, and it is the narrower of
+  /// the two. /transcode, every /api/v1/discovery/* route and every playlist
+  /// route are off it — so a peer reporting working ffmpeg or a finished
+  /// discovery scan would otherwise light up UI whose requests can only 403.
+  void _applyFederatedDefaults(Server server) {
+    server.transcodeAvailable = false;
+    server.transcodeDefaultCodec = null;
+    server.transcodeDefaultBitrate = null;
+    server.discoveryAvailable = false;
+    server.discoveryP2pAvailable = false;
+    server.federationDiscoveryAvailable = false;
+    server.discoveryPathAvailable = false;
+    server.playlists.clear();
+  }
+
+  /// A stable, unique, filesystem-safe download-folder name for a peer.
+  ///
+  /// This server's OWN name, never derived from the parent's: localname keys
+  /// queue restore and `media/<localname>`, and the parent's localname is
+  /// user-editable — deriving from it would force a folder migration for every
+  /// child on a rename. Suffixed on collision because two parents can each have
+  /// a peer called "home".
+  String _federatedLocalname(String peerName) {
+    final slug = peerName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    final base = slug.isEmpty ? 'peer' : 'peer-$slug';
+    for (int n = 1;; n++) {
+      final candidate = n == 1 ? base : '$base-$n';
+      if (byLocalname(candidate) == null) return candidate;
+    }
   }
 
   // Self-signed / insecure TLS (full flavor only) — see SelfSignedHttpOverrides

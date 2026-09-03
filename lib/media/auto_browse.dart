@@ -872,7 +872,7 @@ class AutoApi {
           caller: 'auto-browse');
     }
     final uri = server.apiUri(location);
-    final headers = <String, String>{'x-access-token': server.jwt ?? ''};
+    final headers = <String, String>{'x-access-token': server.authToken ?? ''};
     late http.Response resp;
     if (body == null) {
       resp = await http.get(uri, headers: headers).timeout(_fetchTimeout);

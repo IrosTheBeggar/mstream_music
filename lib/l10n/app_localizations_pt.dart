@@ -2278,4 +2278,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String torrentDuplicate(String name) {
     return '\"$name\" já está no cliente';
   }
+
+  @override
+  String serverPickerVia(String parent) {
+    return 'via $parent';
+  }
+
+  @override
+  String get browserFederatedReadOnly => 'Read-only server';
+
+  @override
+  String get browserFederatedReadOnlyNote =>
+      'Playlists and ratings stay on your own';
 }

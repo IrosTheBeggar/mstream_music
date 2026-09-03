@@ -604,7 +604,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             !TunnelPolicy.showTunnelBanner(
                 status: st,
                 browsingTunnelServer:
-                    ServerManager().currentServer?.isIroh ?? false)) {
+                    ServerManager().currentServer?.isIrohTransport ?? false)) {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);
@@ -870,6 +870,40 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // over the browser ↔ album-detail body. It sits BELOW the player overlay and
   // the outer Scaffold's drawer in build()'s Stack, so an open drawer dims it
   // like any other content.
+  // One row of the server picker. A federated peer is indented under the
+  // server it is reached through and names it, since a peer has no URL of its
+  // own to be identified by — only a name its parent reports.
+  Widget _serverPickerRow(AppLocalizations l, Server server) {
+    final selected = server == ServerManager().currentServer;
+    final color = selected ? VelvetColors.primary : VelvetColors.textPrimary;
+    if (!server.isFederated) {
+      return Text(server.displayName, style: TextStyle(color: color));
+    }
+    final parent = server.parentServer?.displayName ?? server.federationParent;
+    return Padding(
+      padding: const EdgeInsets.only(left: 16),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.hub_outlined, size: 16, color: VelvetColors.textSecondary),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(server.displayName,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color)),
+              Text(l.serverPickerVia(parent ?? ''),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11, color: VelvetColors.textSecondary)),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
   Widget _homeScaffold(BuildContext context, AppLocalizations l) {
     return Scaffold(
       // The only text input over this Scaffold is the search field in the
@@ -914,7 +948,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   return Visibility(
                     visible: cServer != null,
                     child: Text(
-                      cServer == null ? '' : cServer.url,
+                      cServer == null ? '' : cServer.displayName,
                       style: TextStyle(
                           fontSize: 11,
                           color: VelvetColors.appBarTextSecondary,
@@ -947,7 +981,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           StreamBuilder<List<Server>>(
               stream: ServerManager().serverListStream,
               builder: (context, snapshot) {
-                final isVisible = snapshot.hasData && snapshot.data!.length > 1;
+                // A peer the parent has stopped listing isn't selectable, so it
+                // doesn't count towards "is there more than one server here".
+                final isVisible = snapshot.hasData &&
+                    snapshot.data!.where((s) => !s.federationMissing).length >
+                        1;
                 return Visibility(
                   visible: isVisible,
                   child: PopupMenuButton(
@@ -983,20 +1021,20 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                       },
                       icon: Icon(Icons.cloud),
                       itemBuilder: (BuildContext context) {
-                        List<PopupMenuEntry<int>> popUpWidgetList =
-                            ServerManager().serverList.map((server) {
-                          return PopupMenuItem(
-                            value: ServerManager().serverList.indexOf(server),
-                            child: Text(server.url,
-                                style: TextStyle(
-                                    color: server ==
-                                            ServerManager().currentServer
-                                        ? VelvetColors.primary
-                                        : VelvetColors.textPrimary)),
-                          );
-                        }).toList();
-
-                        return popUpWidgetList;
+                        final servers = ServerManager().serverList;
+                        return <PopupMenuEntry<int>>[
+                          for (final server in servers)
+                            // A peer its parent no longer lists stays in the
+                            // list so queued and downloaded tracks keep
+                            // resolving, but selecting it could only fail.
+                            if (!server.federationMissing)
+                              PopupMenuItem<int>(
+                                // The index into the FULL list — that is what
+                                // changeCurrentServer takes.
+                                value: servers.indexOf(server),
+                                child: _serverPickerRow(l, server),
+                              ),
+                        ];
                       }),
                 );
               }),
