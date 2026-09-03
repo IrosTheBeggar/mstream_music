@@ -9,6 +9,7 @@ import '../native/iroh_tunnel.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/iroh_pairing_qr_sheet.dart';
+import '../admin/admin_launcher.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
@@ -108,6 +109,11 @@ class ManageServersScreen extends StatelessWidget {
           case 'pairingCode':
             showIrohPairingQrSheet(context, server.irohPairingCode!);
             break;
+          case 'admin':
+            final s = ServerManager().serverList[index];
+            openAdminPanel(context,
+                baseUrl: s.url, token: s.jwt, label: s.url);
+            break;
           case 'delete':
             _showDeleteDialog(context, index);
             break;
@@ -139,7 +145,8 @@ class ManageServersScreen extends StatelessWidget {
               : _menuItem(
                   'hide', Icons.visibility_off_outlined, l.federatedHide),
         if (!server.isFederated)
-          _menuItem('delete', Icons.delete_outline, l.delete,
+          _menuItem('admin', Icons.admin_panel_settings_outlined, l.adminPanelMenuItem),
+        _menuItem('delete', Icons.delete_outline, l.delete,
               color: VelvetColors.error),
         if (server.isFederated && server.federationMissing)
           _menuItem('delete', Icons.delete_outline, l.federatedForget,
