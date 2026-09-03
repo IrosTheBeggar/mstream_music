@@ -131,6 +131,11 @@ class CarPlayBridge {
           appLog('[carplay] Auto DJ: no server to run it on');
           return null;
         }
+        if (server.isFederated) {
+          appLog('[carplay] Auto DJ: ${server.localname} is a shared server — '
+              'not available there');
+          return null;
+        }
         appLog('[carplay] Auto DJ → on (${server.localname})');
         // Not awaited: on an empty queue this starts random play, whose
         // play() future only completes when playback later pauses.

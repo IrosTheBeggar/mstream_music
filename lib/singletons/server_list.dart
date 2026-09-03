@@ -1661,6 +1661,22 @@ class ServerManager {
     return null;
   }
 
+  /// Hide a peer from the picker (or show it again). Hiding the server that
+  /// is being browsed moves the browser to its parent first — the peer is
+  /// still addressable (queued tracks keep playing), it just stops being
+  /// offered.
+  Future<void> setFederatedHidden(Server s, bool hidden) async {
+    if (!s.isFederated || s.federationHidden == hidden) return;
+    s.federationHidden = hidden;
+    if (hidden && identical(s, currentServer)) {
+      final parent = s.parentServer;
+      final idx = parent == null ? -1 : serverList.indexOf(parent);
+      await changeCurrentServer(idx >= 0 ? idx : 0);
+    }
+    _serverListStream.sink.add(serverList);
+    await writeServerFile();
+  }
+
   /// Follow a parent's rename through to its peers. [Server.federationParent]
   /// stores the parent's localname, and the edit screen lets the user change
   /// it; without this the children would point at a name nothing answers to.

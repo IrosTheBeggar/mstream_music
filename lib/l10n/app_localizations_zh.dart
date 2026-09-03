@@ -2147,4 +2147,26 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get browserFederatedReadOnlyNote =>
       'Playlists and ratings stay on your own';
+
+  @override
+  String get federatedAutoDjUnavailable =>
+      'Auto DJ can\'t run on a shared server. Switch to one of your own servers first.';
+
+  @override
+  String get federatedShareUnavailable =>
+      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+
+  @override
+  String get federatedForget => 'Forget';
+
+  @override
+  String get federatedHide => 'Hide from the picker';
+
+  @override
+  String get federatedShow => 'Show in the picker';
+
+  @override
+  String federatedNoLongerListed(String parent) {
+    return 'No longer shared by $parent';
+  }
 }

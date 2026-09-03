@@ -122,4 +122,7 @@ if [ "$IROH" = 1 ]; then
 fi
 media_key pause; sleep 1
 save_applog federation-rig
+# SMOKE_RIG_KEEP=1: leave both servers running and the phone on the rig config
+# for checks done by hand afterwards (restore with cfg_restore + kill the nodes).
+if [ "${SMOKE_RIG_KEEP:-0}" = 1 ]; then trap - EXIT; log "kept: servers $NODES up, phone on the rig config, backup in $CFG_BACKUP"; fi
 summary

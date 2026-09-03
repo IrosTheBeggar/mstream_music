@@ -64,9 +64,13 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
   @override
   void initState() {
     super.initState();
-    _servers = ServerManager().serverList;
+    // A federated peer cannot receive a torrent (every torrent route is off
+    // the federation allowlist), so only the user's own servers are offered.
+    _servers = ServerManager().serverList.where((s) => !s.isFederated).toList();
     final cur = ServerManager().currentServer;
-    _server = cur ?? (_servers.isNotEmpty ? _servers.first : null);
+    _server = (cur != null && !cur.isFederated)
+        ? cur
+        : (_servers.isNotEmpty ? _servers.first : null);
     if (_server != null) {
       _loadForServer(_server!);
     } else {

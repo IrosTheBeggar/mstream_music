@@ -278,8 +278,12 @@ class TrackActionsSheet extends StatelessWidget {
               await addToQueueEnd(item);
               _queuedToast();
             }),
-          if (isServerTrack) ...[
+          // Playlists live on the user's OWN server: adding a peer's path
+          // would store one the parent cannot resolve (and every playlist
+          // route is off the federation allowlist besides).
+          if (isServerTrack && item.server?.isFederated != true)
             action(Icons.playlist_add, l.trackAddToPlaylist, _addToPlaylist),
+          if (isServerTrack) ...[
             // downloadOneFile does its own progress/error snackbars, so no
             // toast here; referenceItem keeps the row's download badge live.
             action(
@@ -327,17 +331,21 @@ class _TrackBadges extends StatelessWidget {
     final m = item.metadata;
     final key = m?.musicalKey?.trim();
     final bpm = m?.bpm;
+    // A federated peer's tracks: no rating (rate-song is off the federation
+    // allowlist, and the rating would be someone else's anyway) and no lyrics
+    // badge (the lyrics route is off it too, so nothing could open them).
+    final federated = item.server?.isFederated == true;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _SheetRating(item: item),
+        if (!federated) _SheetRating(item: item),
         if (key != null && key.isNotEmpty)
           factBadge(Icons.piano, key),
         // A tempo of 0 is "the scanner found no BPM", not a 0-BPM song.
         if (bpm != null && bpm > 0) factBadge(Icons.speed, '$bpm BPM'),
-        if (m?.hasLyrics == true)
+        if (m?.hasLyrics == true && !federated)
           factBadge(Icons.lyrics_rounded, l.lyricsTitle),
       ],
     );

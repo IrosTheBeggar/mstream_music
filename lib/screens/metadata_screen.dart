@@ -75,7 +75,10 @@ class MetadataScreen extends StatelessWidget {
       // a rateable track: a local file has no server-side rating, and adding it
       // unconditionally would force an empty chip row to render for one.
       if (MediaItemRating.canRate(item)) MediaItemRating(item: item, size: 18),
-      if (extras['hasLyrics'] == true && lyricsServer != null && path != null)
+      if (extras['hasLyrics'] == true &&
+          lyricsServer != null &&
+          !lyricsServer.isFederated &&
+          path != null)
         _actionChip(
           Icons.lyrics_rounded,
           l.lyricsTitle,

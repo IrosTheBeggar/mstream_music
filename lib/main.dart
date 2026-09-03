@@ -981,11 +981,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
           StreamBuilder<List<Server>>(
               stream: ServerManager().serverListStream,
               builder: (context, snapshot) {
-                // A peer the parent has stopped listing isn't selectable, so it
-                // doesn't count towards "is there more than one server here".
+                // A peer the parent has stopped listing, or one the user hid,
+                // isn't selectable, so it doesn't count towards "is there more
+                // than one server here".
                 final isVisible = snapshot.hasData &&
-                    snapshot.data!.where((s) => !s.federationMissing).length >
-                        1;
+                    snapshot.data!.where((s) => s.isSelectable).length > 1;
                 return Visibility(
                   visible: isVisible,
                   child: PopupMenuButton(
@@ -1024,10 +1024,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                         final servers = ServerManager().serverList;
                         return <PopupMenuEntry<int>>[
                           for (final server in servers)
-                            // A peer its parent no longer lists stays in the
-                            // list so queued and downloaded tracks keep
-                            // resolving, but selecting it could only fail.
-                            if (!server.federationMissing)
+                            // A peer its parent no longer lists (or one the
+                            // user hid) stays in the list so queued and
+                            // downloaded tracks keep resolving, but is not
+                            // offered.
+                            if (server.isSelectable)
                               PopupMenuItem<int>(
                                 // The index into the FULL list — that is what
                                 // changeCurrentServer takes.

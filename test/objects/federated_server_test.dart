@@ -114,6 +114,31 @@ void main() {
     });
   });
 
+  group('selectable', () {
+    // Phase 3: the picker and the car offer a peer only while its parent
+    // still lists it and the user has not hidden it.
+    test('a listed, unhidden peer is selectable', () {
+      expect(_pair().peer.isSelectable, isTrue);
+    });
+
+    test('a peer the parent stopped listing is not', () {
+      expect((_pair().peer..federationMissing = true).isSelectable, isFalse);
+    });
+
+    test('a hidden peer is not, and the flag survives a round trip', () {
+      final peer = _pair().peer..federationHidden = true;
+      expect(peer.isSelectable, isFalse);
+      final back = Server.fromJson(peer.toJson());
+      expect(back.federationHidden, isTrue);
+      expect(back.isSelectable, isFalse);
+    });
+
+    test('a plain server is always selectable', () {
+      final s = Server('https://music.example.com', null, null, null, 'main');
+      expect(s.isSelectable, isTrue);
+    });
+  });
+
   group('credentials', () {
     test('a peer authenticates with the parent token, never its own', () {
       final p = _pair();

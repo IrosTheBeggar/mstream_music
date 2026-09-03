@@ -46,6 +46,14 @@ Future<void> showSharePlaylistDialog(BuildContext context) async {
           context, l.shareBlockedTitle, l.shareServerGoneBody(serverName));
       return;
     case _Shareable(:final server, :final filepaths):
+      // A federated peer's tracks live on someone else's server: the parent's
+      // share route cannot address them, and every share/playlist route is
+      // off the federation allowlist besides.
+      if (server.isFederated) {
+        await _alert(
+            context, l.shareBlockedTitle, l.federatedShareUnavailable);
+        return;
+      }
       // An iroh server has no public URL — a share link would point at a dead
       // loopback address — so block sharing its tracks with a clear message.
       if (server.isIroh) {
