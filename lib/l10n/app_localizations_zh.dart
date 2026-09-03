@@ -2189,9 +2189,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminSubsonicAPI => 'Subsonic API';
 
   @override
-  String get adminMP3Player => 'MP3 播放器';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -2883,25 +2880,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminDlnaStructureLabel => '结构';
 
   @override
-  String get adminMdnsLocalNetworkDiscoveryTitle => '本地网络发现';
-
-  @override
-  String get adminMdnsLocalNetworkDiscoverySubtitle =>
-      '将此服务器作为 _mstream._tcp mDNS 服务进行广播。仅发布元数据 — 不暴露任何媒体库数据或新路由。';
-
-  @override
-  String get adminMdnsEnableAdvertisingTitle => '启用广播';
-
-  @override
-  String get adminMdnsFriendlyNameLabel => '友好名称';
-
-  @override
-  String get adminMdnsFriendlyNameHelper => '留空 = 从主机名派生（最多 63 字节）';
-
-  @override
-  String get adminMdnsInstanceIdLabel => '实例 ID';
-
-  @override
   String get adminSubsonicApiTitle => 'Subsonic API';
 
   @override
@@ -3372,14 +3350,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get adminFederationUnavailable => '不可用';
-
-  @override
   String get adminFederationDescription =>
-      '联邦功能正围绕新的本地备份方案进行重建，目前在服务器上不可用。该端点仍保持挂载，以便旧客户端获得明确的状态提示，而非 404 错误。';
-
-  @override
-  String get adminCheckStatus => '检查状态';
+      '与其他 mStream 服务器配对：签发密钥让对方读取你的库，或添加对方的票据来读取他们的库。';
 
   @override
   String get adminAllowed => '允许';
@@ -3398,4 +3370,183 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get adminUnknownUser => '未知';
+
+  @override
+  String get adminFederationEnableTitle => '启用联邦';
+
+  @override
+  String get adminFederationEnableSubtitle => '允许此服务器与其他 mStream 服务器配对';
+
+  @override
+  String get adminFederationEndpointId => '端点 ID';
+
+  @override
+  String get adminFederationRelay => '中继';
+
+  @override
+  String get adminFederationOnline => '在线';
+
+  @override
+  String get adminFederationOffline => '离线';
+
+  @override
+  String get adminFederationStopped => '已停止';
+
+  @override
+  String get adminFederationUnsupportedTitle => '此平台不支持';
+
+  @override
+  String get adminFederationUnsupportedBody => '此版本没有适用于你所在平台的联邦端点，因此无法在此运行。';
+
+  @override
+  String get adminFederationCopy => '复制';
+
+  @override
+  String get adminFederationCopied => '已复制';
+
+  @override
+  String get adminFederationKeysTitle => '你签发的密钥';
+
+  @override
+  String get adminFederationKeysSubtitle => '其他服务器读取本服务器时使用的凭据';
+
+  @override
+  String get adminFederationNoKeys => '尚未签发密钥';
+
+  @override
+  String get adminFederationMintTitle => '签发密钥';
+
+  @override
+  String get adminFederationCopyTicket => '显示票据';
+
+  @override
+  String get adminFederationTicketTitle => '票据';
+
+  @override
+  String get adminFederationTicketBody => '请交给对方服务器的管理员。仅显示一次。';
+
+  @override
+  String get adminFederationNoTicket => '此密钥没有可用票据';
+
+  @override
+  String get adminFederationEditLimits => '编辑限额';
+
+  @override
+  String get adminFederationLimitsTitle => '限额';
+
+  @override
+  String get adminFederationLimitsSaved => '已保存限额';
+
+  @override
+  String get adminFederationStreamKbps => '流媒体上限 (kbps)';
+
+  @override
+  String get adminFederationDailyMb => '每日上限 (MB)';
+
+  @override
+  String get adminFederationMaxStreams => '并发流数';
+
+  @override
+  String get adminFederationUnlimitedHint => '0 表示不限';
+
+  @override
+  String get adminFederationUnlimited => '不限';
+
+  @override
+  String adminFederationKbps(int kbps) {
+    return '$kbps kbps';
+  }
+
+  @override
+  String adminFederationMbPerDay(int mb) {
+    return '$mb MB/天';
+  }
+
+  @override
+  String adminFederationStreams(int count) {
+    return '$count 个流';
+  }
+
+  @override
+  String adminFederationUsageToday(String used) {
+    return '今日：$used';
+  }
+
+  @override
+  String get adminFederationExpired => '已过期';
+
+  @override
+  String get adminFederationBound => '已绑定';
+
+  @override
+  String get adminFederationUnbound => '未绑定';
+
+  @override
+  String get adminFederationResetBinding => '重置绑定';
+
+  @override
+  String get adminFederationResetBindingDone => '已重置绑定';
+
+  @override
+  String get adminFederationRevoke => '吊销';
+
+  @override
+  String adminFederationRevokeTitle(String name) {
+    return '吊销 $name？';
+  }
+
+  @override
+  String get adminFederationRevokeBody => '正在使用此密钥的所有流将立即中断。';
+
+  @override
+  String get adminFederationRevoked => '已吊销密钥';
+
+  @override
+  String get adminFederationPeersTitle => '你读取的服务器';
+
+  @override
+  String get adminFederationPeersSubtitle => '向你提供票据、可供你读取的服务器';
+
+  @override
+  String get adminFederationNoPeers => '尚未添加对端';
+
+  @override
+  String get adminFederationAddPeer => '添加对端';
+
+  @override
+  String get adminFederationAddPeerBody => '粘贴对方服务器给你的票据。其中包含对方地址和访问密钥。';
+
+  @override
+  String get adminFederationTicketLabel => '票据';
+
+  @override
+  String get adminFederationPeerNameLabel => '名称（可选）';
+
+  @override
+  String get adminFederationPeerAdded => '已添加对端';
+
+  @override
+  String get adminFederationPeerRemoved => '已移除对端';
+
+  @override
+  String adminFederationRemovePeerTitle(String name) {
+    return '移除 $name？';
+  }
+
+  @override
+  String get adminFederationTestOk => '对端可达';
+
+  @override
+  String adminFederationLastSeen(String when) {
+    return '最后一次连接 $when';
+  }
+
+  @override
+  String get adminFederationNeverSeen => '从未连接';
+
+  @override
+  String get adminFederationUseDiscovery => '发送发现查询';
+
+  @override
+  String get adminFederationUseDiscoverySubtitle => '与此对端共享你正在收听的内容';
 }

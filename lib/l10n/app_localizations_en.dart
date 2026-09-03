@@ -2310,9 +2310,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminSubsonicAPI => 'Subsonic API';
 
   @override
-  String get adminMP3Player => 'MP3 Player';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -3014,26 +3011,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Structure';
 
   @override
-  String get adminMdnsLocalNetworkDiscoveryTitle => 'Local network discovery';
-
-  @override
-  String get adminMdnsLocalNetworkDiscoverySubtitle =>
-      'Advertises this server as an _mstream._tcp mDNS service. Publishes metadata only — exposes no library data or new routes.';
-
-  @override
-  String get adminMdnsEnableAdvertisingTitle => 'Enable advertising';
-
-  @override
-  String get adminMdnsFriendlyNameLabel => 'Friendly name';
-
-  @override
-  String get adminMdnsFriendlyNameHelper =>
-      'Empty = derive from hostname (max 63 bytes)';
-
-  @override
-  String get adminMdnsInstanceIdLabel => 'Instance ID';
-
-  @override
   String get adminSubsonicApiTitle => 'Subsonic API';
 
   @override
@@ -3507,14 +3484,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get adminFederationUnavailable => 'Unavailable';
-
-  @override
   String get adminFederationDescription =>
-      'Federation is being rebuilt around the new local-backup story and is currently unavailable on the server. The endpoint stays mounted so older clients get a clear status instead of a 404.';
-
-  @override
-  String get adminCheckStatus => 'Check status';
+      'Pair with other mStream servers: issue keys so they can read your libraries, or add their tickets to read theirs.';
 
   @override
   String get adminAllowed => 'Allowed';
@@ -3533,4 +3504,191 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminUnknownUser => 'unknown';
+
+  @override
+  String get adminFederationEnableTitle => 'Enable federation';
+
+  @override
+  String get adminFederationEnableSubtitle =>
+      'Let this server pair with other mStream servers';
+
+  @override
+  String get adminFederationEndpointId => 'Endpoint ID';
+
+  @override
+  String get adminFederationRelay => 'Relay';
+
+  @override
+  String get adminFederationOnline => 'Online';
+
+  @override
+  String get adminFederationOffline => 'Offline';
+
+  @override
+  String get adminFederationStopped => 'Stopped';
+
+  @override
+  String get adminFederationUnsupportedTitle => 'Not supported here';
+
+  @override
+  String get adminFederationUnsupportedBody =>
+      'This build has no federation endpoint for your platform, so it cannot run here.';
+
+  @override
+  String get adminFederationCopy => 'Copy';
+
+  @override
+  String get adminFederationCopied => 'Copied';
+
+  @override
+  String get adminFederationKeysTitle => 'Keys you issued';
+
+  @override
+  String get adminFederationKeysSubtitle =>
+      'Credentials other servers use to read from this one';
+
+  @override
+  String get adminFederationNoKeys => 'No keys issued yet';
+
+  @override
+  String get adminFederationMintTitle => 'Mint a key';
+
+  @override
+  String get adminFederationCopyTicket => 'Show ticket';
+
+  @override
+  String get adminFederationTicketTitle => 'Ticket';
+
+  @override
+  String get adminFederationTicketBody =>
+      'Hand this to the other server’s admin. It is shown once.';
+
+  @override
+  String get adminFederationNoTicket => 'No ticket available for this key';
+
+  @override
+  String get adminFederationEditLimits => 'Edit limits';
+
+  @override
+  String get adminFederationLimitsTitle => 'Limits';
+
+  @override
+  String get adminFederationLimitsSaved => 'Limits saved';
+
+  @override
+  String get adminFederationStreamKbps => 'Stream ceiling (kbps)';
+
+  @override
+  String get adminFederationDailyMb => 'Daily cap (MB)';
+
+  @override
+  String get adminFederationMaxStreams => 'Concurrent streams';
+
+  @override
+  String get adminFederationUnlimitedHint => '0 means unlimited';
+
+  @override
+  String get adminFederationUnlimited => 'unlimited';
+
+  @override
+  String adminFederationKbps(int kbps) {
+    return '$kbps kbps';
+  }
+
+  @override
+  String adminFederationMbPerDay(int mb) {
+    return '$mb MB/day';
+  }
+
+  @override
+  String adminFederationStreams(int count) {
+    return '$count streams';
+  }
+
+  @override
+  String adminFederationUsageToday(String used) {
+    return 'Today: $used';
+  }
+
+  @override
+  String get adminFederationExpired => 'Expired';
+
+  @override
+  String get adminFederationBound => 'bound';
+
+  @override
+  String get adminFederationUnbound => 'not bound';
+
+  @override
+  String get adminFederationResetBinding => 'Reset binding';
+
+  @override
+  String get adminFederationResetBindingDone => 'Binding reset';
+
+  @override
+  String get adminFederationRevoke => 'Revoke';
+
+  @override
+  String adminFederationRevokeTitle(String name) {
+    return 'Revoke $name?';
+  }
+
+  @override
+  String get adminFederationRevokeBody =>
+      'Any streams currently using this key are cut immediately.';
+
+  @override
+  String get adminFederationRevoked => 'Key revoked';
+
+  @override
+  String get adminFederationPeersTitle => 'Servers you read';
+
+  @override
+  String get adminFederationPeersSubtitle =>
+      'Servers that gave you a ticket, which you can read from';
+
+  @override
+  String get adminFederationNoPeers => 'No peers added yet';
+
+  @override
+  String get adminFederationAddPeer => 'Add peer';
+
+  @override
+  String get adminFederationAddPeerBody =>
+      'Paste the ticket the other server gave you. It carries their address and the key that grants access.';
+
+  @override
+  String get adminFederationTicketLabel => 'Ticket';
+
+  @override
+  String get adminFederationPeerNameLabel => 'Name (optional)';
+
+  @override
+  String get adminFederationPeerAdded => 'Peer added';
+
+  @override
+  String get adminFederationPeerRemoved => 'Peer removed';
+
+  @override
+  String adminFederationRemovePeerTitle(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get adminFederationTestOk => 'Peer reachable';
+
+  @override
+  String adminFederationLastSeen(String when) {
+    return 'Last seen $when';
+  }
+
+  @override
+  String get adminFederationNeverSeen => 'Never reached';
+
+  @override
+  String get adminFederationUseDiscovery => 'Send discovery queries';
+
+  @override
+  String get adminFederationUseDiscoverySubtitle =>
+      'Shares what you are listening to with this peer';
 }

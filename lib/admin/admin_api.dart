@@ -421,16 +421,9 @@ class AdminApi {
   Future<void> setDlnaBrowse(String browse) =>
       _post('/api/v1/admin/dlna/browse', {'browse': browse}); // flat|dirs|artist|album|genre
 
-  // ── mDNS (MP3 Player discovery) ───────────────────────────────────────────
-
-  /// `{enabled, name, instanceId}`
-  Future<Map<String, dynamic>> getMdns() async =>
-      Map<String, dynamic>.from(await _get('/api/v1/admin/mdns'));
-
-  Future<void> setMdnsEnabled(bool v) =>
-      _post('/api/v1/admin/mdns/enabled', {'enabled': v});
-  Future<void> setMdnsName(String name) =>
-      _post('/api/v1/admin/mdns/name', {'name': name});
+  // mDNS advertising is still a server feature (`discovery.mdns` in the config
+  // file) but its admin routes were removed — it is config-file-only now, with
+  // no endpoint to read or change it. There is deliberately no client for it.
 
   // ── Subsonic ──────────────────────────────────────────────────────────────
 
@@ -479,10 +472,107 @@ class AdminApi {
           '/api/v1/admin/subsonic/mint-key',
           {'username': username, 'name': name}));
 
-  // ── Federation (disabled stub on the server — POST returns 410) ────────────
+  // ── Federation ────────────────────────────────────────────────────────────
+  //
+  // Mirrors `src/api/admin-federation.js`. Two halves that read alike but point
+  // opposite ways: *keys* are credentials this server hands out so others may
+  // read from it; *peers* are tickets it has been given so it can read from
+  // them. `available: false` means the iroh native binary is missing for this
+  // platform — the feature cannot run here at all, which is distinct from
+  // `enabled: false` (switched off).
 
-  Future<void> enableFederation(bool enable) =>
-      _post('/api/v1/admin/federation/enable', {'enable': enable});
+  /// `{enabled, available, running, endpointId, online, relayUrl, limitDefaults}`
+  Future<Map<String, dynamic>> getFederation() async =>
+      Map<String, dynamic>.from(await _get('/api/v1/admin/federation'));
+
+  /// Returns `{enabled, available}` — `available: false` when the toggle was
+  /// stored but the endpoint could not start on this platform.
+  Future<Map<String, dynamic>> setFederationEnabled(bool enabled) async =>
+      Map<String, dynamic>.from(
+          await _post('/api/v1/admin/federation', {'enabled': enabled}));
+
+  /// Rows carry `library_names`, `ticket`, `usage_today_bytes`, `is_expired`,
+  /// `stream_kbps`, `daily_mb`, `max_streams`, `bound_endpoint_id`.
+  Future<List<dynamic>> federationKeys() async {
+    final r = await _get('/api/v1/admin/federation/keys');
+    return r is List ? r : const [];
+  }
+
+  /// Mints a key for [vpaths]. Response includes the one-time `ticket` to hand
+  /// to the other server. Limits of 0 mean "unlimited"; [expiresAt] must be a
+  /// future ISO-8601 instant, or null for never.
+  Future<Map<String, dynamic>> mintFederationKey(
+    String name,
+    List<String> vpaths, {
+    int? streamKbps,
+    int? dailyMb,
+    int? maxStreams,
+    String? expiresAt,
+  }) async =>
+      Map<String, dynamic>.from(
+          await _post('/api/v1/admin/federation/keys', {
+        'name': name,
+        'vpaths': vpaths,
+        'streamKbps': ?streamKbps,
+        'dailyMb': ?dailyMb,
+        'maxStreams': ?maxStreams,
+        'expiresAt': ?expiresAt,
+      }));
+
+  /// Live limit edit. All three limits are required by the server; `expiresAt`
+  /// is tri-state — omit to leave unchanged, null for never, ISO to renew.
+  Future<void> setFederationKeyLimits(
+    int id, {
+    required int streamKbps,
+    required int dailyMb,
+    required int maxStreams,
+    bool changeExpiry = false,
+    String? expiresAt,
+  }) =>
+      _post('/api/v1/admin/federation/keys/$id/limits', {
+        'streamKbps': streamKbps,
+        'dailyMb': dailyMb,
+        'maxStreams': maxStreams,
+        if (changeExpiry) 'expiresAt': expiresAt,
+      });
+
+  /// Revokes the key and severs any live streams riding it.
+  Future<void> deleteFederationKey(int id) =>
+      _delete('/api/v1/admin/federation/keys/$id');
+
+  /// Clears the TOFU endpoint binding so the key can be presented from a new
+  /// endpoint (i.e. after the far side rebuilt its server identity).
+  Future<void> resetFederationKeyBinding(int id) =>
+      _post('/api/v1/admin/federation/keys/$id/reset-binding');
+
+  /// Rows carry `name`, `last_seen`, `last_status`, `use_discovery`.
+  Future<List<dynamic>> federationPeers() async {
+    final r = await _get('/api/v1/admin/federation/peers');
+    return r is List ? r : const [];
+  }
+
+  /// Adds a peer from a ticket pasted from the other server. [name] overrides
+  /// the name embedded in the ticket.
+  Future<Map<String, dynamic>> addFederationPeer(String ticket,
+          {String? name}) async =>
+      Map<String, dynamic>.from(
+          await _post('/api/v1/admin/federation/peers', {
+        'ticket': ticket,
+        if (name != null && name.isNotEmpty) 'name': name,
+      }));
+
+  /// Health check; response is the probe result plus the refreshed `peer` row.
+  Future<Map<String, dynamic>> testFederationPeer(int id) async =>
+      Map<String, dynamic>.from(
+          await _post('/api/v1/admin/federation/peers/$id/test'));
+
+  /// Per-peer opt-out for OUTBOUND discovery queries (sending this peer our
+  /// seed vectors). Inbound answering is unaffected.
+  Future<void> setFederationPeerDiscovery(int id, bool enabled) =>
+      _post('/api/v1/admin/federation/peers/$id/discovery', {'enabled': enabled});
+
+  Future<void> deleteFederationPeer(int id) =>
+      _delete('/api/v1/admin/federation/peers/$id');
 
   // ── Torrent ───────────────────────────────────────────────────────────────
 

@@ -4044,12 +4044,6 @@ abstract class AppLocalizations {
   /// **'Subsonic API'**
   String get adminSubsonicAPI;
 
-  /// Navigation label for the MP3 Player (server audio) section.
-  ///
-  /// In en, this message translates to:
-  /// **'MP3 Player'**
-  String get adminMP3Player;
-
   /// Navigation label and per-user permission toggle for the Torrent feature.
   ///
   /// In en, this message translates to:
@@ -5394,42 +5388,6 @@ abstract class AppLocalizations {
   /// **'Structure'**
   String get adminDlnaStructureLabel;
 
-  /// Card title for the mDNS local network discovery section.
-  ///
-  /// In en, this message translates to:
-  /// **'Local network discovery'**
-  String get adminMdnsLocalNetworkDiscoveryTitle;
-
-  /// Subtitle explaining what mDNS advertising does.
-  ///
-  /// In en, this message translates to:
-  /// **'Advertises this server as an _mstream._tcp mDNS service. Publishes metadata only — exposes no library data or new routes.'**
-  String get adminMdnsLocalNetworkDiscoverySubtitle;
-
-  /// Toggle title to enable mDNS advertising.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable advertising'**
-  String get adminMdnsEnableAdvertisingTitle;
-
-  /// Field label for the mDNS friendly name.
-  ///
-  /// In en, this message translates to:
-  /// **'Friendly name'**
-  String get adminMdnsFriendlyNameLabel;
-
-  /// Helper text for the mDNS friendly name field.
-  ///
-  /// In en, this message translates to:
-  /// **'Empty = derive from hostname (max 63 bytes)'**
-  String get adminMdnsFriendlyNameHelper;
-
-  /// Info row label showing the mDNS instance ID.
-  ///
-  /// In en, this message translates to:
-  /// **'Instance ID'**
-  String get adminMdnsInstanceIdLabel;
-
   /// Card title for the Subsonic API settings.
   ///
   /// In en, this message translates to:
@@ -6258,23 +6216,11 @@ abstract class AppLocalizations {
   /// **'{size} MB'**
   String adminCacheSizeMb(int size);
 
-  /// Status pill indicating federation is unavailable.
+  /// Intro line on the Federation card explaining what pairing does.
   ///
   /// In en, this message translates to:
-  /// **'Unavailable'**
-  String get adminFederationUnavailable;
-
-  /// Explanatory body text on the Federation view.
-  ///
-  /// In en, this message translates to:
-  /// **'Federation is being rebuilt around the new local-backup story and is currently unavailable on the server. The endpoint stays mounted so older clients get a clear status instead of a 404.'**
+  /// **'Pair with other mStream servers: issue keys so they can read your libraries, or add their tickets to read theirs.'**
   String get adminFederationDescription;
-
-  /// Button to re-check federation status.
-  ///
-  /// In en, this message translates to:
-  /// **'Check status'**
-  String get adminCheckStatus;
 
   /// Permission value (About view): action is allowed.
   ///
@@ -6311,6 +6257,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'unknown'**
   String get adminUnknownUser;
+
+  /// Switch that turns federation on or off.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable federation'**
+  String get adminFederationEnableTitle;
+
+  /// Subtitle under the federation enable switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Let this server pair with other mStream servers'**
+  String get adminFederationEnableSubtitle;
+
+  /// Label for this server’s federation endpoint identifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint ID'**
+  String get adminFederationEndpointId;
+
+  /// Label for the relay URL the endpoint reached.
+  ///
+  /// In en, this message translates to:
+  /// **'Relay'**
+  String get adminFederationRelay;
+
+  /// Status pill: endpoint is up and reached a relay.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get adminFederationOnline;
+
+  /// Status pill: endpoint is running but has no relay.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get adminFederationOffline;
+
+  /// Status pill: enabled but the endpoint did not start.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get adminFederationStopped;
+
+  /// Card title when federation cannot run on this platform.
+  ///
+  /// In en, this message translates to:
+  /// **'Not supported here'**
+  String get adminFederationUnsupportedTitle;
+
+  /// Explanation when the federation binary is missing for this platform.
+  ///
+  /// In en, this message translates to:
+  /// **'This build has no federation endpoint for your platform, so it cannot run here.'**
+  String get adminFederationUnsupportedBody;
+
+  /// Button that copies a value to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get adminFederationCopy;
+
+  /// Toast after copying a value to the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get adminFederationCopied;
+
+  /// Card title for credentials this server issued.
+  ///
+  /// In en, this message translates to:
+  /// **'Keys you issued'**
+  String get adminFederationKeysTitle;
+
+  /// Subtitle explaining what issued keys are for.
+  ///
+  /// In en, this message translates to:
+  /// **'Credentials other servers use to read from this one'**
+  String get adminFederationKeysSubtitle;
+
+  /// Empty state for the issued-keys list.
+  ///
+  /// In en, this message translates to:
+  /// **'No keys issued yet'**
+  String get adminFederationNoKeys;
+
+  /// Button and dialog title for creating a federation key.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint a key'**
+  String get adminFederationMintTitle;
+
+  /// Menu item that reveals a key’s ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Show ticket'**
+  String get adminFederationCopyTicket;
+
+  /// Title of the dialog showing a key’s ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket'**
+  String get adminFederationTicketTitle;
+
+  /// Explanation shown with a freshly minted ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand this to the other server’s admin. It is shown once.'**
+  String get adminFederationTicketBody;
+
+  /// Error when a key row carries no ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'No ticket available for this key'**
+  String get adminFederationNoTicket;
+
+  /// Menu item and dialog title for changing a key’s limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit limits'**
+  String get adminFederationEditLimits;
+
+  /// Section heading for the limit fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits'**
+  String get adminFederationLimitsTitle;
+
+  /// Toast after saving a key’s limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits saved'**
+  String get adminFederationLimitsSaved;
+
+  /// Field label for the per-stream bitrate ceiling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream ceiling (kbps)'**
+  String get adminFederationStreamKbps;
+
+  /// Field label for the daily transfer cap.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily cap (MB)'**
+  String get adminFederationDailyMb;
+
+  /// Field label for the concurrent stream cap.
+  ///
+  /// In en, this message translates to:
+  /// **'Concurrent streams'**
+  String get adminFederationMaxStreams;
+
+  /// Hint that a limit of zero means no limit.
+  ///
+  /// In en, this message translates to:
+  /// **'0 means unlimited'**
+  String get adminFederationUnlimitedHint;
+
+  /// Shown in place of a limit value when it is zero.
+  ///
+  /// In en, this message translates to:
+  /// **'unlimited'**
+  String get adminFederationUnlimited;
+
+  /// A key’s stream ceiling.
+  ///
+  /// In en, this message translates to:
+  /// **'{kbps} kbps'**
+  String adminFederationKbps(int kbps);
+
+  /// A key’s daily transfer cap.
+  ///
+  /// In en, this message translates to:
+  /// **'{mb} MB/day'**
+  String adminFederationMbPerDay(int mb);
+
+  /// A key’s concurrent stream cap.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} streams'**
+  String adminFederationStreams(int count);
+
+  /// Bytes a key has transferred today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today: {used}'**
+  String adminFederationUsageToday(String used);
+
+  /// Pill on a key whose expiry has passed.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get adminFederationExpired;
+
+  /// A key that is pinned to the endpoint that first used it.
+  ///
+  /// In en, this message translates to:
+  /// **'bound'**
+  String get adminFederationBound;
+
+  /// A key that has not been used from any endpoint yet.
+  ///
+  /// In en, this message translates to:
+  /// **'not bound'**
+  String get adminFederationUnbound;
+
+  /// Menu item that clears a key’s endpoint binding.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset binding'**
+  String get adminFederationResetBinding;
+
+  /// Toast after clearing a key’s endpoint binding.
+  ///
+  /// In en, this message translates to:
+  /// **'Binding reset'**
+  String get adminFederationResetBindingDone;
+
+  /// Destructive action that deletes a federation key.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get adminFederationRevoke;
+
+  /// Confirmation title when revoking a key; {name} is the key label.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke {name}?'**
+  String adminFederationRevokeTitle(String name);
+
+  /// Warning shown when revoking a key.
+  ///
+  /// In en, this message translates to:
+  /// **'Any streams currently using this key are cut immediately.'**
+  String get adminFederationRevokeBody;
+
+  /// Toast after revoking a key.
+  ///
+  /// In en, this message translates to:
+  /// **'Key revoked'**
+  String get adminFederationRevoked;
+
+  /// Card title for servers this one can read from.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers you read'**
+  String get adminFederationPeersTitle;
+
+  /// Subtitle explaining what peers are.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers that gave you a ticket, which you can read from'**
+  String get adminFederationPeersSubtitle;
+
+  /// Empty state for the peer list.
+  ///
+  /// In en, this message translates to:
+  /// **'No peers added yet'**
+  String get adminFederationNoPeers;
+
+  /// Button and dialog title for adding a peer from a ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Add peer'**
+  String get adminFederationAddPeer;
+
+  /// Explanation in the add-peer dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the ticket the other server gave you. It carries their address and the key that grants access.'**
+  String get adminFederationAddPeerBody;
+
+  /// Field label for pasting a peer ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket'**
+  String get adminFederationTicketLabel;
+
+  /// Optional display name for a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (optional)'**
+  String get adminFederationPeerNameLabel;
+
+  /// Toast after adding a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer added'**
+  String get adminFederationPeerAdded;
+
+  /// Toast after removing a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer removed'**
+  String get adminFederationPeerRemoved;
+
+  /// Confirmation title when removing a peer; {name} is the peer name.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String adminFederationRemovePeerTitle(String name);
+
+  /// Toast after a successful peer health check.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer reachable'**
+  String get adminFederationTestOk;
+
+  /// When a peer was last reached; {when} is a timestamp.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen {when}'**
+  String adminFederationLastSeen(String when);
+
+  /// Shown when a peer has never been reached.
+  ///
+  /// In en, this message translates to:
+  /// **'Never reached'**
+  String get adminFederationNeverSeen;
+
+  /// Per-peer switch for outbound discovery queries.
+  ///
+  /// In en, this message translates to:
+  /// **'Send discovery queries'**
+  String get adminFederationUseDiscovery;
+
+  /// Privacy note under the per-peer discovery switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares what you are listening to with this peer'**
+  String get adminFederationUseDiscoverySubtitle;
 }
 
 class _AppLocalizationsDelegate

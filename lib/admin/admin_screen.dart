@@ -12,7 +12,6 @@ import 'views/directories_view.dart';
 import 'views/dlna_view.dart';
 import 'views/federation_view.dart';
 import 'views/logs_view.dart';
-import 'views/mdns_view.dart';
 import 'views/settings_view.dart';
 import 'views/subsonic_view.dart';
 import 'views/torrent_view.dart';
@@ -35,8 +34,8 @@ class _NavGroup {
 
 /// The admin shell: a responsive grouped sidebar (permanent on wide windows, a
 /// Drawer on narrow ones) plus the selected view. Owns the [AdminApi] for the
-/// session and rebuilds the active view fresh on selection so only one view
-/// polls/fetches at a time.
+/// session. Views are built lazily on first visit and kept mounted after, and
+/// only the visible one is marked active, so at most one view polls at a time.
 class AdminScreen extends StatefulWidget {
   final AdminSession session;
 
@@ -63,13 +62,16 @@ class _AdminScreenState extends State<AdminScreen> {
   late final AdminApi _api = AdminApi(widget.session);
   int _selected = 0;
 
+  /// Indices that have been opened at least once, and so are built and kept
+  /// mounted in the IndexedStack. Everything else is an empty placeholder.
+  final Set<int> _visited = {0};
+
   late final List<_NavGroup> _groups = [
     _NavGroup((l) => l.adminConfigGroup, [
       _NavItem(Icons.folder_outlined, (l) => l.adminDirectories, (a) => DirectoriesView(api: a)),
       _NavItem(Icons.people_outline, (l) => l.adminUsers, (a) => UsersView(api: a)),
       _NavItem(Icons.wifi_tethering, (l) => l.adminDLNA, (a) => DlnaView(api: a)),
       _NavItem(Icons.play_circle_outline, (l) => l.adminSubsonicAPI, (a) => SubsonicView(api: a)),
-      _NavItem(Icons.travel_explore, (l) => l.adminMP3Player, (a) => MdnsView(api: a)),
       _NavItem(Icons.download_outlined, (l) => l.adminTorrent, (a) => TorrentView(api: a)),
       _NavItem(Icons.hub_outlined, (l) => l.adminFederation, (a) => FederationView(api: a)),
     ]),
@@ -93,7 +95,10 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   void _select(int index) {
-    setState(() => _selected = index);
+    setState(() {
+      _selected = index;
+      _visited.add(index);
+    });
     Navigator.of(context).maybePop(); // close the Drawer if open
   }
 
@@ -119,19 +124,26 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
           Expanded(
-            // Build every view up front and keep them all mounted: each view's
-            // loader fires immediately, prefetching its data in the background
-            // so the first (and every) switch is instant. Only the active
-            // view's AdminViewActive is true, so polling views stay paused while
-            // offscreen — preserving "one poller at a time".
+            // Build a view the first time it is opened, then keep it mounted so
+            // returning to it is instant and its state survives. Unvisited slots
+            // stay empty placeholders: opening the panel must not fire fourteen
+            // loaders at once, which on a phone means fourteen parallel requests
+            // over whatever connection the user happens to be on.
+            //
+            // Only the active view's AdminViewActive is true, so polling views
+            // (logs, torrent, backups) stay paused while mounted but offscreen —
+            // preserving "one poller at a time".
             child: IndexedStack(
               index: _selected,
               children: [
                 for (int i = 0; i < flat.length; i++)
-                  AdminViewActive(
-                    active: i == _selected,
-                    child: flat[i].build(_api),
-                  ),
+                  if (_visited.contains(i))
+                    AdminViewActive(
+                      active: i == _selected,
+                      child: flat[i].build(_api),
+                    )
+                  else
+                    const SizedBox.shrink(),
               ],
             ),
           ),

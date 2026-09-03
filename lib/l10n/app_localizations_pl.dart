@@ -2349,9 +2349,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get adminSubsonicAPI => 'API Subsonic';
 
   @override
-  String get adminMP3Player => 'Odtwarzacz MP3';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -3071,27 +3068,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Struktura';
 
   @override
-  String get adminMdnsLocalNetworkDiscoveryTitle =>
-      'Wykrywanie w sieci lokalnej';
-
-  @override
-  String get adminMdnsLocalNetworkDiscoverySubtitle =>
-      'Rozgłasza ten serwer jako usługę mDNS _mstream._tcp. Publikuje tylko metadane — nie udostępnia danych biblioteki ani nowych tras.';
-
-  @override
-  String get adminMdnsEnableAdvertisingTitle => 'Włącz rozgłaszanie';
-
-  @override
-  String get adminMdnsFriendlyNameLabel => 'Przyjazna nazwa';
-
-  @override
-  String get adminMdnsFriendlyNameHelper =>
-      'Puste = utworzona z nazwy hosta (maks. 63 bajty)';
-
-  @override
-  String get adminMdnsInstanceIdLabel => 'ID instancji';
-
-  @override
   String get adminSubsonicApiTitle => 'API Subsonic';
 
   @override
@@ -3574,14 +3550,8 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get adminFederationUnavailable => 'Niedostępna';
-
-  @override
   String get adminFederationDescription =>
-      'Federacja jest przebudowywana wokół nowego mechanizmu lokalnych kopii zapasowych i obecnie jest niedostępna na serwerze. Punkt końcowy pozostaje aktywny, aby starsi klienci otrzymywali jasny status zamiast błędu 404.';
-
-  @override
-  String get adminCheckStatus => 'Sprawdź status';
+      'Sparuj z innymi serwerami mStream: wystaw klucze, aby mogły czytać twoje biblioteki, albo dodaj ich bilety, aby czytać ich biblioteki.';
 
   @override
   String get adminAllowed => 'Dozwolone';
@@ -3600,4 +3570,191 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get adminUnknownUser => 'nieznany';
+
+  @override
+  String get adminFederationEnableTitle => 'Włącz federację';
+
+  @override
+  String get adminFederationEnableSubtitle =>
+      'Pozwól temu serwerowi parować się z innymi serwerami mStream';
+
+  @override
+  String get adminFederationEndpointId => 'Identyfikator punktu końcowego';
+
+  @override
+  String get adminFederationRelay => 'Przekaźnik';
+
+  @override
+  String get adminFederationOnline => 'Online';
+
+  @override
+  String get adminFederationOffline => 'Offline';
+
+  @override
+  String get adminFederationStopped => 'Zatrzymana';
+
+  @override
+  String get adminFederationUnsupportedTitle => 'Nieobsługiwane tutaj';
+
+  @override
+  String get adminFederationUnsupportedBody =>
+      'Ta kompilacja nie zawiera punktu końcowego federacji dla twojej platformy, więc nie może tu działać.';
+
+  @override
+  String get adminFederationCopy => 'Kopiuj';
+
+  @override
+  String get adminFederationCopied => 'Skopiowano';
+
+  @override
+  String get adminFederationKeysTitle => 'Wystawione klucze';
+
+  @override
+  String get adminFederationKeysSubtitle =>
+      'Poświadczenia, których inne serwery używają do czytania z tego';
+
+  @override
+  String get adminFederationNoKeys => 'Nie wystawiono jeszcze kluczy';
+
+  @override
+  String get adminFederationMintTitle => 'Wystaw klucz';
+
+  @override
+  String get adminFederationCopyTicket => 'Pokaż bilet';
+
+  @override
+  String get adminFederationTicketTitle => 'Bilet';
+
+  @override
+  String get adminFederationTicketBody =>
+      'Przekaż to administratorowi drugiego serwera. Pokazywane tylko raz.';
+
+  @override
+  String get adminFederationNoTicket => 'Brak biletu dla tego klucza';
+
+  @override
+  String get adminFederationEditLimits => 'Edytuj limity';
+
+  @override
+  String get adminFederationLimitsTitle => 'Limity';
+
+  @override
+  String get adminFederationLimitsSaved => 'Zapisano limity';
+
+  @override
+  String get adminFederationStreamKbps => 'Limit strumienia (kb/s)';
+
+  @override
+  String get adminFederationDailyMb => 'Limit dzienny (MB)';
+
+  @override
+  String get adminFederationMaxStreams => 'Równoczesne strumienie';
+
+  @override
+  String get adminFederationUnlimitedHint => '0 oznacza bez limitu';
+
+  @override
+  String get adminFederationUnlimited => 'bez limitu';
+
+  @override
+  String adminFederationKbps(int kbps) {
+    return '$kbps kb/s';
+  }
+
+  @override
+  String adminFederationMbPerDay(int mb) {
+    return '$mb MB/dzień';
+  }
+
+  @override
+  String adminFederationStreams(int count) {
+    return '$count strumieni';
+  }
+
+  @override
+  String adminFederationUsageToday(String used) {
+    return 'Dziś: $used';
+  }
+
+  @override
+  String get adminFederationExpired => 'Wygasł';
+
+  @override
+  String get adminFederationBound => 'powiązany';
+
+  @override
+  String get adminFederationUnbound => 'niepowiązany';
+
+  @override
+  String get adminFederationResetBinding => 'Zresetuj powiązanie';
+
+  @override
+  String get adminFederationResetBindingDone => 'Zresetowano powiązanie';
+
+  @override
+  String get adminFederationRevoke => 'Unieważnij';
+
+  @override
+  String adminFederationRevokeTitle(String name) {
+    return 'Unieważnić $name?';
+  }
+
+  @override
+  String get adminFederationRevokeBody =>
+      'Wszystkie strumienie używające tego klucza zostaną natychmiast przerwane.';
+
+  @override
+  String get adminFederationRevoked => 'Klucz unieważniony';
+
+  @override
+  String get adminFederationPeersTitle => 'Serwery, które czytasz';
+
+  @override
+  String get adminFederationPeersSubtitle =>
+      'Serwery, które dały ci bilet i z których możesz czytać';
+
+  @override
+  String get adminFederationNoPeers => 'Nie dodano jeszcze węzłów';
+
+  @override
+  String get adminFederationAddPeer => 'Dodaj węzeł';
+
+  @override
+  String get adminFederationAddPeerBody =>
+      'Wklej bilet otrzymany od drugiego serwera. Zawiera jego adres i klucz dostępu.';
+
+  @override
+  String get adminFederationTicketLabel => 'Bilet';
+
+  @override
+  String get adminFederationPeerNameLabel => 'Nazwa (opcjonalnie)';
+
+  @override
+  String get adminFederationPeerAdded => 'Dodano węzeł';
+
+  @override
+  String get adminFederationPeerRemoved => 'Usunięto węzeł';
+
+  @override
+  String adminFederationRemovePeerTitle(String name) {
+    return 'Usunąć $name?';
+  }
+
+  @override
+  String get adminFederationTestOk => 'Węzeł osiągalny';
+
+  @override
+  String adminFederationLastSeen(String when) {
+    return 'Ostatnio widziany $when';
+  }
+
+  @override
+  String get adminFederationNeverSeen => 'Nigdy nieosiągnięty';
+
+  @override
+  String get adminFederationUseDiscovery => 'Wysyłaj zapytania odkrywania';
+
+  @override
+  String get adminFederationUseDiscoverySubtitle =>
+      'Udostępnia temu węzłowi to, czego słuchasz';
 }

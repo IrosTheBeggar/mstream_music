@@ -2036,10 +2036,6 @@
   "@adminSubsonicAPI": {
     "description": "Navigation label and card title for the Subsonic API section."
   },
-  "adminMP3Player": "MP3 Player",
-  "@adminMP3Player": {
-    "description": "Navigation label for the MP3 Player (server audio) section."
-  },
   "adminTorrent": "Torrent",
   "@adminTorrent": {
     "description": "Navigation label and per-user permission toggle for the Torrent feature."
@@ -2967,30 +2963,6 @@
   "@adminDlnaStructureLabel": {
     "description": "Field label for the DLNA browse structure."
   },
-  "adminMdnsLocalNetworkDiscoveryTitle": "Local network discovery",
-  "@adminMdnsLocalNetworkDiscoveryTitle": {
-    "description": "Card title for the mDNS local network discovery section."
-  },
-  "adminMdnsLocalNetworkDiscoverySubtitle": "Advertises this server as an _mstream._tcp mDNS service. Publishes metadata only — exposes no library data or new routes.",
-  "@adminMdnsLocalNetworkDiscoverySubtitle": {
-    "description": "Subtitle explaining what mDNS advertising does."
-  },
-  "adminMdnsEnableAdvertisingTitle": "Enable advertising",
-  "@adminMdnsEnableAdvertisingTitle": {
-    "description": "Toggle title to enable mDNS advertising."
-  },
-  "adminMdnsFriendlyNameLabel": "Friendly name",
-  "@adminMdnsFriendlyNameLabel": {
-    "description": "Field label for the mDNS friendly name."
-  },
-  "adminMdnsFriendlyNameHelper": "Empty = derive from hostname (max 63 bytes)",
-  "@adminMdnsFriendlyNameHelper": {
-    "description": "Helper text for the mDNS friendly name field."
-  },
-  "adminMdnsInstanceIdLabel": "Instance ID",
-  "@adminMdnsInstanceIdLabel": {
-    "description": "Info row label showing the mDNS instance ID."
-  },
   "adminSubsonicApiTitle": "Subsonic API",
   "@adminSubsonicApiTitle": {
     "description": "Card title for the Subsonic API settings."
@@ -3648,17 +3620,9 @@
       }
     }
   },
-  "adminFederationUnavailable": "Unavailable",
-  "@adminFederationUnavailable": {
-    "description": "Status pill indicating federation is unavailable."
-  },
-  "adminFederationDescription": "Federation is being rebuilt around the new local-backup story and is currently unavailable on the server. The endpoint stays mounted so older clients get a clear status instead of a 404.",
+  "adminFederationDescription": "Pair with other mStream servers: issue keys so they can read your libraries, or add their tickets to read theirs.",
   "@adminFederationDescription": {
-    "description": "Explanatory body text on the Federation view."
-  },
-  "adminCheckStatus": "Check status",
-  "@adminCheckStatus": {
-    "description": "Button to re-check federation status."
+    "description": "Intro line on the Federation card explaining what pairing does."
   },
   "adminAllowed": "Allowed",
   "@adminAllowed": {
@@ -3683,5 +3647,260 @@
   "adminUnknownUser": "unknown",
   "@adminUnknownUser": {
     "description": "Fallback for an unknown shared-playlist owner."
+  },
+  "adminFederationEnableTitle": "Enable federation",
+  "@adminFederationEnableTitle": {
+    "description": "Switch that turns federation on or off."
+  },
+  "adminFederationEnableSubtitle": "Let this server pair with other mStream servers",
+  "@adminFederationEnableSubtitle": {
+    "description": "Subtitle under the federation enable switch."
+  },
+  "adminFederationEndpointId": "Endpoint ID",
+  "@adminFederationEndpointId": {
+    "description": "Label for this server’s federation endpoint identifier."
+  },
+  "adminFederationRelay": "Relay",
+  "@adminFederationRelay": {
+    "description": "Label for the relay URL the endpoint reached."
+  },
+  "adminFederationOnline": "Online",
+  "@adminFederationOnline": {
+    "description": "Status pill: endpoint is up and reached a relay."
+  },
+  "adminFederationOffline": "Offline",
+  "@adminFederationOffline": {
+    "description": "Status pill: endpoint is running but has no relay."
+  },
+  "adminFederationStopped": "Stopped",
+  "@adminFederationStopped": {
+    "description": "Status pill: enabled but the endpoint did not start."
+  },
+  "adminFederationUnsupportedTitle": "Not supported here",
+  "@adminFederationUnsupportedTitle": {
+    "description": "Card title when federation cannot run on this platform."
+  },
+  "adminFederationUnsupportedBody": "This build has no federation endpoint for your platform, so it cannot run here.",
+  "@adminFederationUnsupportedBody": {
+    "description": "Explanation when the federation binary is missing for this platform."
+  },
+  "adminFederationCopy": "Copy",
+  "@adminFederationCopy": {
+    "description": "Button that copies a value to the clipboard."
+  },
+  "adminFederationCopied": "Copied",
+  "@adminFederationCopied": {
+    "description": "Toast after copying a value to the clipboard."
+  },
+  "adminFederationKeysTitle": "Keys you issued",
+  "@adminFederationKeysTitle": {
+    "description": "Card title for credentials this server issued."
+  },
+  "adminFederationKeysSubtitle": "Credentials other servers use to read from this one",
+  "@adminFederationKeysSubtitle": {
+    "description": "Subtitle explaining what issued keys are for."
+  },
+  "adminFederationNoKeys": "No keys issued yet",
+  "@adminFederationNoKeys": {
+    "description": "Empty state for the issued-keys list."
+  },
+  "adminFederationMintTitle": "Mint a key",
+  "@adminFederationMintTitle": {
+    "description": "Button and dialog title for creating a federation key."
+  },
+  "adminFederationCopyTicket": "Show ticket",
+  "@adminFederationCopyTicket": {
+    "description": "Menu item that reveals a key’s ticket."
+  },
+  "adminFederationTicketTitle": "Ticket",
+  "@adminFederationTicketTitle": {
+    "description": "Title of the dialog showing a key’s ticket."
+  },
+  "adminFederationTicketBody": "Hand this to the other server’s admin. It is shown once.",
+  "@adminFederationTicketBody": {
+    "description": "Explanation shown with a freshly minted ticket."
+  },
+  "adminFederationNoTicket": "No ticket available for this key",
+  "@adminFederationNoTicket": {
+    "description": "Error when a key row carries no ticket."
+  },
+  "adminFederationEditLimits": "Edit limits",
+  "@adminFederationEditLimits": {
+    "description": "Menu item and dialog title for changing a key’s limits."
+  },
+  "adminFederationLimitsTitle": "Limits",
+  "@adminFederationLimitsTitle": {
+    "description": "Section heading for the limit fields."
+  },
+  "adminFederationLimitsSaved": "Limits saved",
+  "@adminFederationLimitsSaved": {
+    "description": "Toast after saving a key’s limits."
+  },
+  "adminFederationStreamKbps": "Stream ceiling (kbps)",
+  "@adminFederationStreamKbps": {
+    "description": "Field label for the per-stream bitrate ceiling."
+  },
+  "adminFederationDailyMb": "Daily cap (MB)",
+  "@adminFederationDailyMb": {
+    "description": "Field label for the daily transfer cap."
+  },
+  "adminFederationMaxStreams": "Concurrent streams",
+  "@adminFederationMaxStreams": {
+    "description": "Field label for the concurrent stream cap."
+  },
+  "adminFederationUnlimitedHint": "0 means unlimited",
+  "@adminFederationUnlimitedHint": {
+    "description": "Hint that a limit of zero means no limit."
+  },
+  "adminFederationUnlimited": "unlimited",
+  "@adminFederationUnlimited": {
+    "description": "Shown in place of a limit value when it is zero."
+  },
+  "adminFederationKbps": "{kbps} kbps",
+  "@adminFederationKbps": {
+    "description": "A key’s stream ceiling.",
+    "placeholders": {
+      "kbps": {
+        "type": "int"
+      }
+    }
+  },
+  "adminFederationMbPerDay": "{mb} MB/day",
+  "@adminFederationMbPerDay": {
+    "description": "A key’s daily transfer cap.",
+    "placeholders": {
+      "mb": {
+        "type": "int"
+      }
+    }
+  },
+  "adminFederationStreams": "{count} streams",
+  "@adminFederationStreams": {
+    "description": "A key’s concurrent stream cap.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminFederationUsageToday": "Today: {used}",
+  "@adminFederationUsageToday": {
+    "description": "Bytes a key has transferred today.",
+    "placeholders": {
+      "used": {
+        "type": "String"
+      }
+    }
+  },
+  "adminFederationExpired": "Expired",
+  "@adminFederationExpired": {
+    "description": "Pill on a key whose expiry has passed."
+  },
+  "adminFederationBound": "bound",
+  "@adminFederationBound": {
+    "description": "A key that is pinned to the endpoint that first used it."
+  },
+  "adminFederationUnbound": "not bound",
+  "@adminFederationUnbound": {
+    "description": "A key that has not been used from any endpoint yet."
+  },
+  "adminFederationResetBinding": "Reset binding",
+  "@adminFederationResetBinding": {
+    "description": "Menu item that clears a key’s endpoint binding."
+  },
+  "adminFederationResetBindingDone": "Binding reset",
+  "@adminFederationResetBindingDone": {
+    "description": "Toast after clearing a key’s endpoint binding."
+  },
+  "adminFederationRevoke": "Revoke",
+  "@adminFederationRevoke": {
+    "description": "Destructive action that deletes a federation key."
+  },
+  "adminFederationRevokeTitle": "Revoke {name}?",
+  "@adminFederationRevokeTitle": {
+    "description": "Confirmation title when revoking a key; {name} is the key label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminFederationRevokeBody": "Any streams currently using this key are cut immediately.",
+  "@adminFederationRevokeBody": {
+    "description": "Warning shown when revoking a key."
+  },
+  "adminFederationRevoked": "Key revoked",
+  "@adminFederationRevoked": {
+    "description": "Toast after revoking a key."
+  },
+  "adminFederationPeersTitle": "Servers you read",
+  "@adminFederationPeersTitle": {
+    "description": "Card title for servers this one can read from."
+  },
+  "adminFederationPeersSubtitle": "Servers that gave you a ticket, which you can read from",
+  "@adminFederationPeersSubtitle": {
+    "description": "Subtitle explaining what peers are."
+  },
+  "adminFederationNoPeers": "No peers added yet",
+  "@adminFederationNoPeers": {
+    "description": "Empty state for the peer list."
+  },
+  "adminFederationAddPeer": "Add peer",
+  "@adminFederationAddPeer": {
+    "description": "Button and dialog title for adding a peer from a ticket."
+  },
+  "adminFederationAddPeerBody": "Paste the ticket the other server gave you. It carries their address and the key that grants access.",
+  "@adminFederationAddPeerBody": {
+    "description": "Explanation in the add-peer dialog."
+  },
+  "adminFederationTicketLabel": "Ticket",
+  "@adminFederationTicketLabel": {
+    "description": "Field label for pasting a peer ticket."
+  },
+  "adminFederationPeerNameLabel": "Name (optional)",
+  "@adminFederationPeerNameLabel": {
+    "description": "Optional display name for a peer."
+  },
+  "adminFederationPeerAdded": "Peer added",
+  "@adminFederationPeerAdded": {
+    "description": "Toast after adding a peer."
+  },
+  "adminFederationPeerRemoved": "Peer removed",
+  "@adminFederationPeerRemoved": {
+    "description": "Toast after removing a peer."
+  },
+  "adminFederationRemovePeerTitle": "Remove {name}?",
+  "@adminFederationRemovePeerTitle": {
+    "description": "Confirmation title when removing a peer; {name} is the peer name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adminFederationTestOk": "Peer reachable",
+  "@adminFederationTestOk": {
+    "description": "Toast after a successful peer health check."
+  },
+  "adminFederationLastSeen": "Last seen {when}",
+  "@adminFederationLastSeen": {
+    "description": "When a peer was last reached; {when} is a timestamp.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminFederationNeverSeen": "Never reached",
+  "@adminFederationNeverSeen": {
+    "description": "Shown when a peer has never been reached."
+  },
+  "adminFederationUseDiscovery": "Send discovery queries",
+  "@adminFederationUseDiscovery": {
+    "description": "Per-peer switch for outbound discovery queries."
+  },
+  "adminFederationUseDiscoverySubtitle": "Shares what you are listening to with this peer",
+  "@adminFederationUseDiscoverySubtitle": {
+    "description": "Privacy note under the per-peer discovery switch."
   }
 }

@@ -2352,9 +2352,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get adminSubsonicAPI => 'Subsonic API';
 
   @override
-  String get adminMP3Player => 'MP3-плеер';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -3070,27 +3067,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Структура';
 
   @override
-  String get adminMdnsLocalNetworkDiscoveryTitle =>
-      'Обнаружение в локальной сети';
-
-  @override
-  String get adminMdnsLocalNetworkDiscoverySubtitle =>
-      'Объявляет этот сервер как mDNS-сервис _mstream._tcp. Публикует только метаданные — не раскрывает данные библиотеки и не открывает новые маршруты.';
-
-  @override
-  String get adminMdnsEnableAdvertisingTitle => 'Включить объявление';
-
-  @override
-  String get adminMdnsFriendlyNameLabel => 'Понятное имя';
-
-  @override
-  String get adminMdnsFriendlyNameHelper =>
-      'Пусто = вывести из имени хоста (макс. 63 байта)';
-
-  @override
-  String get adminMdnsInstanceIdLabel => 'ID экземпляра';
-
-  @override
   String get adminSubsonicApiTitle => 'Subsonic API';
 
   @override
@@ -3565,14 +3541,8 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get adminFederationUnavailable => 'Недоступно';
-
-  @override
   String get adminFederationDescription =>
-      'Федерация перестраивается под новый подход к локальному резервному копированию и сейчас недоступна на сервере. Конечная точка остаётся подключённой, чтобы старые клиенты получали понятный статус, а не ошибку 404.';
-
-  @override
-  String get adminCheckStatus => 'Проверить статус';
+      'Свяжите сервер с другими серверами mStream: выдайте ключи, чтобы они читали ваши библиотеки, или добавьте их билеты, чтобы читать чужие.';
 
   @override
   String get adminAllowed => 'Разрешено';
@@ -3591,4 +3561,191 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get adminUnknownUser => 'неизвестно';
+
+  @override
+  String get adminFederationEnableTitle => 'Включить федерацию';
+
+  @override
+  String get adminFederationEnableSubtitle =>
+      'Разрешить этому серверу связываться с другими серверами mStream';
+
+  @override
+  String get adminFederationEndpointId => 'ID конечной точки';
+
+  @override
+  String get adminFederationRelay => 'Ретранслятор';
+
+  @override
+  String get adminFederationOnline => 'В сети';
+
+  @override
+  String get adminFederationOffline => 'Не в сети';
+
+  @override
+  String get adminFederationStopped => 'Остановлено';
+
+  @override
+  String get adminFederationUnsupportedTitle => 'Здесь не поддерживается';
+
+  @override
+  String get adminFederationUnsupportedBody =>
+      'В этой сборке нет конечной точки федерации для вашей платформы, поэтому она здесь не работает.';
+
+  @override
+  String get adminFederationCopy => 'Копировать';
+
+  @override
+  String get adminFederationCopied => 'Скопировано';
+
+  @override
+  String get adminFederationKeysTitle => 'Выданные ключи';
+
+  @override
+  String get adminFederationKeysSubtitle =>
+      'Учётные данные, по которым другие серверы читают с этого';
+
+  @override
+  String get adminFederationNoKeys => 'Ключи ещё не выданы';
+
+  @override
+  String get adminFederationMintTitle => 'Выпустить ключ';
+
+  @override
+  String get adminFederationCopyTicket => 'Показать билет';
+
+  @override
+  String get adminFederationTicketTitle => 'Билет';
+
+  @override
+  String get adminFederationTicketBody =>
+      'Передайте это администратору другого сервера. Показывается один раз.';
+
+  @override
+  String get adminFederationNoTicket => 'Для этого ключа нет билета';
+
+  @override
+  String get adminFederationEditLimits => 'Изменить лимиты';
+
+  @override
+  String get adminFederationLimitsTitle => 'Лимиты';
+
+  @override
+  String get adminFederationLimitsSaved => 'Лимиты сохранены';
+
+  @override
+  String get adminFederationStreamKbps => 'Потолок потока (кбит/с)';
+
+  @override
+  String get adminFederationDailyMb => 'Дневной лимит (МБ)';
+
+  @override
+  String get adminFederationMaxStreams => 'Одновременные потоки';
+
+  @override
+  String get adminFederationUnlimitedHint => '0 — без ограничений';
+
+  @override
+  String get adminFederationUnlimited => 'без лимита';
+
+  @override
+  String adminFederationKbps(int kbps) {
+    return '$kbps кбит/с';
+  }
+
+  @override
+  String adminFederationMbPerDay(int mb) {
+    return '$mb МБ/сут';
+  }
+
+  @override
+  String adminFederationStreams(int count) {
+    return '$count потоков';
+  }
+
+  @override
+  String adminFederationUsageToday(String used) {
+    return 'Сегодня: $used';
+  }
+
+  @override
+  String get adminFederationExpired => 'Истёк';
+
+  @override
+  String get adminFederationBound => 'привязан';
+
+  @override
+  String get adminFederationUnbound => 'не привязан';
+
+  @override
+  String get adminFederationResetBinding => 'Сбросить привязку';
+
+  @override
+  String get adminFederationResetBindingDone => 'Привязка сброшена';
+
+  @override
+  String get adminFederationRevoke => 'Отозвать';
+
+  @override
+  String adminFederationRevokeTitle(String name) {
+    return 'Отозвать $name?';
+  }
+
+  @override
+  String get adminFederationRevokeBody =>
+      'Все потоки, использующие этот ключ, будут немедленно оборваны.';
+
+  @override
+  String get adminFederationRevoked => 'Ключ отозван';
+
+  @override
+  String get adminFederationPeersTitle => 'Серверы, которые вы читаете';
+
+  @override
+  String get adminFederationPeersSubtitle =>
+      'Серверы, давшие вам билет, с которых вы можете читать';
+
+  @override
+  String get adminFederationNoPeers => 'Узлы ещё не добавлены';
+
+  @override
+  String get adminFederationAddPeer => 'Добавить узел';
+
+  @override
+  String get adminFederationAddPeerBody =>
+      'Вставьте билет, полученный от другого сервера. В нём его адрес и ключ доступа.';
+
+  @override
+  String get adminFederationTicketLabel => 'Билет';
+
+  @override
+  String get adminFederationPeerNameLabel => 'Имя (необязательно)';
+
+  @override
+  String get adminFederationPeerAdded => 'Узел добавлен';
+
+  @override
+  String get adminFederationPeerRemoved => 'Узел удалён';
+
+  @override
+  String adminFederationRemovePeerTitle(String name) {
+    return 'Удалить $name?';
+  }
+
+  @override
+  String get adminFederationTestOk => 'Узел доступен';
+
+  @override
+  String adminFederationLastSeen(String when) {
+    return 'Последний раз: $when';
+  }
+
+  @override
+  String get adminFederationNeverSeen => 'Ни разу не отвечал';
+
+  @override
+  String get adminFederationUseDiscovery => 'Отправлять запросы поиска';
+
+  @override
+  String get adminFederationUseDiscoverySubtitle =>
+      'Сообщает этому узлу, что вы слушаете';
 }

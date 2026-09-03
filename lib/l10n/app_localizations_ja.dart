@@ -2233,9 +2233,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminSubsonicAPI => 'Subsonic API';
 
   @override
-  String get adminMP3Player => 'MP3プレーヤー';
-
-  @override
   String get adminTorrent => 'トレント';
 
   @override
@@ -2929,25 +2926,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminDlnaStructureLabel => '構造';
 
   @override
-  String get adminMdnsLocalNetworkDiscoveryTitle => 'ローカルネットワーク検出';
-
-  @override
-  String get adminMdnsLocalNetworkDiscoverySubtitle =>
-      'このサーバーを_mstream._tcp mDNSサービスとして広告します。メタデータのみを公開し、ライブラリデータや新しいルートは公開しません。';
-
-  @override
-  String get adminMdnsEnableAdvertisingTitle => '広告を有効化';
-
-  @override
-  String get adminMdnsFriendlyNameLabel => 'フレンドリー名';
-
-  @override
-  String get adminMdnsFriendlyNameHelper => '空 = ホスト名から生成(最大63バイト)';
-
-  @override
-  String get adminMdnsInstanceIdLabel => 'インスタンスID';
-
-  @override
   String get adminSubsonicApiTitle => 'Subsonic API';
 
   @override
@@ -3419,14 +3397,8 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get adminFederationUnavailable => '利用不可';
-
-  @override
   String get adminFederationDescription =>
-      'フェデレーションは新しいローカルバックアップの仕組みを中心に再構築中で、現在サーバーでは利用できません。古いクライアントが404ではなく明確なステータスを受け取れるよう、エンドポイントはマウントされたままになっています。';
-
-  @override
-  String get adminCheckStatus => 'ステータスを確認';
+      '他の mStream サーバーと連携します。キーを発行して自分のライブラリを読ませるか、相手のチケットを追加して相手のライブラリを読みます。';
 
   @override
   String get adminAllowed => '許可';
@@ -3445,4 +3417,186 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adminUnknownUser => '不明';
+
+  @override
+  String get adminFederationEnableTitle => 'フェデレーションを有効化';
+
+  @override
+  String get adminFederationEnableSubtitle =>
+      'このサーバーが他の mStream サーバーと連携できるようにします';
+
+  @override
+  String get adminFederationEndpointId => 'エンドポイント ID';
+
+  @override
+  String get adminFederationRelay => 'リレー';
+
+  @override
+  String get adminFederationOnline => 'オンライン';
+
+  @override
+  String get adminFederationOffline => 'オフライン';
+
+  @override
+  String get adminFederationStopped => '停止中';
+
+  @override
+  String get adminFederationUnsupportedTitle => 'この環境では未対応';
+
+  @override
+  String get adminFederationUnsupportedBody =>
+      'このビルドにはお使いのプラットフォーム向けのフェデレーション・エンドポイントが含まれていないため、ここでは動作しません。';
+
+  @override
+  String get adminFederationCopy => 'コピー';
+
+  @override
+  String get adminFederationCopied => 'コピーしました';
+
+  @override
+  String get adminFederationKeysTitle => '発行したキー';
+
+  @override
+  String get adminFederationKeysSubtitle => '他のサーバーがこのサーバーから読み取るための資格情報';
+
+  @override
+  String get adminFederationNoKeys => '発行済みのキーはありません';
+
+  @override
+  String get adminFederationMintTitle => 'キーを発行';
+
+  @override
+  String get adminFederationCopyTicket => 'チケットを表示';
+
+  @override
+  String get adminFederationTicketTitle => 'チケット';
+
+  @override
+  String get adminFederationTicketBody => '相手サーバーの管理者に渡してください。表示は一度きりです。';
+
+  @override
+  String get adminFederationNoTicket => 'このキーのチケットはありません';
+
+  @override
+  String get adminFederationEditLimits => '上限を編集';
+
+  @override
+  String get adminFederationLimitsTitle => '上限';
+
+  @override
+  String get adminFederationLimitsSaved => '上限を保存しました';
+
+  @override
+  String get adminFederationStreamKbps => 'ストリーム上限 (kbps)';
+
+  @override
+  String get adminFederationDailyMb => '1 日の上限 (MB)';
+
+  @override
+  String get adminFederationMaxStreams => '同時ストリーム数';
+
+  @override
+  String get adminFederationUnlimitedHint => '0 は無制限を意味します';
+
+  @override
+  String get adminFederationUnlimited => '無制限';
+
+  @override
+  String adminFederationKbps(int kbps) {
+    return '$kbps kbps';
+  }
+
+  @override
+  String adminFederationMbPerDay(int mb) {
+    return '$mb MB/日';
+  }
+
+  @override
+  String adminFederationStreams(int count) {
+    return '$count ストリーム';
+  }
+
+  @override
+  String adminFederationUsageToday(String used) {
+    return '本日: $used';
+  }
+
+  @override
+  String get adminFederationExpired => '期限切れ';
+
+  @override
+  String get adminFederationBound => 'バインド済み';
+
+  @override
+  String get adminFederationUnbound => '未バインド';
+
+  @override
+  String get adminFederationResetBinding => 'バインドをリセット';
+
+  @override
+  String get adminFederationResetBindingDone => 'バインドをリセットしました';
+
+  @override
+  String get adminFederationRevoke => '失効';
+
+  @override
+  String adminFederationRevokeTitle(String name) {
+    return '$name を失効しますか？';
+  }
+
+  @override
+  String get adminFederationRevokeBody => 'このキーを使用中のストリームは直ちに切断されます。';
+
+  @override
+  String get adminFederationRevoked => 'キーを失効しました';
+
+  @override
+  String get adminFederationPeersTitle => '読み取り先サーバー';
+
+  @override
+  String get adminFederationPeersSubtitle => 'チケットを渡してくれた、読み取り可能なサーバー';
+
+  @override
+  String get adminFederationNoPeers => 'ピアはまだ追加されていません';
+
+  @override
+  String get adminFederationAddPeer => 'ピアを追加';
+
+  @override
+  String get adminFederationAddPeerBody =>
+      '相手サーバーから受け取ったチケットを貼り付けてください。アドレスとアクセス用のキーが含まれています。';
+
+  @override
+  String get adminFederationTicketLabel => 'チケット';
+
+  @override
+  String get adminFederationPeerNameLabel => '名前 (任意)';
+
+  @override
+  String get adminFederationPeerAdded => 'ピアを追加しました';
+
+  @override
+  String get adminFederationPeerRemoved => 'ピアを削除しました';
+
+  @override
+  String adminFederationRemovePeerTitle(String name) {
+    return '$name を削除しますか？';
+  }
+
+  @override
+  String get adminFederationTestOk => 'ピアに到達できました';
+
+  @override
+  String adminFederationLastSeen(String when) {
+    return '最終確認 $when';
+  }
+
+  @override
+  String get adminFederationNeverSeen => '未到達';
+
+  @override
+  String get adminFederationUseDiscovery => 'ディスカバリ問い合わせを送信';
+
+  @override
+  String get adminFederationUseDiscoverySubtitle => '再生中の内容をこのピアと共有します';
 }
