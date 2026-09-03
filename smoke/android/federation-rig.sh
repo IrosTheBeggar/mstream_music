@@ -108,6 +108,17 @@ if [ "$IROH" = 1 ]; then
   T=$(now_ts); tap $PICKER; sleep 1.5; tap 782 366; sleep 5
   wait_for_log_after "$T" '\[srv\] switched to ' 5 || fail "no switch away from the peer"
   if is_playing && [ "$(count_log 'tunnel stopped')" -eq 0 ]; then pass "tunnel kept for the queued peer track after switching to a standard server"; else fail "tunnel or playback lost after the switch ($(session_state))"; fi
+  # Phase 4: relaunch with the peer track queued. The parent's tunnel comes up on
+  # a FRESH port, so the restored peer URLs (stream through the parent's proxy,
+  # art through its art proxy) must be re-derived against it — or the track
+  # plays from a dead loopback port.
+  PORT1=$(applog | grep -oE 'tunnel up port=[0-9]+' | head -1 | grep -oE '[0-9]+$')
+  media_key pause; sleep 1; app_stop; logcat_clear; wake; app_start
+  wait_for_log '\[iroh\] tunnel up' 45 || fail "no tunnel after the relaunch"
+  PORT2=$(applog | grep -oE 'tunnel up port=[0-9]+' | head -1 | grep -oE '[0-9]+$')
+  if wait_for_log '\[play\] track [0-9]+/[0-9]+' 30; then
+    sleep 3; ensure_playing 15 && pass "restored peer track plays after a relaunch (port $PORT1 → $PORT2)" || { save_applog rig-relaunch; fail "restored peer track did not play on the fresh port ($(session_state))"; }
+  else save_applog rig-relaunch; fail "queue did not restore after the relaunch"; fi
 fi
 media_key pause; sleep 1
 save_applog federation-rig

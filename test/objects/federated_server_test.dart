@@ -207,6 +207,34 @@ void main() {
     });
   });
 
+  group('albumArtFileFromUrl', () {
+    // Queue restore and playlists re-origin a persisted art URL against the
+    // live tunnel by pulling the file out of it; a peer's URL is the parent's
+    // art proxy, a different shape with the same durable part.
+    test("reads a server's own /album-art URL", () {
+      expect(
+          albumArtFileFromUrl(
+              'http://127.0.0.1:4111/album-art/abc.jpeg?compress=l&token=t'),
+          'abc.jpeg');
+    });
+
+    test("reads a peer's proxied art URL", () {
+      expect(
+          albumArtFileFromUrl('http://127.0.0.1:4111/api/v1/federation/peers/3'
+              '/art/abc%20d.jpeg?compress=s&token=t&__lt=x'),
+          'abc d.jpeg');
+    });
+
+    test('anything else is not an art URL', () {
+      expect(albumArtFileFromUrl('http://127.0.0.1:4111/media/a.mp3'), isNull);
+      expect(
+          albumArtFileFromUrl(
+              'http://h/api/v1/federation/peers/3/stream/a.mp3'),
+          isNull);
+      expect(albumArtFileFromUrl('not a url at all ::'), isNull);
+    });
+  });
+
   group('album art', () {
     test('a peer cover goes through the art proxy with compress forwarded', () {
       final peer = _pair().peer;

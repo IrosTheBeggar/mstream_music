@@ -84,15 +84,17 @@ class PlaylistEntry {
     // For an iroh server that URL carries a previous session's loopback port +
     // token, so re-origin it against the live tunnel (mirrors queue_store); HTTP
     // servers keep the persisted URL (their host:port is durable).
+    // Transport, not identity: a federated peer of an iroh parent rides that
+    // parent's tunnel and its art URL (the parent's art proxy) goes stale the
+    // same way. albumArtFileFromUrl reads both URL shapes.
     String? artUrl = extrasMap['artUrl'] as String?;
     final server = ServerManager().byLocalname(extrasMap['server'] as String?);
-    if (artUrl != null && server != null && server.isIroh) {
-      final u = Uri.tryParse(artUrl);
-      if (u != null &&
-          u.pathSegments.length >= 2 &&
-          u.pathSegments.first == 'album-art') {
-        artUrl = buildAlbumArtUrl(server, u.pathSegments.sublist(1).join('/'),
-            compress: u.queryParameters['compress'] ?? 's');
+    if (artUrl != null && server != null && server.isIrohTransport) {
+      final file = albumArtFileFromUrl(artUrl);
+      if (file != null) {
+        artUrl = buildAlbumArtUrl(server, file,
+            compress:
+                Uri.tryParse(artUrl)?.queryParameters['compress'] ?? 's');
         extrasMap['artUrl'] = artUrl;
       }
     }

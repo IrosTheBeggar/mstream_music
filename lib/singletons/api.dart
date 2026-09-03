@@ -171,7 +171,8 @@ class ApiManager {
               'x-access-token': server.authToken ?? ''
             });
       http.Response response;
-      final bool isIroh = server.isIroh;
+      // Transport, not identity: a peer of an iroh parent rides that tunnel.
+      final bool isIroh = server.isIrohTransport;
       try {
         // For iroh, bound the request so a wedged tunnel fails fast instead of
         // hanging the global loading bar. HTTP gets a generous bound too — a

@@ -109,6 +109,49 @@ void main() {
       expect(restored.id, isNot(contains('STALE')));
     });
 
+    test('a federated peer of an iroh parent re-origins onto the parent tunnel',
+        () {
+      // The peer's URLs are the parent's proxies on the parent's loopback. A
+      // previous session's port + token are baked into both the stream id and
+      // the art URL; the restore must re-derive them against the LIVE tunnel
+      // (transport, not identity — the peer itself is not an iroh server).
+      final parent = Server('iroh://placeholder', null, null, 'ptok', 'home')
+        ..connectionType = 'iroh'
+        ..tunnelPort = 52345
+        ..tunnelToken = 'newtok';
+      final peer = Server('federated://home/3', null, null, null, 'peer-b')
+        ..federationParent = 'home'
+        ..federationPeerId = 3
+        ..parentServer = parent;
+      final original = MediaItem(
+        id: 'http://127.0.0.1:34113/api/v1/federation/peers/3/stream/a.mp3'
+            '?app_uuid=OLD&token=STALE&__lt=oldtok',
+        title: 'A',
+        extras: {
+          'server': 'peer-b',
+          'path': '/a.mp3',
+          'artUrl': 'http://127.0.0.1:34113/api/v1/federation/peers/3/art/x.jpg'
+              '?compress=l&token=STALE&__lt=oldtok',
+        },
+      );
+      final restored = QueueStore.itemFromJson(
+        roundTripJson(original),
+        resolveServer: (name) => name == 'peer-b' ? peer : null,
+      );
+      expect(restored, isNotNull);
+      expect(restored!.id,
+          startsWith('http://127.0.0.1:52345/api/v1/federation/peers/3/stream/a.mp3'));
+      expect(restored.id, contains('token=ptok'));
+      expect(restored.id, contains('__lt=newtok'));
+      expect(restored.id, isNot(contains('STALE')));
+      final art = Uri.parse(restored.extras!['artUrl'] as String);
+      expect(art.port, 52345);
+      expect(art.path, '/api/v1/federation/peers/3/art/x.jpg');
+      expect(art.queryParameters['compress'], 'l');
+      expect(art.queryParameters['__lt'], 'newtok');
+      expect(art.queryParameters['token'], 'ptok');
+    });
+
     test('returns null when the server is no longer configured', () {
       final original = MediaItem(
         id: 'http://host:3000/media/x',

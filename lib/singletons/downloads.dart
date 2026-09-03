@@ -228,7 +228,9 @@ class DownloadManager {
     } catch (_) {
       return false; // server removed while the download lingered
     }
-    if (!server.isIroh) return false; // only loopback URLs rotate this way
+    // Only loopback URLs rotate this way — an iroh server's, or a federated
+    // peer's, whose download URL sits on its parent's loopback.
+    if (!server.isIrohTransport) return false;
 
     // Bring the tunnel up (rebuilds it if hard-down) and wait for a live port;
     // if it can't connect, this is a real failure.

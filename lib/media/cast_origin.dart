@@ -16,11 +16,13 @@ import 'local_media_server.dart';
 /// which relays the bytes to the renderer from the phone's LAN address over the
 /// tunnel (Range forwarded, so seeking still works).
 
-/// The iroh [Server] a queued [item] belongs to, or null when the item isn't
-/// from an iroh server (a plain HTTP server's URLs are already routable).
+/// The iroh [Server] whose tunnel carries a queued [item]'s bytes — the item's
+/// own server, or the PARENT of a federated peer, whose URLs sit on the
+/// parent's loopback just the same — or null when the item's bytes don't ride
+/// a tunnel at all (a plain HTTP server's URLs are already routable).
 Server? irohServerFor(MediaItem item) {
   final s = ServerManager().byLocalname(item.extras?['server'] as String?);
-  return (s != null && s.isIroh) ? s : null;
+  return (s != null && s.isIrohTransport) ? s.transportServer : null;
 }
 
 /// Rebind a stored loopback iroh URL to [server]'s LIVE tunnel — current port +
@@ -30,10 +32,13 @@ Server? irohServerFor(MediaItem item) {
 /// ([irohProxyUri], for a renderer that can't reach loopback) or hand it to an
 /// on-device consumer that can (the visualizer transcoder).
 Uri irohLoopbackUri(Server server, String stored) {
+  // A federated peer has no port or token of its own: both live on the
+  // parent whose tunnel it rides, so resolve to that transport first.
+  final t = server.transportServer ?? server;
   final u = Uri.parse(stored);
-  final base = Uri.parse(server.effectiveBaseUrl); // http://127.0.0.1:<livePort>
+  final base = Uri.parse(t.effectiveBaseUrl); // http://127.0.0.1:<livePort>
   final q = Map<String, String>.from(u.queryParameters);
-  if (server.tunnelToken != null) q['__lt'] = server.tunnelToken!;
+  if (t.tunnelToken != null) q['__lt'] = t.tunnelToken!;
   return u.replace(
     scheme: base.scheme,
     host: base.host,
@@ -52,13 +57,15 @@ Uri irohLoopbackUri(Server server, String stored) {
 /// Without this, every tunnel rebuild left the queue's art on the dead port:
 /// "Error loading artUri … Connection refused" every ~30s for minutes.
 MediaItem rebindLoopbackArt(MediaItem item, Server server) {
-  if (!server.isIroh || server.tunnelPort == null) return item;
+  // The port and token to compare against are the TRANSPORT's: a peer's art
+  // URL is the parent's art proxy on the parent's loopback.
+  final t = server.transportServer;
+  if (t == null || !t.isIroh || t.tunnelPort == null) return item;
   bool stale(String? u) {
     if (u == null) return false;
     final p = Uri.tryParse(u);
     if (p == null || p.host != '127.0.0.1') return false;
-    return p.port != server.tunnelPort ||
-        p.queryParameters['__lt'] != server.tunnelToken;
+    return p.port != t.tunnelPort || p.queryParameters['__lt'] != t.tunnelToken;
   }
 
   final art = item.artUri?.toString();
