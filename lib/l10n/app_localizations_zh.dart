@@ -552,6 +552,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fieldPassword => '密码';
 
   @override
+  String get fieldPasswordShow => 'Show password';
+
+  @override
+  String get fieldPasswordHide => 'Hide password';
+
+  @override
   String get fieldSdCard => '下载到 SD 卡';
 
   @override

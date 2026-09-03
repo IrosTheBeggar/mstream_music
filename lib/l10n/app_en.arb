@@ -422,6 +422,14 @@
   "publicAccessSubtitle": "Server is publicly accessible — no username or password needed.",
   "fieldUsername": "Username",
   "fieldPassword": "Password",
+  "fieldPasswordShow": "Show password",
+  "@fieldPasswordShow": {
+    "description": "Tooltip and screen-reader label for the eye button on a password field while the password is hidden; tapping it reveals the text."
+  },
+  "fieldPasswordHide": "Hide password",
+  "@fieldPasswordHide": {
+    "description": "Tooltip and screen-reader label for the eye button on a password field while the password is visible; tapping it obscures the text again."
+  },
   "fieldSdCard": "Download to SD Card",
   "sdCardSubtitle": "Save downloaded music to the removable SD card instead of internal storage.",
   "testConnectionButton": "Test Connection",

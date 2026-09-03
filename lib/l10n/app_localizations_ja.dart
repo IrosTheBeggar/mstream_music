@@ -563,6 +563,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fieldPassword => 'パスワード';
 
   @override
+  String get fieldPasswordShow => 'Show password';
+
+  @override
+  String get fieldPasswordHide => 'Hide password';
+
+  @override
   String get fieldSdCard => 'SD カードにダウンロード';
 
   @override

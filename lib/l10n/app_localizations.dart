@@ -1116,6 +1116,18 @@ abstract class AppLocalizations {
   /// **'Password'**
   String get fieldPassword;
 
+  /// Tooltip and screen-reader label for the eye button on a password field while the password is hidden; tapping it reveals the text.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get fieldPasswordShow;
+
+  /// Tooltip and screen-reader label for the eye button on a password field while the password is visible; tapping it obscures the text again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get fieldPasswordHide;
+
   /// No description provided for @fieldSdCard.
   ///
   /// In en, this message translates to:
