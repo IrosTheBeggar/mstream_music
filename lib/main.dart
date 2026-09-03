@@ -12,6 +12,7 @@ import 'screens/album_detail_view.dart';
 import 'objects/display_item.dart';
 import 'native/carplay_bridge.dart';
 import 'singletons/server_list.dart';
+import 'singletons/tunnel_policy.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
 import 'screens/auto_dj.dart';
@@ -575,15 +576,35 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // that we're on a slower relay path (the optimal direct path stays hidden, so
   // everyday use is clean). Hidden entirely for non-iroh servers. Plain English.
   Widget _tunnelBanner() {
-    return StreamBuilder<IrohTunnelStatus>(
-      stream: ServerManager().tunnelStatusStream,
-      initialData: ServerManager().tunnelStatus,
-      builder: (context, snap) {
+    // Re-evaluated on a server switch too, not only on tunnel events: whether
+    // the strip belongs on screen depends on which server is being browsed
+    // (a "Reconnecting…" strip used to outlive a switch to a standard server
+    // until the tunnel's next status change).
+    return StreamBuilder<Server?>(
+      stream: ServerManager().currentServerStream,
+      initialData: ServerManager().currentServer,
+      builder: (context, _) => StreamBuilder<IrohTunnelStatus>(
+        stream: ServerManager().tunnelStatusStream,
+        initialData: ServerManager().tunnelStatus,
+        builder: _tunnelBannerBody,
+      ),
+    );
+  }
+
+  Widget _tunnelBannerBody(
+      BuildContext context, AsyncSnapshot<IrohTunnelStatus> snap) {
+    {
         final st = snap.data ?? IrohTunnelStatus.down;
-        // Show whenever the tunnel has a server to serve — including a background
-        // playback server while a non-iroh default is the selected server (the
-        // tunnel "follows playback").
-        if (!ServerManager().tunnelActive) {
+        // Only while the tunnel has a server to serve. Browsing the iroh
+        // server: every state. Browsing a standard server while the tunnel
+        // serves queued playback in the background: only the actionable
+        // states — a spinner over a server that is already usable reads as
+        // that server being unreachable (TunnelPolicy.showTunnelBanner).
+        if (!ServerManager().tunnelActive ||
+            !TunnelPolicy.showTunnelBanner(
+                status: st,
+                browsingTunnelServer:
+                    ServerManager().currentServer?.isIroh ?? false)) {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);
@@ -646,8 +667,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                       style: TextStyle(color: VelvetColors.primary)),
                 ));
         }
-      },
-    );
+    }
   }
 
   // Thin iroh status strip — matches the migration banner's Material + padding +

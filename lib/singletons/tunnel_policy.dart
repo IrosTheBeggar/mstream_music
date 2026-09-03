@@ -82,6 +82,13 @@ class TunnelTiming {
   /// Bound on a queue-end park waiting for the tunnel to come back.
   static const Duration parkMax = Duration(minutes: 30);
 
+  /// How long a queue that stops referencing the iroh server keeps the tunnel
+  /// before it is released. A restore, a clear-then-refill and the handler's
+  /// initial empty queue all pass through "no iroh song queued" for a moment;
+  /// releasing at once tore a fresh launch tunnel down mid-dial (Galaxy S25,
+  /// 2026-09-02) and cost a full rebuild seconds later.
+  static const Duration queueReleaseGrace = Duration(seconds: 10);
+
   /// How long after an audio-focus interruption began an auto rebuild must not
   /// resume playback. A window, not a flag: Android never delivers the `end`
   /// for a permanent loss (6 begins, 0 ends across the two drive logs).
@@ -234,6 +241,21 @@ class TunnelPolicy {
         ? TunnelTiming.reconnectingWatchdog
         : TunnelTiming.reconnectingWatchdogBlind;
     return (notConnectedFor ?? Duration.zero) >= ceiling;
+  }
+
+  /// Whether the tunnel status strip belongs on screen. Browsing the iroh
+  /// server: every state (it is the server on screen). Browsing another
+  /// server while the tunnel serves queued playback in the background: only
+  /// the actionable states — a rejected code (Repair) and a hard-down tunnel
+  /// (Retry). "Connecting…" / "Reconnecting…" spinners over a standard server
+  /// that is already usable read as that server being unreachable.
+  static bool showTunnelBanner({
+    required IrohTunnelStatus status,
+    required bool browsingTunnelServer,
+  }) {
+    if (browsingTunnelServer) return true;
+    return status == IrohTunnelStatus.rejected ||
+        status == IrohTunnelStatus.down;
   }
 
   /// Delay before retry number [attempt] (0-based) after a failed cold dial.
