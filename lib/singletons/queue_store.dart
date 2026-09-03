@@ -378,18 +378,19 @@ class QueueStore {
       id = (j['id'] as String?) ?? Uuid().v4();
     }
 
-    // For an iroh server the persisted artUrl carries the PREVIOUS session's
-    // ephemeral loopback port + token, so re-origin it against the current tunnel:
-    // pull the album-art file + compress out of the stale URL and rebuild via
-    // buildAlbumArtUrl (live effectiveBaseUrl/token). HTTP servers keep the URL.
+    // For a server whose bytes ride an iroh tunnel — its own, or its parent's
+    // for a federated peer — the persisted artUrl carries the PREVIOUS
+    // session's ephemeral loopback port + token, so re-origin it against the
+    // current tunnel: pull the album-art file + compress out of the stale URL
+    // and rebuild via buildAlbumArtUrl (live effectiveBaseUrl/token, and the
+    // peer's proxy prefix). HTTP servers keep the URL.
     String? artUrl = extras['artUrl'] as String?;
-    if (artUrl != null && server != null && server.isIroh) {
-      final u = Uri.tryParse(artUrl);
-      if (u != null &&
-          u.pathSegments.length >= 2 &&
-          u.pathSegments.first == 'album-art') {
-        artUrl = buildAlbumArtUrl(server, u.pathSegments.sublist(1).join('/'),
-            compress: u.queryParameters['compress'] ?? 's');
+    if (artUrl != null && server != null && server.isIrohTransport) {
+      final file = albumArtFileFromUrl(artUrl);
+      if (file != null) {
+        artUrl = buildAlbumArtUrl(server, file,
+            compress:
+                Uri.tryParse(artUrl)?.queryParameters['compress'] ?? 's');
         extras['artUrl'] = artUrl; // keep extras consistent (player panel / Auto)
       }
     }

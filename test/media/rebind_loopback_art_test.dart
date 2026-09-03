@@ -78,4 +78,48 @@ void main() {
       expect(identical(rebindLoopbackArt(item, _iroh()), item), isTrue);
     });
   });
+
+  group('a federated peer of an iroh parent', () {
+    // A peer's art URL is the parent's art proxy on the parent's loopback, so
+    // it goes stale with the parent's port + token and must be rebound to
+    // THEM — the peer itself has no tunnel, port or token of its own.
+    Server peerOf(Server parent) =>
+        Server('federated://home/3', null, null, null, 'peer-basement')
+          ..federationParent = 'home'
+          ..federationPeerId = 3
+          ..parentServer = parent;
+    const staleProxied =
+        'http://127.0.0.1:34113/api/v1/federation/peers/3/art/abc.jpeg'
+        '?compress=l&token=jwt&__lt=oldtok';
+
+    test('rebinds to the parent tunnel and keeps the proxied path', () {
+      final peer = peerOf(_iroh());
+      final out = rebindLoopbackArt(
+          _item(art: staleProxied, extraArt: staleProxied), peer);
+      expect(out.artUri!.port, 52345);
+      expect(out.artUri!.queryParameters['__lt'], 'newtok');
+      expect(out.artUri!.path, '/api/v1/federation/peers/3/art/abc.jpeg');
+      expect(Uri.parse(out.extras!['artUrl'] as String).port, 52345);
+    });
+
+    test('irohLoopbackUri resolves the parent port and token', () {
+      final peer = peerOf(_iroh());
+      final live = irohLoopbackUri(peer, staleProxied);
+      expect(live.port, 52345);
+      expect(live.queryParameters['__lt'], 'newtok');
+      expect(live.path, '/api/v1/federation/peers/3/art/abc.jpeg');
+    });
+
+    test('a peer of an HTTP parent is left alone', () {
+      final http = Server('https://music.example', null, null, 'jwt', 'home');
+      final item = _item(art: staleProxied);
+      expect(identical(rebindLoopbackArt(item, peerOf(http)), item), isTrue);
+    });
+
+    test('an unlinked peer is left alone', () {
+      final peer = peerOf(_iroh())..parentServer = null;
+      final item = _item(art: staleProxied);
+      expect(identical(rebindLoopbackArt(item, peer), item), isTrue);
+    });
+  });
 }

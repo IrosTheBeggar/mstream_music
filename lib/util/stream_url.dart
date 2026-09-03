@@ -163,6 +163,29 @@ String buildServerDownloadUrl(Server server, String path) {
 /// when null, matching [buildServerStreamUrl]) and the whole URL is
 /// percent-encoded. Assumes [Server.url] carries no trailing slash — the app's
 /// stored convention, shared with the stream-URL builder above.
+/// The `album_art_file` a stored art URL was built for, or null when [url] is
+/// not an art URL. Understands both shapes [buildAlbumArtUrl] produces: a
+/// server's own `/album-art/<file>` and a federated peer's
+/// `…/federation/peers/<id>/art/<file>`. Used to re-origin a persisted URL
+/// against the live tunnel: the file is the durable part, everything else is
+/// re-derived.
+String? albumArtFileFromUrl(String url) {
+  final u = Uri.tryParse(url);
+  if (u == null) return null;
+  final seg = u.pathSegments;
+  if (seg.length >= 2 && seg.first == 'album-art') {
+    return seg.sublist(1).join('/');
+  }
+  final art = seg.indexOf('art');
+  if (art >= 2 &&
+      art + 1 < seg.length &&
+      seg[art - 2] == 'peers' &&
+      seg.contains('federation')) {
+    return seg.sublist(art + 1).join('/');
+  }
+  return null;
+}
+
 String buildAlbumArtUrl(Server server, String artFile, {String compress = 's'}) {
   final String token =
       server.authToken == null ? '' : '&token=${server.authToken!}';

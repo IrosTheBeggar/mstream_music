@@ -864,7 +864,7 @@ class AutoApi {
     // would replace an instant error row with a 45s spinner on every browse
     // tap of an unreachable server. 12s is long enough for a tunnel that is
     // actually coming up and short enough to stay a car UI.
-    if (server.isIroh && !ServerManager().tunnelServes(server)) {
+    if (server.isIrohTransport && !ServerManager().tunnelServes(server)) {
       await ServerManager().awaitTunnelReady(
           server: server,
           timeout: const Duration(seconds: 12),

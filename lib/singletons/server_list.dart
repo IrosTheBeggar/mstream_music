@@ -662,8 +662,16 @@ class ServerManager {
 
   /// True when the single tunnel is currently assigned to [s] (regardless of its
   /// connection state) — i.e. [s] is the server we last (re)started it for.
-  bool tunnelAssignedTo(Server s) =>
-      s.isIroh && _activeTunnelCode != null && s.irohPairingCode == _activeTunnelCode;
+  ///
+  /// Answered for the TRANSPORT: a federated peer is served exactly when its
+  /// parent's tunnel is, so every caller may pass whichever server it holds.
+  bool tunnelAssignedTo(Server s) {
+    final t = s.transportServer;
+    return t != null &&
+        t.isIroh &&
+        _activeTunnelCode != null &&
+        t.irohPairingCode == _activeTunnelCode;
+  }
 
   /// True when the tunnel is assigned to [s] AND reports connected — i.e. [s]'s
   /// loopback is live right now.
@@ -1375,8 +1383,10 @@ class ServerManager {
       String caller = '?',
       bool bypassBackoff = false}) async {
     // Default to the browsed server; callers on the playback path pass the
-    // track's server (which the single tunnel may be serving instead).
-    final s = server ?? currentServer;
+    // track's server (which the single tunnel may be serving instead). Either
+    // way the wait is for the TRANSPORT's tunnel — a federated peer has none
+    // of its own and is ready exactly when its parent is.
+    final s = (server ?? currentServer)?.transportServer;
     if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
     // A rejected cold dial leaves no native tunnel to report it; answer
     // before firing an ensure that would only re-dial into the rejection.
@@ -1428,8 +1438,12 @@ class ServerManager {
   /// [_remedyDeadTunnel] (kick in place when the binary can, else a hard
   /// rebuild rate-limited to one per minute). A passing probe means the tunnel
   /// is fine and the failures were the source's own problem, so nothing moves.
-  Future<void> reverifyTunnel(Server s) async {
-    if (!IrohTunnel.isSupported || !s.isIroh || _reverifying) return;
+  Future<void> reverifyTunnel(Server server) async {
+    // Probe the transport: a peer's failures happen on its parent's tunnel.
+    final s = server.transportServer;
+    if (!IrohTunnel.isSupported || s == null || !s.isIroh || _reverifying) {
+      return;
+    }
     if (_activeTunnelCode == null || s.tunnelPort == null) return;
     // Already known down: ensureActiveTunnel / awaitTunnelReady own that case
     // and this would only race them.

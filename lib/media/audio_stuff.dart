@@ -390,7 +390,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         final dj = autoDJServer;
         final action = queueEndAction(
             onLocalBackend: identical(_backend, _localBackend),
-            isIrohDJ: dj != null && dj.isIroh,
+            isIrohDJ: dj != null && dj.isIrohTransport,
             djPickPending: _djPickPending,
             playIntent: _playIntent,
             tunnelServes: dj != null && ServerManager().tunnelServes(dj),
@@ -1016,7 +1016,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     final itemServer = failed == null ? null : _serverFor(failed);
     if (!badLocalCopy &&
         itemServer != null &&
-        itemServer.isIroh &&
+        itemServer.isIrohTransport &&
         !ServerManager().tunnelServes(itemServer)) {
       // The tunnel isn't live for this track's iroh server — point it there and
       // resume rather than skipping. (If it IS serving this server and the track
@@ -1031,7 +1031,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // fires on a status TRANSITION that never comes. Count these; past a
     // couple, ask for ground truth.
     if (itemServer != null &&
-        itemServer.isIroh &&
+        itemServer.isIrohTransport &&
         ServerManager().tunnelServes(itemServer)) {
       _noteTunnelLoadFailure(itemServer);
     }
@@ -1550,7 +1550,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     final idx = _reviveSpot().index;
     final item = (idx >= 0 && idx < q.length) ? q[idx] : null;
     final server = item == null ? null : _serverFor(item);
-    if (server == null || !server.isIroh) return;
+    if (server == null || !server.isIrohTransport) return;
     if (!ServerManager().tunnelServes(server)) return;
     // Shares the error-time recovery's per-server budget so a flapping tunnel
     // (connected↔reconnecting) can't spin reloads against a dying server.
@@ -2630,11 +2630,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     return sameStreamUrl(newId, m.id) ? m : m.copyWith(id: newId);
   }
 
-  /// Re-derive [m]'s album-art URL against the live tunnel (iroh items only;
-  /// downloaded items included). Same instance when nothing changes.
+  /// Re-derive [m]'s album-art URL against the live tunnel (items whose bytes
+  /// ride a tunnel — an iroh server's, or a federated peer's through its
+  /// parent; downloaded items included). Same instance when nothing changes.
   MediaItem _withRebuiltArt(MediaItem m) {
     final server = _serverFor(m);
-    if (server == null || !server.isIroh) return m;
+    if (server == null || !server.isIrohTransport) return m;
     return rebindLoopbackArt(m, server);
   }
 
@@ -2917,7 +2918,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!isNetwork && localPath != null && File(localPath).existsSync()) {
       return true;
     }
-    return _serverFor(item)?.isIroh ?? false;
+    return _serverFor(item)?.isIrohTransport ?? false;
   }
 
   // True while the active cast backend streams the on-device visualizer: the
@@ -3087,7 +3088,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     // of stopping (queueEndAction).
     final dj = autoDJServer!;
     if (shouldDeferDJPick(
-        isIroh: dj.isIroh, tunnelServes: ServerManager().tunnelServes(dj))) {
+        isIroh: dj.isIrohTransport,
+        tunnelServes: ServerManager().tunnelServes(dj))) {
       // Owed from THIS moment, not from when the wait gives up: a track that
       // ends inside the 12s wait (a short track, a seek to the end — seen on
       // a Galaxy: completed 11s after the top-up started) would otherwise
@@ -3395,7 +3397,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Parked on this pick and the tunnel still claims to serve: ask for
         // ground truth now rather than waiting up to a minute for the idle
         // timeout to flip the status (see _retryPickAtQueueEnd).
-        if (_parkedForDJ && dj.isIroh && ServerManager().tunnelServes(dj)) {
+        if (_parkedForDJ &&
+            dj.isIrohTransport &&
+            ServerManager().tunnelServes(dj)) {
           unawaited(ServerManager().reverifyTunnel(dj));
         }
         return;
