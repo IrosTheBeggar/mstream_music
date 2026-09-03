@@ -426,9 +426,17 @@ class ServerManager {
       }
 
       // Peers are the parent's data, so only a parent reconciles them — and
-      // only when it says it has some (flags, never probes).
-      if (!server.isFederated && scoped?['federationBrowse'] == true) {
-        unawaited(refreshFederatedPeers(server));
+      // only when it says it has some (flags, never probes). The flag going
+      // OFF is information too: the parent removed its last peer, or switched
+      // federation off. Either way nothing we hold for it is reachable any
+      // more, so the peers we have are reconciled against an empty list —
+      // flagged missing, and the browser moved off one being browsed.
+      if (!server.isFederated) {
+        if (scoped?['federationBrowse'] == true) {
+          unawaited(refreshFederatedPeers(server));
+        } else if (scoped != null && federatedChildren(server).isNotEmpty) {
+          unawaited(_reconcilePeers(server, const []));
+        }
       }
     } catch (err) {
       if (throwErr) {
@@ -1726,7 +1734,12 @@ class ServerManager {
       appLog('[federation] peer list on ${parent.localname} failed: $err');
       return;
     }
+    await _reconcilePeers(parent, peers);
+  }
 
+  /// Fold the parent's peer list ([peers], possibly empty) into the servers
+  /// held for it. See [refreshFederatedPeers] for the rules.
+  Future<void> _reconcilePeers(Server parent, List peers) async {
     bool changed = false;
     // Ids first, names second: a peer the admin removed and re-added comes
     // back under a NEW row id (the plan's "peer ids are parent-side rowids"

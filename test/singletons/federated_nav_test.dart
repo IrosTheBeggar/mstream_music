@@ -5,6 +5,7 @@
 // this device's own downloads either way.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
@@ -110,5 +111,26 @@ void main() {
     expect(_sections(), contains('playlists'));
     expect(_sections(), contains('rated'));
     expect(BrowserManager().browserList.any((i) => i.type == 'note'), isFalse);
+  });
+
+  group('BrowserManager.isHomeList', () {
+    DisplayItem row(String type) =>
+        DisplayItem(null, type, type, null, null, null);
+    test('a section list is home', () {
+      expect(BrowserManager.isHomeList([row('execAction'), row('execAction')]),
+          isTrue);
+    });
+    test("a peer's leading note does not demote its home", () {
+      // The toolbar's whole-server search and the card grid key on this; the
+      // note used to make a peer's home a plain list without the search.
+      expect(BrowserManager.isHomeList([row('note'), row('execAction')]),
+          isTrue);
+    });
+    test('anything else is not home', () {
+      expect(BrowserManager.isHomeList([row('file'), row('execAction')]),
+          isFalse);
+      expect(BrowserManager.isHomeList([row('note')]), isFalse);
+      expect(BrowserManager.isHomeList(const []), isFalse);
+    });
   });
 }

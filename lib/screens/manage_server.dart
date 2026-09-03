@@ -199,7 +199,12 @@ class ManageServersScreen extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _pushEdit(context, index),
+        // A federated peer has nothing to edit — its name, URL, credentials and
+        // storage are the parent's — so the row opens Info rather than a form
+        // whose Save would overwrite the synthetic record.
+        onTap: () => server.isFederated
+            ? _showServerInfo(context, index)
+            : _pushEdit(context, index),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
