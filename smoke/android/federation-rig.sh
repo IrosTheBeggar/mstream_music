@@ -89,10 +89,13 @@ json.dump([b]+L, open(dst,'w'))
 PY
 app_stop; cfg_write servers.json "$RIG/servers.json"; logcat_clear; wake; app_start
 wait_for_log '\[app\] default server ready' 30 || fail "default never published"
-for i in $(seq 1 30); do
+# The reconcile runs once the parent's capability refresh lands; over a
+# just-enabled Quick Connect the first dial can stall in the handshake for
+# ~13s once or twice before a retry lands, so allow a generous window.
+for i in $(seq 1 90); do
   cfg_read servers.json | python3 -c "import sys,json; sys.exit(0 if any(s.get('federationParent')=='$PARENT' for s in json.load(sys.stdin)) else 1)" && break; sleep 1
 done
-[ "$i" -lt 30 ] && pass "peer reconciled under $PARENT in ${i}s" || { save_applog rig-launch; fail "no peer entry after 30s"; summary; exit 1; }
+[ "$i" -lt 90 ] && pass "peer reconciled under $PARENT in ${i}s" || { save_applog rig-launch; fail "no peer entry after 90s"; summary; exit 1; }
 N=$(cfg_read servers.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
 PEER_Y=$((222 + 144 * (N - 1))) # picker rows: 222, 366, 510, … — the peer is listed last
 tap $PICKER; sleep 1.5; shot picker; tap 639 $PEER_Y; sleep 3
