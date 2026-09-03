@@ -18,6 +18,7 @@
 //      mirrors the same endpoints + parsing and returns plain DisplayItems
 //      (so playback can reuse queue_actions.playFromHere unchanged).
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -247,7 +248,7 @@ class AutoBrowse {
       }
 
       if (parentMediaId == AudioService.browsableRootId) {
-        return _rootTabs(server);
+        return rootTabs(server);
       }
 
       final Uri? u = Uri.tryParse(parentMediaId);
@@ -421,6 +422,11 @@ class AutoBrowse {
       // Shuffle All: hand the library to the app's Auto-DJ from a clean queue —
       // infinite random play, reusing its working random-songs payload + top-up.
       if (u.host == 'shuffle') {
+        if (srv.isFederated) {
+          appLog('[auto] shuffle: ${srv.localname} is a shared server — '
+              'Auto DJ is not available there');
+          return;
+        }
         await handler.customAction('clearPlaylist');
         await handler.customAction('setAutoDJ', {'autoDJServer': srv});
         return;
@@ -556,8 +562,13 @@ class AutoBrowse {
 
   // ── tree nodes ──
 
-  static List<MediaItem> _rootTabs(Server server) {
+  /// The root of the car tree for [server]. A federated peer is read-only and
+  /// cannot host the DJ, so it has no Shuffle All (random-songs) and no
+  /// Playlists (every playlist route is off the federation allowlist).
+  @visibleForTesting
+  static List<MediaItem> rootTabs(Server server) {
     final String s = server.localname;
+    final bool federated = server.isFederated;
     // Albums/Artists open onto an A–Z letter index (category list), or — for a
     // small library — straight to album/artist rows. The album-art grid is
     // applied one level down on the album leaves (see _bucketView childStyle).
@@ -565,11 +576,15 @@ class AutoBrowse {
     return [
       // A playable quick-action: hand the whole library to Auto-DJ (infinite
       // shuffle). First, so it's the obvious "just play something" option.
-      MediaItem(
-          id: _id('shuffle', {'s': s}), title: 'Shuffle All', playable: true),
+      if (!federated)
+        MediaItem(
+            id: _id('shuffle', {'s': s}),
+            title: 'Shuffle All',
+            playable: true),
       _browse(_id('cat', {'s': s, 'k': 'recent'}), 'Recently Added'),
-      _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',
-          styleExtras: _listChildren),
+      if (!federated)
+        _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',
+            styleExtras: _listChildren),
       _browse(_id('cat', {'s': s, 'k': 'albums'}), 'Albums',
           styleExtras: _categoryListChildren),
       _browse(_id('cat', {'s': s, 'k': 'artists'}), 'Artists',

@@ -3971,6 +3971,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playlists and ratings stay on your own'**
   String get browserFederatedReadOnlyNote;
+
+  /// No description provided for @federatedAutoDjUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto DJ can\'t run on a shared server. Switch to one of your own servers first.'**
+  String get federatedAutoDjUnavailable;
+
+  /// No description provided for @federatedShareUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.'**
+  String get federatedShareUnavailable;
+
+  /// No description provided for @federatedForget.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget'**
+  String get federatedForget;
+
+  /// No description provided for @federatedHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from the picker'**
+  String get federatedHide;
+
+  /// No description provided for @federatedShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in the picker'**
+  String get federatedShow;
+
+  /// No description provided for @federatedNoLongerListed.
+  ///
+  /// In en, this message translates to:
+  /// **'No longer shared by {parent}'**
+  String federatedNoLongerListed(String parent);
 }
 
 class _AppLocalizationsDelegate

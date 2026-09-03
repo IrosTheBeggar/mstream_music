@@ -92,7 +92,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // keeps logical focus through back/keyboard-dismiss and navigation (Flutter
     // even restores it on return to home), which left the preview stuck on.
     _navSub = BrowserManager().browserListStream.listen((list) {
-      final isHome = list.isNotEmpty && list[0].type == 'execAction';
+      final isHome = BrowserManager.isHomeList(list);
       if (!isHome && _homeSearchFocus.hasFocus) _homeSearchFocus.unfocus();
     });
   }
@@ -414,7 +414,7 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
 
     // Home section list: the "search the whole server" field, plus a checkbox
     // dropdown that picks which categories the search queries (persisted).
-    final isHome = s.list.isNotEmpty && s.list[0].type == 'execAction';
+    final isHome = BrowserManager.isHomeList(s.list);
     if (isHome) {
       return Row(children: [
         const SizedBox(width: 8),

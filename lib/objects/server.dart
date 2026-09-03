@@ -95,6 +95,16 @@ class Server {
   // only when the user says so, or with the parent.
   bool federationMissing = false;
 
+  // The user hid this peer from the picker (and the car). Peers are the
+  // parent admin's data, so "remove" would only last until the next
+  // reconcile mirrored the list again — hiding is the durable choice, and it
+  // keeps queued and downloaded tracks resolving. Cleared with "Show".
+  bool federationHidden = false;
+
+  /// Whether the picker (and the car UI) may offer this server: not a peer
+  /// its parent no longer lists, and not one the user hid.
+  bool get isSelectable => !federationMissing && !federationHidden;
+
   // Runtime-only (never persisted): the live parent, linked by ServerManager
   // after the list loads and on every peer reconcile. Same contract as
   // [tunnelPort] — null means "not resolvable yet", and every accessor below
@@ -264,6 +274,7 @@ class Server {
             json['federationPeerId'] is int ? json['federationPeerId'] : null,
         federationPeerName = json['federationPeerName'] as String?,
         federationMissing = json['federationMissing'] == true,
+        federationHidden = json['federationHidden'] == true,
         serverVersion = json['serverVersion'] as String?,
         versionCheckedAt = json['versionCheckedAt'] is int
             ? DateTime.fromMillisecondsSinceEpoch(json['versionCheckedAt'])
@@ -297,6 +308,7 @@ class Server {
         'federationPeerId': federationPeerId,
         'federationPeerName': federationPeerName,
         'federationMissing': federationMissing,
+        'federationHidden': federationHidden,
         'serverVersion': serverVersion,
         'versionCheckedAt': versionCheckedAt?.millisecondsSinceEpoch
       };

@@ -13,6 +13,19 @@ import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
 
 class BrowserManager {
+  /// Whether [list] is the home section list: its first row that is not a
+  /// note is a section shortcut. A federated peer's home leads with a
+  /// read-only note, and that must not demote it to a plain list — the home
+  /// treatment (card grid, the whole-server search field) is what makes the
+  /// sections usable.
+  static bool isHomeList(List<DisplayItem> list) {
+    for (final it in list) {
+      if (it.type == 'note') continue;
+      return it.type == 'execAction';
+    }
+    return false;
+  }
+
   final List<List<DisplayItem>> browserCache = [];
   final List<double> scrollCache = [];
   // 1:1 with browserCache. Drives whether the letter-scrub strip

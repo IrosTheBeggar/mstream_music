@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
@@ -145,7 +146,7 @@ class ServerManager {
     syncInsecureTls();
 
     if (serverList.isNotEmpty) {
-      currentServer = serverList[0];
+      currentServer = firstSelectable(serverList);
       // An iroh default: bring its tunnel up BEFORE the browser queries it —
       // bounded: a cold dial in a dead zone takes up to ~43s and the retry
       // loop owns failures, so launch must not wait on it. The dial keeps
@@ -425,9 +426,17 @@ class ServerManager {
       }
 
       // Peers are the parent's data, so only a parent reconciles them — and
-      // only when it says it has some (flags, never probes).
-      if (!server.isFederated && scoped?['federationBrowse'] == true) {
-        unawaited(refreshFederatedPeers(server));
+      // only when it says it has some (flags, never probes). The flag going
+      // OFF is information too: the parent removed its last peer, or switched
+      // federation off. Either way nothing we hold for it is reachable any
+      // more, so the peers we have are reconciled against an empty list —
+      // flagged missing, and the browser moved off one being browsed.
+      if (!server.isFederated) {
+        if (scoped?['federationBrowse'] == true) {
+          unawaited(refreshFederatedPeers(server));
+        } else if (scoped != null && federatedChildren(server).isNotEmpty) {
+          unawaited(_reconcilePeers(server, const []));
+        }
       }
     } catch (err) {
       if (throwErr) {
@@ -1575,7 +1584,7 @@ class ServerManager {
     } else if (!serverList.contains(currentServer)) {
       // The active server went — either it IS the one being removed, or it was
       // one of its peers, swept out with it.
-      currentServer = serverList[0];
+      currentServer = firstSelectable(serverList);
       // clear the browser
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
@@ -1645,6 +1654,13 @@ class ServerManager {
     }
   }
 
+  /// The default: the first server the picker would offer. A hidden or
+  /// no-longer-listed peer can sit at index 0 (Make Default, then hidden, or
+  /// the parent stopped sharing it), and opening on it would only 404.
+  @visibleForTesting
+  static Server firstSelectable(List<Server> servers) =>
+      servers.firstWhere((s) => s.isSelectable, orElse: () => servers.first);
+
   /// The federated servers reached through [parent].
   List<Server> federatedChildren(Server parent) => serverList
       .where((s) => s.isFederated && s.federationParent == parent.localname)
@@ -1659,6 +1675,22 @@ class ServerManager {
       }
     }
     return null;
+  }
+
+  /// Hide a peer from the picker (or show it again). Hiding the server that
+  /// is being browsed moves the browser to its parent first — the peer is
+  /// still addressable (queued tracks keep playing), it just stops being
+  /// offered.
+  Future<void> setFederatedHidden(Server s, bool hidden) async {
+    if (!s.isFederated || s.federationHidden == hidden) return;
+    s.federationHidden = hidden;
+    if (hidden && identical(s, currentServer)) {
+      final parent = s.parentServer;
+      final idx = parent == null ? -1 : serverList.indexOf(parent);
+      await changeCurrentServer(idx >= 0 ? idx : 0);
+    }
+    _serverListStream.sink.add(serverList);
+    await writeServerFile();
   }
 
   /// Follow a parent's rename through to its peers. [Server.federationParent]
@@ -1702,17 +1734,45 @@ class ServerManager {
       appLog('[federation] peer list on ${parent.localname} failed: $err');
       return;
     }
+    await _reconcilePeers(parent, peers);
+  }
 
+  /// Fold the parent's peer list ([peers], possibly empty) into the servers
+  /// held for it. See [refreshFederatedPeers] for the rules.
+  Future<void> _reconcilePeers(Server parent, List peers) async {
     bool changed = false;
+    // Ids first, names second: a peer the admin removed and re-added comes
+    // back under a NEW row id (the plan's "peer ids are parent-side rowids"
+    // risk). Matching by id alone would flag the old record missing and mint
+    // a `-2` twin, stranding the queue and the download folder — so a listed
+    // id nobody holds is adopted by a child of the same name whose own id is
+    // no longer listed.
     final Set<int> listed = {};
+    final entries = <({int id, String name})>[];
     for (final p in peers) {
       if (p is! Map) continue;
       final id = p['id'];
       final name = p['name'];
       if (id is! int || name is! String || name.isEmpty) continue;
       listed.add(id);
-
-      final existing = _childByPeerId(parent, id);
+      entries.add((id: id, name: name));
+    }
+    for (final e in entries) {
+      final id = e.id;
+      final name = e.name;
+      var existing = _childByPeerId(parent, id);
+      if (existing == null) {
+        final orphan =
+            adoptablePeer(federatedChildren(parent), name, listed);
+        if (orphan != null) {
+          appLog('[federation] ${orphan.localname}: peer id '
+              '${orphan.federationPeerId} → $id (re-added on '
+              '${parent.localname})');
+          orphan.federationPeerId = id;
+          existing = orphan;
+          changed = true;
+        }
+      }
       if (existing == null) {
         final fresh = _newFederatedServer(parent, id, name);
         serverList.add(fresh);
@@ -1729,11 +1789,13 @@ class ServerManager {
       }
     }
 
+    Server? vanishedUnderUs;
     for (final child in federatedChildren(parent)) {
       final gone = !listed.contains(child.federationPeerId);
       if (gone != child.federationMissing) {
         child.federationMissing = gone;
         changed = true;
+        if (gone && identical(child, currentServer)) vanishedUnderUs = child;
       }
     }
 
@@ -1741,10 +1803,34 @@ class ServerManager {
     _linkFederatedParents();
     _serverListStream.sink.add(serverList);
     await writeServerFile();
+    // The peer being browsed stopped being shared: every request through the
+    // proxy is a 404 from here on, and the picker no longer offers it. Move
+    // the browser to the parent, the way Hide does.
+    if (vanishedUnderUs != null) {
+      appLog('[federation] ${vanishedUnderUs.localname} is no longer shared '
+          'by ${parent.localname} — leaving it for the parent');
+      final idx = serverList.indexOf(parent);
+      await changeCurrentServer(idx >= 0 ? idx : 0);
+    }
     // Capabilities for anything new or newly back: one /api through the proxy.
     for (final child in federatedChildren(parent)) {
       if (!child.federationMissing) unawaited(getServerPaths(child));
     }
+  }
+
+  /// Among [children] (one parent's peers), the record a listed peer named
+  /// [name] should re-use when no child holds its id: a child of that name
+  /// whose OWN id is not in [listed] — the admin removed and re-added it, and
+  /// the parent handed out a fresh row id. Null when nothing qualifies.
+  @visibleForTesting
+  static Server? adoptablePeer(
+      List<Server> children, String name, Set<int> listed) {
+    for (final c in children) {
+      if (c.federationPeerName == name && !listed.contains(c.federationPeerId)) {
+        return c;
+      }
+    }
+    return null;
   }
 
   /// A Server standing in for peer [id] of [parent], named [name].

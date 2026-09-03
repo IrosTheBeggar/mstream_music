@@ -704,8 +704,19 @@ class _BrowserState extends State<Browser> {
   // card height fell out of the screen WIDTH, which on a narrow phone (or at
   // a large text scale) squeezed the tile and label into less room than they
   // occupy and overflowed.
-  Widget _homeView(BuildContext context, List<DisplayItem> items) {
+  Widget _homeView(BuildContext context, List<DisplayItem> allItems) {
     final rows = <Widget>[];
+    // A note (a federated peer's "read-only server") is a full-width banner
+    // above the cards, never a card: it has no action and reads as a caption
+    // for the sections, not one of them.
+    final notes = allItems.where((it) => it.type == 'note').toList();
+    final items = allItems.where((it) => it.type != 'note').toList();
+    for (final note in notes) {
+      rows.add(Padding(
+        padding: EdgeInsets.only(bottom: _homeCardGap),
+        child: _homeNote(context, note),
+      ));
+    }
     for (var i = 0; i < items.length; i += 2) {
       final pair = items.skip(i).take(2).toList();
       rows.add(Padding(
@@ -730,6 +741,40 @@ class _BrowserState extends State<Browser> {
   }
 
   static const double _homeCardGap = 10;
+
+  Widget _homeNote(BuildContext context, DisplayItem note) {
+    final l = AppLocalizations.of(context);
+    return Material(
+      color: VelvetColors.card,
+      borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          if (note.icon != null) ...[
+            Icon(note.icon!.icon, color: VelvetColors.textSecondary),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(browserChromeLabel(l, note.name),
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary)),
+                if (note.subtext != null)
+                  Text(browserChromeLabel(l, note.subtext!),
+                      style: TextStyle(
+                          fontSize: 13, color: VelvetColors.textSecondary)),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
 
   Widget _homeCard(BuildContext context, List<DisplayItem> items, int i) {
     final l = AppLocalizations.of(context);
@@ -1034,8 +1079,7 @@ class _BrowserState extends State<Browser> {
                     // / scroll restore) is untouched. The execAction home
                     // menu is fixed section shortcuts, not content, so it
                     // is never filtered.
-                    final bool isHome = rawList.isNotEmpty &&
-                        rawList[0].type == 'execAction';
+                    final bool isHome = BrowserManager.isHomeList(rawList);
                     // Search state lives in BrowserManager (the top toolbar owns
                     // the field) and re-emits this list on every change, so
                     // reading it synchronously here re-filters live.

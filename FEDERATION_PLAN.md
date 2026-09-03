@@ -197,20 +197,38 @@ for a federated server, keeping File Explorer / Albums / Artists / Recent /
 Local Files, plus a read-only note mirroring the webapp's left-nav
 explanation.
 
-### Phase 3 — capability gates
+### Phase 3 — capability gates ✅ done
 
-`isFederated` checks for: Auto DJ (picker + `toggleAutoDJ`), star rating, the
-lyrics badge, share, and the torrent panel. `manage_server.dart` offers
-federated rows nothing but "Forget" — no edit, no pairing code, no storage
-settings.
+Every surface whose route the federation allowlist refuses is gated on
+`isFederated`, at the track level where a peer's track can sit in a queue
+browsed from another server:
 
-**`.m3u` rows.** The webapp hides them on a peer (mStream 9dfc3bfb): its row
-handlers called local APIs with a peer path, which poisoned the breadcrumb or
-loaded a same-named *local* playlist. The app's equivalents thread the server
-through (`makeServerCall(useThisServer, …)`) and `POST
-/api/v1/file-explorer/m3u` is allowlisted, so it may well work — but this is
-the one place the webapp found a path-namespace collision, so verify it on a
-peer before deciding to keep the rows.
+- **Auto DJ.** The panel's server dropdown skips peers; the queue-header
+  toggle refuses a peer with a snack ("Auto DJ can't run on a shared
+  server"); CarPlay's toggle and the car's Shuffle All refuse with a log
+  line; and the handler's `setAutoDJ` action is the backstop for every entry
+  point. A peer cannot host the DJ — random-songs is off the allowlist and
+  its paths mean nothing to the parent.
+- **Track sheet.** No rating badge and no lyrics badge for a peer's track,
+  and no Add to playlist (the parent would store a path it cannot resolve).
+  Download stays. The metadata screen's lyrics chip is gated the same way.
+- **Share** blocks a queue of peer tracks with its own message, before the
+  iroh "no public URL" block.
+- **Torrent.** The add-torrent screen offers only the user's own servers.
+- **Car root.** A peer's root has no Shuffle All and no Playlists
+  (`AutoBrowse.rootTabs`, unit-tested).
+- **Manage servers.** A peer row shows its name, a hub icon and "via
+  <parent>" (or "No longer shared by <parent>"), and offers Info plus
+  Hide/Show; no Edit, no pairing code. **The Forget decision:** peers are the
+  parent admin's data, so a removed peer would come back on the next
+  reconcile. Hiding (`federationHidden`, persisted, honoured by the picker
+  and the car via `Server.isSelectable`) is the durable choice while the
+  parent lists it; Forget appears only once the parent has stopped listing
+  it (`federationMissing`). Hiding the browsed peer moves the browser to its
+  parent first.
+
+**`.m3u` rows** — verified on the rig with a playlist file in the peer's
+library (see the Phase 3 PR).
 
 ### Phase 4 — the `isIroh` / transport split ✅ done
 

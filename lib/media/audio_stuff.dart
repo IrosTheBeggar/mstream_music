@@ -2563,6 +2563,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         break;
       case 'setAutoDJ':
         final nextDJ = extras?['autoDJServer'] as Server?;
+        // Backstop for every entry point (panel, queue header, CarPlay, Auto):
+        // a federated peer cannot host the DJ — random-songs is off the
+        // federation allowlist and its paths mean nothing to the parent.
+        if (nextDJ != null && nextDJ.isFederated) {
+          appLog('[dj] ${nextDJ.localname} is a shared (federated) server — '
+              'Auto DJ ignored');
+          break;
+        }
         // A re-arm on the SAME server (a settings-screen rebuild, the queue
         // header toggling it back on) is not a new session. Only a real
         // change resets the session state — and only a real change is allowed

@@ -36,7 +36,7 @@ class ManageServersScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(ServerManager().serverList[index].url,
+                  Text(ServerManager().serverList[index].displayName,
                       style: TextStyle(color: VelvetColors.textPrimary)),
                   const SizedBox(height: 16),
                   Text(l.manageServerDownloadFolder,
@@ -111,19 +111,39 @@ class ManageServersScreen extends StatelessWidget {
           case 'delete':
             _showDeleteDialog(context, index);
             break;
+          case 'hide':
+            ServerManager().setFederatedHidden(server, true);
+            break;
+          case 'show':
+            ServerManager().setFederatedHidden(server, false);
+            break;
         }
       },
       itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
         // Index 0 is already the default server, so omit the action.
-        if (index != 0)
+        if (index != 0 && server.isSelectable)
           _menuItem('default', Icons.arrow_upward_rounded, l.makeDefault),
         _menuItem('info', Icons.info_outline, l.info),
         // Re-share this iroh server's pairing QR so another device can pair.
         if (server.isIroh && server.irohPairingCode != null)
           _menuItem('pairingCode', Icons.qr_code_2, l.irohShowPairingCode),
-        _menuItem('edit', Icons.edit_outlined, l.edit),
-        _menuItem('delete', Icons.delete_outline, l.delete,
-            color: VelvetColors.error),
+        // A federated peer has nothing to edit — its name, transport and
+        // credentials are the parent's — and is the parent admin's data, so
+        // it can be hidden but not removed while the parent still lists it.
+        // Once the parent stops listing it, Forget drops the record.
+        if (!server.isFederated)
+          _menuItem('edit', Icons.edit_outlined, l.edit),
+        if (server.isFederated && !server.federationMissing)
+          server.federationHidden
+              ? _menuItem('show', Icons.visibility_outlined, l.federatedShow)
+              : _menuItem(
+                  'hide', Icons.visibility_off_outlined, l.federatedHide),
+        if (!server.isFederated)
+          _menuItem('delete', Icons.delete_outline, l.delete,
+              color: VelvetColors.error),
+        if (server.isFederated && server.federationMissing)
+          _menuItem('delete', Icons.delete_outline, l.federatedForget,
+              color: VelvetColors.error),
       ],
     );
   }
@@ -174,11 +194,17 @@ class ManageServersScreen extends StatelessWidget {
   // for the default server), the URL, a star marking the default, and the
   // ⋮ menu. Tapping the row opens the edit screen.
   Widget _serverRow(BuildContext context, Server server, int index) {
+    final l = AppLocalizations.of(context);
     final bool isDefault = index == 0;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _pushEdit(context, index),
+        // A federated peer has nothing to edit — its name, URL, credentials and
+        // storage are the parent's — so the row opens Info rather than a form
+        // whose Save would overwrite the synthetic record.
+        onTap: () => server.isFederated
+            ? _showServerInfo(context, index)
+            : _pushEdit(context, index),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
@@ -196,22 +222,49 @@ class ManageServersScreen extends StatelessWidget {
                   borderRadius:
                       BorderRadius.circular(VelvetColors.radiusSmall),
                 ),
-                child: Icon(Icons.dns,
+                child: Icon(server.isFederated ? Icons.hub_outlined : Icons.dns,
                     color: isDefault
                         ? VelvetColors.primary
                         : VelvetColors.textSecondary),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  server.url,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: VelvetColors.textPrimary,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      server.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        // A hidden peer reads as parked, not gone.
+                        color: server.federationHidden
+                            ? VelvetColors.textSecondary
+                            : VelvetColors.textPrimary,
+                      ),
+                    ),
+                    // A peer names the server it is reached through — or the
+                    // one that stopped sharing it.
+                    if (server.isFederated)
+                      Text(
+                        server.federationMissing
+                            ? l.federatedNoLongerListed(
+                                server.parentServer?.displayName ??
+                                    server.federationParent ??
+                                    '')
+                            : l.serverPickerVia(
+                                server.parentServer?.displayName ??
+                                    server.federationParent ??
+                                    ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: VelvetColors.textSecondary),
+                      ),
+                  ],
                 ),
               ),
               if (server.isIroh && server == ServerManager().currentServer)

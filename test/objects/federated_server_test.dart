@@ -6,6 +6,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/server.dart';
+import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/util/stream_url.dart';
 
 /// A parent + one peer of it, wired the way ServerManager wires them.
@@ -111,6 +112,74 @@ void main() {
       final peer = _pair(iroh: true).peer..parentServer = null;
       expect(peer.transportServer, isNull);
       expect(peer.isIrohTransport, isFalse);
+    });
+  });
+
+  group('selectable', () {
+    // Phase 3: the picker and the car offer a peer only while its parent
+    // still lists it and the user has not hidden it.
+    test('a listed, unhidden peer is selectable', () {
+      expect(_pair().peer.isSelectable, isTrue);
+    });
+
+    test('a peer the parent stopped listing is not', () {
+      expect((_pair().peer..federationMissing = true).isSelectable, isFalse);
+    });
+
+    test('a hidden peer is not, and the flag survives a round trip', () {
+      final peer = _pair().peer..federationHidden = true;
+      expect(peer.isSelectable, isFalse);
+      final back = Server.fromJson(peer.toJson());
+      expect(back.federationHidden, isTrue);
+      expect(back.isSelectable, isFalse);
+    });
+
+    test('a plain server is always selectable', () {
+      final s = Server('https://music.example.com', null, null, null, 'main');
+      expect(s.isSelectable, isTrue);
+    });
+  });
+
+  group('reconcile helpers', () {
+    Server child(String name, int id) =>
+        Server('federated://home/$id', null, null, null, 'peer-$id')
+          ..federationParent = 'home'
+          ..federationPeerId = id
+          ..federationPeerName = name;
+
+    test('a re-added peer is adopted by its old record, by name', () {
+      // The admin removed "Basement" (id 3) and re-added it: the parent now
+      // lists id 7 under the same name and nobody holds 7.
+      final old = child('Basement', 3);
+      final other = child('Attic', 4);
+      expect(ServerManager.adoptablePeer([old, other], 'Basement', {7, 4}),
+          same(old));
+    });
+
+    test('a child whose id is still listed is never adopted', () {
+      // Two peers can share a name; the one the parent still lists stays.
+      final live = child('Basement', 3);
+      expect(ServerManager.adoptablePeer([live], 'Basement', {3, 7}), isNull);
+    });
+
+    test('a different name is never adopted', () {
+      expect(
+          ServerManager.adoptablePeer([child('Attic', 4)], 'Basement', {7}),
+          isNull);
+    });
+
+    test('the default skips a hidden or missing peer at index 0', () {
+      final parent = Server('https://home.example.com', null, null, 'j', 'home');
+      final hidden = child('Basement', 3)
+        ..parentServer = parent
+        ..federationHidden = true;
+      final missing = child('Attic', 4)
+        ..parentServer = parent
+        ..federationMissing = true;
+      expect(ServerManager.firstSelectable([hidden, missing, parent]),
+          same(parent));
+      // Nothing selectable at all: fall back to the first, never crash.
+      expect(ServerManager.firstSelectable([hidden]), same(hidden));
     });
   });
 

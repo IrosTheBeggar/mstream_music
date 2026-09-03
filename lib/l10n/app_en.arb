@@ -1998,5 +1998,18 @@
   "browserFederatedReadOnlyNote": "Playlists and ratings stay on your own",
   "@browserFederatedReadOnlyNote": {
     "description": "Subtitle of the note row explaining what a federated peer cannot do."
+  },
+  "federatedAutoDjUnavailable": "Auto DJ can't run on a shared server. Switch to one of your own servers first.",
+  "federatedShareUnavailable": "Tracks on a shared server can't be shared from here — they live in someone else's library.",
+  "federatedForget": "Forget",
+  "federatedHide": "Hide from the picker",
+  "federatedShow": "Show in the picker",
+  "federatedNoLongerListed": "No longer shared by {parent}",
+  "@federatedNoLongerListed": {
+    "placeholders": {
+      "parent": {
+        "type": "String"
+      }
+    }
   }
 }

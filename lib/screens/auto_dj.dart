@@ -733,7 +733,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Server picker (multi-server only, when enabled) ─────────────
 
   Widget _serverPickerTile(Server autoDJServer) {
-    final servers = ServerManager().serverList;
+    // A federated peer cannot host the DJ: random-songs is off the
+    // federation allowlist, and its paths mean nothing to the parent.
+    final servers =
+        ServerManager().serverList.where((s) => !s.isFederated).toList();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: DropdownButton<Server>(

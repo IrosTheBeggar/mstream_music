@@ -17,6 +17,7 @@ import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
+import '../singletons/log_manager.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
 import 'auto_dj_start_sheet.dart';
@@ -592,8 +593,21 @@ Future<void> toggleAutoDJ(BuildContext context) async {
   if (current == null) return;
   final handler = MediaManager().audioHandler;
   final messenger = ScaffoldMessenger.of(context);
+  // A shared (federated) server cannot run the DJ — its random-songs route
+  // is off the federation allowlist — so say so instead of a silent 403.
+  // Only ENABLING is refused: switching the DJ off while a peer is browsed
+  // (the `current == state` branch can never be a peer) must keep working.
+  void refusePeer() {
+    appLog('[dj] refused: ${current.localname} is a shared (federated) server');
+    messenger.showSnackBar(
+        SnackBar(content: Text(l.federatedAutoDjUnavailable)));
+  }
   final Server? state = handler.customState.valueOrNull?.autoDJState as Server?;
   if (state == null) {
+    if (current.isFederated) {
+      refusePeer();
+      return;
+    }
     // Nothing queued: the DJ has no cue to work from, so it needs a first
     // track before it means anything. With a queue this never runs — the DJ
     // reads what is already there, which is why the old standing "seed song"
@@ -611,6 +625,10 @@ Future<void> toggleAutoDJ(BuildContext context) async {
     handler.customAction('setAutoDJ', {'autoDJServer': null});
     messenger.showSnackBar(SnackBar(content: Text(l.autoDjDisabled)));
   } else {
+    if (current.isFederated) {
+      refusePeer();
+      return;
+    }
     handler.customAction('setAutoDJ', {'autoDJServer': current});
     messenger.showSnackBar(
         SnackBar(content: Text(l.autoDjEnabledFor(current.url))));
