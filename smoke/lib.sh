@@ -50,15 +50,15 @@ wait_for_log() { # <regex> <timeout s> → 0 when the line appears
 }
 # Like wait_for_log, but only a line stamped at/after <HH:MM:SS> counts (an
 # earlier match from launch or a previous outage must not satisfy a later check).
-wait_for_log_after() { # <since HH:MM:SS> <regex> <timeout s>
+wait_for_log_after() { # <since, from now_ts> <regex> <timeout s>
   local since="$1" pat="$2" t="${3:-30}" i=0 ts
   while [ "$i" -lt "$t" ]; do
-    ts=$(applog | grep -E "$pat" | awk -v s="$since" '{ if (substr($1,1,8) >= s) { print substr($1,1,12); exit } }')
+    ts=$(applog | grep -E "$pat" | awk -v s="$since" '{ if (substr($1,1,12) >= s) { print substr($1,1,12); exit } }')
     [ -n "$ts" ] && return 0
     sleep 1; i=$((i+1))
   done; return 1
 }
-ts_after() { applog | grep -E "$2" | awk -v s="$1" '{ if (substr($1,1,8) >= s) { print substr($1,1,12); exit } }'; }
+ts_after() { applog | grep -E "$2" | awk -v s="$1" '{ if (substr($1,1,12) >= s) { print substr($1,1,12); exit } }'; }
 first_ts() { applog | grep -E "$1" | head -1 | cut -c1-12; }
 last_ts()  { applog | grep -E "$1" | tail -1 | cut -c1-12; }
 count_log() { applog | grep -cE "$1"; }
@@ -72,7 +72,12 @@ print(round(s(b)-s(a),1) if a and b else '')
 PY
 }
 lt() { python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) < float(sys.argv[2]) else 1)" "$1" "$2"; }
-now_hms() { date '+%H:%M:%S'; }
+# Anchor for wait_for_log_after / ts_after: the PHONE's clock (logcat stamps
+# lines with it; the Mac's can differ by a second) to the millisecond, so a
+# line logged in the same second as the anchor is never taken for a reaction
+# to it (first dead-zone run: the outage-2 reconnect satisfied the Wi-Fi return).
+now_ts()  { adbx shell date '+%H:%M:%S.%N' | tr -d '\r' | cut -c1-12; }
+now_hms() { now_ts; }
 
 shot()      { adbx exec-out screencap -p > "$OUT/$1.png" 2>/dev/null; log "shot $1"; }
 tap()       { adbx shell input tap "$1" "$2"; }
