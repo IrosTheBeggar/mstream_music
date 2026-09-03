@@ -18,12 +18,12 @@ wait_for_log '\[iroh\] tunnel up' 20 || { fail "tunnel did not come up at launch
 sleep 2; tap $ALBUMS; sleep 3; shot before-outage
 airplane enable
 if wait_for_log 'status connected → reconnecting' 75; then pass "supervisor reconnecting after the drop"; else fail "no reconnecting edge within 75s"; fi
-tap $PICKER; sleep 1.5; TAP=$(now_hms); tap $ROW2; sleep 0.7; shot after-switch-0.7s; sleep 3; shot after-switch-3.7s
+tap $PICKER; sleep 1.5; TAP=$(now_ts); tap $ROW2; sleep 0.7; shot after-switch-0.7s; sleep 3; shot after-switch-3.7s
 if wait_for_log "\[srv\] switched to $STD" 5; then
   d=$(secs_between "$TAP" "$(first_ts "\[srv\] switched to $STD")")
   if lt "$d" 2.0; then pass "switch logged ${d}s after the tap"; else fail "switch logged ${d}s after the tap"; fi
 else fail "no '[srv] switched to $STD' line"; fi
-BACK=$(now_hms); airplane disable
+BACK=$(now_ts); airplane disable
 wait_for_log_after "$BACK" 'reconnected: attempt|tunnel up' 60 && pass "tunnel back after service returned" || fail "tunnel not back within 60s"
 save_applog switch; log "inspect $OUT/after-switch-*.png: standard server header, home grid, no 'Reconnecting…' strip"
 summary
