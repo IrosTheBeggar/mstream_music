@@ -44,6 +44,7 @@ target) on exit, including on Ctrl-C. Nothing prints pairing codes or tokens.
 | `android/media-resumption.sh` | headless boot on a PLAY key after a force-kill | 1 min |
 | `android/bt-late-pause.sh` | the car-off late PAUSE is ignored | 1 min |
 | `android/dead-zone.sh` | hand-off, 75 s outage, Retry tap, Wi-Fi return — all in place | 5 min |
+| `android/federation-rig.sh` | two local mStream servers paired over federation; the peer reconciles, browses, plays and downloads through the parent's proxies — over HTTP, or with `SMOKE_RIG_IROH=1` over the parent's Quick Connect tunnel, which must survive a switch to a standard server. Needs a server checkout (header) | 4 min |
 | `android/playback-soak.sh` | screen-off playback survives (Samsung app-sleep) | 2 h |
 | `android/cast-through-rebuild.sh` | opt-in (`SMOKE_CAST=1`, plays on a TV): cast + tunnel disturbance | 2 min |
 | `ios/sim-launch.sh` | app-owned engine boots, UI renders, resume reaches Dart | 1 min |
