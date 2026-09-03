@@ -586,6 +586,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fieldPassword => 'Пароль';
 
   @override
+  String get fieldPasswordShow => 'Show password';
+
+  @override
+  String get fieldPasswordHide => 'Hide password';
+
+  @override
   String get fieldSdCard => 'Загружать на SD-карту';
 
   @override

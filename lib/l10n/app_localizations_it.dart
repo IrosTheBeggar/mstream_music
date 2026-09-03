@@ -580,6 +580,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get fieldPassword => 'Password';
 
   @override
+  String get fieldPasswordShow => 'Show password';
+
+  @override
+  String get fieldPasswordHide => 'Hide password';
+
+  @override
   String get fieldSdCard => 'Scarica su scheda SD';
 
   @override

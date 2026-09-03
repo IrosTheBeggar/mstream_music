@@ -2133,6 +2133,13 @@ class MyCustomFormState extends State<MyCustomForm> {
                   hintText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
+                    // Names the action, not the state. This also carries the
+                    // button to a screen reader: TalkBack announces the
+                    // semantics tooltip, VoiceOver appends it to the label.
+                    // A separate Semantics(label:) would double up on iOS.
+                    tooltip: _obscurePassword
+                        ? l.fieldPasswordShow
+                        : l.fieldPasswordHide,
                     icon: Icon(_obscurePassword
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined),

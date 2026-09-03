@@ -41,6 +41,8 @@ class _IrohLoginScreenState extends State<IrohLoginScreen> {
   final _userCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _busy = false;
+  // Show/hide toggle for the password field.
+  bool _obscurePassword = true;
   String? _error;
 
   @override
@@ -105,7 +107,7 @@ class _IrohLoginScreenState extends State<IrohLoginScreen> {
               TextField(
                 controller: _passCtrl,
                 enabled: !_busy,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 autocorrect: false,
                 enableSuggestions: false,
                 onSubmitted: (_) => _submit(),
@@ -113,6 +115,22 @@ class _IrohLoginScreenState extends State<IrohLoginScreen> {
                 decoration: InputDecoration(
                   labelText: l.fieldPassword,
                   prefixIcon: Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    // Names the action, not the state. This also carries the
+                    // button to a screen reader: TalkBack announces the
+                    // semantics tooltip, VoiceOver appends it to the label.
+                    // A separate Semantics(label:) would double up on iOS.
+                    tooltip: _obscurePassword
+                        ? l.fieldPasswordShow
+                        : l.fieldPasswordHide,
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined),
+                    onPressed: _busy
+                        ? null
+                        : () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                  ),
                 ),
               ),
               if (_error != null) ...[
