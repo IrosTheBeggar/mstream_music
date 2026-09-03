@@ -2267,5 +2267,5 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browserFederatedReadOnlyNote =>
-      'A peer shared with your server. Playlists, ratings and Auto DJ stay on your own.';
+      'Playlists and ratings stay on your own';
 }

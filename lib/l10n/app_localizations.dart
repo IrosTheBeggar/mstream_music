@@ -3969,7 +3969,7 @@ abstract class AppLocalizations {
   /// Subtitle of the note row explaining what a federated peer cannot do.
   ///
   /// In en, this message translates to:
-  /// **'A peer shared with your server. Playlists, ratings and Auto DJ stay on your own.'**
+  /// **'Playlists and ratings stay on your own'**
   String get browserFederatedReadOnlyNote;
 }
 
