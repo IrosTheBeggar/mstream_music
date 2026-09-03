@@ -144,7 +144,13 @@ class _StatusCard extends StatelessWidget {
             value: '${fed['endpointId'] ?? ''}',
             empty: l.adminFederationStopped,
           ),
-          AdminInfoRow(l.adminFederationRelay, '${fed['relayUrl'] ?? '—'}'),
+          // Stacked rather than a label/value row: a relay URL is long enough
+          // that right-aligning it wraps mid-scheme on a phone.
+          _CopyRow(
+            label: l.adminFederationRelay,
+            value: '${fed['relayUrl'] ?? ''}',
+            empty: l.adminFederationOffline,
+          ),
         ],
       ],
     );
@@ -246,13 +252,16 @@ class _KeysCard extends StatelessWidget {
       builder: (_) => _MintKeyDialog(api: api, vpaths: vpaths),
     );
     if (minted == null) return;
+    // Show the ticket BEFORE reloading. `reload` rebuilds the AdminAsync
+    // subtree, which disposes this card and unmounts `context` — reloading
+    // first would silently swallow the one-time ticket.
+    if (context.mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _TicketDialog(ticket: '${minted['ticket'] ?? ''}'),
+      );
+    }
     await reload();
-    if (!context.mounted) return;
-    // The ticket is returned once, at mint time — show it before it's gone.
-    await showDialog<void>(
-      context: context,
-      builder: (_) => _TicketDialog(ticket: '${minted['ticket'] ?? ''}'),
-    );
   }
 }
 
@@ -628,6 +637,9 @@ class _MintKeyDialogState extends State<_MintKeyDialog> {
               controller: _name,
               autofocus: true,
               decoration: InputDecoration(labelText: l.adminKeyNameLabel),
+              // Mint is gated on this being non-empty, so typing has to rebuild
+              // — otherwise filling the name last leaves the button dead.
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
             Align(
@@ -651,10 +663,13 @@ class _MintKeyDialogState extends State<_MintKeyDialog> {
                   style: Theme.of(context).textTheme.labelLarge),
             ),
             const SizedBox(height: 4),
-            Text(l.adminFederationUnlimitedHint,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(l.adminFederationUnlimitedHint,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ),
             const SizedBox(height: 8),
             _numField(_kbps, l.adminFederationStreamKbps),
             const SizedBox(height: 8),

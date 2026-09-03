@@ -31,9 +31,12 @@ class AdminApi {
 
   Uri _u(String path, [Map<String, dynamic>? query]) {
     final uri = Uri.parse(session.baseUrl).resolve(path);
-    if (query == null || query.isEmpty) return uri;
-    return uri.replace(
-        queryParameters: query.map((k, v) => MapEntry(k, '$v')));
+    final merged = <String, String>{
+      ...session.query,
+      ...?query?.map((k, v) => MapEntry(k, '$v')),
+    };
+    if (merged.isEmpty) return uri;
+    return uri.replace(queryParameters: merged);
   }
 
   Map<String, String> get _headers => {

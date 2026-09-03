@@ -22,12 +22,29 @@ class AdminSession {
   /// Human label for the app bar (server name when embedded, username on web).
   final String? label;
 
-  const AdminSession({required this.baseUrl, this.token, this.label});
+  /// Query parameters appended to every request. Empty for a plain HTTP server
+  /// and for the web build; an iroh (Quick Connect) server needs `__lt=<token>`
+  /// here, because its [baseUrl] is a local tunnel whose shim authenticates on
+  /// that parameter rather than on the JWT header alone.
+  final Map<String, String> query;
 
-  AdminSession copyWith({String? baseUrl, String? token, String? label}) =>
+  const AdminSession({
+    required this.baseUrl,
+    this.token,
+    this.label,
+    this.query = const {},
+  });
+
+  AdminSession copyWith({
+    String? baseUrl,
+    String? token,
+    String? label,
+    Map<String, String>? query,
+  }) =>
       AdminSession(
         baseUrl: baseUrl ?? this.baseUrl,
         token: token ?? this.token,
         label: label ?? this.label,
+        query: query ?? this.query,
       );
 }

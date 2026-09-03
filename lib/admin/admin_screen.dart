@@ -47,11 +47,18 @@ class AdminScreen extends StatefulWidget {
   /// Override for the exit action's label. Null → localized "Log out".
   final String? exitLabel;
 
+  /// True when the panel is a route pushed inside the mobile app, as opposed to
+  /// the standalone web build. Embedded, leaving is a normal navigation the user
+  /// does often, so it gets an app-bar button; on web the only "exit" is logging
+  /// out, which belongs in the drawer where it cannot be hit by accident.
+  final bool embedded;
+
   const AdminScreen({
     super.key,
     required this.session,
     this.onExit,
     this.exitLabel,
+    this.embedded = false,
   });
 
   @override
@@ -112,6 +119,17 @@ class _AdminScreenState extends State<AdminScreen> {
       final content = Scaffold(
         appBar: AppBar(
           title: Text(l.adminAppBarTitle(active.label(l))),
+          actions: [
+            // The hamburger owns the leading slot, so the way back to the app
+            // sits on the right rather than being buried at the foot of the
+            // drawer.
+            if (widget.embedded && widget.onExit != null)
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: widget.exitLabel ?? l.adminClose,
+                onPressed: widget.onExit,
+              ),
+          ],
         ),
         drawer: wide ? null : Drawer(child: _sidebar(scrollable: true)),
         body: Row(children: [
