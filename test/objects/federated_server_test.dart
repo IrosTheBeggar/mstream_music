@@ -75,6 +75,45 @@ void main() {
     });
   });
 
+  group('transport', () {
+    // Two questions hide behind "is this an iroh server?": identity (isIroh)
+    // and transport (whose tunnel carries the bytes). ServerManager picks the
+    // tunnel target, the launch wait and the queue's tunnel from the transport.
+    test('a plain server is its own transport', () {
+      final s = Server('https://music.example.com', null, null, null, 'main');
+      expect(identical(s.transportServer, s), isTrue);
+      expect(s.isIrohTransport, isFalse);
+    });
+
+    test('an iroh server is its own iroh transport', () {
+      final s = Server('iroh://placeholder', null, null, null, 'quick')
+        ..connectionType = 'iroh';
+      expect(identical(s.transportServer, s), isTrue);
+      expect(s.isIrohTransport, isTrue);
+    });
+
+    test('a peer of an HTTP parent rides the parent, not a tunnel', () {
+      final pair = _pair();
+      expect(identical(pair.peer.transportServer, pair.parent), isTrue);
+      expect(pair.peer.isIroh, isFalse);
+      expect(pair.peer.isIrohTransport, isFalse);
+    });
+
+    test('a peer of an iroh parent is an iroh transport without being iroh',
+        () {
+      final pair = _pair(iroh: true, tunnelPort: 41773, tunnelToken: 'lt');
+      expect(identical(pair.peer.transportServer, pair.parent), isTrue);
+      expect(pair.peer.isIroh, isFalse);
+      expect(pair.peer.isIrohTransport, isTrue);
+    });
+
+    test('an unlinked peer has no transport and is not an iroh transport', () {
+      final peer = _pair(iroh: true).peer..parentServer = null;
+      expect(peer.transportServer, isNull);
+      expect(peer.isIrohTransport, isFalse);
+    });
+  });
+
   group('credentials', () {
     test('a peer authenticates with the parent token, never its own', () {
       final p = _pair();

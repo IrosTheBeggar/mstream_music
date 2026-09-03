@@ -66,7 +66,10 @@ class ServerManager {
   bool _startRejected = false;
   // The launch ping was skipped because the tunnel was not up yet; the next
   // successful dial runs it (vpaths, transcode defaults, version).
-  String? _pingPendingFor;
+  // Servers whose launch-time capability refresh skipped because their
+  // TRANSPORT's tunnel was not up: the iroh server itself, and any federated
+  // peer riding it. A set, not a slot — one dial serves all of them.
+  final Set<String> _pingPendingFor = {};
   // A Retry tap that lands while a network change is in flight must not be
   // downgraded to an automatic re-run.
   bool _rerunUser = false;
@@ -149,7 +152,7 @@ class ServerManager {
       // running on the chain; the first browse/playback awaits the tunnel
       // itself. A standard default needs nothing and must not wait on the
       // chain either (a queued iroh server's dial may already be running on it).
-      if (currentServer!.isIroh) {
+      if (currentServer!.isIrohTransport) {
         await ensureActiveTunnel(reason: 'launch', bypassBackoff: true)
             .timeout(const Duration(seconds: 12), onTimeout: () {});
       }
@@ -167,7 +170,8 @@ class ServerManager {
       // that on loadServerList completing). Bounded by awaitTunnelReady's cap.
       final resumeName = await QueueStore().peekResumeServer();
       if (resumeName != null && resumeName != currentServer?.localname) {
-        final rs = byLocalname(resumeName);
+        // A federated resume server needs its PARENT's tunnel.
+        final rs = byLocalname(resumeName)?.transportServer;
         if (rs != null && rs.isIroh) {
           setQueueIrohServer(rs);
           await awaitTunnelReady(
@@ -304,7 +308,7 @@ class ServerManager {
   Future<void> _settleTunnelForSwitch(String reason) async {
     final s = currentServer!;
     appLog('[srv] switched to ${s.localname} ($reason)');
-    if (!s.isIroh) {
+    if (!s.isIrohTransport) {
       BrowserManager().goToNavScreen();
       unawaited(getServerPaths(s));
       unawaited(ensureActiveTunnel(reason: reason, bypassBackoff: true));
@@ -349,7 +353,7 @@ class ServerManager {
       }
       if (transport.tunnelPort == null) {
         if (throwErr) throw Exception('iroh tunnel not connected');
-        _pingPendingFor = server.localname; // re-run when the dial lands
+        _pingPendingFor.add(server.localname); // re-run when the dial lands
         return;
       }
     }
@@ -640,10 +644,14 @@ class ServerManager {
   // IS the iroh server, OR the iroh server whose songs are queued. Null → no
   // tunnel. (One-iroh-server cap, so these resolve to the same server when both
   // apply — there's never a second iroh server to contend for the tunnel.)
+  //
+  // Both sides resolve through the TRANSPORT server: a federated peer has no
+  // tunnel of its own and rides its parent's, so browsing a peer (or queuing
+  // its songs) must keep the parent's tunnel up, not release it.
   Server? _tunnelTargetServer() {
-    final c = currentServer;
+    final c = currentServer?.transportServer;
     if (c != null && c.isIroh) return c;
-    final q = _queueIrohServer;
+    final q = _queueIrohServer?.transportServer;
     return (q != null && q.isIroh) ? q : null;
   }
 
@@ -782,9 +790,14 @@ class ServerManager {
             'in ${sw.elapsedMilliseconds}ms ($reason)');
         // The launch sweep no longer waits for a slow dial; run the ping it
         // skipped so vpaths / transcode / version are not stale all session.
-        if (_pingPendingFor == s.localname) {
-          _pingPendingFor = null;
-          unawaited(getServerPaths(s));
+        for (final name in _pingPendingFor.toList()) {
+          final pending = byLocalname(name);
+          if (pending == null) {
+            _pingPendingFor.remove(name);
+          } else if (identical(pending.transportServer, s)) {
+            _pingPendingFor.remove(name);
+            unawaited(getServerPaths(pending));
+          }
         }
         // This bind set a loopback port + token. Any queued iroh stream URL built
         // before now is stale, so rebuild them off the live effectiveBaseUrl.

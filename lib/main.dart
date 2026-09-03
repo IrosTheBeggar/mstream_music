@@ -604,7 +604,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             !TunnelPolicy.showTunnelBanner(
                 status: st,
                 browsingTunnelServer:
-                    ServerManager().currentServer?.isIroh ?? false)) {
+                    ServerManager().currentServer?.isIrohTransport ?? false)) {
           return const SizedBox.shrink();
         }
         final l = AppLocalizations.of(context);

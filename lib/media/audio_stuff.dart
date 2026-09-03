@@ -307,7 +307,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     queue.listen((items) {
       Server? iroh;
       for (final it in items) {
-        final s = _serverFor(it);
+        // A federated peer's songs ride its parent's tunnel: that is the
+        // server to keep connected, not the peer (which has no tunnel).
+        final s = _serverFor(it)?.transportServer;
         if (s != null && s.isIroh) {
           iroh = s;
           break;

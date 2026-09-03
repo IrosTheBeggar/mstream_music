@@ -103,6 +103,21 @@ class Server {
 
   bool get isFederated => federationParent != null;
 
+  /// The server whose transport carries this server's bytes: the parent for a
+  /// federated server, itself for everything else. Null only for a federated
+  /// server whose parent is not linked yet (nothing can be addressed then).
+  ///
+  /// Two different questions hide behind "is this an iroh server?": identity
+  /// (the pairing-code menu, the one-iroh cap, the edit form — [isIroh]) and
+  /// transport (does a request for it ride a loopback tunnel, and whose —
+  /// [isIrohTransport]). A peer of an iroh parent answers no to the first and
+  /// yes to the second.
+  Server? get transportServer => isFederated ? parentServer : this;
+
+  /// True when requests for this server travel over an iroh loopback tunnel —
+  /// its own, or its parent's for a federated server.
+  bool get isIrohTransport => transportServer?.isIroh == true;
+
   /// What to call this server in the UI: a peer's name, or the URL that
   /// identifies every other kind of server.
   String get displayName => isFederated
