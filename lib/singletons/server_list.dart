@@ -153,6 +153,8 @@ class ServerManager {
       // used to hold the browser (blank panel, "Connecting…") for up to 12s.
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
+      // Timing marker for the smoke scripts (smoke/android/launch-matrix.sh).
+      appLog('[app] default server ready: ${currentServer!.localname}');
       // Pre-warm the saved queue's iroh server (if it's a DIFFERENT server) in the
       // BACKGROUND — without selecting it — so the queue restores against a live
       // tunnel instead of a dead loopback port. The default stays selected; this
@@ -288,6 +290,7 @@ class ServerManager {
   /// queue, or release it) runs behind.
   Future<void> _settleTunnelForSwitch(String reason) async {
     final s = currentServer!;
+    appLog('[srv] switched to ${s.localname} ($reason)');
     if (!s.isIroh) {
       BrowserManager().goToNavScreen();
       unawaited(getServerPaths(s));
