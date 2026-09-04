@@ -133,6 +133,11 @@ class AdminCard extends StatelessWidget {
   final String title;
   final String? subtitle;
   final IconData? icon;
+
+  /// Tint for [icon]. Defaults to the scheme primary; a card whose subject is
+  /// destructive passes the error colour, so the heading itself carries the
+  /// warning rather than leaving the button to do it alone.
+  final Color? iconColor;
   final List<Widget> children;
   final List<Widget>? trailing;
   const AdminCard({
@@ -140,6 +145,7 @@ class AdminCard extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.icon,
+    this.iconColor,
     required this.children,
     this.trailing,
   });
@@ -155,7 +161,8 @@ class AdminCard extends StatelessWidget {
           children: [
             Row(children: [
               if (icon != null) ...[
-                Icon(icon, color: theme.colorScheme.primary, size: 20),
+                Icon(icon,
+                    color: iconColor ?? theme.colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
               ],
               Expanded(
@@ -313,7 +320,10 @@ class _AdminSaveFieldState extends State<AdminSaveField> {
         const SizedBox(width: 8),
         Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: FilledButton(
+          // Tonal, not filled: a per-field commit is secondary to whatever the
+          // view's main action is, and a card with three of these should not
+          // have three things shouting at the same volume as the FAB.
+          child: FilledButton.tonal(
             onPressed: _busy ? null : _save,
             child: _busy
                 ? const SizedBox(

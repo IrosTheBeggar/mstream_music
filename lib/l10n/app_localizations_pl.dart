@@ -2797,8 +2797,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Zapisuj dzienniki na dysk';
 
   @override
-  String get adminLogBufferSize =>
-      'Rozmiar bufora dziennika (0–10000, 0 = wył.)';
+  String get adminLogBufferSize => 'Rozmiar bufora dziennika';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = wył.';
 
   @override
   String get adminServerAudio => 'Dźwięk serwera';

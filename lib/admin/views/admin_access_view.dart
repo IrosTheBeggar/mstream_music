@@ -174,6 +174,7 @@ class _AdminAccessEditorState extends State<_AdminAccessEditor> {
       AdminCard(
         title: l.adminDangerZone,
         icon: Icons.warning_amber,
+        iconColor: Theme.of(context).colorScheme.error,
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,

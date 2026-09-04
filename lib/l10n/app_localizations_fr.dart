@@ -2787,8 +2787,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Écrire les journaux sur le disque';
 
   @override
-  String get adminLogBufferSize =>
-      'Taille du tampon de journal (0–10000, 0 = désactivé)';
+  String get adminLogBufferSize => 'Taille du tampon de journal';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = désactivé';
 
   @override
   String get adminServerAudio => 'Audio serveur';

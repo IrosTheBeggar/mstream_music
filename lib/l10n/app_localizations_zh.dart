@@ -2618,7 +2618,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminWriteLogsToDisk => '将日志写入磁盘';
 
   @override
-  String get adminLogBufferSize => '日志缓冲区大小（0–10000，0 = 禁用）';
+  String get adminLogBufferSize => '日志缓冲区大小';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000，0 = 禁用';
 
   @override
   String get adminServerAudio => '服务器音频';

@@ -2781,8 +2781,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Scrivi i log su disco';
 
   @override
-  String get adminLogBufferSize =>
-      'Dimensione buffer log (0–10000, 0 = disattivato)';
+  String get adminLogBufferSize => 'Dimensione buffer log';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = disattivato';
 
   @override
   String get adminServerAudio => 'Audio server';

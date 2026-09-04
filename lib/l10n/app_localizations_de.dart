@@ -2783,8 +2783,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Protokolle auf Datenträger schreiben';
 
   @override
-  String get adminLogBufferSize =>
-      'Protokollpuffergröße (0–10000, 0 = deaktiviert)';
+  String get adminLogBufferSize => 'Protokollpuffergröße';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = deaktiviert';
 
   @override
   String get adminServerAudio => 'Server-Audio';

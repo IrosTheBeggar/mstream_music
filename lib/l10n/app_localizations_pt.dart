@@ -2777,8 +2777,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Gravar registos no disco';
 
   @override
-  String get adminLogBufferSize =>
-      'Tamanho do buffer de registo (0–10000, 0 = desativado)';
+  String get adminLogBufferSize => 'Tamanho do buffer de registo';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = desativado';
 
   @override
   String get adminServerAudio => 'Áudio do servidor';

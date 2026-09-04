@@ -152,6 +152,7 @@ class SettingsView extends StatelessWidget {
               ),
               AdminSaveField(
                 label: l.adminLogBufferSize,
+                helperText: l.adminLogBufferSizeHelper,
                 number: true,
                 initialValue: '${_int(c['logBufferSize'], 0)}',
                 onSave: (v) => api.setLogBufferSize(_int(v, 0)),

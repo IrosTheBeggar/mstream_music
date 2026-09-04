@@ -2745,7 +2745,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Write logs to disk';
 
   @override
-  String get adminLogBufferSize => 'Log buffer size (0–10000, 0 = disabled)';
+  String get adminLogBufferSize => 'Log buffer size';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = disabled';
 
   @override
   String get adminServerAudio => 'Server audio';

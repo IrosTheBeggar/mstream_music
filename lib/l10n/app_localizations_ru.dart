@@ -2798,8 +2798,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get adminWriteLogsToDisk => 'Записывать журналы на диск';
 
   @override
-  String get adminLogBufferSize =>
-      'Размер буфера журнала (0–10000, 0 = отключено)';
+  String get adminLogBufferSize => 'Размер буфера журнала';
+
+  @override
+  String get adminLogBufferSizeHelper => '0–10000, 0 = отключено';
 
   @override
   String get adminServerAudio => 'Аудио на сервере';

@@ -4887,8 +4887,14 @@ abstract class AppLocalizations {
   /// Field label for the in-memory log buffer size.
   ///
   /// In en, this message translates to:
-  /// **'Log buffer size (0–10000, 0 = disabled)'**
+  /// **'Log buffer size'**
   String get adminLogBufferSize;
+
+  /// Helper under the log buffer size field: its range and the disable value.
+  ///
+  /// In en, this message translates to:
+  /// **'0–10000, 0 = disabled'**
+  String get adminLogBufferSizeHelper;
 
   /// Card title for the server audio (Rust player) section.
   ///
