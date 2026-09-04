@@ -118,7 +118,10 @@ class _AdminScreenState extends State<AdminScreen> {
       final wide = constraints.maxWidth >= 900;
       final content = Scaffold(
         appBar: AppBar(
-          title: Text(l.adminAppBarTitle(active.label(l))),
+          // Narrow: just the section. "mStream Admin · Subsonic API" does not
+          // fit a phone and truncates the half that says which view you are on,
+          // and the drawer header already carries the brand and the server.
+          title: Text(wide ? l.adminAppBarTitle(active.label(l)) : active.label(l)),
           actions: [
             // The hamburger owns the leading slot, so the way back to the app
             // sits on the right rather than being buried at the foot of the

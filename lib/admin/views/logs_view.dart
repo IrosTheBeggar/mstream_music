@@ -105,48 +105,72 @@ class _LogsViewState extends State<LogsView> {
         color: scheme.surfaceContainerLow,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(children: [
-            IconButton(
-              tooltip: _paused ? l.adminLogsResumeButton : l.adminLogsPauseButton,
-              icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
-              onPressed: () => setState(() => _paused = !_paused),
-            ),
-            IconButton(
-              tooltip: l.adminClear,
-              icon: const Icon(Icons.clear_all),
-              onPressed: () => setState(_entries.clear),
-            ),
-            Row(children: [
+          // Everything here has to survive a phone-width toolbar: on a narrow
+          // view the auto-scroll label and the download button's label are
+          // dropped to their icons rather than overflowing the row.
+          child: LayoutBuilder(builder: (context, c) {
+            final tight = c.maxWidth < 480;
+            Future<void> download() async {
+              final uri = widget.api.logsDownloadUrl();
+              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  adminToast(context, l.couldNotOpen('$uri'), error: true);
+                }
+              }
+            }
+
+            return Row(children: [
+              IconButton(
+                tooltip:
+                    _paused ? l.adminLogsResumeButton : l.adminLogsPauseButton,
+                icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
+                onPressed: () => setState(() => _paused = !_paused),
+              ),
+              IconButton(
+                tooltip: l.adminClear,
+                icon: const Icon(Icons.clear_all),
+                onPressed: () => setState(_entries.clear),
+              ),
               Checkbox(
                 value: _autoscroll,
                 onChanged: (v) => setState(() => _autoscroll = v ?? true),
               ),
-              Text(l.adminLogsAutoScrollTitle),
-            ]),
-            const Spacer(),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(_error!,
-                    style: TextStyle(color: scheme.error, fontSize: 12)),
-              ),
-            Text(l.adminLogsLineCount(_entries.length),
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(width: 12),
-            FilledButton.tonalIcon(
-              icon: const Icon(Icons.download, size: 18),
-              label: Text(l.adminLogsDownloadZipButton),
-              onPressed: () async {
-                final uri = widget.api.logsDownloadUrl();
-                if (!await launchUrl(uri,
-                    mode: LaunchMode.externalApplication)) {
-                  if (context.mounted) {
-                    adminToast(context, l.couldNotOpen('$uri'), error: true);
-                  }
-                }
-              },
-            ),
-          ]),
+              if (!tight)
+                Text(l.adminLogsAutoScrollTitle)
+              else
+                // The checkbox alone is ambiguous, so keep the name reachable.
+                Tooltip(
+                  message: l.adminLogsAutoScrollTitle,
+                  child: const Icon(Icons.vertical_align_bottom, size: 18),
+                ),
+              const Spacer(),
+              if (_error != null)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(_error!,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: scheme.error, fontSize: 12)),
+                  ),
+                ),
+              Text(l.adminLogsLineCount(_entries.length),
+                  style:
+                      TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
+              const SizedBox(width: 8),
+              if (tight)
+                IconButton(
+                  tooltip: l.adminLogsDownloadZipButton,
+                  icon: const Icon(Icons.download, size: 20),
+                  onPressed: download,
+                )
+              else
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.download, size: 18),
+                  label: Text(l.adminLogsDownloadZipButton),
+                  onPressed: download,
+                ),
+            ]);
+          }),
         ),
       ),
       const Divider(height: 1),
