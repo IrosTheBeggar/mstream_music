@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 import 'directory_picker.dart';
 
@@ -112,6 +113,7 @@ class _StatusBannerState extends State<_StatusBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final active = _status['active'];
     final queue = (_status['queueLength'] is num)
@@ -135,7 +137,7 @@ class _StatusBannerState extends State<_StatusBanner> {
     return AdminCard(
       title: l.adminBackingUp('${a['libraryName'] ?? ''}'),
       icon: Icons.sync,
-      trailing: [StatusPill(label: l.adminRunning, color: Colors.blue)],
+      trailing: [StatusPill(label: l.adminRunning, color: statusColors.info)],
       children: [
         LinearProgressIndicator(value: value),
         const SizedBox(height: 6),
@@ -159,6 +161,7 @@ class _DestinationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final enabled = dest['enabled'] == true;
@@ -169,7 +172,7 @@ class _DestinationCard extends StatelessWidget {
       trailing: [
         StatusPill(
           label: enabled ? l.adminBackupEnabled : l.adminBackupDisabled,
-          color: enabled ? Colors.green : Colors.grey,
+          color: enabled ? statusColors.ok : statusColors.idle,
         ),
       ],
       children: [

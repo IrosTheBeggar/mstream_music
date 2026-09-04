@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Logs" — tails the server's in-memory ring buffer
@@ -80,13 +81,14 @@ class _LogsViewState extends State<LogsView> {
     }
   }
 
-  Color _levelColor(String level, ColorScheme scheme) {
+  Color _levelColor(
+      String level, ColorScheme scheme, AdminStatusColors statusColors) {
     switch (level.toLowerCase()) {
       case 'error':
         return scheme.error;
       case 'warn':
       case 'warning':
-        return Colors.orange;
+        return statusColors.warn;
       case 'debug':
       case 'verbose':
       case 'silly':
@@ -100,6 +102,7 @@ class _LogsViewState extends State<LogsView> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final statusColors = AdminStatusColors.of(context);
     return Column(children: [
       Material(
         color: scheme.surfaceContainerLow,
@@ -203,7 +206,7 @@ class _LogsViewState extends State<LogsView> {
                             TextSpan(
                                 text: '${level.toUpperCase().padRight(5)} ',
                                 style: TextStyle(
-                                    color: _levelColor(level, scheme),
+                                    color: _levelColor(level, scheme, statusColors),
                                     fontWeight: FontWeight.bold)),
                             TextSpan(
                                 text: '${e['message'] ?? ''}',

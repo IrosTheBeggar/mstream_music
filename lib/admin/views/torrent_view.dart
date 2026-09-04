@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Torrent" — optional torrent-client integration (Transmission / qBittorrent
@@ -150,6 +151,7 @@ class _ConnectionCardState extends State<_ConnectionCard> {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final configured = widget.creds['configured'] == true;
     return AdminCard(
@@ -158,7 +160,7 @@ class _ConnectionCardState extends State<_ConnectionCard> {
       trailing: [
         StatusPill(
           label: configured ? l.adminConfigured : l.adminNotConfigured,
-          color: configured ? Colors.green : Colors.grey,
+          color: configured ? statusColors.ok : statusColors.idle,
         ),
       ],
       children: [
@@ -298,6 +300,7 @@ class _TorrentListCardState extends State<_TorrentListCard> {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final connected = _status['connected'] == true;
@@ -307,7 +310,7 @@ class _TorrentListCardState extends State<_TorrentListCard> {
       trailing: [
         StatusPill(
           label: connected ? l.adminConnected : l.adminDisconnected,
-          color: connected ? Colors.green : Colors.orange,
+          color: connected ? statusColors.ok : statusColors.warn,
           icon: connected ? Icons.link : Icons.link_off,
         ),
       ],
@@ -326,6 +329,7 @@ class _TorrentListCardState extends State<_TorrentListCard> {
   Widget _torrentRow(BuildContext context, dynamic t) {
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final statusColors = AdminStatusColors.of(context);
     final progress =
         (t['progress'] is num) ? (t['progress'] as num).toDouble() : 0.0;
     final managed = t['managedByMstream'] == true;
@@ -340,7 +344,7 @@ class _TorrentListCardState extends State<_TorrentListCard> {
           if (managed)
             Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: StatusPill(label: l.adminMstream, color: Colors.blue),
+              child: StatusPill(label: l.adminMstream, color: statusColors.info),
             ),
           Text('${(progress * 100).toStringAsFixed(0)}%',
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
@@ -417,6 +421,7 @@ class _VpathAccessCard extends StatelessWidget {
   Widget _mappingRow(BuildContext context, String name, Map info,
       Future<void> Function() reload) {
     final l = AppLocalizations.of(context);
+    final statusColors = AdminStatusColors.of(context);
     final verified = info['verified'] == true;
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -426,7 +431,7 @@ class _VpathAccessCard extends StatelessWidget {
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         StatusPill(
           label: verified ? l.adminVerified : l.adminUnverified,
-          color: verified ? Colors.green : Colors.orange,
+          color: verified ? statusColors.ok : statusColors.warn,
         ),
         IconButton(
           tooltip: l.adminSetManually,

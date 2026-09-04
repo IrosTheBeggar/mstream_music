@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Transcoding" — ffmpeg-backed on-the-fly transcode defaults.
@@ -14,6 +15,7 @@ class TranscodingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     return AdminAsync(
       loader: api.getTranscode,
       builder: (context, t, reload) {
@@ -28,7 +30,7 @@ class TranscodingView extends StatelessWidget {
                 label: downloaded
                     ? l.adminFFmpegStatusReady
                     : l.adminFFmpegStatusNotDownloaded,
-                color: downloaded ? Colors.green : Colors.orange,
+                color: downloaded ? statusColors.ok : statusColors.warn,
                 icon: downloaded ? Icons.check_circle : Icons.download,
               ),
             ],

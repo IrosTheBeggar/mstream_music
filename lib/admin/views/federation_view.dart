@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Federation" — pairing this server with other mStream servers.
@@ -91,6 +92,7 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final available = fed['available'] == true;
@@ -104,11 +106,11 @@ class _StatusCard extends StatelessWidget {
       running,
       online
     )) {
-      (false, _, _, _) => (l.adminNotAvailable, Colors.grey, Icons.block),
-      (_, false, _, _) => (l.adminDisabled, Colors.grey, Icons.pause_circle_outline),
-      (_, _, false, _) => (l.adminFederationStopped, Colors.orange, Icons.error_outline),
-      (_, _, _, false) => (l.adminFederationOffline, Colors.orange, Icons.cloud_off),
-      _ => (l.adminFederationOnline, Colors.green, Icons.cloud_done),
+      (false, _, _, _) => (l.adminNotAvailable, statusColors.idle, Icons.block),
+      (_, false, _, _) => (l.adminDisabled, statusColors.idle, Icons.pause_circle_outline),
+      (_, _, false, _) => (l.adminFederationStopped, statusColors.warn, Icons.error_outline),
+      (_, _, _, false) => (l.adminFederationOffline, statusColors.warn, Icons.cloud_off),
+      _ => (l.adminFederationOnline, statusColors.ok, Icons.cloud_done),
     };
 
     return AdminCard(
@@ -453,6 +455,7 @@ class _PeerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final id = (row['id'] as num).toInt();
@@ -466,7 +469,7 @@ class _PeerTile extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Icon(ok ? Icons.check_circle : Icons.help_outline,
-              size: 16, color: ok ? Colors.green : scheme.onSurfaceVariant),
+              size: 16, color: ok ? statusColors.ok : scheme.onSurfaceVariant),
           const SizedBox(width: 6),
           Expanded(
             child: Text(name,

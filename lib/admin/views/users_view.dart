@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Users" — accounts, per-user library access and permission flags.
@@ -178,6 +179,7 @@ class _UserCardState extends State<_UserCard> {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return AdminCard(
@@ -187,7 +189,7 @@ class _UserCardState extends State<_UserCard> {
         if (_admin)
           Padding(
             padding: const EdgeInsets.only(right: 4),
-            child: StatusPill(label: l.adminStatusPillLabel, color: Colors.indigo),
+            child: StatusPill(label: l.adminStatusPillLabel, color: statusColors.info),
           ),
         PopupMenuButton<String>(
           itemBuilder: (_) => [

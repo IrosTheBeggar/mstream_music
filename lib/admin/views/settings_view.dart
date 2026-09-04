@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../admin_api.dart';
+import '../admin_theme.dart';
 import '../admin_widgets.dart';
 
 /// "Settings" — live server configuration (GET /api/v1/admin/config) plus
@@ -268,6 +269,7 @@ class _SslCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColors = AdminStatusColors.of(context);
     final l = AppLocalizations.of(context);
     return AdminCard(
       title: l.adminSslHttps,
@@ -275,7 +277,7 @@ class _SslCard extends StatelessWidget {
       trailing: [
         StatusPill(
           label: sslOn ? l.adminEnabled : l.adminDisabled,
-          color: sslOn ? Colors.green : Colors.grey,
+          color: sslOn ? statusColors.ok : statusColors.idle,
         ),
       ],
       children: [
