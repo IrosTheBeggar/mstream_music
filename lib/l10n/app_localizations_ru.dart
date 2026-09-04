@@ -2481,9 +2481,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Предоставить доступ всем пользователям';
 
   @override
-  String get adminAudiobookLibraryTitle => 'Библиотека аудиокниг';
-
-  @override
   String get adminAdd => 'Добавить';
 
   @override

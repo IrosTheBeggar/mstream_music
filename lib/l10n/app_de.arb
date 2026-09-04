@@ -616,7 +616,6 @@
   "adminLibraryNameLabel": "Bibliotheksname (vpath)",
   "adminLibraryNameHelper": "Buchstaben, Zahlen und Bindestriche",
   "adminGrantAllUsersAccessTitle": "Allen Benutzern Zugriff gewähren",
-  "adminAudiobookLibraryTitle": "Hörbuch-Bibliothek",
   "adminAdd": "Hinzufügen",
   "adminChooseFolderTitle": "Ordner wählen",
   "adminSelectFolderButton": "Diesen Ordner wählen",

@@ -616,7 +616,6 @@
   "adminLibraryNameLabel": "Имя библиотеки (vpath)",
   "adminLibraryNameHelper": "Буквы, цифры и дефисы",
   "adminGrantAllUsersAccessTitle": "Предоставить доступ всем пользователям",
-  "adminAudiobookLibraryTitle": "Библиотека аудиокниг",
   "adminAdd": "Добавить",
   "adminChooseFolderTitle": "Выберите папку",
   "adminSelectFolderButton": "Выбрать эту папку",

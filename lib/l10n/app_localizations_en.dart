@@ -2436,9 +2436,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminGrantAllUsersAccessTitle => 'Grant all users access';
 
   @override
-  String get adminAudiobookLibraryTitle => 'Audiobook library';
-
-  @override
   String get adminAdd => 'Add';
 
   @override

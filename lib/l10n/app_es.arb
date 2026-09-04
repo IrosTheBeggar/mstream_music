@@ -616,7 +616,6 @@
   "adminLibraryNameLabel": "Nombre de la biblioteca (vpath)",
   "adminLibraryNameHelper": "Letras, números y guiones",
   "adminGrantAllUsersAccessTitle": "Dar acceso a todos los usuarios",
-  "adminAudiobookLibraryTitle": "Biblioteca de audiolibros",
   "adminAdd": "Añadir",
   "adminChooseFolderTitle": "Elegir una carpeta",
   "adminSelectFolderButton": "Seleccionar esta carpeta",

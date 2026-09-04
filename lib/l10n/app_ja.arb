@@ -616,7 +616,6 @@
   "adminLibraryNameLabel": "ライブラリ名(vpath)",
   "adminLibraryNameHelper": "英数字とハイフン",
   "adminGrantAllUsersAccessTitle": "全ユーザーにアクセスを許可",
-  "adminAudiobookLibraryTitle": "オーディオブックライブラリ",
   "adminAdd": "追加",
   "adminChooseFolderTitle": "フォルダーを選択",
   "adminSelectFolderButton": "このフォルダーを選択",

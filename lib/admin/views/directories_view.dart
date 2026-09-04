@@ -134,9 +134,28 @@ class _AddDirectoryDialog extends StatefulWidget {
 class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
   final _vpath = TextEditingController();
   String? _directory;
-  bool _autoAccess = false;
-  bool _isAudioBooks = false;
+
+  /// On by default: a library nobody can see is almost never what you meant,
+  /// and per-user narrowing is a deliberate follow-up in the Users view.
+  bool _autoAccess = true;
   bool _busy = false;
+
+  /// The last name we derived from a picked folder. Picking again overwrites
+  /// the field only while it still holds this — so re-picking a folder does not
+  /// throw away a name the admin typed themselves.
+  String? _derived;
+
+  /// The webapp's makeVPath: last path segment, lowercased, spaces to dashes,
+  /// anything outside [a-zA-Z0-9-] dropped. (The webapp's own version uses
+  /// String.replace with a string pattern, so it converts only the FIRST space;
+  /// this converts them all, which is what that code intends.)
+  static String _vpathFor(String dir) => dir
+      .split(RegExp(r'[\\/]'))
+      .where((s) => s.isNotEmpty)
+      .last
+      .toLowerCase()
+      .replaceAll(' ', '-')
+      .replaceAll(RegExp(r'[^a-z0-9-]'), '');
 
   @override
   void dispose() {
@@ -155,7 +174,7 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
     final ok = await runAdminAction(
       context,
       () => widget.api.addDirectory(_directory!, vpath,
-          autoAccess: _autoAccess, isAudioBooks: _isAudioBooks),
+          autoAccess: _autoAccess),
       success: l.adminDirectoryAddedToast,
     );
     if (!mounted) return;
@@ -179,7 +198,15 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
             onPressed: () async {
               final picked =
                   await DirectoryPickerDialog.show(context, widget.api);
-              if (picked != null) setState(() => _directory = picked);
+              if (picked == null) return;
+              setState(() {
+                _directory = picked;
+                final current = _vpath.text.trim();
+                if (current.isEmpty || current == _derived) {
+                  _derived = _vpathFor(picked);
+                  _vpath.text = _derived!;
+                }
+              });
             },
           ),
           if (_directory != null)
@@ -205,12 +232,6 @@ class _AddDirectoryDialogState extends State<_AddDirectoryDialog> {
             title: Text(l.adminGrantAllUsersAccessTitle),
             value: _autoAccess,
             onChanged: (v) => setState(() => _autoAccess = v ?? false),
-          ),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l.adminAudiobookLibraryTitle),
-            value: _isAudioBooks,
-            onChanged: (v) => setState(() => _isAudioBooks = v ?? false),
           ),
         ]),
       ),

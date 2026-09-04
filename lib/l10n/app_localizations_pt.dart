@@ -2462,9 +2462,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Conceder acesso a todos os utilizadores';
 
   @override
-  String get adminAudiobookLibraryTitle => 'Biblioteca de audiolivros';
-
-  @override
   String get adminAdd => 'Adicionar';
 
   @override

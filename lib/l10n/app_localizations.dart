@@ -4284,12 +4284,6 @@ abstract class AppLocalizations {
   /// **'Grant all users access'**
   String get adminGrantAllUsersAccessTitle;
 
-  /// Toggle title marking the library as an audiobook library.
-  ///
-  /// In en, this message translates to:
-  /// **'Audiobook library'**
-  String get adminAudiobookLibraryTitle;
-
   /// Add button confirming the add-directory dialog.
   ///
   /// In en, this message translates to:

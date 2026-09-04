@@ -2314,9 +2314,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminGrantAllUsersAccessTitle => '授予所有用户访问权限';
 
   @override
-  String get adminAudiobookLibraryTitle => '有声书库';
-
-  @override
   String get adminAdd => '添加';
 
   @override

@@ -2358,9 +2358,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminGrantAllUsersAccessTitle => '全ユーザーにアクセスを許可';
 
   @override
-  String get adminAudiobookLibraryTitle => 'オーディオブックライブラリ';
-
-  @override
   String get adminAdd => '追加';
 
   @override

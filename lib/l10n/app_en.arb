@@ -2206,10 +2206,6 @@
   "@adminGrantAllUsersAccessTitle": {
     "description": "Toggle title to give every user access to the new library."
   },
-  "adminAudiobookLibraryTitle": "Audiobook library",
-  "@adminAudiobookLibraryTitle": {
-    "description": "Toggle title marking the library as an audiobook library."
-  },
   "adminAdd": "Add",
   "@adminAdd": {
     "description": "Add button confirming the add-directory dialog."

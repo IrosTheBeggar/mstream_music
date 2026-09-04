@@ -616,7 +616,6 @@
   "adminLibraryNameLabel": "媒体库名称（vpath）",
   "adminLibraryNameHelper": "字母、数字和连字符",
   "adminGrantAllUsersAccessTitle": "授予所有用户访问权限",
-  "adminAudiobookLibraryTitle": "有声书库",
   "adminAdd": "添加",
   "adminChooseFolderTitle": "选择文件夹",
   "adminSelectFolderButton": "选择此文件夹",
