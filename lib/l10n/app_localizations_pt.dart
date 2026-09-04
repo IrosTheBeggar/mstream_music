@@ -2329,9 +2329,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminDLNA => 'DLNA';
 
   @override
-  String get adminSubsonicAPI => 'API Subsonic';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -2493,9 +2490,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminLibraryAccessUpdatedToast => 'Acesso à biblioteca atualizado';
 
   @override
-  String get adminSetSubsonicPasswordTitle => 'Definir palavra-passe Subsonic';
-
-  @override
   String get adminSetPasswordTitle => 'Definir palavra-passe';
 
   @override
@@ -2551,9 +2545,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get adminPassword => 'Palavra-passe';
-
-  @override
-  String get adminSubsonicPasswordLabel => 'Palavra-passe Subsonic (opcional)';
 
   @override
   String get adminLibraryAccessHeader => 'Acesso à biblioteca';
@@ -2763,9 +2754,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get adminUiVelvet => 'Velvet';
-
-  @override
-  String get adminUiSubsonic => 'Subsonic';
 
   @override
   String get adminDatabaseTuning => 'Otimização da base de dados';
@@ -3045,136 +3033,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Estrutura';
 
   @override
-  String get adminSubsonicApiTitle => 'API Subsonic';
-
-  @override
   String get adminTestConnection => 'Testar ligação';
-
-  @override
-  String adminSubsonicTestSuccess(String version, String latency) {
-    return 'OK · $version · ${latency}ms';
-  }
-
-  @override
-  String adminSubsonicTestFailed(String reason) {
-    return 'Falhou: $reason';
-  }
-
-  @override
-  String get adminStatus => 'Estado';
-
-  @override
-  String get adminMethodsImplemented => 'Métodos implementados';
-
-  @override
-  String get adminFullStub => 'Completo / esboço';
-
-  @override
-  String get adminNowPlaying => 'A reproduzir agora';
-
-  @override
-  String get adminNobody => 'ninguém';
-
-  @override
-  String get adminLyricsLrclib => 'Letras (LRCLib)';
-
-  @override
-  String get adminLrclibFallback => 'Recurso LRCLib';
-
-  @override
-  String get adminWriteLrcSidecarFiles => 'Gravar ficheiros .lrc auxiliares';
-
-  @override
-  String get adminCache => 'Cache';
-
-  @override
-  String get adminPurgeCache => 'Limpar cache';
-
-  @override
-  String get adminLyricsCachePurged => 'Cache de letras limpa';
-
-  @override
-  String get adminRetryFailed => 'Repetir falhadas';
-
-  @override
-  String get adminTransientLyricsEntriesCleared =>
-      'Entradas de letras transitórias limpas';
-
-  @override
-  String get adminJukebox => 'Jukebox';
-
-  @override
-  String get adminAvailable => 'Disponível';
-
-  @override
-  String get adminUnavailable => 'Indisponível';
-
-  @override
-  String get adminState => 'Estado';
-
-  @override
-  String get adminPlaying => 'a reproduzir';
-
-  @override
-  String get adminPaused => 'em pausa';
-
-  @override
-  String get adminIdle => 'inativo';
-
-  @override
-  String get adminCurrent => 'Atual';
-
-  @override
-  String get adminQueue => 'Fila';
-
-  @override
-  String adminQueueTracks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count faixas',
-      one: '1 faixa',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get adminVolume => 'Volume';
-
-  @override
-  String adminVolumePercent(int percent) {
-    return '$percent%';
-  }
-
-  @override
-  String get adminTokenAuthFailures => 'Falhas de autenticação por token';
-
-  @override
-  String get adminTokenAuthFailuresSubtitle =>
-      'Clientes que usam autenticação por token sem uma palavra-passe Subsonic.';
-
-  @override
-  String get adminNoRecentFailures => 'Sem falhas recentes';
-
-  @override
-  String get adminCleared => 'Limpo';
-
-  @override
-  String get adminMintApiKey => 'Gerar chave de API';
-
-  @override
-  String get adminMintApiKeySubtitle =>
-      'Gerar uma apiKey Subsonic para um utilizador (mostrada uma vez).';
 
   @override
   String get adminKeyNameLabel => 'Nome / etiqueta da chave';
 
   @override
   String get adminMintKey => 'Gerar chave';
-
-  @override
-  String get adminUsernameAndNameRequired =>
-      'Nome de utilizador e nome obrigatórios';
 
   @override
   String get adminTorrentClient => 'Cliente';

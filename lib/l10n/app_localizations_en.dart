@@ -2307,9 +2307,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminDLNA => 'DLNA';
 
   @override
-  String get adminSubsonicAPI => 'Subsonic API';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -2467,9 +2464,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminLibraryAccessUpdatedToast => 'Library access updated';
 
   @override
-  String get adminSetSubsonicPasswordTitle => 'Set Subsonic password';
-
-  @override
   String get adminSetPasswordTitle => 'Set password';
 
   @override
@@ -2525,9 +2519,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminPassword => 'Password';
-
-  @override
-  String get adminSubsonicPasswordLabel => 'Subsonic password (optional)';
 
   @override
   String get adminLibraryAccessHeader => 'Library access';
@@ -2731,9 +2722,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminUiVelvet => 'Velvet';
-
-  @override
-  String get adminUiSubsonic => 'Subsonic';
 
   @override
   String get adminDatabaseTuning => 'Database tuning';
@@ -3011,135 +2999,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Structure';
 
   @override
-  String get adminSubsonicApiTitle => 'Subsonic API';
-
-  @override
   String get adminTestConnection => 'Test connection';
-
-  @override
-  String adminSubsonicTestSuccess(String version, String latency) {
-    return 'OK · $version · ${latency}ms';
-  }
-
-  @override
-  String adminSubsonicTestFailed(String reason) {
-    return 'Failed: $reason';
-  }
-
-  @override
-  String get adminStatus => 'Status';
-
-  @override
-  String get adminMethodsImplemented => 'Methods implemented';
-
-  @override
-  String get adminFullStub => 'Full / stub';
-
-  @override
-  String get adminNowPlaying => 'Now playing';
-
-  @override
-  String get adminNobody => 'nobody';
-
-  @override
-  String get adminLyricsLrclib => 'Lyrics (LRCLib)';
-
-  @override
-  String get adminLrclibFallback => 'LRCLib fallback';
-
-  @override
-  String get adminWriteLrcSidecarFiles => 'Write .lrc sidecar files';
-
-  @override
-  String get adminCache => 'Cache';
-
-  @override
-  String get adminPurgeCache => 'Purge cache';
-
-  @override
-  String get adminLyricsCachePurged => 'Lyrics cache purged';
-
-  @override
-  String get adminRetryFailed => 'Retry failed';
-
-  @override
-  String get adminTransientLyricsEntriesCleared =>
-      'Transient lyrics entries cleared';
-
-  @override
-  String get adminJukebox => 'Jukebox';
-
-  @override
-  String get adminAvailable => 'Available';
-
-  @override
-  String get adminUnavailable => 'Unavailable';
-
-  @override
-  String get adminState => 'State';
-
-  @override
-  String get adminPlaying => 'playing';
-
-  @override
-  String get adminPaused => 'paused';
-
-  @override
-  String get adminIdle => 'idle';
-
-  @override
-  String get adminCurrent => 'Current';
-
-  @override
-  String get adminQueue => 'Queue';
-
-  @override
-  String adminQueueTracks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count tracks',
-      one: '1 track',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get adminVolume => 'Volume';
-
-  @override
-  String adminVolumePercent(int percent) {
-    return '$percent%';
-  }
-
-  @override
-  String get adminTokenAuthFailures => 'Token-auth failures';
-
-  @override
-  String get adminTokenAuthFailuresSubtitle =>
-      'Clients defaulting to token auth without a Subsonic password.';
-
-  @override
-  String get adminNoRecentFailures => 'No recent failures';
-
-  @override
-  String get adminCleared => 'Cleared';
-
-  @override
-  String get adminMintApiKey => 'Mint API key';
-
-  @override
-  String get adminMintApiKeySubtitle =>
-      'Generate a Subsonic apiKey for a user (shown once).';
 
   @override
   String get adminKeyNameLabel => 'Key name / label';
 
   @override
   String get adminMintKey => 'Mint key';
-
-  @override
-  String get adminUsernameAndNameRequired => 'Username and name required';
 
   @override
   String get adminTorrentClient => 'Client';

@@ -105,7 +105,7 @@ class SettingsView extends StatelessWidget {
               ),
               AdminDropdownRow<String>(
                 label: l.adminWebUi,
-                value: ['default', 'velvet', 'subsonic'].contains(c['ui'])
+                value: ['default', 'velvet'].contains(c['ui'])
                     ? c['ui']
                     : 'default',
                 items: [
@@ -113,8 +113,6 @@ class SettingsView extends StatelessWidget {
                       value: 'default', child: Text(l.adminUiDefault)),
                   DropdownMenuItem(
                       value: 'velvet', child: Text(l.adminUiVelvet)),
-                  DropdownMenuItem(
-                      value: 'subsonic', child: Text(l.adminUiSubsonic)),
                 ],
                 onChanged: api.setUi,
               ),

@@ -2186,9 +2186,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminDLNA => 'DLNA';
 
   @override
-  String get adminSubsonicAPI => 'Subsonic API';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -2344,9 +2341,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminLibraryAccessUpdatedToast => '已更新媒体库访问权限';
 
   @override
-  String get adminSetSubsonicPasswordTitle => '设置 Subsonic 密码';
-
-  @override
   String get adminSetPasswordTitle => '设置密码';
 
   @override
@@ -2401,9 +2395,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get adminPassword => '密码';
-
-  @override
-  String get adminSubsonicPasswordLabel => 'Subsonic 密码（可选）';
 
   @override
   String get adminLibraryAccessHeader => '媒体库访问权限';
@@ -2604,9 +2595,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get adminUiVelvet => 'Velvet';
-
-  @override
-  String get adminUiSubsonic => 'Subsonic';
 
   @override
   String get adminDatabaseTuning => '数据库调优';
@@ -2880,133 +2868,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminDlnaStructureLabel => '结构';
 
   @override
-  String get adminSubsonicApiTitle => 'Subsonic API';
-
-  @override
   String get adminTestConnection => '测试连接';
-
-  @override
-  String adminSubsonicTestSuccess(String version, String latency) {
-    return '成功 · $version · ${latency}ms';
-  }
-
-  @override
-  String adminSubsonicTestFailed(String reason) {
-    return '失败：$reason';
-  }
-
-  @override
-  String get adminStatus => '状态';
-
-  @override
-  String get adminMethodsImplemented => '已实现的方法';
-
-  @override
-  String get adminFullStub => '完整 / 桩';
-
-  @override
-  String get adminNowPlaying => '正在播放';
-
-  @override
-  String get adminNobody => '无人';
-
-  @override
-  String get adminLyricsLrclib => '歌词（LRCLib）';
-
-  @override
-  String get adminLrclibFallback => 'LRCLib 回退';
-
-  @override
-  String get adminWriteLrcSidecarFiles => '写入 .lrc 附属文件';
-
-  @override
-  String get adminCache => '缓存';
-
-  @override
-  String get adminPurgeCache => '清除缓存';
-
-  @override
-  String get adminLyricsCachePurged => '已清除歌词缓存';
-
-  @override
-  String get adminRetryFailed => '重试失败项';
-
-  @override
-  String get adminTransientLyricsEntriesCleared => '已清除临时歌词条目';
-
-  @override
-  String get adminJukebox => '点唱机';
-
-  @override
-  String get adminAvailable => '可用';
-
-  @override
-  String get adminUnavailable => '不可用';
-
-  @override
-  String get adminState => '状态';
-
-  @override
-  String get adminPlaying => '播放中';
-
-  @override
-  String get adminPaused => '已暂停';
-
-  @override
-  String get adminIdle => '空闲';
-
-  @override
-  String get adminCurrent => '当前';
-
-  @override
-  String get adminQueue => '队列';
-
-  @override
-  String adminQueueTracks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 首曲目',
-      one: '1 首曲目',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get adminVolume => '音量';
-
-  @override
-  String adminVolumePercent(int percent) {
-    return '$percent%';
-  }
-
-  @override
-  String get adminTokenAuthFailures => '令牌认证失败';
-
-  @override
-  String get adminTokenAuthFailuresSubtitle =>
-      '客户端在未设置 Subsonic 密码的情况下默认使用令牌认证。';
-
-  @override
-  String get adminNoRecentFailures => '近期无失败记录';
-
-  @override
-  String get adminCleared => '已清除';
-
-  @override
-  String get adminMintApiKey => '生成 API 密钥';
-
-  @override
-  String get adminMintApiKeySubtitle => '为用户生成 Subsonic apiKey（仅显示一次）。';
 
   @override
   String get adminKeyNameLabel => '密钥名称 / 标签';
 
   @override
   String get adminMintKey => '生成密钥';
-
-  @override
-  String get adminUsernameAndNameRequired => '必须填写用户名和名称';
 
   @override
   String get adminTorrentClient => '客户端';

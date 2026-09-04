@@ -134,18 +134,13 @@ class _UserCardState extends State<_UserCard> {
     }
   }
 
-  Future<void> _changePassword({bool subsonic = false}) async {
+  Future<void> _changePassword() async {
     final l = AppLocalizations.of(context);
-    final pw = await _promptPassword(context,
-        title: subsonic
-            ? l.adminSetSubsonicPasswordTitle
-            : l.adminSetPasswordTitle);
+    final pw = await _promptPassword(context, title: l.adminSetPasswordTitle);
     if (pw == null || !mounted) return;
     await runAdminAction(
       context,
-      () => subsonic
-          ? widget.api.setUserSubsonicPassword(widget.username, pw)
-          : widget.api.setUserPassword(widget.username, pw),
+      () => widget.api.setUserPassword(widget.username, pw),
       success: l.adminPasswordUpdatedToast,
     );
   }
@@ -198,8 +193,6 @@ class _UserCardState extends State<_UserCard> {
           itemBuilder: (_) => [
             PopupMenuItem(value: 'pw', child: Text(l.adminSetPasswordTitle)),
             PopupMenuItem(
-                value: 'spw', child: Text(l.adminSetSubsonicPasswordTitle)),
-            PopupMenuItem(
                 value: 'del',
                 child: Text(l.adminDeleteUserMenuItem,
                     style: TextStyle(color: scheme.error))),
@@ -208,8 +201,6 @@ class _UserCardState extends State<_UserCard> {
             switch (v) {
               case 'pw':
                 _changePassword();
-              case 'spw':
-                _changePassword(subsonic: true);
               case 'del':
                 _confirmDelete();
             }
@@ -270,7 +261,6 @@ class _AddUserDialog extends StatefulWidget {
 class _AddUserDialogState extends State<_AddUserDialog> {
   final _username = TextEditingController();
   final _password = TextEditingController();
-  final _subsonic = TextEditingController();
   bool _admin = false;
   bool _mkdir = true;
   bool _upload = true;
@@ -282,7 +272,6 @@ class _AddUserDialogState extends State<_AddUserDialog> {
   void dispose() {
     _username.dispose();
     _password.dispose();
-    _subsonic.dispose();
     super.dispose();
   }
 
@@ -303,8 +292,6 @@ class _AddUserDialogState extends State<_AddUserDialog> {
         allowMkdir: _mkdir,
         allowUpload: _upload,
         allowServerAudio: _serverAudio,
-        subsonicPassword:
-            _subsonic.text.isEmpty ? null : _subsonic.text,
       ),
       success: l.adminUserCreatedToast,
     );
@@ -321,7 +308,12 @@ class _AddUserDialogState extends State<_AddUserDialog> {
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              // Left-align the library chips with the labels above them; the
+              // fields and switch tiles stretch either way.
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             TextField(
                 controller: _username,
                 decoration: InputDecoration(labelText: l.adminUsername)),
@@ -330,12 +322,6 @@ class _AddUserDialogState extends State<_AddUserDialog> {
                 controller: _password,
                 obscureText: true,
                 decoration: InputDecoration(labelText: l.adminPassword)),
-            const SizedBox(height: 8),
-            TextField(
-                controller: _subsonic,
-                obscureText: true,
-                decoration: InputDecoration(
-                    labelText: l.adminSubsonicPasswordLabel)),
             const SizedBox(height: 12),
             if (widget.allLibs.isNotEmpty) ...[
               Align(

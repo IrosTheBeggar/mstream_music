@@ -13,7 +13,6 @@ import 'views/dlna_view.dart';
 import 'views/federation_view.dart';
 import 'views/logs_view.dart';
 import 'views/settings_view.dart';
-import 'views/subsonic_view.dart';
 import 'views/torrent_view.dart';
 import 'views/transcoding_view.dart';
 import 'views/users_view.dart';
@@ -78,7 +77,6 @@ class _AdminScreenState extends State<AdminScreen> {
       _NavItem(Icons.folder_outlined, (l) => l.adminDirectories, (a) => DirectoriesView(api: a)),
       _NavItem(Icons.people_outline, (l) => l.adminUsers, (a) => UsersView(api: a)),
       _NavItem(Icons.wifi_tethering, (l) => l.adminDLNA, (a) => DlnaView(api: a)),
-      _NavItem(Icons.play_circle_outline, (l) => l.adminSubsonicAPI, (a) => SubsonicView(api: a)),
       _NavItem(Icons.download_outlined, (l) => l.adminTorrent, (a) => TorrentView(api: a)),
       _NavItem(Icons.hub_outlined, (l) => l.adminFederation, (a) => FederationView(api: a)),
     ]),
@@ -118,9 +116,9 @@ class _AdminScreenState extends State<AdminScreen> {
       final wide = constraints.maxWidth >= 900;
       final content = Scaffold(
         appBar: AppBar(
-          // Narrow: just the section. "mStream Admin · Subsonic API" does not
-          // fit a phone and truncates the half that says which view you are on,
-          // and the drawer header already carries the brand and the server.
+          // Narrow: just the section. "mStream Admin · Transcoding" does not fit
+          // a phone and truncates the half that says which view you are on, and
+          // the drawer header already carries the brand and the server.
           title: Text(wide ? l.adminAppBarTitle(active.label(l)) : active.label(l)),
           actions: [
             // The hamburger owns the leading slot, so the way back to the app

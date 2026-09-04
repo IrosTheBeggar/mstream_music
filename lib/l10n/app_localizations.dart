@@ -4038,12 +4038,6 @@ abstract class AppLocalizations {
   /// **'DLNA'**
   String get adminDLNA;
 
-  /// Navigation label and card title for the Subsonic API section.
-  ///
-  /// In en, this message translates to:
-  /// **'Subsonic API'**
-  String get adminSubsonicAPI;
-
   /// Navigation label and per-user permission toggle for the Torrent feature.
   ///
   /// In en, this message translates to:
@@ -4344,12 +4338,6 @@ abstract class AppLocalizations {
   /// **'Library access updated'**
   String get adminLibraryAccessUpdatedToast;
 
-  /// Dialog title and menu item for setting a user's Subsonic password.
-  ///
-  /// In en, this message translates to:
-  /// **'Set Subsonic password'**
-  String get adminSetSubsonicPasswordTitle;
-
   /// Dialog title and menu item for setting a user's password.
   ///
   /// In en, this message translates to:
@@ -4446,7 +4434,7 @@ abstract class AppLocalizations {
   /// **'Add user'**
   String get adminAddUserDialogTitle;
 
-  /// Field label for a username (add-user dialog and Subsonic mint-key form).
+  /// Field label for a username (add-user dialog).
   ///
   /// In en, this message translates to:
   /// **'Username'**
@@ -4457,12 +4445,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Password'**
   String get adminPassword;
-
-  /// Field label for the optional Subsonic password in the add-user dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Subsonic password (optional)'**
-  String get adminSubsonicPasswordLabel;
 
   /// Group header in the add-user dialog for per-library access toggles.
   ///
@@ -4758,7 +4740,7 @@ abstract class AppLocalizations {
   /// **'Bind address'**
   String get adminBindAddress;
 
-  /// Field label for a network port (settings, DLNA, Subsonic).
+  /// Field label for a network port (settings, DLNA, torrent clients).
   ///
   /// In en, this message translates to:
   /// **'Port'**
@@ -4859,12 +4841,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Velvet'**
   String get adminUiVelvet;
-
-  /// Dropdown option for the Subsonic web UI (brand name, not translated).
-  ///
-  /// In en, this message translates to:
-  /// **'Subsonic'**
-  String get adminUiSubsonic;
 
   /// Card title for the database tuning section.
   ///
@@ -4980,7 +4956,7 @@ abstract class AppLocalizations {
   /// **'Enabled'**
   String get adminEnabled;
 
-  /// Status pill/value indicating a feature is disabled; also a dropdown option (SSL, Subsonic).
+  /// Status pill/value indicating a feature is disabled; also a dropdown option (SSL, DLNA, torrent).
   ///
   /// In en, this message translates to:
   /// **'Disabled'**
@@ -5112,7 +5088,7 @@ abstract class AppLocalizations {
   /// **'Restrict which networks may reach the admin API.'**
   String get adminNetworkAccessSubtitle;
 
-  /// Field label for selecting an access/operation mode (admin access, DLNA, Subsonic).
+  /// Field label for selecting an access/operation mode (admin access, DLNA).
   ///
   /// In en, this message translates to:
   /// **'Mode'**
@@ -5304,13 +5280,13 @@ abstract class AppLocalizations {
   /// **'Disabled'**
   String get adminDlnaModeDisabled;
 
-  /// Mode dropdown option: serve on the same port as HTTP (DLNA, Subsonic).
+  /// Mode dropdown option: serve on the same port as HTTP (DLNA).
   ///
   /// In en, this message translates to:
   /// **'Same port as HTTP'**
   String get adminSamePortAsHttp;
 
-  /// Mode dropdown option: serve on a separate port (DLNA, Subsonic).
+  /// Mode dropdown option: serve on a separate port (DLNA).
   ///
   /// In en, this message translates to:
   /// **'Separate port'**
@@ -5388,215 +5364,11 @@ abstract class AppLocalizations {
   /// **'Structure'**
   String get adminDlnaStructureLabel;
 
-  /// Card title for the Subsonic API settings.
-  ///
-  /// In en, this message translates to:
-  /// **'Subsonic API'**
-  String get adminSubsonicApiTitle;
-
-  /// Button to test the Subsonic API connection.
+  /// Button to test a configured connection (torrent client, federation peer).
   ///
   /// In en, this message translates to:
   /// **'Test connection'**
   String get adminTestConnection;
-
-  /// Toast on successful Subsonic connection test: version and latency.
-  ///
-  /// In en, this message translates to:
-  /// **'OK · {version} · {latency}ms'**
-  String adminSubsonicTestSuccess(String version, String latency);
-
-  /// Toast when the Subsonic connection test fails; {reason} is the failure reason.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed: {reason}'**
-  String adminSubsonicTestFailed(String reason);
-
-  /// Card title for a status section (Subsonic).
-  ///
-  /// In en, this message translates to:
-  /// **'Status'**
-  String get adminStatus;
-
-  /// Info row label for the count of implemented Subsonic API methods.
-  ///
-  /// In en, this message translates to:
-  /// **'Methods implemented'**
-  String get adminMethodsImplemented;
-
-  /// Info row label distinguishing fully-implemented vs stubbed methods.
-  ///
-  /// In en, this message translates to:
-  /// **'Full / stub'**
-  String get adminFullStub;
-
-  /// Group header for the Subsonic now-playing list.
-  ///
-  /// In en, this message translates to:
-  /// **'Now playing'**
-  String get adminNowPlaying;
-
-  /// Placeholder shown when no one is currently playing.
-  ///
-  /// In en, this message translates to:
-  /// **'nobody'**
-  String get adminNobody;
-
-  /// Group header for the LRCLib lyrics settings (LRCLib is a service name).
-  ///
-  /// In en, this message translates to:
-  /// **'Lyrics (LRCLib)'**
-  String get adminLyricsLrclib;
-
-  /// Toggle title to use LRCLib as a lyrics fallback.
-  ///
-  /// In en, this message translates to:
-  /// **'LRCLib fallback'**
-  String get adminLrclibFallback;
-
-  /// Toggle title to write .lrc sidecar lyric files.
-  ///
-  /// In en, this message translates to:
-  /// **'Write .lrc sidecar files'**
-  String get adminWriteLrcSidecarFiles;
-
-  /// Info row label for the lyrics cache.
-  ///
-  /// In en, this message translates to:
-  /// **'Cache'**
-  String get adminCache;
-
-  /// Button to purge the lyrics cache.
-  ///
-  /// In en, this message translates to:
-  /// **'Purge cache'**
-  String get adminPurgeCache;
-
-  /// Toast confirming the lyrics cache was purged.
-  ///
-  /// In en, this message translates to:
-  /// **'Lyrics cache purged'**
-  String get adminLyricsCachePurged;
-
-  /// Button to retry failed lyrics lookups.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry failed'**
-  String get adminRetryFailed;
-
-  /// Toast confirming transient lyrics cache entries were cleared.
-  ///
-  /// In en, this message translates to:
-  /// **'Transient lyrics entries cleared'**
-  String get adminTransientLyricsEntriesCleared;
-
-  /// Card title for the Subsonic jukebox section.
-  ///
-  /// In en, this message translates to:
-  /// **'Jukebox'**
-  String get adminJukebox;
-
-  /// Status pill indicating the jukebox is available.
-  ///
-  /// In en, this message translates to:
-  /// **'Available'**
-  String get adminAvailable;
-
-  /// Status pill indicating the jukebox is unavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Unavailable'**
-  String get adminUnavailable;
-
-  /// Info row label for the jukebox playback state.
-  ///
-  /// In en, this message translates to:
-  /// **'State'**
-  String get adminState;
-
-  /// Jukebox state value: playing.
-  ///
-  /// In en, this message translates to:
-  /// **'playing'**
-  String get adminPlaying;
-
-  /// Jukebox state value: paused.
-  ///
-  /// In en, this message translates to:
-  /// **'paused'**
-  String get adminPaused;
-
-  /// Jukebox state value: idle.
-  ///
-  /// In en, this message translates to:
-  /// **'idle'**
-  String get adminIdle;
-
-  /// Info row label for the jukebox current track.
-  ///
-  /// In en, this message translates to:
-  /// **'Current'**
-  String get adminCurrent;
-
-  /// Info row label for the jukebox queue.
-  ///
-  /// In en, this message translates to:
-  /// **'Queue'**
-  String get adminQueue;
-
-  /// Number of tracks in the jukebox queue.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
-  String adminQueueTracks(int count);
-
-  /// Info row label for the jukebox volume.
-  ///
-  /// In en, this message translates to:
-  /// **'Volume'**
-  String get adminVolume;
-
-  /// Jukebox volume shown as a percentage.
-  ///
-  /// In en, this message translates to:
-  /// **'{percent}%'**
-  String adminVolumePercent(int percent);
-
-  /// Card title for the Subsonic token-auth failures section.
-  ///
-  /// In en, this message translates to:
-  /// **'Token-auth failures'**
-  String get adminTokenAuthFailures;
-
-  /// Subtitle explaining the token-auth failures list.
-  ///
-  /// In en, this message translates to:
-  /// **'Clients defaulting to token auth without a Subsonic password.'**
-  String get adminTokenAuthFailuresSubtitle;
-
-  /// Empty-state text when there are no recent token-auth failures.
-  ///
-  /// In en, this message translates to:
-  /// **'No recent failures'**
-  String get adminNoRecentFailures;
-
-  /// Toast confirming the token-auth failures list was cleared.
-  ///
-  /// In en, this message translates to:
-  /// **'Cleared'**
-  String get adminCleared;
-
-  /// Card title for minting a Subsonic API key.
-  ///
-  /// In en, this message translates to:
-  /// **'Mint API key'**
-  String get adminMintApiKey;
-
-  /// Subtitle for the mint-API-key section.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate a Subsonic apiKey for a user (shown once).'**
-  String get adminMintApiKeySubtitle;
 
   /// Field label for the name/label of a minted API key.
   ///
@@ -5604,17 +5376,11 @@ abstract class AppLocalizations {
   /// **'Key name / label'**
   String get adminKeyNameLabel;
 
-  /// Button to mint a new Subsonic API key.
+  /// Button to mint a new federation key.
   ///
   /// In en, this message translates to:
   /// **'Mint key'**
   String get adminMintKey;
-
-  /// Validation toast when minting a key without a username or key name.
-  ///
-  /// In en, this message translates to:
-  /// **'Username and name required'**
-  String get adminUsernameAndNameRequired;
 
   /// Card title for the torrent client configuration.
   ///

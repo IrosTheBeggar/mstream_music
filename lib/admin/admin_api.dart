@@ -200,8 +200,7 @@ class AdminApi {
           List<String> vpaths = const [],
           bool allowMkdir = true,
           bool allowUpload = true,
-          bool allowServerAudio = false,
-          String? subsonicPassword}) =>
+          bool allowServerAudio = false}) =>
       _put('/api/v1/admin/users', {
         'username': username,
         'password': password,
@@ -210,7 +209,6 @@ class AdminApi {
         'allowMkdir': allowMkdir,
         'allowUpload': allowUpload,
         'allowServerAudio': allowServerAudio,
-        'subsonicPassword': ?subsonicPassword,
       });
 
   Future<void> deleteUser(String username) =>
@@ -218,10 +216,6 @@ class AdminApi {
 
   Future<void> setUserPassword(String username, String password) =>
       _post('/api/v1/admin/users/password',
-          {'username': username, 'password': password});
-
-  Future<void> setUserSubsonicPassword(String username, String? password) =>
-      _post('/api/v1/admin/users/subsonic-password',
           {'username': username, 'password': password});
 
   Future<void> setUserVPaths(String username, List<String> vpaths) =>
@@ -333,7 +327,7 @@ class AdminApi {
   Future<void> setMaxRequestSize(String size) =>
       _config('max-request-size', {'maxRequestSize': size}); // e.g. 50MB
   Future<void> setUi(String ui) =>
-      _config('ui', {'ui': ui}); // default|velvet|subsonic
+      _config('ui', {'ui': ui}); // default|velvet
   Future<void> setPort(int port) => _config('port', {'port': port});
   Future<void> setAddress(String address) =>
       _config('address', {'address': address});
@@ -427,53 +421,6 @@ class AdminApi {
   // mDNS advertising is still a server feature (`discovery.mdns` in the config
   // file) but its admin routes were removed — it is config-file-only now, with
   // no endpoint to read or change it. There is deliberately no client for it.
-
-  // ── Subsonic ──────────────────────────────────────────────────────────────
-
-  /// `{mode, port}`
-  Future<Map<String, dynamic>> getSubsonic() async =>
-      Map<String, dynamic>.from(await _get('/api/v1/admin/subsonic'));
-
-  Future<void> setSubsonicMode(String mode, {int? port}) => _post(
-      '/api/v1/admin/subsonic/mode',
-      {'mode': mode, 'port': ?port});
-
-  /// `{methodsImplemented, methods, methodStatuses, fullCount, stubCount,
-  /// nowPlaying, lyrics}`
-  Future<Map<String, dynamic>> subsonicStats() async =>
-      Map<String, dynamic>.from(await _get('/api/v1/admin/subsonic/stats'));
-
-  /// `{ok, status, version, serverVersion, latencyMs, url}` or `{ok:false, reason}`
-  Future<Map<String, dynamic>> subsonicTest() async =>
-      Map<String, dynamic>.from(await _get('/api/v1/admin/subsonic/test'));
-
-  /// `{available, playing, paused, position, duration, ...}` or `{available:false, reason}`
-  Future<Map<String, dynamic>> subsonicJukebox() async =>
-      Map<String, dynamic>.from(await _get('/api/v1/admin/subsonic/jukebox'));
-
-  /// `{attempts: [...]}`
-  Future<List<dynamic>> subsonicTokenAuthAttempts() async {
-    final r = await _get('/api/v1/admin/subsonic/token-auth-attempts');
-    return (r is Map && r['attempts'] is List) ? r['attempts'] : <dynamic>[];
-  }
-
-  Future<void> clearSubsonicTokenAuthAttempts() =>
-      _delete('/api/v1/admin/subsonic/token-auth-attempts');
-
-  Future<Map<String, dynamic>> purgeLyricsCache({String mode = 'full'}) async =>
-      Map<String, dynamic>.from(
-          await _post('/api/v1/admin/subsonic/lyrics-cache/purge', {'mode': mode}));
-  Future<void> setLyricsCacheEnabled(bool v) =>
-      _post('/api/v1/admin/subsonic/lyrics-cache/enabled', {'enabled': v});
-  Future<void> setLyricsWriteSidecar(bool v) =>
-      _post('/api/v1/admin/subsonic/lyrics-cache/write-sidecar', {'enabled': v});
-
-  /// `{key, name, username}` — plaintext API key returned once.
-  Future<Map<String, dynamic>> mintSubsonicKey(
-          String username, String name) async =>
-      Map<String, dynamic>.from(await _post(
-          '/api/v1/admin/subsonic/mint-key',
-          {'username': username, 'name': name}));
 
   // ── Federation ────────────────────────────────────────────────────────────
   //

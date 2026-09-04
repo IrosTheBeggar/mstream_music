@@ -2230,9 +2230,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminDLNA => 'DLNA';
 
   @override
-  String get adminSubsonicAPI => 'Subsonic API';
-
-  @override
   String get adminTorrent => 'トレント';
 
   @override
@@ -2389,9 +2386,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminLibraryAccessUpdatedToast => 'ライブラリアクセスを更新しました';
 
   @override
-  String get adminSetSubsonicPasswordTitle => 'Subsonicパスワードを設定';
-
-  @override
   String get adminSetPasswordTitle => 'パスワードを設定';
 
   @override
@@ -2446,9 +2440,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adminPassword => 'パスワード';
-
-  @override
-  String get adminSubsonicPasswordLabel => 'Subsonicパスワード(任意)';
 
   @override
   String get adminLibraryAccessHeader => 'ライブラリアクセス';
@@ -2650,9 +2641,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adminUiVelvet => 'Velvet';
-
-  @override
-  String get adminUiSubsonic => 'Subsonic';
 
   @override
   String get adminDatabaseTuning => 'データベースチューニング';
@@ -2926,133 +2914,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminDlnaStructureLabel => '構造';
 
   @override
-  String get adminSubsonicApiTitle => 'Subsonic API';
-
-  @override
   String get adminTestConnection => '接続をテスト';
-
-  @override
-  String adminSubsonicTestSuccess(String version, String latency) {
-    return 'OK · $version · ${latency}ms';
-  }
-
-  @override
-  String adminSubsonicTestFailed(String reason) {
-    return '失敗: $reason';
-  }
-
-  @override
-  String get adminStatus => 'ステータス';
-
-  @override
-  String get adminMethodsImplemented => '実装済みメソッド';
-
-  @override
-  String get adminFullStub => '完全 / スタブ';
-
-  @override
-  String get adminNowPlaying => '再生中';
-
-  @override
-  String get adminNobody => 'なし';
-
-  @override
-  String get adminLyricsLrclib => '歌詞(LRCLib)';
-
-  @override
-  String get adminLrclibFallback => 'LRCLibフォールバック';
-
-  @override
-  String get adminWriteLrcSidecarFiles => '.lrcサイドカーファイルを書き込む';
-
-  @override
-  String get adminCache => 'キャッシュ';
-
-  @override
-  String get adminPurgeCache => 'キャッシュを削除';
-
-  @override
-  String get adminLyricsCachePurged => '歌詞キャッシュを削除しました';
-
-  @override
-  String get adminRetryFailed => '失敗分を再試行';
-
-  @override
-  String get adminTransientLyricsEntriesCleared => '一時的な歌詞エントリをクリアしました';
-
-  @override
-  String get adminJukebox => 'ジュークボックス';
-
-  @override
-  String get adminAvailable => '利用可能';
-
-  @override
-  String get adminUnavailable => '利用不可';
-
-  @override
-  String get adminState => '状態';
-
-  @override
-  String get adminPlaying => '再生中';
-
-  @override
-  String get adminPaused => '一時停止中';
-
-  @override
-  String get adminIdle => 'アイドル';
-
-  @override
-  String get adminCurrent => '現在';
-
-  @override
-  String get adminQueue => 'キュー';
-
-  @override
-  String adminQueueTracks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$countトラック',
-      one: '1トラック',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get adminVolume => '音量';
-
-  @override
-  String adminVolumePercent(int percent) {
-    return '$percent%';
-  }
-
-  @override
-  String get adminTokenAuthFailures => 'トークン認証の失敗';
-
-  @override
-  String get adminTokenAuthFailuresSubtitle =>
-      'Subsonicパスワードなしでトークン認証をデフォルトとするクライアント。';
-
-  @override
-  String get adminNoRecentFailures => '最近の失敗はありません';
-
-  @override
-  String get adminCleared => 'クリアしました';
-
-  @override
-  String get adminMintApiKey => 'APIキーを発行';
-
-  @override
-  String get adminMintApiKeySubtitle => 'ユーザー用のSubsonic apiKeyを生成します(1回のみ表示)。';
 
   @override
   String get adminKeyNameLabel => 'キー名 / ラベル';
 
   @override
   String get adminMintKey => 'キーを発行';
-
-  @override
-  String get adminUsernameAndNameRequired => 'ユーザー名と名前は必須です';
 
   @override
   String get adminTorrentClient => 'クライアント';

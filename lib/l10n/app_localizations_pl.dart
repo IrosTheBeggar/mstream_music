@@ -2346,9 +2346,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get adminDLNA => 'DLNA';
 
   @override
-  String get adminSubsonicAPI => 'API Subsonic';
-
-  @override
   String get adminTorrent => 'Torrent';
 
   @override
@@ -2512,9 +2509,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zaktualizowano dostęp do bibliotek';
 
   @override
-  String get adminSetSubsonicPasswordTitle => 'Ustaw hasło Subsonic';
-
-  @override
   String get adminSetPasswordTitle => 'Ustaw hasło';
 
   @override
@@ -2570,9 +2564,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get adminPassword => 'Hasło';
-
-  @override
-  String get adminSubsonicPasswordLabel => 'Hasło Subsonic (opcjonalne)';
 
   @override
   String get adminLibraryAccessHeader => 'Dostęp do bibliotek';
@@ -2783,9 +2774,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get adminUiVelvet => 'Velvet';
-
-  @override
-  String get adminUiSubsonic => 'Subsonic';
 
   @override
   String get adminDatabaseTuning => 'Strojenie bazy danych';
@@ -3068,138 +3056,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get adminDlnaStructureLabel => 'Struktura';
 
   @override
-  String get adminSubsonicApiTitle => 'API Subsonic';
-
-  @override
   String get adminTestConnection => 'Testuj połączenie';
-
-  @override
-  String adminSubsonicTestSuccess(String version, String latency) {
-    return 'OK · $version · ${latency}ms';
-  }
-
-  @override
-  String adminSubsonicTestFailed(String reason) {
-    return 'Niepowodzenie: $reason';
-  }
-
-  @override
-  String get adminStatus => 'Stan';
-
-  @override
-  String get adminMethodsImplemented => 'Zaimplementowane metody';
-
-  @override
-  String get adminFullStub => 'Pełne / zaślepki';
-
-  @override
-  String get adminNowPlaying => 'Teraz odtwarzane';
-
-  @override
-  String get adminNobody => 'nikt';
-
-  @override
-  String get adminLyricsLrclib => 'Tekst utworu (LRCLib)';
-
-  @override
-  String get adminLrclibFallback => 'Zapasowo LRCLib';
-
-  @override
-  String get adminWriteLrcSidecarFiles => 'Zapisuj pliki .lrc obok utworów';
-
-  @override
-  String get adminCache => 'Pamięć podręczna';
-
-  @override
-  String get adminPurgeCache => 'Wyczyść pamięć podręczną';
-
-  @override
-  String get adminLyricsCachePurged => 'Wyczyszczono pamięć podręczną tekstów';
-
-  @override
-  String get adminRetryFailed => 'Ponów nieudane';
-
-  @override
-  String get adminTransientLyricsEntriesCleared =>
-      'Wyczyszczono tymczasowe wpisy tekstów';
-
-  @override
-  String get adminJukebox => 'Szafa grająca';
-
-  @override
-  String get adminAvailable => 'Dostępna';
-
-  @override
-  String get adminUnavailable => 'Niedostępna';
-
-  @override
-  String get adminState => 'Stan';
-
-  @override
-  String get adminPlaying => 'odtwarzanie';
-
-  @override
-  String get adminPaused => 'wstrzymano';
-
-  @override
-  String get adminIdle => 'bezczynna';
-
-  @override
-  String get adminCurrent => 'Bieżący';
-
-  @override
-  String get adminQueue => 'Kolejka';
-
-  @override
-  String adminQueueTracks(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count utworu',
-      many: '$count utworów',
-      few: '$count utwory',
-      one: '1 utwór',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get adminVolume => 'Głośność';
-
-  @override
-  String adminVolumePercent(int percent) {
-    return '$percent%';
-  }
-
-  @override
-  String get adminTokenAuthFailures => 'Błędy uwierzytelniania tokenem';
-
-  @override
-  String get adminTokenAuthFailuresSubtitle =>
-      'Klienci domyślnie używający uwierzytelniania tokenem bez hasła Subsonic.';
-
-  @override
-  String get adminNoRecentFailures => 'Brak ostatnich błędów';
-
-  @override
-  String get adminCleared => 'Wyczyszczono';
-
-  @override
-  String get adminMintApiKey => 'Wygeneruj klucz API';
-
-  @override
-  String get adminMintApiKeySubtitle =>
-      'Wygeneruj klucz apiKey Subsonic dla użytkownika (pokazywany raz).';
 
   @override
   String get adminKeyNameLabel => 'Nazwa / etykieta klucza';
 
   @override
   String get adminMintKey => 'Wygeneruj klucz';
-
-  @override
-  String get adminUsernameAndNameRequired =>
-      'Nazwa użytkownika i nazwa są wymagane';
 
   @override
   String get adminTorrentClient => 'Klient';

@@ -2032,10 +2032,6 @@
   "@adminDLNA": {
     "description": "Navigation label for the DLNA section (protocol acronym, not translated)."
   },
-  "adminSubsonicAPI": "Subsonic API",
-  "@adminSubsonicAPI": {
-    "description": "Navigation label and card title for the Subsonic API section."
-  },
   "adminTorrent": "Torrent",
   "@adminTorrent": {
     "description": "Navigation label and per-user permission toggle for the Torrent feature."
@@ -2246,10 +2242,6 @@
   "@adminLibraryAccessUpdatedToast": {
     "description": "Toast confirming a user's library access was saved."
   },
-  "adminSetSubsonicPasswordTitle": "Set Subsonic password",
-  "@adminSetSubsonicPasswordTitle": {
-    "description": "Dialog title and menu item for setting a user's Subsonic password."
-  },
   "adminSetPasswordTitle": "Set password",
   "@adminSetPasswordTitle": {
     "description": "Dialog title and menu item for setting a user's password."
@@ -2321,15 +2313,11 @@
   },
   "adminUsername": "Username",
   "@adminUsername": {
-    "description": "Field label for a username (add-user dialog and Subsonic mint-key form)."
+    "description": "Field label for a username (add-user dialog)."
   },
   "adminPassword": "Password",
   "@adminPassword": {
     "description": "Field label for a password (add-user dialog and torrent client form)."
-  },
-  "adminSubsonicPasswordLabel": "Subsonic password (optional)",
-  "@adminSubsonicPasswordLabel": {
-    "description": "Field label for the optional Subsonic password in the add-user dialog."
   },
   "adminLibraryAccessHeader": "Library access",
   "@adminLibraryAccessHeader": {
@@ -2540,7 +2528,7 @@
   },
   "adminPort": "Port",
   "@adminPort": {
-    "description": "Field label for a network port (settings, DLNA, Subsonic)."
+    "description": "Field label for a network port (settings, DLNA, torrent clients)."
   },
   "adminTrustProxyHeaders": "Trust proxy headers",
   "@adminTrustProxyHeaders": {
@@ -2605,10 +2593,6 @@
   "adminUiVelvet": "Velvet",
   "@adminUiVelvet": {
     "description": "Dropdown option for the Velvet web UI (brand name, not translated)."
-  },
-  "adminUiSubsonic": "Subsonic",
-  "@adminUiSubsonic": {
-    "description": "Dropdown option for the Subsonic web UI (brand name, not translated)."
   },
   "adminDatabaseTuning": "Database tuning",
   "@adminDatabaseTuning": {
@@ -2688,7 +2672,7 @@
   },
   "adminDisabled": "Disabled",
   "@adminDisabled": {
-    "description": "Status pill/value indicating a feature is disabled; also a dropdown option (SSL, Subsonic)."
+    "description": "Status pill/value indicating a feature is disabled; also a dropdown option (SSL, DLNA, torrent)."
   },
   "adminReplaceCertificate": "Replace certificate",
   "@adminReplaceCertificate": {
@@ -2776,7 +2760,7 @@
   },
   "adminMode": "Mode",
   "@adminMode": {
-    "description": "Field label for selecting an access/operation mode (admin access, DLNA, Subsonic)."
+    "description": "Field label for selecting an access/operation mode (admin access, DLNA)."
   },
   "adminWhitelistedIps": "Whitelisted IPs / CIDRs",
   "@adminWhitelistedIps": {
@@ -2909,11 +2893,11 @@
   },
   "adminSamePortAsHttp": "Same port as HTTP",
   "@adminSamePortAsHttp": {
-    "description": "Mode dropdown option: serve on the same port as HTTP (DLNA, Subsonic)."
+    "description": "Mode dropdown option: serve on the same port as HTTP (DLNA)."
   },
   "adminSeparatePort": "Separate port",
   "@adminSeparatePort": {
-    "description": "Mode dropdown option: serve on a separate port (DLNA, Subsonic)."
+    "description": "Mode dropdown option: serve on a separate port (DLNA)."
   },
   "adminDlnaBrowseFlat": "Flat (all tracks)",
   "@adminDlnaBrowseFlat": {
@@ -2963,168 +2947,9 @@
   "@adminDlnaStructureLabel": {
     "description": "Field label for the DLNA browse structure."
   },
-  "adminSubsonicApiTitle": "Subsonic API",
-  "@adminSubsonicApiTitle": {
-    "description": "Card title for the Subsonic API settings."
-  },
   "adminTestConnection": "Test connection",
   "@adminTestConnection": {
-    "description": "Button to test the Subsonic API connection."
-  },
-  "adminSubsonicTestSuccess": "OK · {version} · {latency}ms",
-  "@adminSubsonicTestSuccess": {
-    "description": "Toast on successful Subsonic connection test: version and latency.",
-    "placeholders": {
-      "version": {
-        "type": "String"
-      },
-      "latency": {
-        "type": "String"
-      }
-    }
-  },
-  "adminSubsonicTestFailed": "Failed: {reason}",
-  "@adminSubsonicTestFailed": {
-    "description": "Toast when the Subsonic connection test fails; {reason} is the failure reason.",
-    "placeholders": {
-      "reason": {
-        "type": "String"
-      }
-    }
-  },
-  "adminStatus": "Status",
-  "@adminStatus": {
-    "description": "Card title for a status section (Subsonic)."
-  },
-  "adminMethodsImplemented": "Methods implemented",
-  "@adminMethodsImplemented": {
-    "description": "Info row label for the count of implemented Subsonic API methods."
-  },
-  "adminFullStub": "Full / stub",
-  "@adminFullStub": {
-    "description": "Info row label distinguishing fully-implemented vs stubbed methods."
-  },
-  "adminNowPlaying": "Now playing",
-  "@adminNowPlaying": {
-    "description": "Group header for the Subsonic now-playing list."
-  },
-  "adminNobody": "nobody",
-  "@adminNobody": {
-    "description": "Placeholder shown when no one is currently playing."
-  },
-  "adminLyricsLrclib": "Lyrics (LRCLib)",
-  "@adminLyricsLrclib": {
-    "description": "Group header for the LRCLib lyrics settings (LRCLib is a service name)."
-  },
-  "adminLrclibFallback": "LRCLib fallback",
-  "@adminLrclibFallback": {
-    "description": "Toggle title to use LRCLib as a lyrics fallback."
-  },
-  "adminWriteLrcSidecarFiles": "Write .lrc sidecar files",
-  "@adminWriteLrcSidecarFiles": {
-    "description": "Toggle title to write .lrc sidecar lyric files."
-  },
-  "adminCache": "Cache",
-  "@adminCache": {
-    "description": "Info row label for the lyrics cache."
-  },
-  "adminPurgeCache": "Purge cache",
-  "@adminPurgeCache": {
-    "description": "Button to purge the lyrics cache."
-  },
-  "adminLyricsCachePurged": "Lyrics cache purged",
-  "@adminLyricsCachePurged": {
-    "description": "Toast confirming the lyrics cache was purged."
-  },
-  "adminRetryFailed": "Retry failed",
-  "@adminRetryFailed": {
-    "description": "Button to retry failed lyrics lookups."
-  },
-  "adminTransientLyricsEntriesCleared": "Transient lyrics entries cleared",
-  "@adminTransientLyricsEntriesCleared": {
-    "description": "Toast confirming transient lyrics cache entries were cleared."
-  },
-  "adminJukebox": "Jukebox",
-  "@adminJukebox": {
-    "description": "Card title for the Subsonic jukebox section."
-  },
-  "adminAvailable": "Available",
-  "@adminAvailable": {
-    "description": "Status pill indicating the jukebox is available."
-  },
-  "adminUnavailable": "Unavailable",
-  "@adminUnavailable": {
-    "description": "Status pill indicating the jukebox is unavailable."
-  },
-  "adminState": "State",
-  "@adminState": {
-    "description": "Info row label for the jukebox playback state."
-  },
-  "adminPlaying": "playing",
-  "@adminPlaying": {
-    "description": "Jukebox state value: playing."
-  },
-  "adminPaused": "paused",
-  "@adminPaused": {
-    "description": "Jukebox state value: paused."
-  },
-  "adminIdle": "idle",
-  "@adminIdle": {
-    "description": "Jukebox state value: idle."
-  },
-  "adminCurrent": "Current",
-  "@adminCurrent": {
-    "description": "Info row label for the jukebox current track."
-  },
-  "adminQueue": "Queue",
-  "@adminQueue": {
-    "description": "Info row label for the jukebox queue."
-  },
-  "adminQueueTracks": "{count, plural, =1{1 track} other{{count} tracks}}",
-  "@adminQueueTracks": {
-    "description": "Number of tracks in the jukebox queue.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "adminVolume": "Volume",
-  "@adminVolume": {
-    "description": "Info row label for the jukebox volume."
-  },
-  "adminVolumePercent": "{percent}%",
-  "@adminVolumePercent": {
-    "description": "Jukebox volume shown as a percentage.",
-    "placeholders": {
-      "percent": {
-        "type": "int"
-      }
-    }
-  },
-  "adminTokenAuthFailures": "Token-auth failures",
-  "@adminTokenAuthFailures": {
-    "description": "Card title for the Subsonic token-auth failures section."
-  },
-  "adminTokenAuthFailuresSubtitle": "Clients defaulting to token auth without a Subsonic password.",
-  "@adminTokenAuthFailuresSubtitle": {
-    "description": "Subtitle explaining the token-auth failures list."
-  },
-  "adminNoRecentFailures": "No recent failures",
-  "@adminNoRecentFailures": {
-    "description": "Empty-state text when there are no recent token-auth failures."
-  },
-  "adminCleared": "Cleared",
-  "@adminCleared": {
-    "description": "Toast confirming the token-auth failures list was cleared."
-  },
-  "adminMintApiKey": "Mint API key",
-  "@adminMintApiKey": {
-    "description": "Card title for minting a Subsonic API key."
-  },
-  "adminMintApiKeySubtitle": "Generate a Subsonic apiKey for a user (shown once).",
-  "@adminMintApiKeySubtitle": {
-    "description": "Subtitle for the mint-API-key section."
+    "description": "Button to test a configured connection (torrent client, federation peer)."
   },
   "adminKeyNameLabel": "Key name / label",
   "@adminKeyNameLabel": {
@@ -3132,11 +2957,7 @@
   },
   "adminMintKey": "Mint key",
   "@adminMintKey": {
-    "description": "Button to mint a new Subsonic API key."
-  },
-  "adminUsernameAndNameRequired": "Username and name required",
-  "@adminUsernameAndNameRequired": {
-    "description": "Validation toast when minting a key without a username or key name."
+    "description": "Button to mint a new federation key."
   },
   "adminTorrentClient": "Client",
   "@adminTorrentClient": {
