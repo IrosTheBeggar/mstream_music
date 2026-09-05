@@ -16,6 +16,11 @@
 #
 # Everything it creates is torn down: both servers, their scratch dirs, the
 # phone's server list (cfg_restore) and the peer's download folder.
+#
+# Taps are Galaxy S25 defaults. On the arm64 "smoke" AVD (Pixel 7 profile,
+# 1080x2400) the peer's home grid sits lower and a track ROW tap only appends
+# one track, so override: SMOKE_ALBUMS_ROW_XY="798 780" SMOKE_ALBUM1_XY="190 672"
+# SMOKE_TRACK1_XY="746 341" (the album's Play button — what queues the album).
 set -u
 source "$(dirname "$0")/../lib.sh"; pick_device; cfg_backup
 SRC="${SMOKE_MSTREAM_SRC:-$HOME/code/mStream}"; MUSIC="${SMOKE_RIG_MUSIC:-$HOME/code/mstream-demo-music}"
@@ -119,8 +124,17 @@ if [ "$IROH" = 1 ]; then
   media_key pause; sleep 1; app_stop; logcat_clear; wake; app_start
   wait_for_log '\[iroh\] tunnel up' 45 || fail "no tunnel after the relaunch"
   PORT2=$(applog | grep -oE 'tunnel up port=[0-9]+' | head -1 | grep -oE '[0-9]+$')
+  # The restored track must be the PEER's (a leftover queue from another
+  # server would pass a bare "track N/M" check), on the parent's FRESH port.
   if wait_for_log '\[play\] track [0-9]+/[0-9]+' 30; then
-    sleep 3; ensure_playing 15 && pass "restored peer track plays after a relaunch (port $PORT1 → $PORT2)" || { save_applog rig-relaunch; fail "restored peer track did not play on the fresh port ($(session_state))"; }
+    sleep 3
+    RESTORED=$(cfg_read queue.json | python3 -c "
+import sys,json
+from urllib.parse import urlparse
+d=json.load(sys.stdin); it=(d.get('items') or [])[d.get('index',0)]
+print((it.get('extras') or {}).get('server'), urlparse(it.get('id','')).port)" 2>/dev/null)
+    if [ "$RESTORED" = "peer-rig-peer-a $PORT2" ] && ensure_playing 15; then pass "restored peer track plays after a relaunch on the fresh port ($PORT1 → $PORT2)"
+    else save_applog rig-relaunch; fail "restored track is not the peer's on the fresh port (got '$RESTORED', port $PORT2; $(session_state))"; fi
   else save_applog rig-relaunch; fail "queue did not restore after the relaunch"; fi
 fi
 media_key pause; sleep 1
