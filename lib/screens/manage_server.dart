@@ -9,6 +9,7 @@ import '../native/iroh_tunnel.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/iroh_pairing_qr_sheet.dart';
+import '../admin/admin_launcher.dart';
 import 'add_server.dart';
 
 class ManageServersScreen extends StatelessWidget {
@@ -108,6 +109,17 @@ class ManageServersScreen extends StatelessWidget {
           case 'pairingCode':
             showIrohPairingQrSheet(context, server.irohPairingCode!);
             break;
+          case 'admin':
+            final s = ServerManager().serverList[index];
+            // effectiveBaseUrl, not url: an iroh server is reachable only via
+            // its local tunnel, whose shim also wants the `__lt` token on every
+            // request (see Server.apiUri, which does the same for normal calls).
+            openAdminPanel(context,
+                baseUrl: s.effectiveBaseUrl,
+                token: s.jwt,
+                label: s.displayName,
+                query: {if (s.isIroh && s.tunnelToken != null) '__lt': s.tunnelToken!});
+            break;
           case 'delete':
             _showDeleteDialog(context, index);
             break;
@@ -138,9 +150,14 @@ class ManageServersScreen extends StatelessWidget {
               ? _menuItem('show', Icons.visibility_outlined, l.federatedShow)
               : _menuItem(
                   'hide', Icons.visibility_off_outlined, l.federatedHide),
-        if (!server.isFederated)
+        // A federated peer is the parent's data: there is nothing on it to
+        // administer, and it is removed via Forget rather than Delete.
+        if (!server.isFederated) ...[
+          _menuItem('admin', Icons.admin_panel_settings_outlined,
+              l.adminPanelMenuItem),
           _menuItem('delete', Icons.delete_outline, l.delete,
               color: VelvetColors.error),
+        ],
         if (server.isFederated && server.federationMissing)
           _menuItem('delete', Icons.delete_outline, l.federatedForget,
               color: VelvetColors.error),
