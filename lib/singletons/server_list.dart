@@ -31,8 +31,25 @@ class ServerManager {
 
   // The pairing code of the server the (single) iroh tunnel is currently up for,
   // or null when no tunnel is running. Drives (re)start decisions in
-  // [ensureActiveTunnel]; the shim holds one tunnel at a time, for the active server.
+  // [ensureActiveTunnel]; the manager runs one tunnel at a time, for the
+  // active server. It is also the KEY the native table holds that tunnel
+  // under (ABI v2 keys tunnels by an app-chosen id; with one tunnel, the
+  // code is that id) — every native read below resolves through it.
   String? _activeTunnelCode;
+
+  // ── The active tunnel's native state (null key → nothing running) ──
+  IrohTunnelStatus get _nativeStatus => _activeTunnelCode == null
+      ? IrohTunnelStatus.down
+      : IrohTunnel.instance.statusOf(_activeTunnelCode!);
+  IrohPathKind get _nativePathKind => _activeTunnelCode == null
+      ? IrohPathKind.unknown
+      : IrohTunnel.instance.pathKindOf(_activeTunnelCode!);
+  bool? get _nativeRelayOnline => _activeTunnelCode == null
+      ? null
+      : IrohTunnel.instance.relayOnlineOf(_activeTunnelCode!);
+  List<String> _drainNativeEvents() => _activeTunnelCode == null
+      ? const []
+      : IrohTunnel.instance.drainEvents(_activeTunnelCode!);
 
   // ── Reconnect bookkeeping (the rules live in tunnel_policy.dart) ──
   // Single-flight handleNetworkChange: a burst (app resume + a connectivity
@@ -685,7 +702,7 @@ class ServerManager {
   /// True when the tunnel is assigned to [s] AND reports connected — i.e. [s]'s
   /// loopback is live right now.
   bool tunnelServes(Server s) =>
-      tunnelAssignedTo(s) && IrohTunnel.instance.status == IrohTunnelStatus.connected;
+      tunnelAssignedTo(s) && _nativeStatus == IrohTunnelStatus.connected;
 
   /// Bring the single iroh tunnel in line with the active server. With [verify],
   /// also force a rebuild when the native tunnel is fully *down* despite our
@@ -724,9 +741,20 @@ class ServerManager {
     return next;
   }
 
+  // Logged once: the reason the native tunnel is unavailable while a server
+  // needs it (a stale committed binary reports an ABI mismatch here).
+  bool _loggedUnsupported = false;
+
   Future<void> _ensureActiveTunnel(
       bool verify, String reason, bool bypassBackoff) async {
-    if (!IrohTunnel.isSupported) return;
+    if (!IrohTunnel.isSupported) {
+      if (!_loggedUnsupported && _tunnelTargetServer() != null) {
+        _loggedUnsupported = true;
+        appLog('[iroh] native tunnel unavailable ($reason): '
+            '${IrohTunnel.unsupportedReason ?? 'no native library on this device'}');
+      }
+      return;
+    }
     final s = _tunnelTargetServer();
     if (s != null && s.isIroh && s.irohPairingCode != null) {
       // NB: don't drop an active cast here at the top. A renderer reaches an iroh
@@ -744,7 +772,7 @@ class ServerManager {
         // Already wired up. The supervisor handles transient drops itself; only
         // rebuild on a verify when it's fully down (a reconnecting/rejected
         // tunnel is left alone — restarting wouldn't help).
-        if (!verify || IrohTunnel.instance.status != IrohTunnelStatus.down) {
+        if (!verify || _nativeStatus != IrohTunnelStatus.down) {
           return;
         }
       }
@@ -793,17 +821,18 @@ class ServerManager {
       _refreshTunnelStatus(); // surface "Connecting…" while the dial runs
       final sw = Stopwatch()..start();
       try {
-        final port = await IrohTunnel.instance.start(s.irohPairingCode!);
+        final code = s.irohPairingCode!;
+        final port = await IrohTunnel.instance.start(code, code);
         s.tunnelPort = port;
-        s.tunnelToken = IrohTunnel.instance.localToken;
-        _activeTunnelCode = s.irohPairingCode;
+        s.tunnelToken = IrohTunnel.instance.localTokenOf(code);
+        _activeTunnelCode = code;
         _cancelRetry();
         _startRejected = false;
         _lastFailedDialAt = null;
         _notConnectedSince = null;
         _kickedAt = null;
         appLog('[iroh] tunnel up port=$port '
-            'path=${IrohTunnel.instance.pathKind.name} '
+            'path=${_nativePathKind.name} '
             'in ${sw.elapsedMilliseconds}ms ($reason)');
         // The launch sweep no longer waits for a slow dial; run the ping it
         // skipped so vpaths / transcode / version are not stale all session.
@@ -897,7 +926,7 @@ class ServerManager {
       appLog('[iroh] tunnel stopped ($reason) '
           'port=${_tunnelTargetServer()?.tunnelPort}');
     }
-    IrohTunnel.instance.stop();
+    if (_activeTunnelCode != null) IrohTunnel.instance.stop(_activeTunnelCode!);
     _activeTunnelCode = null;
   }
 
@@ -997,7 +1026,7 @@ class ServerManager {
     if (!user && reason.startsWith('connectivity:') && _tunnelStarting) {
       _networkReturnedDuringDial = true;
     }
-    final native = IrohTunnel.instance.status;
+    final native = _nativeStatus;
     final code = _activeTunnelCode;
     final port = s.tunnelPort;
     appLog('[iroh] network change ($reason) native=${native.name} port=$port '
@@ -1073,7 +1102,7 @@ class ServerManager {
     if (!_sameTunnel(s, code, port)) return false;
     final r1 = await _probeTunnel(s);
     appLog('[iroh] probe #1 ${r1.ok ? 'passed' : 'failed'} '
-        '(${r1.reason}, ${r1.ms}ms, native=${IrohTunnel.instance.status.name})');
+        '(${r1.reason}, ${r1.ms}ms, native=${_nativeStatus.name})');
     if (r1.ok) return false;
     // "refused" on loopback is definitive — nothing listens on the port any
     // more. The second probe exists to tell a path migration from a zombie,
@@ -1081,13 +1110,13 @@ class ServerManager {
     // every iOS thaw (iPhone X round: kick at +10s → +3s).
     if (TunnelPolicy.probeIsDefinitive(r1.reason) &&
         _sameTunnel(s, code, port) &&
-        IrohTunnel.instance.status == IrohTunnelStatus.connected) {
+        _nativeStatus == IrohTunnelStatus.connected) {
       return true;
     }
     final wait = TunnelTiming.probeSecondAt - DateTime.now().difference(t0);
     if (wait > Duration.zero) await Future<void>.delayed(wait);
     if (!_sameTunnel(s, code, port) ||
-        IrohTunnel.instance.status != IrohTunnelStatus.connected) {
+        _nativeStatus != IrohTunnelStatus.connected) {
       return false;
     }
     final r2 = await _probeTunnel(s);
@@ -1136,7 +1165,7 @@ class ServerManager {
       _kickedAt = DateTime.now();
       _notConnectedSince ??= _kickedAt;
       appLog('[iroh] kicking the tunnel in place ($reason) — port $port kept');
-      IrohTunnel.instance.kick();
+      IrohTunnel.instance.kick(code!);
     });
   }
 
@@ -1165,7 +1194,7 @@ class ServerManager {
     await _mutateTunnel('drop/$reason', () {
       if (!_sameTunnel(s, code, port)) return; // already rebuilt or dropped
       if (onlyIfConnected &&
-          IrohTunnel.instance.status != IrohTunnelStatus.connected) {
+          _nativeStatus != IrohTunnelStatus.connected) {
         appLog('[iroh] rebuild ($reason) skipped — the supervisor took over');
         return;
       }
@@ -1310,10 +1339,10 @@ class ServerManager {
       // banner must offer Repair, not Retry.
       st = IrohTunnelStatus.rejected;
     } else {
-      st = IrohTunnel.instance.status;
+      st = _nativeStatus;
     }
     final pk = (isIroh && !_tunnelStarting)
-        ? IrohTunnel.instance.pathKind
+        ? _nativePathKind
         : IrohPathKind.unknown;
     final now = DateTime.now();
     if (st != _tunnelStatus.value) {
@@ -1334,7 +1363,7 @@ class ServerManager {
     if (pk != _pathKind.value) _pathKind.add(pk);
     // Native supervisor events (a binary with the events ring); nothing on
     // older binaries.
-    for (final line in IrohTunnel.instance.drainEvents()) {
+    for (final line in _drainNativeEvents()) {
       appLog('[iroh-native] $line');
     }
     // Watchdog: a supervisor that is not converging although the relay is
@@ -1346,10 +1375,10 @@ class ServerManager {
         !_tunnelStarting &&
         _activeTunnelCode != null &&
         TunnelPolicy.shouldEscalate(
-            native: IrohTunnel.instance.status,
+            native: _nativeStatus,
             notConnectedFor: _since(_notConnectedSince),
             sinceKick: _since(_kickedAt),
-            relayReachable: IrohTunnel.instance.relayOnline)) {
+            relayReachable: _nativeRelayOnline)) {
       unawaited(_hardRebuild(s,
           code: _activeTunnelCode,
           port: s.tunnelPort,
@@ -1419,7 +1448,7 @@ class ServerManager {
       // tunnel, a different server being served means s isn't reachable yet.
       if (tunnelServes(s)) return true;
       if (tunnelAssignedTo(s) &&
-          IrohTunnel.instance.status == IrohTunnelStatus.rejected) {
+          _nativeStatus == IrohTunnelStatus.rejected) {
         return false; // this server's code was rejected (needs re-pair)
       }
       // A rejected cold dial leaves no native tunnel to report it.
@@ -1513,7 +1542,7 @@ class ServerManager {
 
     // Try the new code WITHOUT persisting yet.
     await activate(newCode);
-    if (IrohTunnel.instance.status == IrohTunnelStatus.connected) {
+    if (_nativeStatus == IrohTunnelStatus.connected) {
       await writeServerFile(); // persist only a code that actually connected
       _refreshTunnelStatus();
       return true;
@@ -1527,7 +1556,7 @@ class ServerManager {
   /// Adopt a tunnel already started elsewhere (the add-server test) as the active
   /// one, so [ensureActiveTunnel] won't needlessly restart it.
   void registerActiveTunnel(Server s, int port) {
-    final token = IrohTunnel.instance.localToken;
+    final token = IrohTunnel.instance.localTokenOf(s.irohPairingCode!);
     // Serialize the adopt through _tunnelChain so an in-flight (re)start can't
     // clobber these values mid-flight; the changeCurrentServer that follows chains
     // after this and observes the adopted tunnel (no needless re-dial).

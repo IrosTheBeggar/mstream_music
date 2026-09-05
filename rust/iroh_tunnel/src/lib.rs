@@ -49,6 +49,10 @@ use tokio::time::Instant;
 
 /// ALPN both ends must present. Bump if the server bumps `mstream/tunnel/N`.
 pub const TUNNEL_ALPN: &[u8] = b"mstream/tunnel/2";
+/// The FEDERATION endpoint's ALPN (mStream `src/state/federation.js`) — what a
+/// guest ticket dials. The same TCP-over-QUIC bridge sits behind it; only the
+/// credential on the first bi-stream differs (a guest token, not a secret).
+pub const FEDERATION_ALPN: &[u8] = b"mstream/federation/1";
 
 const READ_CHUNK: usize = 64 * 1024;
 const ONLINE_TIMEOUT: Duration = Duration::from_secs(8);
@@ -62,6 +66,12 @@ const SECRET_LEN: usize = 32;
 /// Highest pairing-code schema version this client understands. The pairing-code
 /// version (the `mstr<V>:` envelope) is independent of the tunnel ALPN version.
 const PAIRING_VERSION: u32 = 1;
+/// Highest federation GUEST ticket version (`mstrfedg<V>:`) this client
+/// understands — mStream `docs/federation-guest-ticket.md`.
+const GUEST_TICKET_VERSION: u32 = 1;
+/// The peer reads at most this much on the first bi-stream (mStream's
+/// HANDSHAKE_LIMIT), so a longer guest token could never be accepted.
+const GUEST_TOKEN_MAX: usize = 2048;
 
 // A request that lands while the supervisor is mid-reconnect waits (bounded)
 // for the swapped-in connection instead of hard-failing: ExoPlayer's read
@@ -116,8 +126,14 @@ pub const PATH_RELAY: u8 = 2; // routed via a relay server
 /// cheap Arc handle to clone), so bridges always pick up the current one.
 struct Shared {
     endpoint: Endpoint,
-    addr: EndpointAddr,
-    secret: Vec<u8>,
+    /// Where to dial. Replaceable: a credential refresh may carry a newer
+    /// ticket for the same server (its relay / direct addresses move).
+    addr: Mutex<EndpointAddr>,
+    alpn: &'static [u8],
+    kind: PairingKind,
+    /// What the first bi-stream carries — the connect secret, or a guest
+    /// token. Replaceable in place, see [`Tunnel::set_credential`].
+    payload: Mutex<Vec<u8>>,
     conn: Mutex<Connection>,
     status: AtomicU8,
     /// Same value as [`Shared::status`], as a watch channel so bridges can
@@ -134,6 +150,10 @@ struct Shared {
     /// The accept task, replaceable: a kick aborts it (dropping the listener)
     /// and spawns a fresh one on the same port.
     accept: Mutex<Option<JoinHandle<()>>>,
+    /// The reconnect supervisor, replaceable too: it exits on a rejected
+    /// handshake, and a credential refresh spawns a fresh one on the same
+    /// port ([`Tunnel::set_credential`]).
+    supervisor: Mutex<Option<JoinHandle<()>>>,
     /// App kick: wakes a supervisor that is sleeping out a backoff.
     kick: Notify,
     /// Native events for the app's diagnostics log (drained by the status poll).
@@ -297,7 +317,6 @@ pub struct Tunnel {
     /// Loopback port the app should treat as the server base URL.
     pub local_port: u16,
     shared: Arc<Shared>,
-    supervisor: JoinHandle<()>,
     /// Set by [`Tunnel::begin_shutdown`] so [`Drop`] doesn't slam the connection
     /// shut after a graceful, drained teardown was already scheduled.
     shutting_down: AtomicBool,
@@ -366,6 +385,73 @@ impl Tunnel {
         });
     }
 
+    /// Which kind of server this tunnel dials.
+    pub fn kind(&self) -> PairingKind {
+        self.shared.kind
+    }
+
+    /// Swap the credential (and the endpoint address) this tunnel dials with,
+    /// IN PLACE — same loopback port, same token, so nothing the app built
+    /// against the tunnel goes stale. A federated peer's guest token expires
+    /// daily and the parent hands out a fresh one; without this the only way
+    /// to use it was a stop/start that rotated the port and every queued URL.
+    ///
+    /// The new code must be the same kind as the running one and name the
+    /// same server (endpoint id) — a refreshed ticket may carry new relay or
+    /// direct addresses, which are taken. It applies at the next dial:
+    ///   - CONNECTED: the authenticated connection is kept; the supervisor's
+    ///     next re-dial uses the new credential;
+    ///   - RECONNECTING / CONNECTING: the backoff is cut short (a dial already
+    ///     in flight with the old credential that gets rejected retries once
+    ///     with the new one, see [`supervise`]);
+    ///   - REJECTED (the supervisor gave up): a fresh supervisor is spawned
+    ///     and re-dials at once — the listener never left the port.
+    /// Non-blocking: parsing is pure and the re-dial runs on `rt`.
+    pub fn set_credential(&self, code: &str, rt: &tokio::runtime::Runtime) -> Result<()> {
+        let pairing = parse_pairing_code(code)?;
+        if pairing.kind != self.shared.kind {
+            bail!(
+                "credential kind mismatch: this tunnel is {:?}, the new code is {:?}",
+                self.shared.kind,
+                pairing.kind
+            );
+        }
+        let ticket = EndpointTicket::decode_string(&pairing.ticket)
+            .map_err(|e| anyhow!("invalid endpoint ticket: {e}"))?;
+        let addr = ticket.endpoint_addr().clone();
+        if addr.id != self.shared.addr.lock().unwrap().id {
+            bail!("the new credential is for a different server (endpoint id changed)");
+        }
+        *self.shared.addr.lock().unwrap() = addr;
+        *self.shared.payload.lock().unwrap() = pairing.payload;
+
+        let shared = self.shared.clone();
+        match shared.status.load(Ordering::Relaxed) {
+            STATUS_REJECTED => {
+                // The supervisor returned. A new one starts by awaiting the
+                // (already closed) connection's close, which returns at once,
+                // so it re-dials immediately with the new credential.
+                shared.event("credential updated after a rejected handshake — re-dialing");
+                shared.set_status(STATUS_RECONNECTING);
+                let h = rt.spawn(supervise(shared.clone()));
+                if let Some(old) = shared.supervisor.lock().unwrap().replace(h) {
+                    old.abort();
+                }
+            }
+            STATUS_RECONNECTING | STATUS_CONNECTING => {
+                shared.event("credential updated — cutting the backoff short");
+                shared.kick.notify_one();
+            }
+            STATUS_DOWN => {
+                shared.event("credential updated, but the tunnel is down (listener lost) — a restart is needed");
+            }
+            _ => {
+                shared.event("credential updated — applies at the next dial");
+            }
+        }
+        Ok(())
+    }
+
     /// Begin a graceful, NON-BLOCKING teardown: stop accepting + supervising, then on
     /// `rt` run [`drain_and_close`] (drain in-flight bridges, then close conn +
     /// endpoint — see it for the bounded teardown window). The app calls stop()
@@ -375,7 +461,9 @@ impl Tunnel {
         if let Some(h) = self.shared.accept.lock().unwrap().take() {
             h.abort();
         }
-        self.supervisor.abort();
+        if let Some(h) = self.shared.supervisor.lock().unwrap().take() {
+            h.abort();
+        }
         // Suppress the immediate-close Drop; the spawned drain owns the close now.
         self.shutting_down.store(true, Ordering::Relaxed);
         rt.spawn(drain_and_close(self.shared.clone()));
@@ -393,7 +481,11 @@ impl Drop for Tunnel {
                 h.abort();
             }
         }
-        self.supervisor.abort();
+        if let Ok(mut guard) = self.shared.supervisor.lock() {
+            if let Some(h) = guard.take() {
+                h.abort();
+            }
+        }
         // Closing the connection makes in-flight bridge streams error out promptly.
         if let Ok(conn) = self.shared.conn.lock() {
             conn.close(0u32.into(), b"client dropped");
@@ -413,12 +505,15 @@ enum DialResult {
     Failed(String), // transient: unreachable / timeout / mid-handshake error, with why
 }
 
-/// Connect on the ALPN and run the 32-byte secret handshake on the first bi-stream.
-async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[u8]) -> DialResult {
-    let conn = match tokio::time::timeout(
-        CONNECT_TIMEOUT,
-        endpoint.connect(addr.clone(), TUNNEL_ALPN),
-    )
+/// Connect on `alpn` and run the handshake on the first bi-stream: write the
+/// credential (the 32-byte connect secret, or a guest token), expect "OK".
+async fn dial_and_handshake(
+    endpoint: &Endpoint,
+    addr: &EndpointAddr,
+    alpn: &[u8],
+    payload: &[u8],
+) -> DialResult {
+    let conn = match tokio::time::timeout(CONNECT_TIMEOUT, endpoint.connect(addr.clone(), alpn))
     .await
     {
         Ok(Ok(c)) => c,
@@ -436,7 +531,7 @@ async fn dial_and_handshake(endpoint: &Endpoint, addr: &EndpointAddr, secret: &[
             Ok(pair) => pair,
             Err(e) => return DialResult::Failed(format!("open_bi: {e}")),
         };
-        if send.write_all(secret).await.is_err() || send.finish().is_err() {
+        if send.write_all(payload).await.is_err() || send.finish().is_err() {
             return DialResult::Failed("handshake write failed".into());
         }
         match recv.read_to_end(HANDSHAKE_RESP_LIMIT).await {
@@ -480,7 +575,11 @@ async fn supervise(shared: Arc<Shared>) {
             let relay_online = tokio::time::timeout(ONLINE_TIMEOUT, shared.endpoint.online())
                 .await
                 .is_ok();
-            match dial_and_handshake(&shared.endpoint, &shared.addr, &shared.secret).await {
+            // Snapshot the credential per attempt: set_credential may swap it
+            // (and the address) while this dial is in flight.
+            let addr = shared.addr.lock().unwrap().clone();
+            let payload = shared.payload.lock().unwrap().clone();
+            match dial_and_handshake(&shared.endpoint, &addr, shared.alpn, &payload).await {
                 DialResult::Connected(c) => {
                     *shared.conn.lock().unwrap() = c;
                     shared.set_status(STATUS_CONNECTED);
@@ -491,9 +590,20 @@ async fn supervise(shared: Arc<Shared>) {
                     break; // resume watching the new connection
                 }
                 DialResult::Rejected => {
+                    // A credential swapped in while this dial was in flight
+                    // deserves one more try before giving up.
+                    if *shared.payload.lock().unwrap() != payload {
+                        shared.event("handshake rejected with a stale credential — retrying with the new one");
+                        continue;
+                    }
                     shared.set_status(STATUS_REJECTED);
-                    shared.event("handshake rejected — re-pair needed");
-                    return; // rotated/wrong secret — the app must re-pair
+                    shared.event(match shared.kind {
+                        PairingKind::Tunnel => "handshake rejected — re-pair needed",
+                        PairingKind::FederationGuest => {
+                            "handshake rejected — guest token refused (expired or revoked); refresh it from the parent"
+                        }
+                    });
+                    return; // the app must re-pair (or, for a guest, refresh the token)
                 }
                 DialResult::Failed(reason) => {
                     shared.event(format!(
@@ -551,10 +661,26 @@ async fn wait_backoff(shared: &Shared, backoff: Duration) -> bool {
     }
 }
 
+/// Which kind of server a code dials.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PairingKind {
+    /// Quick Connect: `mstr<V>:{t,s}` — the 32-byte connect secret, ALPN
+    /// `mstream/tunnel/2`.
+    Tunnel,
+    /// A federated peer, dialed directly: `mstrfedg<V>:{t,g}` — a guest token
+    /// the parent server fetched for this device, ALPN `mstream/federation/1`
+    /// (mStream `docs/federation-guest-ticket.md`).
+    FederationGuest,
+}
+
+/// What a code resolves to: where to dial, on which ALPN, and what to write
+/// on the first bi-stream.
 #[derive(Debug)]
 struct Pairing {
     ticket: String,
-    secret: Vec<u8>,
+    alpn: &'static [u8],
+    payload: Vec<u8>,
+    kind: PairingKind,
 }
 
 /// Decode base64 tolerantly — accepts both the standard and URL-safe alphabets,
@@ -576,47 +702,92 @@ fn b64_loose(s: &str) -> Result<Vec<u8>> {
         .map_err(|e| anyhow!("invalid base64: {e}"))
 }
 
-/// Parse the pairing code into its EndpointTicket + connect secret.
+/// Split `<prefix><digits>:<body>`; None when the prefix or a numeric version
+/// is absent (then the string is not this envelope).
+fn split_envelope<'a>(s: &'a str, prefix: &str) -> Option<(u32, &'a str)> {
+    let rest = s.strip_prefix(prefix)?;
+    let (ver, body) = rest.split_once(':')?;
+    if ver.is_empty() || !ver.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some((ver.parse::<u32>().unwrap_or(u32::MAX), body))
+}
+
+fn decode_body(body: &str, label: &str) -> Result<serde_json::Value> {
+    let json = b64_loose(body).with_context(|| format!("invalid {label} (not base64)"))?;
+    serde_json::from_slice(&json).with_context(|| format!("invalid {label} (not JSON)"))
+}
+
+fn field_str(v: &serde_json::Value, key: &str) -> Option<String> {
+    v.get(key).and_then(|x| x.as_str()).map(|s| s.to_string())
+}
+
+/// Parse a code into where to dial and what to present. Two envelopes:
 ///
-/// Format (docs/iroh-pairing-code.md in mStream PR #643): a versioned envelope
-/// `mstr<V>:<base64url(JSON{t,s})>`. A bare (un-prefixed) base64url body is a
-/// legacy code → implicit v1. A version newer than this client understands is
-/// rejected with an actionable "update the app" error. Pure (no native module).
+///   * Quick Connect pairing code (docs/iroh-pairing-code.md in mStream PR
+///     #643): `mstr<V>:<base64url(JSON{t,s})>`; a bare (un-prefixed) body is a
+///     legacy code → implicit v1. `s` is the 32-byte connect secret.
+///   * Federation guest ticket (mStream docs/federation-guest-ticket.md):
+///     `mstrfedg<V>:<base64url(JSON{t,g})>`; `g` is the guest token, written
+///     as-is on the first bi-stream of the federation ALPN. No bare form.
+///
+/// A federation TICKET (`mstrfed<V>:`, the admin-to-admin pairing that carries
+/// a standing key) is refused by name — the app must never hold one. A version
+/// newer than this client understands is rejected with an actionable "update
+/// the app" error. Pure (no native module).
 fn parse_pairing_code(code: &str) -> Result<Pairing> {
     let trimmed = code.trim();
-    // Split the `mstr<V>:` envelope; anything without a valid prefix is a legacy
-    // bare body (implicit v1).
-    let (version, body): (u32, &str) = match trimmed.strip_prefix("mstr").and_then(|rest| {
-        rest.split_once(':').filter(|(ver, _)| {
-            !ver.is_empty() && ver.bytes().all(|b| b.is_ascii_digit())
-        })
-    }) {
-        Some((ver, body)) => (ver.parse::<u32>().unwrap_or(u32::MAX), body),
-        None => (1, trimmed),
-    };
+
+    // The guest envelope first: its prefix extends the tunnel one, and the
+    // tunnel branch would otherwise read `fedg1` as a missing version.
+    if let Some((version, body)) = split_envelope(trimmed, "mstrfedg") {
+        if version > GUEST_TICKET_VERSION {
+            bail!(
+                "Guest ticket is version {version}; this app supports up to v{GUEST_TICKET_VERSION}. Update to a newer version of the app."
+            );
+        }
+        let v = decode_body(body, "guest ticket")?;
+        let ticket =
+            field_str(&v, "t").ok_or_else(|| anyhow!("invalid guest ticket (missing ticket)"))?;
+        let token =
+            field_str(&v, "g").ok_or_else(|| anyhow!("invalid guest ticket (missing token)"))?;
+        if token.is_empty() || token.len() > GUEST_TOKEN_MAX {
+            bail!("invalid guest ticket (token length {})", token.len());
+        }
+        return Ok(Pairing {
+            ticket,
+            alpn: FEDERATION_ALPN,
+            payload: token.into_bytes(),
+            kind: PairingKind::FederationGuest,
+        });
+    }
+    if split_envelope(trimmed, "mstrfed").is_some() {
+        bail!(
+            "This is a federation ticket for pairing two servers, not a pairing code for the app."
+        );
+    }
+
+    let (version, body) = split_envelope(trimmed, "mstr").unwrap_or((1, trimmed));
     if version > PAIRING_VERSION {
         bail!(
             "Pairing code is version {version}; this app supports up to v{PAIRING_VERSION}. Update to a newer version of the app."
         );
     }
-
-    let json = b64_loose(body).context("invalid pairing code (not base64)")?;
-    let v: serde_json::Value =
-        serde_json::from_slice(&json).context("invalid pairing code (not JSON)")?;
-    let ticket = v
-        .get("t")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow!("invalid pairing code (missing ticket)"))?
-        .to_string();
-    let secret_b64 = v
-        .get("s")
-        .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow!("invalid pairing code (missing secret)"))?;
-    let secret = b64_loose(secret_b64).context("invalid pairing code (bad secret)")?;
+    let v = decode_body(body, "pairing code")?;
+    let ticket =
+        field_str(&v, "t").ok_or_else(|| anyhow!("invalid pairing code (missing ticket)"))?;
+    let secret_b64 =
+        field_str(&v, "s").ok_or_else(|| anyhow!("invalid pairing code (missing secret)"))?;
+    let secret = b64_loose(&secret_b64).context("invalid pairing code (bad secret)")?;
     if secret.len() != SECRET_LEN {
         bail!("connect secret must be {SECRET_LEN} bytes (got {})", secret.len());
     }
-    Ok(Pairing { ticket, secret })
+    Ok(Pairing {
+        ticket,
+        alpn: TUNNEL_ALPN,
+        payload: secret,
+        kind: PairingKind::Tunnel,
+    })
 }
 
 /// Dial a tunnel from a pairing code, complete the secret handshake, and start a
@@ -641,10 +812,16 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
     // The failure reason and relay state ride along: "may be offline" used to
     // hide "no home relay within 8s; connect timed out after 25s".
     let t0 = Instant::now();
-    let conn = match dial_and_handshake(&endpoint, &addr, &pairing.secret).await {
+    let conn = match dial_and_handshake(&endpoint, &addr, pairing.alpn, &pairing.payload).await {
         DialResult::Connected(c) => c,
         DialResult::Rejected => bail!(
-            "tunnel handshake rejected — wrong or rotated connect secret; re-pair from the server's Remote Access panel"
+            "{}",
+            match pairing.kind {
+                PairingKind::Tunnel =>
+                    "tunnel handshake rejected — wrong or rotated connect secret; re-pair from the server's Remote Access panel",
+                PairingKind::FederationGuest =>
+                    "handshake rejected — the guest token was refused (expired or revoked); refresh it from the parent server",
+            }
         ),
         DialResult::Failed(reason) => {
             let relay = if endpoint.home_relay_status().get().iter().any(|r| r.is_connected()) {
@@ -674,10 +851,16 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         }
         kind
     };
+    let mode = match pairing.kind {
+        PairingKind::Tunnel => "tunnel",
+        PairingKind::FederationGuest => "guest",
+    };
     let shared = Arc::new(Shared {
         endpoint,
-        addr,
-        secret: pairing.secret,
+        addr: Mutex::new(addr),
+        alpn: pairing.alpn,
+        kind: pairing.kind,
+        payload: Mutex::new(pairing.payload),
         conn: Mutex::new(conn),
         status: AtomicU8::new(STATUS_CONNECTED),
         status_tx,
@@ -685,6 +868,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         local_token: gen_local_token()?,
         local_port: bound_port,
         accept: Mutex::new(None),
+        supervisor: Mutex::new(None),
         kick: Notify::new(),
         events: Mutex::new(EventRing::new()),
         started: Instant::now(),
@@ -694,7 +878,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         reported_token_rejected: AtomicU32::new(0),
     });
     shared.event(format!(
-        "bound 127.0.0.1:{bound_port}, first dial OK in {:.1}s path={path}",
+        "bound 127.0.0.1:{bound_port}, first dial OK in {:.1}s path={path} mode={mode}",
         t0.elapsed().as_secs_f32()
     ));
 
@@ -702,11 +886,11 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
     *shared.accept.lock().unwrap() = Some(accept);
 
     let supervisor = tokio::spawn(supervise(shared.clone()));
+    *shared.supervisor.lock().unwrap() = Some(supervisor);
 
     Ok(Tunnel {
         local_port: bound_port,
         shared,
-        supervisor,
         shutting_down: AtomicBool::new(false),
     })
 }
@@ -927,7 +1111,9 @@ mod tests {
         let secret = [7u8; SECRET_LEN];
         let p = parse_pairing_code(&format!("mstr1:{}", body("endpointabc", &secret))).unwrap();
         assert_eq!(p.ticket, "endpointabc");
-        assert_eq!(p.secret, secret.to_vec());
+        assert_eq!(p.payload, secret.to_vec());
+        assert_eq!(p.alpn, TUNNEL_ALPN);
+        assert_eq!(p.kind, PairingKind::Tunnel);
     }
 
     #[test]
@@ -992,5 +1178,60 @@ mod tests {
     #[test]
     fn rejects_wrong_secret_length() {
         assert!(parse_pairing_code(&format!("mstr1:{}", body("endpointx", &[9u8; 10]))).is_err());
+    }
+
+    // ── federation guest tickets (mstrfedg<V>:) ──
+
+    fn guest_body(t: &str, g: &str) -> String {
+        let json = format!(r#"{{"t":"{t}","g":"{g}"}}"#);
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json.as_bytes())
+    }
+
+    #[test]
+    fn parses_guest_ticket_onto_the_federation_alpn() {
+        let token = "eyJhbGciOiJIUzI1NiJ9.eyJmZWRlcmF0aW9uR3Vlc3QiOnRydWV9.sig";
+        let p = parse_pairing_code(&format!("mstrfedg1:{}", guest_body("endpointpeer", token))).unwrap();
+        assert_eq!(p.ticket, "endpointpeer");
+        assert_eq!(p.payload, token.as_bytes());
+        assert_eq!(p.alpn, FEDERATION_ALPN);
+        assert_eq!(p.kind, PairingKind::FederationGuest);
+    }
+
+    #[test]
+    fn guest_ticket_refuses_empty_oversized_and_missing_tokens() {
+        assert!(parse_pairing_code(&format!("mstrfedg1:{}", guest_body("e", ""))).is_err());
+        let huge = "x".repeat(GUEST_TOKEN_MAX + 1);
+        assert!(parse_pairing_code(&format!("mstrfedg1:{}", guest_body("e", &huge))).is_err());
+        let fits = "x".repeat(GUEST_TOKEN_MAX);
+        assert!(parse_pairing_code(&format!("mstrfedg1:{}", guest_body("e", &fits))).is_ok());
+        let no_token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(br#"{"t":"only"}"#);
+        assert!(parse_pairing_code(&format!("mstrfedg1:{no_token}")).is_err());
+    }
+
+    #[test]
+    fn guest_ticket_rejects_newer_version_with_update_hint() {
+        let err = parse_pairing_code(&format!("mstrfedg2:{}", guest_body("e", "tok")))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("version 2"), "got: {err}");
+        assert!(err.to_lowercase().contains("update"), "got: {err}");
+    }
+
+    #[test]
+    fn a_federation_ticket_is_refused_by_name() {
+        // mstrfed1: carries a standing server key — the app must never hold one.
+        let fed = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(br#"{"t":"e","k":"fedk_x"}"#);
+        let err = parse_pairing_code(&format!("mstrfed1:{fed}")).unwrap_err().to_string();
+        assert!(err.contains("federation ticket"), "got: {err}");
+    }
+
+    #[test]
+    fn the_envelopes_stay_disjoint() {
+        // A guest ticket never parses as a tunnel code and vice versa.
+        let secret = [3u8; SECRET_LEN];
+        let tunnel = format!("mstr1:{}", body("e", &secret));
+        assert_eq!(parse_pairing_code(&tunnel).unwrap().kind, PairingKind::Tunnel);
+        let guest = format!("mstrfedg1:{}", guest_body("e", "tok"));
+        assert_eq!(parse_pairing_code(&guest).unwrap().kind, PairingKind::FederationGuest);
     }
 }
