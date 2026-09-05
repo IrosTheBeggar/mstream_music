@@ -275,6 +275,44 @@ the queue-restore re-origin. Casting a peer track through the LAN relay is
 covered by the same code path as an iroh server's and is the one piece
 not run on a renderer.
 
+### Phase 6 — one tunnel per transport server ✅ done
+
+Groundwork for reaching a peer directly (issue #143): the direct transport
+needs a peer's own tunnel next to its parent's, and `ServerManager` was
+single-tunnel throughout — one pairing code, one dial chain, one retry
+ladder, one probe/kick/watchdog bookkeeping, a queue listener that picked
+the first tunnel-carried track, a status strip fed by one value.
+
+**The model.** [`TunnelHandle`](lib/singletons/tunnel_handle.dart) holds one
+native tunnel's bookkeeping per *transport* server (a Quick Connect server
+today; a directly-reached peer next), keyed by localname in the manager's
+`_tunnels` table. Each handle owns its own chain, retry ladder, probe and
+watchdog state, so a second tunnel is a second entry, not a second copy of
+the lifecycle — and one server's cold dial never holds another's. The
+native key a handle was started under is recorded on it (a re-pair swaps
+the server's code before the old tunnel is stopped).
+
+**Targets.** The browsed server's transport when that is a tunnel, plus
+every tunnel-carried transport the play queue references — the queue
+listener now reports the whole set (`setQueueIrohServers`), and each
+transport it lets go of is released after `queueReleaseGrace`. `ensureTunnels`
+reconciles handles against the targets; `ensureTunnelFor` (re)starts one
+server's tunnel on demand, which is what the playback, download and car
+paths ask for.
+
+**What stays single.** The status strip shows one value: the browsed
+server's tunnel when it is one, else the background playback tunnel in the
+worst state (`bannerTargetAmong`, unit-tested) — `TunnelPolicy.showTunnelBanner`
+still decides whether that state deserves a strip. Listeners that care about
+one server's tunnel (the playback heal watches the parked track's) take
+`tunnelTransitions`, so one tunnel's edge can never hide behind another's
+state. The one-Quick-Connect-server cap in the add-server screen stays for
+now; lifting it is a separate change.
+
+**Log lines** keep their shapes (the smoke scripts grep them) and gain a
+`for=<localname>` suffix, since two tunnels would otherwise be
+indistinguishable in a Diagnostics export.
+
 ### Phase 5 — optional: make Discover leads actionable
 
 `/api/v1/discovery/federation/similar` already returns `peer:{id,name}` on the
