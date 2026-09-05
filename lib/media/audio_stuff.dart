@@ -299,23 +299,21 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       _emitCurrentMediaItem();
     });
-    // Tunnel-follows-queue (one-iroh-server cap): keep the iroh tunnel up whenever
-    // the queue holds a song from the iroh server, and let it go when none remain.
-    // Recomputed on every queue edit; with the cap, the first iroh match is THE
-    // iroh server. This is what makes a queue from the iroh server connect in the
-    // background while the default stays selected.
+    // Tunnel-follows-queue: keep a tunnel up for every tunnel-carried server
+    // the queue holds a song from, and let each go when none of its songs
+    // remain. Recomputed on every queue edit. This is what makes a queue from
+    // a Quick Connect server connect in the background while the default
+    // stays selected — and, with more than one tunnel server queued, keeps
+    // all of them reachable.
     queue.listen((items) {
-      Server? iroh;
+      final transports = <String, Server>{};
       for (final it in items) {
         // A federated peer's songs ride its parent's tunnel: that is the
         // server to keep connected, not the peer (which has no tunnel).
         final s = _serverFor(it)?.transportServer;
-        if (s != null && s.isIroh) {
-          iroh = s;
-          break;
-        }
+        if (s != null && s.isIroh) transports[s.localname] = s;
       }
-      ServerManager().setQueueIrohServer(iroh);
+      ServerManager().setQueueIrohServers(transports.values);
       // Keep-queue-offline: sweep every queue change for tracks to download.
       // No-op unless the setting is on; DownloadManager dedupes (in-flight,
       // once-per-session, already-on-disk). Lives here — not main.dart — so
@@ -350,11 +348,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (the connectivity listener stays silent) and the error-time recovery
     // timed out long ago. This transition is the only signal that playback
     // parked by the outage can resume.
-    ServerManager().tunnelStatusStream.listen((status) {
-      final prev = _lastTunnelStatus;
-      _lastTunnelStatus = status;
-      if (prev == null || prev == IrohTunnelStatus.connected) return;
-      if (status == IrohTunnelStatus.connected) _onTunnelReconnected();
+    // Per tunnel, not the strip's single value: with two tunnels the parked
+    // track's server could come back while the strip keeps showing the other
+    // one's state, and that edge must not be lost.
+    ServerManager().tunnelTransitions.listen((t) {
+      if (t.from == IrohTunnelStatus.connected) return;
+      if (t.to == IrohTunnelStatus.connected) _onTunnelReconnected();
     });
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
@@ -1455,7 +1454,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   // runs; without this hook nothing reloads the player when the server
   // returns. Only touches a player that is actually parked: local backend,
   // idle without a deliberate stop, current track owned by the served server.
-  IrohTunnelStatus? _lastTunnelStatus;
   // One-shot re-check for a connected edge that arrived while a transient
   // guard blocked the heal. The status subject emits on change only, so a
   // consumed edge never re-fires on its own — dropping it would park playback
@@ -1911,7 +1909,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       stop();
     });
     unawaited(ServerManager()
-        .ensureActiveTunnel(verify: true, reason: 'queue-end-park'));
+        .ensureTunnels(verify: true, reason: 'queue-end-park'));
   }
 
   /// The queue ended with a pick owed although the tunnel IS serving (the

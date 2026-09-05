@@ -152,19 +152,22 @@ class ManageServersScreen extends StatelessWidget {
   // CONNECTED (the banner covers reconnecting/down/re-pair), so the chip stays
   // focused on direct-vs-relay and never shows an ambiguous "…" when disconnected.
   // Meaningless for HTTP/inactive servers, so the caller also gates on those.
-  Widget _irohPathChip() {
+  // Reads THIS server's tunnel; the strip's streams (which follow the browsed
+  // server, i.e. this one) are the rebuild triggers.
+  Widget _irohPathChip(Server server) {
     return StreamBuilder<IrohTunnelStatus>(
       stream: ServerManager().tunnelStatusStream,
       initialData: ServerManager().tunnelStatus,
       builder: (context, sSnap) {
-        if (sSnap.data != IrohTunnelStatus.connected) {
+        if (ServerManager().tunnelStatusOf(server) !=
+            IrohTunnelStatus.connected) {
           return const SizedBox.shrink();
         }
         return StreamBuilder<IrohPathKind>(
           stream: ServerManager().pathKindStream,
           initialData: ServerManager().pathKind,
           builder: (context, pSnap) {
-            final pk = pSnap.data ?? IrohPathKind.unknown;
+            final pk = ServerManager().pathKindOf(server);
             if (pk == IrohPathKind.unknown) return const SizedBox.shrink();
             final l = AppLocalizations.of(context);
             final bool relay = pk == IrohPathKind.relay;
@@ -270,7 +273,7 @@ class ManageServersScreen extends StatelessWidget {
               if (server.isIroh && server == ServerManager().currentServer)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
-                  child: _irohPathChip(),
+                  child: _irohPathChip(server),
                 ),
               if (isDefault)
                 Padding(
