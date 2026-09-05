@@ -1841,17 +1841,21 @@ class ServerManager {
   /// [_remedyDeadTunnel] (kick in place when the binary can, else a hard
   /// rebuild rate-limited to one per minute). A passing probe means the tunnel
   /// is fine and the failures were the source's own problem, so nothing moves.
-  Future<void> reverifyTunnel(Server server) async {
+  ///
+  /// Returns true only when the probe ran and passed (the path is fine, the
+  /// failures were the source's own); false when it was remedied or not
+  /// probed at all.
+  Future<bool> reverifyTunnel(Server server) async {
     // Probe the transport: a peer's failures happen on its parent's tunnel.
     final s = server.transportServer;
-    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return;
+    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return false;
     final h = _tunnels[s.localname];
-    if (h == null || h.reverifying || !h.assigned) return;
+    if (h == null || h.reverifying || !h.assigned) return false;
     // Already known down: ensureTunnelFor / awaitTunnelReady own that case
     // and this would only race them.
-    if (!tunnelServes(s)) return;
+    if (!tunnelServes(s)) return false;
     final gap = _since(h.lastHardRebuildAt);
-    if (gap != null && gap < TunnelTiming.hardRebuildMinGap) return;
+    if (gap != null && gap < TunnelTiming.hardRebuildMinGap) return false;
     h.reverifying = true;
     try {
       final code = h.code;
@@ -1860,18 +1864,19 @@ class ServerManager {
       if (r.ok) {
         appLog('[iroh] tunnel probe passed (${r.reason}, ${r.ms}ms) — '
             'the failures were not the path for=${s.localname}');
-        return;
+        return true;
       }
       if (!tunnelServes(s)) {
         appLog('[iroh] probe failed (${r.reason}) but the supervisor '
             'noticed meanwhile — leaving it for=${s.localname}');
-        return;
+        return false;
       }
       appLog('[iroh] tunnel says connected but the probe failed '
           '(${r.reason}, ${r.ms}ms) after repeated load failures '
           'for=${s.localname}');
       await _remedyDeadTunnel(h,
           code: code, port: port, reason: 'reverify', user: false);
+      return false;
     } finally {
       h.reverifying = false;
     }

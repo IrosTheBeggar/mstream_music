@@ -57,6 +57,10 @@ enum MediaToggleAction { play, pause, ignore }
 /// this trigger entirely.
 enum HealAction { run, rearm, drop }
 
+/// What to do after a tunnel-heal resume failed: try again later, or stop
+/// blaming the tunnel and let the failing track take the ordinary skip walk.
+enum ResumeFailureAction { rearm, skipTrack }
+
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
   // ignore: close_sinks
@@ -354,7 +358,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     // one's state, and that edge must not be lost.
     ServerManager().tunnelTransitions.listen((t) {
       if (t.from == IrohTunnelStatus.connected) return;
-      if (t.to == IrohTunnelStatus.connected) _onTunnelReconnected();
+      if (t.to == IrohTunnelStatus.connected) {
+        // A real edge: whatever verdict suspended the heal is stale now.
+        _healSuspended = false;
+        _onTunnelReconnected();
+      }
     });
     // Stop the service when playback reaches the end of the queue.
     _backendSubject.switchMap((b) => b.processingStateStream).listen((state) {
@@ -428,6 +436,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         _httpRetries = 0;
         _networkStalled = false;
         _tunnelLoadFailures = 0;
+        _healResumeFailures = 0;
+        _healSuspended = false;
         // Only a DIFFERENT track reaching ready clears the local-copy retry
         // guard. Clearing it on every ready reopens the loop it exists to
         // stop: a corrupt-but-LOADABLE file (valid header, damaged tail)
@@ -1033,7 +1043,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (itemServer != null &&
         itemServer.isIrohTransport &&
         ServerManager().tunnelServes(itemServer)) {
-      _noteTunnelLoadFailure(itemServer);
+      unawaited(_noteTunnelLoadFailure(itemServer));
     }
     // Non-iroh source failed → hand off to _recoverHttpError, which (with an
     // async connectivity probe) pauses-and-holds on a real outage, retries a
@@ -1052,13 +1062,43 @@ class AudioPlayerHandler extends BaseAudioHandler
   int _tunnelLoadFailures = 0;
   static const int _kTunnelFailuresBeforeProbe = 3;
 
-  void _noteTunnelLoadFailure(Server server) {
-    if (++_tunnelLoadFailures < _kTunnelFailuresBeforeProbe) return;
+  /// Returns true only when this failure triggered the probe AND the probe
+  /// cleared the path — the failures are the source's own.
+  Future<bool> _noteTunnelLoadFailure(Server server) async {
+    if (++_tunnelLoadFailures < _kTunnelFailuresBeforeProbe) return false;
     _tunnelLoadFailures = 0;
     appLog('[iroh] $_kTunnelFailuresBeforeProbe loads failed against a '
         'tunnel reporting connected — checking whether it really is');
-    unawaited(ServerManager().reverifyTunnel(server));
+    return ServerManager().reverifyTunnel(server);
   }
+
+  // Consecutive heal resumes that failed (reset by `ready`, like the load
+  // counter above): the heal's own bound, see healResumeFailureAction.
+  int _healResumeFailures = 0;
+  // Set when the heal hands a track to the skip walk: the path is fine and
+  // the failures are the sources' own, so the heal stays out — every park
+  // during the walk would otherwise re-trigger it (the idle transition is
+  // its own trigger), re-seeding each failing track twice more before the
+  // probe hands it off again. Lifted by a track loading, or by a real
+  // tunnel edge, whose verdict supersedes this one.
+  bool _healSuspended = false;
+  static const int kMaxHealResumeFailures = 6;
+
+  /// After a heal resume failed: keep re-arming while the path itself may be
+  /// the problem; hand the track to the skip walk once the probe has cleared
+  /// the path (the failures are the source's — an expired credential, a file
+  /// the server no longer has — and no amount of re-seeding fixes those); and
+  /// after [kMaxHealResumeFailures] regardless, so a probe that never ran
+  /// (rate-limited, or another one in flight) cannot keep the loop alive.
+  /// Before this the heal re-seeded the same track every ~14 s for as long as
+  /// a serving tunnel and an idle player coexisted, and its own "probe passed
+  /// — the failures were not the path" verdict changed nothing. Pure;
+  /// unit-tested.
+  static ResumeFailureAction healResumeFailureAction(
+          {required bool pathVerified, required int failures}) =>
+      pathVerified || failures >= kMaxHealResumeFailures
+          ? ResumeFailureAction.skipTrack
+          : ResumeFailureAction.rearm;
 
   // The TRACK whose local copy we already re-seeded for — identity, never an
   // index: a removal above the marked row slides a different track underneath
@@ -1296,6 +1336,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       return;
     }
     _recoveringPlayback = true;
+    // Set when the retry's own reload threw: the walk continues from
+    // whenComplete, once the flag is released (see below).
+    Object? followUp;
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
       // No network → an outage: pause-and-hold and let onNetworkRegained resume
@@ -1334,15 +1377,31 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Fresh URLs, not queue.value: a tunnel that rebuilt during the
         // backoff has a new port and token, and retrying the stale ones just
         // burns the bounded budget against addresses that cannot work.
-        await _localBackend.setSources(_queueWithFreshUrls(),
-            initialIndex: idx, initialPosition: pos);
+        try {
+          await _localBackend.setSources(_queueWithFreshUrls(),
+              initialIndex: idx, initialPosition: pos);
+        } catch (e) {
+          // A dead source can fail INSIDE setSources. The player's error
+          // event for it then lands while this recovery still holds the
+          // flag and is dropped as "already recovering", so nothing would
+          // follow this retry — on the rig the walk sat at retry 1 until
+          // the tunnel heal happened to re-seed (which it no longer does
+          // once it has handed a track to the walk). Carry on from here.
+          appLog('[play] retry $attempt did not load: $e');
+          followUp = e;
+          return;
+        }
         if (_playIntent) unawaited(_localBackend.play());
       } else {
         await _skipFailedTrack(error);
       }
     }).catchError((Object e) {
       castLog('http error recovery failed', error: e);
-    }).whenComplete(() => _recoveringPlayback = false);
+    }).whenComplete(() {
+      _recoveringPlayback = false;
+      final next = followUp;
+      if (next != null) _recoverHttpError(next);
+    });
   }
 
   // Resume after a queue-wide network stall when connectivity returns. Wired to
@@ -1481,8 +1540,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     required bool skipPending,
     required BackendProcessingState processingState,
     required bool queueEmpty,
+    bool healSuspended = false,
   }) {
     if (!onLocalBackend || intentionalStop || queueEmpty) return HealAction.drop;
+    // The probe has cleared the path and the skip walk owns the failures.
+    if (healSuspended) return HealAction.drop;
     // A recovery in flight will finish; re-check after it does.
     if (recovering || skipPending) return HealAction.rearm;
     // Not parked yet. It may still park (a load in flight can fail), and no
@@ -1534,6 +1596,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       skipPending: _skipPending,
       processingState: _localBackend.processingState,
       queueEmpty: q.isEmpty,
+      healSuspended: _healSuspended,
     )) {
       case HealAction.drop:
         return;
@@ -1570,7 +1633,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       // backend switch, a user play) may already have revived the player.
       if (_localBackend.processingState != BackendProcessingState.idle) return;
       await _reseedLocalAtSpot();
-    }).catchError((Object e) {
+    }).catchError((Object e) async {
       // appLog, not castLog: no cast is involved, and the incident log this
       // fix came from was tagged [cast] with no cast in sight.
       appLog('[play] tunnel-reconnect resume failed: $e');
@@ -1580,12 +1643,33 @@ class AudioPlayerHandler extends BaseAudioHandler
       // there oscillates 0↔1 and the ground-truth probe never fires. This
       // loop is the one that ran every 11s for the whole incident; it is
       // exactly the run of failures worth probing on.
-      _noteTunnelLoadFailure(server);
-      // Try again rather than leaving the player parked. Bounded by the
-      // tunnelServes gate, the 10s per-server cooldown and the single
-      // _tunnelHealRetry slot, so a flapping tunnel gets ~one attempt per
-      // 10-11s and a revived player fails the idle guard and stops.
-      _rearmTunnelHeal();
+      final pathVerified = await _noteTunnelLoadFailure(server);
+      switch (healResumeFailureAction(
+          pathVerified: pathVerified, failures: ++_healResumeFailures)) {
+        case ResumeFailureAction.rearm:
+          // Try again rather than leaving the player parked. Bounded by the
+          // tunnelServes gate, the 10s per-server cooldown, the single
+          // _tunnelHealRetry slot and the failure bound above, so a flapping
+          // tunnel gets ~one attempt per 10-11s and a revived player fails
+          // the idle guard and stops.
+          _rearmTunnelHeal();
+        case ResumeFailureAction.skipTrack:
+          // The tunnel is fine (or has had its chances): this track will not
+          // load through it, so it takes the ordinary skip walk — bounded by
+          // the queue length, ending in the outage-vs-bad-source decision —
+          // instead of being re-seeded forever.
+          appLog('[play] tunnel fine, track still fails — skipping it '
+              'instead of re-parking ($_healResumeFailures resumes failed); '
+              'heal suspended until a track loads');
+          _healResumeFailures = 0;
+          _healSuspended = true;
+          _skipPending = true;
+          _switchChain = _switchChain
+              .then((_) => _skipFailedTrack(e))
+              .catchError((Object e2) =>
+                  castLog('skip after a failed heal resume failed', error: e2))
+              .whenComplete(() => _skipPending = false);
+      }
     }).whenComplete(() => _recoveringPlayback = false);
   }
 
