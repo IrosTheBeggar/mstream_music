@@ -2742,12 +2742,6 @@ abstract class AppLocalizations {
   /// **'Enable Remote Access on the server, then paste its pairing code or scan the QR.'**
   String get irohPairingBody;
 
-  /// Shown on the iroh add-server tab when an iroh server already exists (only one is allowed).
-  ///
-  /// In en, this message translates to:
-  /// **'Only one peer-to-peer (iroh) server is supported. Remove the existing one to connect a different server.'**
-  String get irohOneServerLimit;
-
   /// Text field label for the iroh pairing code (add-server iroh tab and the re-pair sheet).
   ///
   /// In en, this message translates to:

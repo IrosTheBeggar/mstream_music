@@ -60,6 +60,44 @@ void main() {
     });
   });
 
+  group('direct peers', () {
+    Server peerOf(Server parent) => Server('federated://home/3', null, null, null, 'peer-x')
+      ..federationParent = 'home'
+      ..federationPeerId = 3
+      ..parentServer = parent;
+
+    test('a peer keys by localname and dials with its guest ticket', () {
+      final peer = peerOf(_http('home'));
+      expect(TunnelHandle.keyFor(peer), 'peer-x');
+      expect(TunnelHandle.credentialFor(peer), isNull, reason: 'nothing until the parent hands one out');
+      peer.directTicket = 'mstrfedg1:abc';
+      expect(TunnelHandle.credentialFor(peer), 'mstrfedg1:abc');
+      expect(TunnelHandle.credentialFor(_iroh('qc', 'mstr1:code')), 'mstr1:code');
+    });
+
+    test('binding a peer handle makes the peer direct; clearing it puts it back on the proxy', () {
+      final parent = _http('home');
+      final peer = peerOf(parent);
+      expect(peer.transportServer, same(parent));
+      final h = TunnelHandle(peer)
+        ..bind(key: 'peer-x', credential: 'mstrfedg1:abc', localPort: 5000, localToken: 'lt');
+      expect(peer.isDirect, isTrue);
+      expect(peer.transportServer, same(peer));
+      expect(peer.isIrohTransport, isTrue);
+      expect(h.sameTunnel('mstrfedg1:abc', 5000), isFalse, reason: 'the server holds no ticket yet');
+      peer.directTicket = 'mstrfedg1:abc';
+      expect(h.sameTunnel('mstrfedg1:abc', 5000), isTrue);
+      h.clearRuntime();
+      expect(peer.isDirect, isFalse);
+      expect(peer.transportServer, same(parent));
+    });
+
+    test('the strip follows a browsed direct peer over its own tunnel', () {
+      final peer = peerOf(_http('home'))..tunnelPort = 5000;
+      expect(bannerTargetAmong(browsed: peer.transportServer, background: const []), same(peer));
+    });
+  });
+
   group('bannerTargetAmong', () {
     final qc = _iroh('qc', 'mstr1:a');
     final other = _iroh('other', 'mstr1:b');

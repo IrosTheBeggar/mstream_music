@@ -306,14 +306,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     // stays selected — and, with more than one tunnel server queued, keeps
     // all of them reachable.
     queue.listen((items) {
-      final transports = <String, Server>{};
+      // The item's OWN server, not its transport: a federated peer's songs
+      // ride its parent's tunnel on the proxy path and the peer's own once it
+      // is direct, and the manager is where that decision lives.
+      final servers = <String, Server>{};
       for (final it in items) {
-        // A federated peer's songs ride its parent's tunnel: that is the
-        // server to keep connected, not the peer (which has no tunnel).
-        final s = _serverFor(it)?.transportServer;
-        if (s != null && s.isIroh) transports[s.localname] = s;
+        final s = _serverFor(it);
+        if (s != null) servers[s.localname] = s;
       }
-      ServerManager().setQueueIrohServers(transports.values);
+      ServerManager().setQueueIrohServers(servers.values);
       // Keep-queue-offline: sweep every queue change for tracks to download.
       // No-op unless the setting is on; DownloadManager dedupes (in-flight,
       // once-per-session, already-on-disk). Lives here — not main.dart — so
@@ -2628,7 +2629,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Downloaded items are left alone — they play from the local copy, so their
   /// URL is irrelevant.
   MediaItem _withRebuiltUrl(MediaItem m) {
-    if (m.extras?['localPath'] != null) return m;
+    // A downloaded copy plays from disk, so its URL is irrelevant — while the
+    // file is there. One that vanished (storage cleared, the folder pruned)
+    // falls back to the stored URL at load time, so it is rebuilt like a
+    // streaming item; left alone it would carry a dead port or, for a
+    // direct peer, an expired guest token.
+    if (hasLocalCopy(m)) return m;
     final path = m.extras?['path'] as String?;
     final server = _serverFor(m);
     if (path == null || server == null) return m; // local-only / unknown server
@@ -2643,6 +2649,32 @@ class AudioPlayerHandler extends BaseAudioHandler
     final server = _serverFor(m);
     if (server == null || !server.isIrohTransport) return m;
     return rebindLoopbackArt(m, server);
+  }
+
+  /// Whether [m] plays from a downloaded copy that is actually on disk.
+  static bool hasLocalCopy(MediaItem m) {
+    final localPath = m.extras?['localPath'];
+    return localPath is String && File(localPath).existsSync();
+  }
+
+  /// Whether an "upcoming only" rebuild really should leave the current item
+  /// alone. The option exists to keep a track that is PLAYING from reloading
+  /// mid-song (buffering counts; so does a finished queue, where there is
+  /// nothing upcoming and nothing to restart). A current item the backend is
+  /// not holding — idle after a failed load, never started — or one still
+  /// loading has nothing to protect and may be the very URL that needs the
+  /// change: a direct peer's renewed guest token, a tunnel that came up under
+  /// a parked player. Pure; unit-tested.
+  static bool protectsCurrentTrack(
+      {required bool upcomingOnly, required BackendProcessingState state}) {
+    if (!upcomingOnly) return false;
+    return switch (state) {
+      BackendProcessingState.ready ||
+      BackendProcessingState.buffering ||
+      BackendProcessingState.completed =>
+        true,
+      BackendProcessingState.idle || BackendProcessingState.loading => false,
+    };
   }
 
   /// The URI the CURRENT item actually plays from: the downloaded file when
@@ -2687,7 +2719,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     // everything and wants the LOGICAL spot instead.
     final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
 
-    if (upcomingOnly) {
+    final protectCurrent = protectsCurrentTrack(
+        upcomingOnly: upcomingOnly, state: _backend.processingState);
+    if (upcomingOnly && !protectCurrent) {
+      appLog('[queue] upcoming-only rebuild widened to the current track '
+          '(${_backend.processingState.name})');
+    }
+    if (protectCurrent) {
       final rebuilt = <MediaItem>[];
       bool changed = false;
       for (int i = 0; i < q.length; i++) {

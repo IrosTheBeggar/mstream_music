@@ -1580,10 +1580,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Enable Remote Access on the server, then paste its pairing code or scan the QR.';
 
   @override
-  String get irohOneServerLimit =>
-      'Only one peer-to-peer (iroh) server is supported. Remove the existing one to connect a different server.';
-
-  @override
   String get irohPairingCodeLabel => 'Pairing code';
 
   @override

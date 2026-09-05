@@ -327,4 +327,68 @@ void main() {
           'https://home.example.com/album-art/abc123.jpg?compress=s&token=PARENT-JWT');
     });
   });
+
+  group('direct access (issue #143)', () {
+    test('a peer is direct exactly while it holds a tunnel port of its own', () {
+      final (parent: parent, peer: peer) = _pair();
+      expect(peer.isDirect, isFalse);
+      expect(peer.ownsTunnel, isFalse);
+      expect(peer.transportServer, same(parent));
+      expect(peer.isIrohTransport, isFalse, reason: 'an HTTP parent has no tunnel');
+
+      peer
+        ..tunnelPort = 40123
+        ..tunnelToken = 'peerlt'
+        ..directGuestToken = 'GUEST-JWT';
+      expect(peer.isDirect, isTrue);
+      expect(peer.ownsTunnel, isTrue);
+      expect(peer.transportServer, same(peer));
+      expect(peer.isIrohTransport, isTrue);
+      expect(peer.isIroh, isFalse, reason: 'identity stays federated');
+    });
+
+    test('direct: own loopback, own __lt, the guest token — never the parent\'s', () {
+      final (parent: parent, peer: peer) = _pair(iroh: true, tunnelPort: 5001, tunnelToken: 'parentlt');
+      expect(parent.effectiveBaseUrl, 'http://127.0.0.1:5001');
+      peer
+        ..tunnelPort = 40123
+        ..tunnelToken = 'peerlt'
+        ..directGuestToken = 'GUEST-JWT';
+      expect(peer.effectiveBaseUrl, 'http://127.0.0.1:40123');
+      expect(peer.authToken, 'GUEST-JWT');
+      expect(peer.localTokenQuery, '&__lt=peerlt');
+      final u = peer.apiUri('/api/v1/db/albums');
+      expect(u.toString(), 'http://127.0.0.1:40123/api/v1/db/albums?__lt=peerlt');
+      expect(u.toString(), isNot(contains('federation')));
+      expect(u.toString(), isNot(contains('parentlt')));
+    });
+
+    test('proxy: the parent\'s everything, as before', () {
+      final (parent: parent, peer: peer) = _pair(iroh: true, tunnelPort: 5001, tunnelToken: 'parentlt');
+      peer.directGuestToken = 'GUEST-JWT'; // held but unused without a tunnel
+      expect(peer.isDirect, isFalse);
+      expect(peer.authToken, parent.jwt);
+      expect(peer.effectiveBaseUrl, 'http://127.0.0.1:5001');
+      expect(peer.apiUri('/api/v1/db/albums').toString(),
+          'http://127.0.0.1:5001/api/v1/federation/peers/3/api/api/v1/db/albums?__lt=parentlt');
+    });
+
+    test('the direct material is runtime-only; the parent\'s flag persists', () {
+      final peer = _pair().peer
+        ..directTicket = 'mstrfedg1:x'
+        ..directGuestToken = 'g'
+        ..directDenied = true
+        ..tunnelPort = 1;
+      final back = Server.fromJson(peer.toJson());
+      expect(back.directTicket, isNull);
+      expect(back.directGuestToken, isNull);
+      expect(back.directDenied, isFalse);
+      expect(back.tunnelPort, isNull);
+      expect(back.isDirect, isFalse);
+
+      final parent = _pair().parent..federationDirectAvailable = true;
+      expect(Server.fromJson(parent.toJson()).federationDirectAvailable, isTrue);
+      expect(Server.fromJson({'url': 'https://x', 'localname': 'x'}).federationDirectAvailable, isNull);
+    });
+  });
 }
