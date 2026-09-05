@@ -113,20 +113,24 @@ ensure_playing() { # <timeout s> → 0 when PLAYING
   return 1
 }
 
-# ── device config (servers.json / auto_dj.json), backed up + restored on exit ──
+# ── device config (servers.json / auto_dj.json / queue.json), backed up + restored on exit ──
+# queue.json too: a run that queues tracks from a server it then removes (the
+# federation rig's peer) would otherwise leave the phone on a queue nothing
+# can play — the next PLAY key does nothing and the next script's playback
+# step fails for a reason that has nothing to do with the build.
 CFG_BACKUP=""
 cfg_read()  { adbx shell "run-as $PKG cat app_flutter/$1"; }
 cfg_write() { adbx push "$2" /data/local/tmp/smoke-cfg >/dev/null
               adbx shell "run-as $PKG sh -c 'cat /data/local/tmp/smoke-cfg > app_flutter/$1'; rm /data/local/tmp/smoke-cfg"; }
 cfg_backup() {
   CFG_BACKUP="$OUT/cfg-backup"; mkdir -p "$CFG_BACKUP"
-  for f in servers.json auto_dj.json; do cfg_read "$f" > "$CFG_BACKUP/$f"; done
+  for f in servers.json auto_dj.json queue.json; do cfg_read "$f" > "$CFG_BACKUP/$f"; done
   trap cfg_restore EXIT
 }
 cfg_restore() {
   [ -n "$CFG_BACKUP" ] || return 0
   app_stop
-  for f in servers.json auto_dj.json; do [ -s "$CFG_BACKUP/$f" ] && cfg_write "$f" "$CFG_BACKUP/$f"; done
+  for f in servers.json auto_dj.json queue.json; do [ -s "$CFG_BACKUP/$f" ] && cfg_write "$f" "$CFG_BACKUP/$f"; done
   rm -rf "$CFG_BACKUP"; CFG_BACKUP=""
   log "device config restored"
 }
