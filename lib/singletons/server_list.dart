@@ -1001,7 +1001,11 @@ class ServerManager {
       // the Cast SDK's own suspend/resume recovery.
       // A direct peer's proxy URLs still work while its own tunnel comes
       // up, so only UPCOMING items move over — the playing track keeps its
-      // stream instead of reloading mid-song.
+      // stream instead of reloading mid-song (a paused or idle one moves
+      // too; see protectsCurrentTrack). And a peer that just went direct no
+      // longer needs its parent's tunnel unless the parent is browsed or
+      // queued itself: reconcile now rather than at the next queue edit.
+      if (s.isFederated) unawaited(ensureTunnels(reason: 'direct-up'));
       unawaited(MediaManager()
           .audioHandler
           .customAction('rebuildTranscodeUrls',
@@ -1098,9 +1102,24 @@ class ServerManager {
   /// Nothing references [h]'s server any more: stop its tunnel on its chain
   /// and drop the handle — unless an ensure is queued behind the stop, in
   /// which case something wants it back and the handle stays to serve that.
+  /// Queued URLs that still ride the dropped loopback are rebuilt: a peer's
+  /// tracks left on their parent's proxy port when the peer went direct
+  /// (the playing one is left alone on the bind on purpose, and reloads at
+  /// its spot here — a short gap instead of a dead source and a retry);
+  /// otherwise a no-op. (Federated handles rebuild in _stopHandleTunnel.)
   Future<void> _releaseHandle(TunnelHandle h, String reason) =>
       _mutateHandle(h, reason, () {
+        final carried = h.nativeKey != null && !h.server.isFederated;
         _stopHandleTunnel(h, reason);
+        if (carried) {
+          unawaited(MediaManager()
+              .audioHandler
+              .customAction('rebuildTranscodeUrls',
+                  const {'upcomingOnly': false, 'auto': true})
+              .catchError((Object e) {
+            appLog('[iroh] URL rebuild after the release failed: $e');
+          }));
+        }
         h.cancelRetry();
         if (identical(_tunnels[h.server.localname], h) &&
             h.pendingEnsures == 0) {

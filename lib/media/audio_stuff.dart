@@ -2744,19 +2744,23 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Whether an "upcoming only" rebuild really should leave the current item
   /// alone. The option exists to keep a track that is PLAYING from reloading
   /// mid-song (buffering counts; so does a finished queue, where there is
-  /// nothing upcoming and nothing to restart). A current item the backend is
-  /// not holding — idle after a failed load, never started — or one still
-  /// loading has nothing to protect and may be the very URL that needs the
-  /// change: a direct peer's renewed guest token, a tunnel that came up under
-  /// a parked player. Pure; unit-tested.
+  /// nothing upcoming and nothing to restart). Anything else has nothing to
+  /// protect and may be the very URL that needs the change — a direct peer's
+  /// renewed guest token, a tunnel that came up under a parked player, a
+  /// queue restored at launch and sitting paused on the parent's proxy URL
+  /// while the peer's own tunnel arrives: idle after a failed load, never
+  /// started, still loading, or loaded but paused (the reload keeps the
+  /// spot and stays paused, so nothing is heard). Pure; unit-tested.
   static bool protectsCurrentTrack(
-      {required bool upcomingOnly, required BackendProcessingState state}) {
+      {required bool upcomingOnly,
+      required BackendProcessingState state,
+      required bool playing}) {
     if (!upcomingOnly) return false;
     return switch (state) {
+      BackendProcessingState.completed => true,
       BackendProcessingState.ready ||
-      BackendProcessingState.buffering ||
-      BackendProcessingState.completed =>
-        true,
+      BackendProcessingState.buffering =>
+        playing,
       BackendProcessingState.idle || BackendProcessingState.loading => false,
     };
   }
@@ -2804,10 +2808,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     final cur = (_backend.currentIndex ?? 0).clamp(0, q.length - 1);
 
     final protectCurrent = protectsCurrentTrack(
-        upcomingOnly: upcomingOnly, state: _backend.processingState);
+        upcomingOnly: upcomingOnly,
+        state: _backend.processingState,
+        playing: _backend.playing);
     if (upcomingOnly && !protectCurrent) {
       appLog('[queue] upcoming-only rebuild widened to the current track '
-          '(${_backend.processingState.name})');
+          '(${_backend.processingState.name}'
+          '${_backend.playing ? '' : ', paused'})');
     }
     if (protectCurrent) {
       final rebuilt = <MediaItem>[];
