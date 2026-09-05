@@ -27,7 +27,11 @@ pick_device() {
   if [ -z "$SERIAL" ]; then SERIAL=$("$ADB" devices | awk 'NR>1 && $2=="device"{print $1; exit}'); fi
   [ -n "$SERIAL" ] || { echo "no Android device attached"; exit 2; }
   adbx shell pm list packages 2>/dev/null | grep -q "^package:$PKG$" || { echo "$PKG is not installed on $SERIAL"; exit 2; }
-  log "device: $SERIAL  package: $PKG"
+  # The app's UID, so applog reads THIS package's lines only: the production
+  # build usually runs alongside the dev build with a tunnel of its own, and
+  # its "[iroh] …" lines would otherwise satisfy (or confuse) the checks.
+  APP_UID=$(adbx shell "run-as $PKG id -u" 2>/dev/null | tr -dc '0-9')
+  log "device: $SERIAL  package: $PKG${APP_UID:+ (uid $APP_UID)}"
 }
 log()  { echo "$(date '+%H:%M:%S') $*" | tee -a "$OUT/run.log"; }
 pass() { PASS=$((PASS+1)); log "PASS  $*"; }
@@ -40,8 +44,9 @@ app_start()    { adbx shell am start -n "$PKG/$ACT" >/dev/null; }
 app_stop()     { adbx shell am force-stop "$PKG"; }
 logcat_clear() { adbx logcat -c; }
 # The app's own log lines (Flutter prints) since the last logcat_clear, as "HH:MM:SS.mmm [tag] …".
+# Scoped to the package's UID (pick_device) so another mStream build's lines never leak in.
 applog() {
-  adbx logcat -d -v time 2>/dev/null | grep "I/flutter" | sed 's/^[0-9-]* //; s/ I\/flutter ( [0-9]*): / /'
+  adbx logcat -d -v time ${APP_UID:+--uid="$APP_UID"} 2>/dev/null | grep "I/flutter" | sed 's/^[0-9-]* //; s/ I\/flutter ( *[0-9]*): / /'
 }
 wait_for_log() { # <regex> <timeout s> → 0 when the line appears
   local pat="$1" t="${2:-30}" i=0
