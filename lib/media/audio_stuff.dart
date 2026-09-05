@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show File;
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:audio_service/audio_service.dart';
@@ -37,6 +36,7 @@ import '../singletons/visualizer_audio.dart';
 import '../objects/display_item.dart';
 import '../util/camelot.dart';
 import '../util/server_version.dart';
+import '../util/seed_vector.dart';
 import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
@@ -2089,6 +2089,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           _sonicHistory = const []; // fresh server, fresh sonic session
           _sonicSeedOwners.clear();
           _multiServerExcluded.clear();
+          _multiServerIgnore.clear();
           _sonicLockedAnchor = null;
           _sonicWarned = false;
         }
@@ -2553,6 +2554,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   // across model spaces returns confident nonsense.
   final Set<String> _multiServerExcluded = {};
 
+  // Each OTHER server's ignoreList, by localname (the DJ's own server keeps
+  // using [jsonAutoDJIgnoreList], shared with the single-server path). The
+  // list is server-issued track ids, so it only means anything back on the
+  // server that issued it: one shared list would exclude unrelated tracks
+  // everywhere else and lose the cooldown wherever the winner moved. Only
+  // the winner's list advances — the other servers' picks were never played.
+  final Map<String, dynamic> _multiServerIgnore = {};
+
   /// Servers that could contribute to a multi-server session right now.
   /// Public so the Auto DJ screen can show who is taking part without
   /// duplicating the rules.
@@ -2575,14 +2584,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<({String modelId, String base64})?> _multiServerSeed(
       List<String> seedPaths) async {
     if (seedPaths.isEmpty) return null;
-    // Seeds are stored as "<localname>/<path>"-free vpath strings belonging to
-    // the DJ's server; a cross-server anchor records where each came from.
+    // A cross-server anchor records where each path came from; a path with
+    // no owner predates the map and belongs to the DJ's own server.
     final byServer = <Server, List<String>>{};
     for (final p in seedPaths) {
-      final ownerName = _sonicSeedOwners[p];
-      final owner = ownerName == null
-          ? autoDJServer
-          : (ServerManager().byLocalname(ownerName) ?? autoDJServer);
+      final owner = _seedOwner(p);
       if (owner == null) continue;
       byServer.putIfAbsent(owner, () => []).add(p);
     }
@@ -2605,32 +2611,22 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
       vectors.addAll(got.vectors);
     }
-    if (modelId == null || dim == null || vectors.isEmpty) return null;
+    if (modelId == null || dim == null) return null;
+    // The mean of near-opposite anchors can collapse to zero; the server
+    // would refuse it, so don't spend the round trip (null here).
+    final base64 = seedVectorBase64(vectors, dim);
+    if (base64 == null) return null;
+    return (modelId: modelId, base64: base64);
+  }
 
-    final centroid = Float64List(dim);
-    for (final v in vectors) {
-      for (var i = 0; i < dim; i++) {
-        centroid[i] += v[i];
-      }
-    }
-    var sumSq = 0.0;
-    for (var i = 0; i < dim; i++) {
-      centroid[i] /= vectors.length;
-      sumSq += centroid[i] * centroid[i];
-    }
-    final norm = math.sqrt(sumSq);
-    // Averaging near-opposite vectors can land on zero; the server would
-    // refuse it, so don't spend the round trip.
-    if (norm == 0 || !norm.isFinite) return null;
-
-    final out = Float32List(dim);
-    for (var i = 0; i < dim; i++) {
-      out[i] = centroid[i] / norm;
-    }
-    return (
-      modelId: modelId,
-      base64: base64Encode(out.buffer.asUint8List()),
-    );
+  /// The server a sonic-history path belongs to: recorded when the pick was
+  /// queued, else the DJ's own server (a single-server history predates the
+  /// owners map).
+  Server? _seedOwner(String path) {
+    final ownerName = _sonicSeedOwners[path];
+    return ownerName == null
+        ? autoDJServer
+        : (ServerManager().byLocalname(ownerName) ?? autoDJServer);
   }
 
   /// One pick, chosen across every eligible server.
@@ -2648,14 +2644,32 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (seed == null) return false;
 
     final mgr = AutoDJManager();
-    final ignore = jsonAutoDJIgnoreList ?? [];
+
+    // What no server may answer with: the playing track and the recent
+    // anchors, keyed "<localname>|<path>" because a path only names a row on
+    // the server that holds it. A vector seed carries no hashes for the
+    // server to exclude on its own (the filepath form's seeds are dropped
+    // from the pool server-side), and ignoreList is only a soft cooldown that
+    // yields to the full pool once it covers every candidate — so this guard
+    // lives here, and a server offering a repeat is simply passed over.
+    final recent = <String>{};
+    final cur = mediaItem.valueOrNull;
+    final curServer = cur?.extras?['server'];
+    final curPath = _normSonicPath(cur?.extras?['path'] as String?);
+    if (curServer is String && curPath != null) {
+      recent.add('$curServer|$curPath');
+    }
+    for (final p in _sonicHistory) {
+      final owner = _seedOwner(p);
+      if (owner != null) recent.add('${owner.localname}|$p');
+    }
 
     // Every server is asked at once — a session that waited for each in turn
     // would stall the queue on the slowest one. A server that times out or
     // errors simply doesn't compete for this pick.
     final answers = await Future.wait(candidates.map((server) async {
       final payload = <String, dynamic>{
-        'ignoreList': ignore,
+        'ignoreList': _ignoreListFor(server),
         'similarToVector': seed.base64,
         'similarToModelId': seed.modelId,
         'minSimilarity': mgr.sonicMinSimilarity,
@@ -2689,7 +2703,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         final decoded = jsonDecode(res.body) as Map<String, dynamic>;
         final songs = decoded['songs'] as List?;
         if (songs == null || songs.isEmpty) return null;
-        if (mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) return null;
+        final song = songs[0] as Map<String, dynamic>;
+        if (mgr.isKeywordBlocked(song)) return null;
+        final path = _normSonicPath(song['filepath'] as String?);
+        if (path == null || recent.contains('${server.localname}|$path')) {
+          verboseLog('[dj] ${server.localname} offered a track already in '
+              'play or in the anchor — passed over');
+          return null;
+        }
         final sim = (decoded['sonic'] as Map?)?['similarity'];
         return (
           server: server,
@@ -2715,11 +2736,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[dj] multi-server: ${scored.length}/${candidates.length} answered, '
         'best ${best.similarity.toStringAsFixed(4)} from ${best.server.localname}');
 
-    // The ignore list is per-server on the wire but the session is one queue,
-    // so carry the winner's forward — and it is what keeps a vector seed off
-    // the song already playing, since a vector has no hashes for the server
-    // to exclude on its own.
-    jsonAutoDJIgnoreList = best.decoded['ignoreList'];
+    // Only the winner's cooldown advances — its pick is the one being played,
+    // the others' were not. The DJ's own server shares its list with the
+    // single-server path, so a fallback pick later continues the same
+    // cooldown rather than starting a fresh one.
+    if (best.server.localname == autoDJServer?.localname) {
+      jsonAutoDJIgnoreList = best.decoded['ignoreList'];
+    } else {
+      _multiServerIgnore[best.server.localname] = best.decoded['ignoreList'];
+    }
 
     _queueAutoDJSong(best.decoded,
         autoPlay: autoPlay,
@@ -2727,6 +2752,15 @@ class AudioPlayerHandler extends BaseAudioHandler
         sonicPick: true,
         source: best.server);
     return true;
+  }
+
+  /// The ignoreList to send [server]: the DJ's own server uses the list the
+  /// single-server path maintains, every other server its own.
+  dynamic _ignoreListFor(Server server) {
+    if (server.localname == autoDJServer?.localname) {
+      return jsonAutoDJIgnoreList ?? const [];
+    }
+    return _multiServerIgnore[server.localname] ?? const [];
   }
 
   Future<void> autoDJ(

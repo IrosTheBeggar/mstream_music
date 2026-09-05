@@ -12,6 +12,7 @@ import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/media_format.dart';
+import '../util/seed_vector.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:material_ui/material_ui.dart';
@@ -955,12 +956,11 @@ class ApiManager {
         // notAnalyzed tracks come back with a null embedding — a normal
         // transient state while the worker catches up, not a failure.
         if (b64 is! String || b64.isEmpty) continue;
-        final bytes = base64Decode(b64);
-        if (bytes.lengthInBytes != dim * 4) continue;
-        // Copy into an aligned buffer: the decoded list's offset is not
-        // guaranteed to suit a Float32List view.
-        final aligned = Uint8List.fromList(bytes);
-        vectors.add(aligned.buffer.asFloat32List());
+        // Null for a payload that isn't exactly dim floats — a server
+        // answering with a different dim than it advertised is skipped.
+        final vec = decodeWireVector(b64, dim);
+        if (vec == null) continue;
+        vectors.add(vec);
       }
       if (vectors.isEmpty) return null;
       return (modelId: modelId, dim: dim, vectors: vectors);

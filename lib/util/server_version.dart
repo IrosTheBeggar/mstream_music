@@ -208,17 +208,18 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   ServerParam.similarTo: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.minSimilarity: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.noLyrics: ServerVersion(6, 13, 1, '6.13.1'),
-  // ASSUMPTION — the duration params are merged on the server's master but
-  // NOT in any tag yet (v6.24.0 is the newest, and they landed after it), so
-  // 6.25.0 is the expected next minor rather than an observed floor. If the
-  // release that carries them is numbered differently, these three are the
-  // only thing to change. Erring high is the safe direction: too high hides a
-  // working control, too low sends a parameter that 400s the whole request —
-  // though ServerCapabilities would then learn and drop it.
-  // Same unreleased-floor caveat as the duration params below: the vector
-  // seed is merged on the server's master but carried by no tag yet.
-  ServerParam.similarToVector: ServerVersion(6, 25, 0, '6.25.0'),
-  ServerParam.similarToModelId: ServerVersion(6, 25, 0, '6.25.0'),
+  // The vector seed (mStream #929: /discovery/local/embeddings +
+  // random-songs' similarToVector) is NOT in 6.25.0 — that tag shipped on
+  // 2026-08-30 without it — so the floor is the next minor, an expected
+  // release rather than an observed one. If the release that carries it is
+  // numbered differently, these two are the only thing to change. Erring
+  // high hides a working control; erring low would offer a 6.25.0 server a
+  // session it silently sits out of (its embeddings call 404s, the pick
+  // falls back to single-server, but the participants readout would still
+  // have counted it).
+  ServerParam.similarToVector: ServerVersion(6, 26, 0, '6.26.0'),
+  ServerParam.similarToModelId: ServerVersion(6, 26, 0, '6.26.0'),
+  // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.allowUnknownDuration: ServerVersion(6, 25, 0, '6.25.0'),
