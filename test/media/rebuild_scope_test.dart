@@ -8,20 +8,25 @@ import 'package:mstream_music/media/playback_backend.dart';
 void main() {
   group('AudioPlayerHandler.protectsCurrentTrack', () {
     test('a playing or buffering track is left alone by an upcoming-only rebuild', () {
-      for (final s in [BackendProcessingState.ready, BackendProcessingState.buffering, BackendProcessingState.completed]) {
-        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: s), isTrue, reason: '$s');
+      for (final s in [BackendProcessingState.ready, BackendProcessingState.buffering]) {
+        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: s, playing: true), isTrue, reason: '$s');
       }
+      expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: BackendProcessingState.completed, playing: false), isTrue);
     });
 
-    test('an idle or still-loading current track is rebuilt too (its URL may be the stale one)', () {
+    test('a paused, idle or still-loading current track is rebuilt too (its URL may be the stale one)', () {
+      // A queue restored at launch sits ready-but-paused on the parent's
+      // proxy URL while the peer's own tunnel arrives; the reload keeps the
+      // spot and stays paused.
+      expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: BackendProcessingState.ready, playing: false), isFalse);
       for (final s in [BackendProcessingState.idle, BackendProcessingState.loading]) {
-        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: s), isFalse, reason: '$s');
+        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: true, state: s, playing: true), isFalse, reason: '$s');
       }
     });
 
     test('a full rebuild never protects', () {
       for (final s in BackendProcessingState.values) {
-        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: false, state: s), isFalse);
+        expect(AudioPlayerHandler.protectsCurrentTrack(upcomingOnly: false, state: s, playing: true), isFalse);
       }
     });
   });

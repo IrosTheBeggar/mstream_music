@@ -122,6 +122,11 @@ class DownloadManager {
               await AutoDownloadLedger()
                   .record(dt.serverName!, dt.dataPath!, dt.localPath!);
               await _enforceAutoDownloadCap();
+              // A slot just freed: pull the next unmarked track in. The
+              // queue patch above usually re-sweeps too; this makes sure of
+              // it when the patch changed nothing.
+              unawaited(autoDownloadQueue(
+                  MediaManager().audioHandler.queue.value));
             }
           }
           break;
@@ -348,21 +353,44 @@ class DownloadManager {
     return items.sublist(start, end > items.length ? items.length : end);
   }
 
+  /// With [slotsFor], at most that many candidates per server are picked (and
+  /// marked) in one sweep; the rest stay unmarked, so the next sweep — every
+  /// queue change, every landing — picks them up as transfers finish.
   static List<MediaItem> autoDownloadCandidates(
       List<MediaItem> items, Set<String> attempted,
-      {required bool Function(String path) fileExists}) {
+      {required bool Function(String path) fileExists,
+      int Function(String server)? slotsFor}) {
     final out = <MediaItem>[];
+    final used = <String, int>{};
     for (final m in items) {
       final server = m.extras?['server'] as String?;
       final path = m.extras?['path'] as String?;
       if (server == null || path == null) continue;
       final localPath = m.extras?['localPath'] as String?;
       if (localPath != null && fileExists(localPath)) continue;
-      if (!attempted.add(server + path)) continue;
+      if (attempted.contains(server + path)) continue;
+      if (slotsFor != null) {
+        final taken = used[server] ?? 0;
+        if (taken >= slotsFor(server)) continue; // unmarked: a later sweep
+        used[server] = taken + 1;
+      }
+      attempted.add(server + path);
       out.add(m);
     }
     return out;
   }
+
+  /// How many keep-queue-offline transfers may run against one server at
+  /// once. A queued album used to fire every track together: a federated
+  /// peer caps a key at 3 concurrent streams (guests share it), so most came
+  /// back 429 to retry in another burst, and the burst competed with the
+  /// player's own stream; a small self-hosted server is not happier about
+  /// 26 range requests either. Manual downloads are not held back.
+  static const int kAutoDownloadParallel = 2;
+
+  // In-flight keys are `<serverName><filepath>`, and paths start with '/'.
+  int _inFlightFor(String server) =>
+      _inFlight.where((k) => k.startsWith('$server/')).length;
 
   /// Keep-queue-offline sweep: enqueue a download for every queued server
   /// track not yet on disk. Fired on every queue change (audio_stuff._init)
@@ -376,7 +404,21 @@ class DownloadManager {
   // once per change instead of on every queue emission / advance.
   int _lastClippedLogged = 0;
 
-  Future<void> autoDownloadQueue(List<MediaItem> items) async {
+  // Sweeps run one at a time. They fire on every queue emission — a new
+  // queue emits several times in a row — and two running at once each read
+  // the in-flight set before the other's enqueues have landed, so a queue's
+  // birth started three transfers instead of two (measured on the rig: three
+  // tasks plus the player's stream on a peer's 3-stream cap → eight 429s in
+  // the first seven seconds, none afterwards).
+  Future<void> _sweepChain = Future.value();
+
+  Future<void> autoDownloadQueue(List<MediaItem> items) {
+    final run = _sweepChain.then((_) => _autoDownloadQueue(items));
+    _sweepChain = run.catchError((_) {});
+    return run;
+  }
+
+  Future<void> _autoDownloadQueue(List<MediaItem> items) async {
     if (!SettingsManager().offlineQueue) return;
     final wifiOnly = SettingsManager().offlineQueueWifiOnly;
     // Only fetch what the cap actually allows on disk. Tracks outside the
@@ -397,7 +439,8 @@ class DownloadManager {
       }
     }
     for (final m in autoDownloadCandidates(window, _autoAttempted,
-        fileExists: (p) => File(p).existsSync())) {
+        fileExists: (p) => File(p).existsSync(),
+        slotsFor: (server) => kAutoDownloadParallel - _inFlightFor(server))) {
       await downloadOneFile(m.id, m.extras!['server'], m.extras!['path'],
           requiresWiFi: wifiOnly, auto: true, quiet: true);
     }

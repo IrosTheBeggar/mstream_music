@@ -79,6 +79,30 @@ void main() {
           1);
     });
 
+    test('a per-server slot budget picks — and marks — only what fits', () {
+      final attempted = <String>{};
+      final q = [item('/a'), item('/b'), item('/c'), item('/x', server: 's2')];
+      final first = DownloadManager.autoDownloadCandidates(q, attempted,
+          fileExists: missing, slotsFor: (s) => s == 's1' ? 1 : 2);
+      expect(first.map((m) => m.extras!['path']), ['/a', '/x']);
+      expect(attempted, {'s1/a', 's2/x'}, reason: 'the ones left out stay unmarked');
+      // The next sweep, with a slot free again, takes the next in order.
+      final second = DownloadManager.autoDownloadCandidates(q, attempted,
+          fileExists: missing, slotsFor: (s) => s == 's1' ? 1 : 0);
+      expect(second.map((m) => m.extras!['path']), ['/b']);
+      // No slots → nothing picked, nothing marked.
+      expect(DownloadManager.autoDownloadCandidates(q, attempted, fileExists: missing, slotsFor: (_) => 0), isEmpty);
+      expect(attempted, {'s1/a', 's2/x', 's1/b'});
+    });
+
+    test('already-attempted and on-disk tracks do not consume a slot', () {
+      final attempted = {'s1/a'};
+      final q = [item('/a'), item('/d', localPath: '/disk/d'), item('/b'), item('/c')];
+      final picked = DownloadManager.autoDownloadCandidates(q, attempted,
+          fileExists: onDisk, slotsFor: (_) => 1);
+      expect(picked.map((m) => m.extras!['path']), ['/b']);
+    });
+
     test('duplicate copies of one track in the same sweep pick once', () {
       final picked = DownloadManager.autoDownloadCandidates(
           [item('/a.mp3'), item('/a.mp3')], <String>{},
