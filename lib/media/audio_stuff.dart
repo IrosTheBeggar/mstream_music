@@ -2667,65 +2667,118 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Every server is asked at once — a session that waited for each in turn
     // would stall the queue on the slowest one. A server that times out or
     // errors simply doesn't compete for this pick.
-    final answers = await Future.wait(candidates.map((server) async {
-      final payload = <String, dynamic>{
-        'ignoreList': _ignoreListFor(server),
-        'similarToVector': seed.base64,
-        'similarToModelId': seed.modelId,
-        'minSimilarity': mgr.sonicMinSimilarity,
-        // Each server's own library rules — rating, vpaths, genre — plus the
-        // app-level ones that mean the same everywhere.
-        ...mgr.libraryFilters(server),
-      };
-      final filtered = ServerCapabilities().filter(server, payload);
-      try {
-        final res = await http
-            .post(
-              server.apiUri('/api/v1/db/random-songs'),
-              headers: {
-                'Content-Type': 'application/json',
-                'x-access-token': server.jwt ?? '',
-              },
-              body: jsonEncode(filtered.body),
-            )
-            .timeout(const Duration(seconds: 12));
-        if (res.statusCode > 299) {
-          // A model-space refusal is permanent for this session: the library
-          // is indexed with a different model and rescanning is the only
-          // cure, so stop asking rather than burning a request per pick.
-          if (res.statusCode == 400 && res.body.contains('Sonic seed is from model')) {
-            _multiServerExcluded.add(server.localname);
-            appLog('[dj] ${server.localname} indexes a different embedding '
-                'model — dropped from this session');
+    //
+    // A server answers with a random row from its pool, so when every
+    // answer is a repeat or blocked the ask is repeated a couple of times
+    // with each server's own returned ignoreList fed back (the way the
+    // single-server loop retries) before the pick is left to that loop —
+    // otherwise a strict slider, whose pools are small, would keep turning
+    // the session single-server. The fed-back lists stay transient: only
+    // the winner's cooldown advances (below), its pick is the one played.
+    final retryLists = <String, dynamic>{
+      for (final s in candidates) s.localname: _ignoreListFor(s),
+    };
+    const maxAsks = 3;
+    List<({Server server, Map<String, dynamic> decoded, double similarity})>
+        scored = const [];
+    var answered = 0;
+    for (var ask = 0; ask < maxAsks && scored.isEmpty; ask++) {
+      // A server dropped mid-pick (a model-space refusal) is not asked again.
+      final round = candidates
+          .where((s) => !_multiServerExcluded.contains(s.localname))
+          .toList();
+      if (round.isEmpty) return false;
+      final answers = await Future.wait(round.map((server) async {
+        final payload = <String, dynamic>{
+          'ignoreList': retryLists[server.localname] ?? const [],
+          'similarToVector': seed.base64,
+          'similarToModelId': seed.modelId,
+          'minSimilarity': mgr.sonicMinSimilarity,
+          // Each server's own library rules — rating, vpaths, genre — plus
+          // the app-level ones that mean the same everywhere.
+          ...mgr.libraryFilters(server),
+        };
+        final filtered = ServerCapabilities().filter(server, payload);
+        try {
+          final res = await http
+              .post(
+                server.apiUri('/api/v1/db/random-songs'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-access-token': server.jwt ?? '',
+                },
+                body: jsonEncode(filtered.body),
+              )
+              .timeout(const Duration(seconds: 12));
+          if (res.statusCode > 299) {
+            // A model-space refusal is permanent for this session: the
+            // library is indexed with a different model and rescanning is
+            // the only cure, so stop asking rather than burning a request
+            // per pick.
+            if (res.statusCode == 400 &&
+                res.body.contains('Sonic seed is from model')) {
+              _multiServerExcluded.add(server.localname);
+              appLog('[dj] ${server.localname} indexes a different embedding '
+                  'model — dropped from this session');
+            }
+            return null;
           }
+          final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+          final songs = decoded['songs'] as List?;
+          if (songs == null || songs.isEmpty) return null;
+          // Whatever this answer's fate, the server has now seen its own
+          // pick: its list is what a repeated round sends it.
+          if (decoded['ignoreList'] is List) {
+            retryLists[server.localname] = decoded['ignoreList'];
+          }
+          final song = songs[0] as Map<String, dynamic>;
+          if (mgr.isKeywordBlocked(song)) {
+            return (
+              server: server,
+              decoded: decoded,
+              similarity: -1.0,
+              usable: false,
+            );
+          }
+          final path = _normSonicPath(song['filepath'] as String?);
+          if (path == null || recent.contains('${server.localname}|$path')) {
+            verboseLog('[dj] ${server.localname} offered a track already in '
+                'play or in the anchor — passed over');
+            return (
+              server: server,
+              decoded: decoded,
+              similarity: -1.0,
+              usable: false,
+            );
+          }
+          final sim = (decoded['sonic'] as Map?)?['similarity'];
+          return (
+            server: server,
+            decoded: decoded,
+            // A server that somehow answered without a score still competes,
+            // just never beats one that did.
+            similarity: sim is num ? sim.toDouble() : -1.0,
+            usable: true,
+          );
+        } catch (e) {
+          verboseLog('[dj] ${server.localname} did not answer: $e');
           return null;
         }
-        final decoded = jsonDecode(res.body) as Map<String, dynamic>;
-        final songs = decoded['songs'] as List?;
-        if (songs == null || songs.isEmpty) return null;
-        final song = songs[0] as Map<String, dynamic>;
-        if (mgr.isKeywordBlocked(song)) return null;
-        final path = _normSonicPath(song['filepath'] as String?);
-        if (path == null || recent.contains('${server.localname}|$path')) {
-          verboseLog('[dj] ${server.localname} offered a track already in '
-              'play or in the anchor — passed over');
-          return null;
-        }
-        final sim = (decoded['sonic'] as Map?)?['similarity'];
-        return (
-          server: server,
-          decoded: decoded,
-          // A server that somehow answered without a score still competes,
-          // just never beats one that did.
-          similarity: sim is num ? sim.toDouble() : -1.0,
-        );
-      } catch (e) {
-        verboseLog('[dj] ${server.localname} did not answer: $e');
-        return null;
+      }));
+      final got = answers.nonNulls.toList();
+      answered = got.length;
+      // Nobody answered — asking again would not change that.
+      if (got.isEmpty) break;
+      scored = [
+        for (final a in got)
+          if (a.usable)
+            (server: a.server, decoded: a.decoded, similarity: a.similarity),
+      ];
+      if (scored.isEmpty && ask + 1 < maxAsks) {
+        verboseLog('[dj] multi-server: every answer was a repeat or blocked '
+            '— asking again (${ask + 2}/$maxAsks)');
       }
-    }));
-
-    final scored = answers.nonNulls.toList();
+    }
     if (scored.isEmpty) return false;
 
     // Best match wins. The whole reason for asking everyone is that one of
@@ -2733,8 +2786,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     scored.sort((a, b) => b.similarity.compareTo(a.similarity));
     final best = scored.first;
 
-    appLog('[dj] multi-server: ${scored.length}/${candidates.length} answered, '
-        'best ${best.similarity.toStringAsFixed(4)} from ${best.server.localname}');
+    appLog('[dj] multi-server: $answered/${candidates.length} answered, '
+        '${scored.length} usable, best ${best.similarity.toStringAsFixed(4)} '
+        'from ${best.server.localname}');
 
     // Only the winner's cooldown advances — its pick is the one being played,
     // the others' were not. The DJ's own server shares its list with the
@@ -2826,7 +2880,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         _sonicLockedAnchor == null) {
       _sonicLockedAnchor = _normSonicPath(explicitSeed ?? sonicCurrent);
     }
-    final sonic = sonicParams(
+    // The session's anchors from every server that has contributed a pick
+    // — what a cross-server seed averages over.
+    final sonicAll = sonicParams(
       enabled: sonicEnabled,
       mode: mgr.sonicAnchorMode,
       lockedAnchor: _sonicLockedAnchor,
@@ -2835,15 +2891,34 @@ class AudioPlayerHandler extends BaseAudioHandler
       currentPath: sonicCurrent,
       minSimilarity: mgr.sonicMinSimilarity,
     );
+    // The single-server body carries only what the DJ's own server can
+    // resolve: a filepath names a row on the server holding it, and every
+    // discovery route answers a uniform 404 for one it can't — so another
+    // server's path in this body would stop the session with "Track not
+    // found". With the whole recent history on other servers the policy
+    // falls back the way it does on a cold start: the explicit seed, else
+    // the playing track (both already restricted to the DJ's server above).
+    final sonic = sonicParams(
+      enabled: sonicEnabled,
+      mode: mgr.sonicAnchorMode,
+      lockedAnchor: _sonicLockedAnchor,
+      history: historyOwnedBy(
+          _sonicHistory, _sonicSeedOwners, autoDJServer!.localname),
+      seedPath: explicitSeed,
+      currentPath: sonicCurrent,
+      minSimilarity: mgr.sonicMinSimilarity,
+    );
 
-    // Multi-server first, when it's on and there is a sonic seed to carry.
-    // It returns false whenever it can't run — no seed, too few eligible
-    // servers, nobody answered — and the ordinary single-server pick below
-    // then runs unchanged, so switching this on can never leave the queue
-    // empty where it would otherwise have filled.
-    if (mgr.multiServerEnabled && sonic != null) {
+    // Multi-server first, when it's on and there is a sonic seed to carry —
+    // from ANY server: a session that has wandered onto peers still has
+    // anchors, just not local ones. It returns false whenever it can't run
+    // — no seed, too few eligible servers, nobody answered — and the
+    // ordinary single-server pick below then runs unchanged, so switching
+    // this on can never leave the queue empty where it would otherwise
+    // have filled.
+    if (mgr.multiServerEnabled && sonicAll != null) {
       final seedPaths =
-          (sonic['similarTo'] as List?)?.whereType<String>().toList() ??
+          (sonicAll['similarTo'] as List?)?.whereType<String>().toList() ??
               const <String>[];
       if (await _autoDJMultiServer(seedPaths,
           autoPlay: autoPlay, incrementIndex: incrementIndex)) {
@@ -3208,6 +3283,17 @@ class AudioPlayerHandler extends BaseAudioHandler
       'similarTo': [anchor],
       'minSimilarity': minSimilarity,
     };
+  }
+
+  /// The part of a sonic history that [localname] holds — a path with no
+  /// owner recorded predates the owners map and is the DJ server's own.
+  /// Pure; unit-tested.
+  static List<String> historyOwnedBy(
+      List<String> history, Map<String, String> owners, String localname) {
+    return [
+      for (final p in history)
+        if ((owners[p] ?? localname) == localname) p,
+    ];
   }
 
   /// Appends a DJ pick to the rolling sonic ring buffer: normalized,
