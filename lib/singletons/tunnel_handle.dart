@@ -36,8 +36,27 @@ class TunnelHandle {
           ? transport.irohPairingCode!
           : transport.localname;
 
+  /// The credential a transport dials with: a Quick Connect server's pairing
+  /// code, or the `mstrfedg1:` guest ticket the parent handed out for a
+  /// federated peer — null until it has (the proxy serves meanwhile).
+  static String? credentialFor(Server transport) =>
+      transport.isIroh ? transport.irohPairingCode : transport.directTicket;
+
   /// The key the running native tunnel was started under; null when none.
   String? nativeKey;
+
+  // ── Direct peers only ──
+  /// A guest ticket the peer refused: not dialed again until the parent
+  /// hands out a different one.
+  String? refusedCredential;
+
+  /// Last refresh ATTEMPT through this handle, the last one that came back
+  /// empty-handed (the parent unreachable, or nothing new to hand out — what
+  /// the poll rate-limits), and whether one is in flight — the poll must not
+  /// stack them.
+  DateTime? directRefreshedAt;
+  DateTime? directRefreshFailedAt;
+  bool directRefreshing = false;
 
   /// The credential the running tunnel was started with, and its loopback
   /// port + token. Mirrored onto [Server.tunnelPort] / [Server.tunnelToken],
@@ -101,7 +120,7 @@ class TunnelHandle {
   /// Whether this is still the tunnel a probe was taken against — the
   /// re-check every probe consequence runs inside the chain before acting.
   bool sameTunnel(String? c, int? p) =>
-      c != null && code == c && port == p && server.irohPairingCode == c;
+      c != null && code == c && port == p && credentialFor(server) == c;
 
   /// Record a started (or adopted) tunnel.
   void bind(
@@ -152,7 +171,7 @@ int statusSeverity(IrohTunnelStatus s) => switch (s) {
 Server? bannerTargetAmong(
     {required Server? browsed,
     required List<({Server server, IrohTunnelStatus status})> background}) {
-  if (browsed != null && browsed.isIroh) return browsed;
+  if (browsed != null && browsed.ownsTunnel) return browsed;
   Server? worst;
   var worstRank = -1;
   for (final b in background) {

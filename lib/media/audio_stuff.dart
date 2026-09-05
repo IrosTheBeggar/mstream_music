@@ -306,14 +306,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     // stays selected — and, with more than one tunnel server queued, keeps
     // all of them reachable.
     queue.listen((items) {
-      final transports = <String, Server>{};
+      // The item's OWN server, not its transport: a federated peer's songs
+      // ride its parent's tunnel on the proxy path and the peer's own once it
+      // is direct, and the manager is where that decision lives.
+      final servers = <String, Server>{};
       for (final it in items) {
-        // A federated peer's songs ride its parent's tunnel: that is the
-        // server to keep connected, not the peer (which has no tunnel).
-        final s = _serverFor(it)?.transportServer;
-        if (s != null && s.isIroh) transports[s.localname] = s;
+        final s = _serverFor(it);
+        if (s != null) servers[s.localname] = s;
       }
-      ServerManager().setQueueIrohServers(transports.values);
+      ServerManager().setQueueIrohServers(servers.values);
       // Keep-queue-offline: sweep every queue change for tracks to download.
       // No-op unless the setting is on; DownloadManager dedupes (in-flight,
       // once-per-session, already-on-disk). Lives here — not main.dart — so

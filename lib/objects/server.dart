@@ -56,6 +56,12 @@ class Server {
   //                                  flag's real payload is "this server
   //                                  VERSION has the route" (mStream #762)
   bool? discoveryPathAvailable;
+  //   federationDirectAvailable    — this server hands its devices DIRECT
+  //                                  access to its federated peers (the
+  //                                  `access` route, mStream#943); read on
+  //                                  the PARENT, decides whether a peer of
+  //                                  it is worth dialing directly
+  bool? federationDirectAvailable;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
@@ -113,20 +119,52 @@ class Server {
 
   bool get isFederated => federationParent != null;
 
-  /// The server whose transport carries this server's bytes: the parent for a
-  /// federated server, itself for everything else. Null only for a federated
-  /// server whose parent is not linked yet (nothing can be addressed then).
+  // ─── Direct access (issue #143) ─────────────────────────────────────
+  // Runtime-only, never persisted. The parent hands out a guest ticket for
+  // the peer's federation endpoint (`GET /api/v1/federation/peers/:id/access`);
+  // with it the peer gets a tunnel of its OWN and stops riding the parent's
+  // proxies — its bytes no longer cross the parent's home link twice, and it
+  // stays usable while the parent is down. The proxy path stays the
+  // fallback: an older peer, a refused mint, a failed dial.
+  //
+  // What decides the mode is [tunnelPort] on the peer ITSELF ([isDirect]):
+  // ServerManager binds it when the peer's own tunnel is up and clears it
+  // when that tunnel goes, and every accessor below reads through it — so a
+  // peer flips between the two URL shapes exactly when its tunnel does.
+  String? directTicket; // the `mstrfedg1:` envelope — what the native dial takes
+  String? directGuestToken; // the JWT inside it — what URLs carry as ?token=
+  String? directEndpointId;
+  DateTime? directExpiresAt;
+  DateTime? directFetchedAt;
+  // The parent answered `direct: false` (an older peer, or federation
+  // switched off there), or refused to mint anything fresh for a token the
+  // peer rejected: the proxy is all there is this session.
+  bool directDenied = false;
+
+  /// True while this peer is reached over a tunnel of its own.
+  bool get isDirect => isFederated && tunnelPort != null;
+
+  /// Whether requests for this server ride a loopback tunnel of ITS OWN: a
+  /// Quick Connect server always, a federated peer while it is direct.
+  /// ([isIroh] stays the identity question — the pairing-code menu, the edit
+  /// form, the repair sheet.)
+  bool get ownsTunnel => isIroh || isDirect;
+
+  /// The server whose transport carries this server's bytes: the parent for
+  /// a federated server on the proxy path, itself for everything else — a
+  /// direct peer included. Null only for a federated server whose parent is
+  /// not linked yet (nothing can be addressed then).
   ///
   /// Two different questions hide behind "is this an iroh server?": identity
-  /// (the pairing-code menu, the one-iroh cap, the edit form — [isIroh]) and
-  /// transport (does a request for it ride a loopback tunnel, and whose —
-  /// [isIrohTransport]). A peer of an iroh parent answers no to the first and
-  /// yes to the second.
-  Server? get transportServer => isFederated ? parentServer : this;
+  /// ([isIroh]) and transport (does a request for it ride a loopback tunnel,
+  /// and whose — [isIrohTransport]). A peer of an iroh parent answers no to
+  /// the first and yes to the second; a direct peer answers no and yes too,
+  /// on its own tunnel.
+  Server? get transportServer => isFederated && !isDirect ? parentServer : this;
 
   /// True when requests for this server travel over an iroh loopback tunnel —
-  /// its own, or its parent's for a federated server.
-  bool get isIrohTransport => transportServer?.isIroh == true;
+  /// its own, or its parent's for a federated server on the proxy path.
+  bool get isIrohTransport => transportServer?.ownsTunnel == true;
 
   /// What to call this server in the UI: a peer's name, or the URL that
   /// identifies every other kind of server.
@@ -177,12 +215,17 @@ class Server {
   /// (`/api/…`, `/art/…`, `/stream/…`). Meaningless unless [isFederated].
   String get federationPrefix => '/api/v1/federation/peers/$federationPeerId';
 
-  /// The token that authenticates requests for this server. A federated server
-  /// has none of its own: the proxy runs normal local-user auth on the PARENT,
-  /// and the peer beyond it is reached with the parent's federation key, which
-  /// never leaves the parent. Read this — not [jwt] — for anything that ends up
-  /// on the wire.
-  String? get authToken => isFederated ? parentServer?.jwt : jwt;
+  /// The token that authenticates requests for this server. A federated
+  /// server on the proxy path has none of its own: the proxy runs normal
+  /// local-user auth on the PARENT, and the peer beyond it is reached with
+  /// the parent's federation key, which never leaves the parent. A direct
+  /// peer carries the guest token the peer minted — a JWT the peer's wall
+  /// reads from the ordinary slots. Read this — not [jwt] — for anything
+  /// that ends up on the wire.
+  String? get authToken {
+    if (!isFederated) return jwt;
+    return isDirect ? directGuestToken : parentServer?.jwt;
+  }
 
   /// The base origin to use for requests/streams right now. A federated server
   /// borrows its parent's, which is what makes an iroh parent work for free —
@@ -192,8 +235,10 @@ class Server {
   /// active); for HTTP it's [url]. Before an iroh tunnel is up, or before a
   /// federated server's parent is linked, this is [_unroutable].
   String get effectiveBaseUrl {
-    if (isFederated) return parentServer?.effectiveBaseUrl ?? _unroutable;
-    return isIroh ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
+    if (isFederated && !isDirect) {
+      return parentServer?.effectiveBaseUrl ?? _unroutable;
+    }
+    return ownsTunnel ? 'http://127.0.0.1:${tunnelPort ?? 0}' : url;
   }
 
   /// Query suffix authenticating a loopback request to the iroh tunnel
@@ -203,8 +248,8 @@ class Server {
   /// loopback, and the browse proxy forwards no query params onward, so the
   /// loopback token can't ride through to the peer.
   String get localTokenQuery {
-    if (isFederated) return parentServer?.localTokenQuery ?? '';
-    return (isIroh && tunnelToken != null) ? '&__lt=$tunnelToken' : '';
+    if (isFederated && !isDirect) return parentServer?.localTokenQuery ?? '';
+    return (ownsTunnel && tunnelToken != null) ? '&__lt=$tunnelToken' : '';
   }
 
   /// Resolve [location] against [effectiveBaseUrl], adding the loopback token for
@@ -214,13 +259,13 @@ class Server {
   /// then defers to the parent — so an iroh parent's `__lt` is applied once, to
   /// the outer loopback URL, and the peer sees only the proxied path.
   Uri apiUri(String location) {
-    if (isFederated) {
+    if (isFederated && !isDirect) {
       final parent = parentServer;
       if (parent == null) return Uri.parse(_unroutable);
       return parent.apiUri('$federationPrefix/api$location');
     }
     final u = Uri.parse(effectiveBaseUrl).resolve(location);
-    if (!isIroh || tunnelToken == null) return u;
+    if (!ownsTunnel || tunnelToken == null) return u;
     return u.replace(queryParameters: {
       ...u.queryParameters,
       '__lt': tunnelToken!,
@@ -267,6 +312,9 @@ class Server {
         discoveryPathAvailable = json['discoveryPathAvailable'] is bool
             ? json['discoveryPathAvailable']
             : null,
+        federationDirectAvailable = json['federationDirectAvailable'] is bool
+            ? json['federationDirectAvailable']
+            : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?,
         federationParent = json['federationParent'] as String?,
@@ -302,6 +350,7 @@ class Server {
         'discoveryP2pAvailable': discoveryP2pAvailable,
         'federationDiscoveryAvailable': federationDiscoveryAvailable,
         'discoveryPathAvailable': discoveryPathAvailable,
+        'federationDirectAvailable': federationDirectAvailable,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode,
         'federationParent': federationParent,

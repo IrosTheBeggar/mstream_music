@@ -1387,8 +1387,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         _irohSignedInReady = !isPublic;
       });
       if (isPublic) {
-        // No credentials needed — save immediately (the form pops on success;
-        // the one-iroh cap backstop in _saveIrohServer clears state otherwise).
+        // No credentials needed — save immediately (the form pops on success).
         showGlobalSnack(l.connectionSuccessful);
         await _saveIrohServer(code: code, port: port, jwt: '');
       } else {
@@ -1511,12 +1510,6 @@ class MyCustomFormState extends State<MyCustomForm> {
   // the live tunnel adopted as the active connection, then switch to it.
   Future<void> _saveIrohServer(
       {required String code, required int port, required String jwt}) async {
-    // Backstop the one-iroh-server cap (the tab UI normally blocks reaching here).
-    if (ServerManager().hasIrohServer) {
-      if (mounted) setState(() => _irohSaving = false);
-      _showIrohResult(false, AppLocalizations.of(context).irohOneServerLimit);
-      return;
-    }
     final id = code.hashCode.toUnsigned(32).toRadixString(16);
     final username = _irohPublic ? '' : _irohUserCtrl.text;
     final password = _irohPublic ? '' : _irohPassCtrl.text;
@@ -1553,15 +1546,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   Future<void> _connectDiscovered(DiscoveredServer server) async {
     final l = AppLocalizations.of(context);
     if (_connectingId != null) return; // one pairing at a time
-    // The manual paste/scan Test dials the SAME single native tunnel; two
-    // concurrent dials hand one flow the other's port and it silently binds
-    // the wrong server. The tiles and the Test button also disable while the
-    // sibling flow runs — this is the backstop.
+    // One pairing at a time: the tiles and the Test button also disable
+    // while the sibling flow runs — this is the backstop.
     if (_irohTesting) return;
-    if (ServerManager().hasIrohServer) {
-      _showIrohResult(false, l.irohOneServerLimit);
-      return;
-    }
     if (!IrohTunnel.isSupported) {
       _showIrohResult(false, l.irohAndroidOnly);
       return;
@@ -1571,8 +1558,8 @@ class MyCustomFormState extends State<MyCustomForm> {
       _showIrohResult(false, l.lanUnreachable);
       return;
     }
-    // A leftover tunnel from a paste/scan test would collide (single native
-    // tunnel) — drop it first.
+    // A leftover tunnel from a paste/scan test is not this server's — drop
+    // it first.
     if (_irohPort != null && !_irohSaved) {
       _stopTestTunnel();
       _irohPort = null;
@@ -1862,29 +1849,6 @@ class MyCustomFormState extends State<MyCustomForm> {
               const SizedBox(height: 16),
               Text(
                 l.irohAndroidOnly,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: VelvetColors.textSecondary, fontSize: 14, height: 1.4),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    // One iroh server max (a single native tunnel). If one's already configured,
-    // show why instead of the pairing UI.
-    if (ServerManager().hasIrohServer) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 40, 28, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.hub_outlined,
-                  size: 40, color: VelvetColors.textSecondary),
-              const SizedBox(height: 16),
-              Text(
-                l.irohOneServerLimit,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: VelvetColors.textSecondary, fontSize: 14, height: 1.4),
