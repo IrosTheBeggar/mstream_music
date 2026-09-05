@@ -24,6 +24,14 @@ if wait_for_log "\[srv\] switched to $STD" 5; then
   if lt "$d" 2.0; then pass "switch logged ${d}s after the tap"; else fail "switch logged ${d}s after the tap"; fi
 else fail "no '[srv] switched to $STD' line"; fi
 BACK=$(now_ts); airplane disable
-wait_for_log_after "$BACK" 'reconnected: attempt|tunnel up' 60 && pass "tunnel back after service returned" || fail "tunnel not back within 60s"
+# The tunnel outlives the switch only while the queue holds the Quick Connect
+# server's tracks (tunnel-follows-queue). A queue from the standard server
+# releases it on the switch instead, and then there is nothing to come back —
+# say so rather than fail a check that does not apply.
+if applog | grep -q 'tunnel stopped (no-target/server-switch)'; then
+  skip "tunnel released on the switch (the queue is not on $IROH) — 'tunnel back' does not apply; queue $IROH tracks first"
+else
+  wait_for_log_after "$BACK" 'reconnected: attempt|tunnel up' 60 && pass "tunnel back after service returned" || fail "tunnel not back within 60s"
+fi
 save_applog switch; log "inspect $OUT/after-switch-*.png: standard server header, home grid, no 'Reconnecting…' strip"
 summary

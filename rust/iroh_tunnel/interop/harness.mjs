@@ -239,6 +239,103 @@ async function main() {
       `${connsBeforeKick} -> ${serverConns.length} (client2 first dial + re-dial)`);
   child2.kill();
 
+  // 8) GUEST MODE: a federation endpoint (ALPN mstream/federation/1) whose
+  //    first bi-stream carries a guest TOKEN, dialed from a `mstrfedg1:` guest
+  //    ticket — then the credential is swapped IN PLACE: the server flips to
+  //    accepting only token B and drops the connection, the supervisor's
+  //    re-dial with A is rejected (status REJECTED, supervisor exits), and the
+  //    client's timed swap to B must re-dial on the SAME port.
+  console.log('\n=== GUEST TEST (federation ALPN + in-place credential swap) ===');
+  const FED_ALPN = Array.from(Buffer.from('mstream/federation/1'));
+  const fedEndpoint = await Endpoint.bind({ alpns: [FED_ALPN] });
+  await Promise.race([fedEndpoint.online().catch(() => {}), delay(8000)]);
+  let acceptedToken = 'guest-token-A';
+  const fedConns = [];
+  let fedRejections = 0;
+  (async () => {
+    for (;;) {
+      let incoming;
+      try { incoming = await fedEndpoint.acceptNext(); } catch { break; }
+      if (incoming === null) break;
+      (async () => {
+        const accepting = await incoming.accept();
+        const conn = await accepting.connect();
+        const authBi = await conn.acceptBi();
+        // The server reads up to 2 KB here (HANDSHAKE_LIMIT on the peer).
+        const sent = Buffer.from(await authBi.recv.readToEnd(2048)).toString('utf8');
+        const ok = sent === acceptedToken;
+        try { await authBi.send.writeAll(Array.from(Buffer.from(ok ? 'OK' : 'NO'))); await authBi.send.finish(); } catch { /* hung up */ }
+        if (!ok) { fedRejections++; try { conn.close(1n, Array.from(Buffer.from('unauthorized'))); } catch { /* noop */ } return; }
+        fedConns.push(conn);
+        for (;;) {
+          let bi;
+          try { bi = await conn.acceptBi(); } catch { break; }
+          const socket = net.connect({ host: '127.0.0.1', port: stubPort });
+          socket.once('connect', () => bridge(socket, bi));
+        }
+      })().catch(() => {});
+    }
+  })();
+  const fedTicket = EndpointTicket.fromAddr(fedEndpoint.addr()).toString();
+  const guestCode = (g) => 'mstrfedg1:' + Buffer.from(JSON.stringify({ t: fedTicket, g })).toString('base64url');
+
+  // Rejected up front: a wrong token must fail the start with "rejected".
+  const bad = spawn(exe, [guestCode('not-a-valid-token')], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let badErr = '';
+  bad.stderr.on('data', (d) => { badErr += d.toString(); });
+  const badExit = await new Promise((resolve) => bad.once('exit', resolve));
+  check('a refused guest token fails the start with "rejected"', badExit !== 0 && /rejected/.test(badErr),
+      `exit ${badExit}: ${badErr.trim().split('\n').pop()}`);
+
+  const child3 = spawn(exe, [guestCode('guest-token-A'), '--events', '--swap-after', '6', guestCode('guest-token-B')],
+      { stdio: ['ignore', 'pipe', 'pipe'] });
+  let events3 = '';
+  child3.stderr.on('data', (d) => { events3 += d.toString(); process.stdout.write(`    [rust3] ${d}`); });
+  const port3 = await new Promise((resolve, reject) => {
+    let buf = '';
+    const to = setTimeout(() => reject(new Error('client3 did not report LOCAL_PORT within 45s')), 45000);
+    child3.stdout.on('data', (d) => {
+      buf += d.toString();
+      const mp = /LOCAL_PORT=(\d+)/.exec(buf);
+      const mt = /LOCAL_TOKEN=([0-9a-f]+)/.exec(buf);
+      if (mp && mt) { clearTimeout(to); resolve({ port: Number(mp[1]), token: mt[1] }); }
+    });
+    child3.once('exit', (c) => { clearTimeout(to); reject(new Error(`client3 exited early (code ${c})`)); });
+  });
+  const lurl3 = (p) => `http://127.0.0.1:${port3.port}${p}${p.includes('?') ? '&' : '?'}__lt=${port3.token}`;
+  const g1 = await fetch(lurl3('/guest/before'));
+  check('guest ticket dials the federation ALPN and bridges HTTP', g1.status === 200, `status ${g1.status}`);
+  check('events say mode=guest', /mode=guest/.test(events3));
+
+  // Flip the server to token B and drop the pipe: the re-dial with A is refused.
+  acceptedToken = 'guest-token-B';
+  const rejectionsBefore = fedRejections;
+  for (const c of fedConns.splice(0)) { try { c.close(0n, Array.from(Buffer.from('drop'))); } catch { /* noop */ } }
+  let rejected = false;
+  for (let i = 0; i < 15 && !rejected; i++) { await delay(1000); rejected = /handshake rejected/.test(events3); }
+  check('a stale guest token is rejected on re-dial (supervisor gives up)', rejected,
+      rejected ? `server refused ${fedRejections - rejectionsBefore}` : 'no rejection within 15s');
+
+  // The timed swap (6s after start) hands the tunnel token B: a fresh
+  // supervisor re-dials at once, on the SAME port.
+  let swapped = false, back = false;
+  for (let i = 0; i < 20 && !back; i++) {
+    await delay(1000);
+    swapped = swapped || /credential updated/.test(events3);
+    back = /reconnected: attempt/.test(events3.slice(events3.indexOf('handshake rejected')));
+  }
+  check('credential swap after a rejected handshake respawns the supervisor', swapped && back,
+      `${swapped ? 'swap seen' : 'no swap event'}, ${back ? 'reconnected' : 'no reconnect within 20s'}`);
+  let g2ok = false;
+  for (let i = 0; i < 10 && !g2ok; i++) {
+    try { g2ok = (await fetch(lurl3('/guest/after-swap'), { signal: AbortSignal.timeout(2500) })).status === 200; } catch { /* not yet */ }
+    if (!g2ok) await delay(1000);
+  }
+  check('same LOCAL_PORT serves with the new token', g2ok, g2ok ? `port ${port3.port} kept` : 'no answer');
+  check('server accepted the swapped token (one new connection)', fedConns.length === 1, `${fedConns.length} live`);
+  child3.kill();
+  try { await fedEndpoint.close(); } catch { /* noop */ }
+
   console.log(`\n=== RESULT: ${failures === 0 ? 'ALL PASS' : failures + ' FAILURE(S)'} ===`);
 
   child.kill();
@@ -248,6 +345,6 @@ async function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-const guard = setTimeout(() => { console.error('[harness] TIMEOUT 120s'); process.exit(2); }, 120000);
+const guard = setTimeout(() => { console.error('[harness] TIMEOUT 180s'); process.exit(2); }, 180000);
 guard.unref();
 main().catch((e) => { console.error('[harness] ERROR', e); process.exit(3); });
