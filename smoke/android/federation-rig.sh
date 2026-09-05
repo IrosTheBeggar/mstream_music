@@ -111,11 +111,16 @@ if wait_for_log '\[queue\] add [0-9]+ tracks' 5 && is_playing; then pass "peer a
 shot peer-playing
 adbx shell "run-as $PKG test -d app_flutter/media/peer-rig-peer-a" && pass "download folder created for the peer" || fail "no media/peer-rig-peer-a folder"
 if [ "$IROH" = 1 ]; then
-  [ "$(count_log 'tunnel stopped')" -eq 0 ] && pass "browsing the peer kept the parent's tunnel" || fail "the parent's tunnel was stopped while the peer was browsed"
+  # The PARENT's tunnel only: the app runs one tunnel per server now, and a
+  # Quick Connect queue the peer album replaced is released after the grace
+  # (`tunnel stopped (no-target/queue-server) … for=<that server>`), which is
+  # correct. Old builds log no `for=` suffix; their single tunnel is the parent.
+  parent_stops() { count_log "tunnel stopped .*(for=$PARENT\$|port=[0-9a-z]+\$)"; }
+  [ "$(parent_stops)" -eq 0 ] && pass "browsing the peer kept the parent's tunnel" || fail "the parent's tunnel was stopped while the peer was browsed"
   # switch to the first standard server (row 2) while the peer track plays
   T=$(now_ts); tap $PICKER; sleep 1.5; tap 782 366; sleep 5
   wait_for_log_after "$T" '\[srv\] switched to ' 5 || fail "no switch away from the peer"
-  if is_playing && [ "$(count_log 'tunnel stopped')" -eq 0 ]; then pass "tunnel kept for the queued peer track after switching to a standard server"; else fail "tunnel or playback lost after the switch ($(session_state))"; fi
+  if is_playing && [ "$(parent_stops)" -eq 0 ]; then pass "tunnel kept for the queued peer track after switching to a standard server"; else fail "tunnel or playback lost after the switch ($(session_state), $(parent_stops) parent stop(s))"; fi
   # Phase 4: relaunch with the peer track queued. The parent's tunnel comes up on
   # a FRESH port, so the restored peer URLs (stream through the parent's proxy,
   # art through its art proxy) must be re-derived against it — or the track
