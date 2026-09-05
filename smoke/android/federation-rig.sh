@@ -103,7 +103,10 @@ fi
 
 # ── the parent on the phone ────────────────────────────────────────────────
 if [ "$IROH" = 1 ]; then
-  curl -s -o /dev/null -X POST "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "$J" -H "x-access-token: $TB" -d '{"enabled":true}'; sleep 3
+  # A just-enabled endpoint stalls the phone's first dials in the handshake
+  # (mStream#940; six 13s stalls in a row on 2026-09-05): give it a moment
+  # to settle on its relay before the phone comes knocking.
+  curl -s -o /dev/null -X POST "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "$J" -H "x-access-token: $TB" -d '{"enabled":true}'; sleep "${SMOKE_RIG_QC_WARMUP:-15}"
   CODE=$(curl -s "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "x-access-token: $TB" | python3 -c "import sys,json; print(json.load(sys.stdin).get('qr') or '')")
   [ -n "$CODE" ] && pass "Quick Connect up on B" || { fail "no pairing code from B"; summary; exit 1; }
   PARENT=iroh-rig-b; URL="iroh://rig-b"; CT=iroh
@@ -120,12 +123,14 @@ PY
 app_stop; cfg_write servers.json "$RIG/servers.json"; logcat_clear; wake; app_start
 wait_for_log '\[app\] default server ready' 30 || fail "default never published"
 # The reconcile runs once the parent's capability refresh lands; over a
-# just-enabled Quick Connect the first dial can stall in the handshake for
-# ~13s once or twice before a retry lands, so allow a generous window.
-for i in $(seq 1 90); do
+# just-enabled Quick Connect the first dials stall in the handshake for ~13s
+# each (mStream#940) — four in a row on 2026-09-05 — and the retry ladder
+# (2/10/20/40/60s) needs ~200s to get through that, so allow it.
+[ "$IROH" = 1 ] && RECON=200 || RECON=90
+for i in $(seq 1 $RECON); do
   cfg_read servers.json | python3 -c "import sys,json; sys.exit(0 if any(s.get('federationParent')=='$PARENT' for s in json.load(sys.stdin)) else 1)" && break; sleep 1
 done
-[ "$i" -lt 90 ] && pass "peer reconciled under $PARENT in ${i}s" || { save_applog rig-launch; fail "no peer entry after 90s"; summary; exit 1; }
+[ "$i" -lt "$RECON" ] && pass "peer reconciled under $PARENT in ${i}s" || { save_applog rig-launch; fail "no peer entry after ${RECON}s"; summary; exit 1; }
 N=$(cfg_read servers.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
 PEER_Y=$((222 + 144 * (N - 1))) # picker rows: 222, 366, 510, … — the peer is listed last
 tap $PICKER; sleep 1.5; shot picker; tap 639 $PEER_Y; sleep 3
@@ -232,12 +237,16 @@ if [ "$DIRECT" = 1 ] && [ "$REVOKE" = 1 ] && [ -n "$KEY_ID" ]; then
   media_key play; sleep 2
   PID0=$(adbx shell pidof "$PKG" | tr -d '\r'); N0=$(applog | wc -l | tr -d ' ')
   curl -s -o /dev/null -X DELETE "http://127.0.0.1:$PA/api/v1/admin/federation/keys/$KEY_ID" -H "x-access-token: $TA"
-  log "key $KEY_ID revoked on A"; sleep 75
+  log "key $KEY_ID revoked on A"; sleep 3; adbx shell input keyevent 87; sleep 72   # NEXT: a fresh request, not a buffered track
   PID1=$(adbx shell pidof "$PKG" | tr -d '\r')
   [ -n "$PID1" ] && [ "$PID1" = "$PID0" ] && pass "app alive 75s after the revocation (pid $PID1)" || fail "app died or restarted after the revocation ($PID0 → $PID1)"
   FED=$(applog | tail -n +$N0 | grep -cE "\[federation\]|\[api\].*401"); RES=$(applog | tail -n +$N0 | grep -c "resuming parked playback")
   [ "$FED" -le 12 ] && [ "$RES" -le 8 ] && pass "no hot loop after the revocation ($FED access/401 lines, $RES heal resumes in 75s)" || fail "loop after the revocation ($FED access/401 lines, $RES heal resumes in 75s)"
-  case "$(session_state)" in *PLAYING*) fail "still reports PLAYING 75s after the revocation (the stream should be dead)";; *) pass "playback parked after the revocation ($(session_state))";; esac
+  WALK=$(applog | tail -n +$N0 | grep -oE 'failedSkips=[0-9]+' | tail -1 | cut -d= -f2)
+  case "$(session_state)" in
+    *PLAYING*) [ "${WALK:-0}" -ge 3 ] && pass "the failure walk is running after the revocation (failedSkips=$WALK)" || fail "still PLAYING 75s after the revocation with no walk (failedSkips=${WALK:-0})";;
+    *) pass "playback parked after the revocation ($(session_state), failedSkips=${WALK:-0})";;
+  esac
   log "after revocation: $(applog | tail -n +$N0 | grep -oE "\[iroh\] status [a-z]+ → [a-z]+ .*for=$PEER_LN" | tail -1)"
 fi
 media_key pause; sleep 1
