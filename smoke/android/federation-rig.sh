@@ -103,10 +103,12 @@ fi
 
 # ── the parent on the phone ────────────────────────────────────────────────
 if [ "$IROH" = 1 ]; then
-  # A just-enabled endpoint stalls the phone's first dials in the handshake
-  # (mStream#940; six 13s stalls in a row on 2026-09-05): give it a moment
-  # to settle on its relay before the phone comes knocking.
-  curl -s -o /dev/null -X POST "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "$J" -H "x-access-token: $TB" -d '{"enabled":true}'; sleep "${SMOKE_RIG_QC_WARMUP:-15}"
+  # The phone dials the moment the code exists. Servers before mStream#956
+  # advertised NAT-reflexive addresses in the code and a same-LAN phone's
+  # first dials stalled on them (mStream#940); SMOKE_RIG_QC_WARMUP=15 gives
+  # such a server a moment, a fixed one needs none — and 0 keeps the rig
+  # able to catch that stall coming back.
+  curl -s -o /dev/null -X POST "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "$J" -H "x-access-token: $TB" -d '{"enabled":true}'; sleep "${SMOKE_RIG_QC_WARMUP:-0}"
   CODE=$(curl -s "http://127.0.0.1:$PB/api/v1/admin/iroh" -H "x-access-token: $TB" | python3 -c "import sys,json; print(json.load(sys.stdin).get('qr') or '')")
   [ -n "$CODE" ] && pass "Quick Connect up on B" || { fail "no pairing code from B"; summary; exit 1; }
   PARENT=iroh-rig-b; URL="iroh://rig-b"; CT=iroh
