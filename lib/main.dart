@@ -36,6 +36,7 @@ import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/federation_inbox_alerts.dart';
 import 'singletons/queue_store.dart';
+import 'singletons/play_tracker.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
@@ -225,6 +226,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         SettingsManager().startupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
+      // Listening history: sessions key on the handler's server + path and
+      // peer ids resolve through the server list, so it starts here too.
+      PlayTracker().start();
       unawaited(_migrateAutoDjGenreFilter());
       unawaited(_restoreAutoDj());
       unawaited(_handleIncomingTorrent());
@@ -565,6 +569,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       QueueStore().saveNow();
+      PlayTracker().checkpointNow();
     }
   }
 

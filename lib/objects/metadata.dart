@@ -34,6 +34,9 @@ Map<String, dynamic> queueExtras(
       'trackTotal': meta?.trackTotal,
       'discTotal': meta?.discTotal,
       'playCount': meta?.playCount,
+      // The server's content hash — the rename-proof track key the play
+      // tracker records and the Stats API keys counters on.
+      'hash': meta?.hash,
       // Drives the lyrics badge (tap → fetch via GET /api/v1/lyrics).
       'hasLyrics': meta?.hasLyrics ?? false,
     };
