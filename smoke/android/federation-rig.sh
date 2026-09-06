@@ -226,9 +226,12 @@ if [ "$IROH" = 1 ]; then
     RESTORED=$(cfg_read queue.json | python3 -c "
 import sys,json
 from urllib.parse import urlparse
-d=json.load(sys.stdin); it=(d.get('items') or [])[d.get('index',0)]
-print((it.get('extras') or {}).get('server'), urlparse(it.get('id','')).port)" 2>/dev/null)
-    if [ "$RESTORED" = "peer-rig-peer-a $PORT2" ] && ensure_playing 15; then pass "restored peer track plays after a relaunch on $CARRIER's fresh port ($PORT1 → $PORT2)"
+d=json.load(sys.stdin); it=(d.get('items') or [])[d.get('index',0)]; ex=it.get('extras') or {}
+print(ex.get('server'), 'local' if ex.get('localPath') else urlparse(it.get('id','')).port)" 2>/dev/null)
+    # A downloaded copy (keep-queue-offline on) keeps its stored URL by design
+    # and plays from disk: the port says nothing then.
+    if [ "$RESTORED" = "peer-rig-peer-a local" ] && ensure_playing 15; then pass "restored peer track is a downloaded copy and plays from disk (keep-queue-offline on; port not checked)"
+    elif [ "$RESTORED" = "peer-rig-peer-a $PORT2" ] && ensure_playing 15; then pass "restored peer track plays after a relaunch on $CARRIER's fresh port ($PORT1 → $PORT2)"
     else save_applog rig-relaunch; fail "restored track is not the peer's on the fresh port (got '$RESTORED', port $PORT2; $(session_state))"; fi
   else save_applog rig-relaunch; fail "queue did not restore after the relaunch"; fi
 fi
@@ -243,8 +246,14 @@ if [ "$DIRECT" = 1 ] && [ "$REVOKE" = 1 ] && [ -n "$KEY_ID" ]; then
   FED=$(applog | tail -n +$N0 | grep -cE "\[federation\]|\[api\].*401"); RES=$(applog | tail -n +$N0 | grep -c "resuming parked playback")
   [ "$FED" -le 12 ] && [ "$RES" -le 8 ] && pass "no hot loop after the revocation ($FED access/401 lines, $RES heal resumes in 75s)" || fail "loop after the revocation ($FED access/401 lines, $RES heal resumes in 75s)"
   WALK=$(applog | tail -n +$N0 | grep -oE 'failedSkips=[0-9]+' | tail -1 | cut -d= -f2)
+  LOCAL=$(cfg_read queue.json | python3 -c "
+import sys,json
+d=json.load(sys.stdin); it=(d.get('items') or [])[d.get('index',0)]
+print('local' if (it.get('extras') or {}).get('localPath') else 'stream')" 2>/dev/null)
   case "$(session_state)" in
-    *PLAYING*) [ "${WALK:-0}" -ge 3 ] && pass "the failure walk is running after the revocation (failedSkips=$WALK)" || fail "still PLAYING 75s after the revocation with no walk (failedSkips=${WALK:-0})";;
+    *PLAYING*) if [ "$LOCAL" = local ]; then pass "playback continues from downloaded copies after the revocation (keep-queue-offline on; nothing to sever)"
+               elif [ "${WALK:-0}" -ge 3 ]; then pass "the failure walk is running after the revocation (failedSkips=$WALK)"
+               else fail "still PLAYING 75s after the revocation with no walk (failedSkips=${WALK:-0})"; fi;;
     *) pass "playback parked after the revocation ($(session_state), failedSkips=${WALK:-0})";;
   esac
   log "after revocation: $(applog | tail -n +$N0 | grep -oE "\[iroh\] status [a-z]+ → [a-z]+ .*for=$PEER_LN" | tail -1)"
