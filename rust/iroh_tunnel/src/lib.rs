@@ -526,6 +526,7 @@ async fn dial_and_handshake(
         }
     };
     // Bound the handshake so a stalled/half-dead server can't park the supervisor.
+    let probe = conn.clone(); // the block below owns `conn`; the stall report reads the path off this
     let handshake = async {
         let (mut send, mut recv) = match conn.open_bi().await {
             Ok(pair) => pair,
@@ -545,7 +546,18 @@ async fn dial_and_handshake(
     };
     match tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake).await {
         Ok(result) => result,
-        Err(_) => DialResult::Failed("handshake stalled".into()), // transient
+        Err(_) => {
+            // Transient. Say which path the connection sat on while the server
+            // stayed silent (mStream#940): a fresh server endpoint stalls a
+            // phone's first dials and the path is the first thing to know.
+            let path = probe
+                .paths()
+                .iter()
+                .find(|p| p.is_selected())
+                .map(|p| if p.is_relay() { "relay" } else { "direct" })
+                .unwrap_or("none");
+            DialResult::Failed(format!("handshake stalled on {path} path"))
+        }
     }
 }
 
