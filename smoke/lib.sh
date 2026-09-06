@@ -31,13 +31,20 @@ pick_device() {
   # build usually runs alongside the dev build with a tunnel of its own, and
   # its "[iroh] …" lines would otherwise satisfy (or confuse) the checks.
   APP_UID=$(adbx shell "run-as $PKG id -u" 2>/dev/null | tr -dc '0-9')
+  # Keep the screen on for the run: the S25 locks 60s after its screen times
+  # out and `wm dismiss-keyguard` does not clear that keyguard, so a script
+  # whose first tap comes late (the rig's reconcile allowance) tapped the lock
+  # screen. Only the inactivity timeout is affected — the soak's explicit
+  # sleep key still turns the screen off. Reverted by summary / cfg_restore.
+  adbx shell svc power stayon usb 2>/dev/null
   log "device: $SERIAL  package: $PKG${APP_UID:+ (uid $APP_UID)}"
 }
+stayon_off() { adbx shell svc power stayon false 2>/dev/null; }
 log()  { echo "$(date '+%H:%M:%S') $*" | tee -a "$OUT/run.log"; }
 pass() { PASS=$((PASS+1)); log "PASS  $*"; }
 fail() { FAIL=$((FAIL+1)); log "FAIL  $*"; }
 skip() { SKIP=$((SKIP+1)); log "SKIP  $*"; }
-summary() { log "== $SCRIPT_NAME: $PASS pass, $FAIL fail, $SKIP skip — artifacts in $OUT"; [ "$FAIL" -eq 0 ]; }
+summary() { stayon_off; log "== $SCRIPT_NAME: $PASS pass, $FAIL fail, $SKIP skip — artifacts in $OUT"; [ "$FAIL" -eq 0 ]; }
 
 app_pid()      { adbx shell pidof "$PKG" 2>/dev/null | tr -d '\r '; }
 app_start()    { adbx shell am start -n "$PKG/$ACT" >/dev/null; }
@@ -130,6 +137,7 @@ cfg_backup() {
   trap cfg_restore EXIT
 }
 cfg_restore() {
+  stayon_off
   [ -n "$CFG_BACKUP" ] || return 0
   app_stop
   for f in servers.json auto_dj.json queue.json; do [ -s "$CFG_BACKUP/$f" ] && cfg_write "$f" "$CFG_BACKUP/$f"; done
