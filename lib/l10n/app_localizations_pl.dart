@@ -707,6 +707,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Auto DJ wybiera ze wszystkich serwerów naraz, dopasowując się do brzmienia';
 
   @override
+  String get autoDjMultiServerNeedsSonic =>
+      'Wymaga włączenia Podobieństwa brzmienia poniżej';
+
+  @override
   String get autoDjSectionShared => 'Sesja';
 
   @override

@@ -521,6 +521,10 @@
   "@autoDjMultiServerSubtitle": {
     "description": "Subtitle for that switch."
   },
+  "autoDjMultiServerNeedsSonic": "Needs Sonic similarity switched on, below",
+  "@autoDjMultiServerNeedsSonic": {
+    "description": "Warning under the multi-server switch when sonic similarity is off (the mode only runs on sonic picks)."
+  },
   "autoDjSectionShared": "The session",
   "@autoDjSectionShared": {
     "description": "Header for settings that apply to every server."

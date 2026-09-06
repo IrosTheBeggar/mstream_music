@@ -1002,10 +1002,6 @@ class ApiManager {
     }
   }
 
-  /// POST /api/v1/db/random-songs — one random pick, for "surprise me"
-  /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
-  /// min rating) so a random seed can't come from an excluded library.
-  /// Null on any error.
   /// The discovery embeddings for [filePaths] on [server], so a seed can be
   /// carried to a server that has never seen those files.
   ///
@@ -1017,16 +1013,20 @@ class ApiManager {
   ///
   /// Vectors come back base64 float32 little-endian, the same wire form the
   /// server's federation routes use.
+  ///
+  /// Works for a federated peer too: the route is on the federation
+  /// allowlist (mStream #946), and [Server.apiUri] / [Server.authToken] put
+  /// the request on the parent's proxy or the peer's own tunnel.
   Future<({String modelId, int dim, List<Float32List> vectors})?>
       fetchEmbeddings(Server server, List<String> filePaths) async {
     if (filePaths.isEmpty) return null;
     try {
-      final res = await http
+      final res = await _direct
           .post(
             server.apiUri('/api/v1/discovery/local/embeddings'),
             headers: {
               'Content-Type': 'application/json',
-              'x-access-token': server.jwt ?? '',
+              'x-access-token': server.authToken ?? '',
             },
             // The route caps at 8 to match the sonic seed cap; trim here
             // rather than let the whole request 400 on a longer anchor.

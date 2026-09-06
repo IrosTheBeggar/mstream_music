@@ -672,6 +672,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjMultiServerSubtitle => 'Auto DJ 同时从所有服务器挑选，匹配当前播放的声音';
 
   @override
+  String get autoDjMultiServerNeedsSonic => '需要在下方开启“声音相似度”';
+
+  @override
   String get autoDjSectionShared => '本次会话';
 
   @override

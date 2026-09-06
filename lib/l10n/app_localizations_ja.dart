@@ -684,6 +684,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjMultiServerSubtitle => '再生中の曲の響きに合わせて、すべてのサーバーから同時に選びます';
 
   @override
+  String get autoDjMultiServerNeedsSonic => '下の「サウンドの類似性」をオンにする必要があります';
+
+  @override
   String get autoDjSectionShared => 'セッション';
 
   @override

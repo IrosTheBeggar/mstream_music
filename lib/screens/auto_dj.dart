@@ -162,7 +162,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           Divider(color: VelvetColors.border, height: 1),
           // First, because turning it on rearranges everything below it —
           // a control that reorganises a form belongs above the form.
-          if (ServerManager().serverList.length > 1) ...[
+          if (_servers.length > 1) ...[
             _multiServerSwitch(l),
             Divider(color: VelvetColors.border, height: 1),
           ],
@@ -179,14 +179,19 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// True when the panel should show the multi-server layout: the mode is on
   /// AND there is more than one server for it to mean anything with.
   bool get _multiServerMode =>
-      AutoDJManager().multiServerEnabled &&
-      ServerManager().serverList.length > 1;
+      AutoDJManager().multiServerEnabled && _servers.length > 1;
+
+  /// The servers this mode is about: everything the picker may offer. A
+  /// federated peer counts — it takes part like any other server — but not
+  /// one the user hid or its parent stopped listing.
+  List<Server> get _servers =>
+      ServerManager().serverList.where((s) => s.isSelectable).toList();
 
   /// The server whose own settings the bottom section edits. Falls back to
   /// the panel's server so the section is never empty, and re-resolves if the
   /// chosen one has since been deleted.
   Server? get _editTarget {
-    final servers = ServerManager().serverList;
+    final servers = _servers;
     if (_editServer != null && servers.contains(_editServer)) return _editServer;
     return _panelServer;
   }
@@ -261,7 +266,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
       if (target != null) ...[
         _editServerPickerTile(target),
         if (target.autoDJPaths.length > 1) ..._vpathTiles(target),
-        _minRatingTile(target),
+        // Ratings are per-user and a peer is reached with a key (or a guest
+        // token) that has none: the server skips minRating for that caller,
+        // so a rating control here would sit there doing nothing — hidden,
+        // the way the track sheet hides rating on a peer.
+        if (!target.isFederated) _minRatingTile(target),
         if (!_filtersHidden) _genreFilterSection(target),
       ],
     ];
@@ -286,6 +295,16 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                 Text(l.autoDjMultiServerSubtitle,
                     style: TextStyle(
                         color: VelvetColors.textSecondary, fontSize: 12)),
+                // The seed only travels as a vector, so the mode runs on
+                // sonic picks alone: switched on with sonic similarity off
+                // it would silently do nothing. Say so instead.
+                if (mgr.multiServerEnabled && !mgr.sonicSimilarityEnabled)
+                  Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(l.autoDjMultiServerNeedsSonic,
+                        style: TextStyle(
+                            color: VelvetColors.warning, fontSize: 12)),
+                  ),
               ],
             ),
           ),
@@ -302,7 +321,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// How many servers can actually take part, and — when some can't — why.
   /// Silently dropping a server would look like the feature not working.
   Widget _participantsLine(AppLocalizations l) {
-    final total = ServerManager().serverList.length;
+    final total = _servers.length;
     final eligible =
         MediaManager().audioHandler.multiServerCandidates().length;
     final short = eligible < total;
@@ -323,7 +342,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// In this mode every eligible server is already playing.
   Widget _editServerPickerTile(Server target) {
     final l = AppLocalizations.of(context);
-    final servers = ServerManager().serverList;
+    final servers = _servers;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
       child: Column(
@@ -341,7 +360,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
             items: servers
                 .map((s) => DropdownMenuItem(
                       value: s,
-                      child: Text(s.url,
+                      // A peer has no URL of its own; its name is what the
+                      // rest of the app shows for it.
+                      child: Text(s.displayName,
                           overflow: TextOverflow.ellipsis,
                           style:
                               TextStyle(color: VelvetColors.textPrimary)),

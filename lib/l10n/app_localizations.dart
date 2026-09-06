@@ -1326,6 +1326,12 @@ abstract class AppLocalizations {
   /// **'Auto DJ picks from every server at once, matching the sound of what is playing'**
   String get autoDjMultiServerSubtitle;
 
+  /// Warning under the multi-server switch when sonic similarity is off (the mode only runs on sonic picks).
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Sonic similarity switched on, below'**
+  String get autoDjMultiServerNeedsSonic;
+
   /// Header for settings that apply to every server.
   ///
   /// In en, this message translates to:

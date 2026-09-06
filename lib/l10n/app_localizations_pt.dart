@@ -705,6 +705,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'O Auto DJ escolhe de todos os servidores ao mesmo tempo, seguindo o som atual';
 
   @override
+  String get autoDjMultiServerNeedsSonic =>
+      'Requer Semelhança sonora ativada, abaixo';
+
+  @override
   String get autoDjSectionShared => 'A sessão';
 
   @override

@@ -193,6 +193,7 @@
   "autoDjSectionServer": "サーバー",
   "autoDjMultiServerTitle": "すべてのサーバーから再生",
   "autoDjMultiServerSubtitle": "再生中の曲の響きに合わせて、すべてのサーバーから同時に選びます",
+  "autoDjMultiServerNeedsSonic": "下の「サウンドの類似性」をオンにする必要があります",
   "autoDjSectionShared": "セッション",
   "autoDjSectionPerServer": "ライブラリごと",
   "autoDjEditingServer": "設定の対象",

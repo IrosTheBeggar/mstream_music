@@ -193,6 +193,7 @@
   "autoDjSectionServer": "Serwer",
   "autoDjMultiServerTitle": "Odtwarzaj ze wszystkich serwerów",
   "autoDjMultiServerSubtitle": "Auto DJ wybiera ze wszystkich serwerów naraz, dopasowując się do brzmienia",
+  "autoDjMultiServerNeedsSonic": "Wymaga włączenia Podobieństwa brzmienia poniżej",
   "autoDjSectionShared": "Sesja",
   "autoDjSectionPerServer": "Każda biblioteka",
   "autoDjEditingServer": "Ustawienia dla",

@@ -3224,12 +3224,25 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// Public so the Auto DJ screen can show who is taking part without
   /// duplicating the rules.
   List<Server> multiServerCandidates() {
-    return ServerManager().serverList.where((s) {
-      if (_multiServerExcluded.contains(s.localname)) return false;
-      if (s.discoveryAvailable != true) return false;
-      return !crossServerSeedKnownUnsupported(
-          ServerVersion.tryParse(s.serverVersion));
-    }).toList();
+    return ServerManager()
+        .serverList
+        .where((s) => canJoinMultiServer(s, _multiServerExcluded))
+        .toList();
+  }
+
+  /// Whether [s] may take part in a multi-server session: not dropped this
+  /// session ([excluded]), not a peer the user hid or its parent stopped
+  /// listing, discovery on, and a version not known to predate the vector
+  /// seed. A federated peer qualifies like any other server — random-songs
+  /// and the embeddings route are on the federation allowlist (mStream #946)
+  /// and its picks stream the way a browsed peer track does, through the
+  /// parent's proxy or the peer's own tunnel. Pure; unit-tested.
+  static bool canJoinMultiServer(Server s, Set<String> excluded) {
+    if (excluded.contains(s.localname)) return false;
+    if (!s.isSelectable) return false;
+    if (s.discoveryAvailable != true) return false;
+    return !crossServerSeedKnownUnsupported(
+        ServerVersion.tryParse(s.serverVersion));
   }
 
   /// Average the seed tracks' embeddings into one unit vector.
@@ -3293,12 +3306,20 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// eligible servers, nobody answered) — the caller then falls back to the
   /// ordinary single-server pick, so switching this on can never leave the
   /// queue empty where it would otherwise have filled.
+  ///
+  /// [epoch] is the lane this pick belongs to (see [_djSessionEpoch]): a
+  /// clear or a server switch while the servers are being asked makes the
+  /// answer worthless, so it is dropped — false, and the caller checks the
+  /// epoch itself before falling back.
   Future<bool> _autoDJMultiServer(List<String> seedPaths,
-      {bool autoPlay = false, bool incrementIndex = false}) async {
+      {required int epoch,
+      bool autoPlay = false,
+      bool incrementIndex = false}) async {
     final candidates = multiServerCandidates();
     if (candidates.length < 2) return false;
 
     final seed = await _multiServerSeed(seedPaths);
+    if (epoch != _djSessionEpoch) return false;
     if (seed == null) return false;
 
     final mgr = AutoDJManager();
@@ -3363,7 +3384,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 server.apiUri('/api/v1/db/random-songs'),
                 headers: {
                   'Content-Type': 'application/json',
-                  'x-access-token': server.jwt ?? '',
+                  'x-access-token': server.authToken ?? '',
                 },
                 body: jsonEncode(filtered.body),
               )
@@ -3378,6 +3399,20 @@ class AudioPlayerHandler extends BaseAudioHandler
               _multiServerExcluded.add(server.localname);
               appLog('[dj] ${server.localname} indexes a different embedding '
                   'model — dropped from this session');
+            } else {
+              // A schema rejection names the key (the single-server loop's
+              // learner): the next round sends a body without it. When the
+              // key is the vector seed itself the server cannot take part
+              // at all, so it is dropped for the session rather than
+              // re-asked — and 400'd — on every pick.
+              final learned =
+                  ServerCapabilities().noteRejection(server, res.body);
+              if (learned == 'similarToVector' ||
+                  learned == 'similarToModelId') {
+                _multiServerExcluded.add(server.localname);
+                appLog('[dj] ${server.localname} does not take a vector '
+                    'seed — dropped from this session');
+              }
             }
             return null;
           }
@@ -3423,6 +3458,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           return null;
         }
       }));
+      if (epoch != _djSessionEpoch) return false;
       final got = answers.nonNulls.toList();
       answered = got.length;
       // Nobody answered — asking again would not change that.
@@ -3457,6 +3493,14 @@ class AudioPlayerHandler extends BaseAudioHandler
     } else {
       _multiServerIgnore[best.server.localname] = best.decoded['ignoreList'];
     }
+
+    // A pick landed: the same bookkeeping the single-server path does on a
+    // working response — nothing is owed, and the outage log re-arms.
+    _djPickPending = false;
+    _djFailLogged = false;
+    _deferredPickFailures = 0;
+    _autoDJAuthWarned = false;
+    _sonicWarned = false;
 
     await _queueAutoDJSong(best.decoded,
         autoPlay: autoPlay,
@@ -3633,10 +3677,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       final seedPaths =
           (sonicAll['similarTo'] as List?)?.whereType<String>().toList() ??
               const <String>[];
-      if (await _autoDJMultiServer(seedPaths,
-          autoPlay: autoPlay, incrementIndex: incrementIndex)) {
-        return;
-      }
+      final picked = await _autoDJMultiServer(seedPaths,
+          epoch: epoch, autoPlay: autoPlay, incrementIndex: incrementIndex);
+      // The lane changed while the servers were being asked: neither the
+      // cross-server pick nor a single-server fallback belongs to it now
+      // (same rule as the response check further down).
+      if (epoch != _djSessionEpoch) return;
+      if (picked) return;
     }
 
     // Keyword filter is client-side (the server doesn't see it).

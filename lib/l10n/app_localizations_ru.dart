@@ -713,6 +713,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Auto DJ выбирает сразу со всех серверов, подстраиваясь под звучание';
 
   @override
+  String get autoDjMultiServerNeedsSonic =>
+      'Нужно включить «Похожее звучание» ниже';
+
+  @override
   String get autoDjSectionShared => 'Сессия';
 
   @override

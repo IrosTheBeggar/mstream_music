@@ -708,6 +708,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Auto DJ wählt aus allen Servern zugleich – passend zum Klang des laufenden Titels';
 
   @override
+  String get autoDjMultiServerNeedsSonic =>
+      'Braucht eingeschaltete Klangliche Ähnlichkeit (unten)';
+
+  @override
   String get autoDjSectionShared => 'Die Session';
 
   @override
