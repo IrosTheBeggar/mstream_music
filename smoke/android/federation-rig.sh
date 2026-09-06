@@ -186,7 +186,10 @@ print(on, off)" 2>/dev/null; }
   adbx shell input keyevent 87; sleep 8
   if is_playing; then pass "next track plays with the parent dead ($(session_state))"; else save_applog rig-parent-dead; fail "playback lost with the parent dead ($(session_state))"; fi
   tap 93 337; sleep 2; T=$(now_ts); tap $ALBUM1; sleep 4
-  wait_for_log_after "$T" '\[api\] POST /api/v1/file-explorer → 200' 5 && pass "peer's file explorer answers 200 over the direct tunnel with the parent dead" || fail "no 200 from the peer's API with the parent dead"
+  # Either peer route counts: the back tap lands on the folder view on the
+  # Galaxy (file-explorer) but re-opens the album on the emulator's taller
+  # app bar (album-songs) — the point is a 200 from the PEER with B dead.
+  wait_for_log_after "$T" '\[api\] POST /api/v1/(file-explorer|db/album-songs) → 200' 5 && pass "peer's API answers 200 over the direct tunnel with the parent dead" || fail "no 200 from the peer's API with the parent dead"
   restart_b
   if [ "$TTL" != 0 ]; then
     # Renewed in place at 75% of the ticket's life; the port is kept.
