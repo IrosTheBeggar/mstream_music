@@ -89,6 +89,18 @@ class TunnelTiming {
   /// 2026-09-02) and cost a full rebuild seconds later.
   static const Duration queueReleaseGrace = Duration(seconds: 10);
 
+  /// A direct peer's guest ticket is re-fetched once this fraction of its
+  /// life is gone — the parent re-mints past the same point — so the token in
+  /// flight never runs out mid-session.
+  static const double directRefreshAt = 0.75;
+
+  /// After a refresh that came back empty-handed (the parent unreachable, or
+  /// nothing new to hand out), how long before the poll asks again for a
+  /// stale ticket; a successful refresh resets it, so a short-lived ticket
+  /// is renewed on schedule. A refused token has its own shorter gap.
+  static const Duration directRefreshMinGap = Duration(minutes: 5);
+  static const Duration directRefusedRetryGap = Duration(seconds: 60);
+
   /// How long after an audio-focus interruption began an auto rebuild must not
   /// resume playback. A window, not a flag: Android never delivers the `end`
   /// for a permanent loss (6 begins, 0 ends across the two drive logs).
@@ -256,6 +268,19 @@ class TunnelPolicy {
     if (browsingTunnelServer) return true;
     return status == IrohTunnelStatus.rejected ||
         status == IrohTunnelStatus.down;
+  }
+
+  /// Whether a direct peer's guest ticket should be fetched again: nothing
+  /// fetched, a life that already ended, or more than
+  /// [TunnelTiming.directRefreshAt] of it gone. Pure; unit-tested.
+  static bool directTicketStale(
+      {required DateTime? fetchedAt,
+      required DateTime? expiresAt,
+      required DateTime now}) {
+    if (fetchedAt == null || expiresAt == null) return true;
+    final life = expiresAt.difference(fetchedAt);
+    if (life <= Duration.zero) return true;
+    return now.difference(fetchedAt) >= life * TunnelTiming.directRefreshAt;
   }
 
   /// Delay before retry number [attempt] (0-based) after a failed cold dial.

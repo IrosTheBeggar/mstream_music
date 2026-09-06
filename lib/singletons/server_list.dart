@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:mstream_music/singletons/file_explorer.dart';
 
 import '../objects/server.dart';
+import '../objects/direct_access.dart';
 import './api.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
@@ -36,9 +37,11 @@ class ServerManager {
   // is a second entry here, not a second copy of the lifecycle.
   final Map<String, TunnelHandle> _tunnels = {};
 
-  // The transports the play queue references (pushed by the audio handler on
-  // every queue edit), and the release timers for the ones it let go of.
-  final Map<String, Server> _queueIrohServers = {};
+  // The servers the play queue references (pushed by the audio handler on
+  // every queue edit) — held as the item's own server, not its transport,
+  // because a federated peer's transport changes with its mode — and the
+  // release timers for the ones it let go of.
+  final Map<String, Server> _queueServers = {};
   final Map<String, Timer> _queueReleaseTimers = {};
 
   // ── Manager-wide reconnect bookkeeping (the rules live in tunnel_policy.dart) ──
@@ -140,6 +143,9 @@ class ServerManager {
                 reason: 'launch', bypassBackoff: true)
             .timeout(const Duration(seconds: 12), onTimeout: () {});
       }
+      // A federated default worth dialing directly gets its own tunnel next
+      // to the parent's; nothing else changes here.
+      unawaited(ensureTunnels(reason: 'launch'));
       // Publish the default to the UI now: it is usable as soon as it is
       // known. Everything below is background tunnel work for the queue and
       // used to hold the browser (blank panel, "Connecting…") for up to 12s.
@@ -171,17 +177,7 @@ class ServerManager {
   }
 
 
-  /// True when an iroh server is already configured. Only one is supported (a
-  /// single native tunnel), so the add-server flow gates a second one.
-  bool get hasIrohServer => serverList.any((s) => s.isIroh);
-
   Future<void> addServer(Server newServer) async {
-    // One iroh server max (single tunnel). The add-server UI blocks this; this is
-    // the code-level backstop so no other path can add a second.
-    if (newServer.isIroh && hasIrohServer) {
-      showGlobalSnack('Only one iroh server is supported.');
-      return;
-    }
     serverList.add(newServer);
 
     if (currentServer == null) {
@@ -310,18 +306,17 @@ class ServerManager {
   }
 
   Future<void> getServerPaths(Server server, {bool throwErr = false}) async {
-    // Whatever actually carries this server's bytes. A federated server has no
-    // transport of its own — it rides the parent's, so a peer of an iroh
-    // server has to wait on the PARENT's tunnel, not its own (it has none).
-    final transport = server.isFederated ? server.parentServer : server;
+    // Whatever actually carries this server's bytes: the parent's tunnel for
+    // a federated peer on the proxy path, the peer's own once it is direct.
+    final transport = server.transportServer;
     // A federated server whose parent isn't linked yet can't be addressed at
     // all; every URL would resolve to the unroutable origin.
     if (transport == null) {
       if (throwErr) throw Exception('federation parent not linked');
       return;
     }
-    // An iroh server can only be reached through its live tunnel.
-    if (transport.isIroh && transport.tunnelPort == null) {
+    // A tunnel server can only be reached through its live tunnel.
+    if (transport.ownsTunnel && transport.tunnelPort == null) {
       // At launch this fires for the ACTIVE server too: loadServerList pings
       // every server as soon as the list is read, and the tunnel is still
       // dialling. Skipping meant its capabilities and — since the version
@@ -361,6 +356,7 @@ class ServerManager {
       final bool? prevDiscovery = server.discoveryAvailable;
       final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
+      final bool? prevFedDirect = server.federationDirectAvailable;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -411,8 +407,14 @@ class ServerManager {
           server.discoveryAvailable != prevDiscovery ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.federationDiscoveryAvailable != prevFedDiscovery ||
+          server.federationDirectAvailable != prevFedDirect ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
+      }
+      // The parent just started offering direct access: any peer of it that
+      // is browsed or queued is worth a tunnel of its own right away.
+      if (server.federationDirectAvailable == true && prevFedDirect != true) {
+        unawaited(ensureTunnels(reason: 'direct-available'));
       }
 
       // Peers are the parent's data, so only a parent reconciles them — and
@@ -480,6 +482,8 @@ class ServerManager {
         features is Map && features['discoveryP2p'] == true;
     server.federationDiscoveryAvailable =
         user is Map && user['federationDiscovery'] == true;
+    server.federationDirectAvailable =
+        user is Map && user['federationDirect'] == true;
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -512,6 +516,7 @@ class ServerManager {
     server.discoveryAvailable = res['discovery'] == true;
     server.discoveryP2pAvailable = res['discoveryP2p'] == true;
     server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
+    server.federationDirectAvailable = res['federationDirect'] == true;
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     return res;
   }
@@ -615,17 +620,65 @@ class ServerManager {
   //  6. Handles are independent: one server's cold dial never delays
   //     another's, and a decision about one never stops another.
 
-  /// The transports that need a tunnel right now.
+  /// The transports that need a tunnel right now: for every referenced
+  /// server (browsed, or holding queued tracks) the Quick Connect server
+  /// itself, or — for a federated peer — the peer's own tunnel when it is
+  /// worth dialing directly, plus the parent's while the peer is not direct
+  /// yet (and whenever it is not), since the proxy path serves until then.
   Set<Server> _tunnelTargets() {
     final out = <Server>{};
-    final c = currentServer?.transportServer;
-    if (c != null && c.isIroh) out.add(c);
-    for (final q in _queueIrohServers.values) {
-      final t = q.transportServer;
-      if (t != null && t.isIroh) out.add(t);
+    void add(Server? referenced) {
+      if (referenced == null) return;
+      if (referenced.isFederated) {
+        if (_directWanted(referenced)) out.add(referenced);
+        final parent = referenced.parentServer;
+        // The parent's tunnel carries the proxy path until the peer is
+        // direct, and the access call whenever the peer's guest ticket has
+        // to be fetched again (stale, or refused by the peer).
+        if (parent != null &&
+            parent.isIroh &&
+            (!referenced.isDirect ||
+                _directTicketStale(referenced) ||
+                _directRefused(referenced))) {
+          out.add(parent);
+        }
+        return;
+      }
+      if (referenced.isIroh) out.add(referenced);
+    }
+
+    add(currentServer);
+    for (final q in _queueServers.values) {
+      add(q);
     }
     return out;
   }
+
+  /// Whether [peer] should have a tunnel of its own: its parent offers
+  /// direct access (the `federationDirect` flag), nobody declined for this
+  /// peer this session, and the parent still lists it.
+  bool _directWanted(Server peer) {
+    final parent = peer.parentServer;
+    return IrohTunnel.isSupported &&
+        parent != null &&
+        parent.federationDirectAvailable == true &&
+        !peer.directDenied &&
+        !peer.federationMissing;
+  }
+
+  /// The peer's own tunnel is up but its supervisor gave up on the guest
+  /// token (the peer answered "NO"): a refresh through the parent is due.
+  bool _directRefused(Server peer) {
+    final h = _tunnels[peer.localname];
+    return h != null &&
+        h.assigned &&
+        _nativeStatusOf(h) == IrohTunnelStatus.rejected;
+  }
+
+  bool _directTicketStale(Server peer) => TunnelPolicy.directTicketStale(
+      fetchedAt: peer.directFetchedAt,
+      expiresAt: peer.directExpiresAt,
+      now: DateTime.now());
 
   bool _isTarget(Server transport) =>
       _tunnelTargets().any((t) => t.localname == transport.localname);
@@ -643,8 +696,12 @@ class ServerManager {
   Server? _bannerTarget() => bannerTargetAmong(
         browsed: currentServer?.transportServer,
         background: [
+          // A peer's handle that is still an ATTEMPT (dialing, or refused)
+          // serves nothing yet — the proxy does — so its state is not the
+          // user's problem and must not put Repair/Retry on the strip.
           for (final h in _tunnels.values)
-            (server: h.server, status: _effectiveStatus(h)),
+            if (!h.server.isFederated || h.server.isDirect)
+              (server: h.server, status: _effectiveStatus(h)),
         ],
       );
 
@@ -668,24 +725,23 @@ class ServerManager {
   void setQueueIrohServers(Iterable<Server> servers) {
     final next = <String, Server>{};
     for (final s in servers) {
-      final t = s.transportServer;
-      if (t != null && t.isIroh) next[t.localname] = t;
+      if (s.isIroh || s.isFederated) next[s.localname] = s;
     }
     var changed = false;
     for (final e in next.entries) {
       _queueReleaseTimers.remove(e.key)?.cancel();
-      if (!_queueIrohServers.containsKey(e.key)) {
-        _queueIrohServers[e.key] = e.value;
+      if (!_queueServers.containsKey(e.key)) {
+        _queueServers[e.key] = e.value;
         changed = true;
       }
     }
-    for (final name in _queueIrohServers.keys.toList()) {
+    for (final name in _queueServers.keys.toList()) {
       if (next.containsKey(name) || _queueReleaseTimers.containsKey(name)) {
         continue;
       }
       _queueReleaseTimers[name] = Timer(TunnelTiming.queueReleaseGrace, () {
         _queueReleaseTimers.remove(name);
-        final was = _queueIrohServers.remove(name);
+        final was = _queueServers.remove(name);
         if (was == null) return;
         appLog('[iroh] queue no longer references ${was.localname} — '
             'releasing its tunnel');
@@ -707,7 +763,9 @@ class ServerManager {
   /// parent's tunnel is, so every caller may pass whichever server it holds.
   bool tunnelAssignedTo(Server s) {
     final h = _handleFor(s);
-    return h != null && h.assigned && h.code == h.server.irohPairingCode;
+    return h != null &&
+        h.assigned &&
+        h.code == TunnelHandle.credentialFor(h.server);
   }
 
   /// True when the tunnel for [s] is assigned AND reports connected — i.e.
@@ -752,7 +810,14 @@ class ServerManager {
     // A cold dial answered "NO": no native tunnel exists to say so, but the
     // strip must offer Repair, not Retry.
     if (h.startRejected && h.nativeKey == null) return IrohTunnelStatus.rejected;
-    return _nativeStatusOf(h);
+    final native = _nativeStatusOf(h);
+    // A direct peer whose supervisor gave up on a refused guest token is
+    // being refreshed from the parent (_maintainDirect), not re-paired:
+    // "reconnecting" is what the user should read.
+    if (h.server.isFederated && native == IrohTunnelStatus.rejected) {
+      return IrohTunnelStatus.reconnecting;
+    }
+    return native;
   }
 
   // Logged once: the reason the native tunnel is unavailable while a server
@@ -807,7 +872,9 @@ class ServerManager {
       {bool verify = false,
       String reason = 'ensure',
       bool bypassBackoff = false}) {
-    if (!IrohTunnel.isSupported || !transport.isIroh) return Future.value();
+    if (!IrohTunnel.isSupported || !(transport.isIroh || transport.isFederated)) {
+      return Future.value();
+    }
     final h = _handleOf(transport);
     h.pendingEnsures++;
     _startStatusPolling();
@@ -821,10 +888,9 @@ class ServerManager {
   Future<void> _ensureHandle(
       TunnelHandle h, bool verify, String reason, bool bypassBackoff) async {
     final s = h.server;
-    final code = s.irohPairingCode;
-    if (code == null) return;
     final name = s.localname;
-    if (h.assigned && h.code == code) {
+    String? credential = TunnelHandle.credentialFor(s);
+    if (h.assigned && credential != null && h.code == credential) {
       // Already wired up. The supervisor handles transient drops itself; only
       // rebuild on a verify when it's fully down (a reconnecting/rejected
       // tunnel is left alone — restarting wouldn't help).
@@ -855,6 +921,31 @@ class ServerManager {
       if (h.retryTimer == null && !h.startRejected) _scheduleRetry(h);
       return;
     }
+    if (s.isFederated && !h.assigned) {
+      // A peer's credential comes from its parent and expires: fetch it when
+      // missing, stale, or the one the peer refused. Behind the gates above
+      // on purpose — a parent that keeps failing is asked on the retry
+      // ladder, not on every reconcile. (A tunnel that is UP refreshes in
+      // place instead — _maintainDirect.)
+      if (credential == null ||
+          _directTicketStale(s) ||
+          credential == h.refusedCredential) {
+        final outcome = await _refreshDirectAccess(s,
+            force: credential != null && credential == h.refusedCredential);
+        credential = TunnelHandle.credentialFor(s);
+        if (credential == null || credential == h.refusedCredential) {
+          // Declined, unreachable, or the same refused token: the proxy
+          // serves; a transient failure gets the retry ladder.
+          if (outcome != DirectAccessOutcome.denied && _directWanted(s)) {
+            h.lastFailedDialAt = DateTime.now();
+            _scheduleRetry(h, note: ' — waiting for a guest token');
+          }
+          return;
+        }
+      }
+    }
+    if (credential == null) return;
+    final code = credential;
     // A dead (verify) or re-paired tunnel is replaced: drop the old one first
     // (a start under a key that is still running returns its stale port).
     // NB: no cast fallback here. A renderer reaches a tunnel server through
@@ -908,10 +999,13 @@ class ServerManager {
       // casting: the cast backends re-resolve each track against the live
       // tunnel at load time (irohProxyUri), and a mid-session reload clobbers
       // the Cast SDK's own suspend/resume recovery.
+      // A direct peer's proxy URLs still work while its own tunnel comes
+      // up, so only UPCOMING items move over — the playing track keeps its
+      // stream instead of reloading mid-song.
       unawaited(MediaManager()
           .audioHandler
           .customAction('rebuildTranscodeUrls',
-              const {'upcomingOnly': false, 'auto': true})
+              {'upcomingOnly': s.isFederated, 'auto': true})
           .catchError((Object e) {
         // Reaching here should now be rare: the handler runs this rebuild
         // on the same chain as every other local-backend load, so a
@@ -930,7 +1024,23 @@ class ServerManager {
       h.startRejected = '$e'.contains('rejected');
       appLog('[iroh] tunnel start failed after ${sw.elapsedMilliseconds}ms '
           '($reason): $e for=$name');
-      if (h.startRejected) {
+      if (h.startRejected && s.isFederated) {
+        // A refused GUEST token is not a pairing problem: it expired or its
+        // key was rotated, and the parent is where a fresh one comes from.
+        // Ask once; a new ticket gets a quick retry, a refusal to mint puts
+        // the peer on the proxy for the session, anything else waits for
+        // the ladder.
+        h.refusedCredential = code;
+        h.startRejected = false;
+        final outcome = await _refreshDirectAccess(s, force: true);
+        if (outcome == DirectAccessOutcome.issued) {
+          _scheduleRetry(h,
+              delay: TunnelTiming.retryAfterNetworkReturn,
+              note: ' — fresh guest token');
+        } else if (outcome != DirectAccessOutcome.denied) {
+          _scheduleRetry(h, note: ' — guest token refused, refresh pending');
+        }
+      } else if (h.startRejected) {
         h.cancelRetry();
       } else {
         final next = TunnelPolicy.retryAfterFailedDial(
@@ -964,12 +1074,25 @@ class ServerManager {
   /// Stop [h]'s native tunnel and forget its assignment. ONLY from inside
   /// its chain (invariant 3).
   void _stopHandleTunnel(TunnelHandle h, String reason) {
-    if (h.nativeKey != null) {
+    final had = h.nativeKey != null;
+    if (had) {
       appLog('[iroh] tunnel stopped ($reason) port=${h.port} '
           'for=${h.server.localname}');
       IrohTunnel.instance.stop(h.nativeKey!);
     }
     h.clearRuntime();
+    // A direct peer just went back to the proxy path: every queued URL on
+    // its old loopback is dead, so rebuild them against the parent (which
+    // rebuilds again when its own tunnel binds, if it has one).
+    if (had && h.server.isFederated) {
+      unawaited(MediaManager()
+          .audioHandler
+          .customAction('rebuildTranscodeUrls',
+              const {'upcomingOnly': false, 'auto': true})
+          .catchError((Object e) {
+        appLog('[iroh] URL rebuild after the direct tunnel went failed: $e');
+      }));
+    }
   }
 
   /// Nothing references [h]'s server any more: stop its tunnel on its chain
@@ -1349,6 +1472,185 @@ class ServerManager {
   /// connection instead of the tunnel. Returns WHY it failed, classified by
   /// [TunnelPolicy.classifyProbeError], because "refused", "reset" and
   /// "timeout" are three different tunnel states.
+  // ── Direct access to federated peers (issue #143) ──
+  //
+  // The parent hands out a guest ticket per peer (GET …/peers/:id/access —
+  // objects/direct_access.dart); the peer's handle dials it like a pairing
+  // code, on the federation ALPN. The ticket expires daily: a tunnel that is
+  // up gets the new one swapped in place (same port, same queued URLs), a
+  // refused one is asked for again rather than treated as a re-pair, and a
+  // parent that declines puts the peer on the proxy for the session.
+
+  /// Ask [peer]'s parent for direct access and record the answer on the
+  /// peer. Waits (bounded) for the parent's own tunnel first when the
+  /// parent is a Quick Connect server — the access call rides it.
+  Future<DirectAccessOutcome> _refreshDirectAccess(Server peer,
+      {bool force = false}) async {
+    final parent = peer.parentServer;
+    final id = peer.federationPeerId;
+    if (parent == null || id == null) return DirectAccessOutcome.failed;
+    final name = peer.localname;
+    if (parent.isIroh && !tunnelServes(parent)) {
+      // The parent is a target while this peer's ticket is due (see
+      // _tunnelTargets), so nothing releases it under the call; it may just
+      // not have been dialed yet.
+      unawaited(ensureTunnelFor(parent, reason: 'direct-access'));
+      await awaitTunnelReady(
+          server: parent,
+          timeout: const Duration(seconds: 12),
+          extendWhileDialing: false,
+          caller: 'direct-access');
+      if (!tunnelServes(parent)) {
+        appLog('[federation] $name: direct access needs ${parent.localname}\'s '
+            'tunnel, which is not up');
+        return DirectAccessOutcome.failed;
+      }
+    }
+    try {
+      final response = await http.get(
+        parent.apiUri('/api/v1/federation/peers/$id/access'
+            '${force ? '?refresh=1' : ''}'),
+        headers: {'x-access-token': parent.authToken ?? ''},
+      ).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        appLog('[federation] $name: direct access on ${parent.localname} -> '
+            'HTTP ${response.statusCode}');
+        return DirectAccessOutcome.failed;
+      }
+      final body = jsonDecode(response.body);
+      if (body is! Map) return DirectAccessOutcome.failed;
+      final access = DirectAccess.fromJson(body);
+      if (access == null) {
+        peer.directDenied = true;
+        appLog('[federation] $name: no direct access '
+            '(${body['reason'] ?? 'declined'}) — staying on '
+            '${parent.localname}\'s proxy');
+        return DirectAccessOutcome.denied;
+      }
+      final changed = access.ticket != peer.directTicket;
+      peer.directDenied = false;
+      if (changed) {
+        // The staleness clock starts at the fetch of a NEW ticket only: the
+        // same one handed out again would otherwise look fresh again.
+        peer
+          ..directTicket = access.ticket
+          ..directGuestToken = access.guestToken
+          ..directEndpointId = access.endpointId
+          ..directExpiresAt = access.expiresAt
+          ..directFetchedAt = DateTime.now();
+      }
+      appLog('[federation] $name: direct access '
+          '${changed ? 'issued' : 'unchanged'}, expires '
+          '${access.expiresAt.toIso8601String()}');
+      return changed ? DirectAccessOutcome.issued : DirectAccessOutcome.unchanged;
+    } on FormatException catch (e) {
+      appLog('[federation] $name: direct access answer unreadable: $e');
+      return DirectAccessOutcome.failed;
+    } catch (e) {
+      appLog('[federation] $name: direct access failed: $e');
+      return DirectAccessOutcome.failed;
+    }
+  }
+
+  /// Poll-time upkeep for a direct peer's tunnel: re-fetch a ticket past
+  /// three quarters of its life and swap it in place, and treat a supervisor
+  /// that gave up on a refused token as "refresh it" — rate-limited, since a
+  /// refresh is a round trip through the parent.
+  void _maintainDirect(TunnelHandle h) {
+    final s = h.server;
+    if (!s.isFederated || !h.assigned || h.directRefreshing) return;
+    final refused = _nativeStatusOf(h) == IrohTunnelStatus.rejected;
+    final stale = _directTicketStale(s);
+    if (!refused && !stale) return;
+    // Rate-limit ATTEMPTS after a refusal, and only FAILED attempts for a
+    // stale ticket — a renewal that worked must not delay the next one. A
+    // ticket that has already run out (the parent was unreachable at the
+    // scheduled point) is urgent: every request is failing, so ask on the
+    // short gap.
+    final expiresAt = s.directExpiresAt;
+    final expired = expiresAt != null && !DateTime.now().isBefore(expiresAt);
+    final gap = _since(refused ? h.directRefreshedAt : h.directRefreshFailedAt);
+    final minGap = refused || expired
+        ? TunnelTiming.directRefusedRetryGap
+        : TunnelTiming.directRefreshMinGap;
+    if (gap != null && gap < minGap) return;
+    unawaited(_refreshDirectCredential(h,
+        force: refused, why: refused ? 'refused' : 'stale'));
+  }
+
+  /// Fetch a fresh ticket for a peer whose tunnel is up and hand it to the
+  /// native side in place — same port, same token, the queued URLs survive;
+  /// only upcoming items take the new guest token. A parent that declines
+  /// releases the tunnel (the proxy takes over); a swap the native side
+  /// refuses (a different endpoint id) rebuilds instead.
+  Future<void> _refreshDirectCredential(TunnelHandle h,
+      {required bool force, required String why}) async {
+    final s = h.server;
+    final name = s.localname;
+    h.directRefreshing = true;
+    h.directRefreshedAt = DateTime.now();
+    try {
+      final before = s.directTicket;
+      var outcome = await _refreshDirectAccess(s, force: force);
+      if (outcome == DirectAccessOutcome.unchanged && !force) {
+        // The parent's own cache is not due for a re-mint yet: make it.
+        outcome = await _refreshDirectAccess(s, force: true);
+      }
+      if (!h.assigned || h.nativeKey == null) return;
+      switch (outcome) {
+        case DirectAccessOutcome.denied:
+          appLog('[iroh] direct access withdrawn ($why) — back to the proxy '
+              'for=$name');
+          await _releaseHandle(h, 'direct-withdrawn');
+          return;
+        case DirectAccessOutcome.failed:
+        case DirectAccessOutcome.unchanged:
+          h.directRefreshFailedAt = DateTime.now();
+          return; // try again after the gap
+        case DirectAccessOutcome.issued:
+          break;
+      }
+      final ticket = s.directTicket;
+      if (ticket == null || ticket == before) return;
+      try {
+        IrohTunnel.instance.setCredential(h.nativeKey!, ticket);
+        h.code = ticket;
+        h.refusedCredential = null;
+        h.directRefreshFailedAt = null;
+        appLog('[iroh] guest credential refreshed in place ($why) for=$name');
+        // The parent's tunnel was kept up for the access call; drop it if
+        // nothing else wants it.
+        unawaited(ensureTunnels(reason: 'direct-refreshed'));
+        unawaited(MediaManager()
+            .audioHandler
+            .customAction('rebuildTranscodeUrls',
+                const {'upcomingOnly': true, 'auto': true})
+            .catchError((Object e) {
+          appLog('[iroh] URL rebuild after the credential refresh failed: $e');
+        }));
+      } on IrohTunnelException catch (e) {
+        appLog('[iroh] credential swap refused (${e.message}) — rebuilding '
+            'for=$name');
+        await _hardRebuild(h,
+            code: h.code, port: h.port, reason: 'credential', user: true);
+      }
+    } finally {
+      h.directRefreshing = false;
+    }
+  }
+
+  /// The browse layer saw a 401 from a direct peer: its guest token is no
+  /// longer honoured (expired early, or the key was rotated). Refresh it now
+  /// rather than at the next scheduled point.
+  Future<void> onDirectAuthRejected(Server server) async {
+    if (!server.isDirect) return;
+    final h = _tunnels[server.localname];
+    if (h == null || h.directRefreshing) return;
+    final gap = _since(h.directRefreshedAt);
+    if (gap != null && gap < TunnelTiming.directRefusedRetryGap) return;
+    await _refreshDirectCredential(h, force: true, why: '401');
+  }
+
   Future<({bool ok, String reason, int ms})> _probeTunnel(Server s) async {
     final sw = Stopwatch()..start();
     final client = HttpClient()
@@ -1430,6 +1732,7 @@ class ServerManager {
     for (final line in _drainNativeEventsOf(h)) {
       appLog('[iroh-native] $line for=$name');
     }
+    _maintainDirect(h);
     // Watchdog: a supervisor that is not converging although the relay is
     // reachable (or a kick that did not take) gets a fresh endpoint. Never in
     // a dead zone — see TunnelPolicy.shouldEscalate — and never more than one
@@ -1494,7 +1797,7 @@ class ServerManager {
     // federated peer has none of its own and is ready exactly when its
     // parent is.
     final s = (server ?? currentServer)?.transportServer;
-    if (!IrohTunnel.isSupported || s == null || !s.isIroh) return true;
+    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return true;
     final h = _handleOf(s);
     // A rejected cold dial leaves no native tunnel to report it; answer
     // before firing an ensure that would only re-dial into the rejection.
@@ -1541,7 +1844,7 @@ class ServerManager {
   Future<void> reverifyTunnel(Server server) async {
     // Probe the transport: a peer's failures happen on its parent's tunnel.
     final s = server.transportServer;
-    if (!IrohTunnel.isSupported || s == null || !s.isIroh) return;
+    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return;
     final h = _tunnels[s.localname];
     if (h == null || h.reverifying || !h.assigned) return;
     // Already known down: ensureTunnelFor / awaitTunnelReady own that case
@@ -1672,7 +1975,7 @@ class ServerManager {
     // it on the next edit, but do it now).
     for (final gone in [removeThisServer, ...orphans]) {
       _queueReleaseTimers.remove(gone.localname)?.cancel();
-      _queueIrohServers.remove(gone.localname);
+      _queueServers.remove(gone.localname);
     }
 
     if (serverList.isEmpty) {
@@ -1967,6 +2270,7 @@ class ServerManager {
     server.discoveryAvailable = false;
     server.discoveryP2pAvailable = false;
     server.federationDiscoveryAvailable = false;
+    server.federationDirectAvailable = false; // a peer's own peers are out of reach
     server.discoveryPathAvailable = false;
     server.playlists.clear();
   }
@@ -2062,4 +2366,19 @@ class ServerManager {
   Stream<Server?> get currentServerStream => _currentServerStream.stream;
 
   Stream<List<Server>> get serverListStream => _serverListStream.stream;
+}
+
+/// What asking the parent for a peer's direct access came to.
+enum DirectAccessOutcome {
+  /// A ticket the peer did not hold before (first fetch, or a fresh mint).
+  issued,
+
+  /// The parent handed out the ticket the peer already holds.
+  unchanged,
+
+  /// The parent said `direct: false`: the proxy is all there is.
+  denied,
+
+  /// Unreachable, an HTTP error, or an unreadable answer: try again later.
+  failed,
 }

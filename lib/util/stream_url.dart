@@ -63,13 +63,15 @@ String buildServerStreamUrl(Server server, String path) {
   final tm = TranscodeManager();
   final String token =
       server.authToken == null ? '' : '&token=${server.authToken!}';
-  // A federated server's tracks live on a peer, reached through the parent's
-  // byte proxy (which forwards Range, so seeking still works). /transcode is
-  // off the federation allowlist entirely — there is no transcode branch to
-  // take here, and transcodeAvailable is pinned false for these servers so the
-  // check below would land on /media regardless. Explicit anyway: the endpoint
-  // differs, not just the flag.
-  if (server.isFederated) {
+  // A federated server's tracks live on a peer. On the proxy path they come
+  // through the parent's byte proxy (which forwards Range, so seeking still
+  // works); a DIRECT peer serves /media itself over its own tunnel, with the
+  // guest token in the ordinary slot, so it takes the plain branch below.
+  // /transcode is off the federation allowlist either way — there is no
+  // transcode branch to take, and transcodeAvailable is pinned false for
+  // these servers so the check below lands on /media regardless. Explicit
+  // for the proxy anyway: the endpoint differs, not just the flag.
+  if (server.isFederated && !server.isDirect) {
     return '${server.effectiveBaseUrl}${server.federationPrefix}/stream$p'
         '?app_uuid=${Uuid().v4()}$token${server.localTokenQuery}';
   }
@@ -143,7 +145,7 @@ String buildServerDownloadUrl(Server server, String path) {
     if (element.isEmpty) continue;
     p += '/${Uri.encodeComponent(element)}';
   }
-  final String base = server.isFederated
+  final String base = server.isFederated && !server.isDirect
       ? '${server.effectiveBaseUrl}${server.federationPrefix}/stream$p'
       : '${server.effectiveBaseUrl}/media$p';
   final parts = <String>[
@@ -192,8 +194,10 @@ String buildAlbumArtUrl(Server server, String artFile, {String compress = 's'}) 
   // The art proxy takes the file as ONE path segment — the peer serves
   // /album-art/:file, a single hash name — and forwards only `compress`.
   // encodeComponent, not encodeFull: the segment is escaped exactly once, the
-  // way the webapp's peerArtUrl does it.
-  if (server.isFederated) {
+  // way the webapp's peerArtUrl does it. A direct peer serves /album-art
+  // itself, so it takes the plain shape below (which albumArtFileFromUrl
+  // reads as well).
+  if (server.isFederated && !server.isDirect) {
     return '${server.effectiveBaseUrl}${server.federationPrefix}'
         '/art/${Uri.encodeComponent(artFile)}'
         '?compress=$compress$token${server.localTokenQuery}';

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File;
 
 import './file_explorer.dart';
@@ -204,6 +205,11 @@ class ApiManager {
       appLog('[api] $getOrPost $location → ${response.statusCode} '
           '(${sw.elapsedMilliseconds}ms)');
 
+      // A direct peer refusing our guest token: the parent can hand out a
+      // fresh one, and the tunnel keeps its port meanwhile.
+      if (response.statusCode == 401 && server.isDirect) {
+        unawaited(ServerManager().onDirectAuthRejected(server));
+      }
       if (response.statusCode > 299) {
         throw Exception('Server Call Failed');
       }

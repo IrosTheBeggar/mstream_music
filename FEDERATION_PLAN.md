@@ -313,6 +313,54 @@ now; lifting it is a separate change.
 `for=<localname>` suffix, since two tunnels would otherwise be
 indistinguishable in a Diagnostics export.
 
+### Phase 7 — direct access: a peer over a tunnel of its own ✅ done
+
+The point of issue #143: a peer's bytes no longer cross the parent's home
+link twice, the peer stays usable while the parent is down, and there is one
+hop less latency. Server side: mStream#943 (guest tokens, the parent's
+`access` route, the `mstrfedg1:` guest ticket, `federationDirect` in the
+`/api` user block). App side, this phase.
+
+**The mode is the peer's own tunnel port.** `Server.isDirect` is true while
+the peer holds a `tunnelPort` of its own — the manager binds it when the
+peer's tunnel is up and clears it when that tunnel goes — and every accessor
+reads through it: `transportServer` is the peer itself, `effectiveBaseUrl`
+its loopback, `authToken` the guest token, `localTokenQuery` its own `__lt`,
+`apiUri` the plain path. The three URL builders take the plain `/media` and
+`/album-art` shapes for a direct peer and the parent's proxy shapes
+otherwise; `albumArtFileFromUrl` already read both. `ownsTunnel` (a Quick
+Connect server, or a direct peer) is the "has a tunnel of its own" question
+the manager and the strip ask; `isIroh` stays identity.
+
+**The manager.** A federated peer that is browsed or queued is a target of
+its own when its parent advertises `federationDirect`, nobody declined this
+session, and the parent still lists it — with the parent's tunnel kept as a
+target too until the peer is direct (the proxy serves meanwhile). The peer's
+handle keys by localname and dials with its guest ticket
+(`TunnelHandle.credentialFor`), fetched from the parent on demand
+(`GET …/peers/:id/access`, waiting for a Quick Connect parent's tunnel
+first) and recorded on the peer with its expiry. A tunnel that is up gets a
+fresh ticket swapped in place once three quarters of the lifetime is gone
+(`IrohTunnel.setCredential` — same port, the queued URLs survive; only
+upcoming items take the new token). A refused guest token is asked for
+again rather than treated as a re-pair: at the first dial through one forced
+refresh and a quick retry, on a running tunnel through the poll, on a browse
+401 at once. A parent that answers `direct: false` puts the peer on the
+proxy for the session. When a direct tunnel goes, the queued URLs are
+rebuilt against the parent.
+
+**What the user sees.** The strip follows a browsed direct peer's own
+tunnel; a peer handle that is still an attempt never puts Repair or Retry on
+the strip (the proxy is serving). Log lines: `[federation] <peer>: direct
+access issued/unchanged/no direct access`, the peer's own `[iroh] … for=<peer>`
+lifecycle with `mode=guest` in the native events.
+
+**Also in this phase: the one-Quick-Connect-server cap is gone.** The native
+layer keys tunnels by server and the manager runs one per server, so the
+add-server screen and its backstop no longer refuse a second Quick Connect
+server. A server that is neither browsed nor queued has no tunnel, so a phone
+with several paired servers still runs one most of the time.
+
 ### Phase 5 — optional: make Discover leads actionable
 
 `/api/v1/discovery/federation/similar` already returns `peer:{id,name}` on the
