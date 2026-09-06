@@ -79,6 +79,22 @@ void main() {
       expect(AudioPlayerHandler.canJoinMultiServer(_peer(), {}), isTrue);
     });
 
+    test('a peer joins even with its discovery flag pinned false — health '
+        'decides for it', () {
+      // ServerManager._applyFederatedDefaults pins the flag; the two routes
+      // the fan-out uses are allowlisted regardless, and the model handshake
+      // asks the peer before anything is sent.
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _peer()..discoveryAvailable = false, {}),
+          isTrue);
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _server('a', discovery: false), {}),
+          isFalse,
+          reason: 'a plain server still needs the flag');
+    });
+
     test('a hidden peer, or one its parent stopped listing, sits out', () {
       expect(AudioPlayerHandler.canJoinMultiServer(_peer(hidden: true), {}),
           isFalse);

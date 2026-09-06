@@ -185,6 +185,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _sonicSeedOwners.clear();
     _multiServerExcluded.clear();
     _multiServerIgnore.clear();
+    _fanOutDeclined.clear();
     _sonicLockedAnchor = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
     _sonicWarned = false;
@@ -2184,6 +2185,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   void restoreAutoDJ(Server server) {
     if (autoDJServer != null) return;
     autoDJServer = server;
+    // A multi-server session's fan-out servers are tunnel targets from the
+    // moment the DJ is armed — this path arms too, so it nudges too (the
+    // mode's own edge fired while nothing was armed yet).
+    _reconcileFanOutTunnels('dj-restore');
     customState.add(CustomEvent(autoDJServer));
     appLog('[autodj] restored on ${server.localname}');
   }
@@ -3292,12 +3297,33 @@ class AudioPlayerHandler extends BaseAudioHandler
       {bool allowUnknownDiscovery = false}) {
     if (excluded.contains(s.localname)) return false;
     if (!s.isSelectable) return false;
-    if (s.discoveryAvailable != true &&
+    // A peer's discovery flag is pinned false by the app (its similar-tracks
+    // and sonic-path routes are off the federation allowlist — see
+    // ServerManager._applyFederatedDefaults), so it says nothing about the
+    // two routes the fan-out uses, which ARE allowlisted (mStream #946). A
+    // peer's discovery is learned from federation/health instead — the model
+    // handshake asks it before any vector is sent.
+    if (!s.isFederated &&
+        s.discoveryAvailable != true &&
         !(allowUnknownDiscovery && s.discoveryAvailable == null)) {
       return false;
     }
     return !crossServerSeedKnownUnsupported(
         ServerVersion.tryParse(s.serverVersion));
+  }
+
+  // The reasons the fan-out has already explained this session, so a session
+  // that keeps running single-server says why once, not per pick.
+  final Set<String> _fanOutDeclined = {};
+
+  /// The multi-server pick is not running this time, for [reason]. Logged the
+  /// first time each reason comes up in a session: otherwise a mode switched
+  /// on that quietly does nothing is indistinguishable from the mode working.
+  bool _fanOutDecline(String reason) {
+    if (_fanOutDeclined.add(reason)) {
+      appLog('[dj] multi-server: not this pick — $reason');
+    }
+    return false;
   }
 
   /// Average the seed tracks' embeddings into one unit vector.
@@ -3374,7 +3400,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       bool autoPlay = false,
       bool incrementIndex = false}) async {
     final candidates = multiServerCandidates();
-    if (candidates.length < 2) return false;
+    if (candidates.length < 2) {
+      return _fanOutDecline('${candidates.length} eligible server(s) — the '
+          'others lack discovery or a new enough version');
+    }
 
     // A candidate whose tunnel is dialing right now — the session's targets
     // were just registered (see _djFanOutServers), or a drop is being
@@ -3401,7 +3430,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     final seed = await _multiServerSeed(seedPaths);
     if (epoch != _djSessionEpoch) return false;
-    if (seed == null) return false;
+    if (seed == null) {
+      return _fanOutDecline('no vector for the anchor (not analysed yet, or '
+          'its server did not answer)');
+    }
 
     // The model handshake, before anything is sent: every candidate's model
     // space, from federation/health (the anchors' owners already answered it
@@ -3418,6 +3450,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       await Future.wait(unknownModel.map((s) async {
         final health = await ApiManager().fetchFederationHealth(s);
         _fanOutModels.record(s.localname, health?.modelId, DateTime.now());
+        // Once per server per cache life: the drive log's only record of the
+        // handshake, so a server that keeps sitting out can be explained.
+        appLog(health == null
+            ? '[dj] ${s.localname}: no health answer — sits this pick out'
+            : health.modelId == null
+                ? '[dj] ${s.localname}: no discovery model right now — sits '
+                    'this pick out'
+                : '[dj] ${s.localname} answers in model ${health.modelId} '
+                    '(${health.analyzedCount} analysed)');
       }));
       if (epoch != _djSessionEpoch) return false;
     }
@@ -3443,7 +3484,9 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (eligible.isEmpty ||
         (eligible.length == 1 &&
             eligible.first.localname == autoDJServer?.localname)) {
-      return false;
+      return _fanOutDecline(eligible.isEmpty
+          ? 'no server answers in the seed\'s model space right now'
+          : 'only the DJ\'s own server is in the seed\'s model space');
     }
 
     final mgr = AutoDJManager();
@@ -3490,7 +3533,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       final round = eligible
           .where((s) => !_multiServerExcluded.contains(s.localname))
           .toList();
-      if (round.isEmpty) return false;
+      if (round.isEmpty) return _fanOutDecline('every server was dropped');
       final answers = await Future.wait(round.map((server) async {
         final payload = <String, dynamic>{
           'ignoreList': retryLists[server.localname] ?? const [],
@@ -3602,7 +3645,13 @@ class AudioPlayerHandler extends BaseAudioHandler
             '— asking again (${ask + 2}/$maxAsks)');
       }
     }
-    if (scored.isEmpty) return false;
+    if (scored.isEmpty) {
+      // Per pick, not per session: a round where nobody answered, or every
+      // answer was a repeat, is worth a line each time.
+      appLog('[dj] multi-server: not this pick — $answered answered, none '
+          'usable after $maxAsks asks');
+      return false;
+    }
 
     // Best match wins. The whole reason for asking everyone is that one of
     // them holds something closer to the seed than the DJ's own server does.
