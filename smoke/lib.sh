@@ -98,7 +98,9 @@ media_key() { # play | pause | play-pause
   local code; case "$1" in play) code=126;; pause) code=127;; *) code=85;; esac
   adbx shell input keyevent "$code"; log "media key: $1"
 }
-wake()      { adbx shell input keyevent KEYCODE_WAKEUP; }
+# Wake AND dismiss a swipe keyguard: a script run after the soak (screen off,
+# phone locked) otherwise taps the lock screen. A secure lock stays put.
+wake()      { adbx shell input keyevent KEYCODE_WAKEUP; adbx shell wm dismiss-keyguard >/dev/null 2>&1; }
 bt_connected() { adbx shell dumpsys bluetooth_manager 2>/dev/null | grep -m1 -E "ConnectionState:" | grep -q STATE_CONNECTED; }
 a2dp_route()   { adbx shell dumpsys audio 2>/dev/null | grep -m1 -oE 'Devices: (bt_a2dp|speaker)[^ ]*'; }
 session_state() { adbx shell dumpsys media_session 2>/dev/null | grep -A8 "$PKG" | grep -m1 -oE 'state=[A-Z_]+\([0-9]\)'; }
