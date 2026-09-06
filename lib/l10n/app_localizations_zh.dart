@@ -690,7 +690,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中有 $count 台参与 — 其余需要启用 discovery 并升级服务器';
+    return '$total 台中有 $count 台参与 — 其余缺少 discovery、匹配的嵌入模型或足够新的服务器版本';
   }
 
   @override

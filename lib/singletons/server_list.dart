@@ -620,11 +620,20 @@ class ServerManager {
   //  6. Handles are independent: one server's cold dial never delays
   //     another's, and a decision about one never stops another.
 
+  /// The servers a multi-server Auto DJ session asks on every pick — every
+  /// eligible server, not just the browsed and queued ones — supplied by the
+  /// audio handler while such a session is armed, empty otherwise. Read live
+  /// on every target computation, so there is no copy to go stale; the
+  /// handler nudges [ensureTunnels] whenever the answer changes (arm, disarm,
+  /// the mode toggling, a server dropped from the session).
+  Iterable<Server> Function() djFanOutServers = () => const <Server>[];
+
   /// The transports that need a tunnel right now: for every referenced
-  /// server (browsed, or holding queued tracks) the Quick Connect server
-  /// itself, or — for a federated peer — the peer's own tunnel when it is
-  /// worth dialing directly, plus the parent's while the peer is not direct
-  /// yet (and whenever it is not), since the proxy path serves until then.
+  /// server (browsed, holding queued tracks, or asked by a multi-server Auto
+  /// DJ session) the Quick Connect server itself, or — for a federated peer
+  /// — the peer's own tunnel when it is worth dialing directly, plus the
+  /// parent's while the peer is not direct yet (and whenever it is not),
+  /// since the proxy path serves until then.
   Set<Server> _tunnelTargets() {
     final out = <Server>{};
     void add(Server? referenced) {
@@ -650,6 +659,13 @@ class ServerManager {
     add(currentServer);
     for (final q in _queueServers.values) {
       add(q);
+    }
+    // Tunnel-follows-the-DJ: a Quick Connect server or a direct peer answers
+    // a cross-server pick only over a live tunnel, and nothing else would
+    // dial one for a server that is neither browsed nor queued — so a
+    // session that may ask it keeps it up, and lets it go when it ends.
+    for (final s in djFanOutServers()) {
+      add(s);
     }
     return out;
   }

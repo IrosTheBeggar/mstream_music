@@ -724,7 +724,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$count server su $total partecipano — gli altri richiedono discovery attivo e una versione più recente';
+    return '$count server su $total partecipano — agli altri manca discovery, un modello di embedding compatibile o una versione del server abbastanza recente';
   }
 
   @override

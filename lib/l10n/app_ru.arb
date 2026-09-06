@@ -198,7 +198,7 @@
   "autoDjSectionPerServer": "Каждая библиотека",
   "autoDjEditingServer": "Настройки для",
   "autoDjMultiServerAllIn": "Участвуют серверов: {count}",
-  "autoDjMultiServerSomeExcluded": "Участвуют {count} из {total} серверов — остальным нужен включённый discovery и более новая версия",
+  "autoDjMultiServerSomeExcluded": "Участвуют {count} из {total} серверов — остальным не хватает discovery, совпадающей модели эмбеддингов или достаточно новой версии сервера",
   "autoDjSectionSources": "Источники",
   "autoDjSectionContinuity": "Непрерывность",
   "autoDjSectionFilters": "Фильтры",

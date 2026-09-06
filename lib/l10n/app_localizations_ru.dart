@@ -732,7 +732,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return 'Участвуют $count из $total серверов — остальным нужен включённый discovery и более новая версия';
+    return 'Участвуют $count из $total серверов — остальным не хватает discovery, совпадающей модели эмбеддингов или достаточно новой версии сервера';
   }
 
   @override

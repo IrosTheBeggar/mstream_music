@@ -40,6 +40,7 @@ import '../objects/display_item.dart';
 import '../util/camelot.dart';
 import '../util/server_version.dart';
 import '../util/seed_vector.dart';
+import '../util/session_model_cache.dart';
 import '../util/queue_actions.dart';
 import '../util/connectivity_probe.dart';
 import '../util/stream_url.dart';
@@ -357,6 +358,20 @@ class AudioPlayerHandler extends BaseAudioHandler
     // (just_audio's error channel), NOT as errors on changeStream — recover the
     // iroh mid-stream-drop case from here.
     _backendSubject.switchMap((b) => b.errorStream).listen(_onPlaybackError);
+    // Tunnel-follows-the-DJ: while a multi-server session is armed, every
+    // server it may ask is a tunnel target (ServerManager._tunnelTargets) —
+    // a Quick Connect server or a direct peer answers only over a live
+    // tunnel, and nothing else would dial one for a server that is neither
+    // browsed nor queued. The manager reads the set live; only the mode's
+    // edges (and arm / disarm, see setAutoDJ) have to nudge the reconcile.
+    ServerManager().djFanOutServers = _djFanOutServers;
+    AutoDJManager().changeStream.listen((_) {
+      final on = AutoDJManager().multiServerEnabled;
+      if (on == _fanOutWasOn) return;
+      _fanOutWasOn = on;
+      unawaited(ServerManager()
+          .ensureTunnels(reason: on ? 'dj-fanout' : 'dj-fanout-off'));
+    });
     // The iroh supervisor re-dials a dropped tunnel forever on the same
     // loopback port, so a dead server coming back flips this status to
     // connected without any app-side event: the phone's network never changed
@@ -2471,6 +2486,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (autoDJServer?.localname == localname) {
       // Auto-DJ would keep topping the queue back up from the deleted server.
       autoDJServer = null;
+      _reconcileFanOutTunnels('dj-off');
       // Forget it too, or the next launch would try to restore a server that
       // no longer exists.
       unawaited(AutoDJManager().setEnabledServer(null));
@@ -2671,6 +2687,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         final freshSession = autoDJServer == null || autoDJServer != nextDJ;
         if (freshSession) _resetAutoDJSession();
         autoDJServer = nextDJ;
+        _reconcileFanOutTunnels(nextDJ == null ? 'dj-off' : 'dj-fanout');
         // Remembered across restarts. Every toggle path funnels through here,
         // so this is the one place that has to record it.
         unawaited(AutoDJManager().setEnabledServer(nextDJ?.localname));
@@ -3206,11 +3223,43 @@ class AudioPlayerHandler extends BaseAudioHandler
   // answer "something like this" out of its own library.
   //
   // Servers that can't take part are dropped for the rest of the session
-  // rather than retried every pick: too old, discovery off, or — the case
-  // that can only be discovered by asking — indexed with a different
-  // embedding model, which the server refuses with a 400 because comparing
-  // across model spaces returns confident nonsense.
+  // rather than retried every pick: too old, discovery off, or indexed with
+  // a different embedding model — read up front from federation/health
+  // ([_fanOutModels]); the server's own refusal (a 400, because comparing
+  // across model spaces returns confident nonsense) stays as the backstop.
   final Set<String> _multiServerExcluded = {};
+
+  // Which model each server answers in, by localname — the handshake mStream
+  // #929 expects before a vector is sent, cached so a session pays one GET
+  // per server every few minutes rather than one per pick.
+  final SessionModelCache _fanOutModels = SessionModelCache();
+
+  // The last multi-server setting the tunnel reconcile was told about, so
+  // only its edges cost a reconcile (AutoDJManager notifies on every change).
+  bool _fanOutWasOn = false;
+
+  /// What the multi-server session may ask right now, for the tunnel
+  /// manager: nothing unless the DJ is armed with the mode on. Servers whose
+  /// discovery flag is still unknown are included — a Quick Connect server
+  /// never reached has no flags yet, and its tunnel coming up is exactly
+  /// what lets the capability refresh learn them.
+  Iterable<Server> _djFanOutServers() {
+    if (autoDJServer == null || !AutoDJManager().multiServerEnabled) {
+      return const <Server>[];
+    }
+    return ServerManager().serverList.where((s) => canJoinMultiServer(
+        s, _multiServerExcluded,
+        allowUnknownDiscovery: true));
+  }
+
+  /// Re-evaluate the tunnel targets after something changed what the session
+  /// may ask (arm, disarm, an exclusion). No-op while the mode is off: the
+  /// session never contributed a target then, and the mode's own edge is
+  /// handled where it is observed (see _init).
+  void _reconcileFanOutTunnels(String reason) {
+    if (!AutoDJManager().multiServerEnabled) return;
+    unawaited(ServerManager().ensureTunnels(reason: reason));
+  }
 
   // Each OTHER server's ignoreList, by localname (the DJ's own server keeps
   // using [jsonAutoDJIgnoreList], shared with the single-server path). The
@@ -3236,11 +3285,17 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// seed. A federated peer qualifies like any other server — random-songs
   /// and the embeddings route are on the federation allowlist (mStream #946)
   /// and its picks stream the way a browsed peer track does, through the
-  /// parent's proxy or the peer's own tunnel. Pure; unit-tested.
-  static bool canJoinMultiServer(Server s, Set<String> excluded) {
+  /// parent's proxy or the peer's own tunnel. With [allowUnknownDiscovery] a
+  /// server that has never reported its flags passes too — for the tunnel
+  /// targets, where reaching it is what fills them in. Pure; unit-tested.
+  static bool canJoinMultiServer(Server s, Set<String> excluded,
+      {bool allowUnknownDiscovery = false}) {
     if (excluded.contains(s.localname)) return false;
     if (!s.isSelectable) return false;
-    if (s.discoveryAvailable != true) return false;
+    if (s.discoveryAvailable != true &&
+        !(allowUnknownDiscovery && s.discoveryAvailable == null)) {
+      return false;
+    }
     return !crossServerSeedKnownUnsupported(
         ServerVersion.tryParse(s.serverVersion));
   }
@@ -3281,6 +3336,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         continue;
       }
       vectors.addAll(got.vectors);
+      // The answer names the owner's model space — that server's handshake
+      // is done without a health call.
+      _fanOutModels.record(entry.key.localname, got.modelId, DateTime.now());
     }
     if (modelId == null || dim == null) return null;
     // The mean of near-opposite anchors can collapse to zero; the server
@@ -3318,9 +3376,75 @@ class AudioPlayerHandler extends BaseAudioHandler
     final candidates = multiServerCandidates();
     if (candidates.length < 2) return false;
 
+    // A candidate whose tunnel is dialing right now — the session's targets
+    // were just registered (see _djFanOutServers), or a drop is being
+    // re-dialed — gets a few seconds rather than being passed over; usually
+    // only the first pick after the mode came on pays this. A tunnel that is
+    // down with no dial in flight is not waited for: its retry timer owns it,
+    // and the server simply does not answer this pick.
+    final dialing = candidates.where((s) {
+      if (!s.isIrohTransport || ServerManager().tunnelServes(s)) return false;
+      final st = ServerManager().tunnelStatusOf(s);
+      return st == IrohTunnelStatus.connecting ||
+          st == IrohTunnelStatus.reconnecting;
+    }).toList();
+    if (dialing.isNotEmpty) {
+      verboseLog('[dj] multi-server: ${dialing.length} tunnel(s) still '
+          'dialing — waiting briefly');
+      await Future.wait(dialing.map((s) => ServerManager().awaitTunnelReady(
+          server: s,
+          timeout: const Duration(seconds: 8),
+          extendWhileDialing: false,
+          caller: 'dj-fanout')));
+      if (epoch != _djSessionEpoch) return false;
+    }
+
     final seed = await _multiServerSeed(seedPaths);
     if (epoch != _djSessionEpoch) return false;
     if (seed == null) return false;
+
+    // The model handshake, before anything is sent: every candidate's model
+    // space, from federation/health (the anchors' owners already answered it
+    // with their vectors), cached for a few minutes. A server indexed with
+    // another model is dropped for the session — only a rescan changes that
+    // — and one with no model to offer right now (discovery off there,
+    // nothing analysed yet, not answering) sits this pick out and is asked
+    // again after a while. Webapp parity (mStream #946), and what #929 asks
+    // of a caller: reaching the server's model-mismatch 400 means a bug.
+    final unknownModel = candidates
+        .where((s) => _fanOutModels.lookup(s.localname, DateTime.now()) == null)
+        .toList();
+    if (unknownModel.isNotEmpty) {
+      await Future.wait(unknownModel.map((s) async {
+        final health = await ApiManager().fetchFederationHealth(s);
+        _fanOutModels.record(s.localname, health?.modelId, DateTime.now());
+      }));
+      if (epoch != _djSessionEpoch) return false;
+    }
+    final eligible = <Server>[];
+    for (final s in candidates) {
+      final model = _fanOutModels.lookup(s.localname, DateTime.now())?.modelId;
+      if (model == seed.modelId) {
+        eligible.add(s);
+      } else if (model == null) {
+        verboseLog('[dj] ${s.localname} has no discovery model to answer '
+            'with right now — sits this pick out');
+      } else {
+        _multiServerExcluded.add(s.localname);
+        appLog('[dj] ${s.localname} indexes model $model, the session is '
+            '${seed.modelId} — dropped from this session');
+        _reconcileFanOutTunnels('dj-fanout');
+      }
+    }
+    // Nothing to gain over the single-server pick when the DJ's own server
+    // is the only one left: that path seeds by filepath, which the server
+    // can exclude from its own pool. One OTHER server alone is still a
+    // session worth running — the DJ's may be the one with nothing to say.
+    if (eligible.isEmpty ||
+        (eligible.length == 1 &&
+            eligible.first.localname == autoDJServer?.localname)) {
+      return false;
+    }
 
     final mgr = AutoDJManager();
 
@@ -3355,7 +3479,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // the session single-server. The fed-back lists stay transient: only
     // the winner's cooldown advances (below), its pick is the one played.
     final retryLists = <String, dynamic>{
-      for (final s in candidates) s.localname: _ignoreListFor(s),
+      for (final s in eligible) s.localname: _ignoreListFor(s),
     };
     const maxAsks = 3;
     List<({Server server, Map<String, dynamic> decoded, double similarity})>
@@ -3363,7 +3487,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     var answered = 0;
     for (var ask = 0; ask < maxAsks && scored.isEmpty; ask++) {
       // A server dropped mid-pick (a model-space refusal) is not asked again.
-      final round = candidates
+      final round = eligible
           .where((s) => !_multiServerExcluded.contains(s.localname))
           .toList();
       if (round.isEmpty) return false;
@@ -3396,9 +3520,13 @@ class AudioPlayerHandler extends BaseAudioHandler
             // per pick.
             if (res.statusCode == 400 &&
                 res.body.contains('Sonic seed is from model')) {
+              // The handshake above should have caught this; a stale cache
+              // (a rescan under a new model) still ends here.
               _multiServerExcluded.add(server.localname);
+              _fanOutModels.record(server.localname, null, DateTime.now());
               appLog('[dj] ${server.localname} indexes a different embedding '
                   'model — dropped from this session');
+              _reconcileFanOutTunnels('dj-fanout');
             } else {
               // A schema rejection names the key (the single-server loop's
               // learner): the next round sends a body without it. When the
@@ -3412,6 +3540,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 _multiServerExcluded.add(server.localname);
                 appLog('[dj] ${server.localname} does not take a vector '
                     'seed — dropped from this session');
+                _reconcileFanOutTunnels('dj-fanout');
               }
             }
             return null;
@@ -3480,7 +3609,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     scored.sort((a, b) => b.similarity.compareTo(a.similarity));
     final best = scored.first;
 
-    appLog('[dj] multi-server: $answered/${candidates.length} answered, '
+    appLog('[dj] multi-server: $answered/${eligible.length} answered, '
         '${scored.length} usable, best ${best.similarity.toStringAsFixed(4)} '
         'from ${best.server.localname}');
 

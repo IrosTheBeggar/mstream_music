@@ -702,7 +702,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中 $count 台が参加中 — 残りは discovery の有効化と新しいサーバー版が必要です';
+    return '$total 台中 $count 台が参加中 — 残りは discovery、同じ埋め込みモデル、または十分に新しいサーバー版が不足しています';
   }
 
   @override

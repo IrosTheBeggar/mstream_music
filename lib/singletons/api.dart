@@ -1066,6 +1066,43 @@ class ApiManager {
     }
   }
 
+  /// GET /api/v1/federation/health — the model a server answers sonic
+  /// queries in (`discovery.modelId`), read before a cross-server Auto DJ
+  /// session sends it a vector: the server refuses a foreign one with a hard
+  /// 400 (mStream #929), so a caller is expected to ask first. Served to a
+  /// logged-in user on the server's own wall, to a peer through the parent's
+  /// proxy and to a guest over a direct tunnel alike (it is on the federation
+  /// allowlist). `modelId` is null when discovery is off there or nothing is
+  /// analysed yet; the whole answer is null when the server did not answer.
+  Future<({String? modelId, int analyzedCount})?> fetchFederationHealth(
+      Server server) async {
+    try {
+      final res = await _direct
+          .get(
+            server.apiUri('/api/v1/federation/health'),
+            headers: {'x-access-token': server.authToken ?? ''},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode > 299) {
+        verboseLog('[dj] health HTTP ${res.statusCode} on ${server.localname}');
+        return null;
+      }
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final d = decoded['discovery'];
+      if (d is! Map) return (modelId: null, analyzedCount: 0);
+      final id = d['modelId'];
+      final n = d['analyzedCount'];
+      return (
+        modelId: id is String && id.isNotEmpty ? id : null,
+        analyzedCount: n is num ? n.toInt() : 0,
+      );
+    } catch (e) {
+      verboseLog('[dj] health failed on ${server.localname}: $e');
+      return null;
+    }
+  }
+
   /// Pick Auto DJ's opening track for a "Surprise me" start.
   ///
   /// Unlike [fetchRandomSong] this honours the Auto DJ library filters. The

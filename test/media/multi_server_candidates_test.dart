@@ -52,6 +52,21 @@ void main() {
           isFalse);
     });
 
+    test('a never-reported discovery flag passes only for the tunnel targets',
+        () {
+      // Reaching the server is what fills the flag in, so the targets may
+      // include it; a pick never asks it until the flag says yes.
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(_server('a', discovery: null), {},
+              allowUnknownDiscovery: true),
+          isTrue);
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _server('a', discovery: false), {},
+              allowUnknownDiscovery: true),
+          isFalse);
+    });
+
     test('a server dropped this session (model mismatch, no vector seed) '
         'stays out', () {
       expect(AudioPlayerHandler.canJoinMultiServer(_server('a'), {'a'}),

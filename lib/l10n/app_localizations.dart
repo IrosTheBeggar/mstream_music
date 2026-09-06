@@ -1359,7 +1359,7 @@ abstract class AppLocalizations {
   /// Readout when some servers cannot take part, and why.
   ///
   /// In en, this message translates to:
-  /// **'{count} of {total} servers are taking part — the rest need discovery enabled and a newer server version'**
+  /// **'{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version'**
   String autoDjMultiServerSomeExcluded(int count, int total);
 
   /// BPM continuity row.

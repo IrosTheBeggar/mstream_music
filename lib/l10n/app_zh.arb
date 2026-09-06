@@ -198,7 +198,7 @@
   "autoDjSectionPerServer": "各个媒体库",
   "autoDjEditingServer": "设置对象",
   "autoDjMultiServerAllIn": "{count} 台服务器正在参与",
-  "autoDjMultiServerSomeExcluded": "{total} 台中有 {count} 台参与 — 其余需要启用 discovery 并升级服务器",
+  "autoDjMultiServerSomeExcluded": "{total} 台中有 {count} 台参与 — 其余缺少 discovery、匹配的嵌入模型或足够新的服务器版本",
   "autoDjSectionSources": "来源",
   "autoDjSectionContinuity": "连贯性",
   "autoDjSectionFilters": "筛选",

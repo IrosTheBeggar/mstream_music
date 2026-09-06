@@ -198,7 +198,7 @@
   "autoDjSectionPerServer": "Cada biblioteca",
   "autoDjEditingServer": "Ajustes de",
   "autoDjMultiServerAllIn": "{count} servidores participan",
-  "autoDjMultiServerSomeExcluded": "{count} de {total} servidores participan; el resto necesita discovery activado y una versión de servidor más reciente",
+  "autoDjMultiServerSomeExcluded": "{count} de {total} servidores participan; al resto le falta discovery, un modelo de embeddings compatible o una versión de servidor suficientemente reciente",
   "autoDjSectionSources": "Fuentes",
   "autoDjSectionContinuity": "Continuidad",
   "autoDjSectionFilters": "Filtros",
