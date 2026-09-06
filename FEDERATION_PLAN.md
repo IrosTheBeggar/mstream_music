@@ -361,6 +361,16 @@ add-server screen and its backstop no longer refuse a second Quick Connect
 server. A server that is neither browsed nor queued has no tunnel, so a phone
 with several paired servers still runs one most of the time.
 
+**Verification (2026-09-05).** `smoke/android/federation-rig.sh` covers the
+direct path (ticket, own tunnel, URLs moved, parent killed mid-track, renewal
+in place, a Quick Connect parent released and re-dialed, a revoked key) in
+both parent modes; `SMOKE_RIG_SERVERS_ONLY=1` starts a pair for the iOS
+rounds. Playback resilience found on the way (the tunnel heal handing a
+verified-path failure to the skip walk, two downloads per server) is its own
+PR. Galaxy S25: the whole Android smoke suite green on the release
+candidate; iOS simulator: the full direct round green; iPhone: needs
+Developer Mode for a launched test.
+
 ### Phase 5 — optional: make Discover leads actionable
 
 `/api/v1/discovery/federation/similar` already returns `peer:{id,name}` on the

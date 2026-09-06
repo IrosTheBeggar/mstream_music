@@ -9,6 +9,7 @@ HealAction act({
   bool skipPending = false,
   BackendProcessingState processingState = BackendProcessingState.idle,
   bool queueEmpty = false,
+  bool healSuspended = false,
 }) =>
     AudioPlayerHandler.healAction(
       onLocalBackend: onLocalBackend,
@@ -17,12 +18,22 @@ HealAction act({
       skipPending: skipPending,
       processingState: processingState,
       queueEmpty: queueEmpty,
+      healSuspended: healSuspended,
     );
 
 void main() {
   group('AudioPlayerHandler.healAction', () {
     test('parked player with tracks queued → run', () {
       expect(act(), HealAction.run);
+    });
+
+    // After a hand-off the skip walk owns the failures: every park during it
+    // used to re-trigger the heal (the idle transition is its own trigger),
+    // re-seeding each failing track twice more before the probe handed it
+    // off again — ~35 s per track instead of ~3 s.
+    test('suspended after a hand-off → drop, even when parked', () {
+      expect(act(healSuspended: true), HealAction.drop);
+      expect(act(healSuspended: true, processingState: BackendProcessingState.loading), HealAction.drop);
     });
 
     // The regression this exists for. The heal's original trigger was a single
@@ -81,6 +92,30 @@ void main() {
               onLocalBackend: false,
               processingState: BackendProcessingState.loading),
           HealAction.drop);
+    });
+  });
+
+  group('AudioPlayerHandler.healResumeFailureAction', () {
+    ResumeFailureAction act({bool pathVerified = false, int failures = 1}) =>
+        AudioPlayerHandler.healResumeFailureAction(
+            pathVerified: pathVerified, failures: failures);
+
+    test('a resume that failed with no verdict yet → rearm', () {
+      expect(act(), ResumeFailureAction.rearm);
+      expect(act(failures: 2), ResumeFailureAction.rearm);
+    });
+
+    // The loop this exists for: an expired guest token (or a rotated secret)
+    // made every load fail against a tunnel that was perfectly fine, the
+    // probe said so, and the heal re-seeded the same track every ~14s anyway.
+    test('the probe cleared the path → the track takes the skip walk', () {
+      expect(act(pathVerified: true), ResumeFailureAction.skipTrack);
+      expect(act(pathVerified: true, failures: 1), ResumeFailureAction.skipTrack);
+    });
+
+    test('with no verdict, the bound alone ends it', () {
+      expect(act(failures: AudioPlayerHandler.kMaxHealResumeFailures - 1), ResumeFailureAction.rearm);
+      expect(act(failures: AudioPlayerHandler.kMaxHealResumeFailures), ResumeFailureAction.skipTrack);
     });
   });
 }

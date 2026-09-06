@@ -1001,7 +1001,11 @@ class ServerManager {
       // the Cast SDK's own suspend/resume recovery.
       // A direct peer's proxy URLs still work while its own tunnel comes
       // up, so only UPCOMING items move over — the playing track keeps its
-      // stream instead of reloading mid-song.
+      // stream instead of reloading mid-song (a paused or idle one moves
+      // too; see protectsCurrentTrack). And a peer that just went direct no
+      // longer needs its parent's tunnel unless the parent is browsed or
+      // queued itself: reconcile now rather than at the next queue edit.
+      if (s.isFederated) unawaited(ensureTunnels(reason: 'direct-up'));
       unawaited(MediaManager()
           .audioHandler
           .customAction('rebuildTranscodeUrls',
@@ -1098,9 +1102,24 @@ class ServerManager {
   /// Nothing references [h]'s server any more: stop its tunnel on its chain
   /// and drop the handle — unless an ensure is queued behind the stop, in
   /// which case something wants it back and the handle stays to serve that.
+  /// Queued URLs that still ride the dropped loopback are rebuilt: a peer's
+  /// tracks left on their parent's proxy port when the peer went direct
+  /// (the playing one is left alone on the bind on purpose, and reloads at
+  /// its spot here — a short gap instead of a dead source and a retry);
+  /// otherwise a no-op. (Federated handles rebuild in _stopHandleTunnel.)
   Future<void> _releaseHandle(TunnelHandle h, String reason) =>
       _mutateHandle(h, reason, () {
+        final carried = h.nativeKey != null && !h.server.isFederated;
         _stopHandleTunnel(h, reason);
+        if (carried) {
+          unawaited(MediaManager()
+              .audioHandler
+              .customAction('rebuildTranscodeUrls',
+                  const {'upcomingOnly': false, 'auto': true})
+              .catchError((Object e) {
+            appLog('[iroh] URL rebuild after the release failed: $e');
+          }));
+        }
         h.cancelRetry();
         if (identical(_tunnels[h.server.localname], h) &&
             h.pendingEnsures == 0) {
@@ -1841,17 +1860,21 @@ class ServerManager {
   /// [_remedyDeadTunnel] (kick in place when the binary can, else a hard
   /// rebuild rate-limited to one per minute). A passing probe means the tunnel
   /// is fine and the failures were the source's own problem, so nothing moves.
-  Future<void> reverifyTunnel(Server server) async {
+  ///
+  /// Returns true only when the probe ran and passed (the path is fine, the
+  /// failures were the source's own); false when it was remedied or not
+  /// probed at all.
+  Future<bool> reverifyTunnel(Server server) async {
     // Probe the transport: a peer's failures happen on its parent's tunnel.
     final s = server.transportServer;
-    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return;
+    if (!IrohTunnel.isSupported || s == null || !s.ownsTunnel) return false;
     final h = _tunnels[s.localname];
-    if (h == null || h.reverifying || !h.assigned) return;
+    if (h == null || h.reverifying || !h.assigned) return false;
     // Already known down: ensureTunnelFor / awaitTunnelReady own that case
     // and this would only race them.
-    if (!tunnelServes(s)) return;
+    if (!tunnelServes(s)) return false;
     final gap = _since(h.lastHardRebuildAt);
-    if (gap != null && gap < TunnelTiming.hardRebuildMinGap) return;
+    if (gap != null && gap < TunnelTiming.hardRebuildMinGap) return false;
     h.reverifying = true;
     try {
       final code = h.code;
@@ -1860,18 +1883,19 @@ class ServerManager {
       if (r.ok) {
         appLog('[iroh] tunnel probe passed (${r.reason}, ${r.ms}ms) — '
             'the failures were not the path for=${s.localname}');
-        return;
+        return true;
       }
       if (!tunnelServes(s)) {
         appLog('[iroh] probe failed (${r.reason}) but the supervisor '
             'noticed meanwhile — leaving it for=${s.localname}');
-        return;
+        return false;
       }
       appLog('[iroh] tunnel says connected but the probe failed '
           '(${r.reason}, ${r.ms}ms) after repeated load failures '
           'for=${s.localname}');
       await _remedyDeadTunnel(h,
           code: code, port: port, reason: 'reverify', user: false);
+      return false;
     } finally {
       h.reverifying = false;
     }
