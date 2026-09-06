@@ -64,8 +64,8 @@ release if the `.so` is missing, but cannot detect a stale one):
 
 | ABI | size | sha256 |
 |---|---|---|
-| arm64-v8a | **9.58 MB** (10,044,728 bytes) | `952b36f1a9aec2720d1f6fa5feb1ece6e902ab5ae67a390840e970abc75d1bb4` |
-| x86_64 | 11.13 MB (11,674,240 bytes) — emulators only | `c3326d8736eb51339d9ebc8defe5c3cf69cfb82c93b1c65e56babdbf088c23d3` |
+| arm64-v8a | **10.05 MB** (10,045,240 bytes) | `ba25ef6dda23b1059c4ae6fb8909e853e2db09a21196d6fd08a8dcf107c2ddb0` |
+| x86_64 | 11.67 MB (11,674,880 bytes) — emulators only | `3384220af5992e2dbf7a852f8cc030e13cdcd120d2ace7dcb6dd8ac090557205` |
 
 With Play app-bundle ABI splits, an arm64 device downloads only its own slice (~9.5 MB). iroh **core only** — no blobs/docs/gossip/rpc (the full off-the-shelf FFI is 31 MB).
 
