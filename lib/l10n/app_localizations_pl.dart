@@ -1044,6 +1044,45 @@ class AppLocalizationsPl extends AppLocalizations {
   String get browserRated => 'Ocenione';
 
   @override
+  String get browserSectionLibrary => 'Biblioteka';
+
+  @override
+  String get browserSectionListen => 'Słuchaj';
+
+  @override
+  String get browserSectionNetwork => 'Sieć';
+
+  @override
+  String get browserSectionServer => 'Serwer';
+
+  @override
+  String get browserFederation => 'Federacja';
+
+  @override
+  String get browserTorrents => 'Torrenty';
+
+  @override
+  String get browserAutoDjOn => 'Włączony';
+
+  @override
+  String get browserAutoDjOff => 'Wyłączony';
+
+  @override
+  String browserSharedLibraries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count udostępnionych bibliotek',
+      few: '$count udostępnione biblioteki',
+      one: '1 udostępniona biblioteka',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationSheetTitle => 'Udostępnione biblioteki';
+
+  @override
   String get browserSearch => 'Szukaj';
 
   @override

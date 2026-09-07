@@ -1049,6 +1049,45 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserRated => 'С оценкой';
 
   @override
+  String get browserSectionLibrary => 'Библиотека';
+
+  @override
+  String get browserSectionListen => 'Слушать';
+
+  @override
+  String get browserSectionNetwork => 'Сеть';
+
+  @override
+  String get browserSectionServer => 'Сервер';
+
+  @override
+  String get browserFederation => 'Федерация';
+
+  @override
+  String get browserTorrents => 'Торренты';
+
+  @override
+  String get browserAutoDjOn => 'Включён';
+
+  @override
+  String get browserAutoDjOff => 'Выключен';
+
+  @override
+  String browserSharedLibraries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count общих библиотек',
+      few: '$count общие библиотеки',
+      one: '1 общая библиотека',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationSheetTitle => 'Общие библиотеки';
+
+  @override
   String get browserSearch => 'Поиск';
 
   @override

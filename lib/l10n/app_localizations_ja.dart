@@ -1001,6 +1001,43 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserRated => '評価済み';
 
   @override
+  String get browserSectionLibrary => 'ライブラリ';
+
+  @override
+  String get browserSectionListen => 'リッスン';
+
+  @override
+  String get browserSectionNetwork => 'ネットワーク';
+
+  @override
+  String get browserSectionServer => 'サーバー';
+
+  @override
+  String get browserFederation => 'フェデレーション';
+
+  @override
+  String get browserTorrents => 'トレント';
+
+  @override
+  String get browserAutoDjOn => 'オン';
+
+  @override
+  String get browserAutoDjOff => 'オフ';
+
+  @override
+  String browserSharedLibraries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '共有ライブラリ $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationSheetTitle => '共有ライブラリ';
+
+  @override
   String get browserSearch => '検索';
 
   @override

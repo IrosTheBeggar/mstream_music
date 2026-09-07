@@ -1854,6 +1854,66 @@ abstract class AppLocalizations {
   /// **'Rated'**
   String get browserRated;
 
+  /// Home screen group header: the browse destinations.
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get browserSectionLibrary;
+
+  /// Home screen group header: Auto DJ and Sonic path.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get browserSectionListen;
+
+  /// Home screen group header: libraries shared by other servers.
+  ///
+  /// In en, this message translates to:
+  /// **'Network'**
+  String get browserSectionNetwork;
+
+  /// Home screen group header: what the server does for you (torrents).
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get browserSectionServer;
+
+  /// Home card: the libraries other servers share with this one.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation'**
+  String get browserFederation;
+
+  /// Home card: the server's torrent downloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Torrents'**
+  String get browserTorrents;
+
+  /// Auto DJ card subtext while the DJ is armed.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get browserAutoDjOn;
+
+  /// Auto DJ card subtext while the DJ is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get browserAutoDjOff;
+
+  /// Federation card subtext: how many peers share a library with this server.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 shared library} other{{count} shared libraries}}'**
+  String browserSharedLibraries(int count);
+
+  /// Title of the sheet listing the peers reachable through a server.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared libraries'**
+  String get federationSheetTitle;
+
   /// No description provided for @browserSearch.
   ///
   /// In en, this message translates to:

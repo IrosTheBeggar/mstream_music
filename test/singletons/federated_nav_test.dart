@@ -17,6 +17,13 @@ List<String?> _sections() => BrowserManager()
     .map((i) => i.data)
     .toList();
 
+/// The group headers, in order.
+List<String> _headers() => BrowserManager()
+    .browserList
+    .where((i) => i.type == 'section')
+    .map((i) => i.name)
+    .toList();
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -47,8 +54,51 @@ void main() {
       'rated',
       'recent',
       'localFiles',
+      'autoDj',
+      'torrents',
     ]);
     expect(BrowserManager().browserList.any((i) => i.type == 'note'), isFalse);
+    // Grouped under headers: LIBRARY, LISTEN, SERVER — no NETWORK without a
+    // peer, no Sonic path without the route advertised.
+    expect(_headers(), ['Library', 'Listen', 'Server']);
+  });
+
+  test('a server that advertises the path route gets Sonic path under Listen',
+      () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..discoveryPathAvailable = true;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), contains('sonicPath'));
+    final i =
+        BrowserManager().browserList.indexWhere((r) => r.data == 'sonicPath');
+    final j =
+        BrowserManager().browserList.indexWhere((r) => r.data == 'autoDj');
+    expect(i, j + 1, reason: 'right after Auto DJ, in the same group');
+  });
+
+  test('a server with peers gets a NETWORK group above SERVER, counting them',
+      () {
+    final parent = Server('https://home.example.com', null, null, 'JWT', 'home');
+    final peer = Server('federated://home/3', null, null, null, 'peer-basement')
+      ..federationParent = 'home'
+      ..federationPeerId = 3
+      ..parentServer = parent;
+    final hidden = Server('federated://home/4', null, null, null, 'peer-attic')
+      ..federationParent = 'home'
+      ..federationPeerId = 4
+      ..parentServer = parent
+      ..federationHidden = true;
+    manager.serverList.addAll([parent, peer, hidden]);
+    manager.currentServer = parent;
+    BrowserManager().goToNavScreen();
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    final fed = BrowserManager()
+        .browserList
+        .singleWhere((r) => r.data == 'federation');
+    expect(fed.subtext, 'sharedLibraries:1',
+        reason: 'a hidden peer is not counted');
   });
 
   test('a federated server loses Playlists and Rated', () {
@@ -69,7 +119,11 @@ void main() {
       'artists',
       'recent',
       'localFiles',
+      'autoDj',
     ]);
+    // A peer hosts the DJ (mStream #946) but takes no torrents and has no
+    // peers of its own: LISTEN stays, NETWORK and SERVER go.
+    expect(_headers(), ['Library', 'Listen']);
   });
 
   test('a federated server explains itself with an inert note row', () {
@@ -123,6 +177,8 @@ void main() {
     test("a peer's leading note does not demote its home", () {
       // The toolbar's whole-server search and the card grid key on this; the
       // note used to make a peer's home a plain list without the search.
+      expect(BrowserManager.isHomeList([row('section'), row('execAction')]),
+          isTrue);
       expect(BrowserManager.isHomeList([row('note'), row('execAction')]),
           isTrue);
     });
