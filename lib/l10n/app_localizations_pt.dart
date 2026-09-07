@@ -3186,4 +3186,688 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'Rede P2P';
+
+  @override
+  String get browserP2pOn => 'Ligada';
+
+  @override
+  String get browserP2pOff => 'Desligada';
+
+  @override
+  String get p2pTitle => 'Rede P2P';
+
+  @override
+  String get p2pStatusConnected => 'Ligado';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vizinhos',
+      one: '1 vizinho',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return 'anunciado como $name';
+  }
+
+  @override
+  String get p2pStatusSearching => 'Entrou · à espera de vizinhos';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return 'A religar · tentativa $n';
+  }
+
+  @override
+  String get p2pStatusNotJoined => 'Ainda não entrou';
+
+  @override
+  String get p2pStatusOff => 'Desligada';
+
+  @override
+  String get p2pStatusUnavailable => 'Indisponível nesta plataforma';
+
+  @override
+  String get p2pStatNeighbors => 'vizinhos na malha';
+
+  @override
+  String get p2pStatNeighborsSub => 'ligações gossip ativas';
+
+  @override
+  String get p2pStatKnown => 'servidores conhecidos';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '$hidden ocultos · $blocked bloqueados';
+  }
+
+  @override
+  String get p2pStatHeld => 'snapshots guardados';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held de $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used de $cap';
+  }
+
+  @override
+  String get p2pStatTracks => 'faixas dos pares';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pesquisáveis, $count bibliotecas',
+      one: 'pesquisáveis, 1 biblioteca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => 'Atividade';
+
+  @override
+  String get p2pActivitySubtitle => 'mais recente primeiro · só em memória';
+
+  @override
+  String get p2pActivityEmpty =>
+      'Ainda nada — entradas na malha, descargas de snapshots, rotação e recuperações aparecem aqui à medida que acontecem.';
+
+  @override
+  String get p2pActivityNote =>
+      'O histórico completo está nos registos do servidor.';
+
+  @override
+  String get p2pFromNetwork => 'Da rede';
+
+  @override
+  String get p2pFindSimilar => 'Encontrar música semelhante na rede';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Abre Descobrir para a faixa em reprodução · sugestões de $count bibliotecas descarregadas',
+      one:
+          'Abre Descobrir para a faixa em reprodução · sugestões de 1 biblioteca descarregada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying =>
+      'Reproduza algo primeiro — Descobrir segue a faixa atual';
+
+  @override
+  String get p2pNewArtistsOnlySub =>
+      'Ocultar sugestões de artistas que já estão nesta biblioteca';
+
+  @override
+  String get p2pServersYouFollow => 'Servidores que segue';
+
+  @override
+  String get p2pServersOnNetwork => 'Servidores na rede';
+
+  @override
+  String get p2pNoServersYet =>
+      'Ainda não se ouviu nenhum servidor — adicione um com o ticket de um amigo ou dê um minuto ao gossip.';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores ocultos — modelo incompatível',
+      one: '1 servidor oculto — modelo incompatível',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => 'Mostrar';
+
+  @override
+  String get p2pHide => 'Ocultar';
+
+  @override
+  String get p2pBefriend => 'Adicionar um servidor amigo';
+
+  @override
+  String get p2pOnline => 'online';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return 'offline $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count faixas',
+      one: '1 faixa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seeders',
+      one: '1 seeder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => 'descarregado';
+
+  @override
+  String get p2pChipUpdate => 'atualização disponível';
+
+  @override
+  String get p2pChipNotDownloaded => 'não descarregado';
+
+  @override
+  String get p2pChipPinned => 'afixado';
+
+  @override
+  String get p2pChipIncompatible => 'modelo incompatível';
+
+  @override
+  String get p2pChipFederated => 'federado';
+
+  @override
+  String get p2pChipTheyAsked => 'pediram-lhe';
+
+  @override
+  String get p2pChipRequestSent => 'pedido enviado';
+
+  @override
+  String get p2pSearchingTitle => 'À procura de pares';
+
+  @override
+  String get p2pSearchingBody =>
+      'A malha forma-se em cerca de um minuto. Este ecrã atualiza-se sozinho.';
+
+  @override
+  String get p2pReconnectingTitle => 'A religar';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'O sidecar morreu e está a ser relançado (tentativa $n) — não é preciso fazer nada.';
+  }
+
+  @override
+  String get p2pJoinTitle => 'Recomendações das bibliotecas de outras pessoas';
+
+  @override
+  String get p2pJoinBody =>
+      'Descobrir ganha a secção “Da rede” e o seu servidor entra no catálogo que outros operadores consultam.';
+
+  @override
+  String get p2pWhatShared => 'O que é partilhado';
+
+  @override
+  String get p2pShared1 => 'Um snapshot só com metadados';
+
+  @override
+  String get p2pShared1Sub =>
+      'Artista, título, duração, impressões sonoras — nunca ficheiros de áudio';
+
+  @override
+  String get p2pShared2 => 'O nome e a descrição do seu servidor';
+
+  @override
+  String get p2pShared2Sub =>
+      'Visíveis para todos na rede, por predefinição a rede pública da comunidade';
+
+  @override
+  String get p2pShared3 => 'Liga a recolha de dados de descoberta';
+
+  @override
+  String get p2pShared3Sub =>
+      'A análise pós-verificação que cria as impressões, se ainda não estiver ligada';
+
+  @override
+  String get p2pHowYouAppear => 'Como aparece';
+
+  @override
+  String get p2pServerName => 'Nome do servidor';
+
+  @override
+  String get p2pServerNameHint =>
+      '“mStream” ao lado de outros 18 000 mStream é a primeira coisa a mudar.';
+
+  @override
+  String get p2pDescription => 'Descrição';
+
+  @override
+  String get p2pDescriptionHint => '180 caracteres, opcional.';
+
+  @override
+  String get p2pAlsoAcceptRequests => 'Aceitar também pedidos de federação';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub =>
+      'Convites para partilhar bibliotecas — nada é partilhado até aprovar cada um. Liga a federação.';
+
+  @override
+  String get p2pJoin => 'Entrar na rede';
+
+  @override
+  String get p2pJoining => 'A entrar…';
+
+  @override
+  String get p2pJoined =>
+      'Entrou na rede de descoberta — dê um minuto à malha.';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return 'Não foi possível entrar na rede: $error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return 'A descoberta está ligada, mas a caixa de pedidos não arrancou: $error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      'O binário p2p-sidecar não foi encontrado para esta plataforma e não há nenhum para descarregar — a rede está indisponível.';
+
+  @override
+  String get p2pWillDownloadNote =>
+      'O sidecar ainda não está instalado; ao entrar é descarregado primeiro.';
+
+  @override
+  String get p2pAdminOnlyNote => 'Só o administrador do servidor pode entrar.';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return 'A rede de descoberta está desligada em $server. O administrador pode entrar.';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return 'Entrar, convidar e gerir snapshots são tarefas do administrador. Inicie sessão em $server como administrador para gerir a rede aqui.';
+  }
+
+  @override
+  String get p2pSnapshotSection => 'Snapshot';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return 'Descarregado · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return 'Snapshot $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return 'há um mais recente ($seq) anunciado';
+  }
+
+  @override
+  String get p2pNotDownloaded => 'Não descarregado';
+
+  @override
+  String get p2pNotDownloadedSub =>
+      'Descarregue-o para o pesquisar a partir de Descobrir';
+
+  @override
+  String get p2pDownload => 'Descarregar';
+
+  @override
+  String get p2pUpdate => 'Atualizar';
+
+  @override
+  String get p2pDownloading => 'A descarregar…';
+
+  @override
+  String get p2pDownloaded => 'Snapshot descarregado';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return 'Não foi possível descarregar o snapshot: $error';
+  }
+
+  @override
+  String get p2pPin => 'Afixar este snapshot';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'A rotação liberta os snapshots menos usados após $count dias; um afixado fica.',
+      one:
+          'A rotação liberta os snapshots menos usados após 1 dia; um afixado fica.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation =>
+      'A rotação está desligada; um snapshot afixado também sobrevive à falta de espaço.';
+
+  @override
+  String get p2pRemoveSnapshot => 'Remover snapshot';
+
+  @override
+  String get p2pSnapshotRemoved => 'Snapshot removido';
+
+  @override
+  String get p2pHeldSince => 'guardado desde';
+
+  @override
+  String get p2pTracksLabel => 'faixas';
+
+  @override
+  String get p2pSeedersLabel => 'seeders';
+
+  @override
+  String get p2pSeedersSub => 'a servir o snapshot';
+
+  @override
+  String get p2pFederatedWithYou => 'Federado consigo';
+
+  @override
+  String get p2pFederatedWithYouSub =>
+      'Abra Federação para ver o que leem um do outro';
+
+  @override
+  String get p2pTheyAskedYou => 'Pediram para federar';
+
+  @override
+  String get p2pTheyAskedYouSub => 'Reveja o pedido em Federação';
+
+  @override
+  String get p2pRequestSentTitle => 'Pedido enviado';
+
+  @override
+  String get p2pRequestSentSub => 'À espera deles · acompanhe em Federação';
+
+  @override
+  String get p2pAskToFederate => 'Pedir para partilhar bibliotecas';
+
+  @override
+  String get p2pAskToFederateSub =>
+      'Envia um pedido pela rede — por agora nada muda';
+
+  @override
+  String get p2pOpen => 'Abrir';
+
+  @override
+  String get p2pReview => 'Rever';
+
+  @override
+  String get p2pForget => 'Esquecer este servidor';
+
+  @override
+  String get p2pForgetSub =>
+      'Offline e sem nada descarregado; volta se for ouvido de novo';
+
+  @override
+  String p2pForgotten(String name) {
+    return '$name esquecido';
+  }
+
+  @override
+  String get p2pBlockServer => 'Bloquear servidor';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return 'Bloquear $name? Os seus anúncios são ignorados e o seu snapshot removido.';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '$name bloqueado';
+  }
+
+  @override
+  String get p2pUnblock => 'Desbloquear';
+
+  @override
+  String get p2pUnblocked => 'Servidor desbloqueado';
+
+  @override
+  String get p2pIncompatibleNote =>
+      'Modelo de embeddings incompatível — a sua biblioteca não pode alimentar a pesquisa de semelhantes deste servidor.';
+
+  @override
+  String get p2pCompatible => 'modelo compatível';
+
+  @override
+  String get p2pModelUnknown => 'modelo desconhecido';
+
+  @override
+  String get p2pNoDescription => 'Sem descrição.';
+
+  @override
+  String get p2pUnnamedServer => 'Servidor sem nome';
+
+  @override
+  String get p2pFederateTitle => 'Pedir federação';
+
+  @override
+  String get p2pFederateNote =>
+      'Envia um pedido pela rede de descoberta. Agora não se troca nenhum acesso — veem o seu nome, a mensagem e a oferta; as bibliotecas só são partilhadas se aceitarem.';
+
+  @override
+  String get p2pMessage => 'Mensagem';
+
+  @override
+  String p2pMessageHint(int n) {
+    return 'Opcional · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries =>
+      'Bibliotecas que partilhará em troca se aceitarem';
+
+  @override
+  String get p2pShareBackNote =>
+      'Desmarque tudo para um pedido unilateral — só leria as deles.';
+
+  @override
+  String get p2pSendRequest => 'Enviar pedido';
+
+  @override
+  String get p2pRequestSent => 'Pedido enviado — acompanhe em Federação';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return 'Não foi possível enviar o pedido: $error';
+  }
+
+  @override
+  String get p2pTheirTicket => 'O ticket deles';
+
+  @override
+  String get p2pTheirTicketHint =>
+      'Um amigo encontra o dele em “Convidar um amigo” no ecrã Rede P2P.';
+
+  @override
+  String get p2pTicketPasted => 'Colado da área de transferência.';
+
+  @override
+  String get p2pRememberFriend => 'Lembrar este amigo';
+
+  @override
+  String get p2pRememberFriendSub =>
+      'Guardado na configuração do servidor para a amizade sobreviver a reinícios.';
+
+  @override
+  String get p2pJoinFriend => 'Entrar';
+
+  @override
+  String get p2pJoinedFriend => 'Entrou — a malha forma-se num minuto';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return 'Não foi possível entrar: $error';
+  }
+
+  @override
+  String get p2pNotATicket => 'Isso não parece um ticket de ponto de ligação.';
+
+  @override
+  String get p2pScanQr => 'Digitalizar um código QR';
+
+  @override
+  String get p2pScannerTitle => 'Digitalizar um ticket de rede';
+
+  @override
+  String get p2pInviteFriend => 'Convidar um amigo';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return 'O seu ticket — um amigo cola-o aqui no telemóvel para adicionar $name. É um endereço, não uma credencial.';
+  }
+
+  @override
+  String get p2pTicketCopied => 'Ticket copiado';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return 'Adiciona o meu servidor mStream na rede de descoberta — na app mStream abre Rede P2P → Adicionar um servidor amigo e cola este ticket:\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'Ticket da rede de descoberta mStream';
+
+  @override
+  String get p2pTicketNotReady =>
+      'O sidecar ainda não está a correr, por isso ainda não há ticket para partilhar.';
+
+  @override
+  String get p2pSettingsTitle => 'Definições de rede';
+
+  @override
+  String get p2pSwitchTitle => 'Rede de descoberta';
+
+  @override
+  String get p2pSwitchSub =>
+      'Anuncia à rede um snapshot só com metadados. Desligue para sair — os dados recolhidos ficam locais.';
+
+  @override
+  String get p2pLeaveConfirm =>
+      'Sair da rede de descoberta? O seu servidor deixa de anunciar e descarregar snapshots. A descoberta local continua a funcionar.';
+
+  @override
+  String get p2pLeave => 'Sair';
+
+  @override
+  String get p2pLeft => 'Saiu da rede de descoberta';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return 'Não foi possível sair da rede: $error';
+  }
+
+  @override
+  String get p2pEditIdentity => 'Nome e descrição';
+
+  @override
+  String get p2pIdentitySaved => 'Guardado — anunciado à rede';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return 'Não foi possível guardar: $error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => 'Snapshots';
+
+  @override
+  String get p2pAutoDownload => 'Descarga automática até';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores',
+      one: '1 servidor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => 'Limite de armazenamento';
+
+  @override
+  String get p2pRotate => 'Rodar descargas';
+
+  @override
+  String get p2pForgetOffline => 'Esquecer servidores offline';
+
+  @override
+  String get p2pMeshSection => 'Malha';
+
+  @override
+  String get p2pCommunitySeeds => 'Seeds da comunidade';
+
+  @override
+  String get p2pCommunitySeedsOn =>
+      'Arranque através dos servidores seed públicos';
+
+  @override
+  String get p2pCommunitySeedsOff =>
+      'Desligados — só servidores amigos; definido na configuração do servidor';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores bloqueados',
+      one: '1 servidor bloqueado',
+      zero: 'Nenhum servidor bloqueado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub =>
+      'Anúncios ignorados, snapshots nunca descarregados';
+
+  @override
+  String get p2pBlockedTitle => 'Servidores bloqueados';
+
+  @override
+  String get p2pSaved => 'Guardado';
+
+  @override
+  String get p2pOff => 'Desligada';
+
+  @override
+  String get p2pSave => 'Guardar';
+
+  @override
+  String get p2pSearchServers => 'Procurar servidores — nome ou descrição';
 }

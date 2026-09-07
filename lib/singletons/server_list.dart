@@ -360,6 +360,7 @@ class ServerManager {
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
       final bool? prevFedDirect = server.federationDirectAvailable;
       final bool? prevFedAvailable = server.federationAvailable;
+      final bool? prevP2pAvailable = server.p2pAvailable;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -414,10 +415,13 @@ class ServerManager {
           server.federationDiscoveryAvailable != prevFedDiscovery ||
           server.federationDirectAvailable != prevFedDirect ||
           server.federationAvailable != prevFedAvailable ||
+          server.p2pAvailable != prevP2pAvailable ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
       }
       if (server.federationAvailable != prevFedAvailable ||
+          server.p2pAvailable != prevP2pAvailable ||
+          server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         _refreshHomeIfShowing(server);
       }
@@ -503,6 +507,8 @@ class ServerManager {
         user is Map && user['federationDirect'] == true;
     server.federationAvailable =
         user is Map && user.containsKey('federationBrowse');
+    // Server-wide, so it rides under `features` here (top-level on ping).
+    server.p2pAvailable = features is Map && features.containsKey('discoveryP2p');
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -540,6 +546,7 @@ class ServerManager {
     server.federationDirectAvailable = res['federationDirect'] == true;
     server.federationAvailable =
         res.containsKey('federationBrowse');
+    server.p2pAvailable = res.containsKey('discoveryP2p');
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     return res;
   }
@@ -2351,6 +2358,7 @@ class ServerManager {
     server.federationDiscoveryAvailable = false;
     server.federationDirectAvailable = false; // a peer's own peers are out of reach
     server.federationAvailable = false; // and it has no federation of its own
+    server.p2pAvailable = false; // the network is the parent's, not a peer's
     server.discoveryPathAvailable = false;
     server.playlists.clear();
   }

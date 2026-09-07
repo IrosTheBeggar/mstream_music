@@ -3157,4 +3157,685 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'P2P Network';
+
+  @override
+  String get browserP2pOn => 'On';
+
+  @override
+  String get browserP2pOff => 'Off';
+
+  @override
+  String get p2pTitle => 'P2P Network';
+
+  @override
+  String get p2pStatusConnected => 'Connected';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count neighbors',
+      one: '1 neighbor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return 'announcing as $name';
+  }
+
+  @override
+  String get p2pStatusSearching => 'Joined · waiting for neighbors';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return 'Reconnecting · attempt $n';
+  }
+
+  @override
+  String get p2pStatusNotJoined => 'Not joined yet';
+
+  @override
+  String get p2pStatusOff => 'Off';
+
+  @override
+  String get p2pStatusUnavailable => 'Not available on this platform';
+
+  @override
+  String get p2pStatNeighbors => 'mesh neighbors';
+
+  @override
+  String get p2pStatNeighborsSub => 'live gossip links';
+
+  @override
+  String get p2pStatKnown => 'servers known';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '$hidden hidden · $blocked blocked';
+  }
+
+  @override
+  String get p2pStatHeld => 'snapshots held';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held of $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used of $cap';
+  }
+
+  @override
+  String get p2pStatTracks => 'peer tracks';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'searchable, $count libraries',
+      one: 'searchable, 1 library',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => 'Activity';
+
+  @override
+  String get p2pActivitySubtitle => 'newest first · held in memory';
+
+  @override
+  String get p2pActivityEmpty =>
+      'Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.';
+
+  @override
+  String get p2pActivityNote => 'The full history lives in the server logs.';
+
+  @override
+  String get p2pFromNetwork => 'From the network';
+
+  @override
+  String get p2pFindSimilar => 'Find similar music on the network';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Opens Discover for the track playing now · leads from $count downloaded libraries',
+      one:
+          'Opens Discover for the track playing now · leads from 1 downloaded library',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying =>
+      'Play something first — Discover follows the current track';
+
+  @override
+  String get p2pNewArtistsOnlySub =>
+      'Hide leads for artists already in this library';
+
+  @override
+  String get p2pServersYouFollow => 'Servers you follow';
+
+  @override
+  String get p2pServersOnNetwork => 'Servers on the network';
+
+  @override
+  String get p2pNoServersYet =>
+      'No servers heard yet — befriend one with a friend\'s ticket, or give gossip a minute.';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servers hidden — incompatible model',
+      one: '1 server hidden — incompatible model',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => 'Show';
+
+  @override
+  String get p2pHide => 'Hide';
+
+  @override
+  String get p2pBefriend => 'Befriend a server';
+
+  @override
+  String get p2pOnline => 'online';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return 'offline $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tracks',
+      one: '1 track',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seeders',
+      one: '1 seeder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => 'downloaded';
+
+  @override
+  String get p2pChipUpdate => 'update available';
+
+  @override
+  String get p2pChipNotDownloaded => 'not downloaded';
+
+  @override
+  String get p2pChipPinned => 'pinned';
+
+  @override
+  String get p2pChipIncompatible => 'incompatible model';
+
+  @override
+  String get p2pChipFederated => 'federated';
+
+  @override
+  String get p2pChipTheyAsked => 'they asked you';
+
+  @override
+  String get p2pChipRequestSent => 'request sent';
+
+  @override
+  String get p2pSearchingTitle => 'Searching for peers';
+
+  @override
+  String get p2pSearchingBody =>
+      'The mesh weaves in over a minute or so. This screen updates itself.';
+
+  @override
+  String get p2pReconnectingTitle => 'Reconnecting';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'The sidecar died and is being replayed (attempt $n) — no action needed.';
+  }
+
+  @override
+  String get p2pJoinTitle => 'Recommendations from other people\'s libraries';
+
+  @override
+  String get p2pJoinBody =>
+      'Discover gains “From the network”, and your server joins the catalog other operators browse.';
+
+  @override
+  String get p2pWhatShared => 'What gets shared';
+
+  @override
+  String get p2pShared1 => 'A metadata-only snapshot';
+
+  @override
+  String get p2pShared1Sub =>
+      'Artist, title, duration, sound fingerprints — never audio files';
+
+  @override
+  String get p2pShared2 => 'Your server\'s name and description';
+
+  @override
+  String get p2pShared2Sub =>
+      'Visible to everyone on the network, by default the public community network';
+
+  @override
+  String get p2pShared3 => 'Turns on discovery data collection';
+
+  @override
+  String get p2pShared3Sub =>
+      'The post-scan analysis that builds the fingerprints, if it is not on yet';
+
+  @override
+  String get p2pHowYouAppear => 'How you appear';
+
+  @override
+  String get p2pServerName => 'Server name';
+
+  @override
+  String get p2pServerNameHint =>
+      '“mStream” next to 18,000 other mStreams is the first thing to change.';
+
+  @override
+  String get p2pDescription => 'Description';
+
+  @override
+  String get p2pDescriptionHint => '180 characters, optional.';
+
+  @override
+  String get p2pAlsoAcceptRequests => 'Also accept federation requests';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub =>
+      'Invitations to share libraries — nothing is shared unless you approve each one. Turns federation on.';
+
+  @override
+  String get p2pJoin => 'Join the network';
+
+  @override
+  String get p2pJoining => 'Joining…';
+
+  @override
+  String get p2pJoined =>
+      'Joined the discovery network — give the mesh a minute to weave in.';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return 'Couldn\'t join the network: $error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return 'Discovery is on, but the request inbox didn\'t start: $error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      'The p2p-sidecar binary was not found for this platform and no downloadable build is published — the network is unavailable.';
+
+  @override
+  String get p2pWillDownloadNote =>
+      'The sidecar is not installed yet; joining downloads it first.';
+
+  @override
+  String get p2pAdminOnlyNote => 'Only the server admin can join.';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return 'The discovery network is off on $server. Its admin can join it.';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return 'Joining, inviting and snapshots are admin jobs. Sign in to $server as an admin to manage the network here.';
+  }
+
+  @override
+  String get p2pSnapshotSection => 'Snapshot';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return 'Downloaded · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return 'Snapshot $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return 'a newer one ($seq) is announced';
+  }
+
+  @override
+  String get p2pNotDownloaded => 'Not downloaded';
+
+  @override
+  String get p2pNotDownloadedSub => 'Download it to search it from Discover';
+
+  @override
+  String get p2pDownload => 'Download';
+
+  @override
+  String get p2pUpdate => 'Update';
+
+  @override
+  String get p2pDownloading => 'Downloading…';
+
+  @override
+  String get p2pDownloaded => 'Snapshot downloaded';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return 'Couldn\'t download the snapshot: $error';
+  }
+
+  @override
+  String get p2pPin => 'Pin this snapshot';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Rotation frees the least-used snapshots after $count days; a pinned one stays.',
+      one:
+          'Rotation frees the least-used snapshots after 1 day; a pinned one stays.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation =>
+      'Rotation is off; a pinned snapshot also survives a storage squeeze.';
+
+  @override
+  String get p2pRemoveSnapshot => 'Remove snapshot';
+
+  @override
+  String get p2pSnapshotRemoved => 'Snapshot removed';
+
+  @override
+  String get p2pHeldSince => 'held since';
+
+  @override
+  String get p2pTracksLabel => 'tracks';
+
+  @override
+  String get p2pSeedersLabel => 'seeders';
+
+  @override
+  String get p2pSeedersSub => 'serving the snapshot';
+
+  @override
+  String get p2pFederatedWithYou => 'Federated with you';
+
+  @override
+  String get p2pFederatedWithYouSub =>
+      'Open Federation to see what you read from each other';
+
+  @override
+  String get p2pTheyAskedYou => 'They asked to federate';
+
+  @override
+  String get p2pTheyAskedYouSub => 'Review the request under Federation';
+
+  @override
+  String get p2pRequestSentTitle => 'Request sent';
+
+  @override
+  String get p2pRequestSentSub => 'Waiting on them · track it under Federation';
+
+  @override
+  String get p2pAskToFederate => 'Ask to share libraries';
+
+  @override
+  String get p2pAskToFederateSub =>
+      'Sends a request over the network — nothing changes hands now';
+
+  @override
+  String get p2pOpen => 'Open';
+
+  @override
+  String get p2pReview => 'Review';
+
+  @override
+  String get p2pForget => 'Forget this server';
+
+  @override
+  String get p2pForgetSub =>
+      'Offline with nothing downloaded; it comes back if heard again';
+
+  @override
+  String p2pForgotten(String name) {
+    return '$name forgotten';
+  }
+
+  @override
+  String get p2pBlockServer => 'Block server';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return 'Block $name? Its announcements are ignored and its snapshot removed.';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '$name blocked';
+  }
+
+  @override
+  String get p2pUnblock => 'Unblock';
+
+  @override
+  String get p2pUnblocked => 'Server unblocked';
+
+  @override
+  String get p2pIncompatibleNote =>
+      'Incompatible embedding model — its library can\'t power this server\'s similar-search.';
+
+  @override
+  String get p2pCompatible => 'compatible model';
+
+  @override
+  String get p2pModelUnknown => 'model unknown';
+
+  @override
+  String get p2pNoDescription => 'No description.';
+
+  @override
+  String get p2pUnnamedServer => 'Unnamed server';
+
+  @override
+  String get p2pFederateTitle => 'Ask to federate';
+
+  @override
+  String get p2pFederateNote =>
+      'Sends a request over the discovery network. No access is exchanged now — they see your name, message and offer; libraries are only shared if they accept.';
+
+  @override
+  String get p2pMessage => 'Message';
+
+  @override
+  String p2pMessageHint(int n) {
+    return 'Optional · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries =>
+      'Libraries you\'ll share back if they accept';
+
+  @override
+  String get p2pShareBackNote =>
+      'Uncheck everything for a one-way ask — you would only read theirs.';
+
+  @override
+  String get p2pSendRequest => 'Send request';
+
+  @override
+  String get p2pRequestSent => 'Request sent — track it under Federation';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return 'Couldn\'t send the request: $error';
+  }
+
+  @override
+  String get p2pTheirTicket => 'Their ticket';
+
+  @override
+  String get p2pTheirTicketHint =>
+      'A friend finds theirs under Invite a friend on their P2P Network screen.';
+
+  @override
+  String get p2pTicketPasted => 'Pasted from your clipboard.';
+
+  @override
+  String get p2pRememberFriend => 'Remember this friend';
+
+  @override
+  String get p2pRememberFriendSub =>
+      'Saved to the server config so the friendship survives restarts.';
+
+  @override
+  String get p2pJoinFriend => 'Join';
+
+  @override
+  String get p2pJoinedFriend => 'Joined — the mesh weaves in over a minute';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return 'Couldn\'t join: $error';
+  }
+
+  @override
+  String get p2pNotATicket => 'That doesn\'t look like an endpoint ticket.';
+
+  @override
+  String get p2pScanQr => 'Scan a QR code';
+
+  @override
+  String get p2pScannerTitle => 'Scan a network ticket';
+
+  @override
+  String get p2pInviteFriend => 'Invite a friend';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return 'Your ticket — a friend pastes it here on their phone to befriend $name. It is an address, not a credential.';
+  }
+
+  @override
+  String get p2pTicketCopied => 'Ticket copied';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return 'Befriend my mStream server on the discovery network — in the mStream app open P2P Network → Befriend a server and paste this ticket:\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'mStream discovery-network ticket';
+
+  @override
+  String get p2pTicketNotReady =>
+      'The sidecar isn\'t running yet, so there is no ticket to share.';
+
+  @override
+  String get p2pSettingsTitle => 'Network settings';
+
+  @override
+  String get p2pSwitchTitle => 'Discovery network';
+
+  @override
+  String get p2pSwitchSub =>
+      'Announcing a metadata-only snapshot to the network. Switch off to leave — collected data stays local.';
+
+  @override
+  String get p2pLeaveConfirm =>
+      'Leave the discovery network? Your server stops announcing and downloading snapshots. Local discovery keeps working.';
+
+  @override
+  String get p2pLeave => 'Leave';
+
+  @override
+  String get p2pLeft => 'Left the discovery network';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return 'Couldn\'t leave the network: $error';
+  }
+
+  @override
+  String get p2pEditIdentity => 'Name and description';
+
+  @override
+  String get p2pIdentitySaved => 'Saved — announced to the network';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return 'Couldn\'t save: $error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => 'Snapshots';
+
+  @override
+  String get p2pAutoDownload => 'Auto-download up to';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servers',
+      one: '1 server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => 'Storage cap';
+
+  @override
+  String get p2pRotate => 'Rotate downloads';
+
+  @override
+  String get p2pForgetOffline => 'Forget offline servers';
+
+  @override
+  String get p2pMeshSection => 'Mesh';
+
+  @override
+  String get p2pCommunitySeeds => 'Community seeds';
+
+  @override
+  String get p2pCommunitySeedsOn =>
+      'Bootstrapping through the public seed servers';
+
+  @override
+  String get p2pCommunitySeedsOff =>
+      'Off — only befriended servers; set in the server config';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count blocked servers',
+      one: '1 blocked server',
+      zero: 'No blocked servers',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub => 'Announcements ignored, snapshots never fetched';
+
+  @override
+  String get p2pBlockedTitle => 'Blocked servers';
+
+  @override
+  String get p2pSaved => 'Saved';
+
+  @override
+  String get p2pOff => 'Off';
+
+  @override
+  String get p2pSave => 'Save';
+
+  @override
+  String get p2pSearchServers => 'Search servers — name or description';
 }

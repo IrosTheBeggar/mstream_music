@@ -23,6 +23,7 @@ import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
 import 'federation/federation_screen.dart';
+import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
@@ -165,6 +166,15 @@ class _BrowserState extends State<Browser> {
       if (s != null) {
         Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => FederationScreen(parent: s)));
+      }
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'p2pNetwork') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => P2pScreen(server: s)));
       }
       return;
     }

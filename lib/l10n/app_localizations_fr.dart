@@ -3197,4 +3197,693 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'Réseau P2P';
+
+  @override
+  String get browserP2pOn => 'Activé';
+
+  @override
+  String get browserP2pOff => 'Désactivé';
+
+  @override
+  String get p2pTitle => 'Réseau P2P';
+
+  @override
+  String get p2pStatusConnected => 'Connecté';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count voisins',
+      one: '1 voisin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return 'annoncé comme $name';
+  }
+
+  @override
+  String get p2pStatusSearching => 'Rejoint · en attente de voisins';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return 'Reconnexion · tentative $n';
+  }
+
+  @override
+  String get p2pStatusNotJoined => 'Pas encore rejoint';
+
+  @override
+  String get p2pStatusOff => 'Désactivé';
+
+  @override
+  String get p2pStatusUnavailable => 'Indisponible sur cette plateforme';
+
+  @override
+  String get p2pStatNeighbors => 'voisins du maillage';
+
+  @override
+  String get p2pStatNeighborsSub => 'liens gossip actifs';
+
+  @override
+  String get p2pStatKnown => 'serveurs connus';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '$hidden masqués · $blocked bloqués';
+  }
+
+  @override
+  String get p2pStatHeld => 'instantanés conservés';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held sur $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used sur $cap';
+  }
+
+  @override
+  String get p2pStatTracks => 'pistes des pairs';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'cherchables, $count bibliothèques',
+      one: 'cherchables, 1 bibliothèque',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => 'Activité';
+
+  @override
+  String get p2pActivitySubtitle =>
+      'plus récent en premier · en mémoire seulement';
+
+  @override
+  String get p2pActivityEmpty =>
+      'Rien pour l\'instant — les entrées dans le maillage, les téléchargements d\'instantanés, la rotation et les reprises s\'affichent ici au fil de l\'eau.';
+
+  @override
+  String get p2pActivityNote =>
+      'L\'historique complet est dans les journaux du serveur.';
+
+  @override
+  String get p2pFromNetwork => 'Depuis le réseau';
+
+  @override
+  String get p2pFindSimilar => 'Trouver de la musique similaire sur le réseau';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ouvre Découvrir pour la piste en cours · pistes issues de $count bibliothèques téléchargées',
+      one:
+          'Ouvre Découvrir pour la piste en cours · pistes issues de 1 bibliothèque téléchargée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying =>
+      'Lancez d\'abord une lecture — Découvrir suit la piste en cours';
+
+  @override
+  String get p2pNewArtistsOnlySub =>
+      'Masquer les pistes d\'artistes déjà présents dans cette bibliothèque';
+
+  @override
+  String get p2pServersYouFollow => 'Serveurs suivis';
+
+  @override
+  String get p2pServersOnNetwork => 'Serveurs sur le réseau';
+
+  @override
+  String get p2pNoServersYet =>
+      'Aucun serveur entendu pour l\'instant — ajoutez-en un avec le ticket d\'un ami, ou laissez une minute au gossip.';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count serveurs masqués — modèle incompatible',
+      one: '1 serveur masqué — modèle incompatible',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => 'Afficher';
+
+  @override
+  String get p2pHide => 'Masquer';
+
+  @override
+  String get p2pBefriend => 'Ajouter un serveur ami';
+
+  @override
+  String get p2pOnline => 'en ligne';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return 'hors ligne $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pistes',
+      one: '1 piste',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seeders',
+      one: '1 seeder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => 'téléchargé';
+
+  @override
+  String get p2pChipUpdate => 'mise à jour disponible';
+
+  @override
+  String get p2pChipNotDownloaded => 'non téléchargé';
+
+  @override
+  String get p2pChipPinned => 'épinglé';
+
+  @override
+  String get p2pChipIncompatible => 'modèle incompatible';
+
+  @override
+  String get p2pChipFederated => 'fédéré';
+
+  @override
+  String get p2pChipTheyAsked => 'ils vous ont demandé';
+
+  @override
+  String get p2pChipRequestSent => 'demande envoyée';
+
+  @override
+  String get p2pSearchingTitle => 'Recherche de pairs';
+
+  @override
+  String get p2pSearchingBody =>
+      'Le maillage se tisse en une minute environ. Cet écran se met à jour tout seul.';
+
+  @override
+  String get p2pReconnectingTitle => 'Reconnexion';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'Le sidecar s\'est arrêté et est relancé (tentative $n) — rien à faire.';
+  }
+
+  @override
+  String get p2pJoinTitle =>
+      'Des recommandations issues des bibliothèques des autres';
+
+  @override
+  String get p2pJoinBody =>
+      'Découvrir gagne une section « Depuis le réseau », et votre serveur rejoint le catalogue que consultent les autres opérateurs.';
+
+  @override
+  String get p2pWhatShared => 'Ce qui est partagé';
+
+  @override
+  String get p2pShared1 => 'Un instantané de métadonnées seulement';
+
+  @override
+  String get p2pShared1Sub =>
+      'Artiste, titre, durée, empreintes sonores — jamais de fichiers audio';
+
+  @override
+  String get p2pShared2 => 'Le nom et la description de votre serveur';
+
+  @override
+  String get p2pShared2Sub =>
+      'Visibles par tous sur le réseau, par défaut le réseau communautaire public';
+
+  @override
+  String get p2pShared3 => 'Active la collecte des données de découverte';
+
+  @override
+  String get p2pShared3Sub =>
+      'L\'analyse après scan qui construit les empreintes, si elle n\'est pas déjà active';
+
+  @override
+  String get p2pHowYouAppear => 'Comment vous apparaissez';
+
+  @override
+  String get p2pServerName => 'Nom du serveur';
+
+  @override
+  String get p2pServerNameHint =>
+      '« mStream » à côté de 18 000 autres mStream, c\'est la première chose à changer.';
+
+  @override
+  String get p2pDescription => 'Description';
+
+  @override
+  String get p2pDescriptionHint => '180 caractères, facultatif.';
+
+  @override
+  String get p2pAlsoAcceptRequests =>
+      'Accepter aussi les demandes de fédération';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub =>
+      'Des invitations à partager des bibliothèques — rien n\'est partagé tant que vous n\'approuvez pas chacune. Active la fédération.';
+
+  @override
+  String get p2pJoin => 'Rejoindre le réseau';
+
+  @override
+  String get p2pJoining => 'Connexion…';
+
+  @override
+  String get p2pJoined =>
+      'Réseau de découverte rejoint — laissez une minute au maillage.';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return 'Impossible de rejoindre le réseau : $error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return 'La découverte est active, mais la boîte de demandes n\'a pas démarré : $error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      'Le binaire p2p-sidecar est introuvable pour cette plateforme et aucune version n\'est téléchargeable — le réseau est indisponible.';
+
+  @override
+  String get p2pWillDownloadNote =>
+      'Le sidecar n\'est pas encore installé ; rejoindre le télécharge d\'abord.';
+
+  @override
+  String get p2pAdminOnlyNote =>
+      'Seul l\'administrateur du serveur peut rejoindre le réseau.';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return 'Le réseau de découverte est désactivé sur $server. Son administrateur peut le rejoindre.';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return 'Rejoindre, inviter et gérer les instantanés sont réservés à l\'administrateur. Connectez-vous à $server comme administrateur pour gérer le réseau ici.';
+  }
+
+  @override
+  String get p2pSnapshotSection => 'Instantané';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return 'Téléchargé · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return 'Instantané $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return 'un plus récent ($seq) est annoncé';
+  }
+
+  @override
+  String get p2pNotDownloaded => 'Non téléchargé';
+
+  @override
+  String get p2pNotDownloadedSub =>
+      'Téléchargez-le pour le chercher depuis Découvrir';
+
+  @override
+  String get p2pDownload => 'Télécharger';
+
+  @override
+  String get p2pUpdate => 'Mettre à jour';
+
+  @override
+  String get p2pDownloading => 'Téléchargement…';
+
+  @override
+  String get p2pDownloaded => 'Instantané téléchargé';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return 'Impossible de télécharger l\'instantané : $error';
+  }
+
+  @override
+  String get p2pPin => 'Épingler cet instantané';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'La rotation libère les instantanés les moins utilisés après $count jours ; un instantané épinglé reste.',
+      one:
+          'La rotation libère les instantanés les moins utilisés après 1 jour ; un instantané épinglé reste.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation =>
+      'La rotation est désactivée ; un instantané épinglé survit aussi au manque de place.';
+
+  @override
+  String get p2pRemoveSnapshot => 'Retirer l\'instantané';
+
+  @override
+  String get p2pSnapshotRemoved => 'Instantané retiré';
+
+  @override
+  String get p2pHeldSince => 'conservé depuis';
+
+  @override
+  String get p2pTracksLabel => 'pistes';
+
+  @override
+  String get p2pSeedersLabel => 'seeders';
+
+  @override
+  String get p2pSeedersSub => 'servent l\'instantané';
+
+  @override
+  String get p2pFederatedWithYou => 'Fédéré avec vous';
+
+  @override
+  String get p2pFederatedWithYouSub =>
+      'Ouvrez Fédération pour voir ce que vous lisez l\'un chez l\'autre';
+
+  @override
+  String get p2pTheyAskedYou => 'Ils ont demandé à fédérer';
+
+  @override
+  String get p2pTheyAskedYouSub => 'Examinez la demande dans Fédération';
+
+  @override
+  String get p2pRequestSentTitle => 'Demande envoyée';
+
+  @override
+  String get p2pRequestSentSub =>
+      'En attente de leur réponse · à suivre dans Fédération';
+
+  @override
+  String get p2pAskToFederate => 'Demander à partager des bibliothèques';
+
+  @override
+  String get p2pAskToFederateSub =>
+      'Envoie une demande sur le réseau — rien ne change pour l\'instant';
+
+  @override
+  String get p2pOpen => 'Ouvrir';
+
+  @override
+  String get p2pReview => 'Examiner';
+
+  @override
+  String get p2pForget => 'Oublier ce serveur';
+
+  @override
+  String get p2pForgetSub =>
+      'Hors ligne et rien de téléchargé ; il revient s\'il est de nouveau entendu';
+
+  @override
+  String p2pForgotten(String name) {
+    return '$name oublié';
+  }
+
+  @override
+  String get p2pBlockServer => 'Bloquer le serveur';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return 'Bloquer $name ? Ses annonces sont ignorées et son instantané retiré.';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '$name bloqué';
+  }
+
+  @override
+  String get p2pUnblock => 'Débloquer';
+
+  @override
+  String get p2pUnblocked => 'Serveur débloqué';
+
+  @override
+  String get p2pIncompatibleNote =>
+      'Modèle d\'empreintes incompatible — sa bibliothèque ne peut pas alimenter la recherche de similaires de ce serveur.';
+
+  @override
+  String get p2pCompatible => 'modèle compatible';
+
+  @override
+  String get p2pModelUnknown => 'modèle inconnu';
+
+  @override
+  String get p2pNoDescription => 'Pas de description.';
+
+  @override
+  String get p2pUnnamedServer => 'Serveur sans nom';
+
+  @override
+  String get p2pFederateTitle => 'Demander à fédérer';
+
+  @override
+  String get p2pFederateNote =>
+      'Envoie une demande sur le réseau de découverte. Aucun accès n\'est échangé maintenant — ils voient votre nom, votre message et votre offre ; les bibliothèques ne sont partagées que s\'ils acceptent.';
+
+  @override
+  String get p2pMessage => 'Message';
+
+  @override
+  String p2pMessageHint(int n) {
+    return 'Facultatif · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries =>
+      'Bibliothèques que vous partagerez en retour s\'ils acceptent';
+
+  @override
+  String get p2pShareBackNote =>
+      'Décochez tout pour une demande à sens unique — vous ne feriez que lire les leurs.';
+
+  @override
+  String get p2pSendRequest => 'Envoyer la demande';
+
+  @override
+  String get p2pRequestSent => 'Demande envoyée — à suivre dans Fédération';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return 'Impossible d\'envoyer la demande : $error';
+  }
+
+  @override
+  String get p2pTheirTicket => 'Leur ticket';
+
+  @override
+  String get p2pTheirTicketHint =>
+      'Un ami trouve le sien sous « Inviter un ami » sur son écran Réseau P2P.';
+
+  @override
+  String get p2pTicketPasted => 'Collé depuis le presse-papiers.';
+
+  @override
+  String get p2pRememberFriend => 'Se souvenir de cet ami';
+
+  @override
+  String get p2pRememberFriendSub =>
+      'Enregistré dans la configuration du serveur pour que l\'amitié survive aux redémarrages.';
+
+  @override
+  String get p2pJoinFriend => 'Rejoindre';
+
+  @override
+  String get p2pJoinedFriend => 'Rejoint — le maillage se tisse en une minute';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return 'Impossible de rejoindre : $error';
+  }
+
+  @override
+  String get p2pNotATicket =>
+      'Ceci ne ressemble pas à un ticket de point de connexion.';
+
+  @override
+  String get p2pScanQr => 'Scanner un code QR';
+
+  @override
+  String get p2pScannerTitle => 'Scanner un ticket réseau';
+
+  @override
+  String get p2pInviteFriend => 'Inviter un ami';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return 'Votre ticket — un ami le colle ici sur son téléphone pour ajouter $name. C\'est une adresse, pas un identifiant.';
+  }
+
+  @override
+  String get p2pTicketCopied => 'Ticket copié';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return 'Ajoute mon serveur mStream sur le réseau de découverte — dans l\'application mStream, ouvre Réseau P2P → Ajouter un serveur ami et colle ce ticket :\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'Ticket réseau de découverte mStream';
+
+  @override
+  String get p2pTicketNotReady =>
+      'Le sidecar ne tourne pas encore, il n\'y a donc pas encore de ticket à partager.';
+
+  @override
+  String get p2pSettingsTitle => 'Réglages du réseau';
+
+  @override
+  String get p2pSwitchTitle => 'Réseau de découverte';
+
+  @override
+  String get p2pSwitchSub =>
+      'Annonce un instantané de métadonnées seulement sur le réseau. Désactivez pour quitter — les données collectées restent locales.';
+
+  @override
+  String get p2pLeaveConfirm =>
+      'Quitter le réseau de découverte ? Votre serveur cesse d\'annoncer et de télécharger des instantanés. La découverte locale continue de fonctionner.';
+
+  @override
+  String get p2pLeave => 'Quitter';
+
+  @override
+  String get p2pLeft => 'Réseau de découverte quitté';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return 'Impossible de quitter le réseau : $error';
+  }
+
+  @override
+  String get p2pEditIdentity => 'Nom et description';
+
+  @override
+  String get p2pIdentitySaved => 'Enregistré — annoncé sur le réseau';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return 'Impossible d\'enregistrer : $error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => 'Instantanés';
+
+  @override
+  String get p2pAutoDownload => 'Téléchargement auto jusqu\'à';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count serveurs',
+      one: '1 serveur',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => 'Plafond de stockage';
+
+  @override
+  String get p2pRotate => 'Rotation des téléchargements';
+
+  @override
+  String get p2pForgetOffline => 'Oublier les serveurs hors ligne';
+
+  @override
+  String get p2pMeshSection => 'Maillage';
+
+  @override
+  String get p2pCommunitySeeds => 'Seeds communautaires';
+
+  @override
+  String get p2pCommunitySeedsOn => 'Amorçage via les serveurs seed publics';
+
+  @override
+  String get p2pCommunitySeedsOff =>
+      'Désactivés — serveurs amis seulement ; réglé dans la configuration du serveur';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count serveurs bloqués',
+      one: '1 serveur bloqué',
+      zero: 'Aucun serveur bloqué',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub =>
+      'Annonces ignorées, instantanés jamais téléchargés';
+
+  @override
+  String get p2pBlockedTitle => 'Serveurs bloqués';
+
+  @override
+  String get p2pSaved => 'Enregistré';
+
+  @override
+  String get p2pOff => 'Désactivé';
+
+  @override
+  String get p2pSave => 'Enregistrer';
+
+  @override
+  String get p2pSearchServers => 'Rechercher des serveurs — nom ou description';
 }

@@ -164,6 +164,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.pathScreenTitle;
     case 'Federation':
       return l.browserFederation;
+    case 'P2P Network':
+      return l.browserP2pNetwork;
     case 'Add torrent':
       return l.torrentScreenTitle; // the screen's own title, as the drawer used
     case 'Search':
@@ -184,6 +186,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
 /// The subtext a home card carries, from the machine form the home list
 /// stores (`sharedLibraries:<n>`) or a plain English chrome string.
 String homeCardSubtext(AppLocalizations l, String subtext) {
+  if (subtext == 'p2p:on') return l.browserP2pOn;
+  if (subtext == 'p2p:off') return l.browserP2pOff;
   final shared = RegExp(r'^sharedLibraries:(\d+)$').firstMatch(subtext);
   if (shared != null) {
     return l.browserSharedLibraries(int.parse(shared.group(1)!));

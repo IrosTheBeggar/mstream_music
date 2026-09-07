@@ -3178,5 +3178,884 @@
               "type": "int"
           }
       }
+  },
+  "browserP2pNetwork": "P2P Network",
+  "@browserP2pNetwork": {
+      "description": "Home card: the discovery network screen."
+  },
+  "browserP2pOn": "On",
+  "@browserP2pOn": {
+      "description": "P2P card subtext: the server is on the discovery network."
+  },
+  "browserP2pOff": "Off",
+  "@browserP2pOff": {
+      "description": "P2P card subtext: the discovery network is off on this server."
+  },
+  "p2pTitle": "P2P Network",
+  "@p2pTitle": {
+      "description": "Title of the P2P Network screen."
+  },
+  "p2pStatusConnected": "Connected",
+  "@p2pStatusConnected": {
+      "description": "Mesh state: at least one neighbor."
+  },
+  "p2pNeighborsCount": "{count, plural, =1{1 neighbor} other{{count} neighbors}}",
+  "@p2pNeighborsCount": {
+      "description": "Mesh neighbor count.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pAnnouncingAs": "announcing as {name}",
+  "@p2pAnnouncingAs": {
+      "description": "Status line: the name this server announces.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pStatusSearching": "Joined · waiting for neighbors",
+  "@p2pStatusSearching": {
+      "description": "Mesh state: joined, no neighbor yet."
+  },
+  "p2pStatusReconnecting": "Reconnecting · attempt {n}",
+  "@p2pStatusReconnecting": {
+      "description": "Mesh state: crash recovery is replaying the sidecar.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pStatusNotJoined": "Not joined yet",
+  "@p2pStatusNotJoined": {
+      "description": "Mesh state: enabled but the sidecar has not joined."
+  },
+  "p2pStatusOff": "Off",
+  "@p2pStatusOff": {
+      "description": "Network state: disabled."
+  },
+  "p2pStatusUnavailable": "Not available on this platform",
+  "@p2pStatusUnavailable": {
+      "description": "Network state: no sidecar binary."
+  },
+  "p2pStatNeighbors": "mesh neighbors",
+  "@p2pStatNeighbors": {
+      "description": "Stat tile label."
+  },
+  "p2pStatNeighborsSub": "live gossip links",
+  "@p2pStatNeighborsSub": {
+      "description": "Stat tile detail."
+  },
+  "p2pStatKnown": "servers known",
+  "@p2pStatKnown": {
+      "description": "Stat tile label."
+  },
+  "p2pStatKnownSub": "{hidden} hidden · {blocked} blocked",
+  "@p2pStatKnownSub": {
+      "description": "Stat tile detail.",
+      "placeholders": {
+          "hidden": {
+              "type": "int"
+          },
+          "blocked": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pStatHeld": "snapshots held",
+  "@p2pStatHeld": {
+      "description": "Stat tile label."
+  },
+  "p2pStatHeldOf": "{held} of {max}",
+  "@p2pStatHeldOf": {
+      "description": "Stat tile value: held snapshots out of the auto-fetch count.",
+      "placeholders": {
+          "held": {
+              "type": "int"
+          },
+          "max": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pStatStorage": "{used} of {cap}",
+  "@p2pStatStorage": {
+      "description": "Stat tile detail: snapshot storage used of the cap.",
+      "placeholders": {
+          "used": {
+              "type": "String"
+          },
+          "cap": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pStatTracks": "peer tracks",
+  "@p2pStatTracks": {
+      "description": "Stat tile label."
+  },
+  "p2pStatTracksSub": "{count, plural, =1{searchable, 1 library} other{searchable, {count} libraries}}",
+  "@p2pStatTracksSub": {
+      "description": "Stat tile detail.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pActivity": "Activity",
+  "@p2pActivity": {
+      "description": "Activity screen title and the link to it."
+  },
+  "p2pActivitySubtitle": "newest first · held in memory",
+  "@p2pActivitySubtitle": {
+      "description": "Activity screen subtitle."
+  },
+  "p2pActivityEmpty": "Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.",
+  "@p2pActivityEmpty": {
+      "description": "Activity empty state."
+  },
+  "p2pActivityNote": "The full history lives in the server logs.",
+  "@p2pActivityNote": {
+      "description": "Note under the activity list."
+  },
+  "p2pFromNetwork": "From the network",
+  "@p2pFromNetwork": {
+      "description": "Section header: the listener payoff."
+  },
+  "p2pFindSimilar": "Find similar music on the network",
+  "@p2pFindSimilar": {
+      "description": "Row: opens Discover's network section."
+  },
+  "p2pFindSimilarSub": "{count, plural, =1{Opens Discover for the track playing now · leads from 1 downloaded library} other{Opens Discover for the track playing now · leads from {count} downloaded libraries}}",
+  "@p2pFindSimilarSub": {
+      "description": "Row subtitle.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pFindSimilarNothingPlaying": "Play something first — Discover follows the current track",
+  "@p2pFindSimilarNothingPlaying": {
+      "description": "Row subtitle when nothing is playing."
+  },
+  "p2pNewArtistsOnlySub": "Hide leads for artists already in this library",
+  "@p2pNewArtistsOnlySub": {
+      "description": "Subtitle of the new-artists-only switch."
+  },
+  "p2pServersYouFollow": "Servers you follow",
+  "@p2pServersYouFollow": {
+      "description": "Section header (admin)."
+  },
+  "p2pServersOnNetwork": "Servers on the network",
+  "@p2pServersOnNetwork": {
+      "description": "Section header (member)."
+  },
+  "p2pNoServersYet": "No servers heard yet — befriend one with a friend's ticket, or give gossip a minute.",
+  "@p2pNoServersYet": {
+      "description": "Catalog empty state."
+  },
+  "p2pHiddenIncompatible": "{count, plural, =1{1 server hidden — incompatible model} other{{count} servers hidden — incompatible model}}",
+  "@p2pHiddenIncompatible": {
+      "description": "Footer: hidden incompatible servers.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pShow": "Show",
+  "@p2pShow": {
+      "description": "Link: show hidden servers."
+  },
+  "p2pHide": "Hide",
+  "@p2pHide": {
+      "description": "Link: hide incompatible servers again."
+  },
+  "p2pBefriend": "Befriend a server",
+  "@p2pBefriend": {
+      "description": "Row and screen title: join a friend's server by ticket."
+  },
+  "p2pOnline": "online",
+  "@p2pOnline": {
+      "description": "Peer state."
+  },
+  "p2pOfflineFor": "offline {ago}",
+  "@p2pOfflineFor": {
+      "description": "Peer state with the last-heard time.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pTracksCount": "{count, plural, =1{1 track} other{{count} tracks}}",
+  "@p2pTracksCount": {
+      "description": "Track count.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pSeedersCount": "{count, plural, =1{1 seeder} other{{count} seeders}}",
+  "@p2pSeedersCount": {
+      "description": "Seeder count.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pChipDownloaded": "downloaded",
+  "@p2pChipDownloaded": {
+      "description": "Snapshot chip."
+  },
+  "p2pChipUpdate": "update available",
+  "@p2pChipUpdate": {
+      "description": "Snapshot chip."
+  },
+  "p2pChipNotDownloaded": "not downloaded",
+  "@p2pChipNotDownloaded": {
+      "description": "Snapshot chip."
+  },
+  "p2pChipPinned": "pinned",
+  "@p2pChipPinned": {
+      "description": "Snapshot chip."
+  },
+  "p2pChipIncompatible": "incompatible model",
+  "@p2pChipIncompatible": {
+      "description": "Peer chip."
+  },
+  "p2pChipFederated": "federated",
+  "@p2pChipFederated": {
+      "description": "Relationship chip."
+  },
+  "p2pChipTheyAsked": "they asked you",
+  "@p2pChipTheyAsked": {
+      "description": "Relationship chip."
+  },
+  "p2pChipRequestSent": "request sent",
+  "@p2pChipRequestSent": {
+      "description": "Relationship chip."
+  },
+  "p2pSearchingTitle": "Searching for peers",
+  "@p2pSearchingTitle": {
+      "description": "Card title while alone on the mesh."
+  },
+  "p2pSearchingBody": "The mesh weaves in over a minute or so. This screen updates itself.",
+  "@p2pSearchingBody": {
+      "description": "Card body while alone on the mesh."
+  },
+  "p2pReconnectingTitle": "Reconnecting",
+  "@p2pReconnectingTitle": {
+      "description": "Card title during crash recovery."
+  },
+  "p2pReconnectingBody": "The sidecar died and is being replayed (attempt {n}) — no action needed.",
+  "@p2pReconnectingBody": {
+      "description": "Card body during crash recovery.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pJoinTitle": "Recommendations from other people's libraries",
+  "@p2pJoinTitle": {
+      "description": "Join screen headline."
+  },
+  "p2pJoinBody": "Discover gains “From the network”, and your server joins the catalog other operators browse.",
+  "@p2pJoinBody": {
+      "description": "Join screen body."
+  },
+  "p2pWhatShared": "What gets shared",
+  "@p2pWhatShared": {
+      "description": "Section header on the join screen."
+  },
+  "p2pShared1": "A metadata-only snapshot",
+  "@p2pShared1": {
+      "description": "Shared item 1."
+  },
+  "p2pShared1Sub": "Artist, title, duration, sound fingerprints — never audio files",
+  "@p2pShared1Sub": {
+      "description": "Shared item 1 detail."
+  },
+  "p2pShared2": "Your server's name and description",
+  "@p2pShared2": {
+      "description": "Shared item 2."
+  },
+  "p2pShared2Sub": "Visible to everyone on the network, by default the public community network",
+  "@p2pShared2Sub": {
+      "description": "Shared item 2 detail."
+  },
+  "p2pShared3": "Turns on discovery data collection",
+  "@p2pShared3": {
+      "description": "Shared item 3."
+  },
+  "p2pShared3Sub": "The post-scan analysis that builds the fingerprints, if it is not on yet",
+  "@p2pShared3Sub": {
+      "description": "Shared item 3 detail."
+  },
+  "p2pHowYouAppear": "How you appear",
+  "@p2pHowYouAppear": {
+      "description": "Section header: identity."
+  },
+  "p2pServerName": "Server name",
+  "@p2pServerName": {
+      "description": "Field label."
+  },
+  "p2pServerNameHint": "“mStream” next to 18,000 other mStreams is the first thing to change.",
+  "@p2pServerNameHint": {
+      "description": "Field hint."
+  },
+  "p2pDescription": "Description",
+  "@p2pDescription": {
+      "description": "Field label."
+  },
+  "p2pDescriptionHint": "180 characters, optional.",
+  "@p2pDescriptionHint": {
+      "description": "Field hint."
+  },
+  "p2pAlsoAcceptRequests": "Also accept federation requests",
+  "@p2pAlsoAcceptRequests": {
+      "description": "Switch on the join screen."
+  },
+  "p2pAlsoAcceptRequestsSub": "Invitations to share libraries — nothing is shared unless you approve each one. Turns federation on.",
+  "@p2pAlsoAcceptRequestsSub": {
+      "description": "Switch subtitle."
+  },
+  "p2pJoin": "Join the network",
+  "@p2pJoin": {
+      "description": "Button: enable the discovery network."
+  },
+  "p2pJoining": "Joining…",
+  "@p2pJoining": {
+      "description": "Button while enabling."
+  },
+  "p2pJoined": "Joined the discovery network — give the mesh a minute to weave in.",
+  "@p2pJoined": {
+      "description": "Toast after joining."
+  },
+  "p2pJoinFailed": "Couldn't join the network: {error}",
+  "@p2pJoinFailed": {
+      "description": "Toast when joining fails.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pInboxFailed": "Discovery is on, but the request inbox didn't start: {error}",
+  "@p2pInboxFailed": {
+      "description": "Toast when the federation half of joining fails.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pUnavailableNote": "The p2p-sidecar binary was not found for this platform and no downloadable build is published — the network is unavailable.",
+  "@p2pUnavailableNote": {
+      "description": "Note when the sidecar is missing."
+  },
+  "p2pWillDownloadNote": "The sidecar is not installed yet; joining downloads it first.",
+  "@p2pWillDownloadNote": {
+      "description": "Note when the sidecar can be fetched."
+  },
+  "p2pAdminOnlyNote": "Only the server admin can join.",
+  "@p2pAdminOnlyNote": {
+      "description": "Note for admins on the join screen."
+  },
+  "p2pMemberOffNote": "The discovery network is off on {server}. Its admin can join it.",
+  "@p2pMemberOffNote": {
+      "description": "Member note when the network is off.",
+      "placeholders": {
+          "server": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pMemberNote": "Joining, inviting and snapshots are admin jobs. Sign in to {server} as an admin to manage the network here.",
+  "@p2pMemberNote": {
+      "description": "Member note.",
+      "placeholders": {
+          "server": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pSnapshotSection": "Snapshot",
+  "@p2pSnapshotSection": {
+      "description": "Section header on the peer screen."
+  },
+  "p2pDownloadedSize": "Downloaded · {size}",
+  "@p2pDownloadedSize": {
+      "description": "Snapshot row title.",
+      "placeholders": {
+          "size": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pSnapshotSeq": "Snapshot {seq}",
+  "@p2pSnapshotSeq": {
+      "description": "Snapshot row detail.",
+      "placeholders": {
+          "seq": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pNewerAnnounced": "a newer one ({seq}) is announced",
+  "@p2pNewerAnnounced": {
+      "description": "Snapshot row detail when stale.",
+      "placeholders": {
+          "seq": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pNotDownloaded": "Not downloaded",
+  "@p2pNotDownloaded": {
+      "description": "Snapshot row title."
+  },
+  "p2pNotDownloadedSub": "Download it to search it from Discover",
+  "@p2pNotDownloadedSub": {
+      "description": "Snapshot row detail."
+  },
+  "p2pDownload": "Download",
+  "@p2pDownload": {
+      "description": "Button."
+  },
+  "p2pUpdate": "Update",
+  "@p2pUpdate": {
+      "description": "Button."
+  },
+  "p2pDownloading": "Downloading…",
+  "@p2pDownloading": {
+      "description": "Button while fetching."
+  },
+  "p2pDownloaded": "Snapshot downloaded",
+  "@p2pDownloaded": {
+      "description": "Toast."
+  },
+  "p2pDownloadFailed": "Couldn't download the snapshot: {error}",
+  "@p2pDownloadFailed": {
+      "description": "Toast.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pPin": "Pin this snapshot",
+  "@p2pPin": {
+      "description": "Switch."
+  },
+  "p2pPinSub": "{count, plural, =1{Rotation frees the least-used snapshots after 1 day; a pinned one stays.} other{Rotation frees the least-used snapshots after {count} days; a pinned one stays.}}",
+  "@p2pPinSub": {
+      "description": "Switch subtitle.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pPinSubNoRotation": "Rotation is off; a pinned snapshot also survives a storage squeeze.",
+  "@p2pPinSubNoRotation": {
+      "description": "Switch subtitle when rotation is off."
+  },
+  "p2pRemoveSnapshot": "Remove snapshot",
+  "@p2pRemoveSnapshot": {
+      "description": "Button."
+  },
+  "p2pSnapshotRemoved": "Snapshot removed",
+  "@p2pSnapshotRemoved": {
+      "description": "Toast."
+  },
+  "p2pHeldSince": "held since",
+  "@p2pHeldSince": {
+      "description": "Stat tile label."
+  },
+  "p2pTracksLabel": "tracks",
+  "@p2pTracksLabel": {
+      "description": "Stat tile label."
+  },
+  "p2pSeedersLabel": "seeders",
+  "@p2pSeedersLabel": {
+      "description": "Stat tile label."
+  },
+  "p2pSeedersSub": "serving the snapshot",
+  "@p2pSeedersSub": {
+      "description": "Stat tile detail."
+  },
+  "p2pFederatedWithYou": "Federated with you",
+  "@p2pFederatedWithYou": {
+      "description": "Relationship row title."
+  },
+  "p2pFederatedWithYouSub": "Open Federation to see what you read from each other",
+  "@p2pFederatedWithYouSub": {
+      "description": "Relationship row detail."
+  },
+  "p2pTheyAskedYou": "They asked to federate",
+  "@p2pTheyAskedYou": {
+      "description": "Relationship row title."
+  },
+  "p2pTheyAskedYouSub": "Review the request under Federation",
+  "@p2pTheyAskedYouSub": {
+      "description": "Relationship row detail."
+  },
+  "p2pRequestSentTitle": "Request sent",
+  "@p2pRequestSentTitle": {
+      "description": "Relationship row title."
+  },
+  "p2pRequestSentSub": "Waiting on them · track it under Federation",
+  "@p2pRequestSentSub": {
+      "description": "Relationship row detail."
+  },
+  "p2pAskToFederate": "Ask to share libraries",
+  "@p2pAskToFederate": {
+      "description": "Relationship row title."
+  },
+  "p2pAskToFederateSub": "Sends a request over the network — nothing changes hands now",
+  "@p2pAskToFederateSub": {
+      "description": "Relationship row detail."
+  },
+  "p2pOpen": "Open",
+  "@p2pOpen": {
+      "description": "Link."
+  },
+  "p2pReview": "Review",
+  "@p2pReview": {
+      "description": "Link."
+  },
+  "p2pForget": "Forget this server",
+  "@p2pForget": {
+      "description": "Button."
+  },
+  "p2pForgetSub": "Offline with nothing downloaded; it comes back if heard again",
+  "@p2pForgetSub": {
+      "description": "Button detail."
+  },
+  "p2pForgotten": "{name} forgotten",
+  "@p2pForgotten": {
+      "description": "Toast.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pBlockServer": "Block server",
+  "@p2pBlockServer": {
+      "description": "Button."
+  },
+  "p2pBlockConfirm": "Block {name}? Its announcements are ignored and its snapshot removed.",
+  "@p2pBlockConfirm": {
+      "description": "Confirm dialog.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pBlocked": "{name} blocked",
+  "@p2pBlocked": {
+      "description": "Toast.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pUnblock": "Unblock",
+  "@p2pUnblock": {
+      "description": "Button."
+  },
+  "p2pUnblocked": "Server unblocked",
+  "@p2pUnblocked": {
+      "description": "Toast."
+  },
+  "p2pIncompatibleNote": "Incompatible embedding model — its library can't power this server's similar-search.",
+  "@p2pIncompatibleNote": {
+      "description": "Note on an incompatible peer."
+  },
+  "p2pCompatible": "compatible model",
+  "@p2pCompatible": {
+      "description": "Peer subtitle piece."
+  },
+  "p2pModelUnknown": "model unknown",
+  "@p2pModelUnknown": {
+      "description": "Peer subtitle piece."
+  },
+  "p2pNoDescription": "No description.",
+  "@p2pNoDescription": {
+      "description": "Peer description empty state."
+  },
+  "p2pUnnamedServer": "Unnamed server",
+  "@p2pUnnamedServer": {
+      "description": "Stand-in for a server without a name."
+  },
+  "p2pFederateTitle": "Ask to federate",
+  "@p2pFederateTitle": {
+      "description": "Screen title."
+  },
+  "p2pFederateNote": "Sends a request over the discovery network. No access is exchanged now — they see your name, message and offer; libraries are only shared if they accept.",
+  "@p2pFederateNote": {
+      "description": "Explainer note."
+  },
+  "p2pMessage": "Message",
+  "@p2pMessage": {
+      "description": "Field label."
+  },
+  "p2pMessageHint": "Optional · {n} / 500",
+  "@p2pMessageHint": {
+      "description": "Field hint with the character count.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pShareBackLibraries": "Libraries you'll share back if they accept",
+  "@p2pShareBackLibraries": {
+      "description": "Section header."
+  },
+  "p2pShareBackNote": "Uncheck everything for a one-way ask — you would only read theirs.",
+  "@p2pShareBackNote": {
+      "description": "Note under the list."
+  },
+  "p2pSendRequest": "Send request",
+  "@p2pSendRequest": {
+      "description": "Button."
+  },
+  "p2pRequestSent": "Request sent — track it under Federation",
+  "@p2pRequestSent": {
+      "description": "Toast."
+  },
+  "p2pRequestFailed": "Couldn't send the request: {error}",
+  "@p2pRequestFailed": {
+      "description": "Toast.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pTheirTicket": "Their ticket",
+  "@p2pTheirTicket": {
+      "description": "Field label."
+  },
+  "p2pTheirTicketHint": "A friend finds theirs under Invite a friend on their P2P Network screen.",
+  "@p2pTheirTicketHint": {
+      "description": "Field hint."
+  },
+  "p2pTicketPasted": "Pasted from your clipboard.",
+  "@p2pTicketPasted": {
+      "description": "Field hint after pasting."
+  },
+  "p2pRememberFriend": "Remember this friend",
+  "@p2pRememberFriend": {
+      "description": "Switch."
+  },
+  "p2pRememberFriendSub": "Saved to the server config so the friendship survives restarts.",
+  "@p2pRememberFriendSub": {
+      "description": "Switch subtitle."
+  },
+  "p2pJoinFriend": "Join",
+  "@p2pJoinFriend": {
+      "description": "Button: join the friend's server."
+  },
+  "p2pJoinedFriend": "Joined — the mesh weaves in over a minute",
+  "@p2pJoinedFriend": {
+      "description": "Toast."
+  },
+  "p2pJoinFriendFailed": "Couldn't join: {error}",
+  "@p2pJoinFriendFailed": {
+      "description": "Toast.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pNotATicket": "That doesn't look like an endpoint ticket.",
+  "@p2pNotATicket": {
+      "description": "Field error."
+  },
+  "p2pScanQr": "Scan a QR code",
+  "@p2pScanQr": {
+      "description": "Button."
+  },
+  "p2pScannerTitle": "Scan a network ticket",
+  "@p2pScannerTitle": {
+      "description": "Scanner title."
+  },
+  "p2pInviteFriend": "Invite a friend",
+  "@p2pInviteFriend": {
+      "description": "Section header and share subject."
+  },
+  "p2pYourTicketNote": "Your ticket — a friend pastes it here on their phone to befriend {name}. It is an address, not a credential.",
+  "@p2pYourTicketNote": {
+      "description": "Note above your own ticket.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pTicketCopied": "Ticket copied",
+  "@p2pTicketCopied": {
+      "description": "Toast."
+  },
+  "p2pShareMessage": "Befriend my mStream server on the discovery network — in the mStream app open P2P Network → Befriend a server and paste this ticket:\n\n{ticket}",
+  "@p2pShareMessage": {
+      "description": "Share-sheet message.",
+      "placeholders": {
+          "ticket": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pShareSubject": "mStream discovery-network ticket",
+  "@p2pShareSubject": {
+      "description": "Share-sheet subject."
+  },
+  "p2pTicketNotReady": "The sidecar isn't running yet, so there is no ticket to share.",
+  "@p2pTicketNotReady": {
+      "description": "Note when the endpoint ticket is missing."
+  },
+  "p2pSettingsTitle": "Network settings",
+  "@p2pSettingsTitle": {
+      "description": "Screen title."
+  },
+  "p2pSwitchTitle": "Discovery network",
+  "@p2pSwitchTitle": {
+      "description": "Switch title."
+  },
+  "p2pSwitchSub": "Announcing a metadata-only snapshot to the network. Switch off to leave — collected data stays local.",
+  "@p2pSwitchSub": {
+      "description": "Switch subtitle."
+  },
+  "p2pLeaveConfirm": "Leave the discovery network? Your server stops announcing and downloading snapshots. Local discovery keeps working.",
+  "@p2pLeaveConfirm": {
+      "description": "Confirm dialog."
+  },
+  "p2pLeave": "Leave",
+  "@p2pLeave": {
+      "description": "Confirm button."
+  },
+  "p2pLeft": "Left the discovery network",
+  "@p2pLeft": {
+      "description": "Toast."
+  },
+  "p2pLeaveFailed": "Couldn't leave the network: {error}",
+  "@p2pLeaveFailed": {
+      "description": "Toast.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pEditIdentity": "Name and description",
+  "@p2pEditIdentity": {
+      "description": "Screen title for editing the identity."
+  },
+  "p2pIdentitySaved": "Saved — announced to the network",
+  "@p2pIdentitySaved": {
+      "description": "Toast."
+  },
+  "p2pSaveFailed": "Couldn't save: {error}",
+  "@p2pSaveFailed": {
+      "description": "Toast.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "p2pSnapshotsSection": "Snapshots",
+  "@p2pSnapshotsSection": {
+      "description": "Section header."
+  },
+  "p2pAutoDownload": "Auto-download up to",
+  "@p2pAutoDownload": {
+      "description": "Chip row label."
+  },
+  "p2pServersCount": "{count, plural, =1{1 server} other{{count} servers}}",
+  "@p2pServersCount": {
+      "description": "Chip label.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pStorageCap": "Storage cap",
+  "@p2pStorageCap": {
+      "description": "Chip row label."
+  },
+  "p2pRotate": "Rotate downloads",
+  "@p2pRotate": {
+      "description": "Chip row label."
+  },
+  "p2pForgetOffline": "Forget offline servers",
+  "@p2pForgetOffline": {
+      "description": "Chip row label."
+  },
+  "p2pMeshSection": "Mesh",
+  "@p2pMeshSection": {
+      "description": "Section header."
+  },
+  "p2pCommunitySeeds": "Community seeds",
+  "@p2pCommunitySeeds": {
+      "description": "Row title."
+  },
+  "p2pCommunitySeedsOn": "Bootstrapping through the public seed servers",
+  "@p2pCommunitySeedsOn": {
+      "description": "Row detail when on."
+  },
+  "p2pCommunitySeedsOff": "Off — only befriended servers; set in the server config",
+  "@p2pCommunitySeedsOff": {
+      "description": "Row detail when off."
+  },
+  "p2pBlockedServers": "{count, plural, =0{No blocked servers} =1{1 blocked server} other{{count} blocked servers}}",
+  "@p2pBlockedServers": {
+      "description": "Row title.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "p2pBlockedSub": "Announcements ignored, snapshots never fetched",
+  "@p2pBlockedSub": {
+      "description": "Row detail."
+  },
+  "p2pBlockedTitle": "Blocked servers",
+  "@p2pBlockedTitle": {
+      "description": "Screen title."
+  },
+  "p2pSaved": "Saved",
+  "@p2pSaved": {
+      "description": "Toast."
+  },
+  "p2pOff": "Off",
+  "@p2pOff": {
+      "description": "Chip: none."
+  },
+  "p2pSave": "Save",
+  "@p2pSave": {
+      "description": "Button."
+  },
+  "p2pSearchServers": "Search servers — name or description",
+  "@p2pSearchServers": {
+    "description": "Placeholder of the catalog filter field."
   }
 }

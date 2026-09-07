@@ -5375,6 +5375,1056 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 day ago} other{{count} days ago}}'**
   String agoDays(int count);
+
+  /// Home card: the discovery network screen.
+  ///
+  /// In en, this message translates to:
+  /// **'P2P Network'**
+  String get browserP2pNetwork;
+
+  /// P2P card subtext: the server is on the discovery network.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get browserP2pOn;
+
+  /// P2P card subtext: the discovery network is off on this server.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get browserP2pOff;
+
+  /// Title of the P2P Network screen.
+  ///
+  /// In en, this message translates to:
+  /// **'P2P Network'**
+  String get p2pTitle;
+
+  /// Mesh state: at least one neighbor.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get p2pStatusConnected;
+
+  /// Mesh neighbor count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 neighbor} other{{count} neighbors}}'**
+  String p2pNeighborsCount(int count);
+
+  /// Status line: the name this server announces.
+  ///
+  /// In en, this message translates to:
+  /// **'announcing as {name}'**
+  String p2pAnnouncingAs(String name);
+
+  /// Mesh state: joined, no neighbor yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined · waiting for neighbors'**
+  String get p2pStatusSearching;
+
+  /// Mesh state: crash recovery is replaying the sidecar.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting · attempt {n}'**
+  String p2pStatusReconnecting(int n);
+
+  /// Mesh state: enabled but the sidecar has not joined.
+  ///
+  /// In en, this message translates to:
+  /// **'Not joined yet'**
+  String get p2pStatusNotJoined;
+
+  /// Network state: disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get p2pStatusOff;
+
+  /// Network state: no sidecar binary.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available on this platform'**
+  String get p2pStatusUnavailable;
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'mesh neighbors'**
+  String get p2pStatNeighbors;
+
+  /// Stat tile detail.
+  ///
+  /// In en, this message translates to:
+  /// **'live gossip links'**
+  String get p2pStatNeighborsSub;
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'servers known'**
+  String get p2pStatKnown;
+
+  /// Stat tile detail.
+  ///
+  /// In en, this message translates to:
+  /// **'{hidden} hidden · {blocked} blocked'**
+  String p2pStatKnownSub(int hidden, int blocked);
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'snapshots held'**
+  String get p2pStatHeld;
+
+  /// Stat tile value: held snapshots out of the auto-fetch count.
+  ///
+  /// In en, this message translates to:
+  /// **'{held} of {max}'**
+  String p2pStatHeldOf(int held, int max);
+
+  /// Stat tile detail: snapshot storage used of the cap.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {cap}'**
+  String p2pStatStorage(String used, String cap);
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'peer tracks'**
+  String get p2pStatTracks;
+
+  /// Stat tile detail.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{searchable, 1 library} other{searchable, {count} libraries}}'**
+  String p2pStatTracksSub(int count);
+
+  /// Activity screen title and the link to it.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get p2pActivity;
+
+  /// Activity screen subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'newest first · held in memory'**
+  String get p2pActivitySubtitle;
+
+  /// Activity empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet — mesh joins, snapshot fetches, rotation and recovery events land here as they happen.'**
+  String get p2pActivityEmpty;
+
+  /// Note under the activity list.
+  ///
+  /// In en, this message translates to:
+  /// **'The full history lives in the server logs.'**
+  String get p2pActivityNote;
+
+  /// Section header: the listener payoff.
+  ///
+  /// In en, this message translates to:
+  /// **'From the network'**
+  String get p2pFromNetwork;
+
+  /// Row: opens Discover's network section.
+  ///
+  /// In en, this message translates to:
+  /// **'Find similar music on the network'**
+  String get p2pFindSimilar;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Opens Discover for the track playing now · leads from 1 downloaded library} other{Opens Discover for the track playing now · leads from {count} downloaded libraries}}'**
+  String p2pFindSimilarSub(int count);
+
+  /// Row subtitle when nothing is playing.
+  ///
+  /// In en, this message translates to:
+  /// **'Play something first — Discover follows the current track'**
+  String get p2pFindSimilarNothingPlaying;
+
+  /// Subtitle of the new-artists-only switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide leads for artists already in this library'**
+  String get p2pNewArtistsOnlySub;
+
+  /// Section header (admin).
+  ///
+  /// In en, this message translates to:
+  /// **'Servers you follow'**
+  String get p2pServersYouFollow;
+
+  /// Section header (member).
+  ///
+  /// In en, this message translates to:
+  /// **'Servers on the network'**
+  String get p2pServersOnNetwork;
+
+  /// Catalog empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No servers heard yet — befriend one with a friend\'s ticket, or give gossip a minute.'**
+  String get p2pNoServersYet;
+
+  /// Footer: hidden incompatible servers.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 server hidden — incompatible model} other{{count} servers hidden — incompatible model}}'**
+  String p2pHiddenIncompatible(int count);
+
+  /// Link: show hidden servers.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get p2pShow;
+
+  /// Link: hide incompatible servers again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get p2pHide;
+
+  /// Row and screen title: join a friend's server by ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Befriend a server'**
+  String get p2pBefriend;
+
+  /// Peer state.
+  ///
+  /// In en, this message translates to:
+  /// **'online'**
+  String get p2pOnline;
+
+  /// Peer state with the last-heard time.
+  ///
+  /// In en, this message translates to:
+  /// **'offline {ago}'**
+  String p2pOfflineFor(String ago);
+
+  /// Track count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
+  String p2pTracksCount(int count);
+
+  /// Seeder count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 seeder} other{{count} seeders}}'**
+  String p2pSeedersCount(int count);
+
+  /// Snapshot chip.
+  ///
+  /// In en, this message translates to:
+  /// **'downloaded'**
+  String get p2pChipDownloaded;
+
+  /// Snapshot chip.
+  ///
+  /// In en, this message translates to:
+  /// **'update available'**
+  String get p2pChipUpdate;
+
+  /// Snapshot chip.
+  ///
+  /// In en, this message translates to:
+  /// **'not downloaded'**
+  String get p2pChipNotDownloaded;
+
+  /// Snapshot chip.
+  ///
+  /// In en, this message translates to:
+  /// **'pinned'**
+  String get p2pChipPinned;
+
+  /// Peer chip.
+  ///
+  /// In en, this message translates to:
+  /// **'incompatible model'**
+  String get p2pChipIncompatible;
+
+  /// Relationship chip.
+  ///
+  /// In en, this message translates to:
+  /// **'federated'**
+  String get p2pChipFederated;
+
+  /// Relationship chip.
+  ///
+  /// In en, this message translates to:
+  /// **'they asked you'**
+  String get p2pChipTheyAsked;
+
+  /// Relationship chip.
+  ///
+  /// In en, this message translates to:
+  /// **'request sent'**
+  String get p2pChipRequestSent;
+
+  /// Card title while alone on the mesh.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for peers'**
+  String get p2pSearchingTitle;
+
+  /// Card body while alone on the mesh.
+  ///
+  /// In en, this message translates to:
+  /// **'The mesh weaves in over a minute or so. This screen updates itself.'**
+  String get p2pSearchingBody;
+
+  /// Card title during crash recovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting'**
+  String get p2pReconnectingTitle;
+
+  /// Card body during crash recovery.
+  ///
+  /// In en, this message translates to:
+  /// **'The sidecar died and is being replayed (attempt {n}) — no action needed.'**
+  String p2pReconnectingBody(int n);
+
+  /// Join screen headline.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations from other people\'s libraries'**
+  String get p2pJoinTitle;
+
+  /// Join screen body.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover gains “From the network”, and your server joins the catalog other operators browse.'**
+  String get p2pJoinBody;
+
+  /// Section header on the join screen.
+  ///
+  /// In en, this message translates to:
+  /// **'What gets shared'**
+  String get p2pWhatShared;
+
+  /// Shared item 1.
+  ///
+  /// In en, this message translates to:
+  /// **'A metadata-only snapshot'**
+  String get p2pShared1;
+
+  /// Shared item 1 detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist, title, duration, sound fingerprints — never audio files'**
+  String get p2pShared1Sub;
+
+  /// Shared item 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Your server\'s name and description'**
+  String get p2pShared2;
+
+  /// Shared item 2 detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible to everyone on the network, by default the public community network'**
+  String get p2pShared2Sub;
+
+  /// Shared item 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Turns on discovery data collection'**
+  String get p2pShared3;
+
+  /// Shared item 3 detail.
+  ///
+  /// In en, this message translates to:
+  /// **'The post-scan analysis that builds the fingerprints, if it is not on yet'**
+  String get p2pShared3Sub;
+
+  /// Section header: identity.
+  ///
+  /// In en, this message translates to:
+  /// **'How you appear'**
+  String get p2pHowYouAppear;
+
+  /// Field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Server name'**
+  String get p2pServerName;
+
+  /// Field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'“mStream” next to 18,000 other mStreams is the first thing to change.'**
+  String get p2pServerNameHint;
+
+  /// Field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get p2pDescription;
+
+  /// Field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'180 characters, optional.'**
+  String get p2pDescriptionHint;
+
+  /// Switch on the join screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Also accept federation requests'**
+  String get p2pAlsoAcceptRequests;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitations to share libraries — nothing is shared unless you approve each one. Turns federation on.'**
+  String get p2pAlsoAcceptRequestsSub;
+
+  /// Button: enable the discovery network.
+  ///
+  /// In en, this message translates to:
+  /// **'Join the network'**
+  String get p2pJoin;
+
+  /// Button while enabling.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining…'**
+  String get p2pJoining;
+
+  /// Toast after joining.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined the discovery network — give the mesh a minute to weave in.'**
+  String get p2pJoined;
+
+  /// Toast when joining fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t join the network: {error}'**
+  String p2pJoinFailed(String error);
+
+  /// Toast when the federation half of joining fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery is on, but the request inbox didn\'t start: {error}'**
+  String p2pInboxFailed(String error);
+
+  /// Note when the sidecar is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'The p2p-sidecar binary was not found for this platform and no downloadable build is published — the network is unavailable.'**
+  String get p2pUnavailableNote;
+
+  /// Note when the sidecar can be fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'The sidecar is not installed yet; joining downloads it first.'**
+  String get p2pWillDownloadNote;
+
+  /// Note for admins on the join screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the server admin can join.'**
+  String get p2pAdminOnlyNote;
+
+  /// Member note when the network is off.
+  ///
+  /// In en, this message translates to:
+  /// **'The discovery network is off on {server}. Its admin can join it.'**
+  String p2pMemberOffNote(String server);
+
+  /// Member note.
+  ///
+  /// In en, this message translates to:
+  /// **'Joining, inviting and snapshots are admin jobs. Sign in to {server} as an admin to manage the network here.'**
+  String p2pMemberNote(String server);
+
+  /// Section header on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot'**
+  String get p2pSnapshotSection;
+
+  /// Snapshot row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded · {size}'**
+  String p2pDownloadedSize(String size);
+
+  /// Snapshot row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot {seq}'**
+  String p2pSnapshotSeq(int seq);
+
+  /// Snapshot row detail when stale.
+  ///
+  /// In en, this message translates to:
+  /// **'a newer one ({seq}) is announced'**
+  String p2pNewerAnnounced(int seq);
+
+  /// Snapshot row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded'**
+  String get p2pNotDownloaded;
+
+  /// Snapshot row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Download it to search it from Discover'**
+  String get p2pNotDownloadedSub;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get p2pDownload;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get p2pUpdate;
+
+  /// Button while fetching.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get p2pDownloading;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot downloaded'**
+  String get p2pDownloaded;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the snapshot: {error}'**
+  String p2pDownloadFailed(String error);
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin this snapshot'**
+  String get p2pPin;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Rotation frees the least-used snapshots after 1 day; a pinned one stays.} other{Rotation frees the least-used snapshots after {count} days; a pinned one stays.}}'**
+  String p2pPinSub(int count);
+
+  /// Switch subtitle when rotation is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotation is off; a pinned snapshot also survives a storage squeeze.'**
+  String get p2pPinSubNoRotation;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove snapshot'**
+  String get p2pRemoveSnapshot;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshot removed'**
+  String get p2pSnapshotRemoved;
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'held since'**
+  String get p2pHeldSince;
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'tracks'**
+  String get p2pTracksLabel;
+
+  /// Stat tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'seeders'**
+  String get p2pSeedersLabel;
+
+  /// Stat tile detail.
+  ///
+  /// In en, this message translates to:
+  /// **'serving the snapshot'**
+  String get p2pSeedersSub;
+
+  /// Relationship row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Federated with you'**
+  String get p2pFederatedWithYou;
+
+  /// Relationship row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Federation to see what you read from each other'**
+  String get p2pFederatedWithYouSub;
+
+  /// Relationship row title.
+  ///
+  /// In en, this message translates to:
+  /// **'They asked to federate'**
+  String get p2pTheyAskedYou;
+
+  /// Relationship row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the request under Federation'**
+  String get p2pTheyAskedYouSub;
+
+  /// Relationship row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent'**
+  String get p2pRequestSentTitle;
+
+  /// Relationship row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting on them · track it under Federation'**
+  String get p2pRequestSentSub;
+
+  /// Relationship row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask to share libraries'**
+  String get p2pAskToFederate;
+
+  /// Relationship row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends a request over the network — nothing changes hands now'**
+  String get p2pAskToFederateSub;
+
+  /// Link.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get p2pOpen;
+
+  /// Link.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get p2pReview;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget this server'**
+  String get p2pForget;
+
+  /// Button detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline with nothing downloaded; it comes back if heard again'**
+  String get p2pForgetSub;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} forgotten'**
+  String p2pForgotten(String name);
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Block server'**
+  String get p2pBlockServer;
+
+  /// Confirm dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}? Its announcements are ignored and its snapshot removed.'**
+  String p2pBlockConfirm(String name);
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} blocked'**
+  String p2pBlocked(String name);
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get p2pUnblock;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unblocked'**
+  String get p2pUnblocked;
+
+  /// Note on an incompatible peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Incompatible embedding model — its library can\'t power this server\'s similar-search.'**
+  String get p2pIncompatibleNote;
+
+  /// Peer subtitle piece.
+  ///
+  /// In en, this message translates to:
+  /// **'compatible model'**
+  String get p2pCompatible;
+
+  /// Peer subtitle piece.
+  ///
+  /// In en, this message translates to:
+  /// **'model unknown'**
+  String get p2pModelUnknown;
+
+  /// Peer description empty state.
+  ///
+  /// In en, this message translates to:
+  /// **'No description.'**
+  String get p2pNoDescription;
+
+  /// Stand-in for a server without a name.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed server'**
+  String get p2pUnnamedServer;
+
+  /// Screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask to federate'**
+  String get p2pFederateTitle;
+
+  /// Explainer note.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends a request over the discovery network. No access is exchanged now — they see your name, message and offer; libraries are only shared if they accept.'**
+  String get p2pFederateNote;
+
+  /// Field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get p2pMessage;
+
+  /// Field hint with the character count.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional · {n} / 500'**
+  String p2pMessageHint(int n);
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Libraries you\'ll share back if they accept'**
+  String get p2pShareBackLibraries;
+
+  /// Note under the list.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncheck everything for a one-way ask — you would only read theirs.'**
+  String get p2pShareBackNote;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get p2pSendRequest;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Request sent — track it under Federation'**
+  String get p2pRequestSent;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the request: {error}'**
+  String p2pRequestFailed(String error);
+
+  /// Field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Their ticket'**
+  String get p2pTheirTicket;
+
+  /// Field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'A friend finds theirs under Invite a friend on their P2P Network screen.'**
+  String get p2pTheirTicketHint;
+
+  /// Field hint after pasting.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasted from your clipboard.'**
+  String get p2pTicketPasted;
+
+  /// Switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember this friend'**
+  String get p2pRememberFriend;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to the server config so the friendship survives restarts.'**
+  String get p2pRememberFriendSub;
+
+  /// Button: join the friend's server.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get p2pJoinFriend;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined — the mesh weaves in over a minute'**
+  String get p2pJoinedFriend;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t join: {error}'**
+  String p2pJoinFriendFailed(String error);
+
+  /// Field error.
+  ///
+  /// In en, this message translates to:
+  /// **'That doesn\'t look like an endpoint ticket.'**
+  String get p2pNotATicket;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a QR code'**
+  String get p2pScanQr;
+
+  /// Scanner title.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a network ticket'**
+  String get p2pScannerTitle;
+
+  /// Section header and share subject.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a friend'**
+  String get p2pInviteFriend;
+
+  /// Note above your own ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ticket — a friend pastes it here on their phone to befriend {name}. It is an address, not a credential.'**
+  String p2pYourTicketNote(String name);
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket copied'**
+  String get p2pTicketCopied;
+
+  /// Share-sheet message.
+  ///
+  /// In en, this message translates to:
+  /// **'Befriend my mStream server on the discovery network — in the mStream app open P2P Network → Befriend a server and paste this ticket:\n\n{ticket}'**
+  String p2pShareMessage(String ticket);
+
+  /// Share-sheet subject.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream discovery-network ticket'**
+  String get p2pShareSubject;
+
+  /// Note when the endpoint ticket is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'The sidecar isn\'t running yet, so there is no ticket to share.'**
+  String get p2pTicketNotReady;
+
+  /// Screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Network settings'**
+  String get p2pSettingsTitle;
+
+  /// Switch title.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery network'**
+  String get p2pSwitchTitle;
+
+  /// Switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Announcing a metadata-only snapshot to the network. Switch off to leave — collected data stays local.'**
+  String get p2pSwitchSub;
+
+  /// Confirm dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the discovery network? Your server stops announcing and downloading snapshots. Local discovery keeps working.'**
+  String get p2pLeaveConfirm;
+
+  /// Confirm button.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get p2pLeave;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Left the discovery network'**
+  String get p2pLeft;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t leave the network: {error}'**
+  String p2pLeaveFailed(String error);
+
+  /// Screen title for editing the identity.
+  ///
+  /// In en, this message translates to:
+  /// **'Name and description'**
+  String get p2pEditIdentity;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved — announced to the network'**
+  String get p2pIdentitySaved;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save: {error}'**
+  String p2pSaveFailed(String error);
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapshots'**
+  String get p2pSnapshotsSection;
+
+  /// Chip row label.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download up to'**
+  String get p2pAutoDownload;
+
+  /// Chip label.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 server} other{{count} servers}}'**
+  String p2pServersCount(int count);
+
+  /// Chip row label.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage cap'**
+  String get p2pStorageCap;
+
+  /// Chip row label.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate downloads'**
+  String get p2pRotate;
+
+  /// Chip row label.
+  ///
+  /// In en, this message translates to:
+  /// **'Forget offline servers'**
+  String get p2pForgetOffline;
+
+  /// Section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh'**
+  String get p2pMeshSection;
+
+  /// Row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Community seeds'**
+  String get p2pCommunitySeeds;
+
+  /// Row detail when on.
+  ///
+  /// In en, this message translates to:
+  /// **'Bootstrapping through the public seed servers'**
+  String get p2pCommunitySeedsOn;
+
+  /// Row detail when off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off — only befriended servers; set in the server config'**
+  String get p2pCommunitySeedsOff;
+
+  /// Row title.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No blocked servers} =1{1 blocked server} other{{count} blocked servers}}'**
+  String p2pBlockedServers(int count);
+
+  /// Row detail.
+  ///
+  /// In en, this message translates to:
+  /// **'Announcements ignored, snapshots never fetched'**
+  String get p2pBlockedSub;
+
+  /// Screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked servers'**
+  String get p2pBlockedTitle;
+
+  /// Toast.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get p2pSaved;
+
+  /// Chip: none.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get p2pOff;
+
+  /// Button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get p2pSave;
+
+  /// Placeholder of the catalog filter field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search servers — name or description'**
+  String get p2pSearchServers;
 }
 
 class _AppLocalizationsDelegate

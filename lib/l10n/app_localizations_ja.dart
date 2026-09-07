@@ -3046,4 +3046,653 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'P2P ネットワーク';
+
+  @override
+  String get browserP2pOn => 'オン';
+
+  @override
+  String get browserP2pOff => 'オフ';
+
+  @override
+  String get p2pTitle => 'P2P ネットワーク';
+
+  @override
+  String get p2pStatusConnected => '接続済み';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '隣接 $count 台',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return '$name として公開中';
+  }
+
+  @override
+  String get p2pStatusSearching => '参加済み · 隣接サーバーを待っています';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return '再接続中 · $n 回目';
+  }
+
+  @override
+  String get p2pStatusNotJoined => 'まだ参加していません';
+
+  @override
+  String get p2pStatusOff => 'オフ';
+
+  @override
+  String get p2pStatusUnavailable => 'このプラットフォームでは利用できません';
+
+  @override
+  String get p2pStatNeighbors => 'メッシュの隣接サーバー';
+
+  @override
+  String get p2pStatNeighborsSub => '有効なゴシップ接続';
+
+  @override
+  String get p2pStatKnown => '既知のサーバー';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '非表示 $hidden · ブロック $blocked';
+  }
+
+  @override
+  String get p2pStatHeld => '保持中のスナップショット';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held / $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used / $cap';
+  }
+
+  @override
+  String get p2pStatTracks => 'ピアの曲';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '検索可能、$count ライブラリ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => 'アクティビティ';
+
+  @override
+  String get p2pActivitySubtitle => '新しい順 · メモリ内のみ';
+
+  @override
+  String get p2pActivityEmpty =>
+      'まだありません — メッシュへの参加、スナップショットの取得、ローテーション、復旧のイベントが発生次第ここに表示されます。';
+
+  @override
+  String get p2pActivityNote => '完全な履歴はサーバーのログにあります。';
+
+  @override
+  String get p2pFromNetwork => 'ネットワークから';
+
+  @override
+  String get p2pFindSimilar => 'ネットワークで似た音楽を探す';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '再生中の曲で「発見」を開きます · 取得済み $count ライブラリからの候補',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying => 'まず何かを再生してください — 「発見」は再生中の曲に追従します';
+
+  @override
+  String get p2pNewArtistsOnlySub => 'このライブラリにすでにいるアーティストの候補を隠す';
+
+  @override
+  String get p2pServersYouFollow => 'フォロー中のサーバー';
+
+  @override
+  String get p2pServersOnNetwork => 'ネットワーク上のサーバー';
+
+  @override
+  String get p2pNoServersYet =>
+      'まだサーバーが見つかりません — 友人のチケットで追加するか、ゴシップに 1 分ほど待ってください。';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 台のサーバーを非表示 — モデルが非互換',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => '表示';
+
+  @override
+  String get p2pHide => '隠す';
+
+  @override
+  String get p2pBefriend => 'サーバーを友達に追加';
+
+  @override
+  String get p2pOnline => 'オンライン';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return 'オフライン $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'シーダー $count',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => '取得済み';
+
+  @override
+  String get p2pChipUpdate => '更新あり';
+
+  @override
+  String get p2pChipNotDownloaded => '未取得';
+
+  @override
+  String get p2pChipPinned => '固定';
+
+  @override
+  String get p2pChipIncompatible => '非互換モデル';
+
+  @override
+  String get p2pChipFederated => 'フェデレーション済み';
+
+  @override
+  String get p2pChipTheyAsked => '相手からのリクエスト';
+
+  @override
+  String get p2pChipRequestSent => 'リクエスト送信済み';
+
+  @override
+  String get p2pSearchingTitle => 'ピアを探しています';
+
+  @override
+  String get p2pSearchingBody => 'メッシュは 1 分ほどで形成されます。この画面は自動で更新されます。';
+
+  @override
+  String get p2pReconnectingTitle => '再接続中';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'サイドカーが停止したため再起動しています（$n 回目）— 操作は不要です。';
+  }
+
+  @override
+  String get p2pJoinTitle => '他の人のライブラリからのおすすめ';
+
+  @override
+  String get p2pJoinBody =>
+      '「発見」に「ネットワークから」のセクションが加わり、あなたのサーバーが他の運営者が閲覧するカタログに載ります。';
+
+  @override
+  String get p2pWhatShared => '共有される内容';
+
+  @override
+  String get p2pShared1 => 'メタデータのみのスナップショット';
+
+  @override
+  String get p2pShared1Sub => 'アーティスト、タイトル、長さ、音の指紋 — 音声ファイルは一切含まれません';
+
+  @override
+  String get p2pShared2 => 'サーバーの名前と説明';
+
+  @override
+  String get p2pShared2Sub => 'ネットワーク上の全員に公開され、既定では公開コミュニティネットワークに載ります';
+
+  @override
+  String get p2pShared3 => 'ディスカバリーデータの収集をオンにします';
+
+  @override
+  String get p2pShared3Sub => '指紋を作るスキャン後の解析（まだオフの場合）';
+
+  @override
+  String get p2pHowYouAppear => '表示のされ方';
+
+  @override
+  String get p2pServerName => 'サーバー名';
+
+  @override
+  String get p2pServerNameHint =>
+      '18,000 台の「mStream」の隣に並ぶ「mStream」は、まず変えたくなる名前です。';
+
+  @override
+  String get p2pDescription => '説明';
+
+  @override
+  String get p2pDescriptionHint => '180 文字まで、任意。';
+
+  @override
+  String get p2pAlsoAcceptRequests => 'フェデレーションのリクエストも受け付ける';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub =>
+      'ライブラリ共有への招待です — 個別に承認するまで何も共有されません。フェデレーションがオンになります。';
+
+  @override
+  String get p2pJoin => 'ネットワークに参加';
+
+  @override
+  String get p2pJoining => '参加中…';
+
+  @override
+  String get p2pJoined => 'ディスカバリーネットワークに参加しました — メッシュの形成に 1 分ほどかかります。';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return '参加できませんでした: $error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return 'ディスカバリーはオンですが、リクエストの受信箱を開始できませんでした: $error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      'このプラットフォーム向けの p2p-sidecar が見つからず、ダウンロード可能なビルドもありません — ネットワークは利用できません。';
+
+  @override
+  String get p2pWillDownloadNote => 'サイドカーがまだインストールされていません。参加時に先にダウンロードします。';
+
+  @override
+  String get p2pAdminOnlyNote => '参加できるのはサーバーの管理者だけです。';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return '$server ではディスカバリーネットワークがオフです。管理者が参加できます。';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return '参加・招待・スナップショットの管理は管理者の役割です。$server に管理者としてログインすると、ここでネットワークを管理できます。';
+  }
+
+  @override
+  String get p2pSnapshotSection => 'スナップショット';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return '取得済み · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return 'スナップショット $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return '新しいもの（$seq）が公開されています';
+  }
+
+  @override
+  String get p2pNotDownloaded => '未取得';
+
+  @override
+  String get p2pNotDownloadedSub => '取得すると「発見」から検索できます';
+
+  @override
+  String get p2pDownload => '取得';
+
+  @override
+  String get p2pUpdate => '更新';
+
+  @override
+  String get p2pDownloading => '取得中…';
+
+  @override
+  String get p2pDownloaded => 'スナップショットを取得しました';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return 'スナップショットを取得できませんでした: $error';
+  }
+
+  @override
+  String get p2pPin => 'このスナップショットを固定';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ローテーションは $count 日後に使用の少ないスナップショットを解放します。固定したものは残ります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation => 'ローテーションはオフです。固定したスナップショットは容量不足でも残ります。';
+
+  @override
+  String get p2pRemoveSnapshot => 'スナップショットを削除';
+
+  @override
+  String get p2pSnapshotRemoved => 'スナップショットを削除しました';
+
+  @override
+  String get p2pHeldSince => '保持開始';
+
+  @override
+  String get p2pTracksLabel => '曲';
+
+  @override
+  String get p2pSeedersLabel => 'シーダー';
+
+  @override
+  String get p2pSeedersSub => 'スナップショットを配信中';
+
+  @override
+  String get p2pFederatedWithYou => 'フェデレーション済み';
+
+  @override
+  String get p2pFederatedWithYouSub => '「フェデレーション」を開くと互いに読めるものを確認できます';
+
+  @override
+  String get p2pTheyAskedYou => 'フェデレーションのリクエストが届いています';
+
+  @override
+  String get p2pTheyAskedYouSub => '「フェデレーション」でリクエストを確認';
+
+  @override
+  String get p2pRequestSentTitle => 'リクエスト送信済み';
+
+  @override
+  String get p2pRequestSentSub => '相手の返答待ち · 「フェデレーション」で確認';
+
+  @override
+  String get p2pAskToFederate => 'ライブラリの共有を依頼';
+
+  @override
+  String get p2pAskToFederateSub => 'ネットワーク経由でリクエストを送ります — 今は何も変わりません';
+
+  @override
+  String get p2pOpen => '開く';
+
+  @override
+  String get p2pReview => '確認';
+
+  @override
+  String get p2pForget => 'このサーバーを忘れる';
+
+  @override
+  String get p2pForgetSub => 'オフラインで何も取得していません。再び見つかれば戻ります';
+
+  @override
+  String p2pForgotten(String name) {
+    return '$name を忘れました';
+  }
+
+  @override
+  String get p2pBlockServer => 'サーバーをブロック';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return '$name をブロックしますか？公開情報は無視され、スナップショットは削除されます。';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '$name をブロックしました';
+  }
+
+  @override
+  String get p2pUnblock => 'ブロック解除';
+
+  @override
+  String get p2pUnblocked => 'サーバーのブロックを解除しました';
+
+  @override
+  String get p2pIncompatibleNote =>
+      '埋め込みモデルが非互換です — このライブラリは、このサーバーの類似検索には使えません。';
+
+  @override
+  String get p2pCompatible => '互換モデル';
+
+  @override
+  String get p2pModelUnknown => 'モデル不明';
+
+  @override
+  String get p2pNoDescription => '説明はありません。';
+
+  @override
+  String get p2pUnnamedServer => '名前のないサーバー';
+
+  @override
+  String get p2pFederateTitle => 'フェデレーションを依頼';
+
+  @override
+  String get p2pFederateNote =>
+      'ディスカバリーネットワーク経由でリクエストを送ります。今はアクセスは交換されません — 相手にはあなたの名前、メッセージ、提供内容が見えます。ライブラリは相手が承認した場合にのみ共有されます。';
+
+  @override
+  String get p2pMessage => 'メッセージ';
+
+  @override
+  String p2pMessageHint(int n) {
+    return '任意 · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries => '相手が承認したときにお返しに共有するライブラリ';
+
+  @override
+  String get p2pShareBackNote => 'すべてのチェックを外すと一方向の依頼になります — こちらは相手のものを読むだけです。';
+
+  @override
+  String get p2pSendRequest => 'リクエストを送信';
+
+  @override
+  String get p2pRequestSent => 'リクエストを送信しました — 「フェデレーション」で確認できます';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return 'リクエストを送信できませんでした: $error';
+  }
+
+  @override
+  String get p2pTheirTicket => '相手のチケット';
+
+  @override
+  String get p2pTheirTicketHint => '友人は自分の P2P ネットワーク画面の「友達を招待」でチケットを確認できます。';
+
+  @override
+  String get p2pTicketPasted => 'クリップボードから貼り付けました。';
+
+  @override
+  String get p2pRememberFriend => 'この友達を記憶する';
+
+  @override
+  String get p2pRememberFriendSub => 'サーバー設定に保存され、再起動後も関係が保たれます。';
+
+  @override
+  String get p2pJoinFriend => '参加';
+
+  @override
+  String get p2pJoinedFriend => '参加しました — メッシュは 1 分ほどで形成されます';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return '参加できませんでした: $error';
+  }
+
+  @override
+  String get p2pNotATicket => 'エンドポイントチケットではないようです。';
+
+  @override
+  String get p2pScanQr => 'QR コードをスキャン';
+
+  @override
+  String get p2pScannerTitle => 'ネットワークチケットをスキャン';
+
+  @override
+  String get p2pInviteFriend => '友達を招待';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return 'あなたのチケット — 友人がスマートフォンでここに貼り付けると $name を追加できます。これは住所であり、認証情報ではありません。';
+  }
+
+  @override
+  String get p2pTicketCopied => 'チケットをコピーしました';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return 'ディスカバリーネットワークで私の mStream サーバーを追加してください — mStream アプリで「P2P ネットワーク → サーバーを友達に追加」を開き、このチケットを貼り付けてください:\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'mStream ディスカバリーネットワークのチケット';
+
+  @override
+  String get p2pTicketNotReady => 'サイドカーがまだ動作していないため、共有できるチケットがありません。';
+
+  @override
+  String get p2pSettingsTitle => 'ネットワーク設定';
+
+  @override
+  String get p2pSwitchTitle => 'ディスカバリーネットワーク';
+
+  @override
+  String get p2pSwitchSub =>
+      'メタデータのみのスナップショットをネットワークに公開します。オフにすると離脱します — 収集したデータはローカルに残ります。';
+
+  @override
+  String get p2pLeaveConfirm =>
+      'ディスカバリーネットワークから離脱しますか？サーバーはスナップショットの公開と取得を停止します。ローカルのディスカバリーはそのまま動作します。';
+
+  @override
+  String get p2pLeave => '離脱';
+
+  @override
+  String get p2pLeft => 'ディスカバリーネットワークから離脱しました';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return '離脱できませんでした: $error';
+  }
+
+  @override
+  String get p2pEditIdentity => '名前と説明';
+
+  @override
+  String get p2pIdentitySaved => '保存しました — ネットワークに公開されました';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return '保存できませんでした: $error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => 'スナップショット';
+
+  @override
+  String get p2pAutoDownload => '自動取得の上限';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 台',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => '容量の上限';
+
+  @override
+  String get p2pRotate => '取得のローテーション';
+
+  @override
+  String get p2pForgetOffline => 'オフラインのサーバーを忘れる';
+
+  @override
+  String get p2pMeshSection => 'メッシュ';
+
+  @override
+  String get p2pCommunitySeeds => 'コミュニティシード';
+
+  @override
+  String get p2pCommunitySeedsOn => '公開シードサーバー経由で接続';
+
+  @override
+  String get p2pCommunitySeedsOff => 'オフ — 友達のサーバーのみ。サーバー設定で指定';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロック中のサーバー $count 台',
+      zero: 'ブロック中のサーバーはありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub => '公開情報を無視し、スナップショットは取得しません';
+
+  @override
+  String get p2pBlockedTitle => 'ブロック中のサーバー';
+
+  @override
+  String get p2pSaved => '保存しました';
+
+  @override
+  String get p2pOff => 'オフ';
+
+  @override
+  String get p2pSave => '保存';
+
+  @override
+  String get p2pSearchServers => 'サーバーを検索 — 名前または説明';
 }

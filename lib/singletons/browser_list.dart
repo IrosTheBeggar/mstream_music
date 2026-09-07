@@ -377,15 +377,30 @@ class BrowserManager {
       // and for every server whose build has federation at all: on with no
       // peers yet, or off and waiting for its admin (the screen says which).
       if (!federated &&
-          (peers.isNotEmpty || server.federationAvailable == true)) ...[
+          (peers.isNotEmpty ||
+              server.federationAvailable == true ||
+              server.p2pAvailable == true ||
+              server.discoveryP2pAvailable == true)) ...[
         header('Network'),
-        DisplayItem(
-            server,
-            'Federation',
-            'execAction',
-            'federation',
-            Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
-            peers.isEmpty ? null : 'sharedLibraries:${peers.length}'),
+        if (peers.isNotEmpty || server.federationAvailable == true)
+          DisplayItem(
+              server,
+              'Federation',
+              'execAction',
+              'federation',
+              Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
+              peers.isEmpty ? null : 'sharedLibraries:${peers.length}'),
+        // The discovery network: the build has it (an admin can join from
+        // here) or it is on (a member gets the catalog and the Discover
+        // leads). The card's second line says on/off.
+        if (server.p2pAvailable == true || server.discoveryP2pAvailable == true)
+          DisplayItem(
+              server,
+              'P2P Network',
+              'execAction',
+              'p2pNetwork',
+              Icon(Icons.public, color: VelvetColors.textSecondary),
+              server.discoveryP2pAvailable == true ? 'p2p:on' : 'p2p:off'),
       ],
       // SERVER: work the server does for you. Torrents have no ping flag —
       // the screen's preflight probe is the gate — but the route is off the
