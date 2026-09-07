@@ -33,10 +33,12 @@
 # Everything it creates is torn down: both servers, their scratch dirs, the
 # phone's server list (cfg_restore) and the peer's download folder.
 #
-# Taps are Galaxy S25 defaults. On the arm64 "smoke" AVD (Pixel 7 profile,
-# 1080x2400) the peer's home grid sits lower and a track ROW tap only appends
-# one track, so override: SMOKE_ALBUMS_ROW_XY="798 780" SMOKE_ALBUM1_XY="190 672"
-# SMOKE_TRACK1_XY="746 341" (the album's Play button — what queues the album).
+# Taps are Galaxy S25 defaults (the peer's home: Albums top-right under its
+# read-only note, then the first album, then a track row, which queues the
+# album). On the arm64 "smoke" AVD (Pixel 7 profile, 1080x2400) the grid sits
+# lower and a track ROW tap only appends one track, so override:
+# SMOKE_ALBUMS_ROW_XY="798 780" SMOKE_ALBUM1_XY="190 672" SMOKE_TRACK1_XY="746 341"
+# (the album's Play button — what queues the album).
 set -u
 source "$(dirname "$0")/../lib.sh"
 [ "${SMOKE_RIG_SERVERS_ONLY:-0}" = 1 ] || { pick_device; cfg_backup; }
@@ -45,7 +47,11 @@ HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"; IROH="${SMOKE_RIG_IROH:-0}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
 TTL=${SMOKE_RIG_TTL_MS:-180000}; REVOKE=${SMOKE_RIG_REVOKE:-1}
 [ "$TTL" != 0 ] && export MSTREAM_TEST_FED_GUEST_TTL_MS=$TTL
-PICKER=${SMOKE_PICKER_XY:-"1007 187"}; ALBUMS_ROW=${SMOKE_ALBUMS_ROW_XY:-"234 909"}
+# The peer's home carries a "Read-only server" note above its grid, which
+# drops the Playlists/Rated tiles and puts Albums top-RIGHT (Galaxy: 796 842).
+# The old default (234 909) landed on File Explorer there and the run passed
+# through a folder row by accident.
+PICKER=${SMOKE_PICKER_XY:-"1007 187"}; ALBUMS_ROW=${SMOKE_ALBUMS_ROW_XY:-"796 842"}
 ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
 [ -d "$MUSIC" ] || { echo "no music folder at $MUSIC"; exit 2; }

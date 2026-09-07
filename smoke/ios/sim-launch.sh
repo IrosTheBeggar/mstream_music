@@ -4,6 +4,11 @@
 # (the manual scene registration). Also the headless check: with the app
 # terminated, Dart must still boot when the CarPlay scene launches it — that
 # part needs a click, so it lives in carplay-round.sh.
+#
+# The resume check reads the `network change (resume)` line, which only the
+# Quick Connect (iroh) transport logs: the simulator's config needs a Quick
+# Connect server as its DEFAULT (first in servers.json), or that check fails
+# while the other two pass.
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; OUT="${SMOKE_OUT:-$ROOT/smoke/out/$(date +%Y%m%d-%H%M%S)-sim-launch}"; mkdir -p "$OUT"
 PASS=0; FAIL=0; log(){ echo "$(date '+%H:%M:%S') $*" | tee -a "$OUT/run.log"; }; pass(){ PASS=$((PASS+1)); log "PASS  $*"; }; fail(){ FAIL=$((FAIL+1)); log "FAIL  $*"; }
