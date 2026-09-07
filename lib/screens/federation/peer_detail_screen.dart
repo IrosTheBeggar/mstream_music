@@ -151,7 +151,11 @@ class _PeerDetailScreenState extends State<PeerDetailScreen> {
             children: [
               FedCard(children: [
                 FedRow(
-                  title: ps.state,
+                  // The state word is written for a row ("live"); as a
+                  // title it starts with a capital.
+                  title: ps.state.isEmpty
+                      ? ps.state
+                      : ps.state[0].toUpperCase() + ps.state.substring(1),
                   titleSize: 17,
                   subtitle: peer.isDirect
                       ? '${ps.transport} · ${l.federationTransportRelay}'
