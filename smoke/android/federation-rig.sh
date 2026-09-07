@@ -28,7 +28,7 @@
 # node_modules symlinked), node, a music folder (SMOKE_RIG_MUSIC, default
 # ~/code/mstream-demo-music, ~10 albums), the phone on the Mac's LAN
 # (SMOKE_RIG_HOST, default en0's address). Taps use the Galaxy S25 coordinates
-# and assume the picker lists the parent first and the peer last.
+# and assume the parent is the first picker row, with the peer directly under it.
 #
 # Everything it creates is torn down: both servers, their scratch dirs, the
 # phone's server list (cfg_restore) and the peer's download folder.
@@ -139,8 +139,9 @@ for i in $(seq 1 $RECON); do
   cfg_read servers.json | python3 -c "import sys,json; sys.exit(0 if any(s.get('federationParent')=='$PARENT' for s in json.load(sys.stdin)) else 1)" && break; sleep 1
 done
 [ "$i" -lt "$RECON" ] && pass "peer reconciled under $PARENT in ${i}s" || { save_applog rig-launch; fail "no peer entry after ${RECON}s"; summary; exit 1; }
-N=$(cfg_read servers.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-PEER_Y=$((222 + 144 * (N - 1))) # picker rows: 222, 366, 510, … — the peer is listed last
+# Picker rows: 222, 366, 510, … — a peer sits directly under its parent,
+# and the parent is planted first, so the peer is row 2.
+PEER_Y=366
 tap $PICKER; sleep 1.5; shot picker; tap 639 $PEER_Y; sleep 3
 wait_for_log '\[srv\] switched to peer-rig-peer-a' 5 && pass "peer selected from the picker" || fail "no switch to the peer"
 shot peer-nav

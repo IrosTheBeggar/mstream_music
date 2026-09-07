@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
 import '../singletons/server_list.dart';
+import '../util/server_tree.dart';
 import '../native/iroh_tunnel.dart';
 import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
@@ -216,6 +217,14 @@ class ManageServersScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
           child: Row(
             children: [
+              // A peer is a branch off the parent's row above it.
+              if (server.isFederated)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 10),
+                  child: Text(kPeerBranch,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 18)),
+                ),
               Container(
                 width: 44,
                 height: 44,
@@ -324,11 +333,15 @@ class ManageServersScreen extends StatelessWidget {
                 ),
               );
             }
+            // Display order: a peer directly under the server it is reached
+            // through (serversGrouped); every action keys on the index into
+            // the STORED list, so that is what each row is handed.
+            final ordered = serversGrouped(cServerList);
             return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: cServerList.length,
-              itemBuilder: (BuildContext context, int index) =>
-                  _serverRow(context, cServerList[index], index),
+              itemCount: ordered.length,
+              itemBuilder: (BuildContext context, int index) => _serverRow(
+                  context, ordered[index], cServerList.indexOf(ordered[index])),
             );
           },
         ),

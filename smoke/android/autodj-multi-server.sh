@@ -227,7 +227,7 @@ PY
 app_stop; cfg_write auto_dj.json "$RIG/auto_dj.json"; logcat_clear; wake; app_start
 wait_for_log '\[app\] default server ready' 30 || fail "phase 1b: default never published"
 wait_for_log '\[autodj\] restored on peer-rig-peer-a' 15 && pass "phase 1b: DJ restored armed on the peer" || fail "phase 1b: DJ not restored on the peer"
-N=$(cfg_read servers.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))"); PEER_Y=$((222 + 144 * (N - 1)))
+PEER_Y=366  # picker rows 222, 366, …: the peer sits directly under its parent, which is row 1
 tap $PICKER; sleep 1.5; shot p1b-picker; tap 639 $PEER_Y; sleep 3
 wait_for_log '\[srv\] switched to peer-rig-peer-a' 5 && pass "phase 1b: peer selected from the picker" || fail "phase 1b: no switch to the peer"
 tap $PEER_ALBUMS; sleep 4; shot p1b-albums; tap $ALBUM1; sleep 3; tap $TRACK1; sleep 6
