@@ -666,6 +666,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSectionFilters => '筛选';
 
   @override
+  String get autoDjMultiServerTitle => '从所有服务器播放';
+
+  @override
+  String get autoDjMultiServerSubtitle => 'Auto DJ 同时从所有服务器挑选，匹配当前播放的声音';
+
+  @override
+  String get autoDjMultiServerNeedsSonic => '需要在下方开启“声音相似度”';
+
+  @override
+  String get autoDjSectionShared => '本次会话';
+
+  @override
+  String get autoDjSectionPerServer => '各个媒体库';
+
+  @override
+  String get autoDjEditingServer => '设置对象';
+
+  @override
+  String autoDjMultiServerAllIn(int count) {
+    return '$count 台服务器正在参与';
+  }
+
+  @override
+  String autoDjMultiServerSomeExcluded(int count, int total) {
+    return '$total 台中有 $count 台参与 — 其余缺少 discovery、匹配的嵌入模型或足够新的服务器版本';
+  }
+
+  @override
   String get autoDjBpmTitle => 'BPM 连贯性';
 
   @override

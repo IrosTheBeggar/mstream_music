@@ -678,6 +678,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjSectionFilters => 'フィルター';
 
   @override
+  String get autoDjMultiServerTitle => 'すべてのサーバーから再生';
+
+  @override
+  String get autoDjMultiServerSubtitle => '再生中の曲の響きに合わせて、すべてのサーバーから同時に選びます';
+
+  @override
+  String get autoDjMultiServerNeedsSonic => '下の「サウンドの類似性」をオンにする必要があります';
+
+  @override
+  String get autoDjSectionShared => 'セッション';
+
+  @override
+  String get autoDjSectionPerServer => 'ライブラリごと';
+
+  @override
+  String get autoDjEditingServer => '設定の対象';
+
+  @override
+  String autoDjMultiServerAllIn(int count) {
+    return '$count 台のサーバーが参加中';
+  }
+
+  @override
+  String autoDjMultiServerSomeExcluded(int count, int total) {
+    return '$total 台中 $count 台が参加中 — 残りは discovery、同じ埋め込みモデル、または十分に新しいサーバー版が不足しています';
+  }
+
+  @override
   String get autoDjBpmTitle => 'BPM の連続性';
 
   @override

@@ -200,6 +200,14 @@ enum ServerParam {
   maxDuration,
   allowUnknownDuration,
 
+  /// random-songs: a sonic seed carried from ANOTHER server, as a raw
+  /// vector rather than a filepath (which only names a row on the server
+  /// that holds it). Paired with the /discovery/local/embeddings route that
+  /// reads the vector out in the first place — a server needs both or
+  /// neither, so one floor covers the pair.
+  similarToVector,
+  similarToModelId,
+
   /// db/search: restrict the lyrics category. The endpoint's other four
   /// `no*` flags all date to 4.7.0 — below the support floor, so they are
   /// never worth gating; this one arrived at 6.13.1 and is the only search
@@ -229,13 +237,18 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   ServerParam.similarTo: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.minSimilarity: ServerVersion(6, 15, 2, '6.15.2'),
   ServerParam.noLyrics: ServerVersion(6, 13, 1, '6.13.1'),
-  // ASSUMPTION — the duration params are merged on the server's master but
-  // NOT in any tag yet (v6.24.0 is the newest, and they landed after it), so
-  // 6.25.0 is the expected next minor rather than an observed floor. If the
-  // release that carries them is numbered differently, these three are the
-  // only thing to change. Erring high is the safe direction: too high hides a
-  // working control, too low sends a parameter that 400s the whole request —
-  // though ServerCapabilities would then learn and drop it.
+  // The vector seed (mStream #929: /discovery/local/embeddings +
+  // random-songs' similarToVector) is NOT in 6.25.0 — that tag shipped on
+  // 2026-08-30 without it — so the floor is the next minor, an expected
+  // release rather than an observed one. If the release that carries it is
+  // numbered differently, these two are the only thing to change. Erring
+  // high hides a working control; erring low would offer a 6.25.0 server a
+  // session it silently sits out of (its embeddings call 404s, the pick
+  // falls back to single-server, but the participants readout would still
+  // have counted it).
+  ServerParam.similarToVector: ServerVersion(6, 26, 0, '6.26.0'),
+  ServerParam.similarToModelId: ServerVersion(6, 26, 0, '6.26.0'),
+  // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.allowUnknownDuration: ServerVersion(6, 25, 0, '6.25.0'),
@@ -283,6 +296,16 @@ bool autoDjFiltersKnownUnsupported(ServerVersion? v) =>
 /// keep the control and learn from a rejection instead.
 bool autoDjDurationKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.minDuration);
+
+/// True when the server is KNOWN to predate portable sonic seeds — the
+/// /discovery/local/embeddings route and random-songs' vector seed, which
+/// ship together. Such a server can still run Auto DJ on its own; it just
+/// can't take part in a session seeded from somewhere else.
+///
+/// Same fork/unknown rule as every other gate: neither is known to be too
+/// old, so both are offered the session and answer for themselves.
+bool crossServerSeedKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.similarToVector);
 
 /// `POST /api/v1/db/metadata/batch` arrived at 5.11.0 — many filepaths in
 /// one request instead of one per track.

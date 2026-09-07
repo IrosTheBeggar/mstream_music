@@ -193,4 +193,57 @@ void main() {
       expect(p['similarTo'], ['music/a.mp3']);
     });
   });
+
+  // A cross-server session records which server each history path came
+  // from; the single-server body may only carry the DJ server's own (any
+  // other path draws that server's uniform 404 — "Track not found").
+  group('AudioPlayerHandler.historyOwnedBy', () {
+    test('keeps the DJ server\'s paths; a path with no owner recorded is its own',
+        () {
+      final owners = {
+        'music/a.mp3': 'home',
+        'nas/b.mp3': 'nas',
+        'nas/c.mp3': 'nas',
+      };
+      expect(
+        AudioPlayerHandler.historyOwnedBy(
+            const ['music/a.mp3', 'nas/b.mp3', 'music/old.mp3', 'nas/c.mp3'],
+            owners,
+            'home'),
+        ['music/a.mp3', 'music/old.mp3'],
+      );
+    });
+
+    test('a history that lives entirely elsewhere yields nothing, and '
+        'sonicParams then falls back to the seed, else the playing track', () {
+      final owners = {'nas/b.mp3': 'nas', 'nas/c.mp3': 'nas'};
+      final local = AudioPlayerHandler.historyOwnedBy(
+          const ['nas/b.mp3', 'nas/c.mp3'], owners, 'home');
+      expect(local, isEmpty);
+      final withSeed = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        history: local,
+        seedPath: 'music/seed.mp3',
+        currentPath: 'music/cur.mp3',
+        minSimilarity: 0.5,
+      );
+      expect(withSeed?['similarTo'], ['music/seed.mp3']);
+      final noSeed = AudioPlayerHandler.sonicParams(
+        enabled: true,
+        history: local,
+        currentPath: '/music/cur.mp3',
+        minSimilarity: 0.5,
+      );
+      expect(noSeed?['similarTo'], ['music/cur.mp3']);
+      expect(
+        AudioPlayerHandler.sonicParams(
+          enabled: true,
+          history: local,
+          minSimilarity: 0.5,
+        ),
+        isNull,
+        reason: 'nothing this server holds: no sonic params, not a foreign path',
+      );
+    });
+  });
 }

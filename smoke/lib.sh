@@ -31,13 +31,20 @@ pick_device() {
   # build usually runs alongside the dev build with a tunnel of its own, and
   # its "[iroh] …" lines would otherwise satisfy (or confuse) the checks.
   APP_UID=$(adbx shell "run-as $PKG id -u" 2>/dev/null | tr -dc '0-9')
+  # Keep the screen on for the run: the S25 locks 60s after its screen times
+  # out and `wm dismiss-keyguard` does not clear that keyguard, so a script
+  # whose first tap comes late (the rig's reconcile allowance) tapped the lock
+  # screen. Only the inactivity timeout is affected — the soak's explicit
+  # sleep key still turns the screen off. Reverted by summary / cfg_restore.
+  adbx shell svc power stayon usb 2>/dev/null
   log "device: $SERIAL  package: $PKG${APP_UID:+ (uid $APP_UID)}"
 }
+stayon_off() { adbx shell svc power stayon false 2>/dev/null; }
 log()  { echo "$(date '+%H:%M:%S') $*" | tee -a "$OUT/run.log"; }
 pass() { PASS=$((PASS+1)); log "PASS  $*"; }
 fail() { FAIL=$((FAIL+1)); log "FAIL  $*"; }
 skip() { SKIP=$((SKIP+1)); log "SKIP  $*"; }
-summary() { log "== $SCRIPT_NAME: $PASS pass, $FAIL fail, $SKIP skip — artifacts in $OUT"; [ "$FAIL" -eq 0 ]; }
+summary() { stayon_off; log "== $SCRIPT_NAME: $PASS pass, $FAIL fail, $SKIP skip — artifacts in $OUT"; [ "$FAIL" -eq 0 ]; }
 
 app_pid()      { adbx shell pidof "$PKG" 2>/dev/null | tr -d '\r '; }
 app_start()    { adbx shell am start -n "$PKG/$ACT" >/dev/null; }
@@ -98,7 +105,9 @@ media_key() { # play | pause | play-pause
   local code; case "$1" in play) code=126;; pause) code=127;; *) code=85;; esac
   adbx shell input keyevent "$code"; log "media key: $1"
 }
-wake()      { adbx shell input keyevent KEYCODE_WAKEUP; }
+# Wake AND dismiss a swipe keyguard: a script run after the soak (screen off,
+# phone locked) otherwise taps the lock screen. A secure lock stays put.
+wake()      { adbx shell input keyevent KEYCODE_WAKEUP; adbx shell wm dismiss-keyguard >/dev/null 2>&1; }
 bt_connected() { adbx shell dumpsys bluetooth_manager 2>/dev/null | grep -m1 -E "ConnectionState:" | grep -q STATE_CONNECTED; }
 a2dp_route()   { adbx shell dumpsys audio 2>/dev/null | grep -m1 -oE 'Devices: (bt_a2dp|speaker)[^ ]*'; }
 session_state() { adbx shell dumpsys media_session 2>/dev/null | grep -A8 "$PKG" | grep -m1 -oE 'state=[A-Z_]+\([0-9]\)'; }
@@ -128,6 +137,7 @@ cfg_backup() {
   trap cfg_restore EXIT
 }
 cfg_restore() {
+  stayon_off
   [ -n "$CFG_BACKUP" ] || return 0
   app_stop
   for f in servers.json auto_dj.json queue.json; do [ -s "$CFG_BACKUP/$f" ] && cfg_write "$f" "$CFG_BACKUP/$f"; done

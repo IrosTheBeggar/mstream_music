@@ -17,6 +17,7 @@ import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/decode_json.dart';
 import '../util/media_format.dart';
+import '../util/seed_vector.dart';
 import '../util/server_version.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
@@ -26,6 +27,7 @@ import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:typed_data';
 
 class ApiManager {
   ApiManager._privateConstructor();
@@ -1000,10 +1002,107 @@ class ApiManager {
     }
   }
 
-  /// POST /api/v1/db/random-songs — one random pick, for "surprise me"
-  /// seeds. Honors the server's Auto DJ source settings (disabled vpaths +
-  /// min rating) so a random seed can't come from an excluded library.
-  /// Null on any error.
+  /// The discovery embeddings for [filePaths] on [server], so a seed can be
+  /// carried to a server that has never seen those files.
+  ///
+  /// Returns the model identity alongside the vectors: embeddings only
+  /// compare within one model space, so a caller must know which space it is
+  /// holding before offering the seed to anyone else. Null when the server
+  /// can't answer at all (too old, discovery off, unreachable) — the caller
+  /// treats that as "this server sits this session out", not an error.
+  ///
+  /// Vectors come back base64 float32 little-endian, the same wire form the
+  /// server's federation routes use.
+  ///
+  /// Works for a federated peer too: the route is on the federation
+  /// allowlist (mStream #946), and [Server.apiUri] / [Server.authToken] put
+  /// the request on the parent's proxy or the peer's own tunnel.
+  Future<({String modelId, int dim, List<Float32List> vectors})?>
+      fetchEmbeddings(Server server, List<String> filePaths) async {
+    if (filePaths.isEmpty) return null;
+    try {
+      final res = await _direct
+          .post(
+            server.apiUri('/api/v1/discovery/local/embeddings'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-access-token': server.authToken ?? '',
+            },
+            // The route caps at 8 to match the sonic seed cap; trim here
+            // rather than let the whole request 400 on a longer anchor.
+            body: jsonEncode({'filePaths': filePaths.take(8).toList()}),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode > 299) {
+        verboseLog('[dj] embeddings HTTP ${res.statusCode} on ${server.localname}');
+        return null;
+      }
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final modelId = (decoded['model'] is Map)
+          ? decoded['model']['id']?.toString()
+          : null;
+      final dim = decoded['dim'];
+      if (modelId == null || dim is! int || dim <= 0) return null;
+
+      final vectors = <Float32List>[];
+      for (final t in (decoded['tracks'] as List? ?? const [])) {
+        if (t is! Map) continue;
+        final b64 = t['embedding'];
+        // notAnalyzed tracks come back with a null embedding — a normal
+        // transient state while the worker catches up, not a failure.
+        if (b64 is! String || b64.isEmpty) continue;
+        // Null for a payload that isn't exactly dim floats — a server
+        // answering with a different dim than it advertised is skipped.
+        final vec = decodeWireVector(b64, dim);
+        if (vec == null) continue;
+        vectors.add(vec);
+      }
+      if (vectors.isEmpty) return null;
+      return (modelId: modelId, dim: dim, vectors: vectors);
+    } catch (e) {
+      verboseLog('[dj] embeddings failed on ${server.localname}: $e');
+      return null;
+    }
+  }
+
+  /// GET /api/v1/federation/health — the model a server answers sonic
+  /// queries in (`discovery.modelId`), read before a cross-server Auto DJ
+  /// session sends it a vector: the server refuses a foreign one with a hard
+  /// 400 (mStream #929), so a caller is expected to ask first. Served to a
+  /// logged-in user on the server's own wall, to a peer through the parent's
+  /// proxy and to a guest over a direct tunnel alike (it is on the federation
+  /// allowlist). `modelId` is null when discovery is off there or nothing is
+  /// analysed yet; the whole answer is null when the server did not answer.
+  Future<({String? modelId, int analyzedCount})?> fetchFederationHealth(
+      Server server) async {
+    try {
+      final res = await _direct
+          .get(
+            server.apiUri('/api/v1/federation/health'),
+            headers: {'x-access-token': server.authToken ?? ''},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode > 299) {
+        verboseLog('[dj] health HTTP ${res.statusCode} on ${server.localname}');
+        return null;
+      }
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) return null;
+      final d = decoded['discovery'];
+      if (d is! Map) return (modelId: null, analyzedCount: 0);
+      final id = d['modelId'];
+      final n = d['analyzedCount'];
+      return (
+        modelId: id is String && id.isNotEmpty ? id : null,
+        analyzedCount: n is num ? n.toInt() : 0,
+      );
+    } catch (e) {
+      verboseLog('[dj] health failed on ${server.localname}: $e');
+      return null;
+    }
+  }
+
   /// Pick Auto DJ's opening track for a "Surprise me" start.
   ///
   /// Unlike [fetchRandomSong] this honours the Auto DJ library filters. The

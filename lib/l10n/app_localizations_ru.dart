@@ -706,6 +706,36 @@ class AppLocalizationsRu extends AppLocalizations {
   String get autoDjSectionFilters => 'Фильтры';
 
   @override
+  String get autoDjMultiServerTitle => 'Играть со всех серверов';
+
+  @override
+  String get autoDjMultiServerSubtitle =>
+      'Auto DJ выбирает сразу со всех серверов, подстраиваясь под звучание';
+
+  @override
+  String get autoDjMultiServerNeedsSonic =>
+      'Нужно включить «Похожее звучание» ниже';
+
+  @override
+  String get autoDjSectionShared => 'Сессия';
+
+  @override
+  String get autoDjSectionPerServer => 'Каждая библиотека';
+
+  @override
+  String get autoDjEditingServer => 'Настройки для';
+
+  @override
+  String autoDjMultiServerAllIn(int count) {
+    return 'Участвуют серверов: $count';
+  }
+
+  @override
+  String autoDjMultiServerSomeExcluded(int count, int total) {
+    return 'Участвуют $count из $total серверов — остальным не хватает discovery, совпадающей модели эмбеддингов или достаточно новой версии сервера';
+  }
+
+  @override
   String get autoDjBpmTitle => 'Непрерывность по BPM';
 
   @override
