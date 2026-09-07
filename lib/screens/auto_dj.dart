@@ -27,6 +27,7 @@ import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../util/fan_out_readout.dart';
+import '../util/server_tree.dart';
 import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/queue_list.dart' show toggleAutoDJ;
@@ -192,8 +193,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// The servers this mode is about: everything the picker may offer. A
   /// federated peer counts — it takes part like any other server — but not
   /// one the user hid or its parent stopped listing.
-  List<Server> get _servers =>
-      ServerManager().serverList.where((s) => s.isSelectable).toList();
+  List<Server> get _servers => serversGrouped(ServerManager().serverList)
+      .where((s) => s.isSelectable)
+      .toList();
+
+  /// A dropdown label: a peer is drawn as a branch off its parent, which
+  /// [serversGrouped] places right above it.
+  String _serverLabel(Server s) =>
+      s.isFederated ? '$kPeerBranch ${s.displayName}' : s.displayName;
 
   /// The server whose own settings the bottom section edits. Falls back to
   /// the panel's server so the section is never empty, and re-resolves if the
@@ -392,7 +399,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                       value: s,
                       // A peer has no URL of its own; its name is what the
                       // rest of the app shows for it.
-                      child: Text(s.displayName,
+                      child: Text(_serverLabel(s),
                           overflow: TextOverflow.ellipsis,
                           style:
                               TextStyle(color: VelvetColors.textPrimary)),
@@ -948,8 +955,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // A federated peer hosts the DJ like any other server (random-songs is
     // on the federation allowlist since mStream #946); only one the user
     // hid, or its parent stopped listing, stays out.
-    final servers =
-        ServerManager().serverList.where((s) => s.isSelectable).toList();
+    final servers = serversGrouped(ServerManager().serverList)
+        .where((s) => s.isSelectable)
+        .toList();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: DropdownButton<Server>(
@@ -965,7 +973,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         items: servers
             .map((s) => DropdownMenuItem(
                   value: s,
-                  child: Text(s.displayName,
+                  child: Text(_serverLabel(s),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: VelvetColors.textPrimary)),
                 ))

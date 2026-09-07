@@ -41,6 +41,7 @@ import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
+import 'util/server_tree.dart';
 import 'util/self_signed_overrides.dart';
 import 'singletons/playlists.dart';
 import 'singletons/settings.dart';
@@ -870,9 +871,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   // over the browser ↔ album-detail body. It sits BELOW the player overlay and
   // the outer Scaffold's drawer in build()'s Stack, so an open drawer dims it
   // like any other content.
-  // One row of the server picker. A federated peer is indented under the
-  // server it is reached through and names it, since a peer has no URL of its
-  // own to be identified by — only a name its parent reports.
+  // One row of the server picker. A federated peer sits directly under the
+  // server it is reached through (see serversGrouped), drawn as a branch off
+  // that row, and names it, since a peer has no URL of its own to be
+  // identified by — only a name its parent reports.
   Widget _serverPickerRow(AppLocalizations l, Server server) {
     final selected = server == ServerManager().currentServer;
     final color = selected ? VelvetColors.primary : VelvetColors.textPrimary;
@@ -881,8 +883,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     }
     final parent = server.parentServer?.displayName ?? server.federationParent;
     return Padding(
-      padding: const EdgeInsets.only(left: 16),
+      padding: const EdgeInsets.only(left: 8),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(kPeerBranch,
+            style: TextStyle(color: VelvetColors.textSecondary, fontSize: 16)),
+        const SizedBox(width: 6),
         Icon(Icons.hub_outlined, size: 16, color: VelvetColors.textSecondary),
         const SizedBox(width: 8),
         Flexible(
@@ -1023,7 +1028,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                       itemBuilder: (BuildContext context) {
                         final servers = ServerManager().serverList;
                         return <PopupMenuEntry<int>>[
-                          for (final server in servers)
+                          // Display order: a peer directly under the server
+                          // it is reached through (serversGrouped); the
+                          // value stays the index into the STORED list.
+                          for (final server in serversGrouped(servers))
                             // A peer its parent no longer lists (or one the
                             // user hid) stays in the list so queued and
                             // downloaded tracks keep resolving, but is not
