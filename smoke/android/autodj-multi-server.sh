@@ -45,10 +45,13 @@ source "$(dirname "$0")/../lib.sh"
 SRC="${SMOKE_MSTREAM_SRC:-$HOME/code/mStream}"; MUSIC="${SMOKE_RIG_MUSIC:-$HOME/code/mstream-demo-music}"
 HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
-HOME_ALBUMS=${SMOKE_HOME_ALBUMS_XY:-"281 1030"}; ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
+# The home is grouped (LIBRARY / LISTEN / NETWORK / SERVER) with row-shaped
+# cards: on a standard home Albums is row two, left (Galaxy 281 866).
+HOME_ALBUMS=${SMOKE_HOME_ALBUMS_XY:-"281 866"}; ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
 # The peer's home carries a "Read-only server" note above its grid, which
-# drops the Playlists/Rated tiles and puts Albums top-RIGHT (Galaxy: 796 842).
-PEER_ALBUMS=${SMOKE_PEER_ALBUMS_XY:-"796 842"}
+# drops the Playlists/Rated tiles and puts Albums top-RIGHT of the first row,
+# one note lower than on a standard home (Galaxy: 796 848).
+PEER_ALBUMS=${SMOKE_PEER_ALBUMS_XY:-"796 848"}
 PICKER=${SMOKE_PICKER_XY:-"1007 187"}; DJ_PILL=${SMOKE_DJ_PILL_XY:-"944 2118"}
 FLOOR=${SMOKE_DJ_FLOOR:-6.26.0}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
@@ -230,6 +233,7 @@ wait_for_log '\[autodj\] restored on peer-rig-peer-a' 15 && pass "phase 1b: DJ r
 PEER_Y=366  # picker rows 222, 366, …: the peer sits directly under its parent, which is row 1
 tap $PICKER; sleep 1.5; shot p1b-picker; tap 639 $PEER_Y; sleep 3
 wait_for_log '\[srv\] switched to peer-rig-peer-a' 5 && pass "phase 1b: peer selected from the picker" || fail "phase 1b: no switch to the peer"
+sleep 1; shot p1b-home  # the peer's home before the tap, for re-calibrating PEER_ALBUMS
 tap $PEER_ALBUMS; sleep 4; shot p1b-albums; tap $ALBUM1; sleep 3; tap $TRACK1; sleep 6
 n=$(applog | grep -oE '\[queue\] add [0-9]+ tracks' | tail -1 | grep -oE '[0-9]+' | head -1)
 if [ -n "$n" ] && ensure_playing 15; then pass "phase 1b: peer album queued ($n tracks) and playing ($(session_state))"; else save_applog p1b-play; fail "phase 1b: peer album did not play ($(session_state))"; fi
