@@ -38,7 +38,7 @@
 # Taps are Galaxy S25 defaults (home grid Albums tile, first album, a track
 # row — which queues the whole album — and the mini-player's Auto DJ pill).
 # Override with SMOKE_HOME_ALBUMS_XY, SMOKE_ALBUM1_XY, SMOKE_TRACK1_XY,
-# SMOKE_DJ_PILL_XY for other phones.
+# SMOKE_DJ_PILL_XY, SMOKE_PEER_ALBUMS_XY for other phones.
 set -u
 source "$(dirname "$0")/../lib.sh"
 [ "${SMOKE_RIG_SERVERS_ONLY:-0}" = 1 ] || { pick_device; cfg_backup; }
@@ -46,7 +46,9 @@ SRC="${SMOKE_MSTREAM_SRC:-$HOME/code/mStream}"; MUSIC="${SMOKE_RIG_MUSIC:-$HOME/
 HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
 HOME_ALBUMS=${SMOKE_HOME_ALBUMS_XY:-"281 1030"}; ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
-PEER_ALBUMS=${SMOKE_ALBUMS_ROW_XY:-"234 909"}  # the peer's home grid (same override as federation-rig.sh)
+# The peer's home carries a "Read-only server" note above its grid, which
+# drops the Playlists/Rated tiles and puts Albums top-RIGHT (Galaxy: 796 842).
+PEER_ALBUMS=${SMOKE_PEER_ALBUMS_XY:-"796 842"}
 PICKER=${SMOKE_PICKER_XY:-"1007 187"}; DJ_PILL=${SMOKE_DJ_PILL_XY:-"944 2118"}
 FLOOR=${SMOKE_DJ_FLOOR:-6.26.0}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
