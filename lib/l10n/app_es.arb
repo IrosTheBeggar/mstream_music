@@ -279,7 +279,6 @@
   "browserSectionNetwork": "Red",
   "browserSectionServer": "Servidor",
   "browserFederation": "Federación",
-  "browserTorrents": "Torrents",
   "browserAutoDjOn": "Activado",
   "browserAutoDjOff": "Desactivado",
   "browserSharedLibraries": "{count, plural, =1{1 biblioteca compartida} other{{count} bibliotecas compartidas}}",

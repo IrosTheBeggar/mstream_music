@@ -388,7 +388,7 @@ class BrowserManager {
       // federation allowlist, so a peer never gets it.
       if (!federated) ...[
         header('Server'),
-        DisplayItem(server, 'Torrents', 'execAction', 'torrents',
+        DisplayItem(server, 'Add torrent', 'execAction', 'torrents',
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
       ],
     ];

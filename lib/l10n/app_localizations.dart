@@ -1884,12 +1884,6 @@ abstract class AppLocalizations {
   /// **'Federation'**
   String get browserFederation;
 
-  /// Home card: the server's torrent downloads.
-  ///
-  /// In en, this message translates to:
-  /// **'Torrents'**
-  String get browserTorrents;
-
   /// Auto DJ card subtext while the DJ is armed.
   ///
   /// In en, this message translates to:

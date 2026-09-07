@@ -1064,9 +1064,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserFederation => 'Федерация';
 
   @override
-  String get browserTorrents => 'Торренты';
-
-  @override
   String get browserAutoDjOn => 'Включён';
 
   @override

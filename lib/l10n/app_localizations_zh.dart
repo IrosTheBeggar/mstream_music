@@ -1000,9 +1000,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserFederation => '联合';
 
   @override
-  String get browserTorrents => '种子';
-
-  @override
   String get browserAutoDjOn => '已开启';
 
   @override

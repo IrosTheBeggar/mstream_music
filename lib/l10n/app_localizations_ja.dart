@@ -1016,9 +1016,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserFederation => 'フェデレーション';
 
   @override
-  String get browserTorrents => 'トレント';
-
-  @override
   String get browserAutoDjOn => 'オン';
 
   @override

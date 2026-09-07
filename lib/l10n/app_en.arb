@@ -846,10 +846,6 @@
   "@browserFederation": {
       "description": "Home card: the libraries other servers share with this one."
   },
-  "browserTorrents": "Torrents",
-  "@browserTorrents": {
-      "description": "Home card: the server's torrent downloads."
-  },
   "browserAutoDjOn": "On",
   "@browserAutoDjOn": {
       "description": "Auto DJ card subtext while the DJ is armed."

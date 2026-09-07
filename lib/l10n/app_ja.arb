@@ -279,7 +279,6 @@
   "browserSectionNetwork": "ネットワーク",
   "browserSectionServer": "サーバー",
   "browserFederation": "フェデレーション",
-  "browserTorrents": "トレント",
   "browserAutoDjOn": "オン",
   "browserAutoDjOff": "オフ",
   "browserSharedLibraries": "{count, plural, other{共有ライブラリ {count} 件}}",

@@ -1055,9 +1055,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get browserFederation => 'Föderation';
 
   @override
-  String get browserTorrents => 'Torrents';
-
-  @override
   String get browserAutoDjOn => 'An';
 
   @override

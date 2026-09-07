@@ -279,7 +279,6 @@
   "browserSectionNetwork": "Сеть",
   "browserSectionServer": "Сервер",
   "browserFederation": "Федерация",
-  "browserTorrents": "Торренты",
   "browserAutoDjOn": "Включён",
   "browserAutoDjOff": "Выключен",
   "browserSharedLibraries": "{count, plural, =1{1 общая библиотека} few{{count} общие библиотеки} other{{count} общих библиотек}}",

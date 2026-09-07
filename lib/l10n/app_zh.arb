@@ -279,7 +279,6 @@
   "browserSectionNetwork": "网络",
   "browserSectionServer": "服务器",
   "browserFederation": "联合",
-  "browserTorrents": "种子",
   "browserAutoDjOn": "已开启",
   "browserAutoDjOff": "已关闭",
   "browserSharedLibraries": "{count, plural, other{{count} 个共享资料库}}",

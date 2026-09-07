@@ -164,8 +164,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.pathScreenTitle;
     case 'Federation':
       return l.browserFederation;
-    case 'Torrents':
-      return l.browserTorrents;
+    case 'Add torrent':
+      return l.torrentScreenTitle; // the screen's own title, as the drawer used
     case 'Search':
       return l.browserSearch;
     case 'Read-only server':
