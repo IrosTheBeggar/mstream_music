@@ -11,6 +11,7 @@ This is a faithful Rust port of the server's reference client `scripts/mstream-i
 - ✅ C ABI + Dart FFI binding; cross-compiles for `arm64-v8a` + `x86_64` at Android API 26.
 - ✅ **Self-healing in place (Phase 2, 2026-09):** the reconnect supervisor's backoff is cut short by an app kick or by the home relay coming back (`wait_backoff`); `mstream_iroh_force_reconnect` re-binds the loopback listener on the SAME port and closes the current connection so the supervisor re-dials at once (iOS kills the listener during a suspension while QUIC survives); bridges wait up to 10 s for a swapped-in connection; a native events ring (`mstream_iroh_drain_events`) and the home-relay state (`mstream_iroh_relay_online`) feed the app's diagnostics + watchdog. The harness's KICK phase covers it.
 - ✅ **Keyed tunnels + federation guest mode (ABI v2, 2026-09):** the native table holds tunnels by an app-chosen key (`mstream_iroh_start(key, code, port)` and every per-tunnel call takes the key; `mstream_iroh_network_changed` fans out), so a Quick Connect server and a directly-reached federated peer can run side by side, each on its own loopback port with its own supervisor. A `mstrfedg1:{t,g}` **guest ticket** (mStream `docs/federation-guest-ticket.md`) dials the peer's federation endpoint (ALPN `mstream/federation/1`) and presents the guest token on the first bi-stream instead of a secret. `mstream_iroh_set_credential(key, code)` swaps a running tunnel's credential **in place** — the daily guest-token refresh must not rotate the loopback port — and a tunnel whose supervisor gave up on a rejected handshake re-dials at once with the new one. `mstream_iroh_abi_version` (2) lets the Dart side refuse a stale binary. The harness's GUEST phase covers the dial, the rejection, and the swap.
+- ✅ **iroh 1.1.0 (2026-09):** lockfile-only update (`iroh = "1"` unchanged) — iroh/base/dns/relay 1.1.0, noq 1.2.0, netdev 0.46.2; clears the four `cargo audit` advisories of the 1.0.0 lock and ships the dalek crypto crates as releases instead of RCs. netdev 0.46 dropped the iOS 18-only `nw_path_is_ultra_constrained` call, so the `apple_compat.rs` launch-crash shim is gone and `build-ios.sh` now fails if that import ever returns. Binaries rebuilt (table below); harness ALL PASS against `@number0/iroh` 1.1.0.
 - ⏳ **Pending (device loop):** stage the `.so` into `jniLibs`, build the APK, and confirm on a physical device against a live server (see *On-device acceptance* below).
 
 ## Frozen wire contract (must match the server byte-for-byte)
@@ -64,8 +65,8 @@ release if the `.so` is missing, but cannot detect a stale one):
 
 | ABI | size | sha256 |
 |---|---|---|
-| arm64-v8a | **10.05 MB** (10,045,240 bytes) | `ba25ef6dda23b1059c4ae6fb8909e853e2db09a21196d6fd08a8dcf107c2ddb0` |
-| x86_64 | 11.67 MB (11,674,880 bytes) — emulators only | `3384220af5992e2dbf7a852f8cc030e13cdcd120d2ace7dcb6dd8ac090557205` |
+| arm64-v8a | **10.09 MB** (10,086,392 bytes) | `ccc678456b9ecef5e2f8a1f5e701c2d8afe925683e9c370698480b747d30891b` |
+| x86_64 | 11.68 MB (11,675,008 bytes) — emulators only | `fa547f60b6044d51c40c3fd4348c0b9738bc7c7a4b25e52c308346a1ee2bb782` |
 
 With Play app-bundle ABI splits, an arm64 device downloads only its own slice (~9.5 MB). iroh **core only** — no blobs/docs/gossip/rpc (the full off-the-shelf FFI is 31 MB).
 
