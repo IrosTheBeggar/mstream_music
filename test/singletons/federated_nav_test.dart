@@ -101,6 +101,33 @@ void main() {
         reason: 'a hidden peer is not counted');
   });
 
+  test('a server whose build has federation gets NETWORK even with no peers',
+      () {
+    // The card leads to the Federation screen, which has something to say
+    // on with no peers yet (share a library, add a peer) and off (turn it
+    // on) — so the build having federation at all is the gate, and the
+    // shared-library count only appears once there is one.
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..federationAvailable = true;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    final fed = BrowserManager()
+        .browserList
+        .singleWhere((r) => r.data == 'federation');
+    expect(fed.subtext, isNull, reason: 'no count without a peer');
+  });
+
+  test('a server that never reported federation gets no NETWORK group', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..federationAvailable = false;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_headers(), ['Library', 'Listen', 'Server']);
+  });
+
   test('a federated server loses Playlists and Rated', () {
     final parent = Server('https://home.example.com', null, null, 'JWT', 'home');
     final peer = Server('federated://home/3', null, null, null, 'peer-basement')

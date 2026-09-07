@@ -863,10 +863,6 @@
           }
       }
   },
-  "federationSheetTitle": "Shared libraries",
-  "@federationSheetTitle": {
-      "description": "Title of the sheet listing the peers reachable through a server."
-  },
   "browserSearch": "Search",
   "browserWelcomeTitle": "Welcome to mStream",
   "browserWelcomeSubtitle": "Tap here to add a server",
@@ -2113,5 +2109,1074 @@
         "type": "String"
       }
     }
+  },
+  "federationTitle": "Federation",
+  "@federationTitle": {
+      "description": "Title of the Federation screen (libraries shared between servers)."
+  },
+  "federationStatusOn": "On · connected to relay",
+  "@federationStatusOn": {
+      "description": "Federation status line when the endpoint is up and reachable."
+  },
+  "federationStatusConnecting": "On · connecting…",
+  "@federationStatusConnecting": {
+      "description": "Federation status line while the endpoint is still reaching its relay."
+  },
+  "federationStatusOff": "Off",
+  "@federationStatusOff": {
+      "description": "Federation status line when the feature is switched off."
+  },
+  "federationStatusUnavailable": "Not available on this platform",
+  "@federationStatusUnavailable": {
+      "description": "Federation status line when the server cannot run the iroh component."
+  },
+  "federationSharedWithYou": "Shared with you",
+  "@federationSharedWithYou": {
+      "description": "Section header: the peers whose libraries this server can read."
+  },
+  "federationRequestsSection": "Requests",
+  "@federationRequestsSection": {
+      "description": "Section header: pairing requests."
+  },
+  "federationYourSharedLibraries": "Your shared libraries",
+  "@federationYourSharedLibraries": {
+      "description": "Section header: the tickets this admin minted."
+  },
+  "federationAddPeer": "Add a peer",
+  "@federationAddPeer": {
+      "description": "Row and screen title: add a friend's server by ticket."
+  },
+  "federationShareLibrary": "Share a library",
+  "@federationShareLibrary": {
+      "description": "Primary action and screen title: mint a ticket for one of this server's libraries."
+  },
+  "federationNoPeersYet": "Nothing is shared with this server yet.",
+  "@federationNoPeersYet": {
+      "description": "Empty state for the Shared with you section."
+  },
+  "federationNoKeysYet": "No tickets yet — share a library to mint one.",
+  "@federationNoKeysYet": {
+      "description": "Empty state for the tickets section (admin)."
+  },
+  "federationNoRequests": "No requests yet — servers on the discovery network can find you here.",
+  "@federationNoRequests": {
+      "description": "Empty state for the requests section when the inbox is open."
+  },
+  "federationClipboardTicket": "Ticket on your clipboard",
+  "@federationClipboardTicket": {
+      "description": "Banner title when a federation ticket is found on the clipboard."
+  },
+  "federationTicketPreview": "{name} · shares {libraries}",
+  "@federationTicketPreview": {
+      "description": "One-line preview of a ticket: the server name and the libraries it grants.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          },
+          "libraries": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTicketPreviewNoLibraries": "{name}",
+  "@federationTicketPreviewNoLibraries": {
+      "description": "One-line preview of a ticket that lists no libraries.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationUnnamedServer": "Unnamed server",
+  "@federationUnnamedServer": {
+      "description": "Stand-in for a ticket or request without a server name."
+  },
+  "federationAddPeerAction": "Add peer",
+  "@federationAddPeerAction": {
+      "description": "Button: add the peer."
+  },
+  "federationPeerLive": "live",
+  "@federationPeerLive": {
+      "description": "Peer state: its tunnel is up."
+  },
+  "federationPeerConnecting": "connecting…",
+  "@federationPeerConnecting": {
+      "description": "Peer state: its tunnel is still dialing."
+  },
+  "federationPeerDirectTunnel": "direct tunnel",
+  "@federationPeerDirectTunnel": {
+      "description": "Peer transport: this phone dials the peer itself."
+  },
+  "federationPeerViaParent": "via {parent}",
+  "@federationPeerViaParent": {
+      "description": "Peer transport: reached through the parent server's proxy.",
+      "placeholders": {
+          "parent": {
+              "type": "String"
+          }
+      }
+  },
+  "federationPeerViaTunnel": "via {parent}'s tunnel",
+  "@federationPeerViaTunnel": {
+      "description": "Peer transport: reached through the parent's Quick Connect tunnel.",
+      "placeholders": {
+          "parent": {
+              "type": "String"
+          }
+      }
+  },
+  "federationPeerMissing": "no longer shared",
+  "@federationPeerMissing": {
+      "description": "Peer state: the parent stopped listing it."
+  },
+  "federationPeerHidden": "hidden from the picker",
+  "@federationPeerHidden": {
+      "description": "Peer state: the user hid it from the server picker."
+  },
+  "federationMemberNote": "Sharing is an admin job. Minting tickets, adding peers and answering pairing requests need an admin sign-in on {server} — the same one that opens the admin panel.",
+  "@federationMemberNote": {
+      "description": "Note for a non-admin user on the Federation screen.",
+      "placeholders": {
+          "server": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRestrictedNote": "This server only takes admin calls from its own network. Connect from home to manage sharing here.",
+  "@federationRestrictedNote": {
+      "description": "Note when the admin API is restricted to the local network."
+  },
+  "federationDisabledNote": "The admin API is switched off on this server.",
+  "@federationDisabledNote": {
+      "description": "Note when the admin API is disabled server-side."
+  },
+  "federationUnsupportedNote": "This server is too old to manage federation from the app. Update mStream.",
+  "@federationUnsupportedNote": {
+      "description": "Note when the server lacks the federation admin routes."
+  },
+  "federationLoadFailed": "Couldn't reach the server.",
+  "@federationLoadFailed": {
+      "description": "Error line when the federation screen cannot load."
+  },
+  "federationRetry": "Retry",
+  "@federationRetry": {
+      "description": "Button: retry loading."
+  },
+  "federationOffTitle": "Share libraries with friends' servers",
+  "@federationOffTitle": {
+      "description": "Headline of the Federation screen while the feature is off."
+  },
+  "federationOffBody": "Pair two mStream servers to read each other's music. Tickets are what you swap — text one, scan one, paste one.",
+  "@federationOffBody": {
+      "description": "Explainer under the headline while federation is off."
+  },
+  "federationOffPoint1Title": "Read-only, end-to-end encrypted",
+  "@federationOffPoint1Title": {
+      "description": "Selling point 1 title (federation off)."
+  },
+  "federationOffPoint1Body": "Playlists and ratings never leave your server",
+  "@federationOffPoint1Body": {
+      "description": "Selling point 1 body."
+  },
+  "federationOffPoint2Title": "No port forwarding or DNS",
+  "@federationOffPoint2Title": {
+      "description": "Selling point 2 title."
+  },
+  "federationOffPoint2Body": "iroh finds a path — direct when it can, relay when it must",
+  "@federationOffPoint2Body": {
+      "description": "Selling point 2 body."
+  },
+  "federationOffPoint3Title": "Tickets you can revoke",
+  "@federationOffPoint3Title": {
+      "description": "Selling point 3 title."
+  },
+  "federationOffPoint3Body": "Each one is claimed once and cut off any time",
+  "@federationOffPoint3Body": {
+      "description": "Selling point 3 body."
+  },
+  "federationOffAdminOnly": "Only the server admin can turn this on.",
+  "@federationOffAdminOnly": {
+      "description": "Note under the selling points for admins."
+  },
+  "federationOffMemberNote": "Federation is off on {server}. Its admin can turn it on.",
+  "@federationOffMemberNote": {
+      "description": "Note for a non-admin when federation is off.",
+      "placeholders": {
+          "server": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTurnOn": "Turn on federation",
+  "@federationTurnOn": {
+      "description": "Button: enable federation."
+  },
+  "federationUnavailableNote": "The iroh component has no build for this server's OS/CPU, so the federation endpoint can't run here.",
+  "@federationUnavailableNote": {
+      "description": "Note when the server platform cannot run federation."
+  },
+  "federationTurnedOn": "Federation is on",
+  "@federationTurnedOn": {
+      "description": "Toast after enabling federation."
+  },
+  "federationTurnedOff": "Federation is off",
+  "@federationTurnedOff": {
+      "description": "Toast after disabling federation."
+  },
+  "federationToggleFailed": "Couldn't update the federation setting.",
+  "@federationToggleFailed": {
+      "description": "Toast when the on/off switch fails."
+  },
+  "federationSettingsTitle": "Federation settings",
+  "@federationSettingsTitle": {
+      "description": "Title of the federation settings screen."
+  },
+  "federationSwitchSubtitle": "Peer-to-peer, end-to-end encrypted. No port forwarding, no DNS.",
+  "@federationSwitchSubtitle": {
+      "description": "Subtitle of the federation on/off switch."
+  },
+  "federationStatusSection": "Status",
+  "@federationStatusSection": {
+      "description": "Section header: endpoint status."
+  },
+  "federationConnectedRelay": "Connected to relay",
+  "@federationConnectedRelay": {
+      "description": "Status row: the endpoint reached its relay."
+  },
+  "federationNotRunning": "Endpoint not running",
+  "@federationNotRunning": {
+      "description": "Status row: federation is on but the endpoint is down."
+  },
+  "federationEndpointId": "Endpoint id",
+  "@federationEndpointId": {
+      "description": "Label of the server's iroh endpoint id."
+  },
+  "federationEndpointCopied": "Endpoint id copied",
+  "@federationEndpointCopied": {
+      "description": "Toast after copying the endpoint id."
+  },
+  "federationPairingRequestsSection": "Pairing requests",
+  "@federationPairingRequestsSection": {
+      "description": "Section header in settings: the requests inbox switch."
+  },
+  "federationRequestsInboxTitle": "Accept requests from the discovery network",
+  "@federationRequestsInboxTitle": {
+      "description": "Switch: let discovery peers send pairing requests."
+  },
+  "federationRequestsInboxSubtitle": "Off by default. When off, new requests are refused at the transport; answers to your own requests still arrive.",
+  "@federationRequestsInboxSubtitle": {
+      "description": "Subtitle of the requests inbox switch."
+  },
+  "federationInboxFailed": "Couldn't update the requests inbox.",
+  "@federationInboxFailed": {
+      "description": "Toast when the inbox switch fails."
+  },
+  "federationDefaultsSection": "Defaults for new tickets",
+  "@federationDefaultsSection": {
+      "description": "Section header: the limit defaults from the server config."
+  },
+  "federationDefaultsNote": "From the server config — every ticket can change them",
+  "@federationDefaultsNote": {
+      "description": "Subtitle under the limit defaults row."
+  },
+  "federationOffWarning": "Turning federation off drops every peer bridge and hides your tickets until it is back on. Peers keep their tickets.",
+  "@federationOffWarning": {
+      "description": "Warning note in settings."
+  },
+  "federationRequestWantsToPair": "{name} wants to pair",
+  "@federationRequestWantsToPair": {
+      "description": "Request row title (inbound).",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRequestToName": "Request to {name}",
+  "@federationRequestToName": {
+      "description": "Request row title (outbound).",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRequestOffers": "Offers {libraries}",
+  "@federationRequestOffers": {
+      "description": "Request row: what the other server offers.",
+      "placeholders": {
+          "libraries": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRequestOffersNothing": "Offers nothing",
+  "@federationRequestOffersNothing": {
+      "description": "Request row: the other server offers no library."
+  },
+  "federationRequestYouOffered": "You offered {libraries}",
+  "@federationRequestYouOffered": {
+      "description": "Outbound request row: what this server offered.",
+      "placeholders": {
+          "libraries": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRequestYouOfferedNothing": "You offered nothing",
+  "@federationRequestYouOfferedNothing": {
+      "description": "Outbound request row: nothing offered."
+  },
+  "federationReqSending": "sending…",
+  "@federationReqSending": {
+      "description": "Request state chip: the request is being delivered."
+  },
+  "federationReqWaiting": "waiting on them",
+  "@federationReqWaiting": {
+      "description": "Request state chip: delivered, no answer yet."
+  },
+  "federationReqSharingBack": "sharing back…",
+  "@federationReqSharingBack": {
+      "description": "Request state chip: granting our share after they accepted."
+  },
+  "federationReqNeedsAnswer": "needs your answer",
+  "@federationReqNeedsAnswer": {
+      "description": "Request state chip: an inbound request awaiting the admin."
+  },
+  "federationReqSendingTicket": "sending your ticket…",
+  "@federationReqSendingTicket": {
+      "description": "Request state chip: accepted, the ticket is being sent."
+  },
+  "federationReqWaitingShare": "waiting on their share",
+  "@federationReqWaitingShare": {
+      "description": "Request state chip: waiting for the other side's grant."
+  },
+  "federationReqDeclined": "declined",
+  "@federationReqDeclined": {
+      "description": "Request state chip: they declined."
+  },
+  "federationReqYouDeclined": "you declined",
+  "@federationReqYouDeclined": {
+      "description": "Request state chip: this admin declined."
+  },
+  "federationReqInboxClosed": "their inbox is closed",
+  "@federationReqInboxClosed": {
+      "description": "Request state chip: refused at the transport."
+  },
+  "federationReqFederated": "federated",
+  "@federationReqFederated": {
+      "description": "Request state chip: completed."
+  },
+  "federationReqWithdrawn": "withdrawn",
+  "@federationReqWithdrawn": {
+      "description": "Request state chip: cancelled."
+  },
+  "federationReqExpired": "expired",
+  "@federationReqExpired": {
+      "description": "Request state chip: expired."
+  },
+  "federationAccept": "Accept…",
+  "@federationAccept": {
+      "description": "Button: open the accept screen for a request."
+  },
+  "federationAcceptAndShare": "Accept & share",
+  "@federationAcceptAndShare": {
+      "description": "Button: accept the request and share back."
+  },
+  "federationDecline": "Decline",
+  "@federationDecline": {
+      "description": "Button: reject a request."
+  },
+  "federationCancelRequest": "Cancel request",
+  "@federationCancelRequest": {
+      "description": "Button: withdraw an outbound request."
+  },
+  "federationDismiss": "Dismiss",
+  "@federationDismiss": {
+      "description": "Button: remove a finished request from the list."
+  },
+  "federationRequestTitle": "Pairing request",
+  "@federationRequestTitle": {
+      "description": "Title of the pairing request screen."
+  },
+  "federationRequestReceived": "Received {ago} over the discovery network",
+  "@federationRequestReceived": {
+      "description": "Line under a request: when it arrived.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRequestSent": "Sent {ago} over the discovery network",
+  "@federationRequestSent": {
+      "description": "Line under an outbound request: when it was sent.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationShareBack": "Share back",
+  "@federationShareBack": {
+      "description": "Section header: libraries to share in return."
+  },
+  "federationShareBackNote": "Nothing changes hands until you accept. They get read-only access to the libraries you tick — at least one.",
+  "@federationShareBackNote": {
+      "description": "Note under the share-back list."
+  },
+  "federationTheirLimits": "Their limits",
+  "@federationTheirLimits": {
+      "description": "Section header: the limits the accepted peer will get."
+  },
+  "federationChange": "Change",
+  "@federationChange": {
+      "description": "Link: edit the limits."
+  },
+  "federationRequestIgnored": "Requests from this server are ignored for 7 days",
+  "@federationRequestIgnored": {
+      "description": "Note under a declined inbound request."
+  },
+  "federationRequestAccepted": "Request accepted",
+  "@federationRequestAccepted": {
+      "description": "Toast after accepting a request."
+  },
+  "federationRequestDeclined": "Request declined",
+  "@federationRequestDeclined": {
+      "description": "Toast after declining a request."
+  },
+  "federationRequestCancelled": "Request withdrawn",
+  "@federationRequestCancelled": {
+      "description": "Toast after cancelling an outbound request."
+  },
+  "federationRequestActionFailed": "Couldn't update the request.",
+  "@federationRequestActionFailed": {
+      "description": "Toast when a request action fails."
+  },
+  "federationTicketNameLabel": "Who is this for?",
+  "@federationTicketNameLabel": {
+      "description": "Field label: the name of the person the ticket is for."
+  },
+  "federationTicketNameHint": "Only you see this name — it labels the ticket in your list.",
+  "@federationTicketNameHint": {
+      "description": "Hint under the ticket name field."
+  },
+  "federationLibrariesTheyCanRead": "Libraries they can read",
+  "@federationLibrariesTheyCanRead": {
+      "description": "Section header: libraries to grant."
+  },
+  "federationLimitsSection": "Limits",
+  "@federationLimitsSection": {
+      "description": "Section header: bandwidth limits."
+  },
+  "federationExactNumbers": "Exact numbers",
+  "@federationExactNumbers": {
+      "description": "Link: switch the limits editor to numeric fields."
+  },
+  "federationPresets": "Presets",
+  "@federationPresets": {
+      "description": "Link: switch the limits editor back to preset chips."
+  },
+  "federationLimitStreamRate": "Stream rate",
+  "@federationLimitStreamRate": {
+      "description": "Limit label: bitrate cap."
+  },
+  "federationLimitPerDay": "Per day",
+  "@federationLimitPerDay": {
+      "description": "Limit label: daily quota."
+  },
+  "federationLimitStreams": "Streams at once",
+  "@federationLimitStreams": {
+      "description": "Limit label: concurrent streams."
+  },
+  "federationLimitExpires": "Expires",
+  "@federationLimitExpires": {
+      "description": "Limit label: ticket expiry."
+  },
+  "federationUnlimited": "Unlimited",
+  "@federationUnlimited": {
+      "description": "Chip: no limit."
+  },
+  "federationNever": "Never",
+  "@federationNever": {
+      "description": "Chip: the ticket never expires."
+  },
+  "federationDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@federationDays": {
+      "description": "Chip: expiry in N days.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "federationOneYear": "1 year",
+  "@federationOneYear": {
+      "description": "Chip: expiry in one year."
+  },
+  "federationKbps": "{n} kbps",
+  "@federationKbps": {
+      "description": "Bitrate in kilobits per second.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "federationMbps": "{n} Mbps",
+  "@federationMbps": {
+      "description": "Bitrate in megabits per second.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "federationMbPerDay": "{n} MB a day",
+  "@federationMbPerDay": {
+      "description": "Daily quota in megabytes.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "federationGbPerDay": "{n} GB a day",
+  "@federationGbPerDay": {
+      "description": "Daily quota in gigabytes.",
+      "placeholders": {
+          "n": {
+              "type": "int"
+          }
+      }
+  },
+  "federationStreamsCount": "{count, plural, =1{1 stream} other{{count} streams}}",
+  "@federationStreamsCount": {
+      "description": "Concurrent stream cap.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "federationNeverExpires": "never expires",
+  "@federationNeverExpires": {
+      "description": "Ticket has no expiry."
+  },
+  "federationExpiresIn": "expires {when}",
+  "@federationExpiresIn": {
+      "description": "Ticket expiry, relative or dated.",
+      "placeholders": {
+          "when": {
+              "type": "String"
+          }
+      }
+  },
+  "federationExpired": "expired",
+  "@federationExpired": {
+      "description": "Ticket past its expiry."
+  },
+  "federationInDays": "{count, plural, =1{in 1 day} other{in {count} days}}",
+  "@federationInDays": {
+      "description": "Relative future time in days.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "federationInHours": "{count, plural, =1{in 1 hour} other{in {count} hours}}",
+  "@federationInHours": {
+      "description": "Relative future time in hours.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "federationStreamRateField": "Stream rate (kbps, 0 = unlimited)",
+  "@federationStreamRateField": {
+      "description": "Numeric field label."
+  },
+  "federationPerDayField": "Daily quota (MB, 0 = unlimited)",
+  "@federationPerDayField": {
+      "description": "Numeric field label."
+  },
+  "federationStreamsField": "Max streams (0 = unlimited)",
+  "@federationStreamsField": {
+      "description": "Numeric field label."
+  },
+  "federationExpiresField": "Expires in days (0 = never)",
+  "@federationExpiresField": {
+      "description": "Numeric field label."
+  },
+  "federationCreateTicket": "Create ticket",
+  "@federationCreateTicket": {
+      "description": "Button: mint the ticket."
+  },
+  "federationMintFailed": "Couldn't create the ticket.",
+  "@federationMintFailed": {
+      "description": "Toast when minting fails."
+  },
+  "federationNoLibraries": "This server has no libraries to share.",
+  "@federationNoLibraries": {
+      "description": "Empty state of the library list in the mint form."
+  },
+  "federationTicketTitle": "Your ticket",
+  "@federationTicketTitle": {
+      "description": "Title of the ticket screen."
+  },
+  "federationTicketFor": "Ticket for {name}",
+  "@federationTicketFor": {
+      "description": "Ticket card title.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTicketReads": "Reads {libraries}",
+  "@federationTicketReads": {
+      "description": "Ticket card: the libraries it grants.",
+      "placeholders": {
+          "libraries": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTicketQrHint": "Same room? Let them scan this.",
+  "@federationTicketQrHint": {
+      "description": "Caption under the QR code."
+  },
+  "federationTicketWarning": "Anyone holding this ticket can read those libraries until it is claimed or revoked. Send it over a private channel — the first server to use it claims it.",
+  "@federationTicketWarning": {
+      "description": "Credential warning on the ticket screen."
+  },
+  "federationCopyTicket": "Copy ticket",
+  "@federationCopyTicket": {
+      "description": "Button: copy the ticket text."
+  },
+  "federationTicketCopied": "Ticket copied",
+  "@federationTicketCopied": {
+      "description": "Toast after copying the ticket."
+  },
+  "federationSendByText": "Send by text…",
+  "@federationSendByText": {
+      "description": "Primary button: open the share sheet with the ticket."
+  },
+  "federationTicketRevokeNote": "Revoke it any time from Federation. If they reinstall, Reset claim lets the ticket be claimed again.",
+  "@federationTicketRevokeNote": {
+      "description": "Note at the bottom of the ticket screen."
+  },
+  "federationTicketNotRunning": "The federation endpoint isn't running, so there is no ticket to send yet. Turn federation on and come back.",
+  "@federationTicketNotRunning": {
+      "description": "Note when a key has no ticket because the endpoint is down."
+  },
+  "federationShareMessage": "I'm sharing my mStream music library with you — {libraries}, read-only. In the mStream app open Federation → Add a peer and paste this ticket:\n\n{ticket}\n\nIt works once — I can revoke it any time.",
+  "@federationShareMessage": {
+      "description": "The text message composed around a ticket for the share sheet.",
+      "placeholders": {
+          "libraries": {
+              "type": "String"
+          },
+          "ticket": {
+              "type": "String"
+          }
+      }
+  },
+  "federationShareSubject": "mStream federation ticket",
+  "@federationShareSubject": {
+      "description": "Subject line for the share sheet."
+  },
+  "federationKeyClaimed": "claimed",
+  "@federationKeyClaimed": {
+      "description": "Key state: the ticket was redeemed."
+  },
+  "federationKeyNotClaimed": "not claimed yet",
+  "@federationKeyNotClaimed": {
+      "description": "Key state: the ticket has not been redeemed."
+  },
+  "federationKeyTodayUsage": "{amount} today",
+  "@federationKeyTodayUsage": {
+      "description": "Bytes served to a key today.",
+      "placeholders": {
+          "amount": {
+              "type": "String"
+          }
+      }
+  },
+  "federationKeyLastUsed": "Last used {ago}",
+  "@federationKeyLastUsed": {
+      "description": "Key row: last use.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationKeyNeverUsed": "Never used",
+  "@federationKeyNeverUsed": {
+      "description": "Key row: never used."
+  },
+  "federationKeyClaimedAgo": "Claimed {ago}",
+  "@federationKeyClaimedAgo": {
+      "description": "Key row: when the ticket was redeemed.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationResetBinding": "Reset claim",
+  "@federationResetBinding": {
+      "description": "Button: let the ticket be claimed again."
+  },
+  "federationResetBindingNote": "Friend reinstalled? Let the ticket be claimed again.",
+  "@federationResetBindingNote": {
+      "description": "Subtitle of the reset-claim row."
+  },
+  "federationBindingReset": "The ticket can be claimed again",
+  "@federationBindingReset": {
+      "description": "Toast after resetting a key's binding."
+  },
+  "federationRevoke": "Revoke",
+  "@federationRevoke": {
+      "description": "Button: revoke a ticket."
+  },
+  "federationRevokeConfirm": "Revoke this ticket? {name} loses access right away.",
+  "@federationRevokeConfirm": {
+      "description": "Confirm dialog before revoking.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationRevoked": "Ticket revoked",
+  "@federationRevoked": {
+      "description": "Toast after revoking."
+  },
+  "federationSaveLimits": "Save limits",
+  "@federationSaveLimits": {
+      "description": "Button: save edited limits."
+  },
+  "federationLimitsSaved": "Limits saved",
+  "@federationLimitsSaved": {
+      "description": "Toast after saving limits."
+  },
+  "federationLimitsFailed": "Couldn't save the limits.",
+  "@federationLimitsFailed": {
+      "description": "Toast when saving limits fails."
+  },
+  "federationSend": "Send",
+  "@federationSend": {
+      "description": "Short button: send the ticket."
+  },
+  "federationKeyTitle": "Shared library",
+  "@federationKeyTitle": {
+      "description": "Title of the key detail screen."
+  },
+  "federationActionFailed": "That didn't work: {error}",
+  "@federationActionFailed": {
+      "description": "Generic failure toast with the server's message.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTheirTicket": "Their ticket",
+  "@federationTheirTicket": {
+      "description": "Field label: the pasted ticket."
+  },
+  "federationScanQr": "Scan a QR code",
+  "@federationScanQr": {
+      "description": "Button: open the scanner."
+  },
+  "federationScannerTitle": "Scan a federation ticket",
+  "@federationScannerTitle": {
+      "description": "Title of the QR scanner for tickets."
+  },
+  "federationPaste": "Paste",
+  "@federationPaste": {
+      "description": "Button: paste from the clipboard."
+  },
+  "federationTicketPasted": "Pasted from your clipboard.",
+  "@federationTicketPasted": {
+      "description": "Hint after pasting a ticket."
+  },
+  "federationNotATicket": "That doesn't look like a federation ticket.",
+  "@federationNotATicket": {
+      "description": "Error under the ticket field."
+  },
+  "federationTicketTooNew": "This ticket comes from a newer mStream than this app understands.",
+  "@federationTicketTooNew": {
+      "description": "Error for a ticket with a newer version."
+  },
+  "federationTicketExpiredNote": "This ticket has expired.",
+  "@federationTicketExpiredNote": {
+      "description": "Error for an expired ticket."
+  },
+  "federationDisplayName": "Display name",
+  "@federationDisplayName": {
+      "description": "Field label: optional peer name."
+  },
+  "federationDisplayNameHint": "Optional — how it shows in your server picker.",
+  "@federationDisplayNameHint": {
+      "description": "Hint under the display name field."
+  },
+  "federationSharesLibraries": "Shares {libraries}",
+  "@federationSharesLibraries": {
+      "description": "Preview: libraries the ticket grants.",
+      "placeholders": {
+          "libraries": {
+              "type": "String"
+          }
+      }
+  },
+  "federationSharesUnknown": "Libraries not listed on the ticket",
+  "@federationSharesUnknown": {
+      "description": "Preview: the ticket names no libraries."
+  },
+  "federationValidUntil": "valid until {date}",
+  "@federationValidUntil": {
+      "description": "Preview: ticket expiry.",
+      "placeholders": {
+          "date": {
+              "type": "String"
+          }
+      }
+  },
+  "federationAddPeerShowsUnder": "Shows up under {server}",
+  "@federationAddPeerShowsUnder": {
+      "description": "Explainer row title on the add-peer screen.",
+      "placeholders": {
+          "server": {
+              "type": "String"
+          }
+      }
+  },
+  "federationAddPeerReadOnly": "Read-only · {branch} {name} in the picker",
+  "@federationAddPeerReadOnly": {
+      "description": "Explainer row body: how the peer will appear.",
+      "placeholders": {
+          "branch": {
+              "type": "String"
+          },
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationAddPeerDials": "Your server dials it over iroh",
+  "@federationAddPeerDials": {
+      "description": "Explainer row title."
+  },
+  "federationAddPeerEncrypted": "End-to-end encrypted · no port forwarding",
+  "@federationAddPeerEncrypted": {
+      "description": "Explainer row body."
+  },
+  "federationAddPeerNoTicket": "No ticket yet? Ask them to text you one.",
+  "@federationAddPeerNoTicket": {
+      "description": "Note at the bottom of the add-peer screen."
+  },
+  "federationPeerAdded": "{name} added",
+  "@federationPeerAdded": {
+      "description": "Toast after adding a peer.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationAddPeerFailed": "Couldn't add the peer.",
+  "@federationAddPeerFailed": {
+      "description": "Toast when adding fails."
+  },
+  "federationPeerAlreadyAdded": "This ticket is already added as a peer.",
+  "@federationPeerAlreadyAdded": {
+      "description": "Error when the ticket was already used here."
+  },
+  "federationLibrariesYouCanRead": "Libraries you can read",
+  "@federationLibrariesYouCanRead": {
+      "description": "Section header on the peer screen."
+  },
+  "federationDiscoverySection": "Discovery",
+  "@federationDiscoverySection": {
+      "description": "Section header on the peer screen."
+  },
+  "federationAskPeerSimilar": "Ask this peer for similar music",
+  "@federationAskPeerSimilar": {
+      "description": "Switch: send discovery queries to this peer."
+  },
+  "federationAskPeerSimilarNote": "Sends what you're listening to — to this peer only.",
+  "@federationAskPeerSimilarNote": {
+      "description": "Subtitle of the discovery switch."
+  },
+  "federationAutoDjSection": "Auto DJ",
+  "@federationAutoDjSection": {
+      "description": "Section header on the peer screen."
+  },
+  "federationAutoDjParticipates": "Takes part in multi-server Auto DJ",
+  "@federationAutoDjParticipates": {
+      "description": "Row: the peer is a fan-out candidate."
+  },
+  "federationAutoDjParticipatesNote": "Answers with its own library when the DJ is on",
+  "@federationAutoDjParticipatesNote": {
+      "description": "Row subtitle."
+  },
+  "federationAutoDjNotCandidate": "Not an Auto DJ candidate",
+  "@federationAutoDjNotCandidate": {
+      "description": "Row: the peer cannot join the DJ fan-out."
+  },
+  "federationAutoDjNotCandidateNote": "Needs a server that can answer sonic picks",
+  "@federationAutoDjNotCandidateNote": {
+      "description": "Row subtitle."
+  },
+  "federationTest": "Test",
+  "@federationTest": {
+      "description": "Button: test the connection to a peer."
+  },
+  "federationTesting": "Testing…",
+  "@federationTesting": {
+      "description": "Button while a test runs."
+  },
+  "federationTestOk": "Reachable",
+  "@federationTestOk": {
+      "description": "Result: the peer answered."
+  },
+  "federationTestFailed": "Couldn't reach it: {error}",
+  "@federationTestFailed": {
+      "description": "Result: the peer did not answer.",
+      "placeholders": {
+          "error": {
+              "type": "String"
+          }
+      }
+  },
+  "federationCheckedAgo": "Checked {ago}",
+  "@federationCheckedAgo": {
+      "description": "Peer status: when the server last tested it.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationNeverTested": "Never tested",
+  "@federationNeverTested": {
+      "description": "Peer status: no test yet."
+  },
+  "federationLastSeen": "Last seen {ago}",
+  "@federationLastSeen": {
+      "description": "Peer status: last successful contact.",
+      "placeholders": {
+          "ago": {
+              "type": "String"
+          }
+      }
+  },
+  "federationBrowseLibrary": "Browse this library",
+  "@federationBrowseLibrary": {
+      "description": "Primary button on the peer screen."
+  },
+  "federationRemovePeer": "Remove peer",
+  "@federationRemovePeer": {
+      "description": "Button: remove a peer from the server."
+  },
+  "federationRemovePeerConfirm": "Remove {name}? Tracks queued from it stop playing.",
+  "@federationRemovePeerConfirm": {
+      "description": "Confirm dialog before removing a peer.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationPeerRemoved": "{name} removed",
+  "@federationPeerRemoved": {
+      "description": "Toast after removing a peer.",
+      "placeholders": {
+          "name": {
+              "type": "String"
+          }
+      }
+  },
+  "federationShowInPicker": "Show in server picker",
+  "@federationShowInPicker": {
+      "description": "Switch: unhide the peer."
+  },
+  "federationShowInPickerNote": "Hidden peers keep playing what you queued from them.",
+  "@federationShowInPickerNote": {
+      "description": "Subtitle of the show-in-picker switch."
+  },
+  "federationPeerReadOnlyNote": "Read-only — playlists and ratings stay on your own server.",
+  "@federationPeerReadOnlyNote": {
+      "description": "Note under the libraries list on the peer screen."
+  },
+  "federationPeerLibrariesUnknown": "Not listed yet — open it once to load its libraries.",
+  "@federationPeerLibrariesUnknown": {
+      "description": "Empty state of the peer's library list."
+  },
+  "federationTransportDirect": "Direct tunnel from this phone",
+  "@federationTransportDirect": {
+      "description": "Peer transport line."
+  },
+  "federationTransportRelay": "Relay standing by",
+  "@federationTransportRelay": {
+      "description": "Peer transport secondary line."
+  },
+  "federationTransportViaParent": "Through {parent}",
+  "@federationTransportViaParent": {
+      "description": "Peer transport line: proxied by the parent.",
+      "placeholders": {
+          "parent": {
+              "type": "String"
+          }
+      }
+  },
+  "federationTransportViaParentTunnel": "Through {parent} over its tunnel",
+  "@federationTransportViaParentTunnel": {
+      "description": "Peer transport line: proxied over the parent's tunnel.",
+      "placeholders": {
+          "parent": {
+              "type": "String"
+          }
+      }
+  },
+  "federationDiscoveryFailed": "Couldn't update the discovery setting.",
+  "@federationDiscoveryFailed": {
+      "description": "Toast when the discovery switch fails."
+  },
+  "agoJustNow": "just now",
+  "@agoJustNow": {
+      "description": "Relative time: under two minutes."
+  },
+  "agoMinutes": "{count, plural, =1{1 min ago} other{{count} min ago}}",
+  "@agoMinutes": {
+      "description": "Relative time in minutes.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "agoHours": "{count, plural, =1{1 h ago} other{{count} h ago}}",
+  "@agoHours": {
+      "description": "Relative time in hours.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "agoDays": "{count, plural, =1{1 day ago} other{{count} days ago}}",
+  "@agoDays": {
+      "description": "Relative time in days.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
   }
 }

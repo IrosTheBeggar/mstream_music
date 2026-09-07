@@ -7,7 +7,9 @@ import '../l10n/app_localizations.dart';
 /// string (mobile_scanner: CameraX/ML Kit on Android). Shared by the add-server
 /// iroh tab and the re-pair sheet.
 class IrohScannerPage extends StatefulWidget {
-  const IrohScannerPage({super.key});
+  /// App-bar title; the pairing-code title when absent.
+  final String? title;
+  const IrohScannerPage({super.key, this.title});
 
   @override
   State<IrohScannerPage> createState() => _IrohScannerPageState();
@@ -37,7 +39,7 @@ class _IrohScannerPageState extends State<IrohScannerPage> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l.irohScannerTitle)),
+      appBar: AppBar(title: Text(widget.title ?? l.irohScannerTitle)),
       body: MobileScanner(controller: _controller, onDetect: _onDetect),
     );
   }

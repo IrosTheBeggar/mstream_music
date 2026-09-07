@@ -1071,9 +1071,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get federationSheetTitle => 'Bibliotecas compartidas';
-
-  @override
   String get browserSearch => 'Buscar';
 
   @override
@@ -2390,5 +2387,811 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String federatedNoLongerListed(String parent) {
     return 'No longer shared by $parent';
+  }
+
+  @override
+  String get federationTitle => 'Federación';
+
+  @override
+  String get federationStatusOn => 'Activa · conectada al relay';
+
+  @override
+  String get federationStatusConnecting => 'Activa · conectando…';
+
+  @override
+  String get federationStatusOff => 'Desactivada';
+
+  @override
+  String get federationStatusUnavailable => 'No disponible en esta plataforma';
+
+  @override
+  String get federationSharedWithYou => 'Compartido contigo';
+
+  @override
+  String get federationRequestsSection => 'Solicitudes';
+
+  @override
+  String get federationYourSharedLibraries => 'Tus bibliotecas compartidas';
+
+  @override
+  String get federationAddPeer => 'Añadir un par';
+
+  @override
+  String get federationShareLibrary => 'Compartir una biblioteca';
+
+  @override
+  String get federationNoPeersYet =>
+      'Todavía no se comparte nada con este servidor.';
+
+  @override
+  String get federationNoKeysYet =>
+      'Aún no hay tickets — comparte una biblioteca para crear uno.';
+
+  @override
+  String get federationNoRequests =>
+      'Aún no hay solicitudes — los servidores de la red de descubrimiento pueden encontrarte aquí.';
+
+  @override
+  String get federationClipboardTicket => 'Ticket en el portapapeles';
+
+  @override
+  String federationTicketPreview(String name, String libraries) {
+    return '$name · comparte $libraries';
+  }
+
+  @override
+  String federationTicketPreviewNoLibraries(String name) {
+    return '$name';
+  }
+
+  @override
+  String get federationUnnamedServer => 'Servidor sin nombre';
+
+  @override
+  String get federationAddPeerAction => 'Añadir par';
+
+  @override
+  String get federationPeerLive => 'en línea';
+
+  @override
+  String get federationPeerConnecting => 'conectando…';
+
+  @override
+  String get federationPeerDirectTunnel => 'túnel directo';
+
+  @override
+  String federationPeerViaParent(String parent) {
+    return 'vía $parent';
+  }
+
+  @override
+  String federationPeerViaTunnel(String parent) {
+    return 'vía el túnel de $parent';
+  }
+
+  @override
+  String get federationPeerMissing => 'ya no se comparte';
+
+  @override
+  String get federationPeerHidden => 'oculto en el selector';
+
+  @override
+  String federationMemberNote(String server) {
+    return 'Compartir es tarea del administrador. Crear tickets, añadir pares y responder solicitudes de emparejamiento requieren iniciar sesión como administrador en $server — la misma sesión que abre el panel de administración.';
+  }
+
+  @override
+  String get federationRestrictedNote =>
+      'Este servidor solo acepta llamadas de administración desde su propia red. Conéctate desde casa para gestionar el uso compartido aquí.';
+
+  @override
+  String get federationDisabledNote =>
+      'La API de administración está desactivada en este servidor.';
+
+  @override
+  String get federationUnsupportedNote =>
+      'Este servidor es demasiado antiguo para gestionar la federación desde la app. Actualiza mStream.';
+
+  @override
+  String get federationLoadFailed => 'No se pudo contactar con el servidor.';
+
+  @override
+  String get federationRetry => 'Reintentar';
+
+  @override
+  String get federationOffTitle =>
+      'Comparte bibliotecas con los servidores de tus amigos';
+
+  @override
+  String get federationOffBody =>
+      'Empareja dos servidores mStream para escuchar la música del otro. Lo que se intercambia son tickets — envía uno por mensaje, escanéalo o pégalo.';
+
+  @override
+  String get federationOffPoint1Title =>
+      'Solo lectura, cifrado de extremo a extremo';
+
+  @override
+  String get federationOffPoint1Body =>
+      'Las listas y valoraciones nunca salen de tu servidor';
+
+  @override
+  String get federationOffPoint2Title => 'Sin abrir puertos ni DNS';
+
+  @override
+  String get federationOffPoint2Body =>
+      'iroh encuentra el camino — directo cuando puede, por relay cuando debe';
+
+  @override
+  String get federationOffPoint3Title => 'Tickets que puedes revocar';
+
+  @override
+  String get federationOffPoint3Body =>
+      'Cada uno se canjea una vez y se corta en cualquier momento';
+
+  @override
+  String get federationOffAdminOnly =>
+      'Solo el administrador del servidor puede activarlo.';
+
+  @override
+  String federationOffMemberNote(String server) {
+    return 'La federación está desactivada en $server. Su administrador puede activarla.';
+  }
+
+  @override
+  String get federationTurnOn => 'Activar la federación';
+
+  @override
+  String get federationUnavailableNote =>
+      'El componente iroh no tiene compilación para el sistema/CPU de este servidor, así que el punto de federación no puede ejecutarse aquí.';
+
+  @override
+  String get federationTurnedOn => 'La federación está activa';
+
+  @override
+  String get federationTurnedOff => 'La federación está desactivada';
+
+  @override
+  String get federationToggleFailed =>
+      'No se pudo cambiar el ajuste de federación.';
+
+  @override
+  String get federationSettingsTitle => 'Ajustes de federación';
+
+  @override
+  String get federationSwitchSubtitle =>
+      'Entre pares, cifrado de extremo a extremo. Sin abrir puertos, sin DNS.';
+
+  @override
+  String get federationStatusSection => 'Estado';
+
+  @override
+  String get federationConnectedRelay => 'Conectado al relay';
+
+  @override
+  String get federationNotRunning => 'El punto de federación no está en marcha';
+
+  @override
+  String get federationEndpointId => 'ID del punto';
+
+  @override
+  String get federationEndpointCopied => 'ID del punto copiado';
+
+  @override
+  String get federationPairingRequestsSection =>
+      'Solicitudes de emparejamiento';
+
+  @override
+  String get federationRequestsInboxTitle =>
+      'Aceptar solicitudes de la red de descubrimiento';
+
+  @override
+  String get federationRequestsInboxSubtitle =>
+      'Desactivado por defecto. Si está desactivado, las nuevas solicitudes se rechazan en el transporte; las respuestas a tus propias solicitudes siguen llegando.';
+
+  @override
+  String get federationInboxFailed =>
+      'No se pudo cambiar la bandeja de solicitudes.';
+
+  @override
+  String get federationDefaultsSection =>
+      'Valores por defecto de los nuevos tickets';
+
+  @override
+  String get federationDefaultsNote =>
+      'De la configuración del servidor — cada ticket puede cambiarlos';
+
+  @override
+  String get federationOffWarning =>
+      'Desactivar la federación corta todos los puentes con pares y oculta tus tickets hasta que vuelva a activarse. Los pares conservan sus tickets.';
+
+  @override
+  String federationRequestWantsToPair(String name) {
+    return '$name quiere emparejarse';
+  }
+
+  @override
+  String federationRequestToName(String name) {
+    return 'Solicitud a $name';
+  }
+
+  @override
+  String federationRequestOffers(String libraries) {
+    return 'Ofrece $libraries';
+  }
+
+  @override
+  String get federationRequestOffersNothing => 'No ofrece nada';
+
+  @override
+  String federationRequestYouOffered(String libraries) {
+    return 'Ofreciste $libraries';
+  }
+
+  @override
+  String get federationRequestYouOfferedNothing => 'No ofreciste nada';
+
+  @override
+  String get federationReqSending => 'enviando…';
+
+  @override
+  String get federationReqWaiting => 'esperando su respuesta';
+
+  @override
+  String get federationReqSharingBack => 'compartiendo a cambio…';
+
+  @override
+  String get federationReqNeedsAnswer => 'necesita tu respuesta';
+
+  @override
+  String get federationReqSendingTicket => 'enviando tu ticket…';
+
+  @override
+  String get federationReqWaitingShare => 'esperando su parte';
+
+  @override
+  String get federationReqDeclined => 'rechazada';
+
+  @override
+  String get federationReqYouDeclined => 'la rechazaste';
+
+  @override
+  String get federationReqInboxClosed => 'su bandeja está cerrada';
+
+  @override
+  String get federationReqFederated => 'federado';
+
+  @override
+  String get federationReqWithdrawn => 'retirada';
+
+  @override
+  String get federationReqExpired => 'caducada';
+
+  @override
+  String get federationAccept => 'Aceptar…';
+
+  @override
+  String get federationAcceptAndShare => 'Aceptar y compartir';
+
+  @override
+  String get federationDecline => 'Rechazar';
+
+  @override
+  String get federationCancelRequest => 'Cancelar solicitud';
+
+  @override
+  String get federationDismiss => 'Descartar';
+
+  @override
+  String get federationRequestTitle => 'Solicitud de emparejamiento';
+
+  @override
+  String federationRequestReceived(String ago) {
+    return 'Recibida $ago por la red de descubrimiento';
+  }
+
+  @override
+  String federationRequestSent(String ago) {
+    return 'Enviada $ago por la red de descubrimiento';
+  }
+
+  @override
+  String get federationShareBack => 'Compartir a cambio';
+
+  @override
+  String get federationShareBackNote =>
+      'Nada cambia hasta que aceptes. Tendrán acceso de solo lectura a las bibliotecas que marques — al menos una.';
+
+  @override
+  String get federationTheirLimits => 'Sus límites';
+
+  @override
+  String get federationChange => 'Cambiar';
+
+  @override
+  String get federationRequestIgnored =>
+      'Las solicitudes de este servidor se ignorarán durante 7 días';
+
+  @override
+  String get federationRequestAccepted => 'Solicitud aceptada';
+
+  @override
+  String get federationRequestDeclined => 'Solicitud rechazada';
+
+  @override
+  String get federationRequestCancelled => 'Solicitud retirada';
+
+  @override
+  String get federationRequestActionFailed =>
+      'No se pudo actualizar la solicitud.';
+
+  @override
+  String get federationTicketNameLabel => '¿Para quién es?';
+
+  @override
+  String get federationTicketNameHint =>
+      'Solo tú ves este nombre — etiqueta el ticket en tu lista.';
+
+  @override
+  String get federationLibrariesTheyCanRead => 'Bibliotecas que podrán leer';
+
+  @override
+  String get federationLimitsSection => 'Límites';
+
+  @override
+  String get federationExactNumbers => 'Valores exactos';
+
+  @override
+  String get federationPresets => 'Preajustes';
+
+  @override
+  String get federationLimitStreamRate => 'Velocidad de streaming';
+
+  @override
+  String get federationLimitPerDay => 'Por día';
+
+  @override
+  String get federationLimitStreams => 'Streams simultáneos';
+
+  @override
+  String get federationLimitExpires => 'Caduca';
+
+  @override
+  String get federationUnlimited => 'Sin límite';
+
+  @override
+  String get federationNever => 'Nunca';
+
+  @override
+  String federationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationOneYear => '1 año';
+
+  @override
+  String federationKbps(int n) {
+    return '$n kbps';
+  }
+
+  @override
+  String federationMbps(int n) {
+    return '$n Mbps';
+  }
+
+  @override
+  String federationMbPerDay(int n) {
+    return '$n MB al día';
+  }
+
+  @override
+  String federationGbPerDay(int n) {
+    return '$n GB al día';
+  }
+
+  @override
+  String federationStreamsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count streams',
+      one: '1 stream',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationNeverExpires => 'no caduca';
+
+  @override
+  String federationExpiresIn(String when) {
+    return 'caduca $when';
+  }
+
+  @override
+  String get federationExpired => 'caducado';
+
+  @override
+  String federationInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'en $count días',
+      one: 'en 1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'en $count horas',
+      one: 'en 1 hora',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationStreamRateField => 'Velocidad (kbps, 0 = sin límite)';
+
+  @override
+  String get federationPerDayField => 'Cuota diaria (MB, 0 = sin límite)';
+
+  @override
+  String get federationStreamsField => 'Streams máx. (0 = sin límite)';
+
+  @override
+  String get federationExpiresField => 'Caduca en días (0 = nunca)';
+
+  @override
+  String get federationCreateTicket => 'Crear ticket';
+
+  @override
+  String get federationMintFailed => 'No se pudo crear el ticket.';
+
+  @override
+  String get federationNoLibraries =>
+      'Este servidor no tiene bibliotecas que compartir.';
+
+  @override
+  String get federationTicketTitle => 'Tu ticket';
+
+  @override
+  String federationTicketFor(String name) {
+    return 'Ticket para $name';
+  }
+
+  @override
+  String federationTicketReads(String libraries) {
+    return 'Lee $libraries';
+  }
+
+  @override
+  String get federationTicketQrHint =>
+      '¿En la misma habitación? Deja que lo escaneen.';
+
+  @override
+  String get federationTicketWarning =>
+      'Cualquiera que tenga este ticket puede leer esas bibliotecas hasta que se canjee o se revoque. Envíalo por un canal privado — el primer servidor que lo use se lo queda.';
+
+  @override
+  String get federationCopyTicket => 'Copiar ticket';
+
+  @override
+  String get federationTicketCopied => 'Ticket copiado';
+
+  @override
+  String get federationSendByText => 'Enviar por mensaje…';
+
+  @override
+  String get federationTicketRevokeNote =>
+      'Revócalo en cualquier momento desde Federación. Si reinstalan, «Restablecer canje» permite canjear el ticket de nuevo.';
+
+  @override
+  String get federationTicketNotRunning =>
+      'El punto de federación no está en marcha, así que todavía no hay ticket que enviar. Activa la federación y vuelve.';
+
+  @override
+  String federationShareMessage(String libraries, String ticket) {
+    return 'Comparto contigo mi biblioteca de música de mStream — $libraries, solo lectura. En la app de mStream abre Federación → Añadir un par y pega este ticket:\n\n$ticket\n\nFunciona una sola vez — puedo revocarlo cuando quiera.';
+  }
+
+  @override
+  String get federationShareSubject => 'Ticket de federación de mStream';
+
+  @override
+  String get federationKeyClaimed => 'canjeado';
+
+  @override
+  String get federationKeyNotClaimed => 'aún sin canjear';
+
+  @override
+  String federationKeyTodayUsage(String amount) {
+    return '$amount hoy';
+  }
+
+  @override
+  String federationKeyLastUsed(String ago) {
+    return 'Último uso $ago';
+  }
+
+  @override
+  String get federationKeyNeverUsed => 'Nunca usado';
+
+  @override
+  String federationKeyClaimedAgo(String ago) {
+    return 'Canjeado $ago';
+  }
+
+  @override
+  String get federationResetBinding => 'Restablecer canje';
+
+  @override
+  String get federationResetBindingNote =>
+      '¿Reinstalaron? Permite canjear el ticket de nuevo.';
+
+  @override
+  String get federationBindingReset => 'El ticket puede canjearse de nuevo';
+
+  @override
+  String get federationRevoke => 'Revocar';
+
+  @override
+  String federationRevokeConfirm(String name) {
+    return '¿Revocar este ticket? $name pierde el acceso de inmediato.';
+  }
+
+  @override
+  String get federationRevoked => 'Ticket revocado';
+
+  @override
+  String get federationSaveLimits => 'Guardar límites';
+
+  @override
+  String get federationLimitsSaved => 'Límites guardados';
+
+  @override
+  String get federationLimitsFailed => 'No se pudieron guardar los límites.';
+
+  @override
+  String get federationSend => 'Enviar';
+
+  @override
+  String get federationKeyTitle => 'Biblioteca compartida';
+
+  @override
+  String federationActionFailed(String error) {
+    return 'No ha funcionado: $error';
+  }
+
+  @override
+  String get federationTheirTicket => 'Su ticket';
+
+  @override
+  String get federationScanQr => 'Escanear un código QR';
+
+  @override
+  String get federationScannerTitle => 'Escanear un ticket de federación';
+
+  @override
+  String get federationPaste => 'Pegar';
+
+  @override
+  String get federationTicketPasted => 'Pegado desde el portapapeles.';
+
+  @override
+  String get federationNotATicket => 'Eso no parece un ticket de federación.';
+
+  @override
+  String get federationTicketTooNew =>
+      'Este ticket viene de un mStream más nuevo de lo que esta app entiende.';
+
+  @override
+  String get federationTicketExpiredNote => 'Este ticket ha caducado.';
+
+  @override
+  String get federationDisplayName => 'Nombre para mostrar';
+
+  @override
+  String get federationDisplayNameHint =>
+      'Opcional — cómo aparece en tu selector de servidores.';
+
+  @override
+  String federationSharesLibraries(String libraries) {
+    return 'Comparte $libraries';
+  }
+
+  @override
+  String get federationSharesUnknown => 'El ticket no indica las bibliotecas';
+
+  @override
+  String federationValidUntil(String date) {
+    return 'válido hasta $date';
+  }
+
+  @override
+  String federationAddPeerShowsUnder(String server) {
+    return 'Aparece bajo $server';
+  }
+
+  @override
+  String federationAddPeerReadOnly(String branch, String name) {
+    return 'Solo lectura · $branch $name en el selector';
+  }
+
+  @override
+  String get federationAddPeerDials => 'Tu servidor se conecta a él por iroh';
+
+  @override
+  String get federationAddPeerEncrypted =>
+      'Cifrado de extremo a extremo · sin abrir puertos';
+
+  @override
+  String get federationAddPeerNoTicket =>
+      '¿Aún sin ticket? Pide que te envíen uno por mensaje.';
+
+  @override
+  String federationPeerAdded(String name) {
+    return '$name añadido';
+  }
+
+  @override
+  String get federationAddPeerFailed => 'No se pudo añadir el par.';
+
+  @override
+  String get federationPeerAlreadyAdded =>
+      'Este ticket ya está añadido como par.';
+
+  @override
+  String get federationLibrariesYouCanRead => 'Bibliotecas que puedes leer';
+
+  @override
+  String get federationDiscoverySection => 'Descubrimiento';
+
+  @override
+  String get federationAskPeerSimilar => 'Pedir música parecida a este par';
+
+  @override
+  String get federationAskPeerSimilarNote =>
+      'Envía lo que estás escuchando — solo a este par.';
+
+  @override
+  String get federationAutoDjSection => 'Auto DJ';
+
+  @override
+  String get federationAutoDjParticipates =>
+      'Participa en el Auto DJ multiservidor';
+
+  @override
+  String get federationAutoDjParticipatesNote =>
+      'Responde con su propia biblioteca cuando el DJ está activo';
+
+  @override
+  String get federationAutoDjNotCandidate => 'No es candidato para Auto DJ';
+
+  @override
+  String get federationAutoDjNotCandidateNote =>
+      'Necesita un servidor que pueda responder a las selecciones sónicas';
+
+  @override
+  String get federationTest => 'Probar';
+
+  @override
+  String get federationTesting => 'Probando…';
+
+  @override
+  String get federationTestOk => 'Accesible';
+
+  @override
+  String federationTestFailed(String error) {
+    return 'No se pudo contactar: $error';
+  }
+
+  @override
+  String federationCheckedAgo(String ago) {
+    return 'Comprobado $ago';
+  }
+
+  @override
+  String get federationNeverTested => 'Nunca probado';
+
+  @override
+  String federationLastSeen(String ago) {
+    return 'Visto por última vez $ago';
+  }
+
+  @override
+  String get federationBrowseLibrary => 'Explorar esta biblioteca';
+
+  @override
+  String get federationRemovePeer => 'Quitar par';
+
+  @override
+  String federationRemovePeerConfirm(String name) {
+    return '¿Quitar $name? Las pistas en cola de ese par dejarán de sonar.';
+  }
+
+  @override
+  String federationPeerRemoved(String name) {
+    return '$name quitado';
+  }
+
+  @override
+  String get federationShowInPicker => 'Mostrar en el selector de servidores';
+
+  @override
+  String get federationShowInPickerNote =>
+      'Los pares ocultos siguen reproduciendo lo que pusiste en cola desde ellos.';
+
+  @override
+  String get federationPeerReadOnlyNote =>
+      'Solo lectura — las listas y valoraciones se quedan en tu propio servidor.';
+
+  @override
+  String get federationPeerLibrariesUnknown =>
+      'Aún sin listar — ábrelo una vez para cargar sus bibliotecas.';
+
+  @override
+  String get federationTransportDirect => 'Túnel directo desde este teléfono';
+
+  @override
+  String get federationTransportRelay => 'Relay en espera';
+
+  @override
+  String federationTransportViaParent(String parent) {
+    return 'A través de $parent';
+  }
+
+  @override
+  String federationTransportViaParentTunnel(String parent) {
+    return 'A través de $parent por su túnel';
+  }
+
+  @override
+  String get federationDiscoveryFailed =>
+      'No se pudo cambiar el ajuste de descubrimiento.';
+
+  @override
+  String get agoJustNow => 'ahora mismo';
+
+  @override
+  String agoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hace $count min',
+      one: 'hace 1 min',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hace $count h',
+      one: 'hace 1 h',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hace $count días',
+      one: 'hace 1 día',
+    );
+    return '$_temp0';
   }
 }
