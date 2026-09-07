@@ -292,6 +292,12 @@ class VelvetColors {
 
   static VelvetPalette _active = _darkPalette;
 
+  /// Brightness of the active palette. The authoritative answer to "is the app
+  /// currently dark?", for the few places that need the app's light/dark choice
+  /// rather than an individual colour — e.g. theming an embedded surface that
+  /// draws its own scheme (see admin/admin_launcher.dart).
+  static Brightness get brightness => _active.brightness;
+
   /// Re-point the active palette. Call this *before* MaterialApp
   /// rebuilds so the new theme and direct VelvetColors lookups stay
   /// in sync (see main.dart's theme StreamBuilder).
