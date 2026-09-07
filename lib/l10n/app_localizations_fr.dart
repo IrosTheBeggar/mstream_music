@@ -1037,6 +1037,41 @@ class AppLocalizationsFr extends AppLocalizations {
   String get browserRated => 'Notés';
 
   @override
+  String get browserSectionLibrary => 'Bibliothèque';
+
+  @override
+  String get browserSectionListen => 'Écouter';
+
+  @override
+  String get browserSectionNetwork => 'Réseau';
+
+  @override
+  String get browserSectionServer => 'Serveur';
+
+  @override
+  String get browserFederation => 'Fédération';
+
+  @override
+  String get browserAutoDjOn => 'Activé';
+
+  @override
+  String get browserAutoDjOff => 'Désactivé';
+
+  @override
+  String browserSharedLibraries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bibliothèques partagées',
+      one: '1 bibliothèque partagée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationSheetTitle => 'Bibliothèques partagées';
+
+  @override
   String get browserSearch => 'Rechercher';
 
   @override

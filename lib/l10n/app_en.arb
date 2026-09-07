@@ -826,6 +826,47 @@
   "browserArtists": "Artists",
   "browserRecent": "Recent",
   "browserRated": "Rated",
+  "browserSectionLibrary": "Library",
+  "@browserSectionLibrary": {
+      "description": "Home screen group header: the browse destinations."
+  },
+  "browserSectionListen": "Listen",
+  "@browserSectionListen": {
+      "description": "Home screen group header: Auto DJ and Sonic path."
+  },
+  "browserSectionNetwork": "Network",
+  "@browserSectionNetwork": {
+      "description": "Home screen group header: libraries shared by other servers."
+  },
+  "browserSectionServer": "Server",
+  "@browserSectionServer": {
+      "description": "Home screen group header: what the server does for you (torrents)."
+  },
+  "browserFederation": "Federation",
+  "@browserFederation": {
+      "description": "Home card: the libraries other servers share with this one."
+  },
+  "browserAutoDjOn": "On",
+  "@browserAutoDjOn": {
+      "description": "Auto DJ card subtext while the DJ is armed."
+  },
+  "browserAutoDjOff": "Off",
+  "@browserAutoDjOff": {
+      "description": "Auto DJ card subtext while the DJ is off."
+  },
+  "browserSharedLibraries": "{count, plural, =1{1 shared library} other{{count} shared libraries}}",
+  "@browserSharedLibraries": {
+      "description": "Federation card subtext: how many peers share a library with this server.",
+      "placeholders": {
+          "count": {
+              "type": "int"
+          }
+      }
+  },
+  "federationSheetTitle": "Shared libraries",
+  "@federationSheetTitle": {
+      "description": "Title of the sheet listing the peers reachable through a server."
+  },
   "browserSearch": "Search",
   "browserWelcomeTitle": "Welcome to mStream",
   "browserWelcomeSubtitle": "Tap here to add a server",

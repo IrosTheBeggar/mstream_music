@@ -20,7 +20,7 @@ class BrowserManager {
   /// sections usable.
   static bool isHomeList(List<DisplayItem> list) {
     for (final it in list) {
-      if (it.type == 'note') continue;
+      if (it.type == 'note' || it.type == 'section') continue;
       return it.type == 'execAction';
     }
     return false;
@@ -311,6 +311,25 @@ class BrowserManager {
     // and Local Files is this device's own downloads either way.
     final bool federated = server.isFederated;
 
+    // The home is grouped: LIBRARY (the browse destinations), LISTEN (what
+    // plays for you), NETWORK (other libraries reachable through this
+    // server) and SERVER (what the server does on your behalf). A group the
+    // server cannot serve is left out with its header — hidden, never greyed,
+    // the same rule the Auto DJ panel applies to its controls.
+    //
+    // A 'section' row is a header; browser.dart's home view renders it and
+    // handleTap falls through it like a note. isHomeList skips both.
+    DisplayItem header(String name) =>
+        DisplayItem(server, name, 'section', null, null, null);
+    // Peers reachable through this server (a peer's own peers are out of
+    // reach, so a peer never gets the group).
+    final peers = federated
+        ? const <Server>[]
+        : ServerManager()
+            .federatedChildren(server)
+            .where((p) => p.isSelectable)
+            .toList();
+
     final List<DisplayItem> sections = [
       if (federated)
         DisplayItem(
@@ -320,6 +339,7 @@ class BrowserManager {
             null,
             Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
             'Playlists and ratings stay on your own'),
+      header('Library'),
       DisplayItem(server, 'File Explorer', 'execAction', 'fileExplorer',
           Icon(Icons.folder, color: VelvetColors.warning), null),
       if (!federated)
@@ -341,6 +361,36 @@ class BrowserManager {
           'localFiles',
           Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
           null),
+      // LISTEN. Auto DJ runs on every server, a peer included (random-songs
+      // is on the federation allowlist since mStream #946). Sonic path only
+      // where the server advertised the route (mStream #762) — the flag is
+      // pinned false on a peer, whose path route is off the allowlist.
+      header('Listen'),
+      DisplayItem(server, 'Auto DJ', 'execAction', 'autoDj',
+          Icon(Icons.all_inclusive, color: VelvetColors.textSecondary), null),
+      if (server.discoveryPathAvailable == true)
+        DisplayItem(server, 'Sonic path', 'execAction', 'sonicPath',
+            Icon(Icons.route, color: VelvetColors.textSecondary), null),
+      // NETWORK: the libraries other servers share with this one. Only when
+      // there are some — an empty group would be a header over nothing.
+      if (peers.isNotEmpty) ...[
+        header('Network'),
+        DisplayItem(
+            server,
+            'Federation',
+            'execAction',
+            'federation',
+            Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
+            'sharedLibraries:${peers.length}'),
+      ],
+      // SERVER: work the server does for you. Torrents have no ping flag —
+      // the screen's preflight probe is the gate — but the route is off the
+      // federation allowlist, so a peer never gets it.
+      if (!federated) ...[
+        header('Server'),
+        DisplayItem(server, 'Add torrent', 'execAction', 'torrents',
+            Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
+      ],
     ];
 
     browserCache.add(sections);

@@ -21,7 +21,12 @@ import '../util/media_format.dart';
 import '../util/queue_actions.dart';
 import '../util/server_version.dart';
 
+import '../singletons/sonic_path_state.dart';
+import '../widgets/federation_sheet.dart';
 import 'add_server.dart';
+import 'add_torrent_screen.dart';
+import 'auto_dj.dart';
+import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -129,6 +134,35 @@ class _BrowserState extends State<Browser> {
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'artists') {
       ApiManager().getArtists(useThisServer: browserList[index].server);
+      return;
+    }
+
+    // The feature cards: screens of their own rather than browser frames, so
+    // the browser stays where it is behind them.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'autoDj') {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const AutoDJScreen()));
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'sonicPath') {
+      final s = browserList[index].server;
+      if (s != null) SonicPathState().beginSetup(s);
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const SonicPathScreen()));
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'torrents') {
+      Navigator.push(
+          context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'federation') {
+      final s = browserList[index].server;
+      if (s != null) showFederationSheet(context, s);
       return;
     }
 
@@ -708,39 +742,76 @@ class _BrowserState extends State<Browser> {
     final rows = <Widget>[];
     // A note (a federated peer's "read-only server") is a full-width banner
     // above the cards, never a card: it has no action and reads as a caption
-    // for the sections, not one of them.
-    final notes = allItems.where((it) => it.type == 'note').toList();
-    final items = allItems.where((it) => it.type != 'note').toList();
-    for (final note in notes) {
-      rows.add(Padding(
-        padding: EdgeInsets.only(bottom: _homeCardGap),
-        child: _homeNote(context, note),
-      ));
-    }
-    for (var i = 0; i < items.length; i += 2) {
-      final pair = items.skip(i).take(2).toList();
-      rows.add(Padding(
-        padding: EdgeInsets.only(top: i == 0 ? 0 : _homeCardGap),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var j = 0; j < pair.length; j++) ...[
-                if (j > 0) SizedBox(width: _homeCardGap),
-                Expanded(child: _homeCard(context, items, i + j)),
+    // for the sections, not one of them. A 'section' row is a header; the
+    // cards that follow it, up to the next header, are its group.
+    var group = <DisplayItem>[];
+    var first = true;
+    void flush() {
+      if (group.isEmpty) return;
+      final items = group;
+      group = [];
+      for (var i = 0; i < items.length; i += 2) {
+        final pair = items.skip(i).take(2).toList();
+        rows.add(Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : _homeCardGap),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var j = 0; j < pair.length; j++) ...[
+                  if (j > 0) SizedBox(width: _homeCardGap),
+                  Expanded(child: _homeCard(context, items, i + j)),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ));
+        ));
+      }
     }
+
+    for (final it in allItems) {
+      if (it.type == 'note') {
+        flush();
+        rows.add(Padding(
+          padding: EdgeInsets.only(bottom: _homeCardGap),
+          child: _homeNote(context, it),
+        ));
+      } else if (it.type == 'section') {
+        flush();
+        rows.add(_homeSectionHeader(context, it, first: first));
+        first = false;
+      } else {
+        group.add(it);
+      }
+    }
+    flush();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 24),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
       children: rows,
     );
   }
 
   static const double _homeCardGap = 10;
+
+  /// A group's header — the Auto DJ panel's section style (uppercase, small,
+  /// in the accent), so the home reads like the rest of the app's settings
+  /// surfaces. The first header sits closer to the top than the rest.
+  Widget _homeSectionHeader(BuildContext context, DisplayItem section,
+      {required bool first}) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(6, first ? 8 : 18, 6, 8),
+      child: Text(
+        browserChromeLabel(l, section.name).toUpperCase(),
+        style: TextStyle(
+          color: VelvetColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
 
   Widget _homeNote(BuildContext context, DisplayItem note) {
     final l = AppLocalizations.of(context);
@@ -787,18 +858,15 @@ class _BrowserState extends State<Browser> {
       child: InkWell(
         onTap: () => handleTap(items, i, context),
         child: Padding(
-          // Tighter vertically than horizontally: the vertical axis is the one
-          // that runs out first, and the tile already carries its own visual
-          // padding around the icon.
+          // The label sits beside the icon, not under it: with four groups
+          // on this screen the vertical axis is the one that runs out, and a
+          // row-shaped card is half the height of the stacked one.
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
-                margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: VelvetColors.primaryDim,
                   borderRadius:
@@ -806,14 +874,53 @@ class _BrowserState extends State<Browser> {
                 ),
                 child: Icon(iconData, color: VelvetColors.primary, size: 22),
               ),
-              Text(
-                browserChromeLabel(l, item.name),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: VelvetColors.textPrimary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      browserChromeLabel(l, item.name),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary,
+                      ),
+                    ),
+                    // A second line only where there is live state to
+                    // show: the DJ's on/off, the shared-library count.
+                    if (item.data == 'autoDj')
+                      StreamBuilder<dynamic>(
+                        stream: MediaManager().audioHandler.customState,
+                        initialData: MediaManager()
+                            .audioHandler
+                            .customState
+                            .valueOrNull,
+                        builder: (context, snap) {
+                          // The subject is untyped (audio_service's
+                          // customState); the DJ screen reads it the same way.
+                          final on = snap.data?.autoDJState != null;
+                          return Text(
+                              on ? l.browserAutoDjOn : l.browserAutoDjOff,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: on
+                                      ? VelvetColors.primary
+                                      : VelvetColors.textSecondary));
+                        },
+                      )
+                    else if (item.subtext != null)
+                      Text(
+                        homeCardSubtext(l, item.subtext!),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 13, color: VelvetColors.textSecondary),
+                      ),
+                  ],
                 ),
               ),
             ],

@@ -150,6 +150,22 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserRecent;
     case 'Rated':
       return l.browserRated;
+    case 'Library':
+      return l.browserSectionLibrary;
+    case 'Listen':
+      return l.browserSectionListen;
+    case 'Network':
+      return l.browserSectionNetwork;
+    case 'Server':
+      return l.browserSectionServer;
+    case 'Auto DJ':
+      return l.autoDjTitle;
+    case 'Sonic path':
+      return l.pathScreenTitle;
+    case 'Federation':
+      return l.browserFederation;
+    case 'Add torrent':
+      return l.torrentScreenTitle; // the screen's own title, as the drawer used
     case 'Search':
       return l.browserSearch;
     case 'Read-only server':
@@ -163,4 +179,14 @@ String browserChromeLabel(AppLocalizations l, String? english) {
     default:
       return english;
   }
+}
+
+/// The subtext a home card carries, from the machine form the home list
+/// stores (`sharedLibraries:<n>`) or a plain English chrome string.
+String homeCardSubtext(AppLocalizations l, String subtext) {
+  final shared = RegExp(r'^sharedLibraries:(\d+)$').firstMatch(subtext);
+  if (shared != null) {
+    return l.browserSharedLibraries(int.parse(shared.group(1)!));
+  }
+  return browserChromeLabel(l, subtext);
 }

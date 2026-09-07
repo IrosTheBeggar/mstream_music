@@ -47,11 +47,10 @@ HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"; IROH="${SMOKE_RIG_IROH:-0}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
 TTL=${SMOKE_RIG_TTL_MS:-180000}; REVOKE=${SMOKE_RIG_REVOKE:-1}
 [ "$TTL" != 0 ] && export MSTREAM_TEST_FED_GUEST_TTL_MS=$TTL
-# The peer's home carries a "Read-only server" note above its grid, which
-# drops the Playlists/Rated tiles and puts Albums top-RIGHT (Galaxy: 796 842).
-# The old default (234 909) landed on File Explorer there and the run passed
-# through a folder row by accident.
-PICKER=${SMOKE_PICKER_XY:-"1007 187"}; ALBUMS_ROW=${SMOKE_ALBUMS_ROW_XY:-"796 842"}
+# The home is grouped with row-shaped cards. The peer's home carries a
+# "Read-only server" note above its grid, which drops the Playlists/Rated
+# tiles and puts Albums top-RIGHT of the first row (Galaxy: 796 848).
+PICKER=${SMOKE_PICKER_XY:-"1007 187"}; ALBUMS_ROW=${SMOKE_ALBUMS_ROW_XY:-"796 848"}
 ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
 [ -d "$MUSIC" ] || { echo "no music folder at $MUSIC"; exit 2; }

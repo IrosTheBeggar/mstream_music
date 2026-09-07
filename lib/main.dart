@@ -15,7 +15,6 @@ import 'singletons/server_list.dart';
 import 'singletons/tunnel_policy.dart';
 import 'objects/server.dart';
 import 'screens/about_screen.dart';
-import 'screens/auto_dj.dart';
 // import 'screens/downloads.dart'; // DownloadScreen — drawer entry hidden below
 import 'singletons/downloads.dart';
 import 'singletons/api.dart';
@@ -28,8 +27,6 @@ import 'screens/manage_server.dart';
 import 'screens/settings_screen.dart';
 import 'screens/setup_flow.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/sonic_path_screen.dart';
-import 'singletons/sonic_path_state.dart';
 import 'singletons/track_capture.dart';
 import 'screens/diagnostics_screen.dart';
 import 'screens/transcode_screen.dart';
@@ -1182,65 +1179,14 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         //     );
         //   },
         // ),
-        ListTile(
-          leading: Icon(Icons.album),
-          title: Text(l.autoDjTitle),
-          onTap: () {
-            Navigator.of(context).pop();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AutoDJScreen()),
-            );
-          },
-        ),
-        // Sonic path — the journey builder between two tracks. Rendered only
-        // when the current server's ping advertised the route (mStream
-        // #762); the StreamBuilder keeps the tile honest across server
-        // switches.
-        StreamBuilder<Server?>(
-          stream: ServerManager().currentServerStream,
-          initialData: ServerManager().currentServer,
-          builder: (context, snap) {
-            final s = snap.data;
-            if (s == null || s.discoveryPathAvailable != true) {
-              return const SizedBox.shrink();
-            }
-            return ListTile(
-              leading: Icon(Icons.route),
-              title: Text(l.pathScreenTitle),
-              onTap: () {
-                Navigator.of(context).pop();
-                SonicPathState().beginSetup(s);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SonicPathScreen()),
-                );
-              },
-            );
-          },
-        ),
+        // Auto DJ, Sonic path and torrents live on the home screen's LISTEN
+        // and SERVER groups now, next to the library they act on.
         ListTile(
           leading: Icon(Icons.share),
           title: Text(l.shareTitle),
           onTap: () {
             Navigator.of(context).pop();
             showSharePlaylistDialog(context);
-          },
-        ),
-        // Add torrent — the webapp's torrent panel. No ping flag exists for
-        // torrents, so the entry is always shown and the screen's
-        // /torrent/preflight probe is the gate (it explains why when the
-        // server can't take one).
-        ListTile(
-          leading: Icon(Icons.downloading),
-          title: Text(l.torrentScreenTitle),
-          onTap: () {
-            Navigator.of(context).pop();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AddTorrentScreen()),
-            );
           },
         ),
         // Local playlists drawer entry hidden — having both this and

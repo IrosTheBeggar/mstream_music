@@ -985,6 +985,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserRated => '已评分';
 
   @override
+  String get browserSectionLibrary => '资料库';
+
+  @override
+  String get browserSectionListen => '聆听';
+
+  @override
+  String get browserSectionNetwork => '网络';
+
+  @override
+  String get browserSectionServer => '服务器';
+
+  @override
+  String get browserFederation => '联合';
+
+  @override
+  String get browserAutoDjOn => '已开启';
+
+  @override
+  String get browserAutoDjOff => '已关闭';
+
+  @override
+  String browserSharedLibraries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个共享资料库',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationSheetTitle => '共享资料库';
+
+  @override
   String get browserSearch => '搜索';
 
   @override
