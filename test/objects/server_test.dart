@@ -170,6 +170,54 @@ void main() {
       expect(s.federationDiscoveryAvailable, isNull);
     });
 
+    test('the raw engine flags parse, ignore junk, and round-trip', () {
+      final s = Server.fromJson({
+        'url': 'u', 'username': null, 'password': null, 'jwt': null,
+        'localname': 'l', 'discoveryEnabled': true, 'discoveryReady': false,
+      });
+      expect(s.discoveryEnabled, isTrue);
+      expect(s.discoveryReady, isFalse);
+      final back = Server.fromJson(s.toJson());
+      expect(back.discoveryEnabled, isTrue);
+      expect(back.discoveryReady, isFalse);
+      final junk = Server.fromJson({
+        'url': 'u', 'username': null, 'password': null, 'jwt': null,
+        'localname': 'l', 'discoveryEnabled': 'yes', 'discoveryReady': 1,
+      });
+      expect(junk.discoveryEnabled, isNull);
+      expect(junk.discoveryReady, isNull);
+    });
+
+    test('discoveryOn reads the raw flag, else the UI flag — never for a peer',
+        () {
+      final s = Server('u', null, null, null, 'l');
+      expect(s.discoveryOn, isNull);
+      s.discoveryAvailable = true; // a record from before the raw flag
+      expect(s.discoveryOn, isTrue);
+      s.discoveryEnabled = false; // the raw flag wins once known
+      expect(s.discoveryOn, isFalse);
+      final peer = Server('federated://home/3', null, null, null, 'peer')
+        ..federationParent = 'home'
+        ..federationPeerId = 3
+        ..discoveryAvailable = false; // pinned by the app, says nothing
+      expect(peer.discoveryOn, isNull);
+      peer.discoveryEnabled = true;
+      expect(peer.discoveryOn, isTrue);
+    });
+
+    test('sonicUsable: on and ready, or on with readiness unreported', () {
+      final s = Server('u', null, null, null, 'l');
+      expect(s.sonicUsable, isFalse, reason: 'never reported');
+      s.discoveryEnabled = true;
+      expect(s.sonicUsable, isTrue, reason: 'readiness unknown (older server)');
+      s.discoveryReady = false;
+      expect(s.sonicUsable, isFalse, reason: 'on, nothing analysed yet');
+      s.discoveryReady = true;
+      expect(s.sonicUsable, isTrue);
+      s.discoveryEnabled = false;
+      expect(s.sonicUsable, isFalse, reason: 'switched off');
+    });
+
     test('round-trips through toJson/fromJson', () {
       final original = Server('u', null, null, null, 'l');
       original.discoveryAvailable = true;

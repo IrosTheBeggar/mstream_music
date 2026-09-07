@@ -731,6 +731,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String autoDjMultiServerConnecting(int count) {
+    return 'Подключаются: $count';
+  }
+
+  @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
     return 'Участвуют $count из $total серверов — остальным не хватает discovery, совпадающей модели эмбеддингов или достаточно новой версии сервера';
   }
@@ -1861,6 +1866,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'На этом сервере нет данных для открытий — выбор останется случайным.';
 
   @override
+  String get autoDjSonicNotReady =>
+      'Открытия включены, но сканирование ещё не дало данных — до тех пор выбор останется случайным.';
+
+  @override
   String get autoDjSonicStrictness => 'Порог похожести';
 
   @override
@@ -2342,10 +2351,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get browserFederatedReadOnlyNote =>
       'Playlists and ratings stay on your own';
-
-  @override
-  String get federatedAutoDjUnavailable =>
-      'Auto DJ can\'t run on a shared server. Switch to one of your own servers first.';
 
   @override
   String get federatedShareUnavailable =>

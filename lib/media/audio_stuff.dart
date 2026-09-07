@@ -186,6 +186,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     _multiServerExcluded.clear();
     _multiServerIgnore.clear();
     _fanOutDeclined.clear();
+    _sonicNotReadyLogged = false;
     _sonicLockedAnchor = null;
     _autoDJAuthWarned = false; // fresh lane, fresh warning budget
     _sonicWarned = false;
@@ -2677,14 +2678,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         break;
       case 'setAutoDJ':
         final nextDJ = extras?['autoDJServer'] as Server?;
-        // Backstop for every entry point (panel, queue header, CarPlay, Auto):
-        // a federated peer cannot host the DJ — random-songs is off the
-        // federation allowlist and its paths mean nothing to the parent.
-        if (nextDJ != null && nextDJ.isFederated) {
-          appLog('[dj] ${nextDJ.localname} is a shared (federated) server — '
-              'Auto DJ ignored');
-          break;
-        }
+        // A federated peer hosts the DJ like any other server: random-songs
+        // is on the federation allowlist (mStream #946), its filepath seeds
+        // resolve on the peer, and its picks stream the way its browsed
+        // tracks do — through the parent's proxy or the peer's own tunnel.
         // A re-arm on the SAME server (a settings-screen rebuild, the queue
         // header toggling it back on) is not a new session. Only a real
         // change resets the session state — and only a real change is allowed
@@ -3286,28 +3283,26 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   /// Whether [s] may take part in a multi-server session: not dropped this
   /// session ([excluded]), not a peer the user hid or its parent stopped
-  /// listing, discovery on, and a version not known to predate the vector
-  /// seed. A federated peer qualifies like any other server — random-songs
-  /// and the embeddings route are on the federation allowlist (mStream #946)
-  /// and its picks stream the way a browsed peer track does, through the
-  /// parent's proxy or the peer's own tunnel. With [allowUnknownDiscovery] a
-  /// server that has never reported its flags passes too — for the tunnel
-  /// targets, where reaching it is what fills them in. Pure; unit-tested.
+  /// listing, discovery on with vectors to answer from, and a version not
+  /// known to predate the vector seed. A federated peer qualifies like any
+  /// other server — random-songs and the embeddings route are on the
+  /// federation allowlist (mStream #946) and its picks stream the way a
+  /// browsed peer track does. The raw engine flags decide (Server.discoveryOn
+  /// / discoveryReady), not the UI flag a peer carries pinned: a server that
+  /// says discovery is off, or on with nothing analysed yet (mStream #879),
+  /// sits out. One that has never reported passes only with
+  /// [allowUnknownDiscovery] (the tunnel targets, where reaching it is what
+  /// fills the flags in) — or when it is a peer, whose federation/health
+  /// answer the model handshake reads before anything is sent. Pure;
+  /// unit-tested.
   static bool canJoinMultiServer(Server s, Set<String> excluded,
       {bool allowUnknownDiscovery = false}) {
     if (excluded.contains(s.localname)) return false;
     if (!s.isSelectable) return false;
-    // A peer's discovery flag is pinned false by the app (its similar-tracks
-    // and sonic-path routes are off the federation allowlist — see
-    // ServerManager._applyFederatedDefaults), so it says nothing about the
-    // two routes the fan-out uses, which ARE allowlisted (mStream #946). A
-    // peer's discovery is learned from federation/health instead — the model
-    // handshake asks it before any vector is sent.
-    if (!s.isFederated &&
-        s.discoveryAvailable != true &&
-        !(allowUnknownDiscovery && s.discoveryAvailable == null)) {
-      return false;
-    }
+    final on = s.discoveryOn;
+    if (on == false) return false;
+    if (s.discoveryReady == false) return false;
+    if (on == null && !s.isFederated && !allowUnknownDiscovery) return false;
     return !crossServerSeedKnownUnsupported(
         ServerVersion.tryParse(s.serverVersion));
   }
@@ -3315,6 +3310,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   // The reasons the fan-out has already explained this session, so a session
   // that keeps running single-server says why once, not per pick.
   final Set<String> _fanOutDeclined = {};
+
+  // Once per session: sonic wanted on a server whose scan has not produced
+  // vectors yet (see _autoDJPick).
+  bool _sonicNotReadyLogged = false;
 
   /// The multi-server pick is not running this time, for [reason]. Logged the
   /// first time each reason comes up in a session: otherwise a mode switched
@@ -3793,9 +3792,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     // building them and having filter() strip them — that also keeps the
     // error branch from thinking sonic is still in play.
     final sonicEnabled = mgr.sonicSimilarityEnabled &&
-        autoDJServer!.discoveryAvailable == true &&
+        autoDJServer!.sonicUsable &&
         !ServerCapabilities()
             .allSuppressed(autoDJServer!, _kSonicParamKeys);
+    // Discovery on but nothing analysed yet (mStream #879): the mode is
+    // wanted and the server would only 400. Say so once per session — a
+    // sonic switch that is on while picks come out random needs explaining.
+    if (mgr.sonicSimilarityEnabled &&
+        autoDJServer!.discoveryOn == true &&
+        autoDJServer!.discoveryReady == false &&
+        !_sonicNotReadyLogged) {
+      _sonicNotReadyLogged = true;
+      appLog('[dj] sonic off: ${autoDJServer!.localname} has discovery on '
+          'but nothing analysed yet — picks stay random until the scan gets '
+          'there');
+    }
     // The explicit seed ("start the session here") only counts when it was
     // picked from the DJ server — filepaths are per-library. Same rule for
     // the playing track.

@@ -5,10 +5,12 @@ import 'package:mstream_music/objects/server.dart';
 // Who may take part in a multi-server Auto DJ session (mStream #929/#946):
 // the pure predicate behind AudioPlayerHandler.multiServerCandidates.
 
-Server _server(String name, {String? version = '6.26.0', bool? discovery = true}) =>
+Server _server(String name,
+        {String? version = '6.26.0', bool? discovery = true, bool? ready}) =>
     Server('https://$name.example.com', 'u', 'p', 'JWT', name)
       ..serverVersion = version
-      ..discoveryAvailable = discovery;
+      ..discoveryEnabled = discovery
+      ..discoveryReady = ready;
 
 Server _peer({bool hidden = false, bool missing = false}) =>
     Server('federated://home/3', null, null, null, 'peer-basement')
@@ -16,7 +18,7 @@ Server _peer({bool hidden = false, bool missing = false}) =>
       ..federationPeerId = 3
       ..federationPeerName = 'Basement'
       ..serverVersion = '6.26.0'
-      ..discoveryAvailable = true
+      ..discoveryAvailable = false // pinned by the app for every peer
       ..federationHidden = hidden
       ..federationMissing = missing;
 
@@ -79,20 +81,50 @@ void main() {
       expect(AudioPlayerHandler.canJoinMultiServer(_peer(), {}), isTrue);
     });
 
-    test('a peer joins even with its discovery flag pinned false — health '
-        'decides for it', () {
-      // ServerManager._applyFederatedDefaults pins the flag; the two routes
-      // the fan-out uses are allowlisted regardless, and the model handshake
-      // asks the peer before anything is sent.
+    test('a peer joins with its UI flag pinned false — the raw flags and '
+        'health decide for it', () {
+      // ServerManager._applyFederatedDefaults pins the UI flag; the two
+      // routes the fan-out uses are allowlisted regardless. Unknown raw
+      // flags: the model handshake asks the peer before anything is sent.
+      expect(AudioPlayerHandler.canJoinMultiServer(_peer(), {}), isTrue);
       expect(
           AudioPlayerHandler.canJoinMultiServer(
-              _peer()..discoveryAvailable = false, {}),
-          isTrue);
+              _peer()..discoveryEnabled = false, {}),
+          isFalse,
+          reason: 'the peer itself says discovery is off');
       expect(
           AudioPlayerHandler.canJoinMultiServer(
               _server('a', discovery: false), {}),
           isFalse,
           reason: 'a plain server still needs the flag');
+    });
+
+    test('discovery on but nothing analysed yet (discoveryReady false) sits '
+        'out — plain server and peer alike', () {
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _server('a', ready: false), {}),
+          isFalse);
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _server('a', ready: false), {},
+              allowUnknownDiscovery: true),
+          isFalse,
+          reason: 'not unknown — the server said no');
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(
+              _peer()..discoveryReady = false, {}),
+          isFalse);
+      expect(
+          AudioPlayerHandler.canJoinMultiServer(_server('a', ready: true), {}),
+          isTrue);
+    });
+
+    test('a record from before the raw flag falls back to the UI flag', () {
+      final old = Server('https://old.example.com', 'u', 'p', 'JWT', 'old')
+        ..serverVersion = '6.26.0'
+        ..discoveryAvailable = true;
+      expect(AudioPlayerHandler.canJoinMultiServer(old, {}), isTrue);
     });
 
     test('a hidden peer, or one its parent stopped listing, sits out', () {

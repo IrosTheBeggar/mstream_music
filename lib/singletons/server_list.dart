@@ -354,6 +354,8 @@ class ServerManager {
       final String? prevCodec = server.transcodeDefaultCodec;
       final String? prevBitrate = server.transcodeDefaultBitrate;
       final bool? prevDiscovery = server.discoveryAvailable;
+      final bool? prevDiscoveryEnabled = server.discoveryEnabled;
+      final bool? prevDiscoveryReady = server.discoveryReady;
       final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
       final bool? prevFedDirect = server.federationDirectAvailable;
@@ -405,6 +407,8 @@ class ServerManager {
           server.transcodeDefaultCodec != prevCodec ||
           server.transcodeDefaultBitrate != prevBitrate ||
           server.discoveryAvailable != prevDiscovery ||
+          server.discoveryEnabled != prevDiscoveryEnabled ||
+          server.discoveryReady != prevDiscoveryReady ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.federationDiscoveryAvailable != prevFedDiscovery ||
           server.federationDirectAvailable != prevFedDirect ||
@@ -478,6 +482,13 @@ class ServerManager {
     _applyTranscode(server, features is Map ? features['transcode'] : null);
 
     server.discoveryAvailable = features is Map && features['discovery'] == true;
+    // The raw engine flags (see Server.discoveryEnabled): kept as reported
+    // even for a peer, whose UI flags the defaults below pin.
+    server.discoveryEnabled = features is Map && features['discovery'] == true;
+    server.discoveryReady =
+        features is Map && features['discoveryReady'] is bool
+            ? features['discoveryReady'] as bool
+            : null;
     server.discoveryP2pAvailable =
         features is Map && features['discoveryP2p'] == true;
     server.federationDiscoveryAvailable =
@@ -514,6 +525,8 @@ class ServerManager {
     _applyPlaylists(server, res['playlists']);
     _applyTranscode(server, res['transcode']);
     server.discoveryAvailable = res['discovery'] == true;
+    server.discoveryEnabled = res['discovery'] == true;
+    server.discoveryReady = null; // ping never served readiness (#879 is /api-only)
     server.discoveryP2pAvailable = res['discoveryP2p'] == true;
     server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
     server.federationDirectAvailable = res['federationDirect'] == true;
@@ -2300,9 +2313,12 @@ class ServerManager {
   ///
   /// A peer's answer describes what IT can do; the federation allowlist decides
   /// what we can reach through the parent's proxy, and it is the narrower of
-  /// the two. /transcode, every /api/v1/discovery/* route and every playlist
-  /// route are off it — so a peer reporting working ffmpeg or a finished
-  /// discovery scan would otherwise light up UI whose requests can only 403.
+  /// the two. /transcode, the discovery similar-tracks / sonic-path routes
+  /// and every playlist route are off it — so a peer reporting working ffmpeg
+  /// or a finished discovery scan would otherwise light up UI whose requests
+  /// can only 403. The raw engine flags (Server.discoveryEnabled / Ready) are
+  /// left as reported: random-songs' sonic seed and the embeddings route ARE
+  /// allowlisted (mStream #946), which is what lets a peer host the DJ.
   void _applyFederatedDefaults(Server server) {
     server.transcodeAvailable = false;
     server.transcodeDefaultCodec = null;

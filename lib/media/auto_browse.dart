@@ -422,11 +422,6 @@ class AutoBrowse {
       // Shuffle All: hand the library to the app's Auto-DJ from a clean queue —
       // infinite random play, reusing its working random-songs payload + top-up.
       if (u.host == 'shuffle') {
-        if (srv.isFederated) {
-          appLog('[auto] shuffle: ${srv.localname} is a shared server — '
-              'Auto DJ is not available there');
-          return;
-        }
         await handler.customAction('clearPlaylist');
         await handler.customAction('setAutoDJ', {'autoDJServer': srv});
         return;
@@ -562,9 +557,10 @@ class AutoBrowse {
 
   // ── tree nodes ──
 
-  /// The root of the car tree for [server]. A federated peer is read-only and
-  /// cannot host the DJ, so it has no Shuffle All (random-songs) and no
-  /// Playlists (every playlist route is off the federation allowlist).
+  /// The root of the car tree for [server]. A federated peer is read-only, so
+  /// it has no Playlists (every playlist route is off the federation
+  /// allowlist); it does host the DJ — random-songs is allowlisted (mStream
+  /// #946) — so Shuffle All is there like anywhere else.
   @visibleForTesting
   static List<MediaItem> rootTabs(Server server) {
     final String s = server.localname;
@@ -576,11 +572,8 @@ class AutoBrowse {
     return [
       // A playable quick-action: hand the whole library to Auto-DJ (infinite
       // shuffle). First, so it's the obvious "just play something" option.
-      if (!federated)
-        MediaItem(
-            id: _id('shuffle', {'s': s}),
-            title: 'Shuffle All',
-            playable: true),
+      MediaItem(
+          id: _id('shuffle', {'s': s}), title: 'Shuffle All', playable: true),
       _browse(_id('cat', {'s': s, 'k': 'recent'}), 'Recently Added'),
       if (!federated)
         _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',

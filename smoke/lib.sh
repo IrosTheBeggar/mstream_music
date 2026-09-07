@@ -39,7 +39,10 @@ pick_device() {
   adbx shell svc power stayon usb 2>/dev/null
   log "device: $SERIAL  package: $PKG${APP_UID:+ (uid $APP_UID)}"
 }
-stayon_off() { adbx shell svc power stayon false 2>/dev/null; }
+# SMOKE_KEEP_SCREEN_ON=1 leaves the screen on between scripts (a session of
+# several runs would otherwise lock the phone 60s after each one ends);
+# revert by hand with `adb shell svc power stayon false`.
+stayon_off() { [ "${SMOKE_KEEP_SCREEN_ON:-0}" = 1 ] || adbx shell svc power stayon false 2>/dev/null; }
 log()  { echo "$(date '+%H:%M:%S') $*" | tee -a "$OUT/run.log"; }
 pass() { PASS=$((PASS+1)); log "PASS  $*"; }
 fail() { FAIL=$((FAIL+1)); log "FAIL  $*"; }

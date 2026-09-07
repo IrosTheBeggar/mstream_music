@@ -62,6 +62,29 @@ class Server {
   //                                  the PARENT, decides whether a peer of
   //                                  it is worth dialing directly
   bool? federationDirectAvailable;
+  // The discovery engine as the server reports it, never pinned: whether it
+  // is switched on at all, and — mStream #879 — whether the scan has
+  // produced vectors yet (null from a server too old to say). The UI flags
+  // above are pinned false on a federated peer because its similar-tracks
+  // and sonic-path routes are off the federation allowlist; the DJ's sonic
+  // seed and the cross-server fan-out use routes that ARE on it, so they
+  // read these instead (see [sonicUsable]).
+  bool? discoveryEnabled;
+  bool? discoveryReady;
+
+  /// Whether discovery is switched on: the raw flag, else — for a record
+  /// written before the app kept the raw flag — the UI flag, which a peer
+  /// never carries (pinned), so a peer answers null until its next refresh.
+  bool? get discoveryOn =>
+      discoveryEnabled ?? (isFederated ? null : discoveryAvailable);
+
+  /// Whether this server can serve the DJ's sonic seed right now: discovery
+  /// on AND the scan has produced vectors. A server with discovery on and an
+  /// unfinished scan looks fully capable on the ping flag and then 400s every
+  /// sonic pick (mStream #879) — this is the gate that keeps sonic mode off
+  /// until it can actually answer. Readiness a server cannot report (older
+  /// builds) does not hold it back.
+  bool get sonicUsable => discoveryOn == true && discoveryReady != false;
 
   // authentication is optional (mstream servers can be public OR private)
   String? username;
@@ -315,6 +338,10 @@ class Server {
         federationDirectAvailable = json['federationDirectAvailable'] is bool
             ? json['federationDirectAvailable']
             : null,
+        discoveryEnabled =
+            json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
+        discoveryReady =
+            json['discoveryReady'] is bool ? json['discoveryReady'] : null,
         connectionType = json['connectionType'] as String? ?? 'http',
         irohPairingCode = json['irohPairingCode'] as String?,
         federationParent = json['federationParent'] as String?,
@@ -351,6 +378,8 @@ class Server {
         'federationDiscoveryAvailable': federationDiscoveryAvailable,
         'discoveryPathAvailable': discoveryPathAvailable,
         'federationDirectAvailable': federationDirectAvailable,
+        'discoveryEnabled': discoveryEnabled,
+        'discoveryReady': discoveryReady,
         'connectionType': connectionType,
         'irohPairingCode': irohPairingCode,
         'federationParent': federationParent,

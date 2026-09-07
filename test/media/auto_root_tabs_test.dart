@@ -1,7 +1,7 @@
-// The car tree's root for a federated peer: read-only, no DJ. Shuffle All
-// hands the library to Auto DJ (random-songs, off the federation allowlist)
-// and Playlists lists routes the allowlist refuses, so a peer's root has
-// neither; a plain server keeps both.
+// The car tree's root for a federated peer: read-only. Playlists lists routes
+// the federation allowlist refuses, so a peer's root has none; Shuffle All
+// hands the library to Auto DJ, whose random-songs route IS allowlisted
+// (mStream #946), so a peer keeps it like a plain server.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/media/auto_browse.dart';
@@ -16,14 +16,14 @@ void main() {
     expect(titles(s), containsAll(['Shuffle All', 'Playlists', 'Albums']));
   });
 
-  test('a federated peer offers neither', () {
+  test('a federated peer offers Shuffle All but not Playlists', () {
     final parent = Server('https://home.example.com', null, null, 'jwt', 'home');
     final peer = Server('federated://home/3', null, null, null, 'peer-b')
       ..federationParent = 'home'
       ..federationPeerId = 3
       ..parentServer = parent;
     final t = titles(peer);
-    expect(t, isNot(contains('Shuffle All')));
+    expect(t, contains('Shuffle All'));
     expect(t, isNot(contains('Playlists')));
     expect(t, containsAll(['Recently Added', 'Albums', 'Artists', 'Files']));
   });
