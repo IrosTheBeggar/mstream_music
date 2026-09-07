@@ -15,6 +15,10 @@
 #                   entry that is neither browsed nor queued: arming the
 #                   session must dial B's tunnel by itself (tunnel-follows-
 #                   the-DJ), and the pick must answer 2/2 over it.
+#   4. DJ off — the mini-player's Auto DJ pill switches the session off; B's
+#                   tunnel must be released at once (`tunnel stopped
+#                   (no-target/dj-off)`) and not re-dialed. Skipped when the
+#                   phase-3 pick came from B: a queued track keeps its tunnel.
 #
 # Pass lines to look for in the app log: `[dj] <server> answers in model
 # test-fake (N analysed)` (the health handshake), `[dj] multi-server: 2/2
@@ -29,8 +33,9 @@
 # the servers, prints their ports and leaves them up for the iOS rounds.
 #
 # Taps are Galaxy S25 defaults (home grid Albums tile, first album, a track
-# row — which queues the whole album). Override with SMOKE_HOME_ALBUMS_XY,
-# SMOKE_ALBUM1_XY, SMOKE_TRACK1_XY for other phones.
+# row — which queues the whole album — and the mini-player's Auto DJ pill).
+# Override with SMOKE_HOME_ALBUMS_XY, SMOKE_ALBUM1_XY, SMOKE_TRACK1_XY,
+# SMOKE_DJ_PILL_XY for other phones.
 set -u
 source "$(dirname "$0")/../lib.sh"
 [ "${SMOKE_RIG_SERVERS_ONLY:-0}" = 1 ] || { pick_device; cfg_backup; }
@@ -38,7 +43,7 @@ SRC="${SMOKE_MSTREAM_SRC:-$HOME/code/mStream}"; MUSIC="${SMOKE_RIG_MUSIC:-$HOME/
 HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
 HOME_ALBUMS=${SMOKE_HOME_ALBUMS_XY:-"281 1030"}; ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
-PICKER=${SMOKE_PICKER_XY:-"1007 187"}
+PICKER=${SMOKE_PICKER_XY:-"1007 187"}; DJ_PILL=${SMOKE_DJ_PILL_XY:-"944 2118"}
 FLOOR=${SMOKE_DJ_FLOOR:-6.26.0}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
 [ -d "$MUSIC" ] || { echo "no music folder at $MUSIC"; exit 2; }
@@ -222,6 +227,25 @@ if [ -z "$CODE" ]; then fail "phase 3: no pairing code from B"; else
   else save_applog p3-launch; fail "phase 3: B's tunnel did not come up within 150s of the launch"; fi
   play_album p3; N=$TRACKS
   [ "${N:-0}" -gt 0 ] && expect_pick "phase 3" "$N" rig-a iroh-rig-b
+
+  # ── phase 4: the DJ switched off releases the fan-out tunnel ─────────────
+  # The pill toggles the DJ off when it is armed on the browsed server (rig-a
+  # here). B is neither browsed nor queued, so the session was its only
+  # reason to hold a tunnel: the manager reconciles at once on the DJ-off
+  # path (no grace) and must not dial it again.
+  if cfg_read queue.json | python3 -c "
+import sys,json
+d=json.load(sys.stdin); sys.exit(0 if any(((it.get('extras') or {}).get('server'))=='iroh-rig-b' for it in (d.get('items') or [])) else 1)" 2>/dev/null; then
+    skip "phase 4: the pick came from B, whose queued track keeps its tunnel — the DJ-off release is not observable this run"
+  else
+    T=$(now_ts); tap $DJ_PILL; sleep 2; shot p4-dj-off
+    if wait_for_log_after "$T" 'tunnel stopped .*for=iroh-rig-b' 20; then
+      LINE=$(applog | grep -E 'tunnel stopped .*for=iroh-rig-b' | tail -1 | sed 's/^[0-9:.]* //')
+      case "$LINE" in *no-target/dj-off*) pass "phase 4: B's tunnel released when the DJ was switched off — $LINE";; *) fail "phase 4: B's tunnel stopped for another reason: $LINE";; esac
+      sleep 15; UPS=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE 'tunnel up .*for=iroh-rig-b')
+      [ "$UPS" -eq 0 ] && pass "phase 4: B not re-dialed in the 35s after the switch-off" || fail "phase 4: B re-dialed $UPS time(s) after the switch-off"
+    else save_applog p4-off; log "$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -E '\[dj\]|\[autodj\]|\[iroh\]' | tail -6)"; fail "phase 4: B's tunnel still up 20s after the DJ was switched off"; fi
+  fi
   media_key pause; sleep 1; save_applog phase3
 fi
 summary
