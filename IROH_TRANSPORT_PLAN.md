@@ -139,7 +139,7 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 
 ## 7. Risks
 - **Contract drift:** the app is pinned to `mstream/tunnel/2` + the composite/handshake. If the server bumps the ALPN version or changes framing, the app must follow. Track the server version.
-- **`@number0/iroh` 1.0 is on the npm `next` tag** (server dep) and the feature is an optionalDependency — the user's server platform must have a prebuilt binary to enable it at all.
+- **`@number0/iroh` 1.1.0 is npm `latest`** (the server requires `^1.1.0`; 1.0.0 stays on the `next` tag) (server dep) and the feature is an optionalDependency — the user's server platform must have a prebuilt binary to enable it at all.
 - **No prebuilt Maven** — we own a Rust build in CI (spike proved `cargo-ndk` + NDK 28.2 works).
 - **On-device FFI path unproven** until the M1 device step (interop is proven on desktop; the `.so` cross-compiles, but the APK build + on-device `dart:ffi` load/handshake is the remaining check).
 - **Relay readiness:** must `online()` before dialing (already in the contract) or the first stream can reset.
@@ -150,8 +150,8 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 | ALPN | `mstream/tunnel/2` (UTF-8 bytes) |
 | Pairing code | `mstr<V>:base64url(JSON{ t, s })` envelope (v1 current; bare body = legacy v1); secret = 32 bytes |
 | Handshake | first bi-stream: write 32 secret bytes → expect ASCII `"OK"` |
-| `iroh` Rust crate (shim) | `1` → 1.0.0 (core only); `Endpoint::bind` / `connect` / `open_bi` |
-| `@number0/iroh` (server) | `next` → 1.0.0 |
+| `iroh` Rust crate (shim) | `1` → 1.1.0 (lock updated 2026-09-07 from 1.0.0; core only); `Endpoint::bind` / `connect` / `open_bi` |
+| `@number0/iroh` (server) | `^1.1.0` (npm `latest` = 1.1.0; the interop harness pins 1.1.0) |
 | NDK / build | 28.2.13676358, `cargo-ndk --platform 26` (flag is `--platform`, not `-p`) |
 | ABIs | arm64-v8a, x86_64 |
 | crypto | ring 0.17 (cross-compiles to Android) |
