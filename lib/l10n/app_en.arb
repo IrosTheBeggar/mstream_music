@@ -546,6 +546,15 @@
       }
     }
   },
+  "autoDjMultiServerConnecting": "{count} still connecting",
+  "@autoDjMultiServerConnecting": {
+    "description": "Second line of the participants readout: how many tunnel servers are still dialing.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "autoDjMultiServerSomeExcluded": "{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version",
   "@autoDjMultiServerSomeExcluded": {
     "description": "Readout when some servers cannot take part, and why.",
@@ -1425,6 +1434,10 @@
   "@autoDjSonicUnavailable": {
     "description": "Subtitle under the (disabled) sonic similarity toggle when the server lacks the discovery capability."
   },
+  "autoDjSonicNotReady": "Discovery is on but the scan hasn't produced data yet — picks stay random until it does.",
+  "@autoDjSonicNotReady": {
+    "description": "Sonic similarity subtitle when discovery is on but the scan has produced no vectors yet (server features.discoveryReady false)."
+  },
   "autoDjSonicStrictness": "Match strictness",
   "@autoDjSonicStrictness": {
     "description": "Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity)."
@@ -2048,7 +2061,6 @@
   "@browserFederatedReadOnlyNote": {
     "description": "Subtitle of the note row explaining what a federated peer cannot do."
   },
-  "federatedAutoDjUnavailable": "Auto DJ can't run on a shared server. Switch to one of your own servers first.",
   "federatedShareUnavailable": "Tracks on a shared server can't be shared from here — they live in someone else's library.",
   "federatedForget": "Forget",
   "federatedHide": "Hide from the picker",

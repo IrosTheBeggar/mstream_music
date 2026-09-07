@@ -1356,6 +1356,12 @@ abstract class AppLocalizations {
   /// **'{count} servers are taking part'**
   String autoDjMultiServerAllIn(int count);
 
+  /// Second line of the participants readout: how many tunnel servers are still dialing.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} still connecting'**
+  String autoDjMultiServerConnecting(int count);
+
   /// Readout when some servers cannot take part, and why.
   ///
   /// In en, this message translates to:
@@ -3186,6 +3192,12 @@ abstract class AppLocalizations {
   /// **'This server doesn\'t have discovery data — picks stay random.'**
   String get autoDjSonicUnavailable;
 
+  /// Sonic similarity subtitle when discovery is on but the scan has produced no vectors yet (server features.discoveryReady false).
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery is on but the scan hasn\'t produced data yet — picks stay random until it does.'**
+  String get autoDjSonicNotReady;
+
   /// Label for the sonic similarity threshold slider (raw cosine threshold sent as minSimilarity).
   ///
   /// In en, this message translates to:
@@ -4025,12 +4037,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playlists and ratings stay on your own'**
   String get browserFederatedReadOnlyNote;
-
-  /// No description provided for @federatedAutoDjUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto DJ can\'t run on a shared server. Switch to one of your own servers first.'**
-  String get federatedAutoDjUnavailable;
 
   /// No description provided for @federatedShareUnavailable.
   ///

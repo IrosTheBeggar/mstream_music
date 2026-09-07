@@ -723,6 +723,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String autoDjMultiServerConnecting(int count) {
+    return '$count ancora in connessione';
+  }
+
+  @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
     return '$count server su $total partecipano — agli altri manca discovery, un modello di embedding compatibile o una versione del server abbastanza recente';
   }
@@ -1842,6 +1847,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Questo server non ha dati di scoperta — la selezione resta casuale.';
 
   @override
+  String get autoDjSonicNotReady =>
+      'La scoperta è attiva ma la scansione non ha ancora prodotto dati — la selezione resta casuale finché non lo farà.';
+
+  @override
   String get autoDjSonicStrictness => 'Soglia di somiglianza';
 
   @override
@@ -2327,10 +2336,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get browserFederatedReadOnlyNote =>
       'Playlists and ratings stay on your own';
-
-  @override
-  String get federatedAutoDjUnavailable =>
-      'Auto DJ can\'t run on a shared server. Switch to one of your own servers first.';
 
   @override
   String get federatedShareUnavailable =>

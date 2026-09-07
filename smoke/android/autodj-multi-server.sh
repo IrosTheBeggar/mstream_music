@@ -9,6 +9,9 @@
 #                   queue-end top-up must ask both servers and queue the best
 #                   answer, which must then play (a peer pick streams through
 #                   the proxy or the peer's own tunnel).
+#   1b. hosted on the peer — the DJ armed ON peer A (Scope 1 of mStream #936),
+#                   fan-out off: a sonic pick from the peer's own library,
+#                   seeded by filepath, through the proxy or its own tunnel.
 #   2. own servers — A and B planted directly (the pairing removed); the same
 #                   over the app's own server list.
 #   3. Quick Connect fan-out — A is the DJ server (HTTP), B a Quick Connect
@@ -43,6 +46,7 @@ SRC="${SMOKE_MSTREAM_SRC:-$HOME/code/mStream}"; MUSIC="${SMOKE_RIG_MUSIC:-$HOME/
 HOST="${SMOKE_RIG_HOST:-$(ipconfig getifaddr en0)}"
 PA=${SMOKE_RIG_PA:-3101}; PB=${SMOKE_RIG_PB:-3102}; RIG="$OUT/rig"; mkdir -p "$RIG"; J='Content-Type: application/json'
 HOME_ALBUMS=${SMOKE_HOME_ALBUMS_XY:-"281 1030"}; ALBUM1=${SMOKE_ALBUM1_XY:-"278 708"}; TRACK1=${SMOKE_TRACK1_XY:-"468 886"}
+PEER_ALBUMS=${SMOKE_ALBUMS_ROW_XY:-"234 909"}  # the peer's home grid (same override as federation-rig.sh)
 PICKER=${SMOKE_PICKER_XY:-"1007 187"}; DJ_PILL=${SMOKE_DJ_PILL_XY:-"944 2118"}
 FLOOR=${SMOKE_DJ_FLOOR:-6.26.0}
 [ -f "$SRC/cli-boot-wrapper.js" ] && [ -d "$SRC/node_modules" ] || { echo "no server checkout with node_modules at $SRC"; exit 2; }
@@ -112,6 +116,10 @@ wait_analysed() { # <port> <token> <label>
   ANALYSED=${n:-0}
 }
 wait_analysed $PA "$TA" "peer A"; NA=$ANALYSED; wait_analysed $PB "$TB" "parent B"; NB=$ANALYSED
+# The readiness flag the app gates sonic mode on (mStream #879): true once
+# the pass has produced vectors — and it was false while the pass ran.
+READY=$(curl -s "http://127.0.0.1:$PB/api/" -H "x-access-token: $TB" | python3 -c "import sys,json; print(json.load(sys.stdin).get('features',{}).get('discoveryReady'))")
+[ "$READY" = True ] && pass "B reports discoveryReady after the pass (the app's sonic gate reads it)" || fail "B reports discoveryReady=$READY after the pass"
 
 # ── pair them (A grants B its library) ─────────────────────────────────────
 TICKET=$(curl -s -X POST "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "$J" -H "x-access-token: $TA" -d '{"name":"Rig Parent B","vpaths":["demo"]}' | python3 -c "import sys,json; print(json.load(sys.stdin)['ticket'])")
@@ -203,6 +211,45 @@ sleep 3  # the peer's own capability refresh (version + discovery flag) lands ri
 play_album p1; N=$TRACKS
 [ "${N:-0}" -gt 0 ] && expect_pick "phase 1" "$N" rig-b peer-rig-peer-a
 media_key pause; sleep 1; save_applog phase1
+
+# ── phase 1b: the DJ hosted ON the peer (Scope 1) ──────────────────────────
+# servers.json stays as the reconcile left it (the peer entry included — the
+# launch restore resolves enabledServer against the list as loaded); only
+# auto_dj.json changes: armed on the peer, the fan-out off, so this is the
+# single-server path — a filepath seed the peer resolves itself, the pick
+# streamed through the proxy or the peer's own tunnel.
+python3 - "$RIG/auto_dj.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); d.update(enabledServer='peer-rig-peer-a', multiServerEnabled=False); json.dump(d, open(p,'w'))
+PY
+app_stop; cfg_write auto_dj.json "$RIG/auto_dj.json"; logcat_clear; wake; app_start
+wait_for_log '\[app\] default server ready' 30 || fail "phase 1b: default never published"
+wait_for_log '\[autodj\] restored on peer-rig-peer-a' 15 && pass "phase 1b: DJ restored armed on the peer" || fail "phase 1b: DJ not restored on the peer"
+N=$(cfg_read servers.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))"); PEER_Y=$((222 + 144 * (N - 1)))
+tap $PICKER; sleep 1.5; shot p1b-picker; tap 639 $PEER_Y; sleep 3
+wait_for_log '\[srv\] switched to peer-rig-peer-a' 5 && pass "phase 1b: peer selected from the picker" || fail "phase 1b: no switch to the peer"
+tap $PEER_ALBUMS; sleep 4; shot p1b-albums; tap $ALBUM1; sleep 3; tap $TRACK1; sleep 6
+n=$(applog | grep -oE '\[queue\] add [0-9]+ tracks' | tail -1 | grep -oE '[0-9]+' | head -1)
+if [ -n "$n" ] && ensure_playing 15; then pass "phase 1b: peer album queued ($n tracks) and playing ($(session_state))"; else save_applog p1b-play; fail "phase 1b: peer album did not play ($(session_state))"; fi
+if [ -n "$n" ]; then
+  T=$(now_ts); for i in $(seq 2 "$n"); do adbx shell input keyevent 87; sleep 1.5; done
+  if wait_for_log_after "$T" '\[queue\] add: ' 60; then
+    srv=""
+    for i in $(seq 1 10); do
+      srv=$(cfg_read queue.json | python3 -c "
+import sys,json
+d=json.load(sys.stdin); it=(d.get('items') or [])[-1]; ex=it.get('extras') or {}
+print(ex.get('server'), ex.get('djPick'), ex.get('djSonic'))" 2>/dev/null)
+      case "$srv" in *" True True") break;; esac; sleep 1
+    done
+    [ "$srv" = "peer-rig-peer-a True True" ] && pass "phase 1b: the peer-hosted DJ queued a sonic pick from the peer's library (djPick + djSonic)" || fail "phase 1b: queued pick reads '$srv'"
+    T2=$(now_ts); adbx shell input keyevent 87; sleep 8
+    if wait_for_log_after "$T2" '\[play\] track [0-9]+/[0-9]+' 10 && is_playing; then pass "phase 1b: the peer's pick plays ($(session_state))"; else save_applog p1b-pick; fail "phase 1b: the pick did not play ($(session_state))"; fi
+    bad=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE '\[dj\] (random-songs HTTP|refused)|Track not found|multi-server:')
+    [ "$bad" -eq 0 ] && pass "phase 1b: no HTTP error, no refusal, no fan-out during the peer-hosted pick" || { log "$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -E '\[dj\]' | tail -6)"; fail "phase 1b: $bad unexpected line(s) during the pick"; }
+  else save_applog p1b-pick; log "$(applog | grep -E '\[dj\]|\[autodj\]' | tail -8)"; fail "phase 1b: no pick within 60s of the last track"; fi
+fi
+media_key pause; sleep 1; save_applog phase1b
 
 # ── phase 2: own servers (the pairing removed; A planted directly) ─────────
 curl -s -o /dev/null -X DELETE "http://127.0.0.1:$PB/api/v1/admin/federation/peers/$PEER_ID" -H "x-access-token: $TB"

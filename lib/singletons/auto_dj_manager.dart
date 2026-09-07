@@ -410,7 +410,9 @@ class AutoDJManager {
         if (e.value == false) e.key,
     ];
     if (ignoreVPaths.isNotEmpty) out['ignoreVPaths'] = ignoreVPaths;
-    if (server.autoDJminRating != null) {
+    // Ratings are per-user; a peer is reached with a key (or a guest token)
+    // that has none, and the server skips the clause for such a caller.
+    if (server.autoDJminRating != null && !server.isFederated) {
       out['minRating'] = server.autoDJminRating;
     }
     if (server.autoDJGenreEnabled && server.autoDJGenres.isNotEmpty) {

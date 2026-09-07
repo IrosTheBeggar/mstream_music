@@ -26,6 +26,7 @@ import '../singletons/api.dart';
 import '../singletons/auto_dj_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
+import '../util/fan_out_readout.dart';
 import '../util/server_version.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/queue_list.dart' show toggleAutoDJ;
@@ -40,6 +41,7 @@ class AutoDJScreen extends StatefulWidget {
 class _AutoDJScreenState extends State<AutoDJScreen> {
   StreamSubscription<dynamic>? _customStateSub;
   StreamSubscription<int>? _autoDjMgrSub;
+  StreamSubscription? _tunnelSub;
 
   Server? _autoDJServer;
 
@@ -82,12 +84,18 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     _autoDjMgrSub = AutoDJManager().changeStream.listen((_) {
       if (mounted) setState(() {});
     });
+    // The participants readout says which candidates are still connecting;
+    // a tunnel coming up or dropping is what changes that.
+    _tunnelSub = ServerManager().tunnelTransitions.listen((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _customStateSub?.cancel();
     _autoDjMgrSub?.cancel();
+    _tunnelSub?.cancel();
     _keywordCtrl.dispose();
     super.dispose();
   }
@@ -223,7 +231,10 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           _olderServerNote(l),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.autoDjSectionFilters),
-          if (_panelServer != null) _minRatingTile(_panelServer!),
+          // No rating tile for a peer: a key has no stars (see the
+          // multi-server body for the same rule).
+          if (_panelServer != null && !_panelServer!.isFederated)
+            _minRatingTile(_panelServer!),
           if (!_durationHidden) _durationFilterSection(),
           // Keyword filter survives: it is applied client-side, so it works
           // against any server however old.
@@ -235,7 +246,8 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           _harmonicMixingSection(),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.autoDjSectionFilters),
-          if (_panelServer != null) _minRatingTile(_panelServer!),
+          if (_panelServer != null && !_panelServer!.isFederated)
+            _minRatingTile(_panelServer!),
           if (!_durationHidden) _durationFilterSection(),
           if (_panelServer != null) _genreFilterSection(_panelServer!),
           _keywordFilterSection(),
@@ -322,18 +334,36 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// Silently dropping a server would look like the feature not working.
   Widget _participantsLine(AppLocalizations l) {
     final total = _servers.length;
-    final eligible =
-        MediaManager().audioHandler.multiServerCandidates().length;
+    final candidates = MediaManager().audioHandler.multiServerCandidates();
+    final eligible = candidates.length;
     final short = eligible < total;
+    // A tunnel server counts as taking part from the moment the session is
+    // armed, but it can only answer once its tunnel is up — say how many
+    // are still on their way rather than let the first pick look short.
+    final connecting =
+        fanOutConnecting(candidates, ServerManager().tunnelServes).length;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
-      child: Text(
-        short
-            ? l.autoDjMultiServerSomeExcluded(eligible, total)
-            : l.autoDjMultiServerAllIn(eligible),
-        style: TextStyle(
-            color: short ? VelvetColors.warning : VelvetColors.textSecondary,
-            fontSize: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            short
+                ? l.autoDjMultiServerSomeExcluded(eligible, total)
+                : l.autoDjMultiServerAllIn(eligible),
+            style: TextStyle(
+                color:
+                    short ? VelvetColors.warning : VelvetColors.textSecondary,
+                fontSize: 12),
+          ),
+          if (connecting > 0)
+            Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text(l.autoDjMultiServerConnecting(connecting),
+                  style: TextStyle(
+                      color: VelvetColors.warning, fontSize: 12)),
+            ),
+        ],
       ),
     );
   }
@@ -434,7 +464,13 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     // which: the server predates 6.15.2, or discovery is switched off there.
     final tooOld =
         sonicKnownUnsupported(ServerVersion.tryParse(target?.serverVersion));
-    final supported = target?.discoveryAvailable == true && !tooOld;
+    // Three reasons, and the subtitle says which: the server predates 6.15.2,
+    // discovery is switched off there, or it is on but the scan has not
+    // produced vectors yet (mStream #879) — the case that used to look
+    // fully capable and then 400 every pick.
+    final notReady =
+        target?.discoveryOn == true && target?.discoveryReady == false;
+    final supported = target?.sonicUsable == true && !tooOld;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -455,7 +491,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
                           ? l.autoDjSonicSubtitle
                           : (tooOld
                               ? l.autoDjSonicNeedsNewerServer
-                              : l.autoDjSonicUnavailable),
+                              : notReady
+                                  ? l.autoDjSonicNotReady
+                                  : l.autoDjSonicUnavailable),
                       style: TextStyle(
                           color: VelvetColors.textSecondary, fontSize: 12),
                     ),
@@ -907,10 +945,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // ── Server picker (multi-server only, when enabled) ─────────────
 
   Widget _serverPickerTile(Server autoDJServer) {
-    // A federated peer cannot host the DJ: random-songs is off the
-    // federation allowlist, and its paths mean nothing to the parent.
+    // A federated peer hosts the DJ like any other server (random-songs is
+    // on the federation allowlist since mStream #946); only one the user
+    // hid, or its parent stopped listing, stays out.
     final servers =
-        ServerManager().serverList.where((s) => !s.isFederated).toList();
+        ServerManager().serverList.where((s) => s.isSelectable).toList();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: DropdownButton<Server>(
@@ -926,7 +965,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         items: servers
             .map((s) => DropdownMenuItem(
                   value: s,
-                  child: Text(s.url,
+                  child: Text(s.displayName,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: VelvetColors.textPrimary)),
                 ))
