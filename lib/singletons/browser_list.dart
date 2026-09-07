@@ -20,7 +20,9 @@ class BrowserManager {
   /// sections usable.
   static bool isHomeList(List<DisplayItem> list) {
     for (final it in list) {
-      if (it.type == 'note' || it.type == 'section') continue;
+      if (it.type == 'note' || it.type == 'banner' || it.type == 'section') {
+        continue;
+      }
       return it.type == 'execAction';
     }
     return false;
@@ -339,6 +341,18 @@ class BrowserManager {
             null,
             Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
             'Playlists and ratings stay on your own'),
+      // Requests waiting on this operator: a banner above the sections (a
+      // count is news, not a place) that opens Federation. Only our own
+      // servers carry the count, and only for an admin (server-scoped).
+      if (!federated && (server.federationInbox ?? 0) > 0)
+        DisplayItem(
+            server,
+            'Federation requests',
+            'banner',
+            'federation',
+            Icon(Icons.mark_email_unread_outlined,
+                color: VelvetColors.primary),
+            'federationInbox:${server.federationInbox}'),
       header('Library'),
       DisplayItem(server, 'File Explorer', 'execAction', 'fileExplorer',
           Icon(Icons.folder, color: VelvetColors.warning), null),

@@ -35,6 +35,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        // flutter_local_notifications (the federation-request alerts) refuses
+        // to build without library desugaring, even though minSdk 26 has
+        // java.time natively — its AAR metadata checks the flag.
+        coreLibraryDesugaringEnabled true
     }
 
     sourceSets {
@@ -161,6 +165,7 @@ kotlin {
 
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     // JVM unit tests for the hand-written MPEG-TS muxer (TsHlsSinkTest). Only
     // compiled/run by the test*UnitTest tasks, never bundled into the APK.
     testImplementation 'junit:junit:4.13.2'

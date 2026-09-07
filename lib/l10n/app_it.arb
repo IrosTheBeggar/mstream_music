@@ -973,5 +973,13 @@
   "p2pSaved": "Salvato",
   "p2pOff": "Off",
   "p2pSave": "Salva",
-  "p2pSearchServers": "Cerca server — nome o descrizione"
+  "p2pSearchServers": "Cerca server — nome o descrizione",
+  "federationInboxBanner": "{count, plural, =1{1 richiesta di federazione in attesa} other{{count} richieste di federazione in attesa}}",
+  "federationInboxBannerSub": "Tocca per accettare o rifiutare",
+  "federationInboxNotificationTitle": "{count, plural, =1{Una richiesta di federazione è in attesa} other{{count} richieste di federazione sono in attesa}}",
+  "federationInboxNotificationBody": "Su {server}. Apri per accettare o rifiutare.",
+  "federationInboxChannelName": "Richieste di federazione",
+  "federationInboxChannelDescription": "Su uno dei tuoi server è arrivata una richiesta di condivisione delle librerie",
+  "federationNotifyTitle": "Avvisami delle richieste",
+  "federationNotifySubtitle": "Una notifica sul telefono quando arriva una richiesta mentre l'app è aperta o in riproduzione"
 }

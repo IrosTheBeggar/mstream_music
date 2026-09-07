@@ -3890,4 +3890,48 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get p2pSearchServers => 'Buscar servidores — nombre o descripción';
+
+  @override
+  String federationInboxBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count solicitudes de federación en espera',
+      one: '1 solicitud de federación en espera',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationInboxBannerSub => 'Toca para aceptar o rechazar';
+
+  @override
+  String federationInboxNotificationTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hay $count solicitudes de federación en espera',
+      one: 'Hay una solicitud de federación en espera',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInboxNotificationBody(String server) {
+    return 'En $server. Abre para aceptar o rechazar.';
+  }
+
+  @override
+  String get federationInboxChannelName => 'Solicitudes de federación';
+
+  @override
+  String get federationInboxChannelDescription =>
+      'Llegó una solicitud para compartir bibliotecas en uno de tus servidores';
+
+  @override
+  String get federationNotifyTitle => 'Avisarme de las solicitudes';
+
+  @override
+  String get federationNotifySubtitle =>
+      'Una notificación en el teléfono cuando llega una solicitud mientras la app está abierta o reproduciendo';
 }

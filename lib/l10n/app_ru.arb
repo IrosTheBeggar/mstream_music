@@ -973,5 +973,13 @@
   "p2pSaved": "Сохранено",
   "p2pOff": "Выкл.",
   "p2pSave": "Сохранить",
-  "p2pSearchServers": "Поиск серверов — имя или описание"
+  "p2pSearchServers": "Поиск серверов — имя или описание",
+  "federationInboxBanner": "{count, plural, =1{1 запрос на федерацию ожидает} few{{count} запроса на федерацию ожидают} other{{count} запросов на федерацию ожидают}}",
+  "federationInboxBannerSub": "Нажмите, чтобы принять или отклонить",
+  "federationInboxNotificationTitle": "{count, plural, =1{Ожидает запрос на федерацию} few{Ожидают {count} запроса на федерацию} other{Ожидают {count} запросов на федерацию}}",
+  "federationInboxNotificationBody": "На {server}. Откройте, чтобы принять или отклонить.",
+  "federationInboxChannelName": "Запросы на федерацию",
+  "federationInboxChannelDescription": "На один из ваших серверов пришёл запрос на общий доступ к библиотекам",
+  "federationNotifyTitle": "Уведомлять о запросах",
+  "federationNotifySubtitle": "Уведомление на телефоне, когда запрос приходит при открытом приложении или во время воспроизведения"
 }

@@ -6431,6 +6431,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search servers — name or description'**
   String get p2pSearchServers;
+
+  /// Home banner headline: requests waiting on this operator.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 federation request waiting} other{{count} federation requests waiting}}'**
+  String federationInboxBanner(int count);
+
+  /// Home banner second line.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to accept or reject'**
+  String get federationInboxBannerSub;
+
+  /// Phone notification title.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{A federation request is waiting} other{{count} federation requests are waiting}}'**
+  String federationInboxNotificationTitle(int count);
+
+  /// Phone notification body; {server} is the server's name or address.
+  ///
+  /// In en, this message translates to:
+  /// **'On {server}. Open to accept or reject.'**
+  String federationInboxNotificationBody(String server);
+
+  /// Android notification channel name.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation requests'**
+  String get federationInboxChannelName;
+
+  /// Android notification channel description.
+  ///
+  /// In en, this message translates to:
+  /// **'A request to share libraries arrived on one of your servers'**
+  String get federationInboxChannelDescription;
+
+  /// Federation settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Notify me about requests'**
+  String get federationNotifyTitle;
+
+  /// Federation settings switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A phone notification when a request arrives while the app is open or playing'**
+  String get federationNotifySubtitle;
 }
 
 class _AppLocalizationsDelegate

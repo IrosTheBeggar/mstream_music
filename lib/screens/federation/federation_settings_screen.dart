@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../singletons/app_messenger.dart';
+import '../../singletons/federation_inbox_alerts.dart';
+import '../../singletons/settings.dart';
 import '../../theme/velvet_theme.dart';
 import '../../widgets/federation_widgets.dart';
 import 'federation_controller.dart';
@@ -47,11 +51,21 @@ class _FederationSettingsScreenState extends State<FederationSettingsScreen> {
     setState(() => _inboxBusy = true);
     try {
       await c.setAcceptRequests(on);
+      // Opening the inbox is the moment the OS permission makes sense.
+      if (on && SettingsManager().notifyFederationRequests) {
+        unawaited(FederationInboxAlerts().ensurePermission());
+      }
     } catch (_) {
       showGlobalSnack(l.federationInboxFailed);
     } finally {
       if (mounted) setState(() => _inboxBusy = false);
     }
+  }
+
+  Future<void> _notify(bool on) async {
+    await SettingsManager().setNotifyFederationRequests(on);
+    if (on) await FederationInboxAlerts().ensurePermission();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -153,6 +167,12 @@ class _FederationSettingsScreenState extends State<FederationSettingsScreen> {
                       titleLines: 2,
                       subtitle: l.federationDefaultsNote,
                       subtitleLines: 2,
+                    ),
+                    FedSwitchRow(
+                      title: l.federationNotifyTitle,
+                      subtitle: l.federationNotifySubtitle,
+                      value: SettingsManager().notifyFederationRequests,
+                      onChanged: _notify,
                     ),
                   ]),
                   const SizedBox(height: 14),

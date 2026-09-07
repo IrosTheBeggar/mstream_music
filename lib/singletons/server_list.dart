@@ -9,6 +9,7 @@ import '../objects/direct_access.dart';
 import './api.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
+import './federation_inbox_alerts.dart';
 import './log_manager.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
@@ -361,6 +362,7 @@ class ServerManager {
       final bool? prevFedDirect = server.federationDirectAvailable;
       final bool? prevFedAvailable = server.federationAvailable;
       final bool? prevP2pAvailable = server.p2pAvailable;
+      final int? prevFedInbox = server.federationInbox;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -416,14 +418,22 @@ class ServerManager {
           server.federationDirectAvailable != prevFedDirect ||
           server.federationAvailable != prevFedAvailable ||
           server.p2pAvailable != prevP2pAvailable ||
+          server.federationInbox != prevFedInbox ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
       }
       if (server.federationAvailable != prevFedAvailable ||
           server.p2pAvailable != prevP2pAvailable ||
+          server.federationInbox != prevFedInbox ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         _refreshHomeIfShowing(server);
+      }
+      // The one flag that also leaves the app: a rise in the request count
+      // is a phone notification, a drop retires it (the alerts decide).
+      if (server.federationInbox != null) {
+        unawaited(FederationInboxAlerts()
+            .onCount(server, server.federationInbox!, previous: prevFedInbox));
       }
       // The parent just started offering direct access: any peer of it that
       // is browsed or queued is worth a tunnel of its own right away.
@@ -507,6 +517,11 @@ class ServerManager {
         user is Map && user['federationDirect'] == true;
     server.federationAvailable =
         user is Map && user.containsKey('federationBrowse');
+    // Requests waiting on this operator — caller-scoped, a number only for
+    // an admin who can act on them. Absent on a build without the inbox.
+    server.federationInbox = user is Map && user['federationInbox'] is int
+        ? user['federationInbox'] as int
+        : null;
     // Server-wide, so it rides under `features` here (top-level on ping).
     server.p2pAvailable = features is Map && features.containsKey('discoveryP2p');
     // /api carries no discoveryPath. It was only ever a "this server VERSION
@@ -546,6 +561,8 @@ class ServerManager {
     server.federationDirectAvailable = res['federationDirect'] == true;
     server.federationAvailable =
         res.containsKey('federationBrowse');
+    server.federationInbox =
+        res['federationInbox'] is int ? res['federationInbox'] as int : null;
     server.p2pAvailable = res.containsKey('discoveryP2p');
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     return res;
@@ -820,6 +837,17 @@ class ServerManager {
   /// group's card and count read them, and the first launch after an update
   /// learns them seconds after the home was drawn. Anywhere deeper is left
   /// alone — a rebuild resets the browse stack.
+  /// The Federation screen just read the request list itself: keep the
+  /// home banner and the alerts in step without waiting for a ping.
+  void setFederationInbox(Server server, int count) {
+    final prev = server.federationInbox;
+    if (prev == count) return;
+    server.federationInbox = count;
+    unawaited(writeServerFile());
+    _refreshHomeIfShowing(server);
+    unawaited(FederationInboxAlerts().onCount(server, count, previous: prev));
+  }
+
   void _refreshHomeIfShowing(Server server) {
     if (!identical(server, currentServer)) return;
     if (!BrowserManager.isHomeList(BrowserManager().browserList)) return;
@@ -2358,6 +2386,7 @@ class ServerManager {
     server.federationDiscoveryAvailable = false;
     server.federationDirectAvailable = false; // a peer's own peers are out of reach
     server.federationAvailable = false; // and it has no federation of its own
+    server.federationInbox = null; // its requests are its operator's business
     server.p2pAvailable = false; // the network is the parent's, not a peer's
     server.discoveryPathAvailable = false;
     server.playlists.clear();

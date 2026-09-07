@@ -63,6 +63,15 @@ void main() {
       expect(back.parentServer, isNull);
     });
 
+    test('the inbox count survives a JSON round trip', () {
+      final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+        ..federationInbox = 2;
+      expect(Server.fromJson(s.toJson()).federationInbox, 2);
+      // Absent (an older file, or a server without the field) stays unknown.
+      final bare = Server('https://x.example.com', null, null, 'JWT', 'x');
+      expect(Server.fromJson(bare.toJson()).federationInbox, isNull);
+    });
+
     test('a server file written before federation loads as non-federated', () {
       final s = Server.fromJson({
         'url': 'https://music.example.com',

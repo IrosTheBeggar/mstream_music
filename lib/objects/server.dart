@@ -78,6 +78,13 @@ class Server {
   //                                  from this, so an admin can join from the
   //                                  phone and a member sees why it is off
   bool? p2pAvailable;
+  //   federationInbox              — federation requests waiting on this
+  //                                  operator (inbound, still `received`),
+  //                                  as of the last ping; null until a
+  //                                  server that carries the field has
+  //                                  answered (an older build never does).
+  //                                  Feeds the home banner and the alerts.
+  int? federationInbox;
   // The discovery engine as the server reports it, never pinned: whether it
   // is switched on at all, and — mStream #879 — whether the scan has
   // produced vectors yet (null from a server too old to say). The UI flags
@@ -360,6 +367,8 @@ class Server {
         p2pAvailable = json['p2pAvailable'] is bool
             ? json['p2pAvailable']
             : null,
+        federationInbox =
+            json['federationInbox'] is int ? json['federationInbox'] : null,
         discoveryEnabled =
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
@@ -402,6 +411,7 @@ class Server {
         'federationDirectAvailable': federationDirectAvailable,
         'federationAvailable': federationAvailable,
         'p2pAvailable': p2pAvailable,
+        'federationInbox': federationInbox,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
         'connectionType': connectionType,

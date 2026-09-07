@@ -973,5 +973,13 @@
   "p2pSaved": "保存しました",
   "p2pOff": "オフ",
   "p2pSave": "保存",
-  "p2pSearchServers": "サーバーを検索 — 名前または説明"
+  "p2pSearchServers": "サーバーを検索 — 名前または説明",
+  "federationInboxBanner": "{count, plural, other{フェデレーションのリクエスト {count} 件が待機中}}",
+  "federationInboxBannerSub": "タップして承認または拒否",
+  "federationInboxNotificationTitle": "{count, plural, other{フェデレーションのリクエストが {count} 件届いています}}",
+  "federationInboxNotificationBody": "{server} に届きました。開いて承認または拒否してください。",
+  "federationInboxChannelName": "フェデレーションのリクエスト",
+  "federationInboxChannelDescription": "いずれかのサーバーにライブラリ共有のリクエストが届きました",
+  "federationNotifyTitle": "リクエストを通知する",
+  "federationNotifySubtitle": "アプリを開いているか再生中にリクエストが届いたら、スマートフォンに通知します"
 }

@@ -89,6 +89,7 @@ dependencies:
   viz_decoder_native:
     path: packages/viz_decoder_native
   material_ui: ^1.1.0
+  flutter_local_notifications: ^22.3.0
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

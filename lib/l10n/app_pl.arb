@@ -973,5 +973,13 @@
   "p2pSaved": "Zapisano",
   "p2pOff": "Wył.",
   "p2pSave": "Zapisz",
-  "p2pSearchServers": "Szukaj serwerów — nazwa lub opis"
+  "p2pSearchServers": "Szukaj serwerów — nazwa lub opis",
+  "federationInboxBanner": "{count, plural, =1{1 prośba o federację czeka} few{{count} prośby o federację czekają} other{{count} próśb o federację czeka}}",
+  "federationInboxBannerSub": "Dotknij, aby zaakceptować lub odrzucić",
+  "federationInboxNotificationTitle": "{count, plural, =1{Czeka prośba o federację} few{Czekają {count} prośby o federację} other{Czeka {count} próśb o federację}}",
+  "federationInboxNotificationBody": "Na {server}. Otwórz, aby zaakceptować lub odrzucić.",
+  "federationInboxChannelName": "Prośby o federację",
+  "federationInboxChannelDescription": "Na jednym z Twoich serwerów pojawiła się prośba o udostępnienie bibliotek",
+  "federationNotifyTitle": "Powiadamiaj o prośbach",
+  "federationNotifySubtitle": "Powiadomienie na telefonie, gdy prośba przyjdzie, a aplikacja jest otwarta lub odtwarza"
 }

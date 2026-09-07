@@ -183,6 +183,26 @@ String browserChromeLabel(AppLocalizations l, String? english) {
   }
 }
 
+/// The two lines of a home banner (`type == 'banner'`): the headline comes
+/// from the machine subtext (`federationInbox:<n>` — the count is the
+/// news), the small line from the chrome name.
+(String, String?) homeBannerText(
+    AppLocalizations l, String name, String? subtext) {
+  final inbox = subtext == null
+      ? null
+      : RegExp(r'^federationInbox:(\d+)$').firstMatch(subtext);
+  if (inbox != null) {
+    return (
+      l.federationInboxBanner(int.parse(inbox.group(1)!)),
+      l.federationInboxBannerSub
+    );
+  }
+  return (
+    browserChromeLabel(l, name),
+    subtext == null ? null : homeCardSubtext(l, subtext)
+  );
+}
+
 /// The subtext a home card carries, from the machine form the home list
 /// stores (`sharedLibraries:<n>`) or a plain English chrome string.
 String homeCardSubtext(AppLocalizations l, String subtext) {

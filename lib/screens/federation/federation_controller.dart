@@ -127,6 +127,9 @@ class FederationController extends ChangeNotifier {
       requests = r.requests;
       acceptRequests = r.acceptRequests;
       requestsSupported = true;
+      // Keep the home banner and the alerts in step with what was just
+      // read (an accept here clears the banner before the next ping).
+      ServerManager().setFederationInbox(parent, pendingInbound);
     } on FederationAdminException catch (e) {
       if (e.status == 404) requestsSupported = false;
       appLog('[federation] requests on ${parent.localname}: $e');

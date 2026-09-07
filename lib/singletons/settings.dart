@@ -218,6 +218,10 @@ class SettingsManager {
   // not already in the library ("new artists only"). Sticky, shared by both
   // sections — mirrors the webapp's localStorage discoverNewArtistsOnly.
   bool discoverNewArtistsOnly = false;
+  // A phone notification when a federation request lands in an admin's
+  // inbox (FederationInboxAlerts). On by default; the OS permission is only
+  // asked for when there is something to show.
+  bool notifyFederationRequests = true;
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
@@ -346,6 +350,7 @@ class SettingsManager {
       final cap = m['autoDownloadCap'];
       autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;
       discoverNewArtistsOnly = m['discoverNewArtistsOnly'] ?? false;
+      notifyFederationRequests = m['notifyFederationRequests'] ?? true;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
@@ -551,6 +556,7 @@ class SettingsManager {
       'offlineQueueWifiOnly': offlineQueueWifiOnly,
       'autoDownloadCap': autoDownloadCap,
       'discoverNewArtistsOnly': discoverNewArtistsOnly,
+      'notifyFederationRequests': notifyFederationRequests,
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
@@ -645,6 +651,11 @@ class SettingsManager {
 
   Future<void> setDiscoverNewArtistsOnly(bool v) async {
     discoverNewArtistsOnly = v;
+    await _save();
+  }
+
+  Future<void> setNotifyFederationRequests(bool v) async {
+    notifyFederationRequests = v;
     await _save();
   }
 
