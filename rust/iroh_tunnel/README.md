@@ -42,7 +42,7 @@ The surface is small (abi-version, start / stop / status / path-kind / network-c
 ## Run the interop test (desktop, no device needed)
 
 ```sh
-cd interop && npm install          # @number0/iroh@next (v1)
+cd interop && npm install          # @number0/iroh 1.1.0 — the line the mStream server runs
 cd .. && cargo build               # builds the dev client binary
 node interop/harness.mjs           # Rust client ⇆ JS server; asserts JSON + Range + concurrency + reconnect + in-place kick + guest mode (federation ALPN, rejected token, in-place credential swap)
 ```
