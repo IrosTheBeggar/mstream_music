@@ -3425,10 +3425,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get p2pJoinTitle => 'Consigli dalle librerie di altre persone';
 
   @override
-  String get p2pJoinBody =>
-      'Scopri guadagna la sezione “Dalla rete” e il tuo server entra nel catalogo che gli altri operatori consultano.';
-
-  @override
   String get p2pWhatShared => 'Cosa viene condiviso';
 
   @override
@@ -3444,13 +3440,6 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Visibili a tutti nella rete, per impostazione predefinita la rete pubblica della community';
-
-  @override
-  String get p2pShared3 => 'Attiva la raccolta dei dati di scoperta';
-
-  @override
-  String get p2pShared3Sub =>
-      'L\'analisi post-scansione che crea le impronte, se non è già attiva';
 
   @override
   String get p2pHowYouAppear => 'Come appari';

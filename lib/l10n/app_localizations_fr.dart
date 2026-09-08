@@ -3433,10 +3433,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Des recommandations issues des bibliothèques des autres';
 
   @override
-  String get p2pJoinBody =>
-      'Découvrir gagne une section « Depuis le réseau », et votre serveur rejoint le catalogue que consultent les autres opérateurs.';
-
-  @override
   String get p2pWhatShared => 'Ce qui est partagé';
 
   @override
@@ -3452,13 +3448,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Visibles par tous sur le réseau, par défaut le réseau communautaire public';
-
-  @override
-  String get p2pShared3 => 'Active la collecte des données de découverte';
-
-  @override
-  String get p2pShared3Sub =>
-      'L\'analyse après scan qui construit les empreintes, si elle n\'est pas déjà active';
 
   @override
   String get p2pHowYouAppear => 'Comment vous apparaissez';

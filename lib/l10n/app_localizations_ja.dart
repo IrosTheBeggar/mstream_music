@@ -3268,10 +3268,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get p2pJoinTitle => '他の人のライブラリからのおすすめ';
 
   @override
-  String get p2pJoinBody =>
-      '「発見」に「ネットワークから」のセクションが加わり、あなたのサーバーが他の運営者が閲覧するカタログに載ります。';
-
-  @override
   String get p2pWhatShared => '共有される内容';
 
   @override
@@ -3285,12 +3281,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get p2pShared2Sub => 'ネットワーク上の全員に公開され、既定では公開コミュニティネットワークに載ります';
-
-  @override
-  String get p2pShared3 => 'ディスカバリーデータの収集をオンにします';
-
-  @override
-  String get p2pShared3Sub => '指紋を作るスキャン後の解析（まだオフの場合）';
 
   @override
   String get p2pHowYouAppear => '表示のされ方';

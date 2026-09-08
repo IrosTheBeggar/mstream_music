@@ -3213,9 +3213,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pJoinTitle => '来自他人曲库的推荐';
 
   @override
-  String get p2pJoinBody => '“发现”会新增“来自网络”栏目，你的服务器也会进入其他运营者浏览的目录。';
-
-  @override
   String get p2pWhatShared => '共享的内容';
 
   @override
@@ -3229,12 +3226,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get p2pShared2Sub => '网络上所有人可见，默认公布到公共社区网络';
-
-  @override
-  String get p2pShared3 => '开启发现数据收集';
-
-  @override
-  String get p2pShared3Sub => '扫描后用于生成指纹的分析（如果尚未开启）';
 
   @override
   String get p2pHowYouAppear => '你的显示方式';

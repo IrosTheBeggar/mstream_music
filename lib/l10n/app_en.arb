@@ -3469,10 +3469,6 @@
   "@p2pJoinTitle": {
       "description": "Join screen headline."
   },
-  "p2pJoinBody": "Discover gains “From the network”, and your server joins the catalog other operators browse.",
-  "@p2pJoinBody": {
-      "description": "Join screen body."
-  },
   "p2pWhatShared": "What gets shared",
   "@p2pWhatShared": {
       "description": "Section header on the join screen."
@@ -3492,14 +3488,6 @@
   "p2pShared2Sub": "Visible to everyone on the network, by default the public community network",
   "@p2pShared2Sub": {
       "description": "Shared item 2 detail."
-  },
-  "p2pShared3": "Turns on discovery data collection",
-  "@p2pShared3": {
-      "description": "Shared item 3."
-  },
-  "p2pShared3Sub": "The post-scan analysis that builds the fingerprints, if it is not on yet",
-  "@p2pShared3Sub": {
-      "description": "Shared item 3 detail."
   },
   "p2pHowYouAppear": "How you appear",
   "@p2pHowYouAppear": {

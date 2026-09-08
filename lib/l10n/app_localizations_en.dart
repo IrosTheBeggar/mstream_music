@@ -3390,10 +3390,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get p2pJoinTitle => 'Recommendations from other people\'s libraries';
 
   @override
-  String get p2pJoinBody =>
-      'Discover gains “From the network”, and your server joins the catalog other operators browse.';
-
-  @override
   String get p2pWhatShared => 'What gets shared';
 
   @override
@@ -3409,13 +3405,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Visible to everyone on the network, by default the public community network';
-
-  @override
-  String get p2pShared3 => 'Turns on discovery data collection';
-
-  @override
-  String get p2pShared3Sub =>
-      'The post-scan analysis that builds the fingerprints, if it is not on yet';
 
   @override
   String get p2pHowYouAppear => 'How you appear';

@@ -3420,10 +3420,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pJoinTitle => 'Recomendações das bibliotecas de outras pessoas';
 
   @override
-  String get p2pJoinBody =>
-      'Descobrir ganha a secção “Da rede” e o seu servidor entra no catálogo que outros operadores consultam.';
-
-  @override
   String get p2pWhatShared => 'O que é partilhado';
 
   @override
@@ -3439,13 +3435,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Visíveis para todos na rede, por predefinição a rede pública da comunidade';
-
-  @override
-  String get p2pShared3 => 'Liga a recolha de dados de descoberta';
-
-  @override
-  String get p2pShared3Sub =>
-      'A análise pós-verificação que cria as impressões, se ainda não estiver ligada';
 
   @override
   String get p2pHowYouAppear => 'Como aparece';

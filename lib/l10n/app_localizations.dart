@@ -5700,12 +5700,6 @@ abstract class AppLocalizations {
   /// **'Recommendations from other people\'s libraries'**
   String get p2pJoinTitle;
 
-  /// Join screen body.
-  ///
-  /// In en, this message translates to:
-  /// **'Discover gains “From the network”, and your server joins the catalog other operators browse.'**
-  String get p2pJoinBody;
-
   /// Section header on the join screen.
   ///
   /// In en, this message translates to:
@@ -5735,18 +5729,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visible to everyone on the network, by default the public community network'**
   String get p2pShared2Sub;
-
-  /// Shared item 3.
-  ///
-  /// In en, this message translates to:
-  /// **'Turns on discovery data collection'**
-  String get p2pShared3;
-
-  /// Shared item 3 detail.
-  ///
-  /// In en, this message translates to:
-  /// **'The post-scan analysis that builds the fingerprints, if it is not on yet'**
-  String get p2pShared3Sub;
 
   /// Section header: identity.
   ///

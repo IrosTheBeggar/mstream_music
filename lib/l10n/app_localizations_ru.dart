@@ -3452,10 +3452,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get p2pJoinTitle => 'Рекомендации из чужих библиотек';
 
   @override
-  String get p2pJoinBody =>
-      'В «Открыть для себя» появится раздел «Из сети», а ваш сервер попадёт в каталог, который просматривают другие операторы.';
-
-  @override
   String get p2pWhatShared => 'Что передаётся';
 
   @override
@@ -3471,13 +3467,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Видны всем в сети, по умолчанию в публичной сети сообщества';
-
-  @override
-  String get p2pShared3 => 'Включает сбор данных для обнаружения';
-
-  @override
-  String get p2pShared3Sub =>
-      'Анализ после сканирования, который строит отпечатки, если он ещё не включён';
 
   @override
   String get p2pHowYouAppear => 'Как вас видят';

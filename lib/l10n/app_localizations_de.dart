@@ -3433,10 +3433,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get p2pJoinTitle => 'Empfehlungen aus den Bibliotheken anderer';
 
   @override
-  String get p2pJoinBody =>
-      'Entdecken erhält den Bereich „Aus dem Netzwerk“, und dein Server erscheint im Katalog, den andere Betreiber durchstöbern.';
-
-  @override
   String get p2pWhatShared => 'Was geteilt wird';
 
   @override
@@ -3452,13 +3448,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get p2pShared2Sub =>
       'Für alle im Netzwerk sichtbar, standardmäßig im öffentlichen Community-Netzwerk';
-
-  @override
-  String get p2pShared3 => 'Schaltet die Discovery-Datensammlung ein';
-
-  @override
-  String get p2pShared3Sub =>
-      'Die Analyse nach dem Scan, die die Fingerabdrücke erzeugt, falls noch nicht aktiv';
 
   @override
   String get p2pHowYouAppear => 'So erscheinst du';

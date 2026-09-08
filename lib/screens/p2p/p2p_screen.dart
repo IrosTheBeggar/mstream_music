@@ -34,7 +34,7 @@ class _P2pScreenState extends State<P2pScreen> with WidgetsBindingObserver {
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _filterCtrl = TextEditingController();
-  bool _acceptRequests = false;
+  bool _acceptRequests = true;
   bool _joining = false;
   bool _seeded = false;
 
@@ -574,27 +574,17 @@ class _P2pScreenState extends State<P2pScreen> with WidgetsBindingObserver {
     return [
       Padding(
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 2),
-        child: Column(children: [
-          const FedTile(Icons.public, size: 56),
-          const SizedBox(height: 8),
-          Text(l.p2pJoinTitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w600,
-                  color: VelvetColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text(l.p2pJoinBody,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13, height: 1.4, color: VelvetColors.textSecondary)),
-        ]),
+        child: Text(l.p2pJoinTitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w600,
+                color: VelvetColors.textPrimary)),
       ),
       FedSection(l.p2pWhatShared),
       FedCard(children: [
         FedRow(icon: Icons.storage_outlined, iconColor: VelvetColors.success, title: l.p2pShared1, subtitle: l.p2pShared1Sub, subtitleLines: 2),
         FedRow(icon: Icons.public, iconColor: VelvetColors.success, title: l.p2pShared2, subtitle: l.p2pShared2Sub, subtitleLines: 2),
-        FedRow(icon: Icons.auto_awesome, iconColor: VelvetColors.success, title: l.p2pShared3, subtitle: l.p2pShared3Sub, subtitleLines: 2),
       ]),
       FedSection(l.p2pHowYouAppear),
       TextField(
