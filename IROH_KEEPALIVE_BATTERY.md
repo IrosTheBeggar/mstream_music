@@ -2,7 +2,8 @@
 
 How the iroh remote-access tunnel (`rust/iroh_tunnel/`) behaves with respect to
 QUIC keepalive, idle timeouts, and Android battery — and why the client sets **no
-custom transport config**. Verified against the pinned **iroh 1.0.0** source.
+custom transport config**. Verified against the pinned **iroh 1.1.0** source (noq-proto 1.2.0); re-checked on the
+2026-09-07 update from 1.0.0 — every constant below is unchanged.
 
 ## TL;DR
 
@@ -22,8 +23,8 @@ Under `presets::N0` + `endpoint.connect(...)`, the connection uses iroh's defaul
 
 | Setting | Value | Source |
 | --- | --- | --- |
-| connection `keep_alive_interval` | **5 s** | `iroh-1.0.0/src/endpoint/quic.rs:156-158` |
-| connection `max_idle_timeout` | **30 s** (negotiated to `min(local, peer)`) | `quic.rs`; noq-proto `connection/mod.rs:7736-7743` |
+| connection `keep_alive_interval` | **5 s** | `iroh-1.1.0/src/endpoint/quic.rs:156-158` |
+| connection `max_idle_timeout` | **30 s** (negotiated to `min(local, peer)`) | `quic.rs`; noq-proto `connection/mod.rs:7741-7748` |
 | per-path `keep_alive_interval` | **5 s** | `quic.rs:156-158` |
 | per-path `max_idle_timeout` (IP/direct) | **15 s** | `src/socket.rs:117` (`PATH_MAX_IDLE_TIMEOUT`) |
 | per-path `max_idle_timeout` (relay) | **30 s** | `src/socket.rs:129` (`RELAY_PATH_MAX_IDLE_TIMEOUT`) |
@@ -37,9 +38,9 @@ timers race:
 
 1. The **per-path idle timeout** abandons the dead path (15 s direct, 30 s relay).
    When the last usable path is abandoned the whole connection closes
-   (noq-proto `transport.rs:404-405`).
+   (noq-proto `config/transport.rs:405-406`).
 2. The **connection-level negotiated idle timeout** (≤ 30 s) closes with
-   `ConnectionError::TimedOut` (`connection/mod.rs:7465`).
+   `ConnectionError::TimedOut` (`connection/mod.rs:7458`).
 
 Either way `conn.closed()` (lib.rs `supervise`) resolves on its own — **~15 s** on
 a direct path, **up to ~30 s** if the surviving path was the relay — and the
@@ -79,12 +80,12 @@ process runs again.
 
 ## If we ever do want a knob
 
-iroh 1.0.0 exposes per-connection transport config, but **not** via `Endpoint::connect`
-(it hardcodes `Default::default()`, `endpoint.rs:1048`). Two supported routes:
+iroh 1.1.0 exposes per-connection transport config, but **not** via `Endpoint::connect`
+(it hardcodes `Default::default()`, `endpoint.rs:1060`). Two supported routes:
 
 - **Per-dial:** switch `dial_and_handshake` from `connect()` to
   `connect_with_opts(addr, alpn, ConnectOptions::new().with_transport_config(cfg))`
-  (`endpoint.rs:1080,1771`), then await the returned `Connecting` once more.
+  (`endpoint.rs:1092,1784`), then await the returned `Connecting` once more.
 - **Endpoint-wide (preferred):** `Endpoint::builder(presets::N0).transport_config(cfg).bind()`
   (`endpoint.rs:669`) so the supervisor's re-dials inherit it without threading
   `ConnectOptions` through `dial_and_handshake`.

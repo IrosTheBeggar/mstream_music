@@ -92,5 +92,15 @@ for slice in ios-arm64 ios-arm64-simulator; do
     exit 1
   }
 done
+# Guard against the iOS 15–17 launch-crash class (dbbbbc9): a transitive dep
+# that hard-links an iOS 18+ Network.framework symbol makes dyld abort the app
+# at launch on older devices, and simulators (iOS 18+) never show it. The known
+# offender was netdev < 0.46's nw_path_is_ultra_constrained; fail if it returns.
+for slice in ios-arm64 ios-arm64-simulator; do
+  if xcrun nm -u -arch arm64 "$DEST/$FW.xcframework/$slice/$FW.framework/$FW" | grep -q '_nw_path_is_ultra_constrained'; then
+    echo "ERROR: $slice imports nw_path_is_ultra_constrained (iOS 18+ only) — the app would crash at launch on iOS 15–17"
+    exit 1
+  fi
+done
 echo "staged: $DEST/$FW.xcframework"
 echo "remember: commit the updated xcframework — builds ship the committed binary."
