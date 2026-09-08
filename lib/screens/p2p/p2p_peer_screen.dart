@@ -110,110 +110,113 @@ class _P2pPeerScreenState extends State<P2pPeerScreen> {
               ],
             ),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-            children: [
-              FedCard(children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: Text(
-                      p.description != null ? '“${p.description}”' : l.p2pNoDescription,
-                      style: TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                          color: p.description != null
-                              ? VelvetColors.textPrimary
-                              : VelvetColors.textTertiary)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-                  child: Row(children: [
-                    _stat('${p.trackCount}', l.p2pTracksLabel, null),
-                    const SizedBox(width: 8),
-                    _stat('${p.seeders}', l.p2pSeedersLabel, null),
-                    const SizedBox(width: 8),
-                    _stat(
-                        f?.firstFetchedAt != null
-                            ? MaterialLocalizations.of(context)
-                                .formatShortMonthDay(f!.firstFetchedAt!)
-                            : '—',
-                        l.p2pHeldSince,
-                        null),
-                  ]),
-                ),
-              ]),
-              if (p.compatible == false) ...[
-                const SizedBox(height: 10),
-                FedNote(l.p2pIncompatibleNote),
-              ],
-              FedSection(l.p2pSnapshotSection),
-              FedCard(children: [
-                FedRow(
-                  icon: Icons.download_outlined,
-                  iconColor: f == null ? VelvetColors.textSecondary : null,
-                  title: f == null ? l.p2pNotDownloaded : l.p2pDownloadedSize(fmtBytes(f.sizeBytes)),
-                  subtitle: f == null
-                      ? l.p2pNotDownloadedSub
-                      : (f.stale
-                          ? '${l.p2pSnapshotSeq(f.snapshotSeq)} · ${l.p2pNewerAnnounced(p.snapshotSeq)}'
-                          : l.p2pSnapshotSeq(f.snapshotSeq)),
-                  subtitleLines: 2,
-                  dot: f == null ? null : (f.stale ? VelvetColors.warning : VelvetColors.success),
-                  trailing: FedButton(
-                      _fetching ? l.p2pDownloading : (f == null ? l.p2pDownload : l.p2pUpdate),
-                      kind: FedButtonKind.text,
-                      height: 32,
-                      fontSize: 14,
-                      busy: _fetching,
-                      onPressed: (f != null && !f.stale) || p.compatible == false
-                          ? null
-                          : () => _fetch(p)),
-                ),
-                if (f != null)
-                  FedSwitchRow(
-                    title: l.p2pPin,
-                    subtitle: rotation > 0 ? l.p2pPinSub(rotation) : l.p2pPinSubNoRotation,
-                    value: f.pinned,
-                    busy: _busy,
-                    onChanged: (v) => _run(() => c.api.pinSnapshot(p.endpointId, v), l.p2pSaved),
+          body: SafeArea(
+            top: false,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+              children: [
+                FedCard(children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    child: Text(
+                        p.description != null ? '“${p.description}”' : l.p2pNoDescription,
+                        style: TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            color: p.description != null
+                                ? VelvetColors.textPrimary
+                                : VelvetColors.textTertiary)),
                   ),
-              ]),
-              FedSection(l.federationTitle),
-              FedCard(children: [_relationshipRow(l, p, name, rel)]),
-              const SizedBox(height: 18),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  if (f != null)
-                    FedButton(l.p2pRemoveSnapshot,
-                        icon: Icons.delete_outline,
-                        kind: FedButtonKind.text,
-                        height: 36,
-                        fontSize: 13,
-                        busy: _busy,
-                        onPressed: () => _run(
-                            () => c.api.removeSnapshot(p.endpointId), l.p2pSnapshotRemoved)),
-                  if (f == null && !p.online)
-                    FedButton(l.p2pForget,
-                        icon: Icons.visibility_off_outlined,
-                        kind: FedButtonKind.text,
-                        height: 36,
-                        fontSize: 13,
-                        busy: _busy,
-                        onPressed: () => _run(() => c.api.forget(p.endpointId),
-                            l.p2pForgotten(name), popAfter: true)),
-                  FedButton(l.p2pBlockServer,
-                      icon: Icons.block,
-                      kind: FedButtonKind.danger,
-                      height: 36,
-                      fontSize: 13,
-                      busy: _busy,
-                      onPressed: () => _block(p, name)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                    child: Row(children: [
+                      _stat('${p.trackCount}', l.p2pTracksLabel, null),
+                      const SizedBox(width: 8),
+                      _stat('${p.seeders}', l.p2pSeedersLabel, null),
+                      const SizedBox(width: 8),
+                      _stat(
+                          f?.firstFetchedAt != null
+                              ? MaterialLocalizations.of(context)
+                                  .formatShortMonthDay(f!.firstFetchedAt!)
+                              : '—',
+                          l.p2pHeldSince,
+                          null),
+                    ]),
+                  ),
+                ]),
+                if (p.compatible == false) ...[
+                  const SizedBox(height: 10),
+                  FedNote(l.p2pIncompatibleNote),
                 ],
-              ),
-            ],
+                FedSection(l.p2pSnapshotSection),
+                FedCard(children: [
+                  FedRow(
+                    icon: Icons.download_outlined,
+                    iconColor: f == null ? VelvetColors.textSecondary : null,
+                    title: f == null ? l.p2pNotDownloaded : l.p2pDownloadedSize(fmtBytes(f.sizeBytes)),
+                    subtitle: f == null
+                        ? l.p2pNotDownloadedSub
+                        : (f.stale
+                            ? '${l.p2pSnapshotSeq(f.snapshotSeq)} · ${l.p2pNewerAnnounced(p.snapshotSeq)}'
+                            : l.p2pSnapshotSeq(f.snapshotSeq)),
+                    subtitleLines: 2,
+                    dot: f == null ? null : (f.stale ? VelvetColors.warning : VelvetColors.success),
+                    trailing: FedButton(
+                        _fetching ? l.p2pDownloading : (f == null ? l.p2pDownload : l.p2pUpdate),
+                        kind: FedButtonKind.text,
+                        height: 32,
+                        fontSize: 14,
+                        busy: _fetching,
+                        onPressed: (f != null && !f.stale) || p.compatible == false
+                            ? null
+                            : () => _fetch(p)),
+                  ),
+                  if (f != null)
+                    FedSwitchRow(
+                      title: l.p2pPin,
+                      subtitle: rotation > 0 ? l.p2pPinSub(rotation) : l.p2pPinSubNoRotation,
+                      value: f.pinned,
+                      busy: _busy,
+                      onChanged: (v) => _run(() => c.api.pinSnapshot(p.endpointId, v), l.p2pSaved),
+                    ),
+                ]),
+                FedSection(l.federationTitle),
+                FedCard(children: [_relationshipRow(l, p, name, rel)]),
+                const SizedBox(height: 18),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    if (f != null)
+                      FedButton(l.p2pRemoveSnapshot,
+                          icon: Icons.delete_outline,
+                          kind: FedButtonKind.text,
+                          height: 36,
+                          fontSize: 13,
+                          busy: _busy,
+                          onPressed: () => _run(
+                              () => c.api.removeSnapshot(p.endpointId), l.p2pSnapshotRemoved)),
+                    if (f == null && !p.online)
+                      FedButton(l.p2pForget,
+                          icon: Icons.visibility_off_outlined,
+                          kind: FedButtonKind.text,
+                          height: 36,
+                          fontSize: 13,
+                          busy: _busy,
+                          onPressed: () => _run(() => c.api.forget(p.endpointId),
+                              l.p2pForgotten(name), popAfter: true)),
+                    FedButton(l.p2pBlockServer,
+                        icon: Icons.block,
+                        kind: FedButtonKind.danger,
+                        height: 36,
+                        fontSize: 13,
+                        busy: _busy,
+                        onPressed: () => _block(p, name)),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -92,98 +92,101 @@ class _P2pSettingsScreenState extends State<P2pSettingsScreen> {
         final (retLabels, retIdx) = _chips(_retention, s.peerRetentionDays, (v) => _days(l, v));
         return Scaffold(
           appBar: AppBar(title: Text(l.p2pSettingsTitle)),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-            children: [
-              FedCard(children: [
-                FedSwitchRow(
-                  title: l.p2pSwitchTitle,
-                  subtitle: l.p2pSwitchSub,
-                  value: s.enabled,
-                  busy: _toggling,
-                  onChanged: s.enabled ? (_) => _leave() : null,
-                ),
-              ]),
-              FedSection(l.p2pHowYouAppear),
-              FedCard(children: [
-                FedRow(
-                  icon: Icons.edit_outlined,
-                  iconColor: VelvetColors.textSecondary,
-                  title: s.serverName.isEmpty ? c.server.displayName : s.serverName,
-                  subtitle: s.serverDescription.isEmpty ? l.p2pNoDescription : s.serverDescription,
-                  subtitleLines: 2,
-                  trailing: fedChevron(),
-                  onTap: () async {
-                    await Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => P2pIdentityScreen(controller: c)));
-                  },
-                ),
-              ]),
-              FedSection(l.p2pSnapshotsSection),
-              FedCard(children: [
-                FedChipRow(
-                  label: l.p2pAutoDownload,
-                  options: autoLabels,
-                  selected: autoIdx,
-                  onSelected: (i) {
-                    if (i < _autoFetch.length && _savingKnob == null) {
-                      _knob('auto', () => c.api.setAutoFetchCount(_autoFetch[i]));
-                    }
-                  },
-                ),
-                FedChipRow(
-                  label: l.p2pStorageCap,
-                  options: storLabels,
-                  selected: storIdx,
-                  onSelected: (i) {
-                    if (i < _storageMb.length && _savingKnob == null) {
-                      _knob('storage', () => c.api.setMaxStorageMb(_storageMb[i]));
-                    }
-                  },
-                ),
-                FedChipRow(
-                  label: l.p2pRotate,
-                  options: rotLabels,
-                  selected: rotIdx,
-                  onSelected: (i) {
-                    if (i < _rotation.length && _savingKnob == null) {
-                      _knob('rotation', () => c.api.setRotationDays(_rotation[i]));
-                    }
-                  },
-                ),
-                FedChipRow(
-                  label: l.p2pForgetOffline,
-                  options: retLabels,
-                  selected: retIdx,
-                  onSelected: (i) {
-                    if (i < _retention.length && _savingKnob == null) {
-                      _knob('retention', () => c.api.setPeerRetentionDays(_retention[i]));
-                    }
-                  },
-                ),
-              ]),
-              FedSection(l.p2pMeshSection),
-              FedCard(children: [
-                FedRow(
-                  icon: Icons.settings_input_antenna,
-                  iconColor: VelvetColors.textSecondary,
-                  title: l.p2pCommunitySeeds,
-                  subtitle: s.communitySeeds ? l.p2pCommunitySeedsOn : l.p2pCommunitySeedsOff,
-                  subtitleLines: 2,
-                ),
-                FedRow(
-                  icon: Icons.block,
-                  iconColor: VelvetColors.textSecondary,
-                  title: l.p2pBlockedServers(s.blockedPeers.length),
-                  subtitle: l.p2pBlockedSub,
-                  trailing: s.blockedPeers.isEmpty ? null : fedChevron(),
-                  onTap: s.blockedPeers.isEmpty
-                      ? null
-                      : () => Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => P2pBlockedScreen(controller: c))),
-                ),
-              ]),
-            ],
+          body: SafeArea(
+            top: false,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+              children: [
+                FedCard(children: [
+                  FedSwitchRow(
+                    title: l.p2pSwitchTitle,
+                    subtitle: l.p2pSwitchSub,
+                    value: s.enabled,
+                    busy: _toggling,
+                    onChanged: s.enabled ? (_) => _leave() : null,
+                  ),
+                ]),
+                FedSection(l.p2pHowYouAppear),
+                FedCard(children: [
+                  FedRow(
+                    icon: Icons.edit_outlined,
+                    iconColor: VelvetColors.textSecondary,
+                    title: s.serverName.isEmpty ? c.server.displayName : s.serverName,
+                    subtitle: s.serverDescription.isEmpty ? l.p2pNoDescription : s.serverDescription,
+                    subtitleLines: 2,
+                    trailing: fedChevron(),
+                    onTap: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => P2pIdentityScreen(controller: c)));
+                    },
+                  ),
+                ]),
+                FedSection(l.p2pSnapshotsSection),
+                FedCard(children: [
+                  FedChipRow(
+                    label: l.p2pAutoDownload,
+                    options: autoLabels,
+                    selected: autoIdx,
+                    onSelected: (i) {
+                      if (i < _autoFetch.length && _savingKnob == null) {
+                        _knob('auto', () => c.api.setAutoFetchCount(_autoFetch[i]));
+                      }
+                    },
+                  ),
+                  FedChipRow(
+                    label: l.p2pStorageCap,
+                    options: storLabels,
+                    selected: storIdx,
+                    onSelected: (i) {
+                      if (i < _storageMb.length && _savingKnob == null) {
+                        _knob('storage', () => c.api.setMaxStorageMb(_storageMb[i]));
+                      }
+                    },
+                  ),
+                  FedChipRow(
+                    label: l.p2pRotate,
+                    options: rotLabels,
+                    selected: rotIdx,
+                    onSelected: (i) {
+                      if (i < _rotation.length && _savingKnob == null) {
+                        _knob('rotation', () => c.api.setRotationDays(_rotation[i]));
+                      }
+                    },
+                  ),
+                  FedChipRow(
+                    label: l.p2pForgetOffline,
+                    options: retLabels,
+                    selected: retIdx,
+                    onSelected: (i) {
+                      if (i < _retention.length && _savingKnob == null) {
+                        _knob('retention', () => c.api.setPeerRetentionDays(_retention[i]));
+                      }
+                    },
+                  ),
+                ]),
+                FedSection(l.p2pMeshSection),
+                FedCard(children: [
+                  FedRow(
+                    icon: Icons.settings_input_antenna,
+                    iconColor: VelvetColors.textSecondary,
+                    title: l.p2pCommunitySeeds,
+                    subtitle: s.communitySeeds ? l.p2pCommunitySeedsOn : l.p2pCommunitySeedsOff,
+                    subtitleLines: 2,
+                  ),
+                  FedRow(
+                    icon: Icons.block,
+                    iconColor: VelvetColors.textSecondary,
+                    title: l.p2pBlockedServers(s.blockedPeers.length),
+                    subtitle: l.p2pBlockedSub,
+                    trailing: s.blockedPeers.isEmpty ? null : fedChevron(),
+                    onTap: s.blockedPeers.isEmpty
+                        ? null
+                        : () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => P2pBlockedScreen(controller: c))),
+                  ),
+                ]),
+              ],
+            ),
           ),
         );
       },
@@ -311,31 +314,34 @@ class _P2pBlockedScreenState extends State<P2pBlockedScreen> {
         final ids = widget.controller.status?.blockedPeers ?? const [];
         return Scaffold(
           appBar: AppBar(title: Text(l.p2pBlockedTitle)),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-            children: [
-              FedCard(children: [
-                if (ids.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(l.p2pBlockedServers(0),
-                        style: TextStyle(color: VelvetColors.textSecondary)),
-                  ),
-                for (final id in ids)
-                  FedRow(
-                    icon: Icons.block,
-                    iconColor: VelvetColors.error,
-                    title: id.length > 12 ? '${id.substring(0, 12)}…' : id,
-                    subtitle: l.p2pBlockedSub,
-                    trailing: FedButton(l.p2pUnblock,
-                        kind: FedButtonKind.text,
-                        height: 32,
-                        fontSize: 14,
-                        busy: _busy == id,
-                        onPressed: () => _unblock(id)),
-                  ),
-              ]),
-            ],
+          body: SafeArea(
+            top: false,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+              children: [
+                FedCard(children: [
+                  if (ids.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(l.p2pBlockedServers(0),
+                          style: TextStyle(color: VelvetColors.textSecondary)),
+                    ),
+                  for (final id in ids)
+                    FedRow(
+                      icon: Icons.block,
+                      iconColor: VelvetColors.error,
+                      title: id.length > 12 ? '${id.substring(0, 12)}…' : id,
+                      subtitle: l.p2pBlockedSub,
+                      trailing: FedButton(l.p2pUnblock,
+                          kind: FedButtonKind.text,
+                          height: 32,
+                          fontSize: 14,
+                          busy: _busy == id,
+                          onPressed: () => _unblock(id)),
+                    ),
+                ]),
+              ],
+            ),
           ),
         );
       },

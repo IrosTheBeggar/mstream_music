@@ -90,48 +90,51 @@ class _P2pActivityScreenState extends State<P2pActivityScreen> {
           ],
         ),
       ),
-      body: _loading && _entries.isEmpty
-          ? fedLoading()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-              children: [
-                FedCard(children: [
-                  if (rows.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Text(l.p2pActivityEmpty,
-                          style: TextStyle(color: VelvetColors.textSecondary, height: 1.4)),
-                    ),
-                  for (final e in rows)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                                e.at == null
-                                    ? '—'
-                                    : TimeOfDay.fromDateTime(e.at!).format(context),
-                                style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 11,
-                                    color: VelvetColors.textTertiary)),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(e.message,
-                                style: TextStyle(
-                                    fontSize: 13, height: 1.3, color: _color(e.level))),
-                          ),
-                        ],
+      body: SafeArea(
+        top: false,
+        child: _loading && _entries.isEmpty
+            ? fedLoading()
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                children: [
+                  FedCard(children: [
+                    if (rows.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(l.p2pActivityEmpty,
+                            style: TextStyle(color: VelvetColors.textSecondary, height: 1.4)),
                       ),
-                    ),
-                ]),
-                FedHint(l.p2pActivityNote),
-              ],
-            ),
+                    for (final e in rows)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                  e.at == null
+                                      ? '—'
+                                      : TimeOfDay.fromDateTime(e.at!).format(context),
+                                  style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 11,
+                                      color: VelvetColors.textTertiary)),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(e.message,
+                                  style: TextStyle(
+                                      fontSize: 13, height: 1.3, color: _color(e.level))),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ]),
+                  FedHint(l.p2pActivityNote),
+                ],
+              ),
+      ),
     );
   }
 }
