@@ -45,7 +45,7 @@ The surface is small (abi-version, start / stop / status / path-kind / network-c
 ```sh
 cd interop && npm install          # @number0/iroh 1.1.0 — the line the mStream server runs
 cd .. && cargo build               # builds the dev client binary
-node interop/harness.mjs           # Rust client ⇆ JS server; asserts JSON + Range + concurrency + reconnect + in-place kick + guest mode (federation ALPN, rejected token, in-place credential swap)
+node interop/harness.mjs           # Rust client ⇆ JS server; asserts JSON + Range + concurrency + reconnect + in-place kick + a spent kick not cutting the next backoff + guest mode (federation ALPN, rejected token, in-place credential swap)
 ```
 
 ## Build for Android
