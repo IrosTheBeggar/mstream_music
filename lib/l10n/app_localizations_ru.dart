@@ -3212,4 +3212,687 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'P2P-сеть';
+
+  @override
+  String get browserP2pOn => 'Включена';
+
+  @override
+  String get browserP2pOff => 'Выключена';
+
+  @override
+  String get p2pTitle => 'P2P-сеть';
+
+  @override
+  String get p2pStatusConnected => 'Подключено';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count соседей',
+      few: '$count соседа',
+      one: '1 сосед',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return 'объявлен как $name';
+  }
+
+  @override
+  String get p2pStatusSearching => 'В сети · ожидание соседей';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return 'Переподключение · попытка $n';
+  }
+
+  @override
+  String get p2pStatusNotJoined => 'Ещё не в сети';
+
+  @override
+  String get p2pStatusOff => 'Выключена';
+
+  @override
+  String get p2pStatusUnavailable => 'Недоступно на этой платформе';
+
+  @override
+  String get p2pStatNeighbors => 'соседей в сети';
+
+  @override
+  String get p2pStatNeighborsSub => 'активные gossip-связи';
+
+  @override
+  String get p2pStatKnown => 'известных серверов';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '$hidden скрыто · $blocked заблокировано';
+  }
+
+  @override
+  String get p2pStatHeld => 'снимков хранится';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held из $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used из $cap';
+  }
+
+  @override
+  String get p2pStatTracks => 'треков у пиров';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'доступно для поиска, $count библиотек',
+      few: 'доступно для поиска, $count библиотеки',
+      one: 'доступно для поиска, 1 библиотека',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => 'Активность';
+
+  @override
+  String get p2pActivitySubtitle => 'сначала новые · только в памяти';
+
+  @override
+  String get p2pActivityEmpty =>
+      'Пока ничего — подключения к сети, загрузки снимков, ротация и восстановление появляются здесь по мере событий.';
+
+  @override
+  String get p2pActivityNote => 'Полная история — в журналах сервера.';
+
+  @override
+  String get p2pFromNetwork => 'Из сети';
+
+  @override
+  String get p2pFindSimilar => 'Найти похожую музыку в сети';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Открывает «Открыть для себя» для играющего трека · подсказки из $count загруженных библиотек',
+      few:
+          'Открывает «Открыть для себя» для играющего трека · подсказки из $count загруженных библиотек',
+      one:
+          'Открывает «Открыть для себя» для играющего трека · подсказки из 1 загруженной библиотеки',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying =>
+      'Сначала включите что-нибудь — «Открыть для себя» следует за текущим треком';
+
+  @override
+  String get p2pNewArtistsOnlySub =>
+      'Скрывать подсказки по исполнителям, которые уже есть в этой библиотеке';
+
+  @override
+  String get p2pServersYouFollow => 'Серверы, за которыми вы следите';
+
+  @override
+  String get p2pServersOnNetwork => 'Серверы в сети';
+
+  @override
+  String get p2pNoServersYet =>
+      'Пока ни одного сервера — добавьте сервер по билету друга или дайте gossip минуту.';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count серверов скрыто — несовместимая модель',
+      few: '$count сервера скрыты — несовместимая модель',
+      one: '1 сервер скрыт — несовместимая модель',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => 'Показать';
+
+  @override
+  String get p2pHide => 'Скрыть';
+
+  @override
+  String get p2pBefriend => 'Добавить сервер друга';
+
+  @override
+  String get p2pOnline => 'в сети';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return 'не в сети $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count треков',
+      few: '$count трека',
+      one: '1 трек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count сидов',
+      few: '$count сида',
+      one: '1 сид',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => 'загружено';
+
+  @override
+  String get p2pChipUpdate => 'есть обновление';
+
+  @override
+  String get p2pChipNotDownloaded => 'не загружено';
+
+  @override
+  String get p2pChipPinned => 'закреплено';
+
+  @override
+  String get p2pChipIncompatible => 'несовместимая модель';
+
+  @override
+  String get p2pChipFederated => 'объединено';
+
+  @override
+  String get p2pChipTheyAsked => 'они попросили вас';
+
+  @override
+  String get p2pChipRequestSent => 'запрос отправлен';
+
+  @override
+  String get p2pSearchingTitle => 'Поиск пиров';
+
+  @override
+  String get p2pSearchingBody =>
+      'Сеть собирается около минуты. Этот экран обновляется сам.';
+
+  @override
+  String get p2pReconnectingTitle => 'Переподключение';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'Sidecar упал и перезапускается (попытка $n) — ничего делать не нужно.';
+  }
+
+  @override
+  String get p2pJoinTitle => 'Рекомендации из чужих библиотек';
+
+  @override
+  String get p2pWhatShared => 'Что передаётся';
+
+  @override
+  String get p2pShared1 => 'Снимок только из метаданных';
+
+  @override
+  String get p2pShared1Sub =>
+      'Исполнитель, название, длительность, звуковые отпечатки — никогда аудиофайлы';
+
+  @override
+  String get p2pShared2 => 'Имя и описание вашего сервера';
+
+  @override
+  String get p2pShared2Sub =>
+      'Видны всем в сети, по умолчанию в публичной сети сообщества';
+
+  @override
+  String get p2pHowYouAppear => 'Как вас видят';
+
+  @override
+  String get p2pServerName => 'Имя сервера';
+
+  @override
+  String get p2pServerNameHint =>
+      '«mStream» рядом с 18 000 других «mStream» — первое, что захочется поменять.';
+
+  @override
+  String get p2pDescription => 'Описание';
+
+  @override
+  String get p2pDescriptionHint => '180 символов, необязательно.';
+
+  @override
+  String get p2pAlsoAcceptRequests => 'Также принимать запросы объединения';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub =>
+      'Приглашения делиться библиотеками — ничего не передаётся, пока вы не одобрите каждое. Включает федерацию.';
+
+  @override
+  String get p2pJoin => 'Войти в сеть';
+
+  @override
+  String get p2pJoining => 'Подключение…';
+
+  @override
+  String get p2pJoined => 'Вы в сети обнаружения — дайте ей минуту собраться.';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return 'Не удалось войти в сеть: $error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return 'Обнаружение включено, но приём запросов не запустился: $error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      'Двоичный файл p2p-sidecar для этой платформы не найден, и загружаемой сборки нет — сеть недоступна.';
+
+  @override
+  String get p2pWillDownloadNote =>
+      'Sidecar ещё не установлен; при входе он будет загружен.';
+
+  @override
+  String get p2pAdminOnlyNote =>
+      'Войти в сеть может только администратор сервера.';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return 'Сеть обнаружения на $server выключена. Администратор может её включить.';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return 'Вход, приглашения и снимки — задачи администратора. Войдите на $server как администратор, чтобы управлять сетью здесь.';
+  }
+
+  @override
+  String get p2pSnapshotSection => 'Снимок';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return 'Загружено · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return 'Снимок $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return 'объявлен более новый ($seq)';
+  }
+
+  @override
+  String get p2pNotDownloaded => 'Не загружено';
+
+  @override
+  String get p2pNotDownloadedSub =>
+      'Загрузите, чтобы искать по нему в «Открыть для себя»';
+
+  @override
+  String get p2pDownload => 'Загрузить';
+
+  @override
+  String get p2pUpdate => 'Обновить';
+
+  @override
+  String get p2pDownloading => 'Загрузка…';
+
+  @override
+  String get p2pDownloaded => 'Снимок загружен';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return 'Не удалось загрузить снимок: $error';
+  }
+
+  @override
+  String get p2pPin => 'Закрепить этот снимок';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Ротация освобождает наименее используемые снимки через $count дней; закреплённый остаётся.',
+      few:
+          'Ротация освобождает наименее используемые снимки через $count дня; закреплённый остаётся.',
+      one:
+          'Ротация освобождает наименее используемые снимки через 1 день; закреплённый остаётся.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation =>
+      'Ротация выключена; закреплённый снимок переживёт и нехватку места.';
+
+  @override
+  String get p2pRemoveSnapshot => 'Удалить снимок';
+
+  @override
+  String get p2pSnapshotRemoved => 'Снимок удалён';
+
+  @override
+  String get p2pHeldSince => 'хранится с';
+
+  @override
+  String get p2pTracksLabel => 'треков';
+
+  @override
+  String get p2pSeedersLabel => 'сидов';
+
+  @override
+  String get p2pSeedersSub => 'раздают снимок';
+
+  @override
+  String get p2pFederatedWithYou => 'Объединён с вами';
+
+  @override
+  String get p2pFederatedWithYouSub =>
+      'Откройте «Федерацию», чтобы увидеть, что вы читаете друг у друга';
+
+  @override
+  String get p2pTheyAskedYou => 'Просят объединиться';
+
+  @override
+  String get p2pTheyAskedYouSub => 'Рассмотрите запрос в разделе «Федерация»';
+
+  @override
+  String get p2pRequestSentTitle => 'Запрос отправлен';
+
+  @override
+  String get p2pRequestSentSub => 'Ждём ответа · следите в разделе «Федерация»';
+
+  @override
+  String get p2pAskToFederate => 'Попросить поделиться библиотеками';
+
+  @override
+  String get p2pAskToFederateSub =>
+      'Отправляет запрос через сеть — пока ничего не меняется';
+
+  @override
+  String get p2pOpen => 'Открыть';
+
+  @override
+  String get p2pReview => 'Рассмотреть';
+
+  @override
+  String get p2pForget => 'Забыть этот сервер';
+
+  @override
+  String get p2pForgetSub =>
+      'Не в сети и ничего не загружено; вернётся, если снова появится';
+
+  @override
+  String p2pForgotten(String name) {
+    return '$name забыт';
+  }
+
+  @override
+  String get p2pBlockServer => 'Заблокировать сервер';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return 'Заблокировать $name? Его объявления будут игнорироваться, а снимок удалён.';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '$name заблокирован';
+  }
+
+  @override
+  String get p2pUnblock => 'Разблокировать';
+
+  @override
+  String get p2pUnblocked => 'Сервер разблокирован';
+
+  @override
+  String get p2pIncompatibleNote =>
+      'Несовместимая модель эмбеддингов — его библиотека не годится для поиска похожего на этом сервере.';
+
+  @override
+  String get p2pCompatible => 'совместимая модель';
+
+  @override
+  String get p2pModelUnknown => 'модель неизвестна';
+
+  @override
+  String get p2pNoDescription => 'Без описания.';
+
+  @override
+  String get p2pUnnamedServer => 'Сервер без имени';
+
+  @override
+  String get p2pFederateTitle => 'Попросить объединиться';
+
+  @override
+  String get p2pFederateNote =>
+      'Отправляет запрос через сеть обнаружения. Сейчас доступ не передаётся — они увидят ваше имя, сообщение и предложение; библиотеки станут общими, только если они согласятся.';
+
+  @override
+  String get p2pMessage => 'Сообщение';
+
+  @override
+  String p2pMessageHint(int n) {
+    return 'Необязательно · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries =>
+      'Библиотеки, которыми вы поделитесь в ответ, если они согласятся';
+
+  @override
+  String get p2pShareBackNote =>
+      'Снимите все отметки для односторонней просьбы — вы будете только читать их библиотеки.';
+
+  @override
+  String get p2pSendRequest => 'Отправить запрос';
+
+  @override
+  String get p2pRequestSent =>
+      'Запрос отправлен — следите в разделе «Федерация»';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return 'Не удалось отправить запрос: $error';
+  }
+
+  @override
+  String get p2pTheirTicket => 'Их билет';
+
+  @override
+  String get p2pTheirTicketHint =>
+      'Друг найдёт свой билет в разделе «Пригласить друга» на своём экране P2P-сети.';
+
+  @override
+  String get p2pTicketPasted => 'Вставлено из буфера обмена.';
+
+  @override
+  String get p2pRememberFriend => 'Запомнить этого друга';
+
+  @override
+  String get p2pRememberFriendSub =>
+      'Сохраняется в конфигурации сервера, чтобы дружба пережила перезапуски.';
+
+  @override
+  String get p2pJoinFriend => 'Подключиться';
+
+  @override
+  String get p2pJoinedFriend => 'Подключено — сеть соберётся за минуту';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return 'Не удалось подключиться: $error';
+  }
+
+  @override
+  String get p2pNotATicket => 'Это не похоже на билет конечной точки.';
+
+  @override
+  String get p2pScanQr => 'Сканировать QR-код';
+
+  @override
+  String get p2pScannerTitle => 'Сканировать сетевой билет';
+
+  @override
+  String get p2pInviteFriend => 'Пригласить друга';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return 'Ваш билет — друг вставляет его здесь на своём телефоне, чтобы добавить $name. Это адрес, а не ключ доступа.';
+  }
+
+  @override
+  String get p2pTicketCopied => 'Билет скопирован';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return 'Добавь мой сервер mStream в сети обнаружения — в приложении mStream открой «P2P-сеть → Добавить сервер друга» и вставь этот билет:\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'Билет сети обнаружения mStream';
+
+  @override
+  String get p2pTicketNotReady =>
+      'Sidecar ещё не запущен, поэтому делиться пока нечем.';
+
+  @override
+  String get p2pSettingsTitle => 'Настройки сети';
+
+  @override
+  String get p2pSwitchTitle => 'Сеть обнаружения';
+
+  @override
+  String get p2pSwitchSub =>
+      'Объявляет в сети снимок только из метаданных. Выключите, чтобы выйти — собранные данные останутся локально.';
+
+  @override
+  String get p2pLeaveConfirm =>
+      'Выйти из сети обнаружения? Сервер перестанет объявлять и загружать снимки. Локальное обнаружение продолжит работать.';
+
+  @override
+  String get p2pLeave => 'Выйти';
+
+  @override
+  String get p2pLeft => 'Вы вышли из сети обнаружения';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return 'Не удалось выйти из сети: $error';
+  }
+
+  @override
+  String get p2pEditIdentity => 'Имя и описание';
+
+  @override
+  String get p2pIdentitySaved => 'Сохранено — объявлено в сети';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return 'Не удалось сохранить: $error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => 'Снимки';
+
+  @override
+  String get p2pAutoDownload => 'Автозагрузка до';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count серверов',
+      few: '$count серверов',
+      one: '1 сервера',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => 'Лимит хранилища';
+
+  @override
+  String get p2pRotate => 'Ротация загрузок';
+
+  @override
+  String get p2pForgetOffline => 'Забывать серверы не в сети';
+
+  @override
+  String get p2pMeshSection => 'Сеть';
+
+  @override
+  String get p2pCommunitySeeds => 'Сиды сообщества';
+
+  @override
+  String get p2pCommunitySeedsOn => 'Подключение через публичные сид-серверы';
+
+  @override
+  String get p2pCommunitySeedsOff =>
+      'Выключено — только серверы друзей; задаётся в конфигурации сервера';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count заблокированных серверов',
+      few: '$count заблокированных сервера',
+      one: '1 заблокированный сервер',
+      zero: 'Нет заблокированных серверов',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub =>
+      'Объявления игнорируются, снимки никогда не загружаются';
+
+  @override
+  String get p2pBlockedTitle => 'Заблокированные серверы';
+
+  @override
+  String get p2pSaved => 'Сохранено';
+
+  @override
+  String get p2pOff => 'Выкл.';
+
+  @override
+  String get p2pSave => 'Сохранить';
+
+  @override
+  String get p2pSearchServers => 'Поиск серверов — имя или описание';
 }

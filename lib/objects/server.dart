@@ -71,6 +71,13 @@ class Server {
   //                                  the admin could turn it on" both
   //                                  deserve the screen
   bool? federationAvailable;
+  //   p2pAvailable                 — this server BUILD has the discovery
+  //                                  network at all (the payload carries the
+  //                                  `discoveryP2p` key, whatever its value);
+  //                                  the home's P2P Network card is offered
+  //                                  from this, so an admin can join from the
+  //                                  phone and a member sees why it is off
+  bool? p2pAvailable;
   // The discovery engine as the server reports it, never pinned: whether it
   // is switched on at all, and — mStream #879 — whether the scan has
   // produced vectors yet (null from a server too old to say). The UI flags
@@ -350,6 +357,9 @@ class Server {
         federationAvailable = json['federationAvailable'] is bool
             ? json['federationAvailable']
             : null,
+        p2pAvailable = json['p2pAvailable'] is bool
+            ? json['p2pAvailable']
+            : null,
         discoveryEnabled =
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
@@ -391,6 +401,7 @@ class Server {
         'discoveryPathAvailable': discoveryPathAvailable,
         'federationDirectAvailable': federationDirectAvailable,
         'federationAvailable': federationAvailable,
+        'p2pAvailable': p2pAvailable,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
         'connectionType': connectionType,

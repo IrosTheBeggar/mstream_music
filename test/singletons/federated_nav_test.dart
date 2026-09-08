@@ -128,6 +128,32 @@ void main() {
     expect(_headers(), ['Library', 'Listen', 'Server']);
   });
 
+  test('a server whose build has the discovery network gets the P2P card',
+      () {
+    // Off: the card still shows (an admin joins from it) and its second
+    // line says so; on: the ping flag flips the line.
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..p2pAvailable = true;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_headers(), ['Library', 'Listen', 'Network', 'Server']);
+    expect(_sections(), isNot(contains('federation')),
+        reason: 'no federation without the flag or a peer');
+    final p2p = BrowserManager()
+        .browserList
+        .singleWhere((r) => r.data == 'p2pNetwork');
+    expect(p2p.subtext, 'p2p:off');
+    s.discoveryP2pAvailable = true;
+    BrowserManager().goToNavScreen();
+    expect(
+        BrowserManager()
+            .browserList
+            .singleWhere((r) => r.data == 'p2pNetwork')
+            .subtext,
+        'p2p:on');
+  });
+
   test('a federated server loses Playlists and Rated', () {
     final parent = Server('https://home.example.com', null, null, 'JWT', 'home');
     final peer = Server('federated://home/3', null, null, null, 'peer-basement')

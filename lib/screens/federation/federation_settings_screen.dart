@@ -59,106 +59,109 @@ class _FederationSettingsScreenState extends State<FederationSettingsScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l.federationSettingsTitle)),
-      body: ListenableBuilder(
-        listenable: c,
-        builder: (context, _) {
-          final s = c.status;
-          final on = s?.enabled == true;
-          final endpoint = s?.endpointId;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-            children: [
-              FedCard(children: [
-                FedSwitchRow(
-                  title: l.federationTitle,
-                  subtitle: l.federationSwitchSubtitle,
-                  value: on,
-                  busy: _toggling,
-                  onChanged: s == null || s.available == false ? null : _toggle,
-                ),
-              ]),
-              if (s?.available == false) ...[
-                const SizedBox(height: 10),
-                FedNote(l.federationUnavailableNote),
-              ],
-              if (on) ...[
-                FedSection(l.federationStatusSection),
+      body: SafeArea(
+        top: false,
+        child: ListenableBuilder(
+          listenable: c,
+          builder: (context, _) {
+            final s = c.status;
+            final on = s?.enabled == true;
+            final endpoint = s?.endpointId;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+              children: [
                 FedCard(children: [
-                  FedRow(
-                    title: s!.running
-                        ? (s.online
-                            ? l.federationConnectedRelay
-                            : l.federationStatusConnecting)
-                        : l.federationNotRunning,
-                    subtitle: s.relayUrl,
-                    dot: s.running
-                        ? (s.online ? VelvetColors.success : VelvetColors.warning)
-                        : VelvetColors.error,
+                  FedSwitchRow(
+                    title: l.federationTitle,
+                    subtitle: l.federationSwitchSubtitle,
+                    value: on,
+                    busy: _toggling,
+                    onChanged: s == null || s.available == false ? null : _toggle,
                   ),
-                  if (endpoint != null)
-                    InkWell(
-                      onTap: () async {
-                        await Clipboard.setData(ClipboardData(text: endpoint));
-                        showGlobalSnack(l.federationEndpointCopied);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 11),
-                        child: Row(children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(l.federationEndpointId,
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: VelvetColors.textSecondary)),
-                                Text(endpoint,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 12,
-                                        color: VelvetColors.textPrimary)),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Icon(Icons.content_copy,
-                              size: 20, color: VelvetColors.primary),
-                        ]),
-                      ),
-                    ),
                 ]),
-                if (c.requestsSupported) ...[
-                  FedSection(l.federationPairingRequestsSection),
+                if (s?.available == false) ...[
+                  const SizedBox(height: 10),
+                  FedNote(l.federationUnavailableNote),
+                ],
+                if (on) ...[
+                  FedSection(l.federationStatusSection),
                   FedCard(children: [
-                    FedSwitchRow(
-                      title: l.federationRequestsInboxTitle,
-                      subtitle: l.federationRequestsInboxSubtitle,
-                      value: c.acceptRequests,
-                      busy: _inboxBusy,
-                      onChanged: _inbox,
+                    FedRow(
+                      title: s!.running
+                          ? (s.online
+                              ? l.federationConnectedRelay
+                              : l.federationStatusConnecting)
+                          : l.federationNotRunning,
+                      subtitle: s.relayUrl,
+                      dot: s.running
+                          ? (s.online ? VelvetColors.success : VelvetColors.warning)
+                          : VelvetColors.error,
+                    ),
+                    if (endpoint != null)
+                      InkWell(
+                        onTap: () async {
+                          await Clipboard.setData(ClipboardData(text: endpoint));
+                          showGlobalSnack(l.federationEndpointCopied);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 11),
+                          child: Row(children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(l.federationEndpointId,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: VelvetColors.textSecondary)),
+                                  Text(endpoint,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                          color: VelvetColors.textPrimary)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Icon(Icons.content_copy,
+                                size: 20, color: VelvetColors.primary),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                  if (c.requestsSupported) ...[
+                    FedSection(l.federationPairingRequestsSection),
+                    FedCard(children: [
+                      FedSwitchRow(
+                        title: l.federationRequestsInboxTitle,
+                        subtitle: l.federationRequestsInboxSubtitle,
+                        value: c.acceptRequests,
+                        busy: _inboxBusy,
+                        onChanged: _inbox,
+                      ),
+                    ]),
+                  ],
+                  FedSection(l.federationDefaultsSection),
+                  FedCard(children: [
+                    FedRow(
+                      icon: Icons.vpn_key_outlined,
+                      iconColor: VelvetColors.textSecondary,
+                      title: fmtLimitsSummary(context, s.limitDefaults),
+                      titleLines: 2,
+                      subtitle: l.federationDefaultsNote,
+                      subtitleLines: 2,
                     ),
                   ]),
+                  const SizedBox(height: 14),
+                  FedNote(l.federationOffWarning),
                 ],
-                FedSection(l.federationDefaultsSection),
-                FedCard(children: [
-                  FedRow(
-                    icon: Icons.vpn_key_outlined,
-                    iconColor: VelvetColors.textSecondary,
-                    title: fmtLimitsSummary(context, s.limitDefaults),
-                    titleLines: 2,
-                    subtitle: l.federationDefaultsNote,
-                    subtitleLines: 2,
-                  ),
-                ]),
-                const SizedBox(height: 14),
-                FedNote(l.federationOffWarning),
               ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

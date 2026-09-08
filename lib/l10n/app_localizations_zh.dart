@@ -2993,4 +2993,636 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get browserP2pNetwork => 'P2P 网络';
+
+  @override
+  String get browserP2pOn => '已开启';
+
+  @override
+  String get browserP2pOff => '已关闭';
+
+  @override
+  String get p2pTitle => 'P2P 网络';
+
+  @override
+  String get p2pStatusConnected => '已连接';
+
+  @override
+  String p2pNeighborsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个邻居',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pAnnouncingAs(String name) {
+    return '以 $name 的名义公布';
+  }
+
+  @override
+  String get p2pStatusSearching => '已加入 · 等待邻居';
+
+  @override
+  String p2pStatusReconnecting(int n) {
+    return '重新连接中 · 第 $n 次';
+  }
+
+  @override
+  String get p2pStatusNotJoined => '尚未加入';
+
+  @override
+  String get p2pStatusOff => '已关闭';
+
+  @override
+  String get p2pStatusUnavailable => '此平台不可用';
+
+  @override
+  String get p2pStatNeighbors => '网状邻居';
+
+  @override
+  String get p2pStatNeighborsSub => '活跃的 gossip 连接';
+
+  @override
+  String get p2pStatKnown => '已知服务器';
+
+  @override
+  String p2pStatKnownSub(int hidden, int blocked) {
+    return '$hidden 个已隐藏 · $blocked 个已屏蔽';
+  }
+
+  @override
+  String get p2pStatHeld => '已保存的快照';
+
+  @override
+  String p2pStatHeldOf(int held, int max) {
+    return '$held / $max';
+  }
+
+  @override
+  String p2pStatStorage(String used, String cap) {
+    return '$used / $cap';
+  }
+
+  @override
+  String get p2pStatTracks => '对等曲目';
+
+  @override
+  String p2pStatTracksSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '可搜索，$count 个曲库',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pActivity => '活动';
+
+  @override
+  String get p2pActivitySubtitle => '最新在前 · 仅保存在内存中';
+
+  @override
+  String get p2pActivityEmpty => '还没有内容 — 加入网状网络、获取快照、轮换和恢复等事件会在发生时显示在这里。';
+
+  @override
+  String get p2pActivityNote => '完整历史记录在服务器日志中。';
+
+  @override
+  String get p2pFromNetwork => '来自网络';
+
+  @override
+  String get p2pFindSimilar => '在网络中寻找相似音乐';
+
+  @override
+  String p2pFindSimilarSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '为正在播放的曲目打开“发现” · 来自 $count 个已下载曲库的线索',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pFindSimilarNothingPlaying => '请先播放一首歌 — “发现”会跟随当前曲目';
+
+  @override
+  String get p2pNewArtistsOnlySub => '隐藏此曲库中已有艺术家的线索';
+
+  @override
+  String get p2pServersYouFollow => '你关注的服务器';
+
+  @override
+  String get p2pServersOnNetwork => '网络上的服务器';
+
+  @override
+  String get p2pNoServersYet => '还没有听到任何服务器 — 用朋友的票据添加一个，或者给 gossip 一分钟。';
+
+  @override
+  String p2pHiddenIncompatible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已隐藏 $count 个服务器 — 模型不兼容',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pShow => '显示';
+
+  @override
+  String get p2pHide => '隐藏';
+
+  @override
+  String get p2pBefriend => '添加好友服务器';
+
+  @override
+  String get p2pOnline => '在线';
+
+  @override
+  String p2pOfflineFor(String ago) {
+    return '离线 $ago';
+  }
+
+  @override
+  String p2pTracksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首曲目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String p2pSeedersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个做种者',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pChipDownloaded => '已下载';
+
+  @override
+  String get p2pChipUpdate => '有更新';
+
+  @override
+  String get p2pChipNotDownloaded => '未下载';
+
+  @override
+  String get p2pChipPinned => '已固定';
+
+  @override
+  String get p2pChipIncompatible => '模型不兼容';
+
+  @override
+  String get p2pChipFederated => '已联合';
+
+  @override
+  String get p2pChipTheyAsked => '对方向你请求';
+
+  @override
+  String get p2pChipRequestSent => '已发送请求';
+
+  @override
+  String get p2pSearchingTitle => '正在寻找对等服务器';
+
+  @override
+  String get p2pSearchingBody => '网状网络大约需要一分钟形成。此屏幕会自动更新。';
+
+  @override
+  String get p2pReconnectingTitle => '重新连接中';
+
+  @override
+  String p2pReconnectingBody(int n) {
+    return 'sidecar 已退出，正在重新启动（第 $n 次）— 无需操作。';
+  }
+
+  @override
+  String get p2pJoinTitle => '来自他人曲库的推荐';
+
+  @override
+  String get p2pWhatShared => '共享的内容';
+
+  @override
+  String get p2pShared1 => '仅含元数据的快照';
+
+  @override
+  String get p2pShared1Sub => '艺术家、标题、时长、声音指纹 — 绝不包含音频文件';
+
+  @override
+  String get p2pShared2 => '你服务器的名称和描述';
+
+  @override
+  String get p2pShared2Sub => '网络上所有人可见，默认公布到公共社区网络';
+
+  @override
+  String get p2pHowYouAppear => '你的显示方式';
+
+  @override
+  String get p2pServerName => '服务器名称';
+
+  @override
+  String get p2pServerNameHint => '在 18,000 个“mStream”旁边再叫“mStream”，是最先要改的东西。';
+
+  @override
+  String get p2pDescription => '描述';
+
+  @override
+  String get p2pDescriptionHint => '最多 180 个字符，可选。';
+
+  @override
+  String get p2pAlsoAcceptRequests => '同时接受联合请求';
+
+  @override
+  String get p2pAlsoAcceptRequestsSub => '共享曲库的邀请 — 每一个都需要你批准后才会共享。会开启联合。';
+
+  @override
+  String get p2pJoin => '加入网络';
+
+  @override
+  String get p2pJoining => '加入中…';
+
+  @override
+  String get p2pJoined => '已加入发现网络 — 给网状网络一分钟时间。';
+
+  @override
+  String p2pJoinFailed(String error) {
+    return '无法加入网络：$error';
+  }
+
+  @override
+  String p2pInboxFailed(String error) {
+    return '发现已开启，但请求收件箱未能启动：$error';
+  }
+
+  @override
+  String get p2pUnavailableNote =>
+      '未找到此平台的 p2p-sidecar 二进制文件，也没有可下载的版本 — 网络不可用。';
+
+  @override
+  String get p2pWillDownloadNote => 'sidecar 尚未安装；加入时会先下载。';
+
+  @override
+  String get p2pAdminOnlyNote => '只有服务器管理员可以加入。';
+
+  @override
+  String p2pMemberOffNote(String server) {
+    return '$server 上的发现网络已关闭。其管理员可以加入。';
+  }
+
+  @override
+  String p2pMemberNote(String server) {
+    return '加入、邀请和快照管理由管理员负责。以管理员身份登录 $server 即可在这里管理网络。';
+  }
+
+  @override
+  String get p2pSnapshotSection => '快照';
+
+  @override
+  String p2pDownloadedSize(String size) {
+    return '已下载 · $size';
+  }
+
+  @override
+  String p2pSnapshotSeq(int seq) {
+    return '快照 $seq';
+  }
+
+  @override
+  String p2pNewerAnnounced(int seq) {
+    return '已公布更新的版本（$seq）';
+  }
+
+  @override
+  String get p2pNotDownloaded => '未下载';
+
+  @override
+  String get p2pNotDownloadedSub => '下载后即可在“发现”中搜索';
+
+  @override
+  String get p2pDownload => '下载';
+
+  @override
+  String get p2pUpdate => '更新';
+
+  @override
+  String get p2pDownloading => '下载中…';
+
+  @override
+  String get p2pDownloaded => '快照已下载';
+
+  @override
+  String p2pDownloadFailed(String error) {
+    return '无法下载快照：$error';
+  }
+
+  @override
+  String get p2pPin => '固定此快照';
+
+  @override
+  String p2pPinSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '轮换会在 $count 天后释放最少使用的快照；固定的快照会保留。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pPinSubNoRotation => '轮换已关闭；固定的快照在空间不足时也会保留。';
+
+  @override
+  String get p2pRemoveSnapshot => '移除快照';
+
+  @override
+  String get p2pSnapshotRemoved => '快照已移除';
+
+  @override
+  String get p2pHeldSince => '保存自';
+
+  @override
+  String get p2pTracksLabel => '曲目';
+
+  @override
+  String get p2pSeedersLabel => '做种者';
+
+  @override
+  String get p2pSeedersSub => '正在提供快照';
+
+  @override
+  String get p2pFederatedWithYou => '已与你联合';
+
+  @override
+  String get p2pFederatedWithYouSub => '打开“联合”查看你们互相读取的内容';
+
+  @override
+  String get p2pTheyAskedYou => '对方请求联合';
+
+  @override
+  String get p2pTheyAskedYouSub => '在“联合”中查看请求';
+
+  @override
+  String get p2pRequestSentTitle => '请求已发送';
+
+  @override
+  String get p2pRequestSentSub => '等待对方 · 在“联合”中跟踪';
+
+  @override
+  String get p2pAskToFederate => '请求共享曲库';
+
+  @override
+  String get p2pAskToFederateSub => '通过网络发送请求 — 现在不会有任何变化';
+
+  @override
+  String get p2pOpen => '打开';
+
+  @override
+  String get p2pReview => '查看';
+
+  @override
+  String get p2pForget => '忘记此服务器';
+
+  @override
+  String get p2pForgetSub => '离线且未下载任何内容；再次听到时会回来';
+
+  @override
+  String p2pForgotten(String name) {
+    return '已忘记 $name';
+  }
+
+  @override
+  String get p2pBlockServer => '屏蔽服务器';
+
+  @override
+  String p2pBlockConfirm(String name) {
+    return '屏蔽 $name？将忽略其公布并移除其快照。';
+  }
+
+  @override
+  String p2pBlocked(String name) {
+    return '已屏蔽 $name';
+  }
+
+  @override
+  String get p2pUnblock => '取消屏蔽';
+
+  @override
+  String get p2pUnblocked => '已取消屏蔽服务器';
+
+  @override
+  String get p2pIncompatibleNote => '嵌入模型不兼容 — 其曲库无法用于此服务器的相似搜索。';
+
+  @override
+  String get p2pCompatible => '模型兼容';
+
+  @override
+  String get p2pModelUnknown => '模型未知';
+
+  @override
+  String get p2pNoDescription => '没有描述。';
+
+  @override
+  String get p2pUnnamedServer => '未命名服务器';
+
+  @override
+  String get p2pFederateTitle => '请求联合';
+
+  @override
+  String get p2pFederateNote =>
+      '通过发现网络发送请求。现在不会交换任何访问权限 — 对方会看到你的名称、消息和提供的内容；只有对方接受后才会共享曲库。';
+
+  @override
+  String get p2pMessage => '消息';
+
+  @override
+  String p2pMessageHint(int n) {
+    return '可选 · $n / 500';
+  }
+
+  @override
+  String get p2pShareBackLibraries => '对方接受后你将回共享的曲库';
+
+  @override
+  String get p2pShareBackNote => '全部取消勾选则为单向请求 — 你只读取对方的曲库。';
+
+  @override
+  String get p2pSendRequest => '发送请求';
+
+  @override
+  String get p2pRequestSent => '请求已发送 — 在“联合”中跟踪';
+
+  @override
+  String p2pRequestFailed(String error) {
+    return '无法发送请求：$error';
+  }
+
+  @override
+  String get p2pTheirTicket => '对方的票据';
+
+  @override
+  String get p2pTheirTicketHint => '朋友可以在其 P2P 网络屏幕的“邀请朋友”下找到自己的票据。';
+
+  @override
+  String get p2pTicketPasted => '已从剪贴板粘贴。';
+
+  @override
+  String get p2pRememberFriend => '记住此朋友';
+
+  @override
+  String get p2pRememberFriendSub => '保存到服务器配置中，重启后友谊依然保留。';
+
+  @override
+  String get p2pJoinFriend => '加入';
+
+  @override
+  String get p2pJoinedFriend => '已加入 — 网状网络会在一分钟内形成';
+
+  @override
+  String p2pJoinFriendFailed(String error) {
+    return '无法加入：$error';
+  }
+
+  @override
+  String get p2pNotATicket => '这看起来不像端点票据。';
+
+  @override
+  String get p2pScanQr => '扫描二维码';
+
+  @override
+  String get p2pScannerTitle => '扫描网络票据';
+
+  @override
+  String get p2pInviteFriend => '邀请朋友';
+
+  @override
+  String p2pYourTicketNote(String name) {
+    return '你的票据 — 朋友在手机上粘贴到这里即可添加 $name。这是一个地址，不是凭据。';
+  }
+
+  @override
+  String get p2pTicketCopied => '已复制票据';
+
+  @override
+  String p2pShareMessage(String ticket) {
+    return '在发现网络上添加我的 mStream 服务器 — 在 mStream 应用中打开“P2P 网络 → 添加好友服务器”并粘贴这张票据：\n\n$ticket';
+  }
+
+  @override
+  String get p2pShareSubject => 'mStream 发现网络票据';
+
+  @override
+  String get p2pTicketNotReady => 'sidecar 尚未运行，所以还没有可分享的票据。';
+
+  @override
+  String get p2pSettingsTitle => '网络设置';
+
+  @override
+  String get p2pSwitchTitle => '发现网络';
+
+  @override
+  String get p2pSwitchSub => '向网络公布仅含元数据的快照。关闭即退出 — 收集的数据保留在本地。';
+
+  @override
+  String get p2pLeaveConfirm => '退出发现网络？你的服务器将停止公布和下载快照。本地发现功能继续可用。';
+
+  @override
+  String get p2pLeave => '退出';
+
+  @override
+  String get p2pLeft => '已退出发现网络';
+
+  @override
+  String p2pLeaveFailed(String error) {
+    return '无法退出网络：$error';
+  }
+
+  @override
+  String get p2pEditIdentity => '名称和描述';
+
+  @override
+  String get p2pIdentitySaved => '已保存 — 已向网络公布';
+
+  @override
+  String p2pSaveFailed(String error) {
+    return '无法保存：$error';
+  }
+
+  @override
+  String get p2pSnapshotsSection => '快照';
+
+  @override
+  String get p2pAutoDownload => '自动下载上限';
+
+  @override
+  String p2pServersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pStorageCap => '存储上限';
+
+  @override
+  String get p2pRotate => '轮换下载';
+
+  @override
+  String get p2pForgetOffline => '忘记离线服务器';
+
+  @override
+  String get p2pMeshSection => '网状网络';
+
+  @override
+  String get p2pCommunitySeeds => '社区种子';
+
+  @override
+  String get p2pCommunitySeedsOn => '通过公共种子服务器引导';
+
+  @override
+  String get p2pCommunitySeedsOff => '已关闭 — 仅好友服务器；在服务器配置中设置';
+
+  @override
+  String p2pBlockedServers(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个已屏蔽的服务器',
+      zero: '没有已屏蔽的服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get p2pBlockedSub => '忽略其公布，绝不获取其快照';
+
+  @override
+  String get p2pBlockedTitle => '已屏蔽的服务器';
+
+  @override
+  String get p2pSaved => '已保存';
+
+  @override
+  String get p2pOff => '关闭';
+
+  @override
+  String get p2pSave => '保存';
+
+  @override
+  String get p2pSearchServers => '搜索服务器 — 名称或描述';
 }

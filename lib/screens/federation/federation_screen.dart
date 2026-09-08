@@ -138,16 +138,19 @@ class _FederationScreenState extends State<FederationScreen>
                 ),
             ],
           ),
-          body: c.loading && c.status == null && c.access == null
-              ? fedLoading()
-              : RefreshIndicator(
-                  onRefresh: () => c.load(quiet: true),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-                    children: _body(context, l),
+          body: SafeArea(
+            top: false,
+            child: c.loading && c.status == null && c.access == null
+                ? fedLoading()
+                : RefreshIndicator(
+                    onRefresh: () => c.load(quiet: true),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                      children: _body(context, l),
+                    ),
                   ),
-                ),
+          ),
           bottomNavigationBar: _bottomBar(l),
         );
       },

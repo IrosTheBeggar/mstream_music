@@ -410,6 +410,20 @@ class FederationAdminApi {
     );
   }
 
+  /// Ask a server heard on the discovery network to federate: a message
+  /// and the libraries this server would share back if they accept
+  /// (every library pre-checked is the webapp's default; none = a one-way
+  /// ask). No access changes hands at this step.
+  Future<FederationRequest> composeRequest(String endpointId,
+      {String? message, List<String> offerVpaths = const []}) async {
+    final res = await _post('/api/v1/admin/federation/requests', {
+      'endpointId': endpointId,
+      if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+      'offerVpaths': offerVpaths,
+    });
+    return FederationRequest.fromJson(res is Map ? res : const {});
+  }
+
   Future<void> acceptRequest(int id,
       {required List<String> vpaths,
       required FederationLimits limits,
