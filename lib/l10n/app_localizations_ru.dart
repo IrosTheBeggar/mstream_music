@@ -1082,9 +1082,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get federationSheetTitle => 'Общие библиотеки';
-
-  @override
   String get browserSearch => 'Поиск';
 
   @override
@@ -2404,5 +2401,815 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String federatedNoLongerListed(String parent) {
     return 'No longer shared by $parent';
+  }
+
+  @override
+  String get federationTitle => 'Федерация';
+
+  @override
+  String get federationStatusOn => 'Включена · подключено к релею';
+
+  @override
+  String get federationStatusConnecting => 'Включена · подключение…';
+
+  @override
+  String get federationStatusOff => 'Выключена';
+
+  @override
+  String get federationStatusUnavailable => 'Недоступно на этой платформе';
+
+  @override
+  String get federationSharedWithYou => 'Доступно вам';
+
+  @override
+  String get federationRequestsSection => 'Запросы';
+
+  @override
+  String get federationYourSharedLibraries => 'Ваши общие библиотеки';
+
+  @override
+  String get federationAddPeer => 'Добавить пир';
+
+  @override
+  String get federationShareLibrary => 'Поделиться библиотекой';
+
+  @override
+  String get federationNoPeersYet => 'С этим сервером пока ничем не делятся.';
+
+  @override
+  String get federationNoKeysYet =>
+      'Билетов пока нет — поделитесь библиотекой, чтобы создать билет.';
+
+  @override
+  String get federationNoRequests =>
+      'Запросов пока нет — серверы из сети обнаружения найдут вас здесь.';
+
+  @override
+  String get federationClipboardTicket => 'Билет в буфере обмена';
+
+  @override
+  String federationTicketPreview(String name, String libraries) {
+    return '$name · делится: $libraries';
+  }
+
+  @override
+  String federationTicketPreviewNoLibraries(String name) {
+    return '$name';
+  }
+
+  @override
+  String get federationUnnamedServer => 'Сервер без имени';
+
+  @override
+  String get federationAddPeerAction => 'Добавить';
+
+  @override
+  String get federationPeerLive => 'на связи';
+
+  @override
+  String get federationPeerConnecting => 'подключение…';
+
+  @override
+  String get federationPeerDirectTunnel => 'прямой туннель';
+
+  @override
+  String federationPeerViaParent(String parent) {
+    return 'через $parent';
+  }
+
+  @override
+  String federationPeerViaTunnel(String parent) {
+    return 'через туннель $parent';
+  }
+
+  @override
+  String get federationPeerMissing => 'больше не доступен';
+
+  @override
+  String get federationPeerHidden => 'скрыт в списке серверов';
+
+  @override
+  String federationMemberNote(String server) {
+    return 'Делиться может только администратор. Создание билетов, добавление пиров и ответы на запросы объединения требуют входа администратором на $server — того же, что открывает панель администратора.';
+  }
+
+  @override
+  String get federationRestrictedNote =>
+      'Этот сервер принимает административные вызовы только из своей сети. Подключитесь из дома, чтобы управлять доступом здесь.';
+
+  @override
+  String get federationDisabledNote =>
+      'Административный API на этом сервере выключен.';
+
+  @override
+  String get federationUnsupportedNote =>
+      'Этот сервер слишком стар, чтобы управлять федерацией из приложения. Обновите mStream.';
+
+  @override
+  String get federationLoadFailed => 'Не удалось связаться с сервером.';
+
+  @override
+  String get federationRetry => 'Повторить';
+
+  @override
+  String get federationOffTitle => 'Делитесь библиотеками с серверами друзей';
+
+  @override
+  String get federationOffBody =>
+      'Объедините два сервера mStream, чтобы слушать музыку друг друга. Обмениваются билетами — отправьте сообщением, отсканируйте или вставьте.';
+
+  @override
+  String get federationOffPoint1Title => 'Только чтение, сквозное шифрование';
+
+  @override
+  String get federationOffPoint1Body =>
+      'Плейлисты и оценки не покидают ваш сервер';
+
+  @override
+  String get federationOffPoint2Title => 'Без проброса портов и DNS';
+
+  @override
+  String get federationOffPoint2Body =>
+      'iroh находит путь — напрямую, когда может, через релей, когда нужно';
+
+  @override
+  String get federationOffPoint3Title => 'Билеты можно отозвать';
+
+  @override
+  String get federationOffPoint3Body =>
+      'Каждый используется один раз и отключается в любой момент';
+
+  @override
+  String get federationOffAdminOnly =>
+      'Включить это может только администратор сервера.';
+
+  @override
+  String federationOffMemberNote(String server) {
+    return 'Федерация на $server выключена. Администратор может её включить.';
+  }
+
+  @override
+  String get federationTurnOn => 'Включить федерацию';
+
+  @override
+  String get federationUnavailableNote =>
+      'У компонента iroh нет сборки для ОС/процессора этого сервера, поэтому конечная точка федерации здесь не запустится.';
+
+  @override
+  String get federationTurnedOn => 'Федерация включена';
+
+  @override
+  String get federationTurnedOff => 'Федерация выключена';
+
+  @override
+  String get federationToggleFailed =>
+      'Не удалось изменить настройку федерации.';
+
+  @override
+  String get federationSettingsTitle => 'Настройки федерации';
+
+  @override
+  String get federationSwitchSubtitle =>
+      'Пир-к-пиру, сквозное шифрование. Без проброса портов, без DNS.';
+
+  @override
+  String get federationStatusSection => 'Состояние';
+
+  @override
+  String get federationConnectedRelay => 'Подключено к релею';
+
+  @override
+  String get federationNotRunning => 'Конечная точка не запущена';
+
+  @override
+  String get federationEndpointId => 'ID конечной точки';
+
+  @override
+  String get federationEndpointCopied => 'ID конечной точки скопирован';
+
+  @override
+  String get federationPairingRequestsSection => 'Запросы объединения';
+
+  @override
+  String get federationRequestsInboxTitle =>
+      'Принимать запросы из сети обнаружения';
+
+  @override
+  String get federationRequestsInboxSubtitle =>
+      'По умолчанию выключено. Когда выключено, новые запросы отклоняются на транспорте; ответы на ваши собственные запросы всё равно приходят.';
+
+  @override
+  String get federationInboxFailed => 'Не удалось изменить приём запросов.';
+
+  @override
+  String get federationDefaultsSection =>
+      'Значения по умолчанию для новых билетов';
+
+  @override
+  String get federationDefaultsNote =>
+      'Из конфигурации сервера — каждый билет может их изменить';
+
+  @override
+  String get federationOffWarning =>
+      'Выключение федерации обрывает все связи с пирами и скрывает ваши билеты, пока она снова не включится. Пиры сохраняют свои билеты.';
+
+  @override
+  String federationRequestWantsToPair(String name) {
+    return '$name хочет объединиться';
+  }
+
+  @override
+  String federationRequestToName(String name) {
+    return 'Запрос к $name';
+  }
+
+  @override
+  String federationRequestOffers(String libraries) {
+    return 'Предлагает: $libraries';
+  }
+
+  @override
+  String get federationRequestOffersNothing => 'Ничего не предлагает';
+
+  @override
+  String federationRequestYouOffered(String libraries) {
+    return 'Вы предложили: $libraries';
+  }
+
+  @override
+  String get federationRequestYouOfferedNothing => 'Вы ничего не предложили';
+
+  @override
+  String get federationReqSending => 'отправка…';
+
+  @override
+  String get federationReqWaiting => 'ждём ответа';
+
+  @override
+  String get federationReqSharingBack => 'делимся в ответ…';
+
+  @override
+  String get federationReqNeedsAnswer => 'нужен ваш ответ';
+
+  @override
+  String get federationReqSendingTicket => 'отправляем ваш билет…';
+
+  @override
+  String get federationReqWaitingShare => 'ждём их доступа';
+
+  @override
+  String get federationReqDeclined => 'отклонён';
+
+  @override
+  String get federationReqYouDeclined => 'вы отклонили';
+
+  @override
+  String get federationReqInboxClosed => 'их приём закрыт';
+
+  @override
+  String get federationReqFederated => 'объединено';
+
+  @override
+  String get federationReqWithdrawn => 'отозван';
+
+  @override
+  String get federationReqExpired => 'истёк';
+
+  @override
+  String get federationAccept => 'Принять…';
+
+  @override
+  String get federationAcceptAndShare => 'Принять и поделиться';
+
+  @override
+  String get federationDecline => 'Отклонить';
+
+  @override
+  String get federationCancelRequest => 'Отозвать запрос';
+
+  @override
+  String get federationDismiss => 'Убрать';
+
+  @override
+  String get federationRequestTitle => 'Запрос объединения';
+
+  @override
+  String federationRequestReceived(String ago) {
+    return 'Получен $ago через сеть обнаружения';
+  }
+
+  @override
+  String federationRequestSent(String ago) {
+    return 'Отправлен $ago через сеть обнаружения';
+  }
+
+  @override
+  String get federationShareBack => 'Поделиться в ответ';
+
+  @override
+  String get federationShareBackNote =>
+      'Ничего не меняется, пока вы не примете. Они получат доступ только для чтения к отмеченным библиотекам — хотя бы одной.';
+
+  @override
+  String get federationTheirLimits => 'Их ограничения';
+
+  @override
+  String get federationChange => 'Изменить';
+
+  @override
+  String get federationRequestIgnored =>
+      'Запросы от этого сервера игнорируются 7 дней';
+
+  @override
+  String get federationRequestAccepted => 'Запрос принят';
+
+  @override
+  String get federationRequestDeclined => 'Запрос отклонён';
+
+  @override
+  String get federationRequestCancelled => 'Запрос отозван';
+
+  @override
+  String get federationRequestActionFailed => 'Не удалось обновить запрос.';
+
+  @override
+  String get federationTicketNameLabel => 'Для кого это?';
+
+  @override
+  String get federationTicketNameHint =>
+      'Это имя видите только вы — оно подписывает билет в вашем списке.';
+
+  @override
+  String get federationLibrariesTheyCanRead =>
+      'Библиотеки, которые они смогут читать';
+
+  @override
+  String get federationLimitsSection => 'Ограничения';
+
+  @override
+  String get federationExactNumbers => 'Точные значения';
+
+  @override
+  String get federationPresets => 'Пресеты';
+
+  @override
+  String get federationLimitStreamRate => 'Скорость потока';
+
+  @override
+  String get federationLimitPerDay => 'В день';
+
+  @override
+  String get federationLimitStreams => 'Потоков одновременно';
+
+  @override
+  String get federationLimitExpires => 'Истекает';
+
+  @override
+  String get federationUnlimited => 'Без ограничений';
+
+  @override
+  String get federationNever => 'Никогда';
+
+  @override
+  String federationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней',
+      few: '$count дня',
+      one: '1 день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationOneYear => '1 год';
+
+  @override
+  String federationKbps(int n) {
+    return '$n кбит/с';
+  }
+
+  @override
+  String federationMbps(int n) {
+    return '$n Мбит/с';
+  }
+
+  @override
+  String federationMbPerDay(int n) {
+    return '$n МБ в день';
+  }
+
+  @override
+  String federationGbPerDay(int n) {
+    return '$n ГБ в день';
+  }
+
+  @override
+  String federationStreamsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count потоков',
+      few: '$count потока',
+      one: '1 поток',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationNeverExpires => 'не истекает';
+
+  @override
+  String federationExpiresIn(String when) {
+    return 'истекает $when';
+  }
+
+  @override
+  String get federationExpired => 'истёк';
+
+  @override
+  String federationInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'через $count дней',
+      few: 'через $count дня',
+      one: 'через 1 день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'через $count часов',
+      few: 'через $count часа',
+      one: 'через 1 час',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationStreamRateField =>
+      'Скорость (кбит/с, 0 = без ограничений)';
+
+  @override
+  String get federationPerDayField => 'Дневная квота (МБ, 0 = без ограничений)';
+
+  @override
+  String get federationStreamsField => 'Макс. потоков (0 = без ограничений)';
+
+  @override
+  String get federationExpiresField => 'Истекает через дней (0 = никогда)';
+
+  @override
+  String get federationCreateTicket => 'Создать билет';
+
+  @override
+  String get federationMintFailed => 'Не удалось создать билет.';
+
+  @override
+  String get federationNoLibraries =>
+      'На этом сервере нет библиотек, которыми можно поделиться.';
+
+  @override
+  String get federationTicketTitle => 'Ваш билет';
+
+  @override
+  String federationTicketFor(String name) {
+    return 'Билет для $name';
+  }
+
+  @override
+  String federationTicketReads(String libraries) {
+    return 'Читает: $libraries';
+  }
+
+  @override
+  String get federationTicketQrHint => 'В одной комнате? Дайте отсканировать.';
+
+  @override
+  String get federationTicketWarning =>
+      'Любой, у кого есть этот билет, может читать эти библиотеки, пока он не использован или не отозван. Отправляйте его по приватному каналу — билет достаётся первому серверу, который его использует.';
+
+  @override
+  String get federationCopyTicket => 'Скопировать билет';
+
+  @override
+  String get federationTicketCopied => 'Билет скопирован';
+
+  @override
+  String get federationSendByText => 'Отправить сообщением…';
+
+  @override
+  String get federationTicketRevokeNote =>
+      'Отозвать можно в любой момент в разделе «Федерация». Если друг переустановил сервер, «Сбросить привязку» позволит использовать билет снова.';
+
+  @override
+  String get federationTicketNotRunning =>
+      'Конечная точка федерации не запущена, поэтому отправлять пока нечего. Включите федерацию и вернитесь.';
+
+  @override
+  String federationShareMessage(String libraries, String ticket) {
+    return 'Делюсь с тобой своей музыкальной библиотекой mStream — $libraries, только чтение. В приложении mStream открой «Федерация → Добавить пир» и вставь этот билет:\n\n$ticket\n\nОн работает один раз — я могу отозвать его в любой момент.';
+  }
+
+  @override
+  String get federationShareSubject => 'Билет федерации mStream';
+
+  @override
+  String get federationKeyClaimed => 'использован';
+
+  @override
+  String get federationKeyNotClaimed => 'ещё не использован';
+
+  @override
+  String federationKeyTodayUsage(String amount) {
+    return '$amount сегодня';
+  }
+
+  @override
+  String federationKeyLastUsed(String ago) {
+    return 'Последнее использование $ago';
+  }
+
+  @override
+  String get federationKeyNeverUsed => 'Не использовался';
+
+  @override
+  String federationKeyClaimedAgo(String ago) {
+    return 'Использован $ago';
+  }
+
+  @override
+  String get federationResetBinding => 'Сбросить привязку';
+
+  @override
+  String get federationResetBindingNote =>
+      'Друг переустановил сервер? Позвольте использовать билет снова.';
+
+  @override
+  String get federationBindingReset => 'Билет можно использовать снова';
+
+  @override
+  String get federationRevoke => 'Отозвать';
+
+  @override
+  String federationRevokeConfirm(String name) {
+    return 'Отозвать этот билет? $name сразу потеряет доступ.';
+  }
+
+  @override
+  String get federationRevoked => 'Билет отозван';
+
+  @override
+  String get federationSaveLimits => 'Сохранить ограничения';
+
+  @override
+  String get federationLimitsSaved => 'Ограничения сохранены';
+
+  @override
+  String get federationLimitsFailed => 'Не удалось сохранить ограничения.';
+
+  @override
+  String get federationSend => 'Отправить';
+
+  @override
+  String get federationKeyTitle => 'Общая библиотека';
+
+  @override
+  String federationActionFailed(String error) {
+    return 'Не сработало: $error';
+  }
+
+  @override
+  String get federationTheirTicket => 'Их билет';
+
+  @override
+  String get federationScanQr => 'Сканировать QR-код';
+
+  @override
+  String get federationScannerTitle => 'Сканировать билет федерации';
+
+  @override
+  String get federationPaste => 'Вставить';
+
+  @override
+  String get federationTicketPasted => 'Вставлено из буфера обмена.';
+
+  @override
+  String get federationNotATicket => 'Это не похоже на билет федерации.';
+
+  @override
+  String get federationTicketTooNew =>
+      'Этот билет от более новой версии mStream, чем понимает это приложение.';
+
+  @override
+  String get federationTicketExpiredNote => 'Срок действия этого билета истёк.';
+
+  @override
+  String get federationDisplayName => 'Отображаемое имя';
+
+  @override
+  String get federationDisplayNameHint =>
+      'Необязательно — так сервер будет показан в списке серверов.';
+
+  @override
+  String federationSharesLibraries(String libraries) {
+    return 'Делится: $libraries';
+  }
+
+  @override
+  String get federationSharesUnknown => 'Библиотеки в билете не указаны';
+
+  @override
+  String federationValidUntil(String date) {
+    return 'действует до $date';
+  }
+
+  @override
+  String federationAddPeerShowsUnder(String server) {
+    return 'Появится под $server';
+  }
+
+  @override
+  String federationAddPeerReadOnly(String branch, String name) {
+    return 'Только чтение · $branch $name в списке серверов';
+  }
+
+  @override
+  String get federationAddPeerDials =>
+      'Ваш сервер подключается к нему через iroh';
+
+  @override
+  String get federationAddPeerEncrypted =>
+      'Сквозное шифрование · без проброса портов';
+
+  @override
+  String get federationAddPeerNoTicket =>
+      'Билета ещё нет? Попросите прислать его сообщением.';
+
+  @override
+  String federationPeerAdded(String name) {
+    return '$name добавлен';
+  }
+
+  @override
+  String get federationAddPeerFailed => 'Не удалось добавить пир.';
+
+  @override
+  String get federationPeerAlreadyAdded => 'Этот билет уже добавлен как пир.';
+
+  @override
+  String get federationLibrariesYouCanRead =>
+      'Библиотеки, которые вы можете читать';
+
+  @override
+  String get federationDiscoverySection => 'Обнаружение';
+
+  @override
+  String get federationAskPeerSimilar =>
+      'Спрашивать у этого пира похожую музыку';
+
+  @override
+  String get federationAskPeerSimilarNote =>
+      'Отправляет то, что вы слушаете — только этому пиру.';
+
+  @override
+  String get federationAutoDjSection => 'Авто-DJ';
+
+  @override
+  String get federationAutoDjParticipates =>
+      'Участвует в многосерверном Авто-DJ';
+
+  @override
+  String get federationAutoDjParticipatesNote =>
+      'Отвечает из своей библиотеки, когда DJ включён';
+
+  @override
+  String get federationAutoDjNotCandidate => 'Не кандидат для Авто-DJ';
+
+  @override
+  String get federationAutoDjNotCandidateNote =>
+      'Нужен сервер, способный отвечать на звуковой подбор';
+
+  @override
+  String get federationTest => 'Проверить';
+
+  @override
+  String get federationTesting => 'Проверка…';
+
+  @override
+  String get federationTestOk => 'Доступен';
+
+  @override
+  String federationTestFailed(String error) {
+    return 'Не удалось связаться: $error';
+  }
+
+  @override
+  String federationCheckedAgo(String ago) {
+    return 'Проверено $ago';
+  }
+
+  @override
+  String get federationNeverTested => 'Не проверялся';
+
+  @override
+  String federationLastSeen(String ago) {
+    return 'Последний раз на связи $ago';
+  }
+
+  @override
+  String get federationBrowseLibrary => 'Открыть эту библиотеку';
+
+  @override
+  String get federationRemovePeer => 'Удалить пир';
+
+  @override
+  String federationRemovePeerConfirm(String name) {
+    return 'Удалить $name? Треки из очереди с этого пира перестанут играть.';
+  }
+
+  @override
+  String federationPeerRemoved(String name) {
+    return '$name удалён';
+  }
+
+  @override
+  String get federationShowInPicker => 'Показывать в списке серверов';
+
+  @override
+  String get federationShowInPickerNote =>
+      'Скрытые пиры продолжают играть то, что вы поставили из них в очередь.';
+
+  @override
+  String get federationPeerReadOnlyNote =>
+      'Только чтение — плейлисты и оценки остаются на вашем сервере.';
+
+  @override
+  String get federationPeerLibrariesUnknown =>
+      'Пока не загружено — откройте его один раз, чтобы получить список библиотек.';
+
+  @override
+  String get federationTransportDirect => 'Прямой туннель с этого телефона';
+
+  @override
+  String get federationTransportRelay => 'Релей наготове';
+
+  @override
+  String federationTransportViaParent(String parent) {
+    return 'Через $parent';
+  }
+
+  @override
+  String federationTransportViaParentTunnel(String parent) {
+    return 'Через $parent по его туннелю';
+  }
+
+  @override
+  String get federationDiscoveryFailed =>
+      'Не удалось изменить настройку обнаружения.';
+
+  @override
+  String get agoJustNow => 'только что';
+
+  @override
+  String agoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count мин назад',
+      few: '$count мин назад',
+      one: '1 мин назад',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ч назад',
+      few: '$count ч назад',
+      one: '1 ч назад',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней назад',
+      few: '$count дня назад',
+      one: '1 день назад',
+    );
+    return '$_temp0';
   }
 }

@@ -373,7 +373,11 @@ class BrowserManager {
             Icon(Icons.route, color: VelvetColors.textSecondary), null),
       // NETWORK: the libraries other servers share with this one. Only when
       // there are some — an empty group would be a header over nothing.
-      if (peers.isNotEmpty) ...[
+      // NETWORK: the Federation screen — for anyone with peers to browse,
+      // and for every server whose build has federation at all: on with no
+      // peers yet, or off and waiting for its admin (the screen says which).
+      if (!federated &&
+          (peers.isNotEmpty || server.federationAvailable == true)) ...[
         header('Network'),
         DisplayItem(
             server,
@@ -381,7 +385,7 @@ class BrowserManager {
             'execAction',
             'federation',
             Icon(Icons.hub_outlined, color: VelvetColors.textSecondary),
-            'sharedLibraries:${peers.length}'),
+            peers.isEmpty ? null : 'sharedLibraries:${peers.length}'),
       ],
       // SERVER: work the server does for you. Torrents have no ping flag —
       // the screen's preflight probe is the gate — but the route is off the

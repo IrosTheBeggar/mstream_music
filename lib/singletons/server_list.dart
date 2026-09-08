@@ -359,6 +359,7 @@ class ServerManager {
       final bool? prevDiscoveryP2p = server.discoveryP2pAvailable;
       final bool? prevFedDiscovery = server.federationDiscoveryAvailable;
       final bool? prevFedDirect = server.federationDirectAvailable;
+      final bool? prevFedAvailable = server.federationAvailable;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -412,8 +413,13 @@ class ServerManager {
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
           server.federationDiscoveryAvailable != prevFedDiscovery ||
           server.federationDirectAvailable != prevFedDirect ||
+          server.federationAvailable != prevFedAvailable ||
           server.discoveryPathAvailable != prevDiscoveryPath) {
         unawaited(writeServerFile());
+      }
+      if (server.federationAvailable != prevFedAvailable ||
+          server.discoveryPathAvailable != prevDiscoveryPath) {
+        _refreshHomeIfShowing(server);
       }
       // The parent just started offering direct access: any peer of it that
       // is browsed or queued is worth a tunnel of its own right away.
@@ -495,6 +501,8 @@ class ServerManager {
         user is Map && user['federationDiscovery'] == true;
     server.federationDirectAvailable =
         user is Map && user['federationDirect'] == true;
+    server.federationAvailable =
+        user is Map && user.containsKey('federationBrowse');
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -530,6 +538,8 @@ class ServerManager {
     server.discoveryP2pAvailable = res['discoveryP2p'] == true;
     server.federationDiscoveryAvailable = res['federationDiscovery'] == true;
     server.federationDirectAvailable = res['federationDirect'] == true;
+    server.federationAvailable =
+        res.containsKey('federationBrowse');
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     return res;
   }
@@ -795,6 +805,18 @@ class ServerManager {
     return h != null &&
         h.assigned &&
         h.code == TunnelHandle.credentialFor(h.server);
+  }
+
+  /// The home is built from a server's flags and its peers. When a ping or
+  /// a peer reconcile changes those for the server being browsed while the
+  /// browser sits on its home, rebuild the home in place: the NETWORK
+  /// group's card and count read them, and the first launch after an update
+  /// learns them seconds after the home was drawn. Anywhere deeper is left
+  /// alone — a rebuild resets the browse stack.
+  void _refreshHomeIfShowing(Server server) {
+    if (!identical(server, currentServer)) return;
+    if (!BrowserManager.isHomeList(BrowserManager().browserList)) return;
+    BrowserManager().goToNavScreen();
   }
 
   /// True when the tunnel for [s] is assigned AND reports connected — i.e.
@@ -2259,6 +2281,7 @@ class ServerManager {
     _linkFederatedParents();
     _serverListStream.sink.add(serverList);
     await writeServerFile();
+    _refreshHomeIfShowing(parent);
     // The peer being browsed stopped being shared: every request through the
     // proxy is a 404 from here on, and the picker no longer offers it. Move
     // the browser to the parent, the way Hide does.
@@ -2327,6 +2350,7 @@ class ServerManager {
     server.discoveryP2pAvailable = false;
     server.federationDiscoveryAvailable = false;
     server.federationDirectAvailable = false; // a peer's own peers are out of reach
+    server.federationAvailable = false; // and it has no federation of its own
     server.discoveryPathAvailable = false;
     server.playlists.clear();
   }

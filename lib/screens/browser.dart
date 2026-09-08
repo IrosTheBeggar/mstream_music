@@ -22,7 +22,7 @@ import '../util/queue_actions.dart';
 import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
-import '../widgets/federation_sheet.dart';
+import 'federation/federation_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
@@ -162,7 +162,10 @@ class _BrowserState extends State<Browser> {
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'federation') {
       final s = browserList[index].server;
-      if (s != null) showFederationSheet(context, s);
+      if (s != null) {
+        Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => FederationScreen(parent: s)));
+      }
       return;
     }
 

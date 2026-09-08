@@ -1902,12 +1902,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 shared library} other{{count} shared libraries}}'**
   String browserSharedLibraries(int count);
 
-  /// Title of the sheet listing the peers reachable through a server.
-  ///
-  /// In en, this message translates to:
-  /// **'Shared libraries'**
-  String get federationSheetTitle;
-
   /// No description provided for @browserSearch.
   ///
   /// In en, this message translates to:
@@ -4121,6 +4115,1266 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No longer shared by {parent}'**
   String federatedNoLongerListed(String parent);
+
+  /// Title of the Federation screen (libraries shared between servers).
+  ///
+  /// In en, this message translates to:
+  /// **'Federation'**
+  String get federationTitle;
+
+  /// Federation status line when the endpoint is up and reachable.
+  ///
+  /// In en, this message translates to:
+  /// **'On · connected to relay'**
+  String get federationStatusOn;
+
+  /// Federation status line while the endpoint is still reaching its relay.
+  ///
+  /// In en, this message translates to:
+  /// **'On · connecting…'**
+  String get federationStatusConnecting;
+
+  /// Federation status line when the feature is switched off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get federationStatusOff;
+
+  /// Federation status line when the server cannot run the iroh component.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available on this platform'**
+  String get federationStatusUnavailable;
+
+  /// Section header: the peers whose libraries this server can read.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared with you'**
+  String get federationSharedWithYou;
+
+  /// Section header: pairing requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests'**
+  String get federationRequestsSection;
+
+  /// Section header: the tickets this admin minted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your shared libraries'**
+  String get federationYourSharedLibraries;
+
+  /// Row and screen title: add a friend's server by ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a peer'**
+  String get federationAddPeer;
+
+  /// Primary action and screen title: mint a ticket for one of this server's libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a library'**
+  String get federationShareLibrary;
+
+  /// Empty state for the Shared with you section.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is shared with this server yet.'**
+  String get federationNoPeersYet;
+
+  /// Empty state for the tickets section (admin).
+  ///
+  /// In en, this message translates to:
+  /// **'No tickets yet — share a library to mint one.'**
+  String get federationNoKeysYet;
+
+  /// Empty state for the requests section when the inbox is open.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests yet — servers on the discovery network can find you here.'**
+  String get federationNoRequests;
+
+  /// Banner title when a federation ticket is found on the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket on your clipboard'**
+  String get federationClipboardTicket;
+
+  /// One-line preview of a ticket: the server name and the libraries it grants.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · shares {libraries}'**
+  String federationTicketPreview(String name, String libraries);
+
+  /// One-line preview of a ticket that lists no libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}'**
+  String federationTicketPreviewNoLibraries(String name);
+
+  /// Stand-in for a ticket or request without a server name.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed server'**
+  String get federationUnnamedServer;
+
+  /// Button: add the peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Add peer'**
+  String get federationAddPeerAction;
+
+  /// Peer state: its tunnel is up.
+  ///
+  /// In en, this message translates to:
+  /// **'live'**
+  String get federationPeerLive;
+
+  /// Peer state: its tunnel is still dialing.
+  ///
+  /// In en, this message translates to:
+  /// **'connecting…'**
+  String get federationPeerConnecting;
+
+  /// Peer transport: this phone dials the peer itself.
+  ///
+  /// In en, this message translates to:
+  /// **'direct tunnel'**
+  String get federationPeerDirectTunnel;
+
+  /// Peer transport: reached through the parent server's proxy.
+  ///
+  /// In en, this message translates to:
+  /// **'via {parent}'**
+  String federationPeerViaParent(String parent);
+
+  /// Peer transport: reached through the parent's Quick Connect tunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'via {parent}\'s tunnel'**
+  String federationPeerViaTunnel(String parent);
+
+  /// Peer state: the parent stopped listing it.
+  ///
+  /// In en, this message translates to:
+  /// **'no longer shared'**
+  String get federationPeerMissing;
+
+  /// Peer state: the user hid it from the server picker.
+  ///
+  /// In en, this message translates to:
+  /// **'hidden from the picker'**
+  String get federationPeerHidden;
+
+  /// Note for a non-admin user on the Federation screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing is an admin job. Minting tickets, adding peers and answering pairing requests need an admin sign-in on {server} — the same one that opens the admin panel.'**
+  String federationMemberNote(String server);
+
+  /// Note when the admin API is restricted to the local network.
+  ///
+  /// In en, this message translates to:
+  /// **'This server only takes admin calls from its own network. Connect from home to manage sharing here.'**
+  String get federationRestrictedNote;
+
+  /// Note when the admin API is disabled server-side.
+  ///
+  /// In en, this message translates to:
+  /// **'The admin API is switched off on this server.'**
+  String get federationDisabledNote;
+
+  /// Note when the server lacks the federation admin routes.
+  ///
+  /// In en, this message translates to:
+  /// **'This server is too old to manage federation from the app. Update mStream.'**
+  String get federationUnsupportedNote;
+
+  /// Error line when the federation screen cannot load.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the server.'**
+  String get federationLoadFailed;
+
+  /// Button: retry loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get federationRetry;
+
+  /// Headline of the Federation screen while the feature is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Share libraries with friends\' servers'**
+  String get federationOffTitle;
+
+  /// Explainer under the headline while federation is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Pair two mStream servers to read each other\'s music. Tickets are what you swap — text one, scan one, paste one.'**
+  String get federationOffBody;
+
+  /// Selling point 1 title (federation off).
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only, end-to-end encrypted'**
+  String get federationOffPoint1Title;
+
+  /// Selling point 1 body.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists and ratings never leave your server'**
+  String get federationOffPoint1Body;
+
+  /// Selling point 2 title.
+  ///
+  /// In en, this message translates to:
+  /// **'No port forwarding or DNS'**
+  String get federationOffPoint2Title;
+
+  /// Selling point 2 body.
+  ///
+  /// In en, this message translates to:
+  /// **'iroh finds a path — direct when it can, relay when it must'**
+  String get federationOffPoint2Body;
+
+  /// Selling point 3 title.
+  ///
+  /// In en, this message translates to:
+  /// **'Tickets you can revoke'**
+  String get federationOffPoint3Title;
+
+  /// Selling point 3 body.
+  ///
+  /// In en, this message translates to:
+  /// **'Each one is claimed once and cut off any time'**
+  String get federationOffPoint3Body;
+
+  /// Note under the selling points for admins.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the server admin can turn this on.'**
+  String get federationOffAdminOnly;
+
+  /// Note for a non-admin when federation is off.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation is off on {server}. Its admin can turn it on.'**
+  String federationOffMemberNote(String server);
+
+  /// Button: enable federation.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on federation'**
+  String get federationTurnOn;
+
+  /// Note when the server platform cannot run federation.
+  ///
+  /// In en, this message translates to:
+  /// **'The iroh component has no build for this server\'s OS/CPU, so the federation endpoint can\'t run here.'**
+  String get federationUnavailableNote;
+
+  /// Toast after enabling federation.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation is on'**
+  String get federationTurnedOn;
+
+  /// Toast after disabling federation.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation is off'**
+  String get federationTurnedOff;
+
+  /// Toast when the on/off switch fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the federation setting.'**
+  String get federationToggleFailed;
+
+  /// Title of the federation settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Federation settings'**
+  String get federationSettingsTitle;
+
+  /// Subtitle of the federation on/off switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer-to-peer, end-to-end encrypted. No port forwarding, no DNS.'**
+  String get federationSwitchSubtitle;
+
+  /// Section header: endpoint status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get federationStatusSection;
+
+  /// Status row: the endpoint reached its relay.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to relay'**
+  String get federationConnectedRelay;
+
+  /// Status row: federation is on but the endpoint is down.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint not running'**
+  String get federationNotRunning;
+
+  /// Label of the server's iroh endpoint id.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint id'**
+  String get federationEndpointId;
+
+  /// Toast after copying the endpoint id.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint id copied'**
+  String get federationEndpointCopied;
+
+  /// Section header in settings: the requests inbox switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing requests'**
+  String get federationPairingRequestsSection;
+
+  /// Switch: let discovery peers send pairing requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept requests from the discovery network'**
+  String get federationRequestsInboxTitle;
+
+  /// Subtitle of the requests inbox switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Off by default. When off, new requests are refused at the transport; answers to your own requests still arrive.'**
+  String get federationRequestsInboxSubtitle;
+
+  /// Toast when the inbox switch fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the requests inbox.'**
+  String get federationInboxFailed;
+
+  /// Section header: the limit defaults from the server config.
+  ///
+  /// In en, this message translates to:
+  /// **'Defaults for new tickets'**
+  String get federationDefaultsSection;
+
+  /// Subtitle under the limit defaults row.
+  ///
+  /// In en, this message translates to:
+  /// **'From the server config — every ticket can change them'**
+  String get federationDefaultsNote;
+
+  /// Warning note in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning federation off drops every peer bridge and hides your tickets until it is back on. Peers keep their tickets.'**
+  String get federationOffWarning;
+
+  /// Request row title (inbound).
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wants to pair'**
+  String federationRequestWantsToPair(String name);
+
+  /// Request row title (outbound).
+  ///
+  /// In en, this message translates to:
+  /// **'Request to {name}'**
+  String federationRequestToName(String name);
+
+  /// Request row: what the other server offers.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers {libraries}'**
+  String federationRequestOffers(String libraries);
+
+  /// Request row: the other server offers no library.
+  ///
+  /// In en, this message translates to:
+  /// **'Offers nothing'**
+  String get federationRequestOffersNothing;
+
+  /// Outbound request row: what this server offered.
+  ///
+  /// In en, this message translates to:
+  /// **'You offered {libraries}'**
+  String federationRequestYouOffered(String libraries);
+
+  /// Outbound request row: nothing offered.
+  ///
+  /// In en, this message translates to:
+  /// **'You offered nothing'**
+  String get federationRequestYouOfferedNothing;
+
+  /// Request state chip: the request is being delivered.
+  ///
+  /// In en, this message translates to:
+  /// **'sending…'**
+  String get federationReqSending;
+
+  /// Request state chip: delivered, no answer yet.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting on them'**
+  String get federationReqWaiting;
+
+  /// Request state chip: granting our share after they accepted.
+  ///
+  /// In en, this message translates to:
+  /// **'sharing back…'**
+  String get federationReqSharingBack;
+
+  /// Request state chip: an inbound request awaiting the admin.
+  ///
+  /// In en, this message translates to:
+  /// **'needs your answer'**
+  String get federationReqNeedsAnswer;
+
+  /// Request state chip: accepted, the ticket is being sent.
+  ///
+  /// In en, this message translates to:
+  /// **'sending your ticket…'**
+  String get federationReqSendingTicket;
+
+  /// Request state chip: waiting for the other side's grant.
+  ///
+  /// In en, this message translates to:
+  /// **'waiting on their share'**
+  String get federationReqWaitingShare;
+
+  /// Request state chip: they declined.
+  ///
+  /// In en, this message translates to:
+  /// **'declined'**
+  String get federationReqDeclined;
+
+  /// Request state chip: this admin declined.
+  ///
+  /// In en, this message translates to:
+  /// **'you declined'**
+  String get federationReqYouDeclined;
+
+  /// Request state chip: refused at the transport.
+  ///
+  /// In en, this message translates to:
+  /// **'their inbox is closed'**
+  String get federationReqInboxClosed;
+
+  /// Request state chip: completed.
+  ///
+  /// In en, this message translates to:
+  /// **'federated'**
+  String get federationReqFederated;
+
+  /// Request state chip: cancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'withdrawn'**
+  String get federationReqWithdrawn;
+
+  /// Request state chip: expired.
+  ///
+  /// In en, this message translates to:
+  /// **'expired'**
+  String get federationReqExpired;
+
+  /// Button: open the accept screen for a request.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept…'**
+  String get federationAccept;
+
+  /// Button: accept the request and share back.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept & share'**
+  String get federationAcceptAndShare;
+
+  /// Button: reject a request.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get federationDecline;
+
+  /// Button: withdraw an outbound request.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get federationCancelRequest;
+
+  /// Button: remove a finished request from the list.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get federationDismiss;
+
+  /// Title of the pairing request screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Pairing request'**
+  String get federationRequestTitle;
+
+  /// Line under a request: when it arrived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {ago} over the discovery network'**
+  String federationRequestReceived(String ago);
+
+  /// Line under an outbound request: when it was sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {ago} over the discovery network'**
+  String federationRequestSent(String ago);
+
+  /// Section header: libraries to share in return.
+  ///
+  /// In en, this message translates to:
+  /// **'Share back'**
+  String get federationShareBack;
+
+  /// Note under the share-back list.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing changes hands until you accept. They get read-only access to the libraries you tick — at least one.'**
+  String get federationShareBackNote;
+
+  /// Section header: the limits the accepted peer will get.
+  ///
+  /// In en, this message translates to:
+  /// **'Their limits'**
+  String get federationTheirLimits;
+
+  /// Link: edit the limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get federationChange;
+
+  /// Note under a declined inbound request.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests from this server are ignored for 7 days'**
+  String get federationRequestIgnored;
+
+  /// Toast after accepting a request.
+  ///
+  /// In en, this message translates to:
+  /// **'Request accepted'**
+  String get federationRequestAccepted;
+
+  /// Toast after declining a request.
+  ///
+  /// In en, this message translates to:
+  /// **'Request declined'**
+  String get federationRequestDeclined;
+
+  /// Toast after cancelling an outbound request.
+  ///
+  /// In en, this message translates to:
+  /// **'Request withdrawn'**
+  String get federationRequestCancelled;
+
+  /// Toast when a request action fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the request.'**
+  String get federationRequestActionFailed;
+
+  /// Field label: the name of the person the ticket is for.
+  ///
+  /// In en, this message translates to:
+  /// **'Who is this for?'**
+  String get federationTicketNameLabel;
+
+  /// Hint under the ticket name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you see this name — it labels the ticket in your list.'**
+  String get federationTicketNameHint;
+
+  /// Section header: libraries to grant.
+  ///
+  /// In en, this message translates to:
+  /// **'Libraries they can read'**
+  String get federationLibrariesTheyCanRead;
+
+  /// Section header: bandwidth limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits'**
+  String get federationLimitsSection;
+
+  /// Link: switch the limits editor to numeric fields.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact numbers'**
+  String get federationExactNumbers;
+
+  /// Link: switch the limits editor back to preset chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets'**
+  String get federationPresets;
+
+  /// Limit label: bitrate cap.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream rate'**
+  String get federationLimitStreamRate;
+
+  /// Limit label: daily quota.
+  ///
+  /// In en, this message translates to:
+  /// **'Per day'**
+  String get federationLimitPerDay;
+
+  /// Limit label: concurrent streams.
+  ///
+  /// In en, this message translates to:
+  /// **'Streams at once'**
+  String get federationLimitStreams;
+
+  /// Limit label: ticket expiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires'**
+  String get federationLimitExpires;
+
+  /// Chip: no limit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get federationUnlimited;
+
+  /// Chip: the ticket never expires.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get federationNever;
+
+  /// Chip: expiry in N days.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String federationDays(int count);
+
+  /// Chip: expiry in one year.
+  ///
+  /// In en, this message translates to:
+  /// **'1 year'**
+  String get federationOneYear;
+
+  /// Bitrate in kilobits per second.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} kbps'**
+  String federationKbps(int n);
+
+  /// Bitrate in megabits per second.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} Mbps'**
+  String federationMbps(int n);
+
+  /// Daily quota in megabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} MB a day'**
+  String federationMbPerDay(int n);
+
+  /// Daily quota in gigabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} GB a day'**
+  String federationGbPerDay(int n);
+
+  /// Concurrent stream cap.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 stream} other{{count} streams}}'**
+  String federationStreamsCount(int count);
+
+  /// Ticket has no expiry.
+  ///
+  /// In en, this message translates to:
+  /// **'never expires'**
+  String get federationNeverExpires;
+
+  /// Ticket expiry, relative or dated.
+  ///
+  /// In en, this message translates to:
+  /// **'expires {when}'**
+  String federationExpiresIn(String when);
+
+  /// Ticket past its expiry.
+  ///
+  /// In en, this message translates to:
+  /// **'expired'**
+  String get federationExpired;
+
+  /// Relative future time in days.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{in 1 day} other{in {count} days}}'**
+  String federationInDays(int count);
+
+  /// Relative future time in hours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{in 1 hour} other{in {count} hours}}'**
+  String federationInHours(int count);
+
+  /// Numeric field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream rate (kbps, 0 = unlimited)'**
+  String get federationStreamRateField;
+
+  /// Numeric field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily quota (MB, 0 = unlimited)'**
+  String get federationPerDayField;
+
+  /// Numeric field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Max streams (0 = unlimited)'**
+  String get federationStreamsField;
+
+  /// Numeric field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires in days (0 = never)'**
+  String get federationExpiresField;
+
+  /// Button: mint the ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Create ticket'**
+  String get federationCreateTicket;
+
+  /// Toast when minting fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t create the ticket.'**
+  String get federationMintFailed;
+
+  /// Empty state of the library list in the mint form.
+  ///
+  /// In en, this message translates to:
+  /// **'This server has no libraries to share.'**
+  String get federationNoLibraries;
+
+  /// Title of the ticket screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ticket'**
+  String get federationTicketTitle;
+
+  /// Ticket card title.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket for {name}'**
+  String federationTicketFor(String name);
+
+  /// Ticket card: the libraries it grants.
+  ///
+  /// In en, this message translates to:
+  /// **'Reads {libraries}'**
+  String federationTicketReads(String libraries);
+
+  /// Caption under the QR code.
+  ///
+  /// In en, this message translates to:
+  /// **'Same room? Let them scan this.'**
+  String get federationTicketQrHint;
+
+  /// Credential warning on the ticket screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone holding this ticket can read those libraries until it is claimed or revoked. Send it over a private channel — the first server to use it claims it.'**
+  String get federationTicketWarning;
+
+  /// Button: copy the ticket text.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy ticket'**
+  String get federationCopyTicket;
+
+  /// Toast after copying the ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket copied'**
+  String get federationTicketCopied;
+
+  /// Primary button: open the share sheet with the ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Send by text…'**
+  String get federationSendByText;
+
+  /// Note at the bottom of the ticket screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke it any time from Federation. If they reinstall, Reset claim lets the ticket be claimed again.'**
+  String get federationTicketRevokeNote;
+
+  /// Note when a key has no ticket because the endpoint is down.
+  ///
+  /// In en, this message translates to:
+  /// **'The federation endpoint isn\'t running, so there is no ticket to send yet. Turn federation on and come back.'**
+  String get federationTicketNotRunning;
+
+  /// The text message composed around a ticket for the share sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m sharing my mStream music library with you — {libraries}, read-only. In the mStream app open Federation → Add a peer and paste this ticket:\n\n{ticket}\n\nIt works once — I can revoke it any time.'**
+  String federationShareMessage(String libraries, String ticket);
+
+  /// Subject line for the share sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'mStream federation ticket'**
+  String get federationShareSubject;
+
+  /// Key state: the ticket was redeemed.
+  ///
+  /// In en, this message translates to:
+  /// **'claimed'**
+  String get federationKeyClaimed;
+
+  /// Key state: the ticket has not been redeemed.
+  ///
+  /// In en, this message translates to:
+  /// **'not claimed yet'**
+  String get federationKeyNotClaimed;
+
+  /// Bytes served to a key today.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} today'**
+  String federationKeyTodayUsage(String amount);
+
+  /// Key row: last use.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used {ago}'**
+  String federationKeyLastUsed(String ago);
+
+  /// Key row: never used.
+  ///
+  /// In en, this message translates to:
+  /// **'Never used'**
+  String get federationKeyNeverUsed;
+
+  /// Key row: when the ticket was redeemed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed {ago}'**
+  String federationKeyClaimedAgo(String ago);
+
+  /// Button: let the ticket be claimed again.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset claim'**
+  String get federationResetBinding;
+
+  /// Subtitle of the reset-claim row.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend reinstalled? Let the ticket be claimed again.'**
+  String get federationResetBindingNote;
+
+  /// Toast after resetting a key's binding.
+  ///
+  /// In en, this message translates to:
+  /// **'The ticket can be claimed again'**
+  String get federationBindingReset;
+
+  /// Button: revoke a ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get federationRevoke;
+
+  /// Confirm dialog before revoking.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke this ticket? {name} loses access right away.'**
+  String federationRevokeConfirm(String name);
+
+  /// Toast after revoking.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticket revoked'**
+  String get federationRevoked;
+
+  /// Button: save edited limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Save limits'**
+  String get federationSaveLimits;
+
+  /// Toast after saving limits.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits saved'**
+  String get federationLimitsSaved;
+
+  /// Toast when saving limits fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the limits.'**
+  String get federationLimitsFailed;
+
+  /// Short button: send the ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get federationSend;
+
+  /// Title of the key detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared library'**
+  String get federationKeyTitle;
+
+  /// Generic failure toast with the server's message.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work: {error}'**
+  String federationActionFailed(String error);
+
+  /// Field label: the pasted ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Their ticket'**
+  String get federationTheirTicket;
+
+  /// Button: open the scanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a QR code'**
+  String get federationScanQr;
+
+  /// Title of the QR scanner for tickets.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a federation ticket'**
+  String get federationScannerTitle;
+
+  /// Button: paste from the clipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste'**
+  String get federationPaste;
+
+  /// Hint after pasting a ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'Pasted from your clipboard.'**
+  String get federationTicketPasted;
+
+  /// Error under the ticket field.
+  ///
+  /// In en, this message translates to:
+  /// **'That doesn\'t look like a federation ticket.'**
+  String get federationNotATicket;
+
+  /// Error for a ticket with a newer version.
+  ///
+  /// In en, this message translates to:
+  /// **'This ticket comes from a newer mStream than this app understands.'**
+  String get federationTicketTooNew;
+
+  /// Error for an expired ticket.
+  ///
+  /// In en, this message translates to:
+  /// **'This ticket has expired.'**
+  String get federationTicketExpiredNote;
+
+  /// Field label: optional peer name.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get federationDisplayName;
+
+  /// Hint under the display name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional — how it shows in your server picker.'**
+  String get federationDisplayNameHint;
+
+  /// Preview: libraries the ticket grants.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares {libraries}'**
+  String federationSharesLibraries(String libraries);
+
+  /// Preview: the ticket names no libraries.
+  ///
+  /// In en, this message translates to:
+  /// **'Libraries not listed on the ticket'**
+  String get federationSharesUnknown;
+
+  /// Preview: ticket expiry.
+  ///
+  /// In en, this message translates to:
+  /// **'valid until {date}'**
+  String federationValidUntil(String date);
+
+  /// Explainer row title on the add-peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows up under {server}'**
+  String federationAddPeerShowsUnder(String server);
+
+  /// Explainer row body: how the peer will appear.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only · {branch} {name} in the picker'**
+  String federationAddPeerReadOnly(String branch, String name);
+
+  /// Explainer row title.
+  ///
+  /// In en, this message translates to:
+  /// **'Your server dials it over iroh'**
+  String get federationAddPeerDials;
+
+  /// Explainer row body.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-end encrypted · no port forwarding'**
+  String get federationAddPeerEncrypted;
+
+  /// Note at the bottom of the add-peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No ticket yet? Ask them to text you one.'**
+  String get federationAddPeerNoTicket;
+
+  /// Toast after adding a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} added'**
+  String federationPeerAdded(String name);
+
+  /// Toast when adding fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add the peer.'**
+  String get federationAddPeerFailed;
+
+  /// Error when the ticket was already used here.
+  ///
+  /// In en, this message translates to:
+  /// **'This ticket is already added as a peer.'**
+  String get federationPeerAlreadyAdded;
+
+  /// Section header on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Libraries you can read'**
+  String get federationLibrariesYouCanRead;
+
+  /// Section header on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery'**
+  String get federationDiscoverySection;
+
+  /// Switch: send discovery queries to this peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask this peer for similar music'**
+  String get federationAskPeerSimilar;
+
+  /// Subtitle of the discovery switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends what you\'re listening to — to this peer only.'**
+  String get federationAskPeerSimilarNote;
+
+  /// Section header on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto DJ'**
+  String get federationAutoDjSection;
+
+  /// Row: the peer is a fan-out candidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes part in multi-server Auto DJ'**
+  String get federationAutoDjParticipates;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers with its own library when the DJ is on'**
+  String get federationAutoDjParticipatesNote;
+
+  /// Row: the peer cannot join the DJ fan-out.
+  ///
+  /// In en, this message translates to:
+  /// **'Not an Auto DJ candidate'**
+  String get federationAutoDjNotCandidate;
+
+  /// Row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a server that can answer sonic picks'**
+  String get federationAutoDjNotCandidateNote;
+
+  /// Button: test the connection to a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get federationTest;
+
+  /// Button while a test runs.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing…'**
+  String get federationTesting;
+
+  /// Result: the peer answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Reachable'**
+  String get federationTestOk;
+
+  /// Result: the peer did not answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach it: {error}'**
+  String federationTestFailed(String error);
+
+  /// Peer status: when the server last tested it.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked {ago}'**
+  String federationCheckedAgo(String ago);
+
+  /// Peer status: no test yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Never tested'**
+  String get federationNeverTested;
+
+  /// Peer status: last successful contact.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen {ago}'**
+  String federationLastSeen(String ago);
+
+  /// Primary button on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse this library'**
+  String get federationBrowseLibrary;
+
+  /// Button: remove a peer from the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove peer'**
+  String get federationRemovePeer;
+
+  /// Confirm dialog before removing a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}? Tracks queued from it stop playing.'**
+  String federationRemovePeerConfirm(String name);
+
+  /// Toast after removing a peer.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} removed'**
+  String federationPeerRemoved(String name);
+
+  /// Switch: unhide the peer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in server picker'**
+  String get federationShowInPicker;
+
+  /// Subtitle of the show-in-picker switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden peers keep playing what you queued from them.'**
+  String get federationShowInPickerNote;
+
+  /// Note under the libraries list on the peer screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only — playlists and ratings stay on your own server.'**
+  String get federationPeerReadOnlyNote;
+
+  /// Empty state of the peer's library list.
+  ///
+  /// In en, this message translates to:
+  /// **'Not listed yet — open it once to load its libraries.'**
+  String get federationPeerLibrariesUnknown;
+
+  /// Peer transport line.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct tunnel from this phone'**
+  String get federationTransportDirect;
+
+  /// Peer transport secondary line.
+  ///
+  /// In en, this message translates to:
+  /// **'Relay standing by'**
+  String get federationTransportRelay;
+
+  /// Peer transport line: proxied by the parent.
+  ///
+  /// In en, this message translates to:
+  /// **'Through {parent}'**
+  String federationTransportViaParent(String parent);
+
+  /// Peer transport line: proxied over the parent's tunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Through {parent} over its tunnel'**
+  String federationTransportViaParentTunnel(String parent);
+
+  /// Toast when the discovery switch fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the discovery setting.'**
+  String get federationDiscoveryFailed;
+
+  /// Relative time: under two minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get agoJustNow;
+
+  /// Relative time in minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 min ago} other{{count} min ago}}'**
+  String agoMinutes(int count);
+
+  /// Relative time in hours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 h ago} other{{count} h ago}}'**
+  String agoHours(int count);
+
+  /// Relative time in days.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day ago} other{{count} days ago}}'**
+  String agoDays(int count);
 }
 
 class _AppLocalizationsDelegate

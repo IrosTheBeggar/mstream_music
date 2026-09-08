@@ -1016,9 +1016,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get federationSheetTitle => '共享资料库';
-
-  @override
   String get browserSearch => '搜索';
 
   @override
@@ -2236,5 +2233,764 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String federatedNoLongerListed(String parent) {
     return 'No longer shared by $parent';
+  }
+
+  @override
+  String get federationTitle => '联合';
+
+  @override
+  String get federationStatusOn => '已开启 · 已连接中继';
+
+  @override
+  String get federationStatusConnecting => '已开启 · 连接中…';
+
+  @override
+  String get federationStatusOff => '已关闭';
+
+  @override
+  String get federationStatusUnavailable => '此平台不可用';
+
+  @override
+  String get federationSharedWithYou => '与你共享的';
+
+  @override
+  String get federationRequestsSection => '请求';
+
+  @override
+  String get federationYourSharedLibraries => '你共享的曲库';
+
+  @override
+  String get federationAddPeer => '添加对等服务器';
+
+  @override
+  String get federationShareLibrary => '共享曲库';
+
+  @override
+  String get federationNoPeersYet => '还没有人与此服务器共享任何内容。';
+
+  @override
+  String get federationNoKeysYet => '还没有票据 — 共享一个曲库来创建票据。';
+
+  @override
+  String get federationNoRequests => '还没有请求 — 发现网络中的服务器可以在这里找到你。';
+
+  @override
+  String get federationClipboardTicket => '剪贴板中有票据';
+
+  @override
+  String federationTicketPreview(String name, String libraries) {
+    return '$name · 共享 $libraries';
+  }
+
+  @override
+  String federationTicketPreviewNoLibraries(String name) {
+    return '$name';
+  }
+
+  @override
+  String get federationUnnamedServer => '未命名服务器';
+
+  @override
+  String get federationAddPeerAction => '添加';
+
+  @override
+  String get federationPeerLive => '在线';
+
+  @override
+  String get federationPeerConnecting => '连接中…';
+
+  @override
+  String get federationPeerDirectTunnel => '直连隧道';
+
+  @override
+  String federationPeerViaParent(String parent) {
+    return '经由 $parent';
+  }
+
+  @override
+  String federationPeerViaTunnel(String parent) {
+    return '经由 $parent 的隧道';
+  }
+
+  @override
+  String get federationPeerMissing => '已停止共享';
+
+  @override
+  String get federationPeerHidden => '已在选择器中隐藏';
+
+  @override
+  String federationMemberNote(String server) {
+    return '共享由管理员负责。创建票据、添加对等服务器和回复配对请求都需要以管理员身份登录 $server — 与打开管理面板所用的登录相同。';
+  }
+
+  @override
+  String get federationRestrictedNote => '此服务器只接受来自其自身网络的管理调用。请在家中连接以在此管理共享。';
+
+  @override
+  String get federationDisabledNote => '此服务器已关闭管理 API。';
+
+  @override
+  String get federationUnsupportedNote => '此服务器版本过旧，无法从应用中管理联合。请更新 mStream。';
+
+  @override
+  String get federationLoadFailed => '无法连接服务器。';
+
+  @override
+  String get federationRetry => '重试';
+
+  @override
+  String get federationOffTitle => '与朋友的服务器共享曲库';
+
+  @override
+  String get federationOffBody =>
+      '配对两台 mStream 服务器，互相收听对方的音乐。交换的是票据 — 用短信发送、扫码或粘贴。';
+
+  @override
+  String get federationOffPoint1Title => '只读，端到端加密';
+
+  @override
+  String get federationOffPoint1Body => '播放列表和评分永远不会离开你的服务器';
+
+  @override
+  String get federationOffPoint2Title => '无需端口转发或 DNS';
+
+  @override
+  String get federationOffPoint2Body => 'iroh 会找到路径 — 能直连就直连，需要时走中继';
+
+  @override
+  String get federationOffPoint3Title => '可撤销的票据';
+
+  @override
+  String get federationOffPoint3Body => '每张只能兑换一次，随时可以切断';
+
+  @override
+  String get federationOffAdminOnly => '只有服务器管理员能开启。';
+
+  @override
+  String federationOffMemberNote(String server) {
+    return '$server 上的联合已关闭。其管理员可以开启。';
+  }
+
+  @override
+  String get federationTurnOn => '开启联合';
+
+  @override
+  String get federationUnavailableNote =>
+      'iroh 组件没有适用于此服务器操作系统/CPU 的构建，联合端点无法在这里运行。';
+
+  @override
+  String get federationTurnedOn => '联合已开启';
+
+  @override
+  String get federationTurnedOff => '联合已关闭';
+
+  @override
+  String get federationToggleFailed => '无法更新联合设置。';
+
+  @override
+  String get federationSettingsTitle => '联合设置';
+
+  @override
+  String get federationSwitchSubtitle => '点对点，端到端加密。无需端口转发，无需 DNS。';
+
+  @override
+  String get federationStatusSection => '状态';
+
+  @override
+  String get federationConnectedRelay => '已连接中继';
+
+  @override
+  String get federationNotRunning => '端点未运行';
+
+  @override
+  String get federationEndpointId => '端点 ID';
+
+  @override
+  String get federationEndpointCopied => '已复制端点 ID';
+
+  @override
+  String get federationPairingRequestsSection => '配对请求';
+
+  @override
+  String get federationRequestsInboxTitle => '接受来自发现网络的请求';
+
+  @override
+  String get federationRequestsInboxSubtitle =>
+      '默认关闭。关闭时，新请求会在传输层被拒绝；你自己发出的请求的回复仍会送达。';
+
+  @override
+  String get federationInboxFailed => '无法更新请求收件箱。';
+
+  @override
+  String get federationDefaultsSection => '新票据的默认值';
+
+  @override
+  String get federationDefaultsNote => '来自服务器配置 — 每张票据都可以更改';
+
+  @override
+  String get federationOffWarning =>
+      '关闭联合会断开所有对等连接，并隐藏你的票据直到重新开启。对等服务器会保留它们的票据。';
+
+  @override
+  String federationRequestWantsToPair(String name) {
+    return '$name 想要配对';
+  }
+
+  @override
+  String federationRequestToName(String name) {
+    return '发给 $name 的请求';
+  }
+
+  @override
+  String federationRequestOffers(String libraries) {
+    return '提供 $libraries';
+  }
+
+  @override
+  String get federationRequestOffersNothing => '未提供任何曲库';
+
+  @override
+  String federationRequestYouOffered(String libraries) {
+    return '你提供了 $libraries';
+  }
+
+  @override
+  String get federationRequestYouOfferedNothing => '你未提供任何曲库';
+
+  @override
+  String get federationReqSending => '发送中…';
+
+  @override
+  String get federationReqWaiting => '等待对方';
+
+  @override
+  String get federationReqSharingBack => '正在回共享…';
+
+  @override
+  String get federationReqNeedsAnswer => '需要你的回复';
+
+  @override
+  String get federationReqSendingTicket => '正在发送你的票据…';
+
+  @override
+  String get federationReqWaitingShare => '等待对方共享';
+
+  @override
+  String get federationReqDeclined => '已被拒绝';
+
+  @override
+  String get federationReqYouDeclined => '你已拒绝';
+
+  @override
+  String get federationReqInboxClosed => '对方收件箱已关闭';
+
+  @override
+  String get federationReqFederated => '已联合';
+
+  @override
+  String get federationReqWithdrawn => '已撤回';
+
+  @override
+  String get federationReqExpired => '已过期';
+
+  @override
+  String get federationAccept => '接受…';
+
+  @override
+  String get federationAcceptAndShare => '接受并共享';
+
+  @override
+  String get federationDecline => '拒绝';
+
+  @override
+  String get federationCancelRequest => '撤回请求';
+
+  @override
+  String get federationDismiss => '移除';
+
+  @override
+  String get federationRequestTitle => '配对请求';
+
+  @override
+  String federationRequestReceived(String ago) {
+    return '$ago通过发现网络收到';
+  }
+
+  @override
+  String federationRequestSent(String ago) {
+    return '$ago通过发现网络发出';
+  }
+
+  @override
+  String get federationShareBack => '回共享';
+
+  @override
+  String get federationShareBackNote => '接受之前不会有任何变化。对方将获得你勾选的曲库（至少一个）的只读访问权限。';
+
+  @override
+  String get federationTheirLimits => '对方的限制';
+
+  @override
+  String get federationChange => '更改';
+
+  @override
+  String get federationRequestIgnored => '来自此服务器的请求将被忽略 7 天';
+
+  @override
+  String get federationRequestAccepted => '已接受请求';
+
+  @override
+  String get federationRequestDeclined => '已拒绝请求';
+
+  @override
+  String get federationRequestCancelled => '已撤回请求';
+
+  @override
+  String get federationRequestActionFailed => '无法更新请求。';
+
+  @override
+  String get federationTicketNameLabel => '这是给谁的？';
+
+  @override
+  String get federationTicketNameHint => '只有你能看到这个名字 — 它用来在列表中标记票据。';
+
+  @override
+  String get federationLibrariesTheyCanRead => '对方可读取的曲库';
+
+  @override
+  String get federationLimitsSection => '限制';
+
+  @override
+  String get federationExactNumbers => '精确数值';
+
+  @override
+  String get federationPresets => '预设';
+
+  @override
+  String get federationLimitStreamRate => '串流速率';
+
+  @override
+  String get federationLimitPerDay => '每日';
+
+  @override
+  String get federationLimitStreams => '同时串流数';
+
+  @override
+  String get federationLimitExpires => '有效期';
+
+  @override
+  String get federationUnlimited => '不限';
+
+  @override
+  String get federationNever => '永不';
+
+  @override
+  String federationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationOneYear => '1 年';
+
+  @override
+  String federationKbps(int n) {
+    return '$n kbps';
+  }
+
+  @override
+  String federationMbps(int n) {
+    return '$n Mbps';
+  }
+
+  @override
+  String federationMbPerDay(int n) {
+    return '每日 $n MB';
+  }
+
+  @override
+  String federationGbPerDay(int n) {
+    return '每日 $n GB';
+  }
+
+  @override
+  String federationStreamsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 路串流',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationNeverExpires => '永不过期';
+
+  @override
+  String federationExpiresIn(String when) {
+    return '$when过期';
+  }
+
+  @override
+  String get federationExpired => '已过期';
+
+  @override
+  String federationInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天后',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 小时后',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationStreamRateField => '串流速率（kbps，0 = 不限）';
+
+  @override
+  String get federationPerDayField => '每日配额（MB，0 = 不限）';
+
+  @override
+  String get federationStreamsField => '最大串流数（0 = 不限）';
+
+  @override
+  String get federationExpiresField => '有效天数（0 = 永不过期）';
+
+  @override
+  String get federationCreateTicket => '创建票据';
+
+  @override
+  String get federationMintFailed => '无法创建票据。';
+
+  @override
+  String get federationNoLibraries => '此服务器没有可共享的曲库。';
+
+  @override
+  String get federationTicketTitle => '你的票据';
+
+  @override
+  String federationTicketFor(String name) {
+    return '给 $name 的票据';
+  }
+
+  @override
+  String federationTicketReads(String libraries) {
+    return '可读取 $libraries';
+  }
+
+  @override
+  String get federationTicketQrHint => '在同一个房间？让对方扫描这个。';
+
+  @override
+  String get federationTicketWarning =>
+      '持有此票据的任何人都能读取这些曲库，直到它被兑换或撤销。请通过私密渠道发送 — 第一个使用它的服务器将占有它。';
+
+  @override
+  String get federationCopyTicket => '复制票据';
+
+  @override
+  String get federationTicketCopied => '已复制票据';
+
+  @override
+  String get federationSendByText => '用短信发送…';
+
+  @override
+  String get federationTicketRevokeNote =>
+      '随时可在“联合”中撤销。如果对方重装了，“重置兑换”可让票据再次被兑换。';
+
+  @override
+  String get federationTicketNotRunning => '联合端点未运行，所以还没有可发送的票据。开启联合后再回来。';
+
+  @override
+  String federationShareMessage(String libraries, String ticket) {
+    return '我把我的 mStream 音乐曲库共享给你 — $libraries，只读。在 mStream 应用中打开“联合 → 添加对等服务器”，粘贴这张票据：\n\n$ticket\n\n它只能用一次 — 我随时可以撤销。';
+  }
+
+  @override
+  String get federationShareSubject => 'mStream 联合票据';
+
+  @override
+  String get federationKeyClaimed => '已兑换';
+
+  @override
+  String get federationKeyNotClaimed => '尚未兑换';
+
+  @override
+  String federationKeyTodayUsage(String amount) {
+    return '今日 $amount';
+  }
+
+  @override
+  String federationKeyLastUsed(String ago) {
+    return '上次使用：$ago';
+  }
+
+  @override
+  String get federationKeyNeverUsed => '从未使用';
+
+  @override
+  String federationKeyClaimedAgo(String ago) {
+    return '兑换于$ago';
+  }
+
+  @override
+  String get federationResetBinding => '重置兑换';
+
+  @override
+  String get federationResetBindingNote => '对方重装了？让票据可以再次兑换。';
+
+  @override
+  String get federationBindingReset => '票据可以再次兑换了';
+
+  @override
+  String get federationRevoke => '撤销';
+
+  @override
+  String federationRevokeConfirm(String name) {
+    return '撤销这张票据？$name 将立即失去访问权限。';
+  }
+
+  @override
+  String get federationRevoked => '已撤销票据';
+
+  @override
+  String get federationSaveLimits => '保存限制';
+
+  @override
+  String get federationLimitsSaved => '已保存限制';
+
+  @override
+  String get federationLimitsFailed => '无法保存限制。';
+
+  @override
+  String get federationSend => '发送';
+
+  @override
+  String get federationKeyTitle => '共享的曲库';
+
+  @override
+  String federationActionFailed(String error) {
+    return '操作失败：$error';
+  }
+
+  @override
+  String get federationTheirTicket => '对方的票据';
+
+  @override
+  String get federationScanQr => '扫描二维码';
+
+  @override
+  String get federationScannerTitle => '扫描联合票据';
+
+  @override
+  String get federationPaste => '粘贴';
+
+  @override
+  String get federationTicketPasted => '已从剪贴板粘贴。';
+
+  @override
+  String get federationNotATicket => '这看起来不像联合票据。';
+
+  @override
+  String get federationTicketTooNew => '这张票据来自比本应用更新的 mStream 版本。';
+
+  @override
+  String get federationTicketExpiredNote => '这张票据已过期。';
+
+  @override
+  String get federationDisplayName => '显示名称';
+
+  @override
+  String get federationDisplayNameHint => '可选 — 在服务器选择器中的显示方式。';
+
+  @override
+  String federationSharesLibraries(String libraries) {
+    return '共享 $libraries';
+  }
+
+  @override
+  String get federationSharesUnknown => '票据中未列出曲库';
+
+  @override
+  String federationValidUntil(String date) {
+    return '有效期至 $date';
+  }
+
+  @override
+  String federationAddPeerShowsUnder(String server) {
+    return '将显示在 $server 之下';
+  }
+
+  @override
+  String federationAddPeerReadOnly(String branch, String name) {
+    return '只读 · 在选择器中显示为 $branch $name';
+  }
+
+  @override
+  String get federationAddPeerDials => '你的服务器通过 iroh 连接它';
+
+  @override
+  String get federationAddPeerEncrypted => '端到端加密 · 无需端口转发';
+
+  @override
+  String get federationAddPeerNoTicket => '还没有票据？让对方用短信发一张给你。';
+
+  @override
+  String federationPeerAdded(String name) {
+    return '已添加 $name';
+  }
+
+  @override
+  String get federationAddPeerFailed => '无法添加对等服务器。';
+
+  @override
+  String get federationPeerAlreadyAdded => '这张票据已作为对等服务器添加。';
+
+  @override
+  String get federationLibrariesYouCanRead => '你可以读取的曲库';
+
+  @override
+  String get federationDiscoverySection => '发现';
+
+  @override
+  String get federationAskPeerSimilar => '向此对等服务器询问相似音乐';
+
+  @override
+  String get federationAskPeerSimilarNote => '会发送你正在听的内容 — 仅发给此对等服务器。';
+
+  @override
+  String get federationAutoDjSection => 'Auto DJ';
+
+  @override
+  String get federationAutoDjParticipates => '参与多服务器 Auto DJ';
+
+  @override
+  String get federationAutoDjParticipatesNote => 'DJ 开启时用它自己的曲库作答';
+
+  @override
+  String get federationAutoDjNotCandidate => '不是 Auto DJ 候选';
+
+  @override
+  String get federationAutoDjNotCandidateNote => '需要能回应音色选曲的服务器';
+
+  @override
+  String get federationTest => '测试';
+
+  @override
+  String get federationTesting => '测试中…';
+
+  @override
+  String get federationTestOk => '可达';
+
+  @override
+  String federationTestFailed(String error) {
+    return '无法连接：$error';
+  }
+
+  @override
+  String federationCheckedAgo(String ago) {
+    return '检查于$ago';
+  }
+
+  @override
+  String get federationNeverTested => '从未测试';
+
+  @override
+  String federationLastSeen(String ago) {
+    return '上次在线：$ago';
+  }
+
+  @override
+  String get federationBrowseLibrary => '浏览此曲库';
+
+  @override
+  String get federationRemovePeer => '移除对等服务器';
+
+  @override
+  String federationRemovePeerConfirm(String name) {
+    return '移除 $name？从它加入队列的曲目将停止播放。';
+  }
+
+  @override
+  String federationPeerRemoved(String name) {
+    return '已移除 $name';
+  }
+
+  @override
+  String get federationShowInPicker => '在服务器选择器中显示';
+
+  @override
+  String get federationShowInPickerNote => '隐藏的对等服务器仍会播放你从它们加入队列的内容。';
+
+  @override
+  String get federationPeerReadOnlyNote => '只读 — 播放列表和评分保留在你自己的服务器上。';
+
+  @override
+  String get federationPeerLibrariesUnknown => '尚未列出 — 打开一次以加载它的曲库。';
+
+  @override
+  String get federationTransportDirect => '从此手机直连的隧道';
+
+  @override
+  String get federationTransportRelay => '中继待命';
+
+  @override
+  String federationTransportViaParent(String parent) {
+    return '经由 $parent';
+  }
+
+  @override
+  String federationTransportViaParentTunnel(String parent) {
+    return '经由 $parent 的隧道';
+  }
+
+  @override
+  String get federationDiscoveryFailed => '无法更新发现设置。';
+
+  @override
+  String get agoJustNow => '刚刚';
+
+  @override
+  String agoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 分钟前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 小时前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天前',
+    );
+    return '$_temp0';
   }
 }

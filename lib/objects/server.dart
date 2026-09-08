@@ -62,6 +62,15 @@ class Server {
   //                                  the PARENT, decides whether a peer of
   //                                  it is worth dialing directly
   bool? federationDirectAvailable;
+  //   federationAvailable          — this server BUILD has federation at
+  //                                  all (the ping/`/api` payload carries
+  //                                  the `federationBrowse` key, whatever
+  //                                  its value): the home's Federation
+  //                                  card is offered from this, since
+  //                                  "on with no peers yet" and "off, and
+  //                                  the admin could turn it on" both
+  //                                  deserve the screen
+  bool? federationAvailable;
   // The discovery engine as the server reports it, never pinned: whether it
   // is switched on at all, and — mStream #879 — whether the scan has
   // produced vectors yet (null from a server too old to say). The UI flags
@@ -338,6 +347,9 @@ class Server {
         federationDirectAvailable = json['federationDirectAvailable'] is bool
             ? json['federationDirectAvailable']
             : null,
+        federationAvailable = json['federationAvailable'] is bool
+            ? json['federationAvailable']
+            : null,
         discoveryEnabled =
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
@@ -378,6 +390,7 @@ class Server {
         'federationDiscoveryAvailable': federationDiscoveryAvailable,
         'discoveryPathAvailable': discoveryPathAvailable,
         'federationDirectAvailable': federationDirectAvailable,
+        'federationAvailable': federationAvailable,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
         'connectionType': connectionType,
