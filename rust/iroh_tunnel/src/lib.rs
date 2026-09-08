@@ -39,7 +39,7 @@ use iroh_tickets::Ticket as _;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{watch, Notify};
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
 
@@ -150,8 +150,13 @@ struct Shared {
     /// handshake, and a credential refresh spawns a fresh one on the same
     /// port ([`Tunnel::set_credential`]).
     supervisor: Mutex<Option<JoinHandle<()>>>,
-    /// App kick: wakes a supervisor that is sleeping out a backoff.
-    kick: Notify,
+    /// App kicks as a generation counter: a kick bumps it, and a backoff wait
+    /// ends early only when the generation moves past the value its attempt
+    /// started with ([`kick_after`]). A `Notify` used to sit here; it stored a
+    /// permit whenever a kick landed while nothing was backing off — the usual
+    /// case, since the re-dial succeeds at once — and that stale permit cut the
+    /// FIRST backoff of the next outage short with a spurious "app kick" event.
+    kick_gen: watch::Sender<u64>,
     /// Native events for the app's diagnostics log (drained by the status poll).
     events: Mutex<EventRing>,
     started: Instant,
@@ -238,6 +243,12 @@ impl Shared {
     }
     fn current_conn(&self) -> Connection {
         self.conn.lock().unwrap().clone()
+    }
+    /// Record an app kick (or a credential swap that should be tried at once):
+    /// a supervisor sleeping out a backoff, or failing the attempt in flight,
+    /// retries immediately. Kicks older than the current attempt are spent.
+    fn kick(&self) {
+        self.kick_gen.send_modify(|g| *g += 1);
     }
     /// Classify the live connection's *selected* path: direct (hole-punched),
     /// relayed, or unknown (no path selected yet / not connected). A snapshot.
@@ -377,7 +388,7 @@ impl Tunnel {
             }
             // No-op if the supervisor already saw this connection close.
             shared.current_conn().close(0u32.into(), b"app kick");
-            shared.kick.notify_one();
+            shared.kick();
         });
     }
 
@@ -436,7 +447,7 @@ impl Tunnel {
             }
             STATUS_RECONNECTING | STATUS_CONNECTING => {
                 shared.event("credential updated — cutting the backoff short");
-                shared.kick.notify_one();
+                shared.kick();
             }
             STATUS_DOWN => {
                 shared.event("credential updated, but the tunnel is down (listener lost) — a restart is needed");
@@ -579,6 +590,9 @@ async fn supervise(shared: Arc<Shared>) {
         loop {
             attempt += 1;
             let t0 = Instant::now();
+            // Kicks from here on — during this attempt or the backoff after it
+            // — cut that backoff short; anything older is already spent.
+            let kick_seen = *shared.kick_gen.borrow();
             // Re-warm a relay path before re-dialing (cheap if already online).
             let relay_online = tokio::time::timeout(ONLINE_TIMEOUT, shared.endpoint.online())
                 .await
@@ -619,7 +633,7 @@ async fn supervise(shared: Arc<Shared>) {
                         t0.elapsed().as_secs_f32(),
                         backoff.as_secs()
                     ));
-                    let woke = wait_backoff(&shared, backoff).await;
+                    let woke = wait_backoff(&shared, backoff, kick_seen).await;
                     backoff = next_backoff(backoff, woke);
                 }
             }
@@ -638,10 +652,24 @@ fn next_backoff(prev: Duration, woke: bool) -> Duration {
     }
 }
 
-/// Sleep `backoff`, returning early (true) on an app kick or on the home relay
-/// going from down to up. Only a DOWN→UP relay edge counts: a relay that was
-/// already up when the attempt failed says nothing about the next attempt.
-async fn wait_backoff(shared: &Shared, backoff: Duration) -> bool {
+/// Resolves once the kick generation has moved past `seen`: at once when it
+/// already has (a kick that landed during the attempt), else on the next kick.
+/// Never resolves for kicks older than `seen`. Unit-tested.
+async fn kick_after(kick_gen: &watch::Sender<u64>, seen: u64) {
+    let mut rx = kick_gen.subscribe();
+    // wait_for tests the current value first, even one already marked seen.
+    if rx.wait_for(|g| *g != seen).await.is_err() {
+        // The sender lives in Shared, so this cannot happen while a supervisor
+        // runs; if it ever did, no kick can come and the sleep should win.
+        std::future::pending::<()>().await;
+    }
+}
+
+/// Sleep `backoff`, returning early (true) on an app kick newer than
+/// `kick_seen` or on the home relay going from down to up. Only a DOWN→UP
+/// relay edge counts: a relay that was already up when the attempt failed says
+/// nothing about the next attempt.
+async fn wait_backoff(shared: &Shared, backoff: Duration, kick_seen: u64) -> bool {
     let mut relay = shared.endpoint.home_relay_status();
     let relay_was_up = relay.get().iter().any(|r| r.is_connected());
     let relay_back = async {
@@ -658,7 +686,7 @@ async fn wait_backoff(shared: &Shared, backoff: Duration) -> bool {
     };
     tokio::select! {
         _ = tokio::time::sleep(backoff) => false,
-        _ = shared.kick.notified() => {
+        _ = kick_after(&shared.kick_gen, kick_seen) => {
             shared.event("backoff cut short: app kick");
             true
         }
@@ -877,7 +905,7 @@ pub async fn connect_tunnel(code: &str, local_port: u16) -> Result<Tunnel> {
         local_port: bound_port,
         accept: Mutex::new(None),
         supervisor: Mutex::new(None),
-        kick: Notify::new(),
+        kick_gen: watch::channel(0u64).0,
         events: Mutex::new(EventRing::new()),
         started: Instant::now(),
         bridges_open_failed: AtomicU32::new(0),
@@ -1155,6 +1183,42 @@ mod tests {
         }
         assert_eq!(seen, vec![2, 4, 8, 10, 10, 10]);
         assert_eq!(next_backoff(Duration::from_secs(10), true).as_secs(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_spent_kick_does_not_wake_the_backoff() {
+        // Mirrors production: no receiver is kept, subscribers are created on demand.
+        let (tx, _) = watch::channel(0u64);
+        tx.send_modify(|g| *g += 1); // a kick from a previous connected period
+        let seen = *tx.borrow(); // the attempt starts after it
+        let woke = tokio::time::timeout(Duration::from_millis(50), kick_after(&tx, seen)).await;
+        assert!(
+            woke.is_err(),
+            "a kick older than the attempt must not cut its backoff"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_kick_during_or_after_the_attempt_wakes_the_backoff() {
+        let (tx, _) = watch::channel(0u64);
+        // During the attempt: the generation moved before the wait began.
+        let seen = *tx.borrow();
+        tx.send_modify(|g| *g += 1);
+        let woke = tokio::time::timeout(Duration::from_millis(50), kick_after(&tx, seen)).await;
+        assert!(
+            woke.is_ok(),
+            "a kick during the attempt cuts the backoff at once"
+        );
+        // While waiting: the kick lands mid-sleep.
+        let seen = *tx.borrow();
+        let (_, woke) = tokio::join!(
+            async {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                tx.send_modify(|g| *g += 1);
+            },
+            tokio::time::timeout(Duration::from_millis(500), kick_after(&tx, seen)),
+        );
+        assert!(woke.is_ok(), "a kick that lands mid-backoff wakes it");
     }
 
     #[test]

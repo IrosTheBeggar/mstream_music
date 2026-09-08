@@ -97,6 +97,10 @@ async function main() {
   console.log(`[server] endpointId=${endpoint.id().toString()}`);
 
   const serverConns = []; // captured so the reconnect test can kill them
+  // While set, a connection accepted now never gets its handshake reply: the
+  // client's HANDSHAKE_TIMEOUT (10s) fails that attempt, which is the only way
+  // to make the supervisor sleep out a backoff against a live server.
+  let stallHandshake = false;
   (async () => {
     for (;;) {
       let incoming;
@@ -109,6 +113,7 @@ async function main() {
         const authBi = await conn.acceptBi();
         const sent = Buffer.from(await authBi.recv.readToEnd(HANDSHAKE_LIMIT));
         const ok = sent.length === connectSecret.length && crypto.timingSafeEqual(sent, connectSecret);
+        if (stallHandshake) await delay(12000); // past the client's 10s handshake timeout
         try { await authBi.send.writeAll(Array.from(Buffer.from(ok ? 'OK' : 'NO'))); await authBi.send.finish(); } catch { /* hung up */ }
         if (!ok) { try { conn.close(1n, Array.from(Buffer.from('unauthorized'))); } catch { /* noop */ } return; }
         for (;;) {
@@ -237,6 +242,30 @@ async function main() {
   check('same LOCAL_PORT answers after the kick', afterOk, afterOk ? `port ${port2.port} kept` : 'no answer');
   check('server accepted exactly one more connection for the kick', serverConns.length === connsBeforeKick + 2,
       `${connsBeforeKick} -> ${serverConns.length} (client2 first dial + re-dial)`);
+
+  // 7b) STALE KICK: the kick above landed while nothing was backing off (its
+  //     re-dial succeeded at once). The next outage that DOES back off must
+  //     not be cut short by that spent kick: drop client2's connection while
+  //     the server stalls the handshake, so attempt 1 times out (10s) and the
+  //     supervisor sleeps its first backoff, then let attempt 2 through. A
+  //     "backoff cut short: app kick" event before the reconnect is the bug.
+  console.log('\n=== STALE KICK TEST (a spent kick must not cut the next backoff) ===');
+  const mark = events2.length;
+  stallHandshake = true;
+  try { serverConns[serverConns.length - 1].close(0n, Array.from(Buffer.from('stale-kick test'))); } catch { /* noop */ }
+  await delay(5000); // attempt 1 is in flight and stalling; attempt 2 comes after the 10s timeout + backoff
+  stallHandshake = false;
+  let staleRec = false;
+  for (let i = 0; i < 30 && !staleRec; i++) {
+    await delay(1000);
+    staleRec = /reconnected: attempt [2-9]/.test(events2.slice(mark));
+  }
+  const since = events2.slice(mark);
+  check('attempt 1 failed on the stalled handshake', /attempt 1 failed .*handshake stalled/.test(since),
+      /attempt 1 failed/.test(since) ? 'seen' : 'no failed attempt (did the stall apply?)');
+  check('supervisor reconnected on a later attempt', staleRec, staleRec ? 'seen' : 'no "reconnected: attempt 2+" within 35s');
+  const spent = /backoff cut short: app kick/.test(since);
+  check('the spent kick did not cut the backoff short', !spent, spent ? 'stale "app kick" wake seen' : 'backoff slept');
   child2.kill();
 
   // 8) GUEST MODE: a federation endpoint (ALPN mstream/federation/1) whose
@@ -345,6 +374,6 @@ async function main() {
   process.exit(failures === 0 ? 0 : 1);
 }
 
-const guard = setTimeout(() => { console.error('[harness] TIMEOUT 180s'); process.exit(2); }, 180000);
+const guard = setTimeout(() => { console.error('[harness] TIMEOUT 240s'); process.exit(2); }, 240000);
 guard.unref();
 main().catch((e) => { console.error('[harness] ERROR', e); process.exit(3); });
