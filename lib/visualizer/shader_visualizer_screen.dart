@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 
 import '../native/audio_capture.dart';
 import '../native/viz_decoder.dart';
+import '../singletons/log_manager.dart';
 import '../singletons/media.dart';
 import '../theme/velvet_theme.dart';
 import 'spectrum_source.dart';
@@ -21,7 +22,12 @@ import 'viz_renderer.dart';
 /// spectrum/waveform is uploaded as the `iChannel0` audio texture so the ported
 /// shader bodies run unchanged.
 class ShaderVisualizerScreen extends StatefulWidget {
-  const ShaderVisualizerScreen({super.key});
+  /// Render-only mode for use as a live BACKDROP (the desktop Now Playing
+  /// screen): no close button, no preset controls — the host owns all chrome
+  /// and typically wraps this in an IgnorePointer.
+  final bool backdrop;
+
+  const ShaderVisualizerScreen({super.key, this.backdrop = false});
 
   @override
   State<ShaderVisualizerScreen> createState() => _ShaderVisualizerScreenState();
@@ -134,8 +140,15 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
       VizDecoder.instance.stop();
       return;
     }
-    VizDecoder.instance
+    final ok = VizDecoder.instance
         .start(uri.scheme == 'file' ? uri.toFilePath() : uri.toString());
+    // Mode is invisible on screen (synth animates too) — log it so "the
+    // visualizer isn't reacting" is a one-glance diagnosis.
+    final err = VizDecoder.instance.lastError();
+    appLog(ok
+        ? '[viz] decode sidecar started (real audio)'
+        : '[viz] decode sidecar unavailable — synthesized signal'
+            '${err.isEmpty ? '' : ' ($err)'}');
   }
 
   /// Playback position now, extrapolated from the last broadcast state (the
@@ -255,8 +268,8 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
                 repaint: _repaint,
               ),
             ),
-            _closeButton(),
-            _controls(),
+            if (!widget.backdrop) _closeButton(),
+            if (!widget.backdrop) _controls(),
           ],
         ),
       ),

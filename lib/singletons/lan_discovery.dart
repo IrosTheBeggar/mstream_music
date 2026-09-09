@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
+import 'package:multicast_dns/multicast_dns.dart';
 
 import '../native/iroh_tunnel.dart';
 import 'log_manager.dart';
@@ -73,9 +75,20 @@ class LanDiscovery {
   LanDiscovery._();
 
   static const String _serviceType = '_mstream._tcp';
+  static const String _serviceTypeLocal = '_mstream._tcp.local';
 
   BonsoirDiscovery? _discovery;
   StreamSubscription<BonsoirDiscoveryEvent>? _sub;
+
+  // Desktop backend (pure-Dart multicast_dns). bonsoir's Windows resolver
+  // never fills host addresses (the TXT arrives, hosts stay [] and it loops
+  // resolve-failure 9003), so tiles could never materialize there. Mirrors
+  // the proven DesktopChromecastDiscoverer recipe.
+  static bool get _useDesktopMdns =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  MDnsClient? _mdns;
+  Timer? _rescan;
+  bool _sweeping = false;
 
   // Services found but not yet resolved, keyed by name+type. Android's NSD
   // resolver is a single system-wide slot shared with every other app, so a
@@ -144,7 +157,22 @@ class LanDiscovery {
   }
 
   Future<void> _startInternal() async {
-    if (!isSupported || _discovery != null) return;
+    if (!isSupported || _discovery != null || _mdns != null) return;
+    if (_useDesktopMdns) {
+      try {
+        final client = _newMdnsClient();
+        _mdns = client;
+        await client.start(interfacesFactory: _mdnsInterfaces);
+        unawaited(_sweep());
+        // mDNS answers are one-shot per query; re-sweep to catch servers that
+        // appear later and to drop ones that vanished.
+        _rescan = Timer.periodic(const Duration(seconds: 6), (_) => _sweep());
+      } catch (e) {
+        appLog('[lan-discovery] desktop mDNS start failed: $e');
+        await stop();
+      }
+      return;
+    }
     try {
       final discovery = BonsoirDiscovery(type: _serviceType);
       _discovery = discovery;
@@ -168,6 +196,10 @@ class LanDiscovery {
     } catch (_) {
       // Already stopped / platform teardown — nothing to recover.
     }
+    _rescan?.cancel();
+    _rescan = null;
+    _mdns?.stop();
+    _mdns = null;
     _watchdog?.cancel();
     _watchdog = null;
     _pendingResolves.clear();
@@ -178,6 +210,114 @@ class LanDiscovery {
       _emit();
     }
   }
+
+  // ── desktop mDNS backend ──
+
+  /// One discovery pass: PTR for the service type, then SRV + TXT + A per
+  /// instance, building [DiscoveredServer]s directly (the TXT carries
+  /// everything but the addresses). Replaces the server map wholesale so a
+  /// server that stopped advertising disappears within a sweep.
+  Future<void> _sweep() async {
+    final client = _mdns;
+    if (client == null || _sweeping) return;
+    _sweeping = true;
+    final found = <String, DiscoveredServer>{};
+    try {
+      await for (final ptr in client
+          .lookup<PtrResourceRecord>(
+              ResourceRecordQuery.serverPointer(_serviceTypeLocal))
+          .timeout(const Duration(seconds: 4), onTimeout: (s) => s.close())) {
+        SrvResourceRecord? srv;
+        await for (final r in client.lookup<SrvResourceRecord>(
+            ResourceRecordQuery.service(ptr.domainName))) {
+          srv = r;
+          break;
+        }
+        if (srv == null) continue;
+
+        final attrs = <String, String>{};
+        await for (final txt in client.lookup<TxtResourceRecord>(
+            ResourceRecordQuery.text(ptr.domainName))) {
+          for (final line in txt.text.split('\n')) {
+            final eq = line.indexOf('=');
+            if (eq > 0) attrs[line.substring(0, eq)] = line.substring(eq + 1);
+          }
+          break;
+        }
+        if (attrs['iroh'] != '1') continue; // not pairable — skip
+
+        // Collect every IPv4 (a multi-homed host advertises virtual adapters
+        // too); the connect flow probes candidates in order.
+        final hosts = <String>[];
+        await for (final ip in client
+            .lookup<IPAddressResourceRecord>(
+                ResourceRecordQuery.addressIPv4(srv.target))
+            .timeout(const Duration(seconds: 1), onTimeout: (s) => s.close())) {
+          final a = ip.address.address;
+          if (!hosts.contains(a)) hosts.add(a);
+        }
+        if (hosts.isEmpty) continue;
+
+        final port =
+            srv.port != 0 ? srv.port : int.tryParse(attrs['port'] ?? '');
+        if (port == null || port == 0) continue;
+
+        // Instance label = the PTR domain minus the service suffix.
+        var instance = ptr.domainName;
+        final suffix = '.$_serviceTypeLocal';
+        if (instance.endsWith(suffix)) {
+          instance = instance.substring(0, instance.length - suffix.length);
+        }
+        final name = (attrs['name'] ?? '').isNotEmpty ? attrs['name']! : instance;
+        final id = (attrs['id'] ?? '').isNotEmpty ? attrs['id']! : instance;
+        found[id] = DiscoveredServer(
+          id: id,
+          name: name,
+          version: attrs['v'],
+          scheme: attrs['scheme'] == 'https' ? 'https' : 'http',
+          port: port,
+          hostAddresses: hosts,
+        );
+        appLog('[lan-discovery] found: $name '
+            'hosts=$hosts port=$port v=${attrs['v']}');
+      }
+    } catch (e) {
+      appLog('[lan-discovery] sweep error: $e');
+    } finally {
+      _sweeping = false;
+    }
+    // Emit only on change so the periodic sweep doesn't rebuild the UI idly.
+    final changed = found.length != _servers.length ||
+        found.keys.any((k) => !_servers.containsKey(k)) ||
+        found.entries.any((e) =>
+            _servers[e.key]?.hostAddresses.join(',') !=
+            e.value.hostAddresses.join(','));
+    if (changed) {
+      _servers
+        ..clear()
+        ..addAll(found);
+      _emit();
+    }
+  }
+
+  /// Windows' winsock has no SO_REUSEPORT — multicast_dns's default client
+  /// (reusePort: true) throws on start(). Same recipe as the desktop
+  /// Chromecast discoverer.
+  static MDnsClient _newMdnsClient() => MDnsClient(
+        rawDatagramSocketFactory: (dynamic host, int port,
+            {bool reuseAddress = true, bool reusePort = true, int ttl = 1}) {
+          return RawDatagramSocket.bind(host, port,
+              reuseAddress: reuseAddress,
+              reusePort: Platform.isWindows ? false : reusePort,
+              ttl: ttl);
+        },
+      );
+
+  /// Exclude loopback: joinMulticast on it throws WSAENOPROTOOPT on Windows,
+  /// and multicast_dns aborts start() if any one interface fails.
+  static Future<Iterable<NetworkInterface>> _mdnsInterfaces(
+          InternetAddressType type) =>
+      NetworkInterface.list(type: type, includeLoopback: false);
 
   /// Restart browsing (the screen's "refresh" affordance).
   Future<void> refresh() async {

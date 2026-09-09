@@ -7,9 +7,12 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 import '../objects/server.dart';
 import '../objects/direct_access.dart';
 import './api.dart';
+import '../l10n/app_localizations.dart';
+import '../util/startup_view.dart';
 import './app_messenger.dart';
 import './browser_list.dart';
 import './log_manager.dart';
+import './settings.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
@@ -20,8 +23,8 @@ import './tunnel_handle.dart';
 import './media.dart';
 import './queue_store.dart';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import '../util/app_data_dir.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:http/http.dart' as http;
 
@@ -74,7 +77,8 @@ class ServerManager {
   }
 
   Future<File> get _serverFile async {
-    final directory = await getApplicationDocumentsDirectory();
+    // App Support on desktop, documents dir on mobile — see appDataDir().
+    final directory = await appDataDir();
     final path = directory.path;
     return File('$path/servers.json');
   }
@@ -113,13 +117,25 @@ class ServerManager {
   Future<void> loadServerList() async {
     List serversJson = await readServerManager();
 
+    var droppedEmbedded = false;
     for (var s in serversJson) {
       try {
+        // '__local__' entries were the app-managed embedded server, removed
+        // when serving moved to the standalone mstream-launcher. Drop them on
+        // sight (dev installs only — the flag never shipped); the launcher's
+        // server is added like any other, via Quick Connect or its URL.
+        if (s is Map && s['localname'] == '__local__') {
+          droppedEmbedded = true;
+          continue;
+        }
         serverList.add(Server.fromJson(s));
       } catch (e) {
         // Skip a corrupt entry instead of failing to load every server
         // that comes after it in the file.
       }
+    }
+    if (droppedEmbedded) {
+      unawaited(writeServerFile());
     }
 
     // Before ANYTHING resolves a URL: a federated server addresses itself
@@ -177,13 +193,43 @@ class ServerManager {
   }
 
 
+  static final bool _isDesktop =
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
+  // Desktop landing after a programmatic server switch (first add, deleting
+  // the current server): load the configured startup section with the browse
+  // pane held on the spinner; on failure clear it so the offline placeholder
+  // + toast take over. Mirrors the sidebar switcher's flow — without this the
+  // pane sits on the "home" placeholder even though the server is healthy.
+  Future<void> _openStartupSectionFor(Server s) async {
+    try {
+      await loadStartupSection(SettingsManager().effectiveStartupView, s);
+    } catch (_) {
+      final ctx = rootMessengerKey.currentContext;
+      showGlobalSnack(ctx != null && ctx.mounted
+          ? AppLocalizations.of(ctx).mainFailedToConnect
+          : 'Failed to connect to server.');
+    } finally {
+      BrowserManager().awaitingSectionLoad = false;
+      BrowserManager().updateStream();
+    }
+  }
+
   Future<void> addServer(Server newServer) async {
     serverList.add(newServer);
 
     if (currentServer == null) {
       currentServer = newServer;
       _currentServerStream.sink.add(currentServer);
+      // Desktop's browser "home" is the offline placeholder (there's no nav
+      // grid there), so a first add would land on "nothing found" with a
+      // healthy server. Hold the spinner and load the configured startup
+      // section instead — same landing the sidebar switcher gives. The phone
+      // keeps its nav grid. Fire-and-forget so the add flow (and its screen
+      // pop) isn't held behind the section fetch.
+      if (_isDesktop) BrowserManager().awaitingSectionLoad = true;
       BrowserManager().goToNavScreen();
+      if (_isDesktop) unawaited(_openStartupSectionFor(newServer));
     }
 
     await _ensureDownloadDir(newServer);
@@ -2070,9 +2116,15 @@ class ServerManager {
       // The active server went — either it IS the one being removed, or it was
       // one of its peers, swept out with it.
       currentServer = firstSelectable(serverList);
-      // clear the browser
+      // clear the browser; on desktop land on the fallback server's startup
+      // section (its "home" is the offline placeholder — see addServer).
+      if (_isDesktop) BrowserManager().awaitingSectionLoad = true;
       BrowserManager().goToNavScreen();
       _currentServerStream.sink.add(currentServer);
+      final fallback = currentServer;
+      if (_isDesktop && fallback != null) {
+        unawaited(_openStartupSectionFor(fallback));
+      }
     }
 
     // Start/stop the tunnel to match the (possibly changed) active server.
@@ -2099,12 +2151,12 @@ class ServerManager {
     serverList.insert(0, s);
     _serverListStream.sink.add(serverList);
 
-    // Switch the active server to it right away (not just on next launch)
-    // and reset the browser onto the new server — mirrors
-    // changeCurrentServer().
-    currentServer = s;
-    _currentServerStream.sink.add(currentServer);
-    await _settleTunnelForSwitch('make-default');
+    // Deliberately does NOT touch [currentServer]: the default only decides
+    // which server loads on the next launch (serverList[0]). It used to also
+    // switch the active server and reset the browser — but that yanked the
+    // selection (and the browse pane) out from under the user mid-session,
+    // leaving the pane showing the previous server's data with a different
+    // server selected. Switching servers is the sidebar/app-bar picker's job.
 
     // Persist the new order so serverList[0] — the default loaded on the
     // next launch — is this server. Without this the choice was lost on

@@ -10,6 +10,7 @@ import './browser_list.dart';
 import './log_manager.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
+import '../util/app_data_dir.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
 
@@ -161,10 +162,20 @@ class FileExplorer {
   // listings empty) instead of throwing on an unmounted volume.
   Future<Directory?> getDownloadDir(
       String storageMode, String? storageBasePath) async {
-    // Every mode other than 'appLocal' is an Android storage concept (external
-    // volumes, SD cards, all-files access). On iOS the picker never offers
-    // them, and any legacy value resolves to the app documents dir.
-    if (!Platform.isAndroid) return getApplicationDocumentsDirectory();
+    // Outside Android, only 'permanent' (a user-chosen folder, offered by the
+    // desktop add-server form) means anything — the other non-appLocal modes
+    // are Android storage concepts (external volumes, SD cards, all-files
+    // access). iOS never offers any of them, and any legacy value resolves to
+    // the app documents dir, exactly as before.
+    if (!Platform.isAndroid) {
+      final isDesktop =
+          Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      if (isDesktop && storageMode == 'permanent' && storageBasePath != null) {
+        final dir = Directory(storageBasePath);
+        return dir.existsSync() ? dir : null;
+      }
+      return appDataDir();
+    }
     switch (storageMode) {
       case 'permanent':
       case 'sdCard':
@@ -188,7 +199,7 @@ class FileExplorer {
         return (dirs != null && dirs.length > 1) ? dirs[1] : null;
       case 'appLocal':
       default:
-        return getApplicationDocumentsDirectory();
+        return appDataDir();
     }
   }
 }
