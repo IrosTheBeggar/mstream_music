@@ -8,7 +8,7 @@
 // offers Restore). Bindings live in HotkeyManager and persist through
 // SettingsManager.saveHotkeys().
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../singletons/settings.dart';
