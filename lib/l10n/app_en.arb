@@ -567,6 +567,27 @@
       }
     }
   },
+  "autoDjSectionQueue": "Queue",
+  "@autoDjSectionQueue": {
+    "description": "Header for how Auto DJ fills the queue."
+  },
+  "autoDjSongsPerFetchTitle": "Songs per fetch",
+  "@autoDjSongsPerFetchTitle": {
+    "description": "Songs-per-fetch row: how many songs one Auto DJ turn queues."
+  },
+  "autoDjSongsPerFetchSubtitle": "How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.",
+  "@autoDjSongsPerFetchSubtitle": {
+    "description": "Songs-per-fetch row subtitle."
+  },
+  "autoDjSongsPerFetchValue": "{count, plural, =1{1 song} other{{count} songs}}",
+  "@autoDjSongsPerFetchValue": {
+    "description": "Songs-per-fetch readout beside the slider.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "autoDjBpmTitle": "BPM continuity",
   "autoDjBpmSubtitle": "Prefer picks within a tempo window of the current song. Honours half/double-tempo equivalence.",
   "autoDjTolerance": "Tolerance",

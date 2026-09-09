@@ -1368,6 +1368,30 @@ abstract class AppLocalizations {
   /// **'{count} of {total} servers are taking part — the rest lack discovery, a matching embedding model or a new enough server version'**
   String autoDjMultiServerSomeExcluded(int count, int total);
 
+  /// Header for how Auto DJ fills the queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get autoDjSectionQueue;
+
+  /// Songs-per-fetch row: how many songs one Auto DJ turn queues.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs per fetch'**
+  String get autoDjSongsPerFetchTitle;
+
+  /// Songs-per-fetch row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.'**
+  String get autoDjSongsPerFetchSubtitle;
+
+  /// Songs-per-fetch readout beside the slider.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 song} other{{count} songs}}'**
+  String autoDjSongsPerFetchValue(int count);
+
   /// BPM continuity row.
   ///
   /// In en, this message translates to:

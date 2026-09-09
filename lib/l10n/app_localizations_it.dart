@@ -733,6 +733,27 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get autoDjSectionQueue => 'Coda';
+
+  @override
+  String get autoDjSongsPerFetchTitle => 'Brani per richiesta';
+
+  @override
+  String get autoDjSongsPerFetchSubtitle =>
+      'Quanti brani Auto DJ aggiunge alla coda ogni volta che interviene. I filtri di continuità valutano l\'intero lotto rispetto al brano in riproduzione al momento della richiesta.';
+
+  @override
+  String autoDjSongsPerFetchValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count brani',
+      one: '1 brano',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjBpmTitle => 'Continuità dei BPM';
 
   @override

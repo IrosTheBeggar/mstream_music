@@ -208,6 +208,11 @@ enum ServerParam {
   similarToVector,
   similarToModelId,
 
+  /// random-songs: how many songs one call returns — a batch (mStream #966).
+  /// Absent, the answer is one song, which is also all a server that
+  /// predates the key can give, so stripping it costs nothing but the batch.
+  limit,
+
   /// db/search: restrict the lyrics category. The endpoint's other four
   /// `no*` flags all date to 4.7.0 — below the support floor, so they are
   /// never worth gating; this one arrived at 6.13.1 and is the only search
@@ -248,6 +253,11 @@ const Map<ServerParam, ServerVersion> _paramFloor = {
   // have counted it).
   ServerParam.similarToVector: ServerVersion(6, 26, 0, '6.26.0'),
   ServerParam.similarToModelId: ServerVersion(6, 26, 0, '6.26.0'),
+  // Batch picks (mStream #966, random-songs' `limit`) merged on 2026-09-09,
+  // also after the 6.25.0 tag, so they ride the same expected release as the
+  // vector seed — and move with the two lines above if it is numbered
+  // differently.
+  ServerParam.limit: ServerVersion(6, 26, 0, '6.26.0'),
   // The duration params DID ship in 6.25.0 (observed, 2026-08-30).
   ServerParam.minDuration: ServerVersion(6, 25, 0, '6.25.0'),
   ServerParam.maxDuration: ServerVersion(6, 25, 0, '6.25.0'),
@@ -306,6 +316,15 @@ bool autoDjDurationKnownUnsupported(ServerVersion? v) =>
 /// old, so both are offered the session and answer for themselves.
 bool crossServerSeedKnownUnsupported(ServerVersion? v) =>
     paramKnownUnsupported(v, ServerParam.similarToVector);
+
+/// True when the server is KNOWN to predate batch picks — random-songs'
+/// `limit`. The cue to hide the songs-per-fetch control rather than show a
+/// number the app then strips before sending: a slider promising four songs a
+/// turn while one arrived would read as broken.
+///
+/// Same fork/unknown rule as every other gate.
+bool autoDjBatchKnownUnsupported(ServerVersion? v) =>
+    paramKnownUnsupported(v, ServerParam.limit);
 
 /// `POST /api/v1/db/metadata/batch` arrived at 5.11.0 — many filepaths in
 /// one request instead of one per track.

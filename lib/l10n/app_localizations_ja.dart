@@ -711,6 +711,27 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get autoDjSectionQueue => 'キュー';
+
+  @override
+  String get autoDjSongsPerFetchTitle => '1回あたりの曲数';
+
+  @override
+  String get autoDjSongsPerFetchSubtitle =>
+      'Auto DJ が実行されるたびにキューへ追加する曲数。連続性フィルターは、取得時に再生中だった曲を基準にまとめて判定します。';
+
+  @override
+  String autoDjSongsPerFetchValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count曲',
+      one: '1曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjBpmTitle => 'BPM の連続性';
 
   @override
