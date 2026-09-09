@@ -152,13 +152,12 @@ Future<void> _startApp() async {
   appLog('[app] mStream $kAppVersion started');
   // Whether the native iroh tunnel lib loaded for this platform/ABI — handy when
   // diagnosing remote-access issues (false on a 32-bit Android slice or a desktop
-  // build that shipped without the bundled lib). When present, read the idle
-  // status too: it forces the FFI bindings to resolve, so an incompatible/missing
-  // symbol surfaces here at startup rather than on first tunnel use.
-  appLog('[iroh] native tunnel supported: ${IrohTunnel.isSupported}');
-  if (IrohTunnel.isSupported) {
-    appLog('[iroh] tunnel status: ${IrohTunnel.instance.status.name}');
-  }
+  // build that shipped without the bundled lib). The probe resolves every FFI
+  // symbol and checks the C ABI version, so a missing or stale binary surfaces
+  // here at startup — with its reason — rather than on first tunnel use.
+  appLog('[iroh] native tunnel supported: ${IrohTunnel.isSupported}'
+      '${IrohTunnel.isSupported ? ' (ABI v${IrohTunnel.instance.abiVersion})' : ''}'
+      '${IrohTunnel.unsupportedReason == null ? '' : ' — ${IrohTunnel.unsupportedReason}'}');
   // Whether libprojectM (the Milkdrop visualizer engine) loaded for this
   // platform/ABI — Android (jniLibs) or the desktop build (bundled DLL). This
   // only confirms the engine lib + FFI symbols resolve and the version reads;
