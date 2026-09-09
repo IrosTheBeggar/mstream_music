@@ -82,6 +82,19 @@ void main() {
       final r = ServerCapabilities().filter(s, {'minSimilarity': 0.5});
       expect(r.dropped, isEmpty);
     });
+
+    test('the batch size is stripped below 6.26.0 and kept from it', () {
+      // random-songs' `limit` (mStream #966). A server without it answers
+      // one song anyway, so dropping the key costs nothing but the batch —
+      // and sending it would 400 the whole pick.
+      final old = _server('old', '6.25.0');
+      final r =
+          ServerCapabilities().filter(old, {'ignoreList': [], 'limit': 4});
+      expect(r.body.keys, ['ignoreList']);
+      expect(r.dropped, ['limit']);
+      final fresh = _server('new', '6.26.0');
+      expect(ServerCapabilities().filter(fresh, {'limit': 4}).dropped, isEmpty);
+    });
   });
 
   group('search flags', () {

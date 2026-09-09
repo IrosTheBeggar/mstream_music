@@ -2703,7 +2703,10 @@ class AudioPlayerHandler extends BaseAudioHandler
             index == queue.value.length - 1) {
           if (queue.value.isEmpty) {
             await autoDJ(autoPlay: true);
-            autoDJ();
+            // A second fetch only when the first left the queue one deep —
+            // the lookahead the queue-end top-up needs. A batch (songs per
+            // fetch above 1) already provides it.
+            if (queue.value.length < 2) autoDJ();
           } else if (index == queue.value.length - 1 &&
               _backend.processingState == BackendProcessingState.idle) {
             autoDJ(autoPlay: true, incrementIndex: true);
@@ -3208,12 +3211,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     await addQueueItem(seed);
     await skipToQueueItem(0);
     await play();
-    // Followers, not a first pick: the seed IS track one. Two more so the
-    // session feels underway before the queue-end top-up takes over. The
-    // first is awaited so a failure surfaces here and not in a detached
-    // future; the second rides along behind it.
+    // Followers, not a first pick: the seed IS track one. At least two more
+    // so the session feels underway before the queue-end top-up takes over.
+    // The first fetch is awaited so a failure surfaces here and not in a
+    // detached future; a second rides along behind it only when the first
+    // was a single pick — a batch already puts the session underway.
     await autoDJ();
-    unawaited(autoDJ());
+    if (queue.value.length < 3) unawaited(autoDJ());
     return true;
   }
 
@@ -3305,6 +3309,46 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (on == null && !s.isFederated && !allowUnknownDiscovery) return false;
     return !crossServerSeedKnownUnsupported(
         ServerVersion.tryParse(s.serverVersion));
+  }
+
+  /// Every song in a random-songs answer with its own similarity. A batch
+  /// answer (mStream #966) carries `sonic.similarities` aligned with `songs`;
+  /// a server from before batches reports only the first song's `similarity`.
+  /// A song without a score competes with -1, so it never beats a scored one.
+  /// Pure; unit-tested.
+  static List<({Map<String, dynamic> song, double similarity})> scoredSongs(
+      Map<String, dynamic> decoded) {
+    final songs = decoded['songs'];
+    if (songs is! List) return const [];
+    final sonic = decoded['sonic'];
+    final sims = sonic is Map ? sonic['similarities'] : null;
+    final single = sonic is Map ? sonic['similarity'] : null;
+    final out = <({Map<String, dynamic> song, double similarity})>[];
+    for (var i = 0; i < songs.length; i++) {
+      final song = songs[i];
+      if (song is! Map) continue;
+      var sim = -1.0;
+      if (sims is List && i < sims.length && sims[i] is num) {
+        sim = (sims[i] as num).toDouble();
+      } else if (i == 0 && single is num) {
+        sim = single.toDouble();
+      }
+      out.add((song: Map<String, dynamic>.from(song), similarity: sim));
+    }
+    return out;
+  }
+
+  /// The [n] best of [items] by [similarity], best first. Equal scores keep
+  /// their order — List.sort is not stable, so the order is pinned by index —
+  /// which is what lets the server asked first win a tie. Pure; unit-tested.
+  static List<T> bestBySimilarity<T>(
+      List<T> items, double Function(T) similarity, int n) {
+    final indexed = [for (var i = 0; i < items.length; i++) (i, items[i])];
+    indexed.sort((a, b) {
+      final c = similarity(b.$2).compareTo(similarity(a.$2));
+      return c != 0 ? c : a.$1.compareTo(b.$1);
+    });
+    return [for (final e in indexed.take(n < 1 ? 1 : n)) e.$2];
   }
 
   // The reasons the fan-out has already explained this session, so a session
@@ -3524,8 +3568,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       for (final s in eligible) s.localname: _ignoreListFor(s),
     };
     const maxAsks = 3;
-    List<({Server server, Map<String, dynamic> decoded, double similarity})>
-        scored = const [];
+    List<
+        ({
+          Server server,
+          Map<String, dynamic> decoded,
+          Map<String, dynamic> song,
+          double similarity,
+        })> scored = const [];
     var answered = 0;
     for (var ask = 0; ask < maxAsks && scored.isEmpty; ask++) {
       // A server dropped mid-pick (a model-space refusal) is not asked again.
@@ -3542,6 +3591,9 @@ class AudioPlayerHandler extends BaseAudioHandler
           // Each server's own library rules — rating, vpaths, genre — plus
           // the app-level ones that mean the same everywhere.
           ...mgr.libraryFilters(server),
+          // Every server is asked for the whole batch; the best across all
+          // of them are queued below.
+          ...mgr.batchParams,
         };
         final filtered = ServerCapabilities().filter(server, payload);
         try {
@@ -3588,42 +3640,33 @@ class AudioPlayerHandler extends BaseAudioHandler
             return null;
           }
           final decoded = jsonDecode(res.body) as Map<String, dynamic>;
-          final songs = decoded['songs'] as List?;
-          if (songs == null || songs.isEmpty) return null;
+          final offered = scoredSongs(decoded);
+          if (offered.isEmpty) return null;
           // Whatever this answer's fate, the server has now seen its own
-          // pick: its list is what a repeated round sends it.
+          // picks: its list is what a repeated round sends it.
           if (decoded['ignoreList'] is List) {
             retryLists[server.localname] = decoded['ignoreList'];
           }
-          final song = songs[0] as Map<String, dynamic>;
-          if (mgr.isKeywordBlocked(song)) {
-            return (
-              server: server,
-              decoded: decoded,
-              similarity: -1.0,
-              usable: false,
-            );
+          // Each song competes on its own. The ones this session may not
+          // play — keyword-blocked, or a repeat of what is playing or
+          // anchoring — are passed over; a server whose whole answer is
+          // passed over still counts as having answered.
+          final usable = <({Map<String, dynamic> song, double similarity})>[];
+          var repeats = 0;
+          for (final c in offered) {
+            if (mgr.isKeywordBlocked(c.song)) continue;
+            final path = _normSonicPath(c.song['filepath'] as String?);
+            if (path == null || recent.contains('${server.localname}|$path')) {
+              repeats++;
+              continue;
+            }
+            usable.add(c);
           }
-          final path = _normSonicPath(song['filepath'] as String?);
-          if (path == null || recent.contains('${server.localname}|$path')) {
-            verboseLog('[dj] ${server.localname} offered a track already in '
-                'play or in the anchor — passed over');
-            return (
-              server: server,
-              decoded: decoded,
-              similarity: -1.0,
-              usable: false,
-            );
+          if (repeats > 0) {
+            verboseLog('[dj] ${server.localname} offered $repeats track(s) '
+                'already in play or in the anchor — passed over');
           }
-          final sim = (decoded['sonic'] as Map?)?['similarity'];
-          return (
-            server: server,
-            decoded: decoded,
-            // A server that somehow answered without a score still competes,
-            // just never beats one that did.
-            similarity: sim is num ? sim.toDouble() : -1.0,
-            usable: true,
-          );
+          return (server: server, decoded: decoded, usable: usable);
         } catch (e) {
           verboseLog('[dj] ${server.localname} did not answer: $e');
           return null;
@@ -3636,8 +3679,13 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (got.isEmpty) break;
       scored = [
         for (final a in got)
-          if (a.usable)
-            (server: a.server, decoded: a.decoded, similarity: a.similarity),
+          for (final c in a.usable)
+            (
+              server: a.server,
+              decoded: a.decoded,
+              song: c.song,
+              similarity: c.similarity,
+            ),
       ];
       if (scored.isEmpty && ask + 1 < maxAsks) {
         verboseLog('[dj] multi-server: every answer was a repeat or blocked '
@@ -3652,23 +3700,31 @@ class AudioPlayerHandler extends BaseAudioHandler
       return false;
     }
 
-    // Best match wins. The whole reason for asking everyone is that one of
-    // them holds something closer to the seed than the DJ's own server does.
-    scored.sort((a, b) => b.similarity.compareTo(a.similarity));
-    final best = scored.first;
+    // Best matches win. The whole reason for asking everyone is that one of
+    // them holds something closer to the seed than the DJ's own server does
+    // — and with a batch, one server may well supply all of it.
+    final chosen =
+        bestBySimilarity(scored, (c) => c.similarity, mgr.songsPerFetch);
+    final best = chosen.first;
 
     appLog('[dj] multi-server: $answered/${eligible.length} answered, '
-        '${scored.length} usable, best ${best.similarity.toStringAsFixed(4)} '
-        'from ${best.server.localname}');
+        '${scored.length} usable, queueing ${chosen.length}; best '
+        '${best.similarity.toStringAsFixed(4)} from ${best.server.localname}');
 
-    // Only the winner's cooldown advances — its pick is the one being played,
-    // the others' were not. The DJ's own server shares its list with the
-    // single-server path, so a fallback pick later continues the same
-    // cooldown rather than starting a fresh one.
-    if (best.server.localname == autoDJServer?.localname) {
-      jsonAutoDJIgnoreList = best.decoded['ignoreList'];
-    } else {
-      _multiServerIgnore[best.server.localname] = best.decoded['ignoreList'];
+    // Only the cooldowns of servers whose songs are being queued advance —
+    // the others' answers were not played. A contributing server's list also
+    // carries the ids of its songs that lost to a better match elsewhere; the
+    // cooldown is soft variety, and they cycle back out. The DJ's own server
+    // shares its list with the single-server path, so a fallback pick later
+    // continues the same cooldown rather than starting a fresh one.
+    final advanced = <String>{};
+    for (final c in chosen) {
+      if (!advanced.add(c.server.localname)) continue;
+      if (c.server.localname == autoDJServer?.localname) {
+        jsonAutoDJIgnoreList = c.decoded['ignoreList'];
+      } else {
+        _multiServerIgnore[c.server.localname] = c.decoded['ignoreList'];
+      }
     }
 
     // A pick landed: the same bookkeeping the single-server path does on a
@@ -3679,11 +3735,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     _autoDJAuthWarned = false;
     _sonicWarned = false;
 
-    await _queueAutoDJSong(best.decoded,
+    await _queueAutoDJSongs(
+        [for (final c in chosen) (song: c.song, source: c.server)],
         autoPlay: autoPlay,
         incrementIndex: incrementIndex,
-        sonicPick: true,
-        source: best.server);
+        sonicPick: true);
     return true;
   }
 
@@ -3888,6 +3944,9 @@ class AudioPlayerHandler extends BaseAudioHandler
         // Rating, vpaths, genre and track length — shared with the
         // "Surprise me" opener so the two can't drift apart again.
         ...mgr.libraryFilters(autoDJServer!),
+        // Songs per fetch (mStream #966). Stripped by the capability filter
+        // for a server known to predate it.
+        ...mgr.batchParams,
       };
       if (mgr.bpmContinuityEnabled && currentBpm != null && currentBpm > 0) {
         payload['bpmRanges'] =
@@ -4107,27 +4166,68 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (epoch != _djSessionEpoch) return;
 
       jsonAutoDJIgnoreList = decoded['ignoreList'];
-      final songs = decoded['songs'] as List?;
-      if (songs == null || songs.isEmpty) return;
+      final songs = _songsOf(decoded);
+      if (songs.isEmpty) return;
 
       lastDecoded = decoded;
 
-      if (!mgr.isKeywordBlocked(songs[0] as Map<String, dynamic>)) {
-        await _queueAutoDJSong(decoded,
+      // A batch keeps whatever part of it passes the keyword filter; only an
+      // answer blocked in full is retried.
+      final accepted = [
+        for (final s in songs)
+          if (!mgr.isKeywordBlocked(s)) s,
+      ];
+      if (accepted.isNotEmpty) {
+        await _queueAutoDJSongs(
+            [for (final s in accepted) (song: s, source: autoDJServer!)],
             autoPlay: autoPlay,
             incrementIndex: incrementIndex,
             sonicPick: sonic != null);
         return;
       }
       // Otherwise loop — the updated ignoreList means the next call
-      // returns a different candidate.
+      // returns different candidates.
     }
 
     if (lastDecoded != null) {
-      await _queueAutoDJSong(lastDecoded,
+      // Every retry was blocked in full: take the last answer whole rather
+      // than stall the session (webapp parity — the server's fallback chain
+      // has already exhausted the alternatives).
+      await _queueAutoDJSongs(
+          [
+            for (final s in _songsOf(lastDecoded))
+              (song: s, source: autoDJServer!),
+          ],
           autoPlay: autoPlay,
           incrementIndex: incrementIndex,
           sonicPick: sonic != null);
+    }
+  }
+
+  /// The song rows of a random-songs answer — one before mStream #966, up to
+  /// `limit` since — skipping anything that is not an object.
+  static List<Map<String, dynamic>> _songsOf(Map<String, dynamic> decoded) {
+    final songs = decoded['songs'];
+    if (songs is! List) return const [];
+    return songs.whereType<Map<String, dynamic>>().toList();
+  }
+
+  /// Queue a batch in the server's order (best first). The flags belong to
+  /// the FIRST song — it is the one a seek lands on and playback starts from;
+  /// the rest simply follow it in the queue.
+  Future<void> _queueAutoDJSongs(
+      List<({Map<String, dynamic> song, Server source})> picks,
+      {bool autoPlay = false,
+      bool incrementIndex = false,
+      bool sonicPick = false}) async {
+    var first = true;
+    for (final p in picks) {
+      await _queueAutoDJSong(p.song,
+          autoPlay: first && autoPlay,
+          incrementIndex: first && incrementIndex,
+          sonicPick: sonicPick,
+          source: p.source);
+      first = false;
     }
   }
 
@@ -4136,13 +4236,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// whichever server answered best, and the stream URL, album art and the
   /// queue item's `server` extra all have to name that one or the track won't
   /// play.
-  Future<void> _queueAutoDJSong(Map<String, dynamic> decoded,
+  Future<void> _queueAutoDJSong(Map<String, dynamic> song,
       {bool autoPlay = false,
       bool incrementIndex = false,
       bool sonicPick = false,
       Server? source}) async {
     final from = source ?? autoDJServer!;
-    final song = decoded['songs'][0] as Map<String, dynamic>;
     final metadata = (song['metadata'] as Map?) ?? const {};
     final filepath = song['filepath'] as String?;
     if (filepath == null) return; // skip a degenerate random-songs row

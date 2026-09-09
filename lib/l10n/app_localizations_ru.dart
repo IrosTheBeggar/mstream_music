@@ -741,6 +741,29 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get autoDjSectionQueue => 'Очередь';
+
+  @override
+  String get autoDjSongsPerFetchTitle => 'Треков за один запрос';
+
+  @override
+  String get autoDjSongsPerFetchSubtitle =>
+      'Сколько треков Auto DJ добавляет в очередь при каждом запуске. Фильтры непрерывности оценивают всю партию по треку, звучавшему в момент запроса.';
+
+  @override
+  String autoDjSongsPerFetchValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count трека',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjBpmTitle => 'Непрерывность по BPM';
 
   @override

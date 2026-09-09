@@ -87,6 +87,26 @@ class AutoDJManager {
   bool bpmContinuityEnabled = false;
   int bpmTolerance = 8;
 
+  // Songs per fetch — how many songs one Auto DJ turn asks the server for,
+  // as `limit` on POST /api/v1/db/random-songs (mStream #966, 6.26.0+). The
+  // server answers up to that many distinct songs out of one bounded pool,
+  // best tier first, so a batch costs one round trip and keeps the queue
+  // several tracks deep instead of one. Continuity filters judge the whole
+  // batch against the song that was playing when it was fetched.
+  //
+  // Default 4: enough runway that a slow tunnel or a flaky connection never
+  // leaves the queue dry between turns, small enough that a changed setting
+  // (a new genre, a tighter match) shows within a few songs. Older servers
+  // never see the key — ServerCapabilities strips it below the floor and
+  // learns a rejection from anything the table misjudged.
+  int songsPerFetch = defaultSongsPerFetch;
+
+  static const int defaultSongsPerFetch = 4;
+
+  /// The server's ceiling (src/api/random.js PICK_LIMIT_MAX); above it the
+  /// server 400s, so the slider stops here.
+  static const int maxSongsPerFetch = 25;
+
   // Track-length window — server-side via `minDuration` / `maxDuration` on
   // POST /api/v1/db/random-songs, in SECONDS. The server applies it at the
   // base-conditions layer and NEVER relaxes it in the waterfall (unlike the
@@ -227,6 +247,7 @@ class AutoDJManager {
       }
       bpmContinuityEnabled = m['bpmContinuityEnabled'] ?? false;
       bpmTolerance = (m['bpmTolerance'] ?? 8).clamp(1, 20);
+      songsPerFetch = _clampSongsPerFetch(m['songsPerFetch']);
       harmonicMixingEnabled = m['harmonicMixingEnabled'] ?? false;
       // ?? true matches the field default: a stored file that predates the
       // key (rather than one that stored `false`) reads as a fresh install
@@ -274,6 +295,14 @@ class AutoDJManager {
     return v.clamp(durationFloorSec, durationCeilSec);
   }
 
+  /// Clamped on read like the duration bounds: the server rejects a value
+  /// outside 1..[maxSongsPerFetch] — and a non-integer — so a hand-edited or
+  /// future-written file must not be able to 400 every pick.
+  static int _clampSongsPerFetch(dynamic raw) {
+    final v = raw is num ? raw.round() : defaultSongsPerFetch;
+    return v.clamp(1, maxSongsPerFetch);
+  }
+
   // Serialized so overlapping saves can't interleave truncate+writes on
   // auto_dj.json (load() silently resets every setting on a corrupt file).
   final WriteChain _writeChain = WriteChain();
@@ -291,6 +320,7 @@ class AutoDJManager {
       'keywordFilterWords': keywordFilterWords,
       'bpmContinuityEnabled': bpmContinuityEnabled,
       'bpmTolerance': bpmTolerance,
+      'songsPerFetch': songsPerFetch,
       'harmonicMixingEnabled': harmonicMixingEnabled,
       'sonicSimilarityEnabled': sonicSimilarityEnabled,
       'sonicMinSimilarity': sonicMinSimilarity,
@@ -481,6 +511,21 @@ class AutoDJManager {
     _notify();
     await _save();
   }
+
+  // --- Songs per fetch ---
+
+  Future<void> setSongsPerFetch(int v) async {
+    songsPerFetch = v.clamp(1, maxSongsPerFetch);
+    _notify();
+    await _save();
+  }
+
+  /// The batch size as request fields — `limit`, when it changes anything.
+  /// At 1 the key is left off: that is the pre-batch wire shape, and there is
+  /// nothing for a server without the key to reject. Deliberately NOT part of
+  /// [libraryFilters]: the "Surprise me" opener wants exactly one song.
+  Map<String, dynamic> get batchParams =>
+      songsPerFetch > 1 ? {'limit': songsPerFetch} : const {};
 
   Future<void> setHarmonicMixingEnabled(bool v) async {
     harmonicMixingEnabled = v;

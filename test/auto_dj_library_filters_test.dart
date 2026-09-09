@@ -32,10 +32,37 @@ void main() {
     mgr.minDurationSec = 120;
     mgr.maxDurationSec = AutoDJManager.durationCeilSec;
     mgr.allowUnknownDuration = false;
+    mgr.songsPerFetch = AutoDJManager.defaultSongsPerFetch;
   });
 
   test('a wide-open config sends nothing', () {
     expect(mgr.libraryFilters(serverWith()), isEmpty);
+  });
+
+  group('songs per fetch (batchParams)', () {
+    // The batch size is a SESSION setting, not a library filter: the DJ's
+    // picks send it, the "Surprise me" opener (one song by definition) must
+    // not — so it lives beside libraryFilters, never inside it.
+    test('defaults to four songs a turn', () {
+      expect(AutoDJManager.defaultSongsPerFetch, 4);
+      expect(mgr.batchParams, {'limit': 4});
+    });
+
+    test('at one the key is left off — the pre-batch wire shape', () {
+      mgr.songsPerFetch = 1;
+      expect(mgr.batchParams, isEmpty);
+    });
+
+    test('the ceiling is the server\'s', () {
+      mgr.songsPerFetch = AutoDJManager.maxSongsPerFetch;
+      expect(mgr.batchParams, {'limit': 25});
+    });
+
+    test('never leaks into the library filters', () {
+      mgr.songsPerFetch = 10;
+      expect(mgr.libraryFilters(serverWith(minRating: 6)),
+          isNot(contains('limit')));
+    });
   });
 
   test('only vpaths switched OFF are excluded', () {

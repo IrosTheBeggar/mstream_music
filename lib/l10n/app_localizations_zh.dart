@@ -699,6 +699,27 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get autoDjSectionQueue => '队列';
+
+  @override
+  String get autoDjSongsPerFetchTitle => '每次获取的歌曲数';
+
+  @override
+  String get autoDjSongsPerFetchSubtitle =>
+      'Auto DJ 每次运行时加入队列的歌曲数量。连续性过滤器以获取时正在播放的歌曲为基准评判整批歌曲。';
+
+  @override
+  String autoDjSongsPerFetchValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首歌',
+      one: '1 首歌',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjBpmTitle => 'BPM 连贯性';
 
   @override

@@ -68,6 +68,7 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   // used to run on EVERY tick of a drag (up to ~50 writes per gesture).
   double? _sonicDrag;
   int? _bpmDrag;
+  int? _limitDrag;
 
   @override
   void initState() {
@@ -224,6 +225,11 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
           ..._vpathTiles(_autoDJServer!),
           Divider(color: VelvetColors.border, height: 1),
         ],
+        if (!_batchHidden) ...[
+          _sectionHeader(l.autoDjSectionQueue),
+          _songsPerFetchSection(),
+          Divider(color: VelvetColors.border, height: 1),
+        ],
         // BPM continuity, harmonic mixing and the genre filter all arrived
         // in 6.7.1. On a server known to predate them the controls are
         // HIDDEN rather than shown-and-ignored: the app strips those
@@ -268,6 +274,9 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
     final target = _editTarget;
     return [
       _sectionHeader(l.autoDjSectionShared),
+      // One batch size for the whole session: every server is asked for it
+      // and the best matches across them fill it.
+      _songsPerFetchSection(),
       if (_filtersHidden)
         _olderServerNote(l)
       else ...[
@@ -293,6 +302,75 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
         if (!_filtersHidden) _genreFilterSection(target),
       ],
     ];
+  }
+
+  // ── Queue: songs per fetch ──────────────────────────────────────
+
+  /// How many songs one Auto DJ turn queues (random-songs' `limit`, mStream
+  /// #966). Same shape as the BPM tolerance control: a readout and a slider,
+  /// local during the drag and persisted once on release.
+  Widget _songsPerFetchSection() {
+    final l = AppLocalizations.of(context);
+    final mgr = AutoDJManager();
+    final shown = _limitDrag ?? mgr.songsPerFetch;
+    final max = AutoDJManager.maxSongsPerFetch;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.autoDjSongsPerFetchTitle,
+                        style: TextStyle(
+                            color: VelvetColors.textPrimary, fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text(
+                      l.autoDjSongsPerFetchSubtitle,
+                      style: TextStyle(
+                          color: VelvetColors.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 12),
+              Text(
+                l.autoDjSongsPerFetchValue(shown),
+                style: TextStyle(
+                  color: VelvetColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: VelvetColors.primary,
+              thumbColor: VelvetColors.primary,
+              overlayColor: VelvetColors.primaryDim,
+            ),
+            child: Slider(
+              value: shown.toDouble().clamp(1.0, max.toDouble()),
+              min: 1,
+              max: max.toDouble(),
+              divisions: max - 1,
+              // Local during the drag, persisted once on release — see
+              // _sonicDrag.
+              onChanged: (v) => setState(() => _limitDrag = v.round()),
+              onChangeEnd: (v) async {
+                await mgr.setSongsPerFetch(v.round());
+                if (mounted) setState(() => _limitDrag = null);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Continuity: sonic similarity + BPM + harmonic mixing ────────
@@ -440,6 +518,14 @@ class _AutoDJScreenState extends State<AutoDJScreen> {
   /// not this one.
   bool get _durationHidden =>
       autoDjDurationKnownUnsupported(_panelServerVersion);
+
+  /// True when the DJ server is KNOWN to predate batch picks (6.26.0), which
+  /// hides the songs-per-fetch control: the app strips `limit` before sending
+  /// to such a server, so a slider would sit there promising a batch every
+  /// turn while one song arrived. Only the single-server body needs the
+  /// gate — a multi-server participant already needs the same release for
+  /// its vector seed.
+  bool get _batchHidden => autoDjBatchKnownUnsupported(_panelServerVersion);
 
   Widget _olderServerNote(AppLocalizations l) {
     return Padding(

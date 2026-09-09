@@ -156,6 +156,40 @@ void main() {
     });
   });
 
+  group('autoDjBatchKnownUnsupported', () {
+    test('below 6.26.0 the songs-per-fetch control is hidden', () {
+      for (final v in ['6.25.0', '6.22.0', '6.7.1']) {
+        expect(autoDjBatchKnownUnsupported(ServerVersion.tryParse(v)), isTrue,
+            reason: v);
+      }
+    });
+
+    test('6.26.0 and up show it', () {
+      for (final v in ['6.26.0', '6.27.3', '7.0.0']) {
+        expect(autoDjBatchKnownUnsupported(ServerVersion.tryParse(v)), isFalse,
+            reason: v);
+      }
+    });
+
+    test('a fork and an unknown version both keep it', () {
+      expect(
+          autoDjBatchKnownUnsupported(ServerVersion.tryParse('6.4.2-velvet')),
+          isFalse);
+      expect(autoDjBatchKnownUnsupported(null), isFalse);
+    });
+
+    test('it rides the same release as the vector seed', () {
+      // Both merged after the 6.25.0 tag. If the release that carries them
+      // is numbered differently, the two floors move together.
+      for (final v in ['6.25.0', '6.26.0']) {
+        final parsed = ServerVersion.tryParse(v);
+        expect(paramKnownUnsupported(parsed, ServerParam.limit),
+            paramKnownUnsupported(parsed, ServerParam.similarToVector),
+            reason: v);
+      }
+    });
+  });
+
   group('metadataBatchKnownUnsupported', () {
     test('below 5.11.0 the batch request is skipped', () {
       for (final v in ['5.5.0', '5.10.9']) {

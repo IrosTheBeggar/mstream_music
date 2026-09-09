@@ -727,6 +727,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get autoDjSectionQueue => 'Queue';
+
+  @override
+  String get autoDjSongsPerFetchTitle => 'Songs per fetch';
+
+  @override
+  String get autoDjSongsPerFetchSubtitle =>
+      'How many songs Auto DJ queues each time it runs. Continuity filters judge the whole batch against the song playing when it was fetched.';
+
+  @override
+  String autoDjSongsPerFetchValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count songs',
+      one: '1 song',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get autoDjBpmTitle => 'BPM continuity';
 
   @override
