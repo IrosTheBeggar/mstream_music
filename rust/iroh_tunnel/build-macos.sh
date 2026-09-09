@@ -56,7 +56,9 @@ xcodebuild -create-xcframework \
   -framework "$fwdir" \
   -output "$DEST/$FW.xcframework"
 
+# The C ABI v2 export set (rust/iroh_tunnel/src/c_api.rs) — keep in step
+# with build-ios.sh.
 n=$(xcrun dyld_info -exports "$DEST/$FW.xcframework/macos-arm64/$FW.framework/$FW" | grep -c ' _mstream_iroh_')
-[ "$n" -eq 9 ] || { echo "ERROR: exports $n/9 mstream_iroh_ symbols"; exit 1; }
+[ "$n" -eq 14 ] || { echo "ERROR: exports $n/14 mstream_iroh_ symbols"; exit 1; }
 echo "staged: $DEST/$FW.xcframework"
 echo "remember: commit the updated xcframework — builds ship the committed binary."
