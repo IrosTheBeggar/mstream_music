@@ -213,6 +213,11 @@ class _AddTorrentScreenState extends State<AddTorrentScreen> {
       label: 'Torrent',
       extensions: ['torrent'],
       mimeTypes: ['application/x-bittorrent'],
+      // iOS: there is no system type for .torrent, and file_selector_ios
+      // throws (ArgumentError) on a group that names no UTI at all — the
+      // picker never opened. Allow any file there; isTorrentFile() below
+      // judges the bytes, as it already does on desktop.
+      uniformTypeIdentifiers: ['public.data'],
     );
     final XFile? file = await openFile(
       acceptedTypeGroups: const [group],
