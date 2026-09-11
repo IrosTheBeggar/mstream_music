@@ -282,7 +282,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       _connectivityDebounce?.cancel();
       _connectivityDebounce = Timer(const Duration(milliseconds: 1500), () {
         _connectivityDebounce = null;
-        unawaited(PlaySync().drain(reason: 'connectivity'));
+        unawaited(PlaySync().drain(reason: 'connectivity', bypassBackoff: true));
         unawaited(ServerManager()
             .handleNetworkChange(reason: 'connectivity:$names'));
         // Resume on-device playback if a network outage had paused it (no-op
@@ -588,7 +588,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     _tunnelSub?.cancel();
     _tunnelSub = ServerManager().tunnelStatusStream.listen((st) {
       if (st == IrohTunnelStatus.connected) {
-        unawaited(sync.drain(reason: 'tunnel'));
+        unawaited(sync.drain(reason: 'tunnel', bypassBackoff: true));
       }
     });
     _playingSub?.cancel();
@@ -619,7 +619,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // native start can block for tens of seconds.
     if (state == AppLifecycleState.resumed) {
       unawaited(ServerManager().handleNetworkChange(reason: 'resume'));
-      unawaited(PlaySync().drain(reason: 'resume'));
+      unawaited(PlaySync().drain(reason: 'resume', bypassBackoff: true));
     }
     // Flush the queue/position to disk when leaving the foreground, so a
     // backgrounded app that's later killed by the OS still reopens in place.
