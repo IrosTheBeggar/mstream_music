@@ -208,9 +208,12 @@ if ! grep -qE '(text|content-desc)="[^"]' "$OUT/home-ui.xml"; then
 elif find_listening; then
   sleep 4; shot listening-device
   ui_has "This phone" && pass "Listening page: device scope rendered" || fail "Listening page did not render the device scope"
-  if tap_text "$NAME"; then
+  # the scope chip carries the server's display name — its URL for a plain server
+  if tap_text "http://$HOST:$PORT"; then
     sleep 5; shot listening-server
-    ui_has "$NAME" && ! ui_has "did not answer" && pass "Listening page: server scope rendered from the Stats API" || fail "Listening page server scope fell back or failed"
+    ui_dump > "$OUT/listening-server-ui.xml"
+    grep -q "Your plays on http://$HOST:$PORT" "$OUT/listening-server-ui.xml" && ! grep -q "did not answer" "$OUT/listening-server-ui.xml" \
+      && pass "Listening page: server scope rendered from the Stats API" || fail "Listening page server scope fell back or failed (see listening-server-ui.xml)"
   else fail "no server chip on the Listening page"; fi
   key KEYCODE_BACK
 else
