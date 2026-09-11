@@ -66,21 +66,32 @@ json.dump({"port":int(port),"address":addr,"dlna":{"mode":"disabled"},"folders":
            "scanOptions":{"bootScanDelay":1,"scanInterval":0,"autoAlbumArt":False},
            "stats":{"playThresholdMs":30000,"playThresholdFraction":0.5,"retentionMonths":24}}, open(rig+"/config.json","w"))
 PY
-(cd "$SRC" && NODE_ENV=test node cli-boot-wrapper.js -j "$RIG/config.json" > "$RIG/server.log" 2>&1) &
+# A leftover server on the port (a previous run's, or the user's own) would
+# answer for ours and fail the capability check for the wrong reason.
+if lsof -ti "tcp:$PORT" -sTCP:LISTEN >/dev/null 2>&1; then echo "port $PORT is in use — free it or set SMOKE_PORT"; exit 2; fi
+# exec, so SRV_PID is node itself and the exit trap really kills it.
+(cd "$SRC" && exec env NODE_ENV=test node cli-boot-wrapper.js -j "$RIG/config.json" > "$RIG/server.log" 2>&1) &
 SRV_PID=$!
 cleanup() { kill "$SRV_PID" 2>/dev/null; cfg_restore; }
 for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/api/" && break; sleep 1; done
 curl -s -o /dev/null "http://127.0.0.1:$PORT/api/" || { fail "server did not come up (see $RIG/server.log)"; kill "$SRV_PID" 2>/dev/null; summary; exit 1; }
-for _ in $(seq 1 90); do curl -s "http://127.0.0.1:$PORT/api/v1/db/status" | grep -q '"locked":false' && break; sleep 1; done
 curl -s -o /dev/null -X PUT "http://127.0.0.1:$PORT/api/v1/admin/users" -H "$J" -d '{"username":"rig","password":"rigpw","vpaths":["demo"],"admin":true}'
 TOKEN=$(curl -s -X POST "http://127.0.0.1:$PORT/api/v1/auth/login" -H "$J" -d '{"username":"rig","password":"rigpw"}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
 [ -n "$TOKEN" ] || { fail "could not log in to the rig server"; kill "$SRV_PID"; summary; exit 1; }
 STATS=$(api GET /api/ | python3 -c "import sys,json; print(json.load(sys.stdin).get('features',{}).get('stats',''))")
 [ "$STATS" = 2 ] && pass "server advertises Stats API v2 (features.stats = 2)" || { fail "server at $SRC lacks Stats API v2 (features.stats = '$STATS')"; kill "$SRV_PID"; summary; exit 1; }
-# three tracks, with their metadata, for the queue
-api POST /api/v1/db/recent/added '{"limit":3}' > "$OUT/tracks.json"
-N=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1]))))" "$OUT/tracks.json")
-[ "$N" -ge 3 ] || { fail "the library has fewer than 3 tracks"; kill "$SRV_PID"; summary; exit 1; }
+# three tracks, with their metadata, for the queue — the boot scan has to
+# have reached them first (bootScanDelay 1 s, then the library).
+N=0
+for _ in $(seq 1 120); do
+  api POST /api/v1/db/recent/added '{"limit":5}' > "$OUT/tracks.json" 2>/dev/null
+  N=$(python3 -c "import json,sys
+try: print(len(json.load(open(sys.argv[1]))))
+except Exception: print(0)" "$OUT/tracks.json")
+  [ "$N" -ge 3 ] && break; sleep 1
+done
+[ "$N" -ge 5 ] || { fail "the library has fewer than 5 tracks after the boot scan"; kill "$SRV_PID"; summary; exit 1; }
+for _ in $(seq 1 60); do curl -s "http://127.0.0.1:$PORT/api/v1/db/status" | grep -q '"locked":false' && break; sleep 1; done
 log "server $NAME on :$PORT (phone side http://$HOST:$PORT), user rig, $N tracks"
 
 # ── the phone ──
@@ -99,7 +110,7 @@ python3 - "$OUT/tracks.json" "$OUT/queue.json" "$NAME" <<'PY'
 import json,sys
 tracks,dst,name=sys.argv[1:]
 items=[]
-for t in json.load(open(tracks))[:3]:
+for t in json.load(open(tracks))[:5]:
     m=t.get('metadata') or {}; p='/'+t['filepath']
     items.append({"id":p,"title":m.get('title') or p.split('/')[-1],"album":m.get('album'),"artist":m.get('artist'),"genre":None,
                   "durationMs":int((m.get('duration') or 0)*1000) or None,
@@ -118,17 +129,17 @@ cfg_read servers.json | python3 -c "import sys,json; sys.exit(0 if any(s.get('lo
 
 # ── 1. a skip after 35 s: a counted play, posted at once ──
 T1=$(now_ts); ensure_playing 20 || { fail "playback did not start from the restored queue"; save_applog play; summary; exit 1; }
-sleep 35; media_next
+sleep 35; media_next; T2=$(now_ts)
+# ── 2. straight on: a skip after 10 s (logged, not counted, still posted) ──
+sleep 10; media_next; T2b=$(now_ts)
 wait_for_log_after "$T1" "\[history\] skipped play (3[0-9]|4[0-9])s/" 10 && pass "35 s skip closed as a counted play" || fail "no counted-play line after the 35 s skip"
-wait_for_log_after "$T1" "\[sync\] $NAME: 1 accepted" 20 && pass "the play was posted and accepted" || fail "the play was not posted (see run log)"
-shot after-skip-1
-
-# ── 2. a skip after 10 s: logged, not counted, still posted ──
-T2=$(now_ts); sleep 10; media_next
 wait_for_log_after "$T2" "\[history\] skipped no-play" 10 && pass "10 s skip closed as not counted" || fail "no not-counted line after the 10 s skip"
-wait_for_log_after "$T2" "\[sync\] $NAME: 1 accepted" 20 && pass "the uncounted play was posted too (the server decides)" || fail "the uncounted play was not posted"
+wait_for_log_after "$T1" "\[sync\] $NAME: 1 accepted" 30 && pass "the counted play was posted and accepted" || fail "the counted play was not posted (see phase1 log)"
+wait_for_log_after "$T2" "\[sync\] $NAME: 1 accepted" 30 && pass "the uncounted play was posted too (the server decides)" || fail "the uncounted play was not posted (see phase1 log)"
+shot after-skips
 
 # ── 3. airplane mode: the play waits in the outbox and drains on reconnect at its own time ──
+ensure_playing 10 || fail "playback stopped before the airplane phase"
 airplane on; sleep 3
 T3=$(now_ts); sleep 35; media_next
 wait_for_log_after "$T3" "\[history\] skipped play" 10 && pass "offline skip recorded on the phone" || fail "no history line for the offline skip"
@@ -139,7 +150,8 @@ airplane off; T4=$(now_ts)
 wait_for_log_after "$T4" "\[sync\] $NAME: 1 accepted" 45 && pass "outbox drained after the network returned" || fail "outbox did not drain after reconnect"
 
 # ── 4. force-kill mid-track: the checkpoint closes it as stopped on relaunch ──
-sleep 20; app_stop; sleep 2; logcat_clear; wake; app_start
+ensure_playing 10 || fail "playback stopped before the kill phase"
+sleep 20; save_applog phase1; app_stop; sleep 2; logcat_clear; wake; app_start
 wait_for_log "\[history\] recovered a session cut short by a kill" 40 && pass "killed session recovered as stopped" || fail "no recovery line after the kill"
 wait_for_log "\[sync\] $NAME: 1 accepted" 40 && pass "the recovered session was posted" || fail "the recovered session was not posted"
 
@@ -179,7 +191,9 @@ adbx shell "run-as $PKG cat app_flutter/play_stats.json" | python3 -c "import sy
 
 # ── the Listening page, both scopes ──
 key KEYCODE_BACK; sleep 1
-if tap_text "Listening"; then
+if ! ui_dump | grep -q 'text="[^"]'; then
+  skip "no text in the accessibility dump — build with --dart-define=SMOKE_SEMANTICS=true for the page checks"
+elif tap_text "Listening"; then
   sleep 4; shot listening-device
   ui_has "This phone" && pass "Listening page: device scope rendered" || fail "Listening page did not render the device scope"
   if tap_text "$NAME"; then
@@ -190,5 +204,5 @@ if tap_text "Listening"; then
 else
   fail "no Listening node on the home screen"
 fi
-save_applog final
+save_applog phase2
 summary

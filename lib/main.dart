@@ -3,6 +3,7 @@ import 'dart:io' show HttpOverrides;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -92,6 +93,13 @@ Future<void> _implicitViewReady() async {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A smoke build (`--dart-define=SMOKE_SEMANTICS=true`) publishes the
+  // accessibility tree unconditionally so `uiautomator dump` can find and
+  // tap widgets by their text; production builds only do so when the OS
+  // asks (a screen reader).
+  if (const bool.fromEnvironment('SMOKE_SEMANTICS')) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
   // Full flavor only: route API HTTPS through an override that accepts a
   // self-signed cert for servers the user explicitly opted in
   // (Server.allowSelfSigned). Must be set before any HttpClient is created.
