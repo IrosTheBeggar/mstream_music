@@ -11,6 +11,8 @@ import './app_messenger.dart';
 import './browser_list.dart';
 import './federation_inbox_alerts.dart';
 import './log_manager.dart';
+import 'play_history.dart';
+import 'play_sync.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
@@ -363,6 +365,7 @@ class ServerManager {
       final bool? prevFedAvailable = server.federationAvailable;
       final bool? prevP2pAvailable = server.p2pAvailable;
       final int? prevFedInbox = server.federationInbox;
+      final int? prevStats = server.statsVersion;
       final bool? prevDiscoveryPath = server.discoveryPathAvailable;
       final prevVersion = server.serverVersion;
 
@@ -419,14 +422,16 @@ class ServerManager {
           server.federationAvailable != prevFedAvailable ||
           server.p2pAvailable != prevP2pAvailable ||
           server.federationInbox != prevFedInbox ||
-          server.discoveryPathAvailable != prevDiscoveryPath) {
+          server.discoveryPathAvailable != prevDiscoveryPath ||
+          server.statsVersion != prevStats) {
         unawaited(writeServerFile());
       }
       if (server.federationAvailable != prevFedAvailable ||
           server.p2pAvailable != prevP2pAvailable ||
           server.federationInbox != prevFedInbox ||
           server.discoveryP2pAvailable != prevDiscoveryP2p ||
-          server.discoveryPathAvailable != prevDiscoveryPath) {
+          server.discoveryPathAvailable != prevDiscoveryPath ||
+          server.statsVersion != prevStats) {
         _refreshHomeIfShowing(server);
       }
       // The one flag that also leaves the app: a rise in the request count
@@ -524,6 +529,9 @@ class ServerManager {
         : null;
     // Server-wide, so it rides under `features` here (top-level on ping).
     server.p2pAvailable = features is Map && features.containsKey('discoveryP2p');
+    // Stats API v2 (mStream 6.27+): an integer generation, absent before.
+    server.statsVersion =
+        features is Map && features['stats'] is int ? features['stats'] as int : null;
     // /api carries no discoveryPath. It was only ever a "this server VERSION
     // has the sonic-path route" gate, and mStream #934 records that it is
     // identical to `discovery` on every build carrying that code.
@@ -564,6 +572,7 @@ class ServerManager {
     server.federationInbox =
         res['federationInbox'] is int ? res['federationInbox'] as int : null;
     server.p2pAvailable = res.containsKey('discoveryP2p');
+    server.statsVersion = res['stats'] is int ? res['stats'] as int : null;
     server.discoveryPathAvailable = res['discoveryPath'] == true;
     return res;
   }
@@ -2080,6 +2089,15 @@ class ServerManager {
     } catch (err) {
       appLog('[server] clearing queued tracks failed: $err');
     }
+    // Its listening record goes the same way: the device-side rows can no
+    // longer be rendered against it, and its outbox can never be posted —
+    // the peers' rows too, since they only ever reported through it.
+    try {
+      await PlayHistory().purgeServer(removeThisServer.localname,
+          peers: orphans.map((s) => s.localname));
+    } catch (err) {
+      appLog('[server] clearing listening history failed: $err');
+    }
     // Drop a stale queue-tunnel pointer to the removed server so the ensure
     // below doesn't try to keep its tunnel up (the queue listener would clear
     // it on the next edit, but do it now).
@@ -2112,6 +2130,10 @@ class ServerManager {
   }
 
   Future<void> callAfterEditServer() async {
+    // New credentials: a server that refused the outbox may take it now.
+    for (final s in serverList) {
+      PlaySync().unpark(s.localname);
+    }
     _serverListStream.sink.add(serverList);
     syncInsecureTls();
     await writeServerFile();
@@ -2389,6 +2411,7 @@ class ServerManager {
     server.federationInbox = null; // its requests are its operator's business
     server.p2pAvailable = false; // the network is the parent's, not a peer's
     server.discoveryPathAvailable = false;
+    server.statsVersion = null; // its plays post to the parent, whose flag governs
     server.playlists.clear();
   }
 

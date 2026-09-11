@@ -27,6 +27,7 @@ import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
+import 'listening/listening_screen.dart';
 import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
@@ -140,6 +141,13 @@ class _BrowserState extends State<Browser> {
 
     // The feature cards: screens of their own rather than browser frames, so
     // the browser stays where it is behind them.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'listening') {
+      final s = browserList[index].server;
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ListeningScreen(server: s)));
+      return;
+    }
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'autoDj') {
       Navigator.push(

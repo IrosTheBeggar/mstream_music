@@ -143,6 +143,11 @@ class TopItem {
     this.tracks = 0,
   });
 
+  TopItem withPeerName(String? name) => TopItem(
+        rank: rank, title: title, subtitle: subtitle, plays: plays, listenedMs: listenedMs, share: share, server: server,
+        path: path, hash: hash, artFile: artFile, peerName: name, fromPeer: fromPeer, tracks: tracks,
+      );
+
   static List<TopItem> listFromServer(dynamic items, String entity) {
     if (items is! List) return const [];
     final out = <TopItem>[];
@@ -238,6 +243,12 @@ class HistoryItem {
         id: id, startedAt: startedAt, title: title, artist: artist, album: album, server: server, path: path,
         hash: hash, artFile: artFile, outcome: outcome, counted: counted, playedMs: playedMs, durationMs: durationMs,
         client: client, peerName: peerName, fromPeer: fromPeer, isLocalFile: isLocalFile, repeats: n,
+      );
+
+  HistoryItem withPeerName(String? name) => HistoryItem(
+        id: id, startedAt: startedAt, title: title, artist: artist, album: album, server: server, path: path,
+        hash: hash, artFile: artFile, outcome: outcome, counted: counted, playedMs: playedMs, durationMs: durationMs,
+        client: client, peerName: name, fromPeer: fromPeer, isLocalFile: isLocalFile, repeats: repeats,
       );
 
   String get sameTrackKey => '${server ?? ''}\u0000${path ?? id}';
@@ -439,7 +450,7 @@ class DeviceStats {
   }
 
   /// Top tracks / artists / albums by plays or by time.
-  static List<TopItem> top(List<PlayEvent> all, {required String entity, String metric = 'plays', DateTime? from, DateTime? to, int limit = 10, String Function(int peerId)? peerName}) {
+  static List<TopItem> top(List<PlayEvent> all, {required String entity, String metric = 'plays', DateTime? from, DateTime? to, int limit = 10, String? Function(int peerId)? peerName}) {
     final events = inPeriod(all, from, to).where((e) => e.counted);
     final groups = <String, _Agg>{};
     for (final e in events) {
@@ -505,7 +516,7 @@ class DeviceStats {
   }
 
   /// Newest first.
-  static List<HistoryItem> history(List<PlayEvent> all, {DateTime? from, DateTime? to, int limit = 50, String Function(int peerId)? peerName}) {
+  static List<HistoryItem> history(List<PlayEvent> all, {DateTime? from, DateTime? to, int limit = 50, String? Function(int peerId)? peerName}) {
     final events = inPeriod(all, from, to)..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return events.take(limit).map((e) => HistoryItem.fromEvent(e, peerName: e.track.peerId != null && peerName != null ? peerName(e.track.peerId!) : null)).toList();
   }
