@@ -63,6 +63,14 @@ void main() {
     });
   });
 
+  test('the zone sent to the server: IANA when known, else a whole-hour Etc/GMT zone', () {
+    expect(StatsApi.localTzFor('Europe/Berlin', const Duration(hours: 2)), 'Europe/Berlin');
+    expect(StatsApi.localTzFor('EDT', const Duration(hours: -4)), 'Etc/GMT+4');
+    expect(StatsApi.localTzFor('CEST', const Duration(hours: 2)), 'Etc/GMT-2');
+    expect(StatsApi.localTzFor('GMT', Duration.zero), 'UTC');
+    expect(StatsApi.localTzFor('IST', const Duration(hours: 5, minutes: 30)), null);
+  });
+
   group('reads', () {
     test('summary / top / history / hourOfDay send the period and origin and parse the answers', () async {
       final urls = <Uri>[];
