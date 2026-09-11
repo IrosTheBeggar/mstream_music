@@ -406,6 +406,7 @@ class PlayTracker {
     if (open == null) return;
     _open = null;
     _checkpointTimer?.cancel();
+    _checkpointTimer = null;
     final event = PlaySessionFold.close(open, reason, DateTime.now().toUtc(),
         id: const Uuid().v4());
     _record(event);
@@ -438,7 +439,8 @@ class PlayTracker {
   /// music stopped — leaving a force-killed app with no checkpoint at all.
   /// One write at most every [_checkpointDebounce] while there is news.
   void _scheduleCheckpoint() {
-    _checkpointTimer ??= Timer(_checkpointDebounce, () {
+    if (_checkpointTimer?.isActive ?? false) return;
+    _checkpointTimer = Timer(_checkpointDebounce, () {
       _checkpointTimer = null;
       checkpointNow();
     });
