@@ -188,8 +188,12 @@ class PlaySync {
   }
 
   /// Drain every target with pending events. One drain at a time; a second
-  /// call while one runs is folded into it.
-  Future<void> drain({String reason = 'manual'}) {
+  /// call while one runs is folded into it. [bypassBackoff] is for the
+  /// triggers that are news about the network — a connectivity change, a
+  /// tunnel coming up, the app resuming — where waiting out a backoff set
+  /// under the old conditions would be wrong.
+  Future<void> drain({String reason = 'manual', bool bypassBackoff = false}) {
+    if (bypassBackoff) backoff.clear();
     final running = _draining;
     if (running != null) return running;
     final f = _drain(reason).catchError((Object e) {
@@ -234,6 +238,9 @@ class PlaySync {
         rejected += r.rejected.length;
         lastPostAt = at;
         lastError = null;
+        appLog('[sync] $target: ${r.accepted.length} accepted, '
+            '${r.duplicates.length} duplicate, ${r.rejected.length} rejected'
+            '${history.pending(target, limit: 1).isEmpty ? '' : ', more waiting'}');
         for (final e in r.rejected.entries) {
           appLog('[sync] $target rejected play ${e.key}: ${e.value}');
         }

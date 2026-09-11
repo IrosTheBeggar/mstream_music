@@ -632,3 +632,14 @@ then A5.
 - **Status 2026-09-06:** S2 (reads + V70 + store primitive) on
   `claude/stats-api-reads`; A2 (capture) on this branch. Next: S1 ingest,
   then S3, then A0 → A1 → A3.
+- **Status 2026-09-11:** the server lane is complete on master (S1–S6 and
+  the follow-ups; the Stats API is `features.stats: 2`, shipping as
+  mStream **6.27** — the "6.26+" wording above is stale). Two server
+  decisions changed from this plan: the legacy scrobble routes are KEPT
+  for good (S7 became docs), and ListenBrainz is gone. Two server additions
+  help the app: the counters route resolves either hash, and a federated
+  play's thin snapshot is completed by the parent from the peer's metadata.
+  App: A0, A1, A3 and A4 landed on this branch (`PlayHistory`,
+  `PlaySync`, `StatsApi`, `Server.statsVersion`, the Listening page, the
+  home node, the Auto/CarPlay tab, Song Info counts, the settings) with the
+  smoke round in `smoke/android/play-history.sh` + `smoke/recipes/play-history.md`.

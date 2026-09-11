@@ -116,6 +116,17 @@ void main() {
     expect(sync.lastError, null);
   });
 
+  test('news about the network bypasses the backoff', () async {
+    await history.enqueue('home', ev('a'));
+    answer = (t, b) async => throw const PostPlaysException(PostFailure.network, 'timeout');
+    await sync.drain();
+    expect(sync.backoff.blocked('home', clock), true);
+    answer = (t, b) async => PostPlaysResult(accepted: b.map((e) => e.id).toList());
+    await sync.drain(reason: 'connectivity', bypassBackoff: true);
+    expect(history.pending('home'), isEmpty);
+    expect(sync.backoff.blocked('home', clock), false);
+  });
+
   test('backoff caps at 30 minutes', () {
     final b = Backoff();
     final t = DateTime.utc(2026);
