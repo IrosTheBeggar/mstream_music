@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../singletons/server_list.dart';
+import '../singletons/play_history.dart';
+import '../objects/metadata.dart';
+import '../widgets/federation_widgets.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
 import '../util/image_cache.dart';
@@ -48,6 +51,32 @@ class MetadataScreen extends StatelessWidget {
 
     // Track / disc as a plain line under the album — "track N of M" when the
     // server reports the totals (track-total / disc-total).
+    final serverName = extras['server'] as String?;
+    final trackPath = extras['path'] as String?;
+    final device = serverName != null && trackPath != null
+        ? PlayHistory().statFor(serverName, trackPath)
+        : null;
+    final serverPlays =
+        extras['playCount'] is num ? (extras['playCount'] as num).toInt() : 0;
+    final serverLast = MusicMetadata.utcOrNull(extras['lastPlayed']);
+    final statsLines = <String>[
+      if (serverPlays > 0 || serverLast != null)
+        [
+          l.songInfoServerPlays(
+              serverPlays, lyricsServer?.displayName ?? (serverName ?? '')),
+          if (serverLast != null)
+            l.songInfoLastPlayed(fmtAgo(context, serverLast)),
+        ].join(' · '),
+      if (device != null && device.plays > 0)
+        [
+          l.songInfoDevicePlays(device.plays),
+          if (device.lastAt != null)
+            l.songInfoLastPlayed(fmtAgo(
+                context,
+                DateTime.fromMillisecondsSinceEpoch(device.lastAt!,
+                    isUtc: true))),
+        ].join(' · '),
+    ];
     final trackDisc = <String>[
       if (extras['track'] != null)
         _numOf('track', extras['track'], extras['trackTotal']),
@@ -261,6 +290,17 @@ class MetadataScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   trackDisc,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: VelvetColors.textDim,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+              for (final line in statsLines) ...[
+                const SizedBox(height: 4),
+                Text(
+                  line,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: VelvetColors.textDim,

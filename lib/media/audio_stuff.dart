@@ -111,6 +111,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   Stream<Duration> get positionStream =>
       _backendSubject.switchMap((b) => b.positionStream);
 
+  // Every user seek, as it is issued. The play tracker listens so the
+  // position jump that follows is not mistaken for listening (and a scrub
+  // back to the start is not mistaken for a repeat).
+  final StreamController<Duration> _seekEvents =
+      StreamController<Duration>.broadcast();
+  Stream<Duration> get seekEvents => _seekEvents.stream;
+
   // Android audio session id of the active backend. The visualizer's
   // real-audio capture attaches a Visualizer to THIS session — the
   // global output mix (session 0) is blocked for normal apps on modern
@@ -1149,6 +1156,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (path == null) return m.id;
     return '${m.extras?['server'] as String? ?? ''}\u0000$path';
   }
+
+  /// The same identity for callers outside the handler (the play tracker
+  /// keys its sessions on it).
+  static String? trackKey(MediaItem? m) => _trackKey(m);
 
   MediaItem? _itemAt(int? idx) {
     final q = queue.value;
@@ -2328,6 +2339,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     // re-seed should read the live player, which this seek just updated).
     _restoreSpot = null;
     _releasePark();
+    _seekEvents.add(position);
     return _backend.seek(position);
   }
 

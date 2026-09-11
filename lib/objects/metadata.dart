@@ -34,6 +34,10 @@ Map<String, dynamic> queueExtras(
       'trackTotal': meta?.trackTotal,
       'discTotal': meta?.discTotal,
       'playCount': meta?.playCount,
+      'lastPlayed': meta?.lastPlayed?.toIso8601String(),
+      // The server's content hash — the rename-proof track key the play
+      // tracker records and the Stats API keys counters on.
+      'hash': meta?.hash,
       // Drives the lyrics badge (tap → fetch via GET /api/v1/lyrics).
       'hasLyrics': meta?.hasLyrics ?? false,
     };
@@ -71,6 +75,9 @@ class MusicMetadata {
   int? trackTotal;
   int? discTotal;
   int? playCount;
+  // The server's per-user last play (`last-played`, UTC); null when never
+  // played there or on servers that don't surface it.
+  DateTime? lastPlayed;
   // Whether the server has lyrics stored for this track (`has-lyrics`, from the
   // lyrics-backfill API; true for embedded plain text OR a synced LRC). Absent
   // on older servers → false. Gates the Song Info lyrics badge, which fetches
@@ -93,6 +100,7 @@ class MusicMetadata {
       this.trackTotal,
       this.discTotal,
       this.playCount,
+    this.lastPlayed,
       this.hasLyrics = false});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
@@ -114,6 +122,7 @@ class MusicMetadata {
         trackTotal = json['trackTotal'],
         discTotal = json['discTotal'],
         playCount = json['playCount'],
+        lastPlayed = utcOrNull(json['lastPlayed']),
         hasLyrics = json['hasLyrics'] == true,
         genres = parseGenres(json['genres']);
 
@@ -136,6 +145,7 @@ class MusicMetadata {
         'trackTotal': trackTotal,
         'discTotal': discTotal,
         'playCount': playCount,
+        'lastPlayed': lastPlayed?.toIso8601String(),
         'hasLyrics': hasLyrics,
         'genres': genres,
       };
@@ -171,6 +181,7 @@ class MusicMetadata {
         trackTotal: _asInt(m['track-total'] ?? m['trackTotal']),
         discTotal: _asInt(m['disc-total'] ?? m['discTotal']),
         playCount: _asInt(m['play-count'] ?? m['playCount']),
+        lastPlayed: utcOrNull(m['last-played'] ?? m['lastPlayed']),
         // Lyrics-availability flag from the lyrics-backfill API; the synced
         // variant (`has-synced-lyrics`) isn't threaded — the lyrics fetch
         // reports plain vs synced itself.
@@ -208,6 +219,17 @@ class MusicMetadata {
   }
 
   /// Parses an int from a num or numeric string, or null.
+  /// A wire timestamp as UTC: ISO-8601 with or without a zone, or SQLite's
+  /// own `YYYY-MM-DD HH:MM:SS.SSS` text (always UTC on the server). Null for
+  /// anything else.
+  static DateTime? utcOrNull(dynamic v) {
+    if (v is! String || v.trim().isEmpty) return null;
+    var s = v.trim();
+    if (s.contains(' ') && !s.contains('T')) s = s.replaceFirst(' ', 'T');
+    if (!RegExp(r'(Z|[+-]\d\d:?\d\d)$').hasMatch(s)) s = '${s}Z';
+    return DateTime.tryParse(s)?.toUtc();
+  }
+
   static int? _asInt(dynamic v) {
     if (v is int) return v;
     if (v is num) return v.toInt();
