@@ -37,6 +37,7 @@ import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/server_capabilities.dart';
 import '../singletons/server_list.dart';
+import '../singletons/play_history.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../build_variant.dart';
@@ -268,6 +269,11 @@ class AutoBrowse {
               return _orEmptyNotice(_paginate(
                   _trackNodes(await AutoApi.recent(srv), srv, 'recent', null),
                   u));
+            case 'history':
+              return _orEmptyNotice(_paginate(
+                  _trackNodes(
+                      await AutoApi.history(srv), srv, 'history', null),
+                  u));
             case 'albums':
               {
                 final rows = await _list(
@@ -442,6 +448,9 @@ class AutoBrowse {
         case 'recent':
           rows = await AutoApi.recent(srv);
           break;
+        case 'history':
+          rows = await AutoApi.history(srv);
+          break;
         case 'search':
           rows = (await AutoApi.search(srv, qp['cv'] ?? '')).titles;
           break;
@@ -575,6 +584,7 @@ class AutoBrowse {
       MediaItem(
           id: _id('shuffle', {'s': s}), title: 'Shuffle All', playable: true),
       _browse(_id('cat', {'s': s, 'k': 'recent'}), 'Recently Added'),
+      _browse(_id('cat', {'s': s, 'k': 'history'}), 'Recently Played'),
       if (!federated)
         _browse(_id('cat', {'s': s, 'k': 'playlists'}), 'Playlists',
             styleExtras: _listChildren),
@@ -960,6 +970,32 @@ class AutoApi {
     final res =
         await _call(s, '/api/v1/playlist/load', body: {'playlistname': name});
     return _fileItems(res, s);
+  }
+
+  /// This phone's recent plays of [s]'s tracks, from the device store —
+  /// offline-safe, newest first, one row per track, 100 at most.
+  static Future<List<DisplayItem>> history(Server s) async {
+    final events = await PlayHistory().events();
+    final seen = <String>{};
+    final out = <DisplayItem>[];
+    for (var i = events.length - 1; i >= 0 && out.length < 100; i--) {
+      final e = events[i];
+      final t = e.track;
+      if (t.server != s.localname || !e.counted) continue;
+      if (!seen.add(t.path)) continue;
+      final path = t.path.startsWith('/') ? t.path.substring(1) : t.path;
+      final item = DisplayItem(s, path, 'file', '/$path', null, null);
+      item.metadata = MusicMetadata.fromServerMap({
+        'title': t.title,
+        'artist': t.artist,
+        'album': t.album,
+        'hash': t.hash,
+        'album-art': t.artFile,
+        if (t.durationMs != null) 'duration': t.durationMs! / 1000,
+      });
+      out.add(item);
+    }
+    return out;
   }
 
   static Future<List<DisplayItem>> recent(Server s) async {

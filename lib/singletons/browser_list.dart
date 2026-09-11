@@ -385,6 +385,10 @@ class BrowserManager {
       if (server.discoveryPathAvailable == true)
         DisplayItem(server, 'Sonic path', 'execAction', 'sonicPath',
             Icon(Icons.route, color: VelvetColors.textSecondary), null),
+      // Listening stats: this phone's own record always, plus the server's
+      // per-user record when it has the Stats API (the page says which).
+      DisplayItem(server, 'Listening', 'execAction', 'listening',
+          Icon(Icons.insights_rounded, color: VelvetColors.textSecondary), null),
       // NETWORK: the libraries other servers share with this one. Only when
       // there are some — an empty group would be a header over nothing.
       // NETWORK: the Federation screen — for anyone with peers to browse,

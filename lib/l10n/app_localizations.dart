@@ -6479,6 +6479,456 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A phone notification when a request arrives while the app is open or playing'**
   String get federationNotifySubtitle;
+
+  /// Home LISTEN-group node: the listening stats page.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening'**
+  String get browserListening;
+
+  /// Android Auto / CarPlay tab: this phone's recent plays of the server's tracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Played'**
+  String get autoRecentlyPlayed;
+
+  /// Settings section header.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history'**
+  String get settingsSectionListening;
+
+  /// Settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep listening history'**
+  String get settingsHistoryEnabled;
+
+  /// Settings switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record what this phone plays, on every server and for local files. Kept on this device only.'**
+  String get settingsHistoryEnabledSubtitle;
+
+  /// Settings switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Send plays to your servers'**
+  String get settingsHistorySend;
+
+  /// Settings switch subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Each play goes to the server the track lives on (a peer\'s track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.'**
+  String get settingsHistorySendSubtitle;
+
+  /// Settings action row title and its confirm button.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear listening history'**
+  String get settingsHistoryClear;
+
+  /// Settings action row subtitle; {size} is a formatted byte count like '1.2 MB'.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes this phone\'s record ({size}). Your servers keep theirs.'**
+  String settingsHistoryClearSubtitle(Object size);
+
+  /// Confirm dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this phone\'s listening history? Plays already sent to a server stay there.'**
+  String get settingsHistoryClearConfirm;
+
+  /// Snackbar after clearing.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history cleared'**
+  String get settingsHistoryCleared;
+
+  /// Settings line under the send switch: outbox size.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Everything is synced} =1{1 play waiting to be sent} other{{count} plays waiting to be sent}}'**
+  String settingsHistoryUnsynced(num count);
+
+  /// Song Info stats line, server counts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 play on {server}} other{{count} plays on {server}}}'**
+  String songInfoServerPlays(num count, Object server);
+
+  /// Song Info stats line, device counts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 play on this phone} other{{count} plays on this phone}}'**
+  String songInfoDevicePlays(num count);
+
+  /// Song Info stats line suffix; {ago} is a relative time like '3 h ago'.
+  ///
+  /// In en, this message translates to:
+  /// **'last {ago}'**
+  String songInfoLastPlayed(Object ago);
+
+  /// App bar title of the listening stats page.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening'**
+  String get listeningTitle;
+
+  /// Scope pill: the device's own record.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone'**
+  String get listeningScopeThisPhone;
+
+  /// Scope bottom sheet title.
+  ///
+  /// In en, this message translates to:
+  /// **'What to show'**
+  String get listeningScopeSheetTitle;
+
+  /// Scope sheet: device row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What this phone played: every server, local files, offline. Kept on this device.'**
+  String get listeningScopeSheetDevice;
+
+  /// Scope sheet: server row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plays on this server from every app — the web player, other phones, this phone once synced.'**
+  String get listeningScopeSheetServer;
+
+  /// Scope sheet: server without the capability.
+  ///
+  /// In en, this message translates to:
+  /// **'No listening stats yet — needs mStream 6.27 or later.'**
+  String get listeningScopeSheetLegacy;
+
+  /// Scope sheet: peer row subtitle; {server} is the parent's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted on {server}: a peer\'s tracks count where your account lives.'**
+  String listeningScopeSheetPeer(Object server);
+
+  /// Provenance line, device scope.
+  ///
+  /// In en, this message translates to:
+  /// **'What this phone played, on every server and local files. Kept on this device.'**
+  String get listeningProvenanceDevice;
+
+  /// Provenance line, server scope.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plays on {server} from every app, including tracks from its peers.'**
+  String listeningProvenanceServer(Object server);
+
+  /// Provenance line, peer scope.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plays of {peer}\'s tracks, counted on {server}.'**
+  String listeningProvenancePeer(Object peer, Object server);
+
+  /// Provenance line when the server is unreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'{server} did not answer — showing this phone\'s plays on it.'**
+  String listeningProvenanceFallback(Object server);
+
+  /// Provenance line for a server without the capability.
+  ///
+  /// In en, this message translates to:
+  /// **'{server} has no listening stats yet (mStream 6.27+) — showing this phone\'s plays on it.'**
+  String listeningProvenanceLegacy(Object server);
+
+  /// Sync line under the provenance.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 play not synced yet} other{{count} plays not synced yet}}'**
+  String listeningUnsynced(num count);
+
+  /// Period chip.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get listeningPeriodWeek;
+
+  /// Period chip.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get listeningPeriodMonth;
+
+  /// Period chip.
+  ///
+  /// In en, this message translates to:
+  /// **'This quarter'**
+  String get listeningPeriodQuarter;
+
+  /// Period chip.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get listeningPeriodYear;
+
+  /// Period chip.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get listeningPeriodAll;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays'**
+  String get listeningTilePlays;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening time'**
+  String get listeningTileTime;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks'**
+  String get listeningTileTracks;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Skips'**
+  String get listeningTileSkips;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get listeningTileStreak;
+
+  /// Summary tile label.
+  ///
+  /// In en, this message translates to:
+  /// **'Sittings'**
+  String get listeningTileSessions;
+
+  /// Streak tile value.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String listeningDays(num count);
+
+  /// Tile subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'counted plays'**
+  String get listeningTileSubCounted;
+
+  /// Tile subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'different tracks'**
+  String get listeningTileSubTracks;
+
+  /// Tile subtitle; {pct} is a whole number.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% of starts'**
+  String listeningTileSubSkips(Object pct);
+
+  /// Tile subtitle; {count} days.
+  ///
+  /// In en, this message translates to:
+  /// **'longest {count}'**
+  String listeningTileSubStreak(Object count);
+
+  /// Tile subtitle; {duration} formatted like '24 min'.
+  ///
+  /// In en, this message translates to:
+  /// **'about {duration} each'**
+  String listeningTileSubSessions(Object duration);
+
+  /// Hour-of-day card title.
+  ///
+  /// In en, this message translates to:
+  /// **'When you listen'**
+  String get listeningWhenYouListen;
+
+  /// Hour-of-day card note; {hour} like '20:00'.
+  ///
+  /// In en, this message translates to:
+  /// **'Most around {hour}'**
+  String listeningMostAround(Object hour);
+
+  /// Top card title.
+  ///
+  /// In en, this message translates to:
+  /// **'Top'**
+  String get listeningTop;
+
+  /// Top entity chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks'**
+  String get listeningTopTracks;
+
+  /// Top entity chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get listeningTopArtists;
+
+  /// Top entity chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get listeningTopAlbums;
+
+  /// Top metric chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays'**
+  String get listeningByPlays;
+
+  /// Top metric chip.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get listeningByTime;
+
+  /// Row count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 play} other{{count} plays}}'**
+  String listeningPlays(num count);
+
+  /// Row count for artists/albums.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 track} other{{count} tracks}}'**
+  String listeningTracksCount(num count);
+
+  /// History card title.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent plays'**
+  String get listeningRecent;
+
+  /// History card button.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get listeningLoadMore;
+
+  /// Empty state title.
+  ///
+  /// In en, this message translates to:
+  /// **'No plays yet'**
+  String get listeningEmptyTitle;
+
+  /// Empty state copy, device scope.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays land here as you listen. This phone keeps its own record; your server keeps yours across every app.'**
+  String get listeningEmptyDevice;
+
+  /// Empty state copy, server scope.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing reported to {server} yet. Plays from this phone arrive once they sync.'**
+  String listeningEmptyServer(Object server);
+
+  /// Empty period copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in this period.'**
+  String get listeningEmptyPeriod;
+
+  /// History row outcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get listeningOutcomeCompleted;
+
+  /// History row outcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get listeningOutcomeSkipped;
+
+  /// History row outcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get listeningOutcomeStopped;
+
+  /// History row outcome with the position, e.g. 'Skipped at 1:20'.
+  ///
+  /// In en, this message translates to:
+  /// **'{outcome} at {position}'**
+  String listeningOutcomeAt(Object outcome, Object position);
+
+  /// History row suffix.
+  ///
+  /// In en, this message translates to:
+  /// **'not counted'**
+  String get listeningNotCounted;
+
+  /// Row suffix naming the peer.
+  ///
+  /// In en, this message translates to:
+  /// **'via {peer}'**
+  String listeningVia(Object peer);
+
+  /// History row repeat badge.
+  ///
+  /// In en, this message translates to:
+  /// **'×{count}'**
+  String listeningRepeats(Object count);
+
+  /// History row subtitle for a device-only file.
+  ///
+  /// In en, this message translates to:
+  /// **'Local file'**
+  String get listeningLocalFile;
+
+  /// Banner when history is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history is off. Turn it on in Settings to record plays on this phone.'**
+  String get listeningHistoryOff;
+
+  /// Error state.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load: {message}'**
+  String listeningError(Object message);
+
+  /// Error state button.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get listeningRetry;
+
+  /// Footer link to Settings.
+  ///
+  /// In en, this message translates to:
+  /// **'History settings'**
+  String get listeningSettings;
+
+  /// Day label.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get listeningToday;
+
+  /// Day label.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get listeningYesterday;
 }
 
 class _AppLocalizationsDelegate

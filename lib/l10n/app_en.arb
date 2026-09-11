@@ -4113,5 +4113,305 @@
   "federationNotifySubtitle": "A phone notification when a request arrives while the app is open or playing",
   "@federationNotifySubtitle": {
     "description": "Federation settings switch subtitle."
+  },
+  "browserListening": "Listening",
+  "@browserListening": {
+    "description": "Home LISTEN-group node: the listening stats page."
+  },
+  "autoRecentlyPlayed": "Recently Played",
+  "@autoRecentlyPlayed": {
+    "description": "Android Auto / CarPlay tab: this phone's recent plays of the server's tracks."
+  },
+  "settingsSectionListening": "Listening history",
+  "@settingsSectionListening": {
+    "description": "Settings section header."
+  },
+  "settingsHistoryEnabled": "Keep listening history",
+  "@settingsHistoryEnabled": {
+    "description": "Settings switch."
+  },
+  "settingsHistoryEnabledSubtitle": "Record what this phone plays, on every server and for local files. Kept on this device only.",
+  "@settingsHistoryEnabledSubtitle": {
+    "description": "Settings switch subtitle."
+  },
+  "settingsHistorySend": "Send plays to your servers",
+  "@settingsHistorySend": {
+    "description": "Settings switch."
+  },
+  "settingsHistorySendSubtitle": "Each play goes to the server the track lives on (a peer's track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.",
+  "@settingsHistorySendSubtitle": {
+    "description": "Settings switch subtitle."
+  },
+  "settingsHistoryClear": "Clear listening history",
+  "@settingsHistoryClear": {
+    "description": "Settings action row title and its confirm button."
+  },
+  "settingsHistoryClearSubtitle": "Removes this phone's record ({size}). Your servers keep theirs.",
+  "@settingsHistoryClearSubtitle": {
+    "description": "Settings action row subtitle; {size} is a formatted byte count like '1.2 MB'."
+  },
+  "settingsHistoryClearConfirm": "Delete this phone's listening history? Plays already sent to a server stay there.",
+  "@settingsHistoryClearConfirm": {
+    "description": "Confirm dialog body."
+  },
+  "settingsHistoryCleared": "Listening history cleared",
+  "@settingsHistoryCleared": {
+    "description": "Snackbar after clearing."
+  },
+  "settingsHistoryUnsynced": "{count, plural, =0{Everything is synced} =1{1 play waiting to be sent} other{{count} plays waiting to be sent}}",
+  "@settingsHistoryUnsynced": {
+    "description": "Settings line under the send switch: outbox size."
+  },
+  "songInfoServerPlays": "{count, plural, =1{1 play on {server}} other{{count} plays on {server}}}",
+  "@songInfoServerPlays": {
+    "description": "Song Info stats line, server counts."
+  },
+  "songInfoDevicePlays": "{count, plural, =1{1 play on this phone} other{{count} plays on this phone}}",
+  "@songInfoDevicePlays": {
+    "description": "Song Info stats line, device counts."
+  },
+  "songInfoLastPlayed": "last {ago}",
+  "@songInfoLastPlayed": {
+    "description": "Song Info stats line suffix; {ago} is a relative time like '3 h ago'."
+  },
+  "listeningTitle": "Listening",
+  "@listeningTitle": {
+    "description": "App bar title of the listening stats page."
+  },
+  "listeningScopeThisPhone": "This phone",
+  "@listeningScopeThisPhone": {
+    "description": "Scope pill: the device's own record."
+  },
+  "listeningScopeSheetTitle": "What to show",
+  "@listeningScopeSheetTitle": {
+    "description": "Scope bottom sheet title."
+  },
+  "listeningScopeSheetDevice": "What this phone played: every server, local files, offline. Kept on this device.",
+  "@listeningScopeSheetDevice": {
+    "description": "Scope sheet: device row subtitle."
+  },
+  "listeningScopeSheetServer": "Your plays on this server from every app — the web player, other phones, this phone once synced.",
+  "@listeningScopeSheetServer": {
+    "description": "Scope sheet: server row subtitle."
+  },
+  "listeningScopeSheetLegacy": "No listening stats yet — needs mStream 6.27 or later.",
+  "@listeningScopeSheetLegacy": {
+    "description": "Scope sheet: server without the capability."
+  },
+  "listeningScopeSheetPeer": "Counted on {server}: a peer's tracks count where your account lives.",
+  "@listeningScopeSheetPeer": {
+    "description": "Scope sheet: peer row subtitle; {server} is the parent's name."
+  },
+  "listeningProvenanceDevice": "What this phone played, on every server and local files. Kept on this device.",
+  "@listeningProvenanceDevice": {
+    "description": "Provenance line, device scope."
+  },
+  "listeningProvenanceServer": "Your plays on {server} from every app, including tracks from its peers.",
+  "@listeningProvenanceServer": {
+    "description": "Provenance line, server scope."
+  },
+  "listeningProvenancePeer": "Your plays of {peer}'s tracks, counted on {server}.",
+  "@listeningProvenancePeer": {
+    "description": "Provenance line, peer scope."
+  },
+  "listeningProvenanceFallback": "{server} did not answer — showing this phone's plays on it.",
+  "@listeningProvenanceFallback": {
+    "description": "Provenance line when the server is unreachable."
+  },
+  "listeningProvenanceLegacy": "{server} has no listening stats yet (mStream 6.27+) — showing this phone's plays on it.",
+  "@listeningProvenanceLegacy": {
+    "description": "Provenance line for a server without the capability."
+  },
+  "listeningUnsynced": "{count, plural, =1{1 play not synced yet} other{{count} plays not synced yet}}",
+  "@listeningUnsynced": {
+    "description": "Sync line under the provenance."
+  },
+  "listeningPeriodWeek": "This week",
+  "@listeningPeriodWeek": {
+    "description": "Period chip."
+  },
+  "listeningPeriodMonth": "This month",
+  "@listeningPeriodMonth": {
+    "description": "Period chip."
+  },
+  "listeningPeriodQuarter": "This quarter",
+  "@listeningPeriodQuarter": {
+    "description": "Period chip."
+  },
+  "listeningPeriodYear": "This year",
+  "@listeningPeriodYear": {
+    "description": "Period chip."
+  },
+  "listeningPeriodAll": "All time",
+  "@listeningPeriodAll": {
+    "description": "Period chip."
+  },
+  "listeningTilePlays": "Plays",
+  "@listeningTilePlays": {
+    "description": "Summary tile label."
+  },
+  "listeningTileTime": "Listening time",
+  "@listeningTileTime": {
+    "description": "Summary tile label."
+  },
+  "listeningTileTracks": "Tracks",
+  "@listeningTileTracks": {
+    "description": "Summary tile label."
+  },
+  "listeningTileSkips": "Skips",
+  "@listeningTileSkips": {
+    "description": "Summary tile label."
+  },
+  "listeningTileStreak": "Streak",
+  "@listeningTileStreak": {
+    "description": "Summary tile label."
+  },
+  "listeningTileSessions": "Sittings",
+  "@listeningTileSessions": {
+    "description": "Summary tile label."
+  },
+  "listeningDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@listeningDays": {
+    "description": "Streak tile value."
+  },
+  "listeningTileSubCounted": "counted plays",
+  "@listeningTileSubCounted": {
+    "description": "Tile subtitle."
+  },
+  "listeningTileSubTracks": "different tracks",
+  "@listeningTileSubTracks": {
+    "description": "Tile subtitle."
+  },
+  "listeningTileSubSkips": "{pct}% of starts",
+  "@listeningTileSubSkips": {
+    "description": "Tile subtitle; {pct} is a whole number."
+  },
+  "listeningTileSubStreak": "longest {count}",
+  "@listeningTileSubStreak": {
+    "description": "Tile subtitle; {count} days."
+  },
+  "listeningTileSubSessions": "about {duration} each",
+  "@listeningTileSubSessions": {
+    "description": "Tile subtitle; {duration} formatted like '24 min'."
+  },
+  "listeningWhenYouListen": "When you listen",
+  "@listeningWhenYouListen": {
+    "description": "Hour-of-day card title."
+  },
+  "listeningMostAround": "Most around {hour}",
+  "@listeningMostAround": {
+    "description": "Hour-of-day card note; {hour} like '20:00'."
+  },
+  "listeningTop": "Top",
+  "@listeningTop": {
+    "description": "Top card title."
+  },
+  "listeningTopTracks": "Tracks",
+  "@listeningTopTracks": {
+    "description": "Top entity chip."
+  },
+  "listeningTopArtists": "Artists",
+  "@listeningTopArtists": {
+    "description": "Top entity chip."
+  },
+  "listeningTopAlbums": "Albums",
+  "@listeningTopAlbums": {
+    "description": "Top entity chip."
+  },
+  "listeningByPlays": "Plays",
+  "@listeningByPlays": {
+    "description": "Top metric chip."
+  },
+  "listeningByTime": "Time",
+  "@listeningByTime": {
+    "description": "Top metric chip."
+  },
+  "listeningPlays": "{count, plural, =1{1 play} other{{count} plays}}",
+  "@listeningPlays": {
+    "description": "Row count."
+  },
+  "listeningTracksCount": "{count, plural, =1{1 track} other{{count} tracks}}",
+  "@listeningTracksCount": {
+    "description": "Row count for artists/albums."
+  },
+  "listeningRecent": "Recent plays",
+  "@listeningRecent": {
+    "description": "History card title."
+  },
+  "listeningLoadMore": "Load more",
+  "@listeningLoadMore": {
+    "description": "History card button."
+  },
+  "listeningEmptyTitle": "No plays yet",
+  "@listeningEmptyTitle": {
+    "description": "Empty state title."
+  },
+  "listeningEmptyDevice": "Plays land here as you listen. This phone keeps its own record; your server keeps yours across every app.",
+  "@listeningEmptyDevice": {
+    "description": "Empty state copy, device scope."
+  },
+  "listeningEmptyServer": "Nothing reported to {server} yet. Plays from this phone arrive once they sync.",
+  "@listeningEmptyServer": {
+    "description": "Empty state copy, server scope."
+  },
+  "listeningEmptyPeriod": "Nothing in this period.",
+  "@listeningEmptyPeriod": {
+    "description": "Empty period copy."
+  },
+  "listeningOutcomeCompleted": "Completed",
+  "@listeningOutcomeCompleted": {
+    "description": "History row outcome."
+  },
+  "listeningOutcomeSkipped": "Skipped",
+  "@listeningOutcomeSkipped": {
+    "description": "History row outcome."
+  },
+  "listeningOutcomeStopped": "Stopped",
+  "@listeningOutcomeStopped": {
+    "description": "History row outcome."
+  },
+  "listeningOutcomeAt": "{outcome} at {position}",
+  "@listeningOutcomeAt": {
+    "description": "History row outcome with the position, e.g. 'Skipped at 1:20'."
+  },
+  "listeningNotCounted": "not counted",
+  "@listeningNotCounted": {
+    "description": "History row suffix."
+  },
+  "listeningVia": "via {peer}",
+  "@listeningVia": {
+    "description": "Row suffix naming the peer."
+  },
+  "listeningRepeats": "×{count}",
+  "@listeningRepeats": {
+    "description": "History row repeat badge."
+  },
+  "listeningLocalFile": "Local file",
+  "@listeningLocalFile": {
+    "description": "History row subtitle for a device-only file."
+  },
+  "listeningHistoryOff": "Listening history is off. Turn it on in Settings to record plays on this phone.",
+  "@listeningHistoryOff": {
+    "description": "Banner when history is disabled."
+  },
+  "listeningError": "Could not load: {message}",
+  "@listeningError": {
+    "description": "Error state."
+  },
+  "listeningRetry": "Retry",
+  "@listeningRetry": {
+    "description": "Error state button."
+  },
+  "listeningSettings": "History settings",
+  "@listeningSettings": {
+    "description": "Footer link to Settings."
+  },
+  "listeningToday": "Today",
+  "@listeningToday": {
+    "description": "Day label."
+  },
+  "listeningYesterday": "Yesterday",
+  "@listeningYesterday": {
+    "description": "Day label."
   }
 }
