@@ -3,6 +3,10 @@ import 'package:material_ui/material_ui.dart';
 // Global ScaffoldMessenger key so context-less singletons (e.g.
 // DownloadManager) can surface SnackBars. Wired into
 // MaterialApp.scaffoldMessengerKey in main.dart.
+// Global Navigator key for the same reason: a notification tap has no
+// context of its own to push the Federation screen from.
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final GlobalKey<ScaffoldMessengerState> rootMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 

@@ -3646,4 +3646,44 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get p2pSearchServers => '搜索服务器 — 名称或描述';
+
+  @override
+  String federationInboxBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个联合请求待处理',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationInboxBannerSub => '点按以接受或拒绝';
+
+  @override
+  String federationInboxNotificationTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '有 $count 个联合请求待处理',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInboxNotificationBody(String server) {
+    return '来自 $server。打开以接受或拒绝。';
+  }
+
+  @override
+  String get federationInboxChannelName => '联合请求';
+
+  @override
+  String get federationInboxChannelDescription => '你的某台服务器收到了共享媒体库的请求';
+
+  @override
+  String get federationNotifyTitle => '有请求时通知我';
+
+  @override
+  String get federationNotifySubtitle => '应用打开或播放时收到请求，会在手机上发出通知';
 }

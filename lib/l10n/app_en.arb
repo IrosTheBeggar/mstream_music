@@ -4066,5 +4066,52 @@
   "p2pSearchServers": "Search servers — name or description",
   "@p2pSearchServers": {
     "description": "Placeholder of the catalog filter field."
+  },
+  "federationInboxBanner": "{count, plural, =1{1 federation request waiting} other{{count} federation requests waiting}}",
+  "@federationInboxBanner": {
+    "description": "Home banner headline: requests waiting on this operator.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "federationInboxBannerSub": "Tap to accept or reject",
+  "@federationInboxBannerSub": {
+    "description": "Home banner second line."
+  },
+  "federationInboxNotificationTitle": "{count, plural, =1{A federation request is waiting} other{{count} federation requests are waiting}}",
+  "@federationInboxNotificationTitle": {
+    "description": "Phone notification title.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "federationInboxNotificationBody": "On {server}. Open to accept or reject.",
+  "@federationInboxNotificationBody": {
+    "description": "Phone notification body; {server} is the server's name or address.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "federationInboxChannelName": "Federation requests",
+  "@federationInboxChannelName": {
+    "description": "Android notification channel name."
+  },
+  "federationInboxChannelDescription": "A request to share libraries arrived on one of your servers",
+  "@federationInboxChannelDescription": {
+    "description": "Android notification channel description."
+  },
+  "federationNotifyTitle": "Notify me about requests",
+  "@federationNotifyTitle": {
+    "description": "Federation settings switch."
+  },
+  "federationNotifySubtitle": "A phone notification when a request arrives while the app is open or playing",
+  "@federationNotifySubtitle": {
+    "description": "Federation settings switch subtitle."
   }
 }

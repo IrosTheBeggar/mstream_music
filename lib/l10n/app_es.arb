@@ -973,5 +973,13 @@
   "p2pSaved": "Guardado",
   "p2pOff": "Desactivada",
   "p2pSave": "Guardar",
-  "p2pSearchServers": "Buscar servidores — nombre o descripción"
+  "p2pSearchServers": "Buscar servidores — nombre o descripción",
+  "federationInboxBanner": "{count, plural, =1{1 solicitud de federación en espera} other{{count} solicitudes de federación en espera}}",
+  "federationInboxBannerSub": "Toca para aceptar o rechazar",
+  "federationInboxNotificationTitle": "{count, plural, =1{Hay una solicitud de federación en espera} other{Hay {count} solicitudes de federación en espera}}",
+  "federationInboxNotificationBody": "En {server}. Abre para aceptar o rechazar.",
+  "federationInboxChannelName": "Solicitudes de federación",
+  "federationInboxChannelDescription": "Llegó una solicitud para compartir bibliotecas en uno de tus servidores",
+  "federationNotifyTitle": "Avisarme de las solicitudes",
+  "federationNotifySubtitle": "Una notificación en el teléfono cuando llega una solicitud mientras la app está abierta o reproduciendo"
 }

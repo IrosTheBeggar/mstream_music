@@ -973,5 +973,13 @@
   "p2pSaved": "Gespeichert",
   "p2pOff": "Aus",
   "p2pSave": "Speichern",
-  "p2pSearchServers": "Server suchen — Name oder Beschreibung"
+  "p2pSearchServers": "Server suchen — Name oder Beschreibung",
+  "federationInboxBanner": "{count, plural, =1{1 Föderationsanfrage wartet} other{{count} Föderationsanfragen warten}}",
+  "federationInboxBannerSub": "Antippen, um anzunehmen oder abzulehnen",
+  "federationInboxNotificationTitle": "{count, plural, =1{Eine Föderationsanfrage wartet} other{{count} Föderationsanfragen warten}}",
+  "federationInboxNotificationBody": "Auf {server}. Öffnen, um anzunehmen oder abzulehnen.",
+  "federationInboxChannelName": "Föderationsanfragen",
+  "federationInboxChannelDescription": "Auf einem deiner Server ist eine Anfrage zum Teilen von Bibliotheken eingegangen",
+  "federationNotifyTitle": "Bei Anfragen benachrichtigen",
+  "federationNotifySubtitle": "Eine Benachrichtigung auf dem Telefon, wenn eine Anfrage eingeht, während die App offen ist oder Musik spielt"
 }

@@ -34,6 +34,7 @@ import 'screens/share_playlist_dialog.dart';
 import 'native/torrent_channel.dart';
 import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
+import 'singletons/federation_inbox_alerts.dart';
 import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
@@ -103,6 +104,9 @@ Future<void> _startApp() async {
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
   await SettingsManager().load();
+  // Federation-request alerts: the notification plumbing and the poll
+  // timer; the first ping's count already lands in it.
+  await FederationInboxAlerts().init();
   // Resolve the album-art ContentProvider authority from the real package name
   // so Android Auto cover art works on any build (not just VARIANT=play ones).
   await initAutoArt();
@@ -157,6 +161,7 @@ Future<void> _startApp() async {
       return MaterialApp(
         title: 'mStream Music',
         scaffoldMessengerKey: rootMessengerKey,
+        navigatorKey: rootNavigatorKey,
         home: MStreamApp(),
         theme: buildAppTheme(palette),
         locale: locale,
@@ -195,6 +200,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // A launch from a federation-request notification opens its screen
+    // once there is a navigator to push onto.
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => FederationInboxAlerts().onFirstFrame());
     // Warm start: a torrent opened while the app is already running arrives
     // through onNewIntent, which only signals that one is staged — the drain
     // is the same call the cold-start path makes, so there is one delivery
@@ -536,6 +545,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // these fire on every focus change (shade pull, screen off, dialogs), not
     // just playback, so they're noise unless you're actively diagnosing.
     verboseLog('[app] lifecycle → $state');
+    FederationInboxAlerts().onLifecycle(state);
     // On resume, re-assert edge-to-edge so a hidden nav bar (e.g. left over from
     // the Visualizer's immersive mode) comes back — but only when the main
     // screen is the top route, so we don't fight the Visualizer if it's open.

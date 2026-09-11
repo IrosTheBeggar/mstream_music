@@ -1,6 +1,7 @@
 import Flutter
 import Intents
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -29,6 +30,9 @@ import UIKit
     self.engine = engine
     carPlay = CarPlayBridge(messenger: engine.binaryMessenger)
     siri = SiriMediaHandler(bridge: carPlay)
+    // Local notifications (federation-request alerts): FlutterAppDelegate
+    // forwards the center's callbacks to the plugin once it is the delegate.
+    UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

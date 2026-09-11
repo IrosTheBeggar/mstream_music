@@ -3918,4 +3918,50 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pSearchServers => 'Поиск серверов — имя или описание';
+
+  @override
+  String federationInboxBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count запросов на федерацию ожидают',
+      few: '$count запроса на федерацию ожидают',
+      one: '1 запрос на федерацию ожидает',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationInboxBannerSub => 'Нажмите, чтобы принять или отклонить';
+
+  @override
+  String federationInboxNotificationTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ожидают $count запросов на федерацию',
+      few: 'Ожидают $count запроса на федерацию',
+      one: 'Ожидает запрос на федерацию',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInboxNotificationBody(String server) {
+    return 'На $server. Откройте, чтобы принять или отклонить.';
+  }
+
+  @override
+  String get federationInboxChannelName => 'Запросы на федерацию';
+
+  @override
+  String get federationInboxChannelDescription =>
+      'На один из ваших серверов пришёл запрос на общий доступ к библиотекам';
+
+  @override
+  String get federationNotifyTitle => 'Уведомлять о запросах';
+
+  @override
+  String get federationNotifySubtitle =>
+      'Уведомление на телефоне, когда запрос приходит при открытом приложении или во время воспроизведения';
 }

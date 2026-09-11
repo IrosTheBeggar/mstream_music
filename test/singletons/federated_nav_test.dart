@@ -220,6 +220,29 @@ void main() {
     expect(BrowserManager().browserList.any((i) => i.type == 'note'), isFalse);
   });
 
+  test('requests waiting on the operator put a banner above the sections', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..federationInbox = 2;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+
+    BrowserManager().goToNavScreen();
+
+    final first = BrowserManager().browserList.first;
+    expect(first.type, 'banner');
+    expect(first.data, 'federation', reason: 'taps through like the card');
+    expect(first.subtext, 'federationInbox:2');
+    expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
+    // The count alone is not a NETWORK group: that still needs the flag.
+    expect(_headers(), ['Library', 'Listen', 'Server']);
+
+    // Nothing waiting: no banner.
+    s.federationInbox = 0;
+    BrowserManager().goToNavScreen();
+    expect(BrowserManager().browserList.any((i) => i.type == 'banner'),
+        isFalse);
+  });
+
   group('BrowserManager.isHomeList', () {
     DisplayItem row(String type) =>
         DisplayItem(null, type, type, null, null, null);

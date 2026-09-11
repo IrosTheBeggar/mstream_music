@@ -160,7 +160,8 @@ class _BrowserState extends State<Browser> {
           context, MaterialPageRoute(builder: (_) => AddTorrentScreen()));
       return;
     }
-    if (browserList[index].type == 'execAction' &&
+    if ((browserList[index].type == 'execAction' ||
+            browserList[index].type == 'banner') &&
         browserList[index].data == 'federation') {
       final s = browserList[index].server;
       if (s != null) {
@@ -789,6 +790,12 @@ class _BrowserState extends State<Browser> {
           padding: EdgeInsets.only(bottom: _homeCardGap),
           child: _homeNote(context, it),
         ));
+      } else if (it.type == 'banner') {
+        flush();
+        rows.add(Padding(
+          padding: EdgeInsets.only(bottom: _homeCardGap),
+          child: _homeBanner(context, allItems, it),
+        ));
       } else if (it.type == 'section') {
         flush();
         rows.add(_homeSectionHeader(context, it, first: first));
@@ -856,6 +863,49 @@ class _BrowserState extends State<Browser> {
             ),
           ),
         ]),
+      ),
+    );
+  }
+
+  /// A tappable strip above the sections — news that wants an action (the
+  /// federation inbox), where [_homeNote] is the inert caption.
+  Widget _homeBanner(
+      BuildContext context, List<DisplayItem> items, DisplayItem it) {
+    final l = AppLocalizations.of(context);
+    final (title, sub) = homeBannerText(l, it.name, it.subtext);
+    return Material(
+      color: VelvetColors.primary.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => handleTap(items, items.indexOf(it), context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(children: [
+            if (it.icon != null) ...[
+              Icon(it.icon!.icon, color: VelvetColors.primary),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: VelvetColors.textPrimary)),
+                  if (sub != null)
+                    Text(sub,
+                        style: TextStyle(
+                            fontSize: 13, color: VelvetColors.textSecondary)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: VelvetColors.primary),
+          ]),
+        ),
       ),
     );
   }

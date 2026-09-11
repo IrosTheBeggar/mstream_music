@@ -973,5 +973,13 @@
   "p2pSaved": "已保存",
   "p2pOff": "关闭",
   "p2pSave": "保存",
-  "p2pSearchServers": "搜索服务器 — 名称或描述"
+  "p2pSearchServers": "搜索服务器 — 名称或描述",
+  "federationInboxBanner": "{count, plural, other{{count} 个联合请求待处理}}",
+  "federationInboxBannerSub": "点按以接受或拒绝",
+  "federationInboxNotificationTitle": "{count, plural, other{有 {count} 个联合请求待处理}}",
+  "federationInboxNotificationBody": "来自 {server}。打开以接受或拒绝。",
+  "federationInboxChannelName": "联合请求",
+  "federationInboxChannelDescription": "你的某台服务器收到了共享媒体库的请求",
+  "federationNotifyTitle": "有请求时通知我",
+  "federationNotifySubtitle": "应用打开或播放时收到请求，会在手机上发出通知"
 }

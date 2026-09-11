@@ -3706,4 +3706,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get p2pSearchServers => 'サーバーを検索 — 名前または説明';
+
+  @override
+  String federationInboxBanner(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'フェデレーションのリクエスト $count 件が待機中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get federationInboxBannerSub => 'タップして承認または拒否';
+
+  @override
+  String federationInboxNotificationTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'フェデレーションのリクエストが $count 件届いています',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String federationInboxNotificationBody(String server) {
+    return '$server に届きました。開いて承認または拒否してください。';
+  }
+
+  @override
+  String get federationInboxChannelName => 'フェデレーションのリクエスト';
+
+  @override
+  String get federationInboxChannelDescription =>
+      'いずれかのサーバーにライブラリ共有のリクエストが届きました';
+
+  @override
+  String get federationNotifyTitle => 'リクエストを通知する';
+
+  @override
+  String get federationNotifySubtitle =>
+      'アプリを開いているか再生中にリクエストが届いたら、スマートフォンに通知します';
 }
