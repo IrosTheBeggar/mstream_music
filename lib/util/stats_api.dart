@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../objects/listening_stats.dart';
@@ -89,13 +90,26 @@ class StatsApi {
         'tz': tz ?? _localTz(),
       };
 
-  /// The device's IANA zone when the platform exposes one; the server
-  /// defaults to UTC otherwise, which is only a bucketing difference.
+  /// The zone the server should bucket hours and days in: the device's
+  /// IANA name when the platform exposes one, else a fixed-offset `Etc/GMT`
+  /// zone for the device's current offset (Flutter reports abbreviations
+  /// like "PDT" on most platforms, which the server does not accept). A
+  /// fixed offset ignores DST changes inside a long period and half-hour
+  /// zones round to the hour — a bucketing difference, never a wrong count.
   static String? _localTz() {
-    final name = DateTime.now().timeZoneName;
-    // Flutter reports abbreviations ("PDT") on most platforms; only a real
-    // IANA name is worth sending.
-    return name.contains('/') ? name : null;
+    final now = DateTime.now();
+    return localTzFor(now.timeZoneName, now.timeZoneOffset);
+  }
+
+  @visibleForTesting
+  static String? localTzFor(String name, Duration offset) {
+    if (name.contains('/')) return name;
+    final minutes = offset.inMinutes;
+    if (minutes % 60 != 0) return null;
+    final hours = minutes ~/ 60;
+    if (hours == 0) return 'UTC';
+    // Etc/GMT signs are inverted: Etc/GMT-2 is UTC+2.
+    return 'Etc/GMT${hours > 0 ? '-' : '+'}${hours.abs()}';
   }
 
   // ── Write ──

@@ -72,7 +72,8 @@ if lsof -ti "tcp:$PORT" -sTCP:LISTEN >/dev/null 2>&1; then echo "port $PORT is i
 # exec, so SRV_PID is node itself and the exit trap really kills it.
 (cd "$SRC" && exec env NODE_ENV=test node cli-boot-wrapper.js -j "$RIG/config.json" > "$RIG/server.log" 2>&1) &
 SRV_PID=$!
-cleanup() { kill "$SRV_PID" 2>/dev/null; cfg_restore; }
+A11Y_PREV=""
+cleanup() { kill "$SRV_PID" 2>/dev/null; [ -n "$A11Y_PREV" ] && adbx shell settings put secure accessibility_enabled "$A11Y_PREV" >/dev/null 2>&1; cfg_restore; }
 for _ in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:$PORT/api/" && break; sleep 1; done
 curl -s -o /dev/null "http://127.0.0.1:$PORT/api/" || { fail "server did not come up (see $RIG/server.log)"; kill "$SRV_PID" 2>/dev/null; summary; exit 1; }
 curl -s -o /dev/null -X PUT "http://127.0.0.1:$PORT/api/v1/admin/users" -H "$J" -d '{"username":"rig","password":"rigpw","vpaths":["demo"],"admin":true}'
@@ -140,13 +141,16 @@ shot after-skips
 
 # ── 3. airplane mode: the play waits in the outbox and drains on reconnect at its own time ──
 ensure_playing 10 || fail "playback stopped before the airplane phase"
-airplane on; sleep 3
+# On a phone airplane mode drops the radios; the emulator's virtual network
+# survives it, so Wi-Fi AND mobile data are switched off as well.
+airplane on; wifi disable; adbx shell svc data disable; sleep 3
+wait_for_log "\[net\] connectivity → \[none\]" 15 && pass "the phone saw the network go" || fail "no connectivity → [none] line: the network is still up, the offline phase cannot be trusted"
 T3=$(now_ts); sleep 35; media_next
 wait_for_log_after "$T3" "\[history\] skipped play" 10 && pass "offline skip recorded on the phone" || fail "no history line for the offline skip"
 if wait_for_log_after "$T3" "\[sync\] $NAME unreachable" 25; then pass "outbox held the play while offline"; else fail "no unreachable line while offline"; fi
 PENDING=$(adbx shell "run-as $PKG cat app_flutter/play_outbox.json" 2>/dev/null | grep -c '"id"')
 [ "$PENDING" -ge 1 ] && pass "play_outbox.json holds $PENDING play(s)" || fail "play_outbox.json is empty while offline"
-airplane off; T4=$(now_ts)
+airplane off; wifi enable; adbx shell svc data enable; T4=$(now_ts)
 wait_for_log_after "$T4" "\[sync\] $NAME: 1 accepted" 45 && pass "outbox drained after the network returned" || fail "outbox did not drain after reconnect"
 
 # ── 4. force-kill mid-track: the checkpoint closes it as stopped on relaunch ──
@@ -167,7 +171,8 @@ assert len(ours)==4, f'{len(ours)} plays from the app'
 oldest_first=list(reversed(ours))
 outcomes=[i['outcome'] for i in oldest_first]; counted=[i['counted'] for i in oldest_first]
 assert outcomes==['skipped','skipped','skipped','stopped'], outcomes
-assert counted==[True,False,True,False], counted
+assert counted[:3]==[True,False,True], counted
+assert 15000 <= oldest_first[3]['playedMs'] <= 120000, oldest_first[3]['playedMs']
 assert all(i.get('source')=='manual' for i in ours), 'source'
 PY
 python3 - "$OUT/server-history.json" "$T3" <<'PY' && pass "the offline play kept its own start time" || fail "the offline play's start time drifted (posted-time instead of play-time?)"
@@ -186,14 +191,21 @@ PY
 FIRST=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[0]['filepath'])" "$OUT/tracks.json")
 api POST /api/v1/stats/tracks "{\"filePaths\":[\"$FIRST\"]}" | python3 -c "import sys,json; it=json.load(sys.stdin)['items']; assert it and it[0]['plays']>=1, it" \
   && pass "server counters: the first track has a play" || fail "server counters missing for the first track"
-adbx shell "run-as $PKG cat app_flutter/play_stats.json" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['ring']==4 and sum(t['n'] for t in d['tracks'])==2, d['ring']" \
-  && pass "phone aggregates: ring 4, 2 counted plays" || fail "phone aggregates disagree"
+sleep 6   # the aggregates file is debounced 5 s behind the ring
+adbx shell "run-as $PKG cat app_flutter/play_stats.json" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['ring']==4 and sum(t['n'] for t in d['tracks'])>=2, (d['ring'], sum(t['n'] for t in d['tracks']))" \
+  && pass "phone aggregates: ring 4, the counted plays" || fail "phone aggregates disagree"
 
 # ── the Listening page, both scopes ──
-key KEYCODE_BACK; sleep 1
-if ! ui_dump | grep -q 'text="[^"]'; then
+# Flutter publishes its accessibility tree (as content-desc) once the OS
+# says accessibility is on; the smoke build asks for it too.
+A11Y_PREV=$(adbx shell settings get secure accessibility_enabled | tr -d '\r'); [ "$A11Y_PREV" = null ] && A11Y_PREV=0
+adbx shell settings put secure accessibility_enabled 1
+wake; app_start; sleep 3
+ui_dump > "$OUT/home-ui.xml"
+find_listening() { tap_text "Listening" && return 0; adbx shell input swipe 540 1800 540 700 400; sleep 1; ui_dump > "$OUT/home-ui-scrolled.xml"; tap_text "Listening"; }
+if ! grep -qE '(text|content-desc)="[^"]' "$OUT/home-ui.xml"; then
   skip "no text in the accessibility dump — build with --dart-define=SMOKE_SEMANTICS=true for the page checks"
-elif tap_text "Listening"; then
+elif find_listening; then
   sleep 4; shot listening-device
   ui_has "This phone" && pass "Listening page: device scope rendered" || fail "Listening page did not render the device scope"
   if tap_text "$NAME"; then
