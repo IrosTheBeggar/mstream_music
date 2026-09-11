@@ -433,15 +433,22 @@ class PlayTracker {
 
   // ── Checkpoint ──
 
+  /// A throttle, not a debounce: position samples arrive several times a
+  /// second while a track plays, and a debounce would never fire until the
+  /// music stopped — leaving a force-killed app with no checkpoint at all.
+  /// One write at most every [_checkpointDebounce] while there is news.
   void _scheduleCheckpoint() {
-    _checkpointTimer?.cancel();
-    _checkpointTimer = Timer(_checkpointDebounce, checkpointNow);
+    _checkpointTimer ??= Timer(_checkpointDebounce, () {
+      _checkpointTimer = null;
+      checkpointNow();
+    });
   }
 
   /// Write the open session now (lifecycle pause / detach) so an OS kill
   /// still yields a `stopped` event with what was listened so far.
   Future<void> checkpointNow() async {
     _checkpointTimer?.cancel();
+    _checkpointTimer = null;
     final open = _open;
     if (open == null) return;
     final content = jsonEncode(open.toCheckpoint(DateTime.now().toUtc()));
