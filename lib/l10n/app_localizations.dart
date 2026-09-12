@@ -2202,6 +2202,18 @@ abstract class AppLocalizations {
   /// **'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.'**
   String get storageHelpSdCard;
 
+  /// No description provided for @mirrorRootLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Local copy folder (optional)'**
+  String get mirrorRootLabel;
+
+  /// No description provided for @mirrorRootHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.'**
+  String get mirrorRootHelp;
+
   /// No description provided for @storageChooseFolder.
   ///
   /// In en, this message translates to:

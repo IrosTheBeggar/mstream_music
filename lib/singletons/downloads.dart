@@ -19,6 +19,7 @@ import 'package:path/path.dart' as path;
 import '../objects/download_tracker.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
+import '../util/local_copy.dart';
 import '../media/cast_origin.dart' show irohLoopbackUri;
 
 class DownloadManager {
@@ -616,13 +617,16 @@ class DownloadManager {
 
     String downloadTo = '${dir.path}/media/$downloadDirectory';
 
-    if (File(downloadTo).existsSync() == true) {
-      // Already on disk — still patch any queued copies (self-healing: covers
-      // a track downloaded before it was queued, and a patch lost to a rare
-      // publish race — every later download attempt re-lands it).
+    // Already on disk — in the download tree or the server's mirror root —
+    // so nothing to transfer; still patch any queued copies (self-healing:
+    // covers a track downloaded before it was queued, and a patch lost to a
+    // rare publish race — every later download attempt re-lands it).
+    final existing =
+        firstExistingSync(localCopyCandidates(server, dir, filepath));
+    if (existing != null) {
       MediaManager()
           .audioHandler
-          .onTrackDownloaded(serverName, filepath, downloadTo);
+          .onTrackDownloaded(serverName, filepath, existing);
       return;
     }
     if (_inFlight.contains(downloadDirectory)) {

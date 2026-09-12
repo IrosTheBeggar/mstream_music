@@ -1278,6 +1278,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht mehr verfügbar sein, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.';
 
   @override
+  String get mirrorRootLabel => 'Ordner mit lokaler Kopie (optional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Ein Ordner, der bereits eine Kopie dieser Bibliothek enthält und von einem anderen Programm synchron gehalten wird (Syncthing, rclone, NAS). Dort gefundene Dateien werden von der Festplatte abgespielt. Die App schreibt nie hinein.';
+
+  @override
   String get storageChooseFolder => 'Ordner wählen';
 
   @override

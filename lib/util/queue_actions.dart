@@ -16,6 +16,7 @@ import '../objects/metadata.dart';
 import '../objects/server.dart';
 import '../singletons/api.dart';
 import '../singletons/file_explorer.dart';
+import 'local_copy.dart';
 import '../singletons/media.dart';
 import '../singletons/settings.dart';
 import 'server_version.dart';
@@ -63,11 +64,11 @@ Future<MediaItem?> _buildServerFileMediaItemWithDir(
     if (full != null) meta = full;
   }
 
-  final String downloadDirectory = i.server!.localname + i.data!;
+  // The app's download tree first, then the server's mirror root (a folder
+  // something else keeps in sync) — see localCopyCandidates.
   final String? finalString =
-      dir == null ? null : '${dir.path}/media/$downloadDirectory';
-  final bool isLocal =
-      finalString != null && File(finalString).existsSync() == true;
+      firstExistingSync(localCopyCandidates(i.server!, dir, i.data!));
+  final bool isLocal = finalString != null;
 
   final String streamUrl = buildServerStreamUrl(i.server!, i.data!);
 
