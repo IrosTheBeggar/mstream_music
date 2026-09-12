@@ -221,6 +221,27 @@ void main() {
       expect(ix.localCount('s', origin: LocalOrigin.auto), 2);
       expect(ix.localByOrigin('s', LocalOrigin.auto).map((f) => f.path), ['/y', '/x']);
     });
+
+    test('bytes, failed counts and the failed list for the status screen', () {
+      ix.upsertLocals([
+        LocalFile(server: 's', path: '/a', localPath: '/dl/a', state: LocalState.ok,
+            origin: LocalOrigin.mirror, size: 100),
+        LocalFile(server: 's', path: '/b', localPath: '/dl/b', state: LocalState.ok,
+            origin: LocalOrigin.mirror, size: 250),
+        LocalFile(server: 's', path: '/c', localPath: '/dl/c', state: LocalState.failed,
+            origin: LocalOrigin.mirror, size: 999, error: 'boom'),
+        LocalFile(server: 's', path: '/m', localPath: '/dl/m', state: LocalState.ok,
+            origin: LocalOrigin.manual, size: 1000),
+      ]);
+      expect(ix.localBytes('s'), 1350, reason: 'ok rows only');
+      expect(ix.localBytes('s', origin: LocalOrigin.mirror), 350);
+      expect(ix.localCount('s', state: LocalState.failed), 1);
+      expect(ix.localCount('s', origin: LocalOrigin.mirror, state: LocalState.ok), 2);
+      final failed = ix.localFailed('s');
+      expect(failed.single.path, '/c');
+      expect(failed.single.error, 'boom');
+      expect(ix.localFailed('nobody'), isEmpty);
+    });
   });
 
   group('subscriptions', () {

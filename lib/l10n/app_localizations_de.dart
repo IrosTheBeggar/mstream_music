@@ -1285,6 +1285,75 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein Ordner, der bereits eine Kopie dieser Bibliothek enthält und von einem anderen Programm synchron gehalten wird (Syncthing, rclone, NAS). Dort gefundene Dateien werden von der Festplatte abgespielt. Die App schreibt nie hinein.';
 
   @override
+  String get libraryCopyTitle => 'Bibliothekskopie';
+
+  @override
+  String get libraryCopyKeepSection =>
+      'Vollständige Kopie auf diesem Gerät behalten';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Jeder Titel wird in Originalqualität heruntergeladen und synchron gehalten: Neue Dateien kommen hinzu, geänderte werden ersetzt, und auf dem Server gelöschte Dateien wandern für eine Weile in einen Papierkorb-Ordner.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'Dieser Server bietet keine Bibliothekssynchronisierung. Er benötigt mStream 6.27 oder neuer.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'Noch keine Bibliotheken gemeldet — den Server einmal öffnen und dann zurückkommen.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Noch nicht synchronisiert';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Zuletzt synchronisiert $when · $files Dateien · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Synchronisiere… $done von $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Server wird geprüft…';
+
+  @override
+  String get libraryCopySyncNow => 'Jetzt synchronisieren';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n Dateien fehlgeschlagen';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Fehlgeschlagene Dateien';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'Letzte Synchronisierung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Gelöschte Dateien aufbewahren für';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n Tage';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Für immer';
+
+  @override
+  String get libraryCopyWifiOnly => 'Nur über WLAN';
+
+  @override
+  String get libraryCopyDesktopNote =>
+      'Synchronisiert, solange die App geöffnet ist.';
+
+  @override
   String get storageChooseFolder => 'Ordner wählen';
 
   @override

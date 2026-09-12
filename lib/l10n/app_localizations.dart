@@ -2214,6 +2214,114 @@ abstract class AppLocalizations {
   /// **'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.'**
   String get mirrorRootHelp;
 
+  /// No description provided for @libraryCopyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Library copy'**
+  String get libraryCopyTitle;
+
+  /// No description provided for @libraryCopyKeepSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep a full copy on this device'**
+  String get libraryCopyKeepSection;
+
+  /// No description provided for @libraryCopyKeepHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Every track is downloaded in original quality and kept in sync: new files arrive, changed files are replaced, and files deleted on the server move to a trash folder for a while.'**
+  String get libraryCopyKeepHelp;
+
+  /// No description provided for @libraryCopyUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This server does not offer library sync. It needs mStream 6.27 or newer.'**
+  String get libraryCopyUnsupported;
+
+  /// No description provided for @libraryCopyNoLibraries.
+  ///
+  /// In en, this message translates to:
+  /// **'No libraries reported yet — open the server once, then come back.'**
+  String get libraryCopyNoLibraries;
+
+  /// No description provided for @libraryCopyNeverSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet'**
+  String get libraryCopyNeverSynced;
+
+  /// No description provided for @libraryCopyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {when} · {files} files · {size}'**
+  String libraryCopyStatus(String when, int files, String size);
+
+  /// No description provided for @libraryCopySyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing… {done} of {total}'**
+  String libraryCopySyncing(int done, int total);
+
+  /// No description provided for @libraryCopyPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the server…'**
+  String get libraryCopyPreparing;
+
+  /// No description provided for @libraryCopySyncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get libraryCopySyncNow;
+
+  /// No description provided for @libraryCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} files failed'**
+  String libraryCopyFailed(int n);
+
+  /// No description provided for @libraryCopyFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed files'**
+  String get libraryCopyFailedTitle;
+
+  /// No description provided for @libraryCopyLastRunError.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync failed: {error}'**
+  String libraryCopyLastRunError(String error);
+
+  /// No description provided for @libraryCopyRetention.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep deleted files for'**
+  String get libraryCopyRetention;
+
+  /// No description provided for @libraryCopyRetentionDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days'**
+  String libraryCopyRetentionDays(int n);
+
+  /// No description provided for @libraryCopyRetentionForever.
+  ///
+  /// In en, this message translates to:
+  /// **'Forever'**
+  String get libraryCopyRetentionForever;
+
+  /// No description provided for @libraryCopyWifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi only'**
+  String get libraryCopyWifiOnly;
+
+  /// No description provided for @libraryCopyDesktopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncs while the app is open.'**
+  String get libraryCopyDesktopNote;
+
   /// No description provided for @storageChooseFolder.
   ///
   /// In en, this message translates to:

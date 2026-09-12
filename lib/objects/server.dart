@@ -27,6 +27,17 @@ class Server {
   // all-files access, like 'permanent'). null = not set.
   String? mirrorRoot;
 
+  // Library sync capability from the /api/ features block (mStream 6.27+:
+  // the server serves POST /api/v1/sync/manifest). Gated strictly on
+  // `== true` like the discovery flags, and persisted like them so the
+  // Library copy screen renders before the first ping.
+  bool? syncAvailable;
+  // Library copy settings: how long a file the mirror removed stays in its
+  // trash (days, 0 = forever) and whether transfers wait for Wi-Fi (mobile
+  // only; ignored on desktop).
+  int mirrorRetentionDays = 30;
+  bool mirrorWifiOnly = true;
+
   // Runtime-only (never persisted): the live loopback port of this server's iroh
   // tunnel while it is the active server. Set by ServerManager when the tunnel
   // starts; consumed by [effectiveBaseUrl].
@@ -351,6 +362,13 @@ class Server {
         storageBasePath =
             json['storageBasePath'] is String ? json['storageBasePath'] : null,
         mirrorRoot = json['mirrorRoot'] is String ? json['mirrorRoot'] : null,
+        syncAvailable =
+            json['syncAvailable'] is bool ? json['syncAvailable'] : null,
+        mirrorRetentionDays = json['mirrorRetentionDays'] is int
+            ? json['mirrorRetentionDays'] as int
+            : 30,
+        mirrorWifiOnly =
+            json['mirrorWifiOnly'] is bool ? json['mirrorWifiOnly'] : true,
         transcodeAvailable =
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
@@ -411,6 +429,9 @@ class Server {
         'storageMode': storageMode,
         'storageBasePath': storageBasePath,
         'mirrorRoot': mirrorRoot,
+        'syncAvailable': syncAvailable,
+        'mirrorRetentionDays': mirrorRetentionDays,
+        'mirrorWifiOnly': mirrorWifiOnly,
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
         'transcodeDefaultBitrate': transcodeDefaultBitrate,

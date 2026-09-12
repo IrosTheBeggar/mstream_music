@@ -1233,6 +1233,73 @@ class AppLocalizationsJa extends AppLocalizations {
       'このライブラリのコピーがすでにあるフォルダーです。別のツール（Syncthing、rclone、NAS など）で同期されます。そこにあるファイルはディスクから再生されます。アプリがこのフォルダーに書き込むことはありません。';
 
   @override
+  String get libraryCopyTitle => 'ライブラリのコピー';
+
+  @override
+  String get libraryCopyKeepSection => 'この端末に完全なコピーを保持';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'すべてのトラックをオリジナル品質でダウンロードし、同期を保ちます。新しいファイルは追加され、変更されたファイルは置き換えられ、サーバーで削除されたファイルはしばらくゴミ箱フォルダーに移されます。';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'このサーバーはライブラリ同期に対応していません。mStream 6.27 以降が必要です。';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'まだライブラリが報告されていません。サーバーを一度開いてから戻ってきてください。';
+
+  @override
+  String get libraryCopyNeverSynced => 'まだ同期されていません';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return '最終同期 $when · $files ファイル · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return '同期中… $done / $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'サーバーを確認しています…';
+
+  @override
+  String get libraryCopySyncNow => '今すぐ同期';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n 件のファイルが失敗';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => '失敗したファイル';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return '前回の同期に失敗しました: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => '削除されたファイルの保持期間';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n 日';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => '無期限';
+
+  @override
+  String get libraryCopyWifiOnly => 'Wi-Fi のみ';
+
+  @override
+  String get libraryCopyDesktopNote => 'アプリを開いている間に同期します。';
+
+  @override
   String get storageChooseFolder => 'フォルダを選択';
 
   @override
