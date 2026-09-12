@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/add_server.dart';
 import 'package:mstream_music/singletons/server_list.dart';
@@ -44,7 +45,7 @@ void main() {
 
   Future<void> pumpEditScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const Scaffold(body: SizedBox()),
     ));

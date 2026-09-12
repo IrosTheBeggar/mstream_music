@@ -35,11 +35,12 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:mstream_music/main.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/singletons/server_list.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 
 Widget testApp() => MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: MStreamApp(),
     );

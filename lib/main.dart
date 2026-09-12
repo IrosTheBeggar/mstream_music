@@ -52,6 +52,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'native/iroh_tunnel.dart';
 import 'widgets/iroh_repair_sheet.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/localizations_delegates.dart';
 import 'widgets/player_panel.dart';
 import 'widgets/server_version_line.dart';
 import 'widgets/browser_toolbar.dart';
@@ -165,7 +166,9 @@ Future<void> _startApp() async {
         home: MStreamApp(),
         theme: buildAppTheme(palette),
         locale: locale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        // The shared list, not the generated one alone: material_ui needs its own
+        // global delegates or every non-English device gets a grey screen (#169).
+        localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
       );

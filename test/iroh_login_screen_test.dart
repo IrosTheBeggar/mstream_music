@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/screens/iroh_login_screen.dart';
 
 void main() {
@@ -16,7 +17,7 @@ void main() {
     Future<String?> Function(String, String)? validate,
   }) async {
     await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: IrohLoginScreen(
         title: 'Sign in',
