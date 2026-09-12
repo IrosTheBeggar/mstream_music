@@ -283,6 +283,13 @@ class LibraryIndex {
   void upsertLocals(Iterable<LocalFile> files) =>
       transaction(() => files.forEach(upsertLocal));
 
+  /// Every local-copy row of [server] — the planner's input.
+  List<LocalFile> localFilesAll(String server) => [
+        for (final r in _db.select(
+            'SELECT * FROM local_files WHERE server = ? ORDER BY path', [server]))
+          LocalFile.fromRow(r)
+      ];
+
   void markState(String server, String path, String state,
           {String quality = 'original', String? error}) =>
       _db.execute(

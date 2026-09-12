@@ -17,6 +17,9 @@ dependencies:
   sqlite3: ^3.5.2
   path: ^1.9.0
   meta: ^1.16.0
+  # Whole-file MD5 verification of mirrored downloads (below the server's
+  # 25 MiB sampled-hash threshold).
+  crypto: ^3.0.6
 
 dev_dependencies:
   test: ^1.25.0
