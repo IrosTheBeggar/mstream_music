@@ -1226,6 +1226,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'SD カード上の選んだフォルダに保存されます。カードを取り外すと利用できなくなることがあります。一部の端末ではアプリが SD カードに書き込めません — フォルダの選択が繰り返し失敗する場合は「永続」または「アプリ内」を使用してください。';
 
   @override
+  String get mirrorRootLabel => 'ローカルコピーのフォルダー（任意）';
+
+  @override
+  String get mirrorRootHelp =>
+      'このライブラリのコピーがすでにあるフォルダーです。別のツール（Syncthing、rclone、NAS など）で同期されます。そこにあるファイルはディスクから再生されます。アプリがこのフォルダーに書き込むことはありません。';
+
+  @override
   String get storageChooseFolder => 'フォルダを選択';
 
   @override

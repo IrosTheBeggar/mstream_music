@@ -330,6 +330,8 @@
   "storageHelpAppLocal": "Guardado dentro de la aplicación. Se elimina al desinstalar o borrar los datos de la app.",
   "storageHelpPermanent": "Guardado en una carpeta que elijas. Se conserva al desinstalar la aplicación. Requiere \"Acceso a todos los archivos\".",
   "storageHelpSdCard": "Guardado en una carpeta de la tarjeta SD que elijas. Puede dejar de estar disponible si se retira la tarjeta. Algunos dispositivos no permiten que las apps escriban en tarjetas SD — si la selección de carpeta sigue fallando, usa Permanente o Local de la app.",
+  "mirrorRootLabel": "Carpeta de copia local (opcional)",
+  "mirrorRootHelp": "Una carpeta que ya contiene una copia de esta biblioteca, sincronizada por otra herramienta (Syncthing, rclone, un NAS). Los archivos encontrados allí se reproducen desde el disco. La app nunca escribe en ella.",
   "storageChooseFolder": "Elegir carpeta",
   "storageNoFolderChosen": "Aún no se ha elegido ninguna carpeta",
   "storageDownloadFolderLabel": "Carpeta de descargas",

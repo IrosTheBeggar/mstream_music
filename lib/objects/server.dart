@@ -19,6 +19,14 @@ class Server {
   String storageMode = 'appLocal';
   String? storageBasePath;
 
+  // Optional folder that already holds a copy of this server's library in
+  // `<vpath>/<relative path>` shape, kept current by something other than the
+  // app (Syncthing, rclone, robocopy, a NAS mirror). Files found there count
+  // as local copies for playback and the downloaded badge; the app never
+  // writes to it. Offered on desktop and on the full Android flavor (needs
+  // all-files access, like 'permanent'). null = not set.
+  String? mirrorRoot;
+
   // Runtime-only (never persisted): the live loopback port of this server's iroh
   // tunnel while it is the active server. Set by ServerManager when the tunnel
   // starts; consumed by [effectiveBaseUrl].
@@ -342,6 +350,7 @@ class Server {
             : ((json['saveToSdCard'] == true) ? 'legacyExternal' : 'appLocal'),
         storageBasePath =
             json['storageBasePath'] is String ? json['storageBasePath'] : null,
+        mirrorRoot = json['mirrorRoot'] is String ? json['mirrorRoot'] : null,
         transcodeAvailable =
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
@@ -401,6 +410,7 @@ class Server {
         'allowSelfSigned': allowSelfSigned,
         'storageMode': storageMode,
         'storageBasePath': storageBasePath,
+        'mirrorRoot': mirrorRoot,
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
         'transcodeDefaultBitrate': transcodeDefaultBitrate,

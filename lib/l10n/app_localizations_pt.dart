@@ -1271,6 +1271,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Salvo em uma pasta do cartão SD que você escolher. Pode ficar indisponível se o cartão for removido. Alguns dispositivos não permitem que apps gravem em cartões SD — se a seleção de pasta continuar falhando, use Permanente ou Local do app.';
 
   @override
+  String get mirrorRootLabel => 'Pasta da cópia local (opcional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Uma pasta que já contém uma cópia desta biblioteca, mantida sincronizada por outra ferramenta (Syncthing, rclone, um NAS). Os ficheiros encontrados aí são reproduzidos a partir do disco. A app nunca escreve nela.';
+
+  @override
   String get storageChooseFolder => 'Escolher pasta';
 
   @override

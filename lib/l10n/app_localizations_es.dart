@@ -1275,6 +1275,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guardado en una carpeta de la tarjeta SD que elijas. Puede dejar de estar disponible si se retira la tarjeta. Algunos dispositivos no permiten que las apps escriban en tarjetas SD — si la selección de carpeta sigue fallando, usa Permanente o Local de la app.';
 
   @override
+  String get mirrorRootLabel => 'Carpeta de copia local (opcional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Una carpeta que ya contiene una copia de esta biblioteca, sincronizada por otra herramienta (Syncthing, rclone, un NAS). Los archivos encontrados allí se reproducen desde el disco. La app nunca escribe en ella.';
+
+  @override
   String get storageChooseFolder => 'Elegir carpeta';
 
   @override

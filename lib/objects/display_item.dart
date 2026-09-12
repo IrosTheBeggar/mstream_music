@@ -7,6 +7,7 @@ import 'metadata.dart';
 import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
+import '../util/local_copy.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
@@ -191,11 +192,12 @@ class DisplayItem {
   DisplayItem(
       this.server, this.name, this.type, this.data, this.icon, this.subtext);
 
-  // Re-evaluates whether this file exists under [dir] — the server's already-
-  // resolved download base, so the full path is <dir>/media/<localname>/... —
-  // and updates [downloadProgress] (100 = present, 0 = not). [dir] null means
-  // the location is currently unavailable (SD card out / folder deleted) and is
-  // treated as "no local copy". Also CLEARS a stale badge, so after a server's
+  // Re-evaluates whether a local copy of this file exists — under [dir], the
+  // server's already-resolved download base (<dir>/media/<localname>/...), or
+  // in the server's mirror root — and updates [downloadProgress] (100 =
+  // present, 0 = not). [dir] null means the download location is currently
+  // unavailable (SD card out / folder deleted); only the mirror root is
+  // checked then. Also CLEARS a stale badge, so after a server's
   // download location changes a row that no longer has a copy stops claiming
   // one. A row that's mid-download (1–99%) is left alone.
   //
@@ -207,9 +209,11 @@ class DisplayItem {
     if (type != 'file' || server == null || data == null) return;
     if (downloadProgress > 0 && downloadProgress < 100) return;
     bool present = false;
-    if (dir != null) {
-      present =
-          await File('${dir.path}/media/${server!.localname}${data!}').exists();
+    for (final c in localCopyCandidates(server!, dir, data!)) {
+      if (await File(c).exists()) {
+        present = true;
+        break;
+      }
     }
     downloadProgress = present ? 100 : 0;
   }

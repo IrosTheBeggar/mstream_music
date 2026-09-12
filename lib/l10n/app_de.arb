@@ -330,6 +330,8 @@
   "storageHelpAppLocal": "Innerhalb der App gespeichert. Wird beim Deinstallieren oder Leeren der App gelöscht.",
   "storageHelpPermanent": "In einem von dir gewählten Ordner gespeichert. Übersteht das Deinstallieren der App. Erfordert \"Zugriff auf alle Dateien\".",
   "storageHelpSdCard": "In einem von dir gewählten Ordner auf der SD-Karte gespeichert. Kann nicht mehr verfügbar sein, wenn die Karte entfernt wird. Manche Geräte lassen Apps nicht auf SD-Karten schreiben – falls die Ordnerauswahl immer wieder fehlschlägt, verwende Dauerhaft oder App-intern.",
+  "mirrorRootLabel": "Ordner mit lokaler Kopie (optional)",
+  "mirrorRootHelp": "Ein Ordner, der bereits eine Kopie dieser Bibliothek enthält und von einem anderen Programm synchron gehalten wird (Syncthing, rclone, NAS). Dort gefundene Dateien werden von der Festplatte abgespielt. Die App schreibt nie hinein.",
   "storageChooseFolder": "Ordner wählen",
   "storageNoFolderChosen": "Noch kein Ordner gewählt",
   "storageDownloadFolderLabel": "Download-Ordner",
