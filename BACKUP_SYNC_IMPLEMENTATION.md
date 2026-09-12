@@ -31,7 +31,7 @@ tests + one device smoke); no repo-wide format.
 | S1 | mStream | `sync/manifest` endpoint + `sync` ping flag — **[mStream #984](https://github.com/IrosTheBeggar/mStream/pull/984)** | — | no | 🟢 2d |
 | A1 | app | Mirror root per server (Tier A) — **[#173](https://github.com/IrosTheBeggar/mstream_music/pull/173)** | — | yes (picker row) | 🟢 1–2d |
 | A2 | app | `packages/library_mirror`: index DB + import of existing downloads — **[#174](https://github.com/IrosTheBeggar/mstream_music/pull/174)** (`package:sqlite3` 3.x build hook, no flutter-libs package) | — | no | 🟡 2–3d |
-| A3 | app | Mirror engine + "Keep a full copy" in Manage Server | S1, A2 | yes (one section) | 🔴 5–7d |
+| A3 | app | Mirror engine + "Keep a full copy" — **[#176](https://github.com/IrosTheBeggar/mstream_music/pull/176)** (engine) + **[#177](https://github.com/IrosTheBeggar/mstream_music/pull/177)** (MirrorManager, adapters, Library copy screen; adoption of pre-existing copies) | S1, A2 | yes (Manage Servers ⋮ → Library copy) | 🔴 5–7d |
 | A4 | app | Offline browsing: albums, artists, album songs, art cache | A3 | yes (offline chip) | 🟡 3–4d |
 | A5 | app | Offline: playlists, rated, genres, recent, search (FTS5) | A4 | yes (search offline) | 🟡 3–4d |
 | A6a | app | Rules: album / artist "Keep offline" | A3 | yes | 🟡 2–3d |
