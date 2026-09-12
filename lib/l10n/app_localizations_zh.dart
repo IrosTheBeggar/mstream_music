@@ -1206,6 +1206,13 @@ class AppLocalizationsZh extends AppLocalizations {
       '保存到你在 SD 卡上选择的文件夹。移除卡后可能变得不可用。部分设备不允许应用写入 SD 卡 — 如果文件夹选择持续失败，请使用“永久”或“应用内部”。';
 
   @override
+  String get mirrorRootLabel => '本地副本文件夹（可选）';
+
+  @override
+  String get mirrorRootHelp =>
+      '一个已经包含此音乐库副本的文件夹，由其他工具（Syncthing、rclone、NAS）保持同步。在其中找到的文件将从磁盘播放。应用永远不会向其中写入。';
+
+  @override
   String get storageChooseFolder => '选择文件夹';
 
   @override

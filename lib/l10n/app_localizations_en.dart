@@ -1261,6 +1261,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Saved to a folder on the SD card you choose. May become unavailable if the card is removed. Some devices don\'t let apps write to SD cards — if folder selection keeps failing, use Permanent or App local.';
 
   @override
+  String get mirrorRootLabel => 'Local copy folder (optional)';
+
+  @override
+  String get mirrorRootHelp =>
+      'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.';
+
+  @override
   String get storageChooseFolder => 'Choose folder';
 
   @override

@@ -1275,6 +1275,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Salvato in una cartella della scheda SD a tua scelta. Può diventare non disponibile se la scheda viene rimossa. Alcuni dispositivi non permettono alle app di scrivere sulle schede SD — se la selezione della cartella continua a non riuscire, usa Permanente o Locale dell’app.';
 
   @override
+  String get mirrorRootLabel => 'Cartella della copia locale (facoltativa)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Una cartella che contiene già una copia di questa libreria, tenuta sincronizzata da un altro strumento (Syncthing, rclone, un NAS). I file trovati lì vengono riprodotti dal disco. L\'app non vi scrive mai.';
+
+  @override
   String get storageChooseFolder => 'Scegli cartella';
 
   @override

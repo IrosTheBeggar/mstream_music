@@ -1291,6 +1291,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zapisywane w wybranym folderze na karcie SD. Może stać się niedostępne po wyjęciu karty. Niektóre urządzenia nie pozwalają aplikacjom zapisywać na kartach SD — jeśli wybór folderu wciąż się nie udaje, użyj opcji Trwała lub Lokalna aplikacji.';
 
   @override
+  String get mirrorRootLabel => 'Folder z lokalną kopią (opcjonalnie)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Folder, który już zawiera kopię tej biblioteki, synchronizowany przez inne narzędzie (Syncthing, rclone, NAS). Znalezione tam pliki są odtwarzane z dysku. Aplikacja nigdy do niego nie zapisuje.';
+
+  @override
   String get storageChooseFolder => 'Wybierz folder';
 
   @override

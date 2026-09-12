@@ -1274,6 +1274,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Enregistré dans un dossier de la carte SD que vous choisissez. Peut devenir indisponible si la carte est retirée. Certains appareils n\'autorisent pas les applications à écrire sur les cartes SD — si la sélection du dossier échoue sans cesse, utilisez Permanent ou Local à l\'application.';
 
   @override
+  String get mirrorRootLabel => 'Dossier de copie locale (facultatif)';
+
+  @override
+  String get mirrorRootHelp =>
+      'Un dossier qui contient déjà une copie de cette bibliothèque, synchronisé par un autre outil (Syncthing, rclone, un NAS). Les fichiers qui s\'y trouvent sont lus depuis le disque. L\'application n\'y écrit jamais.';
+
+  @override
   String get storageChooseFolder => 'Choisir un dossier';
 
   @override

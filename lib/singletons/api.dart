@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show File;
 
 import './file_explorer.dart';
 import './server_capabilities.dart';
@@ -9,6 +8,7 @@ import './app_messenger.dart';
 import './log_manager.dart';
 import './settings.dart';
 import '../objects/server.dart';
+import '../util/local_copy.dart';
 import 'auto_dj_manager.dart';
 import '../objects/discovery.dart';
 import '../objects/display_item.dart';
@@ -266,13 +266,11 @@ class ApiManager {
         final artUrl = m?.albumArt != null
             ? buildAlbumArtUrl(useThisServer, m!.albumArt!, compress: 'l')
             : null;
-        // Same on-disk formula as downloadOneFile (serverName + filepath,
-        // concatenated verbatim), so existing downloads are found exactly
-        // where the sweep put them.
-        final localPath = dir == null
-            ? null
-            : '${dir.path}/media/${useThisServer.localname}$p';
-        final isLocal = localPath != null && File(localPath).existsSync();
+        // The download tree (the same on-disk formula the sweep writes with)
+        // or the server's mirror root — see localCopyCandidates.
+        final localPath =
+            firstExistingSync(localCopyCandidates(useThisServer, dir, p));
+        final isLocal = localPath != null;
         items.add(MediaItem(
           // Same transcode-aware stream URL as the rest of the app (honors
           // the /transcode endpoint + codec/bitrate when transcoding is on).

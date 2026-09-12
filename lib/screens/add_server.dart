@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/services.dart';
 import '../widgets/iroh_scanner.dart';
 import '../build_variant.dart';
@@ -99,6 +100,9 @@ class MyCustomFormState extends State<MyCustomForm> {
   // Show/hide toggle for the password field.
   bool _obscurePassword = true;
   String? _storageBasePath;
+  // Optional read-only folder holding a copy of the library in
+  // <vpath>/<rel> shape (see Server.mirrorRoot).
+  String? _mirrorRoot;
   // Browsable volume roots derived in _detectSdCard for the folder picker.
   String? _sharedStorageRoot;
   String? _sdCardRoot;
@@ -154,6 +158,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       _storageMode = s.storageMode;
       _allowSelfSigned = s.allowSelfSigned;
       _storageBasePath = s.storageBasePath;
+      _mirrorRoot = s.mirrorRoot;
       _downloadFolderCtrl.text = s.localname;
       isEdit = true;
       _editingIroh = s.isIroh;
@@ -838,6 +843,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       s.storageMode = _storageMode;
       s.allowSelfSigned = _allowSelfSigned;
       s.storageBasePath = basePath;
+      s.mirrorRoot = _mirrorRoot;
       // checkServer just logged in with the (possibly edited) credentials —
       // keep the fresh token, or every later request would still send the old
       // one (nothing else re-logs-in on a 401). Empty jwt means no login ran
@@ -857,6 +863,7 @@ class MyCustomFormState extends State<MyCustomForm> {
       newServer.storageMode = _storageMode;
       newServer.allowSelfSigned = _allowSelfSigned;
       newServer.storageBasePath = basePath;
+      newServer.mirrorRoot = _mirrorRoot;
       await ServerManager().getServerPaths(newServer);
 
       await ServerManager().addServer(newServer);
@@ -993,6 +1000,34 @@ class MyCustomFormState extends State<MyCustomForm> {
       return;
     }
     setState(() => _storageBasePath = chosen);
+  }
+
+  // The mirror root is offered wherever the app can read an arbitrary
+  // folder: desktop, and the full Android flavor (all-files access — the same
+  // gate as Permanent). Never on iOS or the Play build.
+  bool get _mirrorRootOffered => Platform.isAndroid
+      ? !isPlayBuild
+      : (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
+  Future<void> _chooseMirrorRoot() async {
+    final l = AppLocalizations.of(context);
+    String? chosen;
+    if (Platform.isAndroid) {
+      if (!await _ensureAllFilesAccess()) return;
+      final root = _sharedStorageRoot;
+      if (root == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l.storageNoVolume)));
+        }
+        return;
+      }
+      chosen = await _browseForFolder(root);
+    } else {
+      chosen = await getDirectoryPath();
+    }
+    if (chosen == null || !mounted) return;
+    setState(() => _mirrorRoot = chosen);
   }
 
   Future<bool> _isWritable(String dirPath) async {
@@ -2277,6 +2312,64 @@ class MyCustomFormState extends State<MyCustomForm> {
                           ? VelvetColors.textTertiary
                           : VelvetColors.textPrimary,
                       fontSize: 12),
+                ),
+              ],
+              // Mirror root: a folder some other tool keeps in sync with the
+              // library. Read-only for the app; files found there play from
+              // disk and get the downloaded badge.
+              if (_mirrorRootOffered) ...[
+                SizedBox(height: 16),
+                Text(l.mirrorRootLabel,
+                    style: TextStyle(
+                        color: VelvetColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                SizedBox(height: 6),
+                Text(
+                  l.mirrorRootHelp,
+                  style:
+                      TextStyle(color: VelvetColors.textTertiary, fontSize: 11),
+                ),
+                SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: VelvetColors.textPrimary,
+                      side: BorderSide(color: VelvetColors.border2),
+                      padding:
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(VelvetColors.radiusSmall),
+                      ),
+                    ),
+                    icon: Icon(Icons.folder_open, size: 18),
+                    label: Text(l.storageChooseFolder),
+                    onPressed: submitPending ? null : _chooseMirrorRoot,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _mirrorRoot ?? l.storageNoFolderChosen,
+                        style: TextStyle(
+                            color: _mirrorRoot == null
+                                ? VelvetColors.textTertiary
+                                : VelvetColors.textPrimary,
+                            fontSize: 12),
+                      ),
+                    ),
+                    if (_mirrorRoot != null)
+                      TextButton(
+                        onPressed: submitPending
+                            ? null
+                            : () => setState(() => _mirrorRoot = null),
+                        child: Text(l.clear),
+                      ),
+                  ],
                 ),
               ],
               // No download-folder field on either flavor. The per-server
