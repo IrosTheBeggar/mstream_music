@@ -1,0 +1,23 @@
+name: library_mirror
+description: >-
+  Local library index + mirror engine for mStream Music: a SQLite cache of a
+  server's tracks / albums / artists / playlists and the on-disk state of
+  local copies. Pure Dart (no Flutter imports) so the same code can run
+  headless later (BACKUP_SYNC_IMPLEMENTATION.md §3).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+
+dependencies:
+  # v3 bundles SQLite (with FTS5) through a build hook on every platform the
+  # app ships to, so there is no system library or Flutter-libs package to
+  # manage — and `dart test` / `flutter test` get the same binary.
+  sqlite3: ^3.5.2
+  path: ^1.9.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0
