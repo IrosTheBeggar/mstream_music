@@ -1558,160 +1558,148 @@ class AppLocalizationsZh extends AppLocalizations {
       'Storage permission is needed to read Downloads';
 
   @override
-  String get addServerTabUrl => 'Server URL';
+  String get addServerTabUrl => '服务器地址';
 
   @override
-  String get addServerTabQuickConnect => 'Quick Connect';
+  String get addServerTabQuickConnect => '快速连接';
 
   @override
-  String get irohPairingHeader => 'Connect with a pairing code';
+  String get irohPairingHeader => '使用配对码连接';
 
   @override
-  String get irohPairingBody =>
-      'Enable Remote Access on the server, then paste its pairing code or scan the QR.';
+  String get irohPairingBody => '在服务器上启用“Remote Access”（远程访问），然后粘贴其配对码或扫描二维码。';
 
   @override
-  String get irohPairingCodeLabel => 'Pairing code';
+  String get irohPairingCodeLabel => '配对码';
 
   @override
-  String get irohPairingCodeHint =>
-      'Paste the code from the server Remote Access panel';
+  String get irohPairingCodeHint => '粘贴服务器 Remote Access 面板中的配对码';
 
   @override
-  String get irohShowPairingCode => 'Show pairing code';
+  String get irohShowPairingCode => '显示配对码';
 
   @override
-  String get irohQrBody =>
-      'Scan with the mStream app on another device to connect it to this server, or copy the code and paste it there.';
+  String get irohQrBody => '在另一台设备上用 mStream 应用扫描以连接到此服务器，或复制配对码并在那里粘贴。';
 
   @override
-  String get irohQrCaution =>
-      'Anyone with this code can connect to your server.';
+  String get irohQrCaution => '任何拥有此配对码的人都可以连接到你的服务器。';
 
   @override
-  String get irohScanQr => 'Scan QR';
+  String get irohScanQr => '扫描二维码';
 
   @override
-  String get irohPaste => 'Paste';
+  String get irohPaste => '粘贴';
 
   @override
-  String get irohTestConnection => 'Test connection';
+  String get irohTestConnection => '测试连接';
 
   @override
-  String get irohTesting => 'Testing…';
+  String get irohTesting => '正在测试…';
 
   @override
-  String get irohScannerTitle => 'Scan pairing QR';
+  String get irohScannerTitle => '扫描配对二维码';
 
   @override
-  String get irohQrAndroidOnly =>
-      'QR scanning isn\'t available on this device.';
+  String get irohQrAndroidOnly => '此设备不支持扫描二维码。';
 
   @override
-  String get irohAndroidOnly =>
-      'Quick Connect isn\'t available on this device.';
+  String get irohAndroidOnly => '此设备不支持快速连接。';
 
   @override
-  String get irohCameraPermission =>
-      'Camera permission is needed to scan a code.';
+  String get irohCameraPermission => '扫描二维码需要相机权限。';
 
   @override
-  String get irohPasteFirst => 'Paste or scan a pairing code first.';
+  String get irohPasteFirst => '请先粘贴或扫描配对码。';
 
   @override
-  String get irohTestFirst => 'Test the connection first.';
+  String get irohTestFirst => '请先测试连接。';
 
   @override
-  String get irohTestConnected => 'Connected through the iroh tunnel';
+  String get irohTestConnected => '已通过 iroh 隧道连接';
 
   @override
   String irohTestConnectedVersion(String version) {
-    return 'Connected through the iroh tunnel — mStream v$version';
+    return '已通过 iroh 隧道连接 — mStream v$version';
   }
 
   @override
-  String get irohPathSuffixDirect => ' · direct';
+  String get irohPathSuffixDirect => ' · 直连';
 
   @override
-  String get irohPathSuffixRelay => ' · via relay';
+  String get irohPathSuffixRelay => ' · 经中继';
 
   @override
-  String get irohTunnelTimeout =>
-      'Tunnel opened but the server did not respond in time.';
+  String get irohTunnelTimeout => '隧道已打开，但服务器未及时响应。';
 
   @override
   String irohTunnelTestFailed(String error) {
-    return 'Tunnel test failed: $error';
+    return '隧道测试失败：$error';
   }
 
   @override
-  String get irohSignInHeader => 'Sign in';
+  String get irohSignInHeader => '登录';
 
   @override
-  String get irohSigningIn => 'Signing in…';
+  String get irohSigningIn => '正在登录…';
 
   @override
-  String get irohSignInSave => 'Sign in & save';
+  String get irohSignInSave => '登录并保存';
 
   @override
-  String get irohSignInTimeout => 'Sign-in timed out.';
+  String get irohSignInTimeout => '登录超时。';
 
   @override
   String irohSignInFailed(String error) {
-    return 'Sign-in failed: $error';
+    return '登录失败：$error';
   }
 
   @override
   String irohSignInFailedHttp(int status) {
-    return 'Sign-in failed (HTTP $status). Check your username and password.';
+    return '登录失败（HTTP $status）。请检查用户名和密码。';
   }
 
   @override
-  String get irohBannerConnecting => 'Connecting to server…';
+  String get irohBannerConnecting => '正在连接服务器…';
 
   @override
-  String get irohBannerReconnecting => 'Reconnecting to server…';
+  String get irohBannerReconnecting => '正在重新连接服务器…';
 
   @override
-  String get irohBannerDisconnected => 'Disconnected from server.';
+  String get irohBannerDisconnected => '已与服务器断开连接。';
 
   @override
-  String get irohBannerRelay => 'Connected via relay — slower path.';
+  String get irohBannerRelay => '已通过中继连接 — 路径较慢。';
 
   @override
-  String get irohBannerRepair =>
-      'Server pairing changed — re-pair to reconnect.';
+  String get irohBannerRepair => '服务器配对已更改 — 请重新配对以重新连接。';
 
   @override
-  String get irohRepairAction => 'Re-pair';
+  String get irohRepairAction => '重新配对';
 
   @override
-  String get irohRetry => 'Retry';
+  String get irohRetry => '重试';
 
   @override
-  String get irohRepairTitle => 'Re-pair server';
+  String get irohRepairTitle => '重新配对服务器';
 
   @override
   String get irohRepairBody =>
-      'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.';
+      '此服务器的配对码已更改（其密钥已轮换）。请从服务器的 Remote Access 面板粘贴或扫描新的配对码。';
 
   @override
-  String get irohRepairFailed =>
-      'Couldn\'t connect with that code — check it and try again.';
+  String get irohRepairFailed => '无法使用该配对码连接 — 请检查后重试。';
 
   @override
-  String get irohPathDirect => 'Direct';
+  String get irohPathDirect => '直连';
 
   @override
-  String get irohPathRelay => 'Relay';
+  String get irohPathRelay => '中继';
 
   @override
-  String get irohCastUnavailable =>
-      'Casting to external devices isn\'t available for peer-to-peer (iroh) servers — playback stays on this device.';
+  String get irohCastUnavailable => '点对点 (iroh) 服务器不支持投放到外部设备 — 播放将保留在此设备上。';
 
   @override
-  String get irohShareUnavailable =>
-      'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+  String get irohShareUnavailable => '点对点 (iroh) 服务器不支持分享 — 它们没有可链接的公开地址。';
 
   @override
   String get discoverTitle => '发现';

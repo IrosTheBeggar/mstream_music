@@ -169,7 +169,8 @@ Future<void> _startApp() async {
         // The shared list, not the generated one alone: material_ui needs its own
         // global delegates or every non-English device gets a grey screen (#169).
         localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+        // English first, so an unsupported device language falls back to English.
+        supportedLocales: appSupportedLocales,
         debugShowCheckedModeBanner: false,
       );
     },

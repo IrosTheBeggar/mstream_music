@@ -41,7 +41,8 @@ import 'package:mstream_music/singletons/browser_list.dart';
 
 Widget testApp() => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+      // English first, so an unsupported device language falls back to English.
+      supportedLocales: appSupportedLocales,
       home: MStreamApp(),
     );
 
