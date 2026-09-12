@@ -11,6 +11,7 @@ import './app_messenger.dart';
 import './browser_list.dart';
 import './federation_inbox_alerts.dart';
 import './log_manager.dart';
+import './library_index.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
@@ -2062,6 +2063,11 @@ class ServerManager {
     // the same sweep.
     final orphans = federatedChildren(removeThisServer);
     serverList.removeWhere(orphans.contains);
+    // The index's rows for the removed servers go too; the files on disk are
+    // removeSyncedFiles' business, as before.
+    for (final gone in [removeThisServer, ...orphans]) {
+      LibraryIndexManager().removeServer(gone.localname);
+    }
     _serverListStream.sink.add(serverList);
     // Deleting a server also deletes its queued tracks — they can't stream
     // anymore and their metadata context (ratings, art, URL re-resolution)

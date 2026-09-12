@@ -11,6 +11,7 @@ import 'package:mstream_music/singletons/migration_manager.dart';
 import 'package:mstream_music/singletons/log_manager.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/singletons/auto_download_ledger.dart';
+import 'package:mstream_music/singletons/library_index.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -115,6 +116,9 @@ class DownloadManager {
               dt.dataPath != null) {
             MediaManager().audioHandler.onTrackDownloaded(
                 dt.serverName!, dt.dataPath!, dt.localPath!);
+            LibraryIndexManager().recordDownloaded(
+                dt.serverName!, dt.dataPath!, dt.localPath!,
+                auto: dt.auto);
             // Record auto-downloads in the ledger and enforce the cap. Only
             // here (a fresh auto-download landing, i.e. online) — never on
             // startup or a connectivity change, so waking up offline can't
@@ -480,6 +484,7 @@ class DownloadManager {
       try {
         final f = File(v.localPath);
         if (f.existsSync()) f.deleteSync();
+        LibraryIndexManager().forgetLocalPath(v.server, v.localPath);
       } catch (e) {
         appLog('[auto-dl] evict delete failed: $e');
       }
@@ -627,6 +632,8 @@ class DownloadManager {
       MediaManager()
           .audioHandler
           .onTrackDownloaded(serverName, filepath, existing);
+      // Manual wins in the index too (the ledger forgot it above).
+      if (!auto) LibraryIndexManager().promoteToManual(serverName, filepath);
       return;
     }
     if (_inFlight.contains(downloadDirectory)) {

@@ -37,6 +37,7 @@ import 'singletons/media.dart';
 import 'singletons/federation_inbox_alerts.dart';
 import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
+import 'singletons/library_index.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
@@ -105,6 +106,9 @@ Future<void> _startApp() async {
   // handler's _init() can read persisted EQ state when it attaches the
   // AndroidEqualizer to the player.
   await SettingsManager().load();
+  // Local library index (SQLite). Milliseconds to open, and optional: a
+  // load failure leaves it unavailable and nothing user-facing changes yet.
+  await LibraryIndexManager().open();
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();
@@ -120,6 +124,9 @@ Future<void> _startApp() async {
   // the keep-queue-offline sweep runs from the handler's queue listener in
   // those sessions, and a completed download must still patch the queue.
   DownloadManager().initDownloader();
+  // One-time import of the downloads that predate the index — off the
+  // critical path; the tree walk runs on a worker isolate.
+  unawaited(LibraryIndexManager().importExistingDownloads());
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,

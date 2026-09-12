@@ -88,6 +88,12 @@ dependencies:
   # model (built by rust/viz_decoder/build-ios.sh).
   viz_decoder_native:
     path: packages/viz_decoder_native
+  # In-repo local library index: a SQLite cache of a server's library plus
+  # the on-disk state of local copies — the base for the mirror engine and
+  # offline browsing (BACKUP_SYNC_IMPLEMENTATION.md). Pure Dart; SQLite
+  # itself comes bundled through package:sqlite3's build hook.
+  library_mirror:
+    path: packages/library_mirror
   material_ui: ^1.1.0
   # Direct dependency (material_ui already pulls it in) for its
   # GlobalCupertinoLocalizations - see lib/l10n/localizations_delegates.dart.
