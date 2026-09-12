@@ -46,7 +46,8 @@ void main() {
   Future<void> pumpEditScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+      // English first, so an unsupported device language falls back to English.
+      supportedLocales: appSupportedLocales,
       home: const Scaffold(body: SizedBox()),
     ));
     await tester.pumpAndSettle();

@@ -22,7 +22,8 @@ void main() {
       MaterialApp(
         locale: locale,
         localizationsDelegates: delegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+        // English first, so an unsupported device language falls back to English.
+        supportedLocales: appSupportedLocales,
         home: Builder(
           builder: (context) => Text(
             '${MaterialLocalizations.of(context).openAppDrawerTooltip}|'

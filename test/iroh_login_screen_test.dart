@@ -18,7 +18,8 @@ void main() {
   }) async {
     await tester.pumpWidget(MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+      // English first, so an unsupported device language falls back to English.
+      supportedLocales: appSupportedLocales,
       home: IrohLoginScreen(
         title: 'Sign in',
         validate: validate ?? (u, p) async => null,

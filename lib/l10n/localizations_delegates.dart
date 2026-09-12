@@ -23,3 +23,16 @@ const List<LocalizationsDelegate<dynamic>> appLocalizationsDelegates = [
   GlobalMaterialLocalizations.delegate,
   GlobalCupertinoLocalizations.delegate,
 ];
+
+/// The locales to hand MaterialApp: English first, then the rest in their
+/// generated order.
+///
+/// AppLocalizations.supportedLocales is generated alphabetically (de, en, es,
+/// …), and Flutter's locale resolution falls back to the FIRST supported
+/// locale when none of the device's languages is supported — so a Dutch or
+/// Swedish phone used to get a German UI. English is the source language and
+/// the only one every string exists in, so it is the fallback.
+final List<Locale> appSupportedLocales = List.unmodifiable(<Locale>[
+  const Locale('en'),
+  ...AppLocalizations.supportedLocales.where((l) => l.languageCode != 'en'),
+]);

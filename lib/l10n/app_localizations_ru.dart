@@ -1681,160 +1681,162 @@ class AppLocalizationsRu extends AppLocalizations {
       'Storage permission is needed to read Downloads';
 
   @override
-  String get addServerTabUrl => 'Server URL';
+  String get addServerTabUrl => 'URL сервера';
 
   @override
-  String get addServerTabQuickConnect => 'Quick Connect';
+  String get addServerTabQuickConnect => 'Быстрое подключение';
 
   @override
-  String get irohPairingHeader => 'Connect with a pairing code';
+  String get irohPairingHeader => 'Подключение по коду сопряжения';
 
   @override
   String get irohPairingBody =>
-      'Enable Remote Access on the server, then paste its pairing code or scan the QR.';
+      'Включите «Remote Access» (удалённый доступ) на сервере, затем вставьте его код сопряжения или отсканируйте QR-код.';
 
   @override
-  String get irohPairingCodeLabel => 'Pairing code';
+  String get irohPairingCodeLabel => 'Код сопряжения';
 
   @override
   String get irohPairingCodeHint =>
-      'Paste the code from the server Remote Access panel';
+      'Вставьте код из панели Remote Access сервера';
 
   @override
-  String get irohShowPairingCode => 'Show pairing code';
+  String get irohShowPairingCode => 'Показать код сопряжения';
 
   @override
   String get irohQrBody =>
-      'Scan with the mStream app on another device to connect it to this server, or copy the code and paste it there.';
+      'Отсканируйте его приложением mStream на другом устройстве, чтобы подключить его к этому серверу, или скопируйте код и вставьте там.';
 
   @override
   String get irohQrCaution =>
-      'Anyone with this code can connect to your server.';
+      'Любой, у кого есть этот код, может подключиться к вашему серверу.';
 
   @override
-  String get irohScanQr => 'Scan QR';
+  String get irohScanQr => 'Сканировать QR';
 
   @override
-  String get irohPaste => 'Paste';
+  String get irohPaste => 'Вставить';
 
   @override
-  String get irohTestConnection => 'Test connection';
+  String get irohTestConnection => 'Проверить подключение';
 
   @override
-  String get irohTesting => 'Testing…';
+  String get irohTesting => 'Проверка…';
 
   @override
-  String get irohScannerTitle => 'Scan pairing QR';
+  String get irohScannerTitle => 'Сканировать QR-код сопряжения';
 
   @override
   String get irohQrAndroidOnly =>
-      'QR scanning isn\'t available on this device.';
+      'Сканирование QR недоступно на этом устройстве.';
 
   @override
   String get irohAndroidOnly =>
-      'Quick Connect isn\'t available on this device.';
+      'Быстрое подключение недоступно на этом устройстве.';
 
   @override
   String get irohCameraPermission =>
-      'Camera permission is needed to scan a code.';
+      'Для сканирования кода нужно разрешение на использование камеры.';
 
   @override
-  String get irohPasteFirst => 'Paste or scan a pairing code first.';
+  String get irohPasteFirst =>
+      'Сначала вставьте или отсканируйте код сопряжения.';
 
   @override
-  String get irohTestFirst => 'Test the connection first.';
+  String get irohTestFirst => 'Сначала проверьте подключение.';
 
   @override
-  String get irohTestConnected => 'Connected through the iroh tunnel';
+  String get irohTestConnected => 'Подключено через туннель iroh';
 
   @override
   String irohTestConnectedVersion(String version) {
-    return 'Connected through the iroh tunnel — mStream v$version';
+    return 'Подключено через туннель iroh — mStream v$version';
   }
 
   @override
-  String get irohPathSuffixDirect => ' · direct';
+  String get irohPathSuffixDirect => ' · напрямую';
 
   @override
-  String get irohPathSuffixRelay => ' · via relay';
+  String get irohPathSuffixRelay => ' · через ретранслятор';
 
   @override
   String get irohTunnelTimeout =>
-      'Tunnel opened but the server did not respond in time.';
+      'Туннель открыт, но сервер не ответил вовремя.';
 
   @override
   String irohTunnelTestFailed(String error) {
-    return 'Tunnel test failed: $error';
+    return 'Проверка туннеля не удалась: $error';
   }
 
   @override
-  String get irohSignInHeader => 'Sign in';
+  String get irohSignInHeader => 'Вход';
 
   @override
-  String get irohSigningIn => 'Signing in…';
+  String get irohSigningIn => 'Выполняется вход…';
 
   @override
-  String get irohSignInSave => 'Sign in & save';
+  String get irohSignInSave => 'Войти и сохранить';
 
   @override
-  String get irohSignInTimeout => 'Sign-in timed out.';
+  String get irohSignInTimeout => 'Время ожидания входа истекло.';
 
   @override
   String irohSignInFailed(String error) {
-    return 'Sign-in failed: $error';
+    return 'Не удалось войти: $error';
   }
 
   @override
   String irohSignInFailedHttp(int status) {
-    return 'Sign-in failed (HTTP $status). Check your username and password.';
+    return 'Не удалось войти (HTTP $status). Проверьте имя пользователя и пароль.';
   }
 
   @override
-  String get irohBannerConnecting => 'Connecting to server…';
+  String get irohBannerConnecting => 'Подключение к серверу…';
 
   @override
-  String get irohBannerReconnecting => 'Reconnecting to server…';
+  String get irohBannerReconnecting => 'Повторное подключение к серверу…';
 
   @override
-  String get irohBannerDisconnected => 'Disconnected from server.';
+  String get irohBannerDisconnected => 'Соединение с сервером разорвано.';
 
   @override
-  String get irohBannerRelay => 'Connected via relay — slower path.';
+  String get irohBannerRelay =>
+      'Подключено через ретранслятор — более медленный путь.';
 
   @override
   String get irohBannerRepair =>
-      'Server pairing changed — re-pair to reconnect.';
+      'Сопряжение сервера изменилось — выполните его заново, чтобы переподключиться.';
 
   @override
-  String get irohRepairAction => 'Re-pair';
+  String get irohRepairAction => 'Сопрячь заново';
 
   @override
-  String get irohRetry => 'Retry';
+  String get irohRetry => 'Повторить';
 
   @override
-  String get irohRepairTitle => 'Re-pair server';
+  String get irohRepairTitle => 'Повторное сопряжение сервера';
 
   @override
   String get irohRepairBody =>
-      'This server\'s pairing code changed (its secret was rotated). Paste or scan the new code from the server\'s Remote Access panel.';
+      'Код сопряжения этого сервера изменился (его секрет был обновлён). Вставьте или отсканируйте новый код из панели Remote Access сервера.';
 
   @override
   String get irohRepairFailed =>
-      'Couldn\'t connect with that code — check it and try again.';
+      'Не удалось подключиться с этим кодом — проверьте его и попробуйте снова.';
 
   @override
-  String get irohPathDirect => 'Direct';
+  String get irohPathDirect => 'Напрямую';
 
   @override
-  String get irohPathRelay => 'Relay';
+  String get irohPathRelay => 'Ретранслятор';
 
   @override
   String get irohCastUnavailable =>
-      'Casting to external devices isn\'t available for peer-to-peer (iroh) servers — playback stays on this device.';
+      'Трансляция на внешние устройства недоступна для одноранговых (iroh) серверов — воспроизведение остаётся на этом устройстве.';
 
   @override
   String get irohShareUnavailable =>
-      'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.';
+      'Функция «Поделиться» недоступна для одноранговых (iroh) серверов — у них нет публичного URL для ссылки.';
 
   @override
   String get discoverTitle => 'Открытия';
