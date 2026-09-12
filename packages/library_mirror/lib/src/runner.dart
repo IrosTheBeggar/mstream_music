@@ -138,6 +138,16 @@ class MirrorRunner {
         for (final t in pl.downloads) (t, false),
         for (final t in pl.replaces) (t, true),
       ];
+      // Copies the mirror did not write: keep them if the bytes check out
+      // (counted as unchanged), otherwise they join the replace queue.
+      for (final a in pl.adoptions) {
+        if (cancelled()) break;
+        if (await _adopt(c, a)) {
+          unchanged++;
+        } else {
+          jobs.add((a.remote, true));
+        }
+      }
       var next = 0;
       var done = 0;
       Future<void> worker() async {
@@ -324,6 +334,28 @@ class MirrorRunner {
       ));
       rethrow;
     }
+  }
+
+  /// Verifies an existing copy against the server's row — size, and the
+  /// whole-file MD5 where the server's hash is one — then stamps the server
+  /// mtime and records the hash so later runs compare it like any other.
+  /// False when it does not check out (or is gone): the caller replaces it.
+  Future<bool> _adopt(MirrorConfig c, Adoption a) async {
+    final t = a.remote;
+    final f = File(a.local.localPath);
+    if (!await f.exists()) return false;
+    final size = await f.length();
+    if (t.size != null && size != t.size) return false;
+    if (t.hash != null && size < kFullHashMaxBytes) {
+      final digest = (await md5.bind(f.openRead()).first).toString();
+      if (digest != t.hash) return false;
+    }
+    if (t.modified != null) {
+      await f.setLastModified(DateTime.fromMillisecondsSinceEpoch(t.modified!));
+    }
+    index.upsertLocal(
+        _row(c, t, a.local.localPath, size: size, origin: a.local.origin));
+    return true;
   }
 
   LocalFile _row(MirrorConfig c, RemoteTrack t, String localPath,

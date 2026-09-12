@@ -205,6 +205,39 @@ void main() {
     expect(ix.localFile('s', '/music/A/user.mp3')!.origin, LocalOrigin.manual);
   });
 
+  test('pre-existing copies are adopted after verification, or replaced when the bytes differ', () async {
+    // Two imported rows (no hash, landing-time mtime): one genuine, one a
+    // same-size file with other bytes.
+    final good = local('/music/A/1.mp3');
+    File(good).createSync(recursive: true);
+    File(good).writeAsStringSync('one');
+    final bad = local('/music/A/2.mp3');
+    File(bad).writeAsStringSync('tw0');
+    for (final (path, lp) in [('/music/A/1.mp3', good), ('/music/A/2.mp3', bad)]) {
+      ix.upsertLocal(LocalFile(server: 's', path: path, localPath: lp, state: LocalState.ok,
+          origin: LocalOrigin.manual, size: 3, mtime: 1234567890000));
+    }
+    final run = await runner().run(cfg);
+    expect(run.downloaded, 1, reason: '/music/B/3.mp3 only');
+    expect(run.replaced, 1, reason: 'the corrupted one');
+    expect(run.unchanged, 1, reason: 'the adopted one');
+    expect(dl.calls, isNot(contains('/music/A/1.mp3')));
+    final adopted = ix.localFile('s', '/music/A/1.mp3')!;
+    expect(adopted.origin, LocalOrigin.manual, reason: 'ownership is kept');
+    expect(adopted.hash, md5.convert(utf8.encode('one')).toString());
+    expect(adopted.mtime, 1700000000000);
+    expect((File(good).lastModifiedSync().millisecondsSinceEpoch - 1700000000000).abs(), lessThan(2000));
+    expect(read('/music/A/2.mp3'), 'two');
+    expect(ix.localFile('s', '/music/A/2.mp3')!.origin, LocalOrigin.manual,
+        reason: 'a replace keeps the row\'s origin too');
+
+    // The next run compares like any other row: nothing to do.
+    dl.calls.clear();
+    final again = await runner().run(cfg);
+    expect(dl.calls, isEmpty);
+    expect(again.unchanged, 3);
+  });
+
   test('per-file failures are counted and recorded, never fatal; temp files are cleaned up', () async {
     dl.failFor.add('/music/A/1.mp3');
     dl.corruptFor.add('/music/A/2.mp3');

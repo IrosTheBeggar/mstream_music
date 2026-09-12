@@ -1298,6 +1298,75 @@ class AppLocalizationsPl extends AppLocalizations {
       'Folder, który już zawiera kopię tej biblioteki, synchronizowany przez inne narzędzie (Syncthing, rclone, NAS). Znalezione tam pliki są odtwarzane z dysku. Aplikacja nigdy do niego nie zapisuje.';
 
   @override
+  String get libraryCopyTitle => 'Kopia biblioteki';
+
+  @override
+  String get libraryCopyKeepSection =>
+      'Przechowuj pełną kopię na tym urządzeniu';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Każdy utwór jest pobierany w oryginalnej jakości i utrzymywany w synchronizacji: nowe pliki są dodawane, zmienione zastępowane, a usunięte na serwerze trafiają na jakiś czas do folderu kosza.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'Ten serwer nie oferuje synchronizacji biblioteki. Wymagany jest mStream 6.27 lub nowszy.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'Nie zgłoszono jeszcze żadnych bibliotek — otwórz serwer raz i wróć tutaj.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Jeszcze nie zsynchronizowano';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Ostatnia synchronizacja $when · $files plików · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Synchronizowanie… $done z $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Sprawdzanie serwera…';
+
+  @override
+  String get libraryCopySyncNow => 'Synchronizuj teraz';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return 'Nieudane pliki: $n';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Nieudane pliki';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'Ostatnia synchronizacja nie powiodła się: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Przechowuj usunięte pliki przez';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n dni';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Bezterminowo';
+
+  @override
+  String get libraryCopyWifiOnly => 'Tylko przez Wi-Fi';
+
+  @override
+  String get libraryCopyDesktopNote =>
+      'Synchronizuje, gdy aplikacja jest otwarta.';
+
+  @override
   String get storageChooseFolder => 'Wybierz folder';
 
   @override

@@ -1268,6 +1268,73 @@ class AppLocalizationsEn extends AppLocalizations {
       'A folder that already holds a copy of this library, kept in sync by another tool (Syncthing, rclone, a NAS). Files found there play from disk. The app never writes to it.';
 
   @override
+  String get libraryCopyTitle => 'Library copy';
+
+  @override
+  String get libraryCopyKeepSection => 'Keep a full copy on this device';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Every track is downloaded in original quality and kept in sync: new files arrive, changed files are replaced, and files deleted on the server move to a trash folder for a while.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'This server does not offer library sync. It needs mStream 6.27 or newer.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'No libraries reported yet — open the server once, then come back.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Not synced yet';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Last synced $when · $files files · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'Syncing… $done of $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'Checking the server…';
+
+  @override
+  String get libraryCopySyncNow => 'Sync now';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n files failed';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Failed files';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'Last sync failed: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Keep deleted files for';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n days';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Forever';
+
+  @override
+  String get libraryCopyWifiOnly => 'Wi-Fi only';
+
+  @override
+  String get libraryCopyDesktopNote => 'Syncs while the app is open.';
+
+  @override
   String get storageChooseFolder => 'Choose folder';
 
   @override

@@ -25,6 +25,7 @@ import '../singletons/browser_list.dart';
 import '../singletons/migration_manager.dart';
 import '../singletons/downloads.dart';
 import '../theme/velvet_theme.dart';
+import '../util/format_bytes.dart';
 import 'iroh_login_screen.dart';
 
 class AddServerScreen extends StatelessWidget {
@@ -640,7 +641,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
-            child: Text(l.storageMigrateBody(count, _formatBytes(bytes)),
+            child: Text(l.storageMigrateBody(count, formatBytes(bytes)),
                 style:
                     TextStyle(color: VelvetColors.textSecondary, fontSize: 13)),
           ),
@@ -654,7 +655,7 @@ class MyCustomFormState extends State<MyCustomForm> {
                       size: 16, color: VelvetColors.warning),
                   SizedBox(width: 6),
                   Expanded(
-                    child: Text(l.storageMigrateNoSpace(_formatBytes(free)),
+                    child: Text(l.storageMigrateNoSpace(formatBytes(free)),
                         style: TextStyle(
                             color: VelvetColors.warning, fontSize: 12)),
                   ),
@@ -726,15 +727,6 @@ class MyCustomFormState extends State<MyCustomForm> {
           style: TextStyle(color: VelvetColors.textTertiary, fontSize: 12)),
       onTap: () => Navigator.of(ctx).pop(value),
     );
-  }
-
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
   }
 
   // Collapses a typed folder name to a single safe path segment: strips path

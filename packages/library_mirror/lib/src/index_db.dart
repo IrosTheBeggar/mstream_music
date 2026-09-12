@@ -330,10 +330,27 @@ class LibraryIndex {
         [server, server, prefix.length, prefix]);
   }
 
-  int localCount(String server, {String? origin}) => _db.select(
+  int localCount(String server, {String? origin, String? state}) => _db.select(
       'SELECT COUNT(*) AS n FROM local_files WHERE server = ? '
-      'AND (? IS NULL OR origin = ?)',
-      [server, origin, origin]).first['n'] as int;
+      'AND (? IS NULL OR origin = ?) AND (? IS NULL OR state = ?)',
+      [server, origin, origin, state, state]).first['n'] as int;
+
+  /// Bytes on disk for [server]'s rows (by [origin] when given), from the
+  /// sizes recorded at verification time.
+  int localBytes(String server, {String? origin}) => _db.select(
+      'SELECT COALESCE(SUM(size), 0) AS b FROM local_files WHERE server = ? '
+      "AND state = 'ok' AND (? IS NULL OR origin = ?)",
+      [server, origin, origin]).first['b'] as int;
+
+  /// Rows whose last transfer failed, with their error, for the status
+  /// screen.
+  List<LocalFile> localFailed(String server) => [
+        for (final r in _db.select(
+            "SELECT * FROM local_files WHERE server = ? AND state = 'failed' "
+            'ORDER BY path',
+            [server]))
+          LocalFile.fromRow(r)
+      ];
 
   /// Oldest-first by verification time — the keep-queue-offline eviction
   /// order once that ledger moves here (A8).

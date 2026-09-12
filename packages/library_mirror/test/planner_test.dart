@@ -13,10 +13,12 @@ LocalFile lf(String path,
         int? size = 1000,
         int? mtime = t0,
         String? hash,
+        bool noHash = false,
         String quality = 'original'}) =>
     LocalFile(
         server: 's', path: path, localPath: '/dl/media/s$path', state: state,
-        origin: origin, size: size, mtime: mtime, hash: hash ?? 'h$path', quality: quality);
+        origin: origin, size: size, mtime: mtime,
+        hash: noHash ? null : (hash ?? 'h$path'), quality: quality);
 
 Plan run({List<RemoteTrack> remote = const [], List<LocalFile> local = const [],
         Set<String>? wanted, PlanOptions options = const PlanOptions()}) =>
@@ -59,6 +61,20 @@ void main() {
       final p = run(remote: [rt('/m/a', size: null, modified: null)],
           local: [lf('/m/a', size: null, mtime: 5)]);
       expect(p.unchanged, 1);
+    });
+
+    test('a copy without a recorded hash is adopted when sizes agree, replaced when not', () {
+      final p = run(remote: [rt('/m/a'), rt('/m/b', size: 2000), rt('/m/c', size: null)], local: [
+        lf('/m/a', noHash: true, mtime: 5, origin: LocalOrigin.manual),
+        lf('/m/b', noHash: true, origin: LocalOrigin.manual),
+        lf('/m/c', noHash: true, size: null),
+      ]);
+      expect(p.adoptions.map((a) => a.remote.path), unorderedEquals(['/m/a', '/m/c']),
+          reason: 'mtime is when it landed, not the server\'s — size decides');
+      expect(p.adoptions.first.local.origin, LocalOrigin.manual);
+      expect(p.replaces.single.path, '/m/b');
+      expect(p.downloads, isEmpty);
+      expect(p.hasWork, isTrue);
     });
 
     test('a failed or stale local row is fetched again', () {

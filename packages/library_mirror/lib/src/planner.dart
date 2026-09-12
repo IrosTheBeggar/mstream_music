@@ -30,10 +30,20 @@ class Rename {
   const Rename(this.from, this.to);
 }
 
+/// A copy the mirror did not write (an imported or manual download) whose
+/// size matches the server's: verified and stamped in place, never
+/// re-downloaded.
+class Adoption {
+  final RemoteTrack remote;
+  final LocalFile local;
+  const Adoption(this.remote, this.local);
+}
+
 class Plan {
   final List<RemoteTrack> downloads;
   final List<RemoteTrack> replaces;
   final List<Rename> renames;
+  final List<Adoption> adoptions;
   final List<LocalFile> trashes;
 
   /// Wanted paths that would collide on a case-folding filesystem. Skipped,
@@ -49,6 +59,7 @@ class Plan {
     required this.downloads,
     required this.replaces,
     required this.renames,
+    required this.adoptions,
     required this.trashes,
     required this.conflicts,
     required this.unchanged,
@@ -59,6 +70,7 @@ class Plan {
       downloads.isNotEmpty ||
       replaces.isNotEmpty ||
       renames.isNotEmpty ||
+      adoptions.isNotEmpty ||
       trashes.isNotEmpty;
 }
 
@@ -78,10 +90,13 @@ bool mtimesAgree(int deltaMs, PlanOptions o) {
 /// Rules, per wanted path: a case-folded duplicate is a conflict; no usable
 /// local copy is a download — unless a mirror-owned file with the same
 /// content hash sits at a path the server no longer lists, which is a
-/// rename; a size or mtime disagreement is a replace; otherwise unchanged.
-/// Then, unless the server is scanning, mirror-owned rows the server dropped
-/// or no rule wants are trashed. Manual, auto and external copies are never
-/// trashed or moved — the mirror only ever removes what it created.
+/// rename; a copy without a recorded hash (imported or downloaded by hand,
+/// so its mtime is when it landed, not the server's) is adopted when the
+/// sizes agree and replaced when they differ; otherwise a size or mtime
+/// disagreement is a replace, and the rest is unchanged. Then, unless the
+/// server is scanning, mirror-owned rows the server dropped or no rule wants
+/// are trashed. Manual, auto and external copies are never trashed or moved
+/// — the mirror only ever removes what it created.
 Plan plan({
   required Iterable<RemoteTrack> remote,
   required Iterable<LocalFile> local,
@@ -115,6 +130,7 @@ Plan plan({
   final downloads = <RemoteTrack>[];
   final replaces = <RemoteTrack>[];
   final renames = <Rename>[];
+  final adoptions = <Adoption>[];
   final claimed = <String>{};
   var unchanged = 0;
   var bytes = 0;
@@ -131,6 +147,13 @@ Plan plan({
       } else {
         downloads.add(r);
         bytes += r.size ?? 0;
+      }
+    } else if (l.hash == null) {
+      if (r.size != null && l.size != null && r.size != l.size) {
+        replaces.add(r);
+        bytes += (r.size ?? 0) + (l.size ?? 0);
+      } else {
+        adoptions.add(Adoption(r, l));
       }
     } else if (_changed(r, l, options)) {
       replaces.add(r);
@@ -154,6 +177,7 @@ Plan plan({
     downloads: downloads,
     replaces: replaces,
     renames: renames,
+    adoptions: adoptions,
     trashes: trashes,
     conflicts: conflicts.toList()..sort(),
     unchanged: unchanged,

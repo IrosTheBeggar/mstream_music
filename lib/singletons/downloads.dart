@@ -12,6 +12,7 @@ import 'package:mstream_music/singletons/log_manager.dart';
 import 'package:mstream_music/singletons/settings.dart';
 import 'package:mstream_music/singletons/auto_download_ledger.dart';
 import 'package:mstream_music/singletons/library_index.dart';
+import 'package:mstream_music/singletons/mirror_manager.dart';
 import 'package:mstream_music/l10n/app_localizations.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
@@ -95,6 +96,13 @@ class DownloadManager {
   }
 
   Future<void> _onUpdate(TaskUpdate update) async {
+    // The mirror's transfers live in their own group and complete into a
+    // temp tree the runner owns — hand them over instead of looking for a
+    // tracker that was never registered.
+    if (update.task.group == kMirrorGroup) {
+      MirrorManager().onTaskUpdate(update);
+      return;
+    }
     final DownloadTracker? dt = downloadMap[update.task.taskId];
     if (dt == null) return;
 

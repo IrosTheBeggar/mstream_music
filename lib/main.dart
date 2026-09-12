@@ -38,6 +38,7 @@ import 'singletons/federation_inbox_alerts.dart';
 import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'singletons/library_index.dart';
+import 'singletons/mirror_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
@@ -127,6 +128,9 @@ Future<void> _startApp() async {
   // One-time import of the downloads that predate the index — off the
   // critical path; the tree walk runs on a worker isolate.
   unawaited(LibraryIndexManager().importExistingDownloads());
+  // Library copy: schedules the mirror runs (2 min after boot, then every
+  // 6 h while the app is open) and owns the mirror group's transfers.
+  unawaited(MirrorManager().init());
   // Saved playlists + AutoDJ config aren't needed for the first frame, and both
   // are independent pure-disk reads — start them off the critical path so two
   // sequential disk round-trips don't delay first paint. Both are stream-backed,

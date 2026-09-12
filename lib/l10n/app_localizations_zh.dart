@@ -1213,6 +1213,71 @@ class AppLocalizationsZh extends AppLocalizations {
       '一个已经包含此音乐库副本的文件夹，由其他工具（Syncthing、rclone、NAS）保持同步。在其中找到的文件将从磁盘播放。应用永远不会向其中写入。';
 
   @override
+  String get libraryCopyTitle => '音乐库副本';
+
+  @override
+  String get libraryCopyKeepSection => '在此设备上保留完整副本';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      '每首曲目都会以原始音质下载并保持同步：新增文件会被下载，更改的文件会被替换，服务器上删除的文件会暂时移入回收站文件夹。';
+
+  @override
+  String get libraryCopyUnsupported => '此服务器不支持音乐库同步，需要 mStream 6.27 或更高版本。';
+
+  @override
+  String get libraryCopyNoLibraries => '尚未获取到音乐库——请先打开该服务器一次，然后再回来。';
+
+  @override
+  String get libraryCopyNeverSynced => '尚未同步';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return '上次同步 $when · $files 个文件 · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return '正在同步… $done / $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => '正在检查服务器…';
+
+  @override
+  String get libraryCopySyncNow => '立即同步';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n 个文件失败';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => '失败的文件';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return '上次同步失败：$error';
+  }
+
+  @override
+  String get libraryCopyRetention => '已删除文件的保留时间';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n 天';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => '永久';
+
+  @override
+  String get libraryCopyWifiOnly => '仅限 Wi-Fi';
+
+  @override
+  String get libraryCopyDesktopNote => '应用打开时会进行同步。';
+
+  @override
   String get storageChooseFolder => '选择文件夹';
 
   @override

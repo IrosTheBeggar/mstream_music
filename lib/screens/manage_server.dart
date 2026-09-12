@@ -11,6 +11,7 @@ import '../singletons/log_manager.dart';
 import '../theme/velvet_theme.dart';
 import '../widgets/iroh_pairing_qr_sheet.dart';
 import 'add_server.dart';
+import 'library_copy_screen.dart';
 
 class ManageServersScreen extends StatelessWidget {
   const ManageServersScreen({super.key});
@@ -106,6 +107,12 @@ class ManageServersScreen extends StatelessWidget {
           case 'info':
             _showServerInfo(context, index);
             break;
+          case 'libraryCopy':
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => LibraryCopyScreen(server: server)));
+            break;
           case 'pairingCode':
             showIrohPairingQrSheet(context, server.irohPairingCode!);
             break;
@@ -125,6 +132,9 @@ class ManageServersScreen extends StatelessWidget {
         if (index != 0 && server.isSelectable)
           _menuItem('default', Icons.arrow_upward_rounded, l.makeDefault),
         _menuItem('info', Icons.info_outline, l.info),
+        // Keep a full copy of the library on this device (the mirror).
+        if (!server.isFederated)
+          _menuItem('libraryCopy', Icons.cloud_sync_outlined, l.libraryCopyTitle),
         // Re-share this iroh server's pairing QR so another device can pair.
         if (server.isIroh && server.irohPairingCode != null)
           _menuItem('pairingCode', Icons.qr_code_2, l.irohShowPairingCode),

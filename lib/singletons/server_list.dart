@@ -503,6 +503,8 @@ class ServerManager {
     _applyTranscode(server, features is Map ? features['transcode'] : null);
 
     server.discoveryAvailable = features is Map && features['discovery'] == true;
+    // Library sync manifest (mStream 6.27+): flags, never probes.
+    server.syncAvailable = features is Map && features['sync'] == true;
     // The raw engine flags (see Server.discoveryEnabled): kept as reported
     // even for a peer, whose UI flags the defaults below pin.
     server.discoveryEnabled = features is Map && features['discovery'] == true;

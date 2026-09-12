@@ -1278,6 +1278,75 @@ class AppLocalizationsPt extends AppLocalizations {
       'Uma pasta que já contém uma cópia desta biblioteca, mantida sincronizada por outra ferramenta (Syncthing, rclone, um NAS). Os ficheiros encontrados aí são reproduzidos a partir do disco. A app nunca escreve nela.';
 
   @override
+  String get libraryCopyTitle => 'Cópia da biblioteca';
+
+  @override
+  String get libraryCopyKeepSection =>
+      'Manter uma cópia completa neste dispositivo';
+
+  @override
+  String get libraryCopyKeepHelp =>
+      'Cada faixa é descarregada em qualidade original e mantida sincronizada: os ficheiros novos chegam, os alterados são substituídos e os eliminados no servidor passam algum tempo numa pasta de reciclagem.';
+
+  @override
+  String get libraryCopyUnsupported =>
+      'Este servidor não oferece sincronização da biblioteca. É necessário o mStream 6.27 ou mais recente.';
+
+  @override
+  String get libraryCopyNoLibraries =>
+      'Ainda não foram comunicadas bibliotecas — abra o servidor uma vez e volte.';
+
+  @override
+  String get libraryCopyNeverSynced => 'Ainda não sincronizado';
+
+  @override
+  String libraryCopyStatus(String when, int files, String size) {
+    return 'Última sincronização $when · $files ficheiros · $size';
+  }
+
+  @override
+  String libraryCopySyncing(int done, int total) {
+    return 'A sincronizar… $done de $total';
+  }
+
+  @override
+  String get libraryCopyPreparing => 'A verificar o servidor…';
+
+  @override
+  String get libraryCopySyncNow => 'Sincronizar agora';
+
+  @override
+  String libraryCopyFailed(int n) {
+    return '$n ficheiros falharam';
+  }
+
+  @override
+  String get libraryCopyFailedTitle => 'Ficheiros falhados';
+
+  @override
+  String libraryCopyLastRunError(String error) {
+    return 'A última sincronização falhou: $error';
+  }
+
+  @override
+  String get libraryCopyRetention => 'Manter os ficheiros eliminados durante';
+
+  @override
+  String libraryCopyRetentionDays(int n) {
+    return '$n dias';
+  }
+
+  @override
+  String get libraryCopyRetentionForever => 'Para sempre';
+
+  @override
+  String get libraryCopyWifiOnly => 'Apenas Wi-Fi';
+
+  @override
+  String get libraryCopyDesktopNote =>
+      'Sincroniza enquanto a app estiver aberta.';
+
+  @override
   String get storageChooseFolder => 'Escolher pasta';
 
   @override
