@@ -3980,4 +3980,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'A phone notification when a request arrives while the app is open or playing';
+
+  @override
+  String get keepOffline => 'Keep offline';
+
+  @override
+  String get keepOfflineOn => 'Kept offline';
+
+  @override
+  String get keepOfflineHelp =>
+      'Downloaded in original quality and kept in sync on this device.';
 }

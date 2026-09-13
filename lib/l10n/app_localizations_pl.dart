@@ -4048,4 +4048,14 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Powiadomienie na telefonie, gdy prośba przyjdzie, a aplikacja jest otwarta lub odtwarza';
+
+  @override
+  String get keepOffline => 'Zachowaj offline';
+
+  @override
+  String get keepOfflineOn => 'Zachowane offline';
+
+  @override
+  String get keepOfflineHelp =>
+      'Pobrane w oryginalnej jakości i synchronizowane na tym urządzeniu.';
 }

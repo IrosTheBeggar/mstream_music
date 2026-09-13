@@ -4026,4 +4026,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Una notificación en el teléfono cuando llega una solicitud mientras la app está abierta o reproduciendo';
+
+  @override
+  String get keepOffline => 'Guardar sin conexión';
+
+  @override
+  String get keepOfflineOn => 'Guardado sin conexión';
+
+  @override
+  String get keepOfflineHelp =>
+      'Se descarga en calidad original y se mantiene sincronizado en este dispositivo.';
 }

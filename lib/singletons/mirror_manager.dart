@@ -105,8 +105,17 @@ class MirrorManager {
   // ── rules ─────────────────────────────────────────────────────────────
 
   bool keepsFullCopy(Server s, String vpath) =>
+      keepsRule(s, RuleKind.library, vpath);
+
+  /// Whether an enabled rule of [kind] pins [key] (a vpath, an album or an
+  /// artist name).
+  bool keepsRule(Server s, String kind, String key) =>
       (_index?.subscriptionsFor(s.localname) ?? const []).any(
-          (r) => r.kind == 'library' && r.key == vpath && r.enabled);
+          (r) => r.kind == kind && r.key == key && r.enabled);
+
+  /// Whether "Keep offline" can be offered for [s]: it speaks the manifest
+  /// and the index is open.
+  bool canKeep(Server s) => s.syncAvailable == true && _index != null;
 
   bool hasRules(Server s) =>
       (_index?.subscriptionsFor(s.localname) ?? const []).any((r) => r.enabled);
@@ -114,15 +123,20 @@ class MirrorManager {
   /// Adds or removes the whole-library rule for [vpath] and syncs right away:
   /// on, so the copy starts filling; off, so the files no rule wants any more
   /// move to the trash (recoverable for the retention period).
-  void setKeepFullCopy(Server s, String vpath, bool on) {
+  void setKeepFullCopy(Server s, String vpath, bool on) =>
+      setRule(s, RuleKind.library, vpath, on);
+
+  /// Adds or removes the rule of [kind] for [key] — an album or artist's
+  /// "Keep offline" (A6a) works exactly like the whole-library switch.
+  void setRule(Server s, String kind, String key, bool on) {
     final ix = _index;
     if (ix == null) return;
     if (on) {
       ix.addSubscription(
-          Subscription(server: s.localname, kind: 'library', key: vpath));
+          Subscription(server: s.localname, kind: kind, key: key));
     } else {
       for (final r in ix.subscriptionsFor(s.localname)) {
-        if (r.kind == 'library' && r.key == vpath && r.id != null) {
+        if (r.kind == kind && r.key == key && r.id != null) {
           ix.removeSubscription(r.id!);
         }
       }

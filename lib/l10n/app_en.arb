@@ -4142,5 +4142,8 @@
   "federationNotifySubtitle": "A phone notification when a request arrives while the app is open or playing",
   "@federationNotifySubtitle": {
     "description": "Federation settings switch subtitle."
-  }
+  },
+  "keepOffline": "Keep offline",
+  "keepOfflineOn": "Kept offline",
+  "keepOfflineHelp": "Downloaded in original quality and kept in sync on this device."
 }

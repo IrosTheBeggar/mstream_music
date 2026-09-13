@@ -4015,4 +4015,14 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Uma notificação no telemóvel quando chega um pedido com a app aberta ou a reproduzir';
+
+  @override
+  String get keepOffline => 'Manter offline';
+
+  @override
+  String get keepOfflineOn => 'Mantido offline';
+
+  @override
+  String get keepOfflineHelp =>
+      'Transferido na qualidade original e mantido sincronizado neste dispositivo.';
 }

@@ -3828,4 +3828,13 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'アプリを開いているか再生中にリクエストが届いたら、スマートフォンに通知します';
+
+  @override
+  String get keepOffline => 'オフラインで保持';
+
+  @override
+  String get keepOfflineOn => 'オフラインで保持中';
+
+  @override
+  String get keepOfflineHelp => '元の音質でダウンロードし、この端末で同期を保ちます。';
 }

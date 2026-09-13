@@ -4018,4 +4018,14 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Una notifica sul telefono quando arriva una richiesta mentre l\'app è aperta o in riproduzione';
+
+  @override
+  String get keepOffline => 'Tieni offline';
+
+  @override
+  String get keepOfflineOn => 'Tenuto offline';
+
+  @override
+  String get keepOfflineHelp =>
+      'Scaricato in qualità originale e mantenuto sincronizzato su questo dispositivo.';
 }

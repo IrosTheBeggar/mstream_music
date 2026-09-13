@@ -6623,6 +6623,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A phone notification when a request arrives while the app is open or playing'**
   String get federationNotifySubtitle;
+
+  /// No description provided for @keepOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep offline'**
+  String get keepOffline;
+
+  /// No description provided for @keepOfflineOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept offline'**
+  String get keepOfflineOn;
+
+  /// No description provided for @keepOfflineHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded in original quality and kept in sync on this device.'**
+  String get keepOfflineHelp;
 }
 
 class _AppLocalizationsDelegate

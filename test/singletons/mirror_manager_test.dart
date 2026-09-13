@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
 import 'package:path/path.dart' as p;
 
 import 'package:mstream_music/objects/server.dart';
@@ -83,6 +84,27 @@ void main() {
       expect(m.keepsFullCopy(s, 'music'), isFalse);
       expect(LibraryIndexManager().index!.subscriptionsFor('home'), isEmpty);
       expect(await m.sync(s), isNull, reason: 'no sync flag → no run');
+    });
+
+    test('album / artist rules: keepsRule, setRule, canKeep', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      expect(m.canKeep(s), isFalse, reason: 'no sync flag');
+      s.syncAvailable = true;
+      expect(m.canKeep(s), isTrue);
+      // Back to "unknown" so the sync a toggle kicks off returns early.
+      s.syncAvailable = null;
+      m.setRule(s, RuleKind.album, 'Be Somebody', true);
+      m.setRule(s, RuleKind.artist, 'Icarus', true);
+      expect(m.keepsRule(s, RuleKind.album, 'Be Somebody'), isTrue);
+      expect(m.keepsRule(s, RuleKind.album, 'Other'), isFalse);
+      expect(m.keepsFullCopy(s, 'music'), isFalse);
+      final rules = LibraryIndexManager().index!.subscriptionsFor('home');
+      expect(rules.map((r) => (r.kind, r.key)),
+          [(RuleKind.album, 'Be Somebody'), (RuleKind.artist, 'Icarus')]);
+      m.setRule(s, RuleKind.album, 'Be Somebody', false);
+      expect(LibraryIndexManager().index!.subscriptionsFor('home').single.kind,
+          RuleKind.artist);
     });
   });
 

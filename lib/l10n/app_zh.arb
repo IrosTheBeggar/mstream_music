@@ -1050,5 +1050,8 @@
   "irohPathDirect": "直连",
   "irohPathRelay": "中继",
   "irohCastUnavailable": "点对点 (iroh) 服务器不支持投放到外部设备 — 播放将保留在此设备上。",
-  "irohShareUnavailable": "点对点 (iroh) 服务器不支持分享 — 它们没有可链接的公开地址。"
+  "irohShareUnavailable": "点对点 (iroh) 服务器不支持分享 — 它们没有可链接的公开地址。",
+  "keepOffline": "离线保留",
+  "keepOfflineOn": "已离线保留",
+  "keepOfflineHelp": "以原始音质下载并在此设备上保持同步。"
 }

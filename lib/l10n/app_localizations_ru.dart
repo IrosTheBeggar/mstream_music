@@ -4056,4 +4056,14 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Уведомление на телефоне, когда запрос приходит при открытом приложении или во время воспроизведения';
+
+  @override
+  String get keepOffline => 'Хранить офлайн';
+
+  @override
+  String get keepOfflineOn => 'Хранится офлайн';
+
+  @override
+  String get keepOfflineHelp =>
+      'Загружается в исходном качестве и синхронизируется на этом устройстве.';
 }
