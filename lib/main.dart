@@ -39,6 +39,7 @@ import 'singletons/queue_store.dart';
 import 'singletons/log_manager.dart';
 import 'singletons/library_index.dart';
 import 'singletons/mirror_manager.dart';
+import 'singletons/art_cache.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
 import 'util/server_tree.dart';
@@ -110,6 +111,9 @@ Future<void> _startApp() async {
   // Local library index (SQLite). Milliseconds to open, and optional: a
   // load failure leaves it unavailable and nothing user-facing changes yet.
   await LibraryIndexManager().open();
+  // Album art the mirror cached (served offline, and instead of a round-trip
+  // online). Lists a few folders; never throws.
+  await ArtCache().init();
   // Federation-request alerts: the notification plumbing and the poll
   // timer; the first ping's count already lands in it.
   await FederationInboxAlerts().init();
@@ -974,13 +978,37 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
                   final Server? cServer = snapshot.data;
                   return Visibility(
                     visible: cServer != null,
-                    child: Text(
-                      cServer == null ? '' : cServer.displayName,
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: VelvetColors.appBarTextSecondary,
-                          fontWeight: FontWeight.normal),
-                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Flexible(
+                        child: Text(
+                          cServer == null ? '' : cServer.displayName,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: VelvetColors.appBarTextSecondary,
+                              fontWeight: FontWeight.normal),
+                        ),
+                      ),
+                      // Browsing the library copy on this device (A4): by
+                      // choice, or because the server could not be reached.
+                      if (cServer?.browseOffline == true) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: VelvetColors.warning.withValues(alpha: 0.18),
+                            borderRadius:
+                                BorderRadius.circular(VelvetColors.radiusSmall),
+                          ),
+                          child: Text(l.offlineChip,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: VelvetColors.warning,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ]),
                   );
                 }),
           ],

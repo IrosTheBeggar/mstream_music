@@ -323,6 +323,40 @@ void main() {
     expect(ix.wantedPaths('s'), isEmpty);
   });
 
+  test('lists are refreshed when the manifest moved and art is cached for mirrored tracks', () async {
+    final lists = _FakeLists();
+    final art = _FakeArt();
+    srv.files['/music/A/1.mp3'] = srv.files['/music/A/1.mp3']!; // unchanged
+    final withArt = MirrorConfig.under(tmp.path, 's', artRoot: p.join(tmp.path, 'art'), pageSize: 2);
+    // Give two tracks art names through a manifest that carries them.
+    final artful = _ArtfulManifest(srv, {'/music/A/1.mp3': 'aa.jpeg', '/music/A/2.mp3': 'aa.jpeg', '/music/B/3.mp3': 'bb.jpeg'});
+    MirrorRunner r() => MirrorRunner(index: ix, manifest: artful, downloader: dl, lists: lists, art: art, now: () => clock);
+
+    await r().run(withArt);
+    expect(lists.calls, 1);
+    expect(ix.albums('s').map((a) => a.name), ['Alpha']);
+    expect(ix.artists('s'), ['Zed']);
+    expect(art.calls, unorderedEquals(['aa.jpeg', 'bb.jpeg']), reason: 'one fetch per distinct file');
+    expect(File(p.join(tmp.path, 'art', 'aa.jpeg')).readAsStringSync(), 'art:aa.jpeg');
+    expect(Directory(p.join(tmp.path, 'art')).listSync().where((e) => p.basename(e.path).startsWith('.')), isEmpty,
+        reason: 'no temp files left');
+
+    // 304: lists untouched, cached art not re-fetched.
+    art.calls.clear();
+    await r().run(withArt);
+    expect(lists.calls, 1);
+    expect(art.calls, isEmpty);
+
+    // A failing art fetch is not a run error and leaves nothing behind.
+    art.failFor.add('cc.jpeg');
+    artful.artByPath['/music/A/2.mp3'] = 'cc.jpeg';
+    srv.revision = 'r2';
+    final run = await r().run(withArt);
+    expect(run.error, isNull);
+    expect(File(p.join(tmp.path, 'art', 'cc.jpeg')).existsSync(), isFalse);
+    expect(lists.calls, 2, reason: 'the manifest moved, so the lists were refreshed');
+  });
+
   test('ManifestPage.fromJson reads the shipped shape', () {
     final page = ManifestPage.fromJson({
       'revision': '1:9:9:1:0',
@@ -339,6 +373,47 @@ void main() {
     expect(page.entries.single.title, 'A');
     expect(ManifestPage.fromJson({'revision': 'x', 'next': null}).entries, isEmpty);
   });
+}
+
+class _FakeLists implements LibraryListsClient {
+  int calls = 0;
+  @override
+  Future<List<AlbumRow>> albums() async {
+    calls++;
+    return const [AlbumRow(name: 'Alpha', albumArtist: 'Zed', year: 2001)];
+  }
+
+  @override
+  Future<List<String>> artists() async => const ['Zed'];
+}
+
+class _FakeArt implements ArtClient {
+  final List<String> calls = [];
+  final Set<String> failFor = {};
+  @override
+  Future<void> fetchArt(String artFile, String destination) async {
+    calls.add(artFile);
+    if (failFor.contains(artFile)) throw const SocketException('no art');
+    await File(destination).writeAsString('art:$artFile');
+  }
+}
+
+/// The fake manifest with album-art names attached to chosen paths.
+class _ArtfulManifest extends FakeManifest {
+  final Map<String, String> artByPath;
+  _ArtfulManifest(super.server, this.artByPath);
+
+  @override
+  Future<ManifestPage?> fetchPage({int? cursor, int limit = 2000, String? ifNoneMatch}) async {
+    final page = await super.fetchPage(cursor: cursor, limit: limit, ifNoneMatch: ifNoneMatch);
+    if (page == null) return null;
+    return ManifestPage(revision: page.revision, scanning: page.scanning, next: page.next,
+        entries: [
+          for (final t in page.entries)
+            RemoteTrack(id: t.id, path: t.path, size: t.size, modified: t.modified, hash: t.hash,
+                hashV: t.hashV, title: t.title, art: artByPath[t.path]),
+        ]);
+  }
 }
 
 /// Serves the fake server's manifest but keeps advertising [hash] for

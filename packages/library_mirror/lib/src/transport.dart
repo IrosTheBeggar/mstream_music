@@ -39,3 +39,16 @@ abstract class Downloader {
   Future<void> download(String path, String destination,
       {bool requiresWiFi = false});
 }
+
+/// The two small whole-library lists the offline browser needs beside the
+/// manifest: `db/albums` and `db/artists`, keyed by name like the API.
+abstract class LibraryListsClient {
+  Future<List<AlbumRow>> albums();
+  Future<List<String>> artists();
+}
+
+/// Fetches one album-art file (its content-addressed name on the server) to
+/// [destination], a temp path the runner owns.
+abstract class ArtClient {
+  Future<void> fetchArt(String artFile, String destination);
+}

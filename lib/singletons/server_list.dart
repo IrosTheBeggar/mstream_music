@@ -351,6 +351,7 @@ class ServerManager {
       // route a federated server answers: /api/v1/ping is off the federation
       // allowlist and 403s a peer key.
       final info = await _fetchServerInfo(server);
+      _clearAutoOffline(server);
 
       final bool? prevAvail = server.transcodeAvailable;
       final String? prevCodec = server.transcodeDefaultCodec;
@@ -456,10 +457,39 @@ class ServerManager {
         }
       }
     } catch (err) {
+      _maybeAutoOffline(server);
       if (throwErr) {
         rethrow;
       }
     }
+  }
+
+  /// Ping failed: if the index holds this server's library, browse it from
+  /// there until the server answers again. Manual offline mode is left as
+  /// the user set it.
+  void _maybeAutoOffline(Server server) {
+    if (server.browseOffline) return;
+    final ix = LibraryIndexManager().index;
+    if (ix == null || ix.remoteCount(server.localname) == 0) return;
+    server.browseOffline = true;
+    server.offlineAuto = true;
+    appLog('[offline] ${server.localname}: unreachable — browsing the library copy');
+    notifyServerChanged();
+  }
+
+  void _clearAutoOffline(Server server) {
+    if (!server.offlineAuto) return;
+    server.browseOffline = false;
+    server.offlineAuto = false;
+    appLog('[offline] ${server.localname}: reachable again — back online');
+    notifyServerChanged();
+  }
+
+  /// Re-emits the server streams after a runtime flag flipped (the app bar's
+  /// offline chip, the Library copy screen).
+  void notifyServerChanged() {
+    _serverListStream.sink.add(serverList);
+    _currentServerStream.sink.add(currentServer);
   }
 
   /// `GET /api/` — the layered server-info endpoint (mStream #932/#934):

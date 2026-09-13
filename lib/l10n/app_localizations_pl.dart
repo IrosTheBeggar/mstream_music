@@ -1367,6 +1367,20 @@ class AppLocalizationsPl extends AppLocalizations {
       'Synchronizuje, gdy aplikacja jest otwarta.';
 
   @override
+  String get offlineBrowseTitle => 'Przeglądaj kopię offline';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Albumy, wykonawcy i foldery pochodzą z indeksu biblioteki na tym urządzeniu, a odtworzyć można tylko pliki, które ono posiada. Włącza się samoczynnie, gdy serwer jest nieosiągalny.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Brak indeksu biblioteki — zsynchronizuj raz, gdy serwer jest osiągalny.';
+
+  @override
+  String get offlineChip => 'Kopia offline';
+
+  @override
   String get storageChooseFolder => 'Wybierz folder';
 
   @override

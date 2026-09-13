@@ -7,6 +7,8 @@ import './browser_list.dart';
 import './app_messenger.dart';
 import './log_manager.dart';
 import './settings.dart';
+import './library_index.dart';
+import './library_source.dart';
 import '../objects/server.dart';
 import '../util/local_copy.dart';
 import 'auto_dj_manager.dart';
@@ -16,13 +18,11 @@ import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/decode_json.dart';
-import '../util/media_format.dart';
 import '../util/seed_vector.dart';
 import '../util/server_version.dart';
 import '../util/stream_url.dart';
 import '../theme/velvet_theme.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:path/path.dart' as path;
 import 'package:audio_service/audio_service.dart';
 
 import 'package:http/http.dart' as http;
@@ -235,23 +235,30 @@ class ApiManager {
   Future<void> getRecursiveFiles(String directory,
       {required Server useThisServer}) async {
     try {
-      final res = await makeServerCall(useThisServer,
-          '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
-
-      final paths = [for (final e in res as List) e.toString()];
-      if (paths.isEmpty) return;
-
-      // The recursive endpoint returns bare paths, so fetch the metadata in
-      // ONE batched request — never per row, because a recursive folder can
-      // be thousands of files. Version-gated and best-effort exactly like
-      // prefillMetadata: on an older server, a request failure, or a track
-      // the DB doesn't know, the row queues bare (today's behaviour) and
-      // tops itself up as it becomes current.
+      final List<String> paths;
       var meta = const <String, MusicMetadata>{};
-      if (!metadataBatchKnownUnsupported(
-          ServerVersion.tryParse(useThisServer.serverVersion))) {
-        meta = await fetchTrackMetadataBatch(useThisServer, paths);
+      final local = _localSource(useThisServer);
+      if (local != null) {
+        // Offline: the index knows every path under the folder and its
+        // metadata, no round-trip at all.
+        (paths, meta) = await local.recursiveTracks(useThisServer, directory);
+      } else {
+        final res = await makeServerCall(useThisServer,
+            '/api/v1/file-explorer/recursive', {"directory": directory}, 'POST');
+        paths = [for (final e in res as List) e.toString()];
+        // The recursive endpoint returns bare paths, so fetch the metadata in
+        // ONE batched request — never per row, because a recursive folder can
+        // be thousands of files. Version-gated and best-effort exactly like
+        // prefillMetadata: on an older server, a request failure, or a track
+        // the DB doesn't know, the row queues bare (today's behaviour) and
+        // tops itself up as it becomes current.
+        if (paths.isNotEmpty &&
+            !metadataBatchKnownUnsupported(
+                ServerVersion.tryParse(useThisServer.serverVersion))) {
+          meta = await fetchTrackMetadataBatch(useThisServer, paths);
+        }
       }
+      if (paths.isEmpty) return;
 
       // Resolve the download dir ONCE; the per-file existence check is a
       // cheap stat. Carrying localPath means an already-downloaded copy
@@ -568,38 +575,29 @@ class ApiManager {
     }
   }
 
+  /// The server the browse lists are for: the one asked for, else the
+  /// current one. Throws like makeServerCall did when there is none.
+  Server _browseServer(Server? useThisServer) =>
+      useThisServer ??
+      ServerManager().currentServer ??
+      (throw Exception('No Server Selected'));
+
+  /// The library index, when this server is being browsed offline and the
+  /// index is open — otherwise null and the server answers.
+  LocalLibrarySource? _localSource(Server s) {
+    final ix = LibraryIndexManager().index;
+    return s.browseOffline && ix != null ? LocalLibrarySource(ix) : null;
+  }
+
+  LibrarySource _sourceFor(Server s) =>
+      _localSource(s) ?? HttpLibrarySource(this);
+
   Future<void> getAlbums({Server? useThisServer}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/albums', {}, 'GET');
-
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).albums(server);
       BrowserManager().setBrowserLabel('Albums');
-
-      List<DisplayItem> newList = [];
-      res['albums'].forEach((e) {
-        // Newer servers include `album_artist`; fold it into the subtitle as
-        // "Artist · Year" for the browse card/list. Older servers omit it, so
-        // the subtitle gracefully falls back to just the year.
-        final artist = (e['album_artist'] ?? e['albumArtist'] ?? e['artist'])
-            ?.toString()
-            .trim();
-        final year = e['year']?.toString().trim();
-        final subtitle = [
-          if (artist != null && artist.isNotEmpty) artist,
-          if (year != null && year.isNotEmpty) year,
-        ].join(' · ');
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['name'],
-            'album',
-            e['name'],
-            Icon(Icons.album, color: VelvetColors.textSecondary),
-            subtitle);
-        newItem.altAlbumArt = e['album_art_file'];
-        newList.add(newItem);
-      });
-
-      BrowserManager().addListToStack(newList, alphabetical: true);
+      BrowserManager().addListToStack(list, alphabetical: true);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getAlbums failed: $err');
@@ -611,26 +609,8 @@ class ApiManager {
   /// tracklist. Throws on a server error so the caller can show its own state.
   Future<List<DisplayItem>> fetchAlbumSongs(String? album,
       {Server? useThisServer}) async {
-    final res = await makeServerCall(
-        useThisServer, '/api/v1/db/album-songs', {'album': album}, 'POST');
-
-    final List<DisplayItem> newList = [];
-    res.forEach((e) {
-      MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-      DisplayItem newItem = DisplayItem(
-          useThisServer,
-          e['filepath'],
-          'file',
-          '/${e['filepath']}',
-          Icon(Icons.music_note, color: VelvetColors.accent),
-          null);
-
-      newItem.metadata = m;
-
-      newList.add(newItem);
-    });
-    return newList;
+    final server = _browseServer(useThisServer);
+    return _sourceFor(server).albumSongs(server, album);
   }
 
   Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
@@ -1218,18 +1198,10 @@ class ApiManager {
 
   Future<void> getArtists({Server? useThisServer}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/artists', {}, 'GET');
-
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).artists(server);
       BrowserManager().setBrowserLabel('Artists');
-
-      List<DisplayItem> newList = [];
-      res['artists'].forEach((e) {
-        DisplayItem newItem = DisplayItem(useThisServer, e, 'artist', e,
-            Icon(Icons.library_music, color: VelvetColors.textSecondary), null);
-        newList.add(newItem);
-      });
-      BrowserManager().addListToStack(newList, alphabetical: true);
+      BrowserManager().addListToStack(list, alphabetical: true);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtists failed: $err');
@@ -1238,27 +1210,9 @@ class ApiManager {
 
   Future<void> getArtistAlbums(String artist, {Server? useThisServer}) async {
     try {
-      final res = await makeServerCall(useThisServer,
-          '/api/v1/db/artists-albums', {'artist': artist}, 'POST');
-
-      List<DisplayItem> newList = [];
-      res['albums'].forEach((e) {
-        String name = e['name'] ?? 'SINGLES';
-
-        // TODO: Errors on singles
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            name,
-            'album',
-            e['name'],
-            Icon(Icons.album, color: VelvetColors.textSecondary),
-            e['year']?.toString() ?? '');
-        newItem.altAlbumArt = e['album_art_file'];
-
-        newList.add(newItem);
-      });
-
-      BrowserManager().addListToStack(newList);
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).artistAlbums(server, artist);
+      BrowserManager().addListToStack(list);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getArtistAlbums failed: $err');
@@ -1299,61 +1253,11 @@ class ApiManager {
 
   Future<void> getFileList(String directory, {Server? useThisServer}) async {
     try {
-      final res = await makeServerCall(useThisServer, '/api/v1/file-explorer', {
-        "directory": directory,
-        // Server defaults this to false (cheap listing). When the user
-        // has the setting on, the server returns a `metadata` field on
-        // each file entry — we attach it to the DisplayItem below so
-        // that when the user taps to queue, browser.dart's addFile
-        // sees a populated metadata object and the resulting MediaItem
-        // carries title/artist/album/art into the player and the
-        // notification.
-        "pullMetadata": SettingsManager().fileExplorerMetadata,
-      }, 'POST');
-
+      final server = _browseServer(useThisServer);
+      final listing = await _sourceFor(server).fileList(server, directory);
       BrowserManager().setBrowserLabel('File Explorer');
-
-      List<DisplayItem> newList = [];
-      res['directories'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['name'],
-            'directory',
-            path.join(res['path'], e['name']),
-            Icon(Icons.folder, color: VelvetColors.warning),
-            null);
-        newList.add(newItem);
-      });
-
-      res['files'].forEach((e) {
-        // A playlist file opens a list rather than playing, so it should not
-        // wear the same icon as the tracks around it.
-        final isPlaylistFile = isM3u(e['name']?.toString());
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['name'],
-            'file',
-            path.join(res['path'], e['name']),
-            Icon(isPlaylistFile ? Icons.queue_music : Icons.music_note,
-                color: VelvetColors.accent),
-            null);
-
-        // The server wraps each file's metadata as { filepath, metadata:
-        // {…actual fields…} } — drill in one level. Only set when
-        // pullMetadata=true was sent AND the file is in the library DB
-        // (unscanned files still arrive without an inner metadata
-        // object; we tolerate that and fall back to filename display).
-        final outer = e['metadata'];
-        final inner = outer is Map ? outer['metadata'] : null;
-        if (inner is Map) {
-          newItem.metadata = MusicMetadata.fromServerMap(inner);
-        }
-
-        newList.add(newItem);
-      });
-
       BrowserManager()
-          .addListToStack(newList, alphabetical: true, path: res['path']);
+          .addListToStack(listing.items, alphabetical: true, path: listing.path);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getFileList failed: $err');

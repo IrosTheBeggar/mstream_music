@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
+import '../singletons/browser_list.dart';
 import '../singletons/library_index.dart';
 import '../singletons/mirror_manager.dart';
 import '../singletons/server_list.dart';
@@ -87,7 +88,9 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
                     ),
                 const SizedBox(height: 16),
                 _status(context, l, st),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                _offlineSwitch(l),
+                const SizedBox(height: 16),
               ],
               Text(l.libraryCopyRetention, style: _label),
               const SizedBox(height: 6),
@@ -139,6 +142,35 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
         },
       ),
     );
+  }
+
+  /// Browse from the index instead of the server (A4). Needs index rows,
+  /// i.e. one completed run; flips the runtime flag and resets the browser so
+  /// the next list comes from the chosen source.
+  Widget _offlineSwitch(AppLocalizations l) {
+    final indexed =
+        (LibraryIndexManager().index?.remoteCount(server.localname) ?? 0) > 0;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        secondary: const Icon(Icons.cloud_off_outlined),
+        title: Text(l.offlineBrowseTitle, style: _body),
+        subtitle: Text(indexed ? l.offlineBrowseHelp : l.offlineBrowseUnavailable,
+            style: _help),
+        value: server.browseOffline,
+        activeThumbColor: VelvetColors.primary,
+        onChanged: !indexed && !server.browseOffline
+            ? null
+            : (v) {
+                setState(() {
+                  server.browseOffline = v;
+                  server.offlineAuto = false;
+                });
+                ServerManager().notifyServerChanged();
+                BrowserManager().goToNavScreen();
+              },
+      ),
+    ]);
   }
 
   Widget _banner(String text) => Container(

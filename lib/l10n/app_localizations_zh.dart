@@ -1278,6 +1278,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryCopyDesktopNote => '应用打开时会进行同步。';
 
   @override
+  String get offlineBrowseTitle => '浏览离线副本';
+
+  @override
+  String get offlineBrowseHelp =>
+      '专辑、艺术家和文件夹来自此设备上的音乐库索引，并且只能播放设备上已有的文件。当无法连接服务器时会自动开启。';
+
+  @override
+  String get offlineBrowseUnavailable => '尚无音乐库索引——请在服务器可用时同步一次。';
+
+  @override
+  String get offlineChip => '离线副本';
+
+  @override
   String get storageChooseFolder => '选择文件夹';
 
   @override

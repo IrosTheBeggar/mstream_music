@@ -1335,6 +1335,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryCopyDesktopNote => 'Syncs while the app is open.';
 
   @override
+  String get offlineBrowseTitle => 'Browse the offline copy';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Albums, artists and folders come from the library index on this device, and only the files it holds can play. Switches on by itself when the server can\'t be reached.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'No library index yet — sync once while the server is reachable.';
+
+  @override
+  String get offlineChip => 'Offline copy';
+
+  @override
   String get storageChooseFolder => 'Choose folder';
 
   @override

@@ -1352,6 +1352,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se sincroniza mientras la app está abierta.';
 
   @override
+  String get offlineBrowseTitle => 'Explorar la copia sin conexión';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Los álbumes, artistas y carpetas provienen del índice de la biblioteca en este dispositivo, y solo se pueden reproducir los archivos que contiene. Se activa solo cuando no se puede contactar con el servidor.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Aún no hay índice de la biblioteca: sincroniza una vez mientras el servidor esté disponible.';
+
+  @override
+  String get offlineChip => 'Copia sin conexión';
+
+  @override
   String get storageChooseFolder => 'Elegir carpeta';
 
   @override
