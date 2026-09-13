@@ -37,7 +37,7 @@ tests + one device smoke); no repo-wide format.
 | A6a | app | Rules: album / artist "Keep offline" — **[#180](https://github.com/IrosTheBeggar/mstream_music/pull/180)** (`expandRule` by kind, toolbar pin + artist sheet) | A3 | yes | 🟡 2–3d |
 | A6b | app | Rules: playlist + rated — **[#181](https://github.com/IrosTheBeggar/mstream_music/pull/181)** (playlist menu toggle, rated dropdown + rules list in Library copy) | A6a, A5 | yes | 🟡 1–2d |
 | A7 | app | Transcoded quality tier for entity rules — **[#184](https://github.com/IrosTheBeggar/mstream_music/pull/184)** (`Tier`, per-quality planning, `media-transcoded/<tier>/`, "Quality of kept items" per server, CLI `--quality`) | A6a | yes (quality picker) | 🟡 2–3d |
-| A8 | app | Fold the keep-queue-offline ledger into the index | A3 | no | 🟡 1–2d |
+| A8 | app | Fold the keep-queue-offline ledger into the index — **[#185](https://github.com/IrosTheBeggar/mstream_music/pull/185)** (`AutoDownloadLedger` as a façade over `local_files` `auto` rows, one-time JSON migration, non-clobbering import) | A3 | no | 🟡 1–2d |
 | S2 | mStream | Tombstones + `since` deltas | S1 | no | 🟡 2–3d |
 | A9 | app | Consume deltas | S2, A3 | no | 🟢 1d |
 | S3 | mStream | Device upload libraries | — | admin toggle | 🟡 2d |
