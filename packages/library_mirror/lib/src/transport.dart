@@ -35,11 +35,13 @@ abstract class ManifestClient {
 /// Moves one server file to [destination] (a temp path the runner owns) and
 /// completes once every byte is on disk; throws on failure. With [tier], the
 /// server's transcode of the file at that codec and bitrate instead of the
-/// original bytes. The app backs this with background_downloader, tests and
-/// the CLI with plain I/O.
+/// original bytes. [modified] is the server's mtime of the file (epoch ms):
+/// a downloader that resumes a partial sends it as `If-Range`, so a file
+/// that changed since comes back whole. The app backs this with
+/// background_downloader, tests and the CLI with plain I/O.
 abstract class Downloader {
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false, Tier? tier});
+      {bool requiresWiFi = false, Tier? tier, int? modified});
 }
 
 /// The two small whole-library lists the offline browser needs beside the

@@ -92,6 +92,65 @@ void main() {
         throwsA(isA<HttpException>()));
   });
 
+  test('an interrupted original resumes with Range + If-Range; a changed file comes back whole', () async {
+    final tmp = Directory.systemTemp.createTempSync('http_resume_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final body = utf8.encode('0123456789');
+    const mtime = 1700000000000;
+    var cut = true;
+    final seen = <Map<String, String>>[];
+    final c = MockClient.streaming((r, _) async {
+      seen.add(Map.of(r.headers));
+      final range = r.headers['Range'];
+      if (range == null) {
+        // The first attempt dies after four bytes.
+        final s = cut
+            ? Stream<List<int>>.fromFutures([
+                Future.value(body.sublist(0, 4)),
+                Future.error(const SocketException('cut')),
+              ])
+            : Stream.value(body);
+        return http.StreamedResponse(s, 200);
+      }
+      final from = int.parse(range.substring('bytes='.length, range.length - 1));
+      final fresh = r.headers['If-Range'] ==
+          HttpDate.format(DateTime.fromMillisecondsSinceEpoch(mtime, isUtc: true));
+      return fresh
+          ? http.StreamedResponse(Stream.value(body.sublist(from)), 206)
+          : http.StreamedResponse(Stream.value(body), 200);
+    });
+    final d = HttpDownloader(server, c);
+    final dest = p.join(tmp.path, 'x.part');
+    await expectLater(d.download('/music/1.mp3', dest, modified: mtime),
+        throwsA(isA<SocketException>()));
+    expect(File(dest).readAsStringSync(), '0123');
+    cut = false;
+    await d.download('/music/1.mp3', dest, modified: mtime);
+    expect(File(dest).readAsStringSync(), '0123456789');
+    expect(seen.last['Range'], 'bytes=4-');
+    expect(seen.last['If-Range'], 'Tue, 14 Nov 2023 22:13:20 GMT');
+
+    // The source moved on since the partial: If-Range misses, 200, rewritten whole.
+    File(dest).writeAsStringSync('0123');
+    await d.download('/music/1.mp3', dest, modified: mtime + 60000);
+    expect(File(dest).readAsStringSync(), '0123456789');
+    expect(seen.last['Range'], 'bytes=4-');
+
+    // A partial longer than the file: 416 discards it and fails the call.
+    File(dest).writeAsStringSync('0123456789-and-more');
+    final c416 = MockClient.streaming(
+        (r, _) async => http.StreamedResponse(Stream.value(<int>[]), 416));
+    await expectLater(HttpDownloader(server, c416).download('/music/1.mp3', dest, modified: mtime),
+        throwsA(isA<HttpException>()));
+    expect(File(dest).existsSync(), isFalse);
+
+    // A transcode never asks for a range, whatever sits at the destination.
+    File(dest).writeAsStringSync('junk');
+    seen.clear();
+    await d.download('/music/1.mp3', dest, tier: const Tier('opus', 96), modified: mtime);
+    expect(seen.single.containsKey('Range'), isFalse);
+  });
+
   test('lists: albums, artists, genres, playlists (getall + load), rated', () async {
     final c = MockClient((r) async {
       final path = r.url.path;

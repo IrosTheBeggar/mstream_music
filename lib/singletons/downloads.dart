@@ -18,6 +18,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path/path.dart' as path;
 
+import 'package:library_mirror/library_mirror.dart' show LibraryIndex;
 import '../objects/download_tracker.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
@@ -471,6 +472,14 @@ class DownloadManager {
   /// on every track change.
   Future<void> enforceAutoDownloadCap() => _enforceAutoDownloadCap();
 
+  /// What the cap must not evict: the cache window's tracks (keyed
+  /// server + path) and anything a library-copy rule pins — the mirror would
+  /// only fetch that again. Pure; unit-tested.
+  static bool Function(String server, String path) cacheProtection(
+          Set<String> queued, LibraryIndex? index) =>
+      (s, p) =>
+          queued.contains(s + p) || (index != null && index.requiredBy(s, p) > 0);
+
   Future<void> _enforceAutoDownloadCap() async {
     final cap = SettingsManager().autoDownloadCap;
     if (cap <= 0) return;
@@ -485,8 +494,8 @@ class DownloadManager {
       final s = m.extras?['server'], p = m.extras?['path'];
       if (s is String && p is String) queued.add(s + p);
     }
-    final victims =
-        AutoDownloadLedger().evictionsFor(cap, (s, p) => queued.contains(s + p));
+    final victims = AutoDownloadLedger().evictionsFor(
+        cap, cacheProtection(queued, LibraryIndexManager().index));
     if (victims.isEmpty) return;
     for (final v in victims) {
       try {

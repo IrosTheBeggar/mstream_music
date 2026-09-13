@@ -546,9 +546,10 @@ class _MirrorDownloader implements Downloader {
   final MirrorManager manager;
   _MirrorDownloader(this.server, this.manager);
 
+  // [modified] is unused: background_downloader resumes its own tasks.
   @override
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false, Tier? tier}) async {
+      {bool requiresWiFi = false, Tier? tier, int? modified}) async {
     final task = DownloadTask(
       // A tier fetches the server's transcode: chunked, no length, so the
       // task reports no progress — only its end.

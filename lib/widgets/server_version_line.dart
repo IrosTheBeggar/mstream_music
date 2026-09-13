@@ -29,14 +29,11 @@ class _ServerVersionLineState extends State<ServerVersionLine> {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     try {
-      // Straight through ensureServerCapabilities' sibling: one unauthenticated
-      // GET, and the result is persisted by the caller.
-      final v = (await ServerManager().fetchServerVersion(server)).version;
-      if (v != null) {
-        server.serverVersion = v;
-        server.versionCheckedAt = DateTime.now();
-        await ServerManager().writeServerFile();
-      }
+      // The full capability ping, not just the version probe: it also clears
+      // an automatic offline switch and replays the writes made while the
+      // server was unreachable — the "I'm back online" tap. The ping persists
+      // a changed version or capability itself.
+      await ServerManager().getServerPaths(server);
     } finally {
       if (mounted) setState(() => _refreshing = false);
     }

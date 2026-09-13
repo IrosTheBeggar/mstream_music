@@ -40,3 +40,7 @@ the original — under `<dest>/media-transcoded/<tier>/<name>/`, with the
 codec's extension, never checked against the original's size or hash.
 `--list-rules` shows the tier after such a rule.
 
+An original that broke off mid-transfer keeps its partial under
+`<dest>/.mstream-tmp/<name>/` and resumes next run (`Range`, guarded by
+`If-Range` on the server's mtime); a transcode is always fetched whole.
+

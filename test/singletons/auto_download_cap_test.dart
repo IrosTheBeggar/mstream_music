@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:library_mirror/library_mirror.dart';
 import 'package:mstream_music/objects/auto_download_entry.dart';
 import 'package:mstream_music/singletons/auto_download_ledger.dart';
+import 'package:mstream_music/singletons/downloads.dart';
 
 void main() {
   // Oldest-first list (newest appended), mirroring the ledger's storage order.
@@ -9,6 +11,19 @@ void main() {
       ];
 
   bool protectNone(String s, String p) => false;
+
+  test('cacheProtection: the cache window and anything a rule pins are protected', () {
+    final ix = LibraryIndex.inMemory();
+    addTearDown(ix.close);
+    final id = ix.addSubscription(const Subscription(server: 's', kind: 'album', key: 'X'));
+    ix.setSubscriptionFiles(id, 's', ['/t1.mp3']);
+    final protect = DownloadManager.cacheProtection({'s/t0.mp3'}, ix);
+    expect(protect('s', '/t0.mp3'), isTrue, reason: 'in the cache window');
+    expect(protect('s', '/t1.mp3'), isTrue, reason: 'pinned by a library-copy rule');
+    expect(protect('s', '/t2.mp3'), isFalse);
+    expect(DownloadManager.cacheProtection({'s/t0.mp3'}, null)('s', '/t1.mp3'), isFalse,
+        reason: 'no index, no rules');
+  });
 
   group('AutoDownloadLedger.selectEvictions', () {
     test('cap 0 keeps everything (unlimited)', () {
