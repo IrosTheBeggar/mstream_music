@@ -3768,4 +3768,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get keepOfflineHelp => '以原始音质下载并在此设备上保持同步。';
+
+  @override
+  String get keepRatedTitle => '离线保留已评分的歌曲';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n 星及以上';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 星';
+
+  @override
+  String get keptOfflineSection => '另外离线保留';
+
+  @override
+  String get keptOfflineNone => '暂无。“离线保留”位于专辑、艺术家和播放列表。';
 }

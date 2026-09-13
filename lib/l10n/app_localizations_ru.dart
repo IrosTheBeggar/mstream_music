@@ -4066,4 +4066,22 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Загружается в исходном качестве и синхронизируется на этом устройстве.';
+
+  @override
+  String get keepRatedTitle => 'Хранить оценённые треки офлайн';
+
+  @override
+  String keepRatedStars(int n) {
+    return 'От $n звёзд';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 звёзд';
+
+  @override
+  String get keptOfflineSection => 'Также хранится офлайн';
+
+  @override
+  String get keptOfflineNone =>
+      'Пока ничего. «Хранить офлайн» есть у альбомов, исполнителей и плейлистов.';
 }

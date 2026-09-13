@@ -363,15 +363,39 @@ void main() {
       const RemoteTrack(id: 3, path: '/musicals/x.mp3', album: 'Other', artist: 'Ann'),
       const RemoteTrack(id: 4, path: '/music/B/3.mp3'),
     ];
-    List<String> ex(String kind, String key, {Set<String> credited = const {}}) =>
-        expandRule(Subscription(server: 's', kind: kind, key: key), remote, creditedAlbums: credited);
+    List<String> ex(String kind, String key,
+            {Set<String> credited = const {}, Set<String> members = const {}}) =>
+        expandRule(Subscription(server: 's', kind: kind, key: key), remote,
+            creditedAlbums: credited, memberPaths: members);
     expect(ex(RuleKind.library, 'music'), ['/music/A/1.mp3', '/music/A/2.mp3', '/music/B/3.mp3']);
     expect(ex(RuleKind.library, '/music/'), ['/music/A/1.mp3', '/music/A/2.mp3', '/music/B/3.mp3']);
     expect(ex(RuleKind.folder, '/music/A'), ['/music/A/1.mp3', '/music/A/2.mp3']);
     expect(ex(RuleKind.album, 'Alpha'), ['/music/A/1.mp3', '/music/A/2.mp3']);
     expect(ex(RuleKind.artist, 'Ann'), ['/music/A/1.mp3', '/musicals/x.mp3']);
     expect(ex(RuleKind.artist, 'Ann', credited: {'Alpha'}), ['/music/A/1.mp3', '/music/A/2.mp3', '/musicals/x.mp3']);
+    expect(ex(RuleKind.playlist, 'Mix', members: {'/music/A/2.mp3', '/gone.mp3'}), ['/music/A/2.mp3'],
+        reason: 'only what the manifest still lists');
+    expect(ex(RuleKind.rated, '8', members: {'/music/B/3.mp3'}), ['/music/B/3.mp3']);
     expect(ex('genre', 'Rock'), isEmpty);
+  });
+
+  test('playlist and rated rules pin what the index resolves for them', () async {
+    ix.removeSubscription(ix.subscriptionsFor('s').single.id!);
+    ix.replacePlaylists('s', const [PlaylistRow(id: 'Mix', name: 'Mix', paths: ['/music/A/2.mp3', '/music/gone.mp3'])]);
+    ix.addSubscription(const Subscription(server: 's', kind: RuleKind.playlist, key: 'Mix'));
+    var run = await runner().run(cfg);
+    expect(run.downloaded, 1);
+    expect(dl.calls, ['/music/A/2.mp3']);
+
+    // Rated needs the manifest rows (the first run pulled them) and the
+    // rated list; 8 and up leaves the 4 out.
+    ix.replaceRated('s', {'/music/B/3.mp3': 8, '/music/A/1.mp3': 4});
+    ix.addSubscription(const Subscription(server: 's', kind: RuleKind.rated, key: '8'));
+    dl.calls.clear();
+    run = await runner().run(cfg);
+    expect(run.downloaded, 1);
+    expect(dl.calls, ['/music/B/3.mp3']);
+    expect(ix.wantedPaths('s'), {'/music/A/2.mp3', '/music/B/3.mp3'});
   });
 
   test('a disabled rule pins nothing and its edges are cleared', () async {

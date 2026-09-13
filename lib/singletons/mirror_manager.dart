@@ -117,6 +117,45 @@ class MirrorManager {
   /// and the index is open.
   bool canKeep(Server s) => s.syncAvailable == true && _index != null;
 
+  /// The album, artist and playlist rules of [s] — what "Keep offline" is
+  /// switched on for, oldest first.
+  List<Subscription> entityRules(Server s) => [
+        for (final r
+            in _index?.subscriptionsFor(s.localname) ?? const <Subscription>[])
+          if (r.enabled &&
+              (r.kind == RuleKind.album ||
+                  r.kind == RuleKind.artist ||
+                  r.kind == RuleKind.playlist))
+            r
+      ];
+
+  /// The rated rule's threshold on the server's 0–10 scale, null without one.
+  int? ratedThreshold(Server s) {
+    for (final r
+        in _index?.subscriptionsFor(s.localname) ?? const <Subscription>[]) {
+      if (r.enabled && r.kind == RuleKind.rated) return int.tryParse(r.key);
+    }
+    return null;
+  }
+
+  /// Keeps every track the caller rated at least [min] (0–10), or none when
+  /// [min] is null: at most one rated rule per server, replaced in place.
+  void setRatedThreshold(Server s, int? min) {
+    final ix = _index;
+    if (ix == null) return;
+    for (final r in ix.subscriptionsFor(s.localname)) {
+      if (r.kind == RuleKind.rated && r.id != null) {
+        ix.removeSubscription(r.id!);
+      }
+    }
+    if (min != null) {
+      ix.addSubscription(
+          Subscription(server: s.localname, kind: RuleKind.rated, key: '$min'));
+    }
+    _publish(s.localname);
+    unawaited(sync(s, trigger: 'rule'));
+  }
+
   bool hasRules(Server s) =>
       (_index?.subscriptionsFor(s.localname) ?? const []).any((r) => r.enabled);
 

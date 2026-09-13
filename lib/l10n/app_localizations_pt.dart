@@ -4025,4 +4025,22 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Transferido na qualidade original e mantido sincronizado neste dispositivo.';
+
+  @override
+  String get keepRatedTitle => 'Manter faixas avaliadas offline';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n estrelas ou mais';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 estrelas';
+
+  @override
+  String get keptOfflineSection => 'Também mantido offline';
+
+  @override
+  String get keptOfflineNone =>
+      'Nada ainda. «Manter offline» está nos álbuns, artistas e playlists.';
 }

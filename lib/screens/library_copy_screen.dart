@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -93,6 +94,10 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
                 const SizedBox(height: 16),
                 _offlineSwitch(l),
                 const SizedBox(height: 16),
+                _ratedRule(l),
+                const SizedBox(height: 12),
+                _keptRules(l),
+                const SizedBox(height: 16),
               ],
               Text(l.libraryCopyRetention, style: _label),
               const SizedBox(height: 6),
@@ -176,6 +181,82 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
       ),
     ]);
   }
+
+  /// The server's 0–10 rating for "3, 4 or 5 stars and up"; 0 is off.
+  static const _ratedChoices = [0, 6, 8, 10];
+
+  /// "Keep rated songs offline" (A6b): at most one rated rule per server.
+  Widget _ratedRule(AppLocalizations l) {
+    final current = MirrorManager().ratedThreshold(server) ?? 0;
+    final value = _ratedChoices.contains(current) ? current : 0;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(l.keepRatedTitle, style: _label),
+      const SizedBox(height: 6),
+      InputDecorator(
+        decoration: const InputDecoration(
+            isDense: true, prefixIcon: Icon(Icons.star_outline)),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+            value: value,
+            isExpanded: true,
+            isDense: true,
+            dropdownColor: VelvetColors.surface,
+            style: _body,
+            items: [
+              for (final n in _ratedChoices)
+                DropdownMenuItem(
+                    value: n,
+                    child: Text(n == 0
+                        ? l.commonOff
+                        : n == 10
+                            ? l.keepRatedFiveStars
+                            : l.keepRatedStars(n ~/ 2))),
+            ],
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() =>
+                  MirrorManager().setRatedThreshold(server, v == 0 ? null : v));
+            },
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  /// Every album, artist and playlist kept offline, each with a way to let
+  /// it go — the same rule the toggle on the item itself would remove.
+  Widget _keptRules(AppLocalizations l) {
+    final rules = MirrorManager().entityRules(server);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(l.keptOfflineSection, style: _label),
+      const SizedBox(height: 4),
+      if (rules.isEmpty)
+        Text(l.keptOfflineNone, style: _help)
+      else
+        for (final r in rules)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading:
+                Icon(_kindIcon(r.kind), color: VelvetColors.textSecondary),
+            title: Text(r.key,
+                style: _body, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: IconButton(
+              icon: Icon(Icons.close,
+                  size: 18, color: VelvetColors.textTertiary),
+              tooltip: l.delete,
+              onPressed: () => setState(
+                  () => MirrorManager().setRule(server, r.kind, r.key, false)),
+            ),
+          ),
+    ]);
+  }
+
+  static IconData _kindIcon(String kind) => switch (kind) {
+        RuleKind.album => Icons.album,
+        RuleKind.artist => Icons.library_music,
+        _ => Icons.queue_music,
+      };
 
   Widget _banner(String text) => Container(
         padding: const EdgeInsets.all(12),

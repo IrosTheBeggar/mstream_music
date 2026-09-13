@@ -4042,4 +4042,22 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Wird in Originalqualität heruntergeladen und auf diesem Gerät synchron gehalten.';
+
+  @override
+  String get keepRatedTitle => 'Bewertete Titel offline behalten';
+
+  @override
+  String keepRatedStars(int n) {
+    return 'Ab $n Sternen';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 Sterne';
+
+  @override
+  String get keptOfflineSection => 'Außerdem offline behalten';
+
+  @override
+  String get keptOfflineNone =>
+      'Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern und Playlists.';
 }

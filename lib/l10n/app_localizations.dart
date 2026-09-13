@@ -6641,6 +6641,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Downloaded in original quality and kept in sync on this device.'**
   String get keepOfflineHelp;
+
+  /// No description provided for @keepRatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep rated songs offline'**
+  String get keepRatedTitle;
+
+  /// No description provided for @keepRatedStars.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} stars and up'**
+  String keepRatedStars(int n);
+
+  /// No description provided for @keepRatedFiveStars.
+  ///
+  /// In en, this message translates to:
+  /// **'5 stars'**
+  String get keepRatedFiveStars;
+
+  /// No description provided for @keptOfflineSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Also kept offline'**
+  String get keptOfflineSection;
+
+  /// No description provided for @keptOfflineNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.'**
+  String get keptOfflineNone;
 }
 
 class _AppLocalizationsDelegate

@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "点对点 (iroh) 服务器不支持分享 — 它们没有可链接的公开地址。",
   "keepOffline": "离线保留",
   "keepOfflineOn": "已离线保留",
-  "keepOfflineHelp": "以原始音质下载并在此设备上保持同步。"
+  "keepOfflineHelp": "以原始音质下载并在此设备上保持同步。",
+  "keepRatedTitle": "离线保留已评分的歌曲",
+  "keepRatedStars": "{n} 星及以上",
+  "keepRatedFiveStars": "5 星",
+  "keptOfflineSection": "另外离线保留",
+  "keptOfflineNone": "暂无。“离线保留”位于专辑、艺术家和播放列表。"
 }

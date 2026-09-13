@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "Compartir no está disponible con servidores peer-to-peer (iroh) — no tienen una URL pública a la que enlazar.",
   "keepOffline": "Guardar sin conexión",
   "keepOfflineOn": "Guardado sin conexión",
-  "keepOfflineHelp": "Se descarga en calidad original y se mantiene sincronizado en este dispositivo."
+  "keepOfflineHelp": "Se descarga en calidad original y se mantiene sincronizado en este dispositivo.",
+  "keepRatedTitle": "Guardar canciones valoradas sin conexión",
+  "keepRatedStars": "{n} estrellas o más",
+  "keepRatedFiveStars": "5 estrellas",
+  "keptOfflineSection": "También guardado sin conexión",
+  "keptOfflineNone": "Nada todavía. «Guardar sin conexión» está en álbumes, artistas y listas."
 }

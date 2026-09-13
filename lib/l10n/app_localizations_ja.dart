@@ -3837,4 +3837,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get keepOfflineHelp => '元の音質でダウンロードし、この端末で同期を保ちます。';
+
+  @override
+  String get keepRatedTitle => '評価した曲をオフラインで保持';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$nつ星以上';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5つ星';
+
+  @override
+  String get keptOfflineSection => 'その他のオフライン保持';
+
+  @override
+  String get keptOfflineNone => 'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリストにあります。';
 }

@@ -106,6 +106,28 @@ void main() {
       expect(LibraryIndexManager().index!.subscriptionsFor('home').single.kind,
           RuleKind.artist);
     });
+
+    test('playlist rule, rated threshold and the entity list', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      m.setRule(s, RuleKind.playlist, 'Mix', true);
+      m.setRule(s, RuleKind.album, 'Alpha', true);
+      expect(m.entityRules(s).map((r) => (r.kind, r.key)),
+          [(RuleKind.playlist, 'Mix'), (RuleKind.album, 'Alpha')]);
+      expect(m.ratedThreshold(s), isNull);
+      m.setRatedThreshold(s, 8);
+      expect(m.ratedThreshold(s), 8);
+      m.setRatedThreshold(s, 10);
+      expect(m.ratedThreshold(s), 10, reason: 'one rated rule, replaced');
+      final ix = LibraryIndexManager().index!;
+      expect(ix.subscriptionsFor('home').where((r) => r.kind == RuleKind.rated),
+          hasLength(1));
+      expect(m.entityRules(s), hasLength(2), reason: 'rated is not an entity');
+      m.setRatedThreshold(s, null);
+      expect(m.ratedThreshold(s), isNull);
+      m.setRule(s, RuleKind.playlist, 'Mix', false);
+      expect(m.entityRules(s).single.key, 'Alpha');
+    });
   });
 
   group('Server library-copy settings', () {

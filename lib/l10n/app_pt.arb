@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "O compartilhamento não está disponível em servidores peer-to-peer (iroh) — eles não têm uma URL pública para vincular.",
   "keepOffline": "Manter offline",
   "keepOfflineOn": "Mantido offline",
-  "keepOfflineHelp": "Transferido na qualidade original e mantido sincronizado neste dispositivo."
+  "keepOfflineHelp": "Transferido na qualidade original e mantido sincronizado neste dispositivo.",
+  "keepRatedTitle": "Manter faixas avaliadas offline",
+  "keepRatedStars": "{n} estrelas ou mais",
+  "keepRatedFiveStars": "5 estrelas",
+  "keptOfflineSection": "Também mantido offline",
+  "keptOfflineNone": "Nada ainda. «Manter offline» está nos álbuns, artistas e playlists."
 }
