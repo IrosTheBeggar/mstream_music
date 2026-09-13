@@ -16,6 +16,7 @@ import 'art_cache.dart';
 import 'browser_list.dart';
 import 'file_explorer.dart';
 import 'library_index.dart';
+import 'migration_manager.dart';
 import 'log_manager.dart';
 import 'server_list.dart';
 
@@ -232,6 +233,10 @@ class MirrorManager {
     _cancelRequested.remove(name);
     _publish(name);
     final runner = MirrorRunner(
+      // The engine's preflight refuses a run the volume cannot hold (plus
+      // 64 MiB headroom); the probe is the same StatFs call the storage
+      // migration uses.
+      freeSpace: (dir) => MigrationManager().freeBytes(dir),
       index: ix,
       manifest: ServerManifestClient(s),
       downloader: _MirrorDownloader(s, this),
