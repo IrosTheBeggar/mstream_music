@@ -20,6 +20,9 @@ dependencies:
   # Whole-file MD5 verification of mirrored downloads (below the server's
   # 25 MiB sampled-hash threshold).
   crypto: ^3.0.6
+  # The headless CLI's transports (A11); the app keeps its own clients.
+  http: ^1.2.0
+  args: ^2.6.0
 
 dev_dependencies:
   test: ^1.25.0
