@@ -360,6 +360,16 @@ class LibraryIndex {
           LocalFile.fromRow(r)
       ];
 
+  /// The transcoded tiers [server] has a usable copy in — what playback
+  /// may fall back to when there is no original.
+  List<String> qualities(String server) => [
+        for (final r in _db.select(
+            'SELECT DISTINCT quality FROM local_files WHERE server = ? '
+            "AND quality != 'original' AND state = 'ok' ORDER BY quality",
+            [server]))
+          r['quality'] as String
+      ];
+
   // ── subscriptions (what to keep) ──────────────────────────────────────
 
   List<Subscription> subscriptionsFor(String server) => [

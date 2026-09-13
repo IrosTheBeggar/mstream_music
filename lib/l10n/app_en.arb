@@ -4145,11 +4145,16 @@
   },
   "keepOffline": "Keep offline",
   "keepOfflineOn": "Kept offline",
-  "keepOfflineHelp": "Downloaded in original quality and kept in sync on this device.",
+  "keepOfflineHelp": "Downloaded and kept in sync on this device.",
   "keepRatedTitle": "Keep rated songs offline",
   "keepRatedStars": "{n} stars and up",
   "@keepRatedStars": {"placeholders": {"n": {"type": "int"}}},
   "keepRatedFiveStars": "5 stars",
   "keptOfflineSection": "Also kept offline",
-  "keptOfflineNone": "Nothing yet. \"Keep offline\" lives on albums, artists and playlists."
+  "keptOfflineNone": "Nothing yet. \"Keep offline\" lives on albums, artists and playlists.",
+  "keepQualityTitle": "Quality of kept items",
+  "keepQualityHelp": "Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.",
+  "keepQualityOriginal": "Original files",
+  "keepQualityTier": "{codec} · {kbps} kbps",
+  "@keepQualityTier": {"placeholders": {"codec": {"type": "String"}, "kbps": {"type": "int"}}}
 }

@@ -54,16 +54,26 @@ class FakeManifest implements ManifestClient {
 class FakeDownloader implements Downloader {
   final FakeServer server;
   final List<String> calls = [];
+  final Map<String, Tier> tiers = {};
   final Set<String> failFor = {};
   final Set<String> corruptFor = {};
+  final Set<String> emptyFor = {};
   FakeDownloader(this.server);
 
   @override
-  Future<void> download(String path, String destination, {bool requiresWiFi = false}) async {
+  Future<void> download(String path, String destination,
+      {bool requiresWiFi = false, Tier? tier}) async {
     calls.add(path);
+    if (tier != null) tiers[path] = tier;
     if (failFor.contains(path)) throw const SocketException('boom');
     final (bytes, _) = server.files[path]!;
-    await File(destination).writeAsBytes(corruptFor.contains(path) ? [...bytes, 0] : bytes);
+    // A transcode is other bytes of another length: the tier's name in front.
+    final out = tier == null
+        ? bytes
+        : emptyFor.contains(path)
+            ? <int>[]
+            : [...utf8.encode('${tier.id}:'), ...bytes];
+    await File(destination).writeAsBytes(corruptFor.contains(path) ? [...out, 0] : out);
   }
 }
 
@@ -396,6 +406,77 @@ void main() {
     expect(run.downloaded, 1);
     expect(dl.calls, ['/music/B/3.mp3']);
     expect(ix.wantedPaths('s'), {'/music/A/2.mp3', '/music/B/3.mp3'});
+  });
+
+  test('a transcoded rule keeps the tier in its own tree, follows the source, and lets go on its own', () async {
+    ix.removeSubscription(ix.subscriptionsFor('s').single.id!);
+    srv
+      ..put('/music/A/1.mp3', 'one', album: 'Alpha')
+      ..put('/music/A/2.mp3', 'two', album: 'Alpha');
+    const tier = 'opus-96';
+    final rule = ix.addSubscription(
+        const Subscription(server: 's', kind: RuleKind.album, key: 'Alpha', quality: tier));
+    var run = await runner().run(cfg);
+    expect(run.error, isNull);
+    expect(run.downloaded, 2);
+    expect(dl.tiers, {'/music/A/1.mp3': const Tier('opus', 96), '/music/A/2.mp3': const Tier('opus', 96)});
+    final ogg = p.join(tmp.path, 'media-transcoded', tier, 's', 'music', 'A', '1.ogg');
+    expect(File(ogg).readAsStringSync(), 'opus-96:one');
+    expect(File(local('/music/A/1.mp3')).existsSync(), isFalse, reason: 'no original was asked for');
+    expect(run.bytes, 2 * 'opus-96:one'.length);
+    final row = ix.localFile('s', '/music/A/1.mp3', quality: tier)!;
+    expect(row.state, LocalState.ok);
+    expect(row.size, 'opus-96:one'.length);
+    expect(row.hash, md5.convert(utf8.encode('one')).toString(), reason: 'the source it was made from');
+    expect(p.equals(row.localPath, ogg), isTrue);
+    expect(ix.localFile('s', '/music/A/1.mp3'), isNull);
+    expect(ix.qualities('s'), [tier]);
+
+    // Nothing moved: one 304, nothing transferred, both counted unchanged.
+    dl.calls.clear();
+    run = await runner().run(cfg);
+    expect(dl.calls, isEmpty);
+    expect(run.unchanged, 2);
+
+    // The source changed: re-transcoded, the old transcode trashed under its tier.
+    srv.put('/music/A/1.mp3', 'uno', mtime: 1700000005000, album: 'Alpha');
+    srv.revision = 'r2';
+    run = await runner().run(cfg);
+    expect(run.replaced, 1);
+    expect(File(ogg).readAsStringSync(), 'opus-96:uno');
+    expect(File(p.join(cfg.trashRoot, '2026-09-12', tier, 'music', 'A', '1.ogg')).readAsStringSync(),
+        'opus-96:one');
+
+    // An original rule for the same album fetches the originals beside the transcodes.
+    ix.addSubscription(const Subscription(server: 's', kind: RuleKind.album, key: 'Alpha'));
+    dl.calls.clear();
+    run = await runner().run(cfg);
+    expect(run.downloaded, 2);
+    expect(read('/music/A/1.mp3'), 'uno');
+    expect(File(ogg).existsSync(), isTrue);
+
+    // An empty transcode is a failure — recorded, not fatal, retried next run.
+    srv.put('/music/A/2.mp3', 'dos', mtime: 1700000009000, album: 'Alpha');
+    srv.revision = 'r3';
+    dl.emptyFor.add('/music/A/2.mp3');
+    run = await runner().run(cfg);
+    expect(run.failed, 1);
+    expect(run.replaced, 1, reason: 'the original copy of the same file');
+    expect(ix.localFile('s', '/music/A/2.mp3', quality: tier)!.state, LocalState.failed);
+    dl.emptyFor.clear();
+    run = await runner().run(cfg);
+    expect(run.failed, 0);
+    expect(ix.localFile('s', '/music/A/2.mp3', quality: tier)!.state, LocalState.ok);
+    expect(File(p.join(tmp.path, 'media-transcoded', tier, 's', 'music', 'A', '2.ogg')).readAsStringSync(),
+        'opus-96:dos');
+
+    // Dropping the tier rule trashes the transcodes and nothing else.
+    ix.removeSubscription(rule);
+    run = await runner().run(cfg);
+    expect(run.trashed, 2);
+    expect(File(ogg).existsSync(), isFalse);
+    expect(read('/music/A/1.mp3'), 'uno');
+    expect(ix.qualities('s'), isEmpty);
   });
 
   test('a disabled rule pins nothing and its edges are cleared', () async {

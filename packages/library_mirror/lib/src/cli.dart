@@ -35,8 +35,12 @@ ArgParser buildParser() => ArgParser()
       splitCommas: false,
       help: 'Add a rule, kind:key — library:music, folder:/music/Live, '
           'album:Name, artist:Name, playlist:Name, rated:8 (0–10)')
+  ..addOption('quality',
+      defaultsTo: Quality.original,
+      help: 'Quality for the rules added with --keep: original, or a '
+          'transcode tier <codec>-<kbps> — mp3-192, opus-96, aac-128 …')
   ..addMultiOption('drop',
-      splitCommas: false, help: 'Remove a rule, kind:key')
+      splitCommas: false, help: 'Remove a rule, kind:key (every quality)')
   ..addFlag('list-rules', negatable: false, help: 'Print the rules and exit')
   ..addOption('retention-days',
       defaultsTo: '30', help: 'Days a trashed file is kept (0 = forever)')
@@ -75,9 +79,9 @@ String summarize(SyncRun run) => run.error != null
         '${run.failed} failed, ${run.unchanged} unchanged';
 
 /// Runs the headless mirror once and returns the exit code. Rules live in
-/// the index next to the copy, so `--keep` is needed once; every later
-/// invocation is just `--server … --dest …`. [client], [out] and [err] are
-/// for tests.
+/// the index next to the copy, so `--keep` is needed once (with `--quality`
+/// for a transcoded tier); every later invocation is just `--server …
+/// --dest …`. [client], [out] and [err] are for tests.
 Future<int> runCli(List<String> args,
     {http.Client? client, StringSink? out, StringSink? err}) async {
   final o = out ?? stdout;
@@ -118,10 +122,15 @@ Future<int> runCli(List<String> args,
     return CliExit.fatal;
   }
   try {
+    final quality = r['quality'] as String;
+    if (quality != Quality.original && Tier.parse(quality) == null) {
+      throw FormatException('a quality is original or <codec>-<kbps> '
+          '(mp3, opus or aac), not "$quality"');
+    }
     for (final spec in r['keep'] as List<String>) {
       final rule = parseRule(spec);
-      index.addSubscription(
-          Subscription(server: name, kind: rule.kind, key: rule.key));
+      index.addSubscription(Subscription(
+          server: name, kind: rule.kind, key: rule.key, quality: quality));
     }
     for (final spec in r['drop'] as List<String>) {
       final rule = parseRule(spec);
@@ -134,7 +143,9 @@ Future<int> runCli(List<String> args,
     final rules = index.subscriptionsFor(name);
     if (r['list-rules'] as bool) {
       for (final s in rules) {
-        o.writeln('${s.kind}:${s.key}${s.enabled ? '' : ' (disabled)'}');
+        o.writeln('${s.kind}:${s.key}'
+            '${s.quality == Quality.original ? '' : ' (${s.quality})'}'
+            '${s.enabled ? '' : ' (disabled)'}');
       }
       return CliExit.ok;
     }

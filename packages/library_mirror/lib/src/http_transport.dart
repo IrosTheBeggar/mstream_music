@@ -30,6 +30,13 @@ class MirrorServer {
   Uri media(String dataPath) => Uri.parse(
       '$base/media${encodeDataPath(dataPath)}${token == null ? '' : '?token=$token'}');
 
+  /// The server's transcode of a data path at [tier] (`/transcode/<path>`
+  /// with `codec` and `bitrate`), streamed chunked — no size to expect.
+  Uri transcode(String dataPath, Tier tier) => Uri.parse(
+      '$base/transcode${encodeDataPath(dataPath)}'
+      '?codec=${tier.codec}&bitrate=${tier.bitrate}'
+      '${token == null ? '' : '&token=$token'}');
+
   /// A cover by its content-addressed name, at the list-row size.
   Uri art(String artFile, {String compress = 'm'}) => Uri.parse(Uri.encodeFull(
       '$base/album-art/$artFile?compress=$compress${token == null ? '' : '&token=$token'}'));
@@ -99,7 +106,8 @@ class HttpManifestClient implements ManifestClient {
   }
 }
 
-/// Streams `/media/<path>` straight to the destination file.
+/// Streams `/media/<path>` — or, for a tier, `/transcode/<path>` — straight
+/// to the destination file.
 class HttpDownloader implements Downloader {
   final MirrorServer server;
   final http.Client client;
@@ -107,13 +115,13 @@ class HttpDownloader implements Downloader {
 
   @override
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false}) async {
-    final res = await client
-        .send(http.Request('GET', server.media(path)))
-        .timeout(_timeout);
+      {bool requiresWiFi = false, Tier? tier}) async {
+    final url = tier == null ? server.media(path) : server.transcode(path, tier);
+    final res = await client.send(http.Request('GET', url)).timeout(_timeout);
     if (res.statusCode != 200) {
       await res.stream.drain<void>();
-      throw HttpException('media$path: HTTP ${res.statusCode}');
+      throw HttpException(
+          '${tier == null ? 'media' : 'transcode'}$path: HTTP ${res.statusCode}');
     }
     final sink = File(destination).openWrite();
     try {

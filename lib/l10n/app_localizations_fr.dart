@@ -4040,7 +4040,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get keepOfflineHelp =>
-      'Téléchargé en qualité d\'origine et maintenu à jour sur cet appareil.';
+      'Téléchargé et maintenu à jour sur cet appareil.';
 
   @override
   String get keepRatedTitle => 'Garder les titres notés hors ligne';
@@ -4059,4 +4059,19 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get keptOfflineNone =>
       'Rien pour l\'instant. « Garder hors ligne » se trouve sur les albums, artistes et playlists.';
+
+  @override
+  String get keepQualityTitle => 'Qualité des éléments conservés';
+
+  @override
+  String get keepQualityHelp =>
+      'Les albums, artistes, playlists et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d\'origine.';
+
+  @override
+  String get keepQualityOriginal => 'Fichiers d\'origine';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbit/s';
+  }
 }

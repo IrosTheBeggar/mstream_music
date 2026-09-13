@@ -36,7 +36,7 @@ tests + one device smoke); no repo-wide format.
 | A5 | app | Offline: playlists, rated, genres, recent, search (FTS5) — **[#179](https://github.com/IrosTheBeggar/mstream_music/pull/179)** (schema v2 outbox, `LibrarySource` lists, `OutboxManager` replay) | A4 | yes (search offline) | 🟡 3–4d |
 | A6a | app | Rules: album / artist "Keep offline" — **[#180](https://github.com/IrosTheBeggar/mstream_music/pull/180)** (`expandRule` by kind, toolbar pin + artist sheet) | A3 | yes | 🟡 2–3d |
 | A6b | app | Rules: playlist + rated — **[#181](https://github.com/IrosTheBeggar/mstream_music/pull/181)** (playlist menu toggle, rated dropdown + rules list in Library copy) | A6a, A5 | yes | 🟡 1–2d |
-| A7 | app | Transcoded quality tier for entity rules | A6a | yes (quality picker) | 🟡 2–3d |
+| A7 | app | Transcoded quality tier for entity rules — **[#184](https://github.com/IrosTheBeggar/mstream_music/pull/184)** (`Tier`, per-quality planning, `media-transcoded/<tier>/`, "Quality of kept items" per server, CLI `--quality`) | A6a | yes (quality picker) | 🟡 2–3d |
 | A8 | app | Fold the keep-queue-offline ledger into the index | A3 | no | 🟡 1–2d |
 | S2 | mStream | Tombstones + `since` deltas | S1 | no | 🟡 2–3d |
 | A9 | app | Consume deltas | S2, A3 | no | 🟢 1d |
@@ -462,8 +462,10 @@ Rule `quality = 'mp3-192'` etc.: destination
 swapped; URL from `buildServerStreamUrl` with transcode params; no Range and
 no verify (size unknown → completion = ok); `local_files.quality`
 distinguishes rows; the resolver prefers `original`, then transcoded; the
-planner ignores transcoded rows entirely. Quality picker on the "Keep
-offline" sheet, hidden when `transcodeAvailable == false`.
+planner plans each quality on its own. Shipped as one choice per server —
+"Quality of kept items" on the Library copy screen, applied to the album /
+artist / playlist / rated rules (re-keyed when it changes; library rules
+stay original) — hidden when `transcodeAvailable == false`.
 
 ---
 

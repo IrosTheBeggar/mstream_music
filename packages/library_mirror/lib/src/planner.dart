@@ -55,6 +55,10 @@ class Plan {
   /// the trash until the sweep).
   final int bytesNeeded;
 
+  /// What was planned: [Quality.original] or a [Tier] id. One plan per
+  /// quality — the tiers never see each other's rows.
+  final String quality;
+
   const Plan({
     required this.downloads,
     required this.replaces,
@@ -64,6 +68,7 @@ class Plan {
     required this.conflicts,
     required this.unchanged,
     required this.bytesNeeded,
+    this.quality = Quality.original,
   });
 
   bool get hasWork =>
@@ -81,11 +86,12 @@ bool mtimesAgree(int deltaMs, PlanOptions o) {
   return d < o.mtimeToleranceMs || (d - o.dstSkewMs).abs() < o.mtimeToleranceMs;
 }
 
-/// Decides what one sync run does. Pure over its inputs:
+/// Decides what one sync run does for one [quality]. Pure over its inputs:
 ///
 ///  - [remote]: the server's current listing (the manifest rows);
-///  - [local]: every local-copy row of the server, any origin;
-///  - [wanted]: the paths the enabled rules pin.
+///  - [local]: every local-copy row of the server, any origin or quality —
+///    only the rows of [quality] take part;
+///  - [wanted]: the paths the enabled rules of that quality pin.
 ///
 /// Rules, per wanted path: a case-folded duplicate is a conflict; no usable
 /// local copy is a download — unless a mirror-owned file with the same
@@ -97,21 +103,32 @@ bool mtimesAgree(int deltaMs, PlanOptions o) {
 /// server is scanning, mirror-owned rows the server dropped or no rule wants
 /// are trashed. Manual, auto and external copies are never trashed or moved
 /// — the mirror only ever removes what it created.
+///
+/// A transcoded tier ([Tier]) has no bytes to compare with the server's: its
+/// rows carry the source's hash and mtime, so a copy is replaced when the
+/// source changed and never for its size; there is nothing to adopt; the
+/// bytes needed are estimated from the duration; and the duplicate check
+/// runs on the tier's file names, since swapping extensions can make two
+/// sources meet at one file.
 Plan plan({
   required Iterable<RemoteTrack> remote,
   required Iterable<LocalFile> local,
   required Set<String> wanted,
   PlanOptions options = const PlanOptions(),
+  String quality = Quality.original,
 }) {
+  final tier = Tier.parse(quality);
   final remoteByPath = {for (final t in remote) t.path: t};
   final localByPath = {
     for (final f in local)
-      if (f.quality == 'original') f.path: f,
+      if (f.quality == quality) f.path: f,
   };
+  int needed(RemoteTrack r) => tier?.estimateBytes(r) ?? r.size ?? 0;
 
   final byFoldedKey = <String, List<String>>{};
   for (final path in wanted) {
-    (byFoldedKey[path.toLowerCase()] ??= []).add(path);
+    final name = tier == null ? path : tier.pathFor(path);
+    (byFoldedKey[name.toLowerCase()] ??= []).add(path);
   }
   final conflicts = <String>{
     for (final group in byFoldedKey.values)
@@ -146,18 +163,18 @@ Plan plan({
         renames.add(Rename(orphan, r));
       } else {
         downloads.add(r);
-        bytes += r.size ?? 0;
+        bytes += needed(r);
       }
-    } else if (l.hash == null) {
+    } else if (tier == null && l.hash == null) {
       if (r.size != null && l.size != null && r.size != l.size) {
         replaces.add(r);
         bytes += (r.size ?? 0) + (l.size ?? 0);
       } else {
         adoptions.add(Adoption(r, l));
       }
-    } else if (_changed(r, l, options)) {
+    } else if (_changed(r, l, options, tier)) {
       replaces.add(r);
-      bytes += (r.size ?? 0) + (l.size ?? 0);
+      bytes += needed(r) + (l.size ?? 0);
     } else {
       unchanged++;
     }
@@ -182,11 +199,19 @@ Plan plan({
     conflicts: conflicts.toList()..sort(),
     unchanged: unchanged,
     bytesNeeded: bytes,
+    quality: quality,
   );
 }
 
-bool _changed(RemoteTrack r, LocalFile l, PlanOptions o) {
-  if (r.size != null && l.size != null && r.size != l.size) return true;
+/// Whether the server's file moved on from the local copy. The original
+/// compares bytes (size) and mtime; a tier compares the source it was made
+/// from (the recorded hash) and mtime — its own size says nothing.
+bool _changed(RemoteTrack r, LocalFile l, PlanOptions o, Tier? tier) {
+  if (tier == null) {
+    if (r.size != null && l.size != null && r.size != l.size) return true;
+  } else if (r.hash != null && l.hash != null && r.hash != l.hash) {
+    return true;
+  }
   if (r.modified != null &&
       l.mtime != null &&
       !mtimesAgree(l.mtime! - r.modified!, o)) {

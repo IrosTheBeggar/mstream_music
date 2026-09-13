@@ -6639,7 +6639,7 @@ abstract class AppLocalizations {
   /// No description provided for @keepOfflineHelp.
   ///
   /// In en, this message translates to:
-  /// **'Downloaded in original quality and kept in sync on this device.'**
+  /// **'Downloaded and kept in sync on this device.'**
   String get keepOfflineHelp;
 
   /// No description provided for @keepRatedTitle.
@@ -6671,6 +6671,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.'**
   String get keptOfflineNone;
+
+  /// No description provided for @keepQualityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality of kept items'**
+  String get keepQualityTitle;
+
+  /// No description provided for @keepQualityHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
+  String get keepQualityHelp;
+
+  /// No description provided for @keepQualityOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original files'**
+  String get keepQualityOriginal;
+
+  /// No description provided for @keepQualityTier.
+  ///
+  /// In en, this message translates to:
+  /// **'{codec} · {kbps} kbps'**
+  String keepQualityTier(String codec, int kbps);
 }
 
 class _AppLocalizationsDelegate

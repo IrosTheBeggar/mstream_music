@@ -34,3 +34,9 @@ neither. Exit codes: 0 ok, 1 fatal, 2 some files failed (retried next run).
 The copy lands in `<dest>/media/<name>/`, deletions in
 `<dest>/.mstream-trash/<name>/<date>/` for `--retention-days` (30).
 
+Add `--quality opus-96` (a tier, `<codec>-<kbps>`: mp3, opus or aac at
+64–192) to a `--keep` and that rule keeps the server's transcode instead of
+the original — under `<dest>/media-transcoded/<tier>/<name>/`, with the
+codec's extension, never checked against the original's size or hash.
+`--list-rules` shows the tier after such a rule.
+
