@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart' show Icons;
 
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/singletons/library_source.dart';
+import 'package:mstream_music/singletons/settings.dart';
 
 RemoteTrack rt(int id, String path,
         {String? title, String? artist, String? album, int? track, int? disc,
@@ -104,5 +105,68 @@ void main() {
     expect(LocalLibrarySource.dirPath(''), '/');
     expect(LocalLibrarySource.dirPath('/a'), '/a/');
     expect(LocalLibrarySource.dirPath('/a/'), '/a/');
+  });
+
+  test("playlists, and a playlist's slots (a gone file keeps its slot)", () async {
+    ix.replacePlaylists('home', const [
+      PlaylistRow(id: 'Mix', name: 'Mix',
+          paths: ['/music/Bob/Other/x.mp3', '/music/gone.mp3']),
+    ]);
+    final lists = await src.playlists(server);
+    expect(lists.single.type, 'playlist');
+    expect(lists.single.data, 'Mix');
+    expect(lists.single.icon!.icon, Icons.queue_music);
+    final rows = await src.playlistContents(server, 'Mix');
+    expect(rows.map((r) => (r.type, r.data)),
+        [('file', '/music/Bob/Other/x.mp3'), ('file', '/music/gone.mp3')]);
+    expect(rows.first.metadata!.title, 'X');
+    expect(rows.last.metadata, isNull);
+    expect(rows.last.name, 'music/gone.mp3');
+    expect(await src.playlistContents(server, 'nope'), isEmpty);
+  });
+
+  test('rated rows: best first, artist as the subtitle', () async {
+    ix.replaceRated('home',
+        {'/music/Alice/First/02.flac': 6, '/music/Bob/Other/x.mp3': 9});
+    final rows = await src.rated(server);
+    expect(rows.map((r) => r.data),
+        ['/music/Bob/Other/x.mp3', '/music/Alice/First/02.flac']);
+    expect(rows.first.subtext, 'Bob');
+    expect(rows.first.metadata!.rating, 9);
+  });
+
+  test('recent lists the newest additions first (id order without dates)',
+      () async {
+    final rows = await src.recent(server);
+    expect(rows.map((r) => r.data).first, '/music/Bob/Other/list.m3u');
+    expect(rows, hasLength(4));
+    expect(rows.first.metadata!.title, 'L');
+  });
+
+  test('search groups artists, albums and tracks per the ticked categories',
+      () async {
+    final before = SettingsManager().searchCategories;
+    try {
+      SettingsManager().searchCategories = {
+        SearchCategory.artists, SearchCategory.albums, SearchCategory.songs,
+      };
+      final rows = await src.search(server, 'ali');
+      expect(rows.first.type, 'artist');
+      expect(rows.first.data, 'Alice');
+      expect(rows.skip(1).map((r) => r.data), unorderedEquals(
+          ['/music/Alice/First/01.flac', '/music/Alice/First/02.flac']));
+      expect(rows.last.metadata!.title, isNotNull, reason: 'full metadata');
+      expect(rows.last.partialMetadata, isFalse);
+
+      final byAlbum = await src.search(server, 'fir');
+      expect(byAlbum.first.type, 'album');
+      expect(byAlbum.first.data, 'First');
+      expect(byAlbum.first.altAlbumArt, 'aa.jpeg');
+
+      SettingsManager().searchCategories = {SearchCategory.albums};
+      expect(await src.search(server, 'ali'), isEmpty);
+    } finally {
+      SettingsManager().searchCategories = before;
+    }
   });
 }

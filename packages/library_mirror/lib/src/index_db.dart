@@ -42,10 +42,8 @@ class LibraryIndex {
     if (v == kSchemaVersion) return;
     db.execute('BEGIN');
     try {
-      if (v < 1) {
-        for (final s in schemaStatements()) {
-          db.execute(s);
-        }
+      for (final s in upgradeStatements(v)) {
+        db.execute(s);
       }
       db.execute('PRAGMA user_version = $kSchemaVersion');
       db.execute('COMMIT');
@@ -545,6 +543,197 @@ class LibraryIndex {
       .map((t) => '"${t.replaceAll('"', '""')}"*')
       .join(' ');
 
+  // ── the other lists (A5) ──────────────────────────────────────────────
+
+  List<GenreRow> genres(String server) => [
+        for (final r in _db.select(
+            'SELECT name, track_count FROM remote_genres WHERE server = ? '
+            'ORDER BY name COLLATE NOCASE',
+            [server]))
+          GenreRow(
+              name: r['name'] as String,
+              trackCount: (r['track_count'] as int?) ?? 0)
+      ];
+
+  /// The playlists by name, without their tracks.
+  List<PlaylistRow> playlists(String server) => [
+        for (final r in _db.select(
+            'SELECT id, name FROM remote_playlists WHERE server = ? '
+            'ORDER BY name COLLATE NOCASE',
+            [server]))
+          PlaylistRow(id: r['id'] as String, name: r['name'] as String)
+      ];
+
+  /// The slots of playlist [id] in order, each with its track when the
+  /// manifest knows the path — the shape `playlist/load` returns.
+  List<PlaylistItem> playlistItems(String server, String id) => [
+        for (final r in _db.select(
+            'SELECT i.pos AS item_pos, i.path AS item_path, rt.* '
+            'FROM remote_playlist_items i '
+            'LEFT JOIN remote_tracks rt ON rt.server = i.server AND rt.path = i.path '
+            'WHERE i.server = ? AND i.playlist_id = ? ORDER BY i.pos',
+            [server, id]))
+          (
+            pos: r['item_pos'] as int,
+            path: r['item_path'] as String,
+            track: r['rt_id'] == null ? null : RemoteTrack.fromRow(r),
+          )
+      ];
+
+  /// The tracks the caller rated, best first — `db/rated`'s order. The
+  /// rating comes from the rated list, which is fresher than the manifest's
+  /// lite block.
+  List<RemoteTrack> rated(String server) => [
+        for (final r in _db.select(
+            'SELECT rt.*, rr.rating AS user_rating FROM remote_rated rr '
+            'JOIN remote_tracks rt ON rt.server = rr.server AND rt.path = rr.path '
+            'WHERE rr.server = ? AND rr.rating > 0 '
+            'ORDER BY rr.rating DESC, rt.path',
+            [server]))
+          RemoteTrack.fromRow(r).withRating(r['user_rating'] as int?)
+      ];
+
+  /// The newest additions — `db/recent/added`'s order.
+  List<RemoteTrack> recent(String server, {int limit = 100}) => [
+        for (final r in _db.select(
+            'SELECT * FROM remote_tracks WHERE server = ? '
+            'ORDER BY created_at DESC, id DESC LIMIT ?',
+            [server, limit]))
+          RemoteTrack.fromRow(r)
+      ];
+
+  /// Artists whose name contains [query] (case-insensitive), for the
+  /// grouped search offline. [albumsMatching] is the same over albums.
+  List<String> artistsMatching(String server, String query,
+          {int limit = 50}) =>
+      [
+        for (final r in _db.select(
+            "SELECT name FROM remote_artists WHERE server = ? "
+            "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
+            [server, _like(query), limit]))
+          r['name'] as String
+      ];
+
+  List<AlbumRow> albumsMatching(String server, String query,
+          {int limit = 50}) =>
+      [
+        for (final r in _db.select(
+            "SELECT * FROM remote_albums WHERE server = ? "
+            "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
+            [server, _like(query), limit]))
+          AlbumRow.fromRow(r)
+      ];
+
+  static String _like(String q) =>
+      '%${q.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%';
+
+  // ── the caller's own writes (mirrored so the offline copy shows them) ──
+
+  /// Records the caller's rating for [path] in the rated list and on the
+  /// track's row; null or 0 clears it.
+  void setRating(String server, String path, int? rating) => transaction(() {
+        final r = rating == null || rating <= 0 ? null : rating;
+        if (r == null) {
+          _db.execute('DELETE FROM remote_rated WHERE server = ? AND path = ?',
+              [server, path]);
+        } else {
+          _db.execute(
+              'INSERT OR REPLACE INTO remote_rated (server, path, rating) '
+              'VALUES (?, ?, ?)',
+              [server, path, r]);
+        }
+        _db.execute(
+            'UPDATE remote_tracks SET rating = ? WHERE server = ? AND path = ?',
+            [r, server, path]);
+      });
+
+  /// Creates playlist [name] when it does not exist. Playlists are keyed by
+  /// name: the server puts no id on the wire.
+  void createPlaylist(String server, String name) => _db.execute(
+      'INSERT OR IGNORE INTO remote_playlists (server, id, name) VALUES (?, ?, ?)',
+      [server, name, name]);
+
+  /// Appends [path] to playlist [name], creating it first like
+  /// `playlist/add-song` does.
+  void addPlaylistItem(String server, String name, String path) =>
+      transaction(() {
+        createPlaylist(server, name);
+        final next = _db.select(
+            'SELECT COALESCE(MAX(pos), -1) + 1 AS n FROM remote_playlist_items '
+            'WHERE server = ? AND playlist_id = ?',
+            [server, name]).first['n'] as int;
+        _db.execute(
+            'INSERT INTO remote_playlist_items (server, playlist_id, pos, path) '
+            'VALUES (?, ?, ?, ?)',
+            [server, name, next, path]);
+      });
+
+  /// Replaces the tracks of playlist [name] (`playlist/save`).
+  void savePlaylist(String server, String name, List<String> paths) =>
+      transaction(() {
+        createPlaylist(server, name);
+        _db.execute(
+            'DELETE FROM remote_playlist_items WHERE server = ? AND playlist_id = ?',
+            [server, name]);
+        final ins = _db.prepare(
+            'INSERT INTO remote_playlist_items (server, playlist_id, pos, path) '
+            'VALUES (?, ?, ?, ?)');
+        try {
+          for (var i = 0; i < paths.length; i++) {
+            ins.execute([server, name, i, paths[i]]);
+          }
+        } finally {
+          ins.close();
+        }
+      });
+
+  void renamePlaylist(String server, String oldName, String newName) =>
+      transaction(() {
+        _db.execute(
+            'UPDATE remote_playlists SET id = ?, name = ? WHERE server = ? AND id = ?',
+            [newName, newName, server, oldName]);
+        _db.execute(
+            'UPDATE remote_playlist_items SET playlist_id = ? '
+            'WHERE server = ? AND playlist_id = ?',
+            [newName, server, oldName]);
+      });
+
+  void deletePlaylist(String server, String name) => transaction(() {
+        _db.execute(
+            'DELETE FROM remote_playlist_items WHERE server = ? AND playlist_id = ?',
+            [server, name]);
+        _db.execute('DELETE FROM remote_playlists WHERE server = ? AND id = ?',
+            [server, name]);
+      });
+
+  // ── outbox ────────────────────────────────────────────────────────────
+
+  /// Queues a write for replay; returns its id. Entries replay in id order,
+  /// so a later write to the same thing wins.
+  int enqueue(String server, String op, Map<String, dynamic> payload,
+      {required int created}) {
+    _db.execute(
+        'INSERT INTO outbox (server, op, payload, created) VALUES (?, ?, ?, ?)',
+        [server, op, jsonEncode(payload), created]);
+    return _db.lastInsertRowId;
+  }
+
+  List<OutboxEntry> outbox(String server) => [
+        for (final r in _db.select(
+            'SELECT * FROM outbox WHERE server = ? ORDER BY id', [server]))
+          OutboxEntry.fromRow(r)
+      ];
+
+  int outboxCount(String server) => _db.select(
+      'SELECT COUNT(*) AS n FROM outbox WHERE server = ?',
+      [server]).first['n'] as int;
+
+  void outboxDone(int id) => _db.execute('DELETE FROM outbox WHERE id = ?', [id]);
+
+  void outboxFailed(int id, String error) => _db.execute(
+      'UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?',
+      [error, id]);
+
   // ── server removal ────────────────────────────────────────────────────
 
   /// Drops everything the index knows about [server]. Files on disk are the
@@ -554,7 +743,7 @@ class LibraryIndex {
           'subscription_files', 'subscriptions', 'sync_runs', 'local_files',
           'remote_rated', 'remote_playlist_items', 'remote_playlists',
           'remote_genres', 'remote_artists', 'remote_albums', 'remote_tracks',
-          'meta',
+          'outbox', 'meta',
         ]) {
           _db.execute('DELETE FROM $t WHERE server = ?', [server]);
         }

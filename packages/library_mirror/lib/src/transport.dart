@@ -45,6 +45,16 @@ abstract class Downloader {
 abstract class LibraryListsClient {
   Future<List<AlbumRow>> albums();
   Future<List<String>> artists();
+
+  /// `db/genres`: name → track count.
+  Future<Map<String, int>> genres();
+
+  /// `playlist/getall` and `playlist/load` for each: the playlists with
+  /// their tracks' data paths (leading slash, like the manifest).
+  Future<List<PlaylistRow>> playlists();
+
+  /// `db/rated`: data path → the caller's rating.
+  Future<Map<String, int>> rated();
 }
 
 /// Fetches one album-art file (its content-addressed name on the server) to
