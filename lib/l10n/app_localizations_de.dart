@@ -4041,7 +4041,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get keepOfflineHelp =>
-      'Wird in Originalqualität heruntergeladen und auf diesem Gerät synchron gehalten.';
+      'Wird heruntergeladen und auf diesem Gerät synchron gehalten.';
 
   @override
   String get keepRatedTitle => 'Bewertete Titel offline behalten';
@@ -4060,4 +4060,19 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get keptOfflineNone =>
       'Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern und Playlists.';
+
+  @override
+  String get keepQualityTitle => 'Qualität der Offline-Inhalte';
+
+  @override
+  String get keepQualityHelp =>
+      'Offline behaltene Alben, Künstler, Playlists und bewertete Titel werden in dieser Qualität gespeichert. Komplette Bibliothekskopien behalten immer die Originaldateien.';
+
+  @override
+  String get keepQualityOriginal => 'Originaldateien';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbit/s';
+  }
 }

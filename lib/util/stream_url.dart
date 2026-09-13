@@ -157,6 +157,27 @@ String buildServerDownloadUrl(Server server, String path) {
   return parts.isEmpty ? base : '$base?${parts.join('&')}';
 }
 
+/// The URL of a server file's transcode at [codec] / [bitrate], for the
+/// library copy's transcoded tier (A7). Like [buildServerDownloadUrl] it
+/// ignores the playback transcode setting — the tier is the rule's choice —
+/// and it has no federated form: a peer's `/transcode` is off the federation
+/// allowlist, and those servers never offer a tier.
+String buildServerTranscodeUrl(Server server, String path,
+    {required String codec, required String bitrate}) {
+  String p = '';
+  for (final element in path.split('/')) {
+    if (element.isEmpty) continue;
+    p += '/${Uri.encodeComponent(element)}';
+  }
+  final parts = <String>[
+    'codec=$codec',
+    'bitrate=$bitrate',
+    if (server.authToken != null) 'token=${server.authToken!}',
+    if (server.localTokenQuery.isNotEmpty) server.localTokenQuery.substring(1),
+  ];
+  return '${server.effectiveBaseUrl}/transcode$p?${parts.join('&')}';
+}
+
 /// Single source of truth for a server's album-art URL.
 ///
 /// [artFile] is the `album_art_file` / metadata `album-art` value. [compress]

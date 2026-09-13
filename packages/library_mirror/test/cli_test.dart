@@ -17,6 +17,7 @@ class FakeMStream {
   String revision = 'r1';
   int manifestCalls = 0;
   int mediaCalls = 0;
+  final List<Map<String, String>> transcodeCalls = [];
 
   Future<http.Response> handle(http.Request r) async {
     final path = Uri.decodeComponent(r.url.path);
@@ -45,6 +46,13 @@ class FakeMStream {
             ],
           }),
           200);
+    }
+    if (path.startsWith('/transcode/')) {
+      transcodeCalls.add(r.url.queryParameters);
+      final bytes = files[path.substring('/transcode'.length)];
+      return bytes == null
+          ? http.Response('nope', 404)
+          : http.Response.bytes([...utf8.encode('t:'), ...bytes], 200);
     }
     if (path.startsWith('/media/')) {
       mediaCalls++;
@@ -116,6 +124,40 @@ void main() {
     expect(out.toString(), contains('2 trashed'));
     expect(File(p.join(tmp.path, 'media', 's', 'music', 'a.mp3')).existsSync(), isFalse);
     expect(Directory(p.join(tmp.path, '.mstream-trash', 's')).listSync(), isNotEmpty);
+  });
+
+  test('--quality keeps a transcoded tier: its own tree, shown after the rule, dropped as one', () async {
+    final tmp = Directory.systemTemp.createTempSync('cli_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final srv = FakeMStream();
+    final client = MockClient(srv.handle);
+    final base = ['--server', 'http://h:3000', '--dest', tmp.path, '--name', 's', '--quiet'];
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final ogg = p.join(tmp.path, 'media-transcoded', 'mp3-128', 's', 'music', 'a.mp3');
+
+    expect(await runCli([...base, '--keep', 'library:music', '--quality', 'mp3-128'],
+        client: client, out: out, err: err), CliExit.ok, reason: err.toString());
+    expect(out.toString(), contains('2 new'));
+    expect(srv.mediaCalls, 0);
+    expect(srv.transcodeCalls, hasLength(2));
+    expect(srv.transcodeCalls.first, {'codec': 'mp3', 'bitrate': '128k'});
+    expect(File(ogg).readAsStringSync(), 't:abc');
+    expect(Directory(p.join(tmp.path, 'media')).existsSync(), isFalse);
+
+    out.clear();
+    expect(await runCli([...base, '--list-rules'], client: client, out: out, err: err), CliExit.ok);
+    expect(out.toString().trim(), 'library:music (mp3-128)');
+
+    out.clear();
+    expect(await runCli([...base, '--drop', 'library:music'], client: client, out: out, err: err), CliExit.ok);
+    expect(out.toString(), contains('2 trashed'));
+    expect(File(ogg).existsSync(), isFalse);
+
+    // A quality that is not a tier is refused before anything runs.
+    expect(await runCli([...base, '--keep', 'library:music', '--quality', 'flac'],
+        client: client, out: out, err: err), CliExit.fatal);
+    expect(err.toString(), contains('a quality is original or <codec>-<kbps>'));
   });
 
   test('an unreachable server is a fatal exit with the reason on stderr', () async {

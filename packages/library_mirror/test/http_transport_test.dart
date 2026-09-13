@@ -20,6 +20,10 @@ void main() {
     expect(server.art('aa.jpeg').toString(),
         'http://h:3000/album-art/aa.jpeg?compress=m&token=tok');
     expect(server.headers, {'x-access-token': 'tok'});
+    expect(server.transcode('/music/A B/1.flac', const Tier('opus', 96)).toString(),
+        'http://h:3000/transcode/music/A%20B/1.flac?codec=opus&bitrate=96k&token=tok');
+    expect(MirrorServer('http://h').transcode('/m/x.flac', const Tier('mp3', 192)).toString(),
+        'http://h/transcode/m/x.flac?codec=mp3&bitrate=192k');
   });
 
   test('login returns a server bound to the token; a refusal throws', () async {
@@ -68,13 +72,22 @@ void main() {
   test('downloader streams the media to the file; a refusal leaves none', () async {
     final tmp = Directory.systemTemp.createTempSync('http_dl_');
     addTearDown(() => tmp.deleteSync(recursive: true));
-    final c = MockClient((r) async => r.url.path.endsWith('/1.mp3')
-        ? http.Response.bytes([1, 2, 3], 200)
-        : http.Response('nope', 404));
+    final c = MockClient((r) async {
+      if (r.url.path.startsWith('/transcode/')) {
+        expect(r.url.queryParameters, {'codec': 'aac', 'bitrate': '128k', 'token': 'tok'});
+        return http.Response.bytes([7], 200);
+      }
+      return r.url.path.endsWith('/1.mp3')
+          ? http.Response.bytes([1, 2, 3], 200)
+          : http.Response('nope', 404);
+    });
     final d = HttpDownloader(server, c);
     final dest = p.join(tmp.path, 'out.part');
     await d.download('/music/1.mp3', dest);
     expect(File(dest).readAsBytesSync(), [1, 2, 3]);
+    final tiered = p.join(tmp.path, 'tier.part');
+    await d.download('/music/1.mp3', tiered, tier: const Tier('aac', 128));
+    expect(File(tiered).readAsBytesSync(), [7]);
     expect(d.download('/music/2.mp3', p.join(tmp.path, 'none.part')),
         throwsA(isA<HttpException>()));
   });

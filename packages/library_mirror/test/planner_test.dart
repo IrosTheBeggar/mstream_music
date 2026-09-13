@@ -21,9 +21,11 @@ LocalFile lf(String path,
         hash: noHash ? null : (hash ?? 'h$path'), quality: quality);
 
 Plan run({List<RemoteTrack> remote = const [], List<LocalFile> local = const [],
-        Set<String>? wanted, PlanOptions options = const PlanOptions()}) =>
+        Set<String>? wanted, PlanOptions options = const PlanOptions(),
+        String quality = Quality.original}) =>
     plan(remote: remote, local: local,
-        wanted: wanted ?? {for (final t in remote) t.path}, options: options);
+        wanted: wanted ?? {for (final t in remote) t.path}, options: options,
+        quality: quality);
 
 void main() {
   group('plan', () {
@@ -149,12 +151,99 @@ void main() {
       final p = run(remote: [rt('/m/a')], local: [lf('/m/a', quality: 'mp3-192')]);
       expect(p.downloads.single.path, '/m/a');
       expect(p.trashes, isEmpty);
+      expect(p.quality, Quality.original);
     });
 
     test('empty inputs plan nothing', () {
       final p = run();
       expect(p.hasWork, isFalse);
       expect(p.unchanged, 0);
+    });
+  });
+
+  group('tiers', () {
+    const q = 'opus-96';
+    final tier = Tier.parse(q)!;
+    // A 100 s track at 96 kbps: 100 × 96 × 125 bytes.
+    RemoteTrack src(String path,
+            {String? hash, bool noHash = false, double? duration = 100,
+            int? modified = t0, int? size = 1000}) =>
+        RemoteTrack(id: path.hashCode & 0xffffff, path: path, size: size,
+            modified: modified, hash: noHash ? null : (hash ?? 'h$path'),
+            duration: duration);
+    LocalFile copy(String path,
+            {String? hash, bool noHash = false, int? mtime = t0, int size = 777,
+            String origin = LocalOrigin.mirror}) =>
+        lf(path, quality: q, hash: hash, noHash: noHash, mtime: mtime, size: size,
+            origin: origin);
+
+    test('Tier: parse, id, bitrate, extension, path and size estimate', () {
+      expect(tier, const Tier('opus', 96));
+      expect((tier.id, tier.bitrate, tier.extension), ('opus-96', '96k', 'ogg'));
+      expect(Tier.parse('mp3-192')!.extension, 'mp3');
+      expect(Tier.parse('aac-128')!.extension, 'aac');
+      expect(Tier.parse(Quality.original), isNull);
+      expect(Tier.parse('flac-1000'), isNull);
+      expect(Tier.parse('mp3'), isNull);
+      expect(tier.pathFor('/m/A/x.flac'), '/m/A/x.ogg');
+      expect(tier.pathFor('m/no-extension'), 'm/no-extension.ogg');
+      expect(tier.pathFor('/m/.hidden'), '/m/.hidden.ogg');
+      expect(tier.pathFor('/m/v1.2/x.Mp3'), '/m/v1.2/x.ogg');
+      expect(tier.estimateBytes(src('/m/a')), 1200000);
+      expect(tier.estimateBytes(src('/m/a', duration: null, size: 42)), 42);
+    });
+
+    test('a missing copy is a download sized by the duration; a present one is unchanged whatever its size', () {
+      final p = run(remote: [src('/m/a'), src('/m/b')], local: [copy('/m/a')], quality: q);
+      expect(p.quality, q);
+      expect(p.downloads.single.path, '/m/b');
+      expect(p.bytesNeeded, 1200000);
+      expect(p.unchanged, 1);
+    });
+
+    test('the copy follows its source: a new hash or mtime replaces it, sizes never do', () {
+      final p = run(remote: [
+        src('/m/a', hash: 'changed'),
+        src('/m/b', modified: t0 + 5 * 3600 * 1000),
+        src('/m/c', size: 5),
+      ], local: [copy('/m/a'), copy('/m/b'), copy('/m/c', size: 999)], quality: q);
+      expect(p.replaces.map((t) => t.path), unorderedEquals(['/m/a', '/m/b']));
+      expect(p.bytesNeeded, 2 * (1200000 + 777));
+      expect(p.unchanged, 1);
+    });
+
+    test('no hash on either side is not a change; nothing is ever adopted', () {
+      final p = run(remote: [src('/m/a', noHash: true), src('/m/b')],
+          local: [copy('/m/a', noHash: true), copy('/m/b', noHash: true)], quality: q);
+      expect(p.unchanged, 2);
+      expect(p.adoptions, isEmpty);
+    });
+
+    test('the original and a transcoded tier never see each other', () {
+      final p = run(remote: [src('/m/a')], local: [lf('/m/a')], quality: q);
+      expect(p.downloads.single.path, '/m/a', reason: 'the original copy is not this tier');
+      expect(p.trashes, isEmpty);
+      final o = run(remote: [src('/m/a')], local: [copy('/m/a')]);
+      expect(o.downloads.single.path, '/m/a');
+      expect(o.trashes, isEmpty);
+    });
+
+    test('unwanted or server-dropped tier copies are trashed; a rename by source hash is a move', () {
+      final p = run(remote: [src('/m/a'), src('/m/new', hash: 'hx')],
+          local: [copy('/m/a'), copy('/m/gone'), copy('/m/old', hash: 'hx')],
+          wanted: {'/m/new'}, quality: q);
+      expect(p.renames.single.from.path, '/m/old');
+      expect(p.renames.single.to.path, '/m/new');
+      expect(p.trashes.map((f) => f.path), unorderedEquals(['/m/a', '/m/gone']));
+      expect(p.downloads, isEmpty);
+    });
+
+    test('two sources that meet at one transcoded file name are conflicts', () {
+      final p = run(remote: [src('/m/x.flac'), src('/m/x.mp3'), src('/m/y.flac')], quality: q);
+      expect(p.conflicts, ['/m/x.flac', '/m/x.mp3']);
+      expect(p.downloads.single.path, '/m/y.flac');
+      expect(run(remote: [src('/m/x.flac'), src('/m/x.mp3')]).conflicts, isEmpty,
+          reason: 'as originals they are two files');
     });
   });
 

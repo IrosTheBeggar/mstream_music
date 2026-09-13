@@ -307,6 +307,68 @@ abstract final class RuleKind {
   static const String rated = 'rated';
 }
 
+/// Quality of a local copy or of a rule: [original] is the server's own
+/// file; anything else names a [Tier].
+abstract final class Quality {
+  static const String original = 'original';
+}
+
+/// A transcoded quality tier, `<codec>-<kbps>` (`mp3-192`, `opus-96`): what
+/// the server's `/transcode` endpoint makes of the original at that codec
+/// and bitrate (A7). A tier's copies live in their own tree
+/// (`media-transcoded/<tier>/<server>/…`, extension swapped for the codec's
+/// container) and are never checked against the original's size or hash —
+/// the server streams them chunked, so completion is the only check.
+@immutable
+class Tier {
+  final String codec;
+  final int kbps;
+  const Tier(this.codec, this.kbps);
+
+  /// The codecs the endpoint accepts (its `codecMap`).
+  static const List<String> codecs = ['mp3', 'opus', 'aac'];
+
+  /// The tier [quality] names, or null for [Quality.original] and for
+  /// anything not `<codec>-<kbps>`.
+  static Tier? parse(String quality) {
+    final m = RegExp(r'^(mp3|opus|aac)-(\d{2,3})$').firstMatch(quality);
+    return m == null ? null : Tier(m.group(1)!, int.parse(m.group(2)!));
+  }
+
+  String get id => '$codec-$kbps';
+
+  /// The `bitrate` the endpoint takes.
+  String get bitrate => '${kbps}k';
+
+  /// The container the server writes: opus in ogg, aac as ADTS, mp3 as is.
+  String get extension => codec == 'opus' ? 'ogg' : codec;
+
+  /// [dataPath] (or a relative path) with its extension swapped for the
+  /// tier's; '/'-separated on every platform, like the data paths.
+  String pathFor(String dataPath) {
+    final dot = dataPath.lastIndexOf('.');
+    final slash = dataPath.lastIndexOf('/');
+    final stem = dot > slash + 1 ? dataPath.substring(0, dot) : dataPath;
+    return '$stem.$extension';
+  }
+
+  /// Bytes the transcode of [t] will take, from its duration — or the
+  /// original's size, an upper bound, when the duration is unknown.
+  int estimateBytes(RemoteTrack t) => t.duration != null
+      ? (t.duration! * kbps * 125).round()
+      : (t.size ?? 0);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Tier && other.codec == codec && other.kbps == kbps;
+
+  @override
+  int get hashCode => Object.hash(codec, kbps);
+
+  @override
+  String toString() => id;
+}
+
 /// A genre and how many tracks carry it (`db/genres`).
 @immutable
 class GenreRow {

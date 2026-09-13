@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:library_mirror/library_mirror.dart' show RuleKind;
+import 'package:library_mirror/library_mirror.dart'
+    show Quality, RuleKind, Tier;
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
@@ -98,6 +99,7 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
                 const SizedBox(height: 12),
                 _keptRules(l),
                 const SizedBox(height: 16),
+                _qualityRule(l),
               ],
               Text(l.libraryCopyRetention, style: _label),
               const SizedBox(height: 6),
@@ -221,6 +223,56 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
         ),
       ),
     ]);
+  }
+
+  /// Quality of the entity rules (A7): the original files or a transcode
+  /// tier, one choice per server. Hidden when the server cannot transcode.
+  Widget _qualityRule(AppLocalizations l) {
+    if (server.transcodeAvailable == false) return const SizedBox.shrink();
+    final value = MirrorManager.qualities.contains(server.mirrorQuality)
+        ? server.mirrorQuality
+        : Quality.original;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(l.keepQualityTitle, style: _label),
+      const SizedBox(height: 4),
+      Text(l.keepQualityHelp, style: _help),
+      const SizedBox(height: 6),
+      InputDecorator(
+        decoration: const InputDecoration(
+            isDense: true, prefixIcon: Icon(Icons.high_quality_outlined)),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            isDense: true,
+            dropdownColor: VelvetColors.surface,
+            style: _body,
+            items: [
+              for (final q in MirrorManager.qualities)
+                DropdownMenuItem(value: q, child: Text(_qualityLabel(l, q))),
+            ],
+            onChanged: (v) {
+              if (v == null || v == server.mirrorQuality) return;
+              setState(() => MirrorManager().setKeepQuality(server, v));
+              _persist();
+            },
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+    ]);
+  }
+
+  static String _qualityLabel(AppLocalizations l, String q) {
+    final tier = Tier.parse(q);
+    if (tier == null) return l.keepQualityOriginal;
+    final codec = switch (tier.codec) {
+      'mp3' => 'MP3',
+      'opus' => 'Opus',
+      'aac' => 'AAC',
+      _ => tier.codec,
+    };
+    return l.keepQualityTier(codec, tier.kbps);
   }
 
   /// Every album, artist and playlist kept offline, each with a way to let

@@ -37,6 +37,11 @@ class Server {
   // only; ignored on desktop).
   int mirrorRetentionDays = 30;
   bool mirrorWifiOnly = true;
+  // Quality the entity rules — "Keep offline" on albums, artists and
+  // playlists, and the rated rule — are kept at: 'original', or a transcode
+  // tier such as 'opus-96' (A7). Whole-library copies always keep the
+  // originals.
+  String mirrorQuality = 'original';
 
   // Runtime-only (never persisted): the live loopback port of this server's iroh
   // tunnel while it is the active server. Set by ServerManager when the tunnel
@@ -50,6 +55,12 @@ class Server {
   // again on the next successful ping only when it was automatic.
   bool browseOffline = false;
   bool offlineAuto = false;
+
+  // Runtime-only (never persisted): the transcoded tiers the mirror holds
+  // copies in for this server (A7), so playback and the downloaded badge can
+  // fall back to one when there is no original — see localCopyCandidates.
+  // Kept current by MirrorManager.
+  Set<String> mirrorTiers = const {};
 
   // Runtime-only (never persisted): the iroh tunnel's loopback auth token while
   // this server is active. The local proxy requires it as `__lt=<token>` so other
@@ -377,6 +388,9 @@ class Server {
             : 30,
         mirrorWifiOnly =
             json['mirrorWifiOnly'] is bool ? json['mirrorWifiOnly'] : true,
+        mirrorQuality = json['mirrorQuality'] is String
+            ? json['mirrorQuality'] as String
+            : 'original',
         transcodeAvailable =
             json['transcodeAvailable'] is bool ? json['transcodeAvailable'] : null,
         transcodeDefaultCodec = json['transcodeDefaultCodec'] as String?,
@@ -440,6 +454,7 @@ class Server {
         'syncAvailable': syncAvailable,
         'mirrorRetentionDays': mirrorRetentionDays,
         'mirrorWifiOnly': mirrorWifiOnly,
+        'mirrorQuality': mirrorQuality,
         'transcodeAvailable': transcodeAvailable,
         'transcodeDefaultCodec': transcodeDefaultCodec,
         'transcodeDefaultBitrate': transcodeDefaultBitrate,

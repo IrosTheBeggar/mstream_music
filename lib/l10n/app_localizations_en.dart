@@ -3988,8 +3988,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get keepOfflineOn => 'Kept offline';
 
   @override
-  String get keepOfflineHelp =>
-      'Downloaded in original quality and kept in sync on this device.';
+  String get keepOfflineHelp => 'Downloaded and kept in sync on this device.';
 
   @override
   String get keepRatedTitle => 'Keep rated songs offline';
@@ -4008,4 +4007,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get keptOfflineNone =>
       'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.';
+
+  @override
+  String get keepQualityTitle => 'Quality of kept items';
+
+  @override
+  String get keepQualityHelp =>
+      'Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.';
+
+  @override
+  String get keepQualityOriginal => 'Original files';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
 }

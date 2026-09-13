@@ -634,8 +634,9 @@ class DownloadManager {
     // so nothing to transfer; still patch any queued copies (self-healing:
     // covers a track downloaded before it was queued, and a patch lost to a
     // rare publish race — every later download attempt re-lands it).
-    final existing =
-        firstExistingSync(localCopyCandidates(server, dir, filepath));
+    // Originals only: a transcoded stand-in is no reason to skip the fetch.
+    final existing = firstExistingSync(
+        localCopyCandidates(server, dir, filepath, transcoded: false));
     if (existing != null) {
       MediaManager()
           .audioHandler

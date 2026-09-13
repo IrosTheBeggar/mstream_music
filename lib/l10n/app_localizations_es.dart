@@ -4035,7 +4035,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keepOfflineHelp =>
-      'Se descarga en calidad original y se mantiene sincronizado en este dispositivo.';
+      'Se descarga y se mantiene sincronizado en este dispositivo.';
 
   @override
   String get keepRatedTitle => 'Guardar canciones valoradas sin conexión';
@@ -4054,4 +4054,19 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get keptOfflineNone =>
       'Nada todavía. «Guardar sin conexión» está en álbumes, artistas y listas.';
+
+  @override
+  String get keepQualityTitle => 'Calidad de lo guardado sin conexión';
+
+  @override
+  String get keepQualityHelp =>
+      'Los álbumes, artistas, listas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
+
+  @override
+  String get keepQualityOriginal => 'Archivos originales';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
 }

@@ -3836,7 +3836,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keepOfflineOn => 'オフラインで保持中';
 
   @override
-  String get keepOfflineHelp => '元の音質でダウンロードし、この端末で同期を保ちます。';
+  String get keepOfflineHelp => 'ダウンロードし、この端末で同期を保ちます。';
 
   @override
   String get keepRatedTitle => '評価した曲をオフラインで保持';
@@ -3854,4 +3854,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get keptOfflineNone => 'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリストにあります。';
+
+  @override
+  String get keepQualityTitle => 'オフライン保存の音質';
+
+  @override
+  String get keepQualityHelp =>
+      'オフラインで保持するアルバム、アーティスト、プレイリスト、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
+
+  @override
+  String get keepQualityOriginal => '元のファイル';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
 }

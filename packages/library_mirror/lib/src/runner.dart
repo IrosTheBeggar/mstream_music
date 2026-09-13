@@ -23,6 +23,10 @@ class MirrorConfig {
   final String trashRoot;
   final String tmpRoot;
 
+  /// Where the transcoded tiers live — `<transcodedRoot>/<tier>/<server>/…`,
+  /// a sibling of `media/` so the Local Files browser never lists them.
+  final String transcodedRoot;
+
   /// Where album-art files for mirrored tracks are cached (flat, by their
   /// content-addressed server name); null = no art caching.
   final String? artRoot;
@@ -38,6 +42,7 @@ class MirrorConfig {
     required this.mediaRoot,
     required this.trashRoot,
     required this.tmpRoot,
+    required this.transcodedRoot,
     this.artRoot,
     this.retentionDays = 30,
     this.wifiOnly = false,
@@ -47,7 +52,8 @@ class MirrorConfig {
 
   /// The standard layout under the app's download location:
   /// `<downloadDir>/media/<server>` (the same tree manual downloads use),
-  /// `<downloadDir>/.mstream-trash/<server>`, `<downloadDir>/.mstream-tmp/<server>`.
+  /// `<downloadDir>/.mstream-trash/<server>`, `<downloadDir>/.mstream-tmp/<server>`,
+  /// and `<downloadDir>/media-transcoded/<tier>/<server>` for the tiers.
   factory MirrorConfig.under(String downloadDir, String server,
           {String? artRoot,
           int retentionDays = 30,
@@ -59,6 +65,7 @@ class MirrorConfig {
         mediaRoot: p.join(downloadDir, 'media', server),
         trashRoot: p.join(downloadDir, '.mstream-trash', server),
         tmpRoot: p.join(downloadDir, '.mstream-tmp', server),
+        transcodedRoot: p.join(downloadDir, 'media-transcoded'),
         artRoot: artRoot,
         retentionDays: retentionDays,
         wifiOnly: wifiOnly,
@@ -66,9 +73,16 @@ class MirrorConfig {
         pageSize: pageSize,
       );
 
-  /// The on-disk file for a data path (`/<vpath>/<rel>`).
-  String localPathFor(String dataPath) =>
-      p.normalize(p.join(mediaRoot, dataPath.replaceFirst(RegExp(r'^/+'), '')));
+  /// The on-disk file for a data path (`/<vpath>/<rel>`): under [mediaRoot]
+  /// for the original; under [transcodedRoot]`/<tier>/<server>/`, with the
+  /// tier's extension, for a transcode.
+  String localPathFor(String dataPath, {String quality = Quality.original}) {
+    final rel = dataPath.replaceFirst(RegExp(r'^/+'), '');
+    final tier = Tier.parse(quality);
+    return p.normalize(tier == null
+        ? p.join(mediaRoot, rel)
+        : p.join(transcodedRoot, tier.id, server, tier.pathFor(rel)));
+  }
 }
 
 class MirrorProgress {
@@ -84,6 +98,10 @@ class MirrorProgress {
 /// through a small worker pool, each verified and stamped before it lands,
 /// and a trash sweep at the end. Every outcome is written to `sync_runs`;
 /// per-file failures are counted and recorded on the row, never fatal.
+///
+/// Each quality is planned on its own — the original files and every
+/// transcoded tier a rule asks for, or a row still sits in — and the plans
+/// are applied together: one preflight, one worker pool, one summary.
 ///
 /// Runs for one server must not overlap; the app serialises them.
 class MirrorRunner {
@@ -130,41 +148,63 @@ class MirrorRunner {
       await _refreshLists(c, manifestChanged: refreshed.changed);
       final scanning = refreshed.scanning;
       final remote = index.remoteTracks(c.server);
+      final local = index.localFilesAll(c.server);
       final wanted = _expandSubscriptions(c, remote);
-      final pl = plan(
-        remote: remote,
-        local: index.localFilesAll(c.server),
-        wanted: wanted,
-        options: PlanOptions(scanning: scanning),
-      );
-      unchanged = pl.unchanged;
-      conflicts = pl.conflicts.length;
-      await _preflight(c, pl);
+      // One plan per quality: every tier a rule asks for, plus any a row
+      // still sits in, so a tier nobody wants any more is let go.
+      final qualities = <String>{
+        Quality.original,
+        ...wanted.keys,
+        for (final f in local) f.quality,
+      };
+      final plans = [
+        for (final q in qualities)
+          plan(
+            remote: remote,
+            local: local,
+            wanted: wanted[q] ?? const {},
+            options: PlanOptions(scanning: scanning),
+            quality: q,
+          ),
+      ];
+      var needed = 0;
+      for (final pl in plans) {
+        unchanged += pl.unchanged;
+        conflicts += pl.conflicts.length;
+        needed += pl.bytesNeeded;
+      }
+      await _preflight(c, needed);
 
       final bucket = _bucketName(now());
-      for (final r in pl.renames) {
-        if (cancelled()) break;
-        await _rename(c, r);
-        renamed++;
-      }
-      for (final f in pl.trashes) {
-        if (cancelled()) break;
-        await _trash(c, f, bucket);
-        trashed++;
+      for (final pl in plans) {
+        for (final r in pl.renames) {
+          if (cancelled()) break;
+          await _rename(c, r);
+          renamed++;
+        }
+        for (final f in pl.trashes) {
+          if (cancelled()) break;
+          await _trash(c, f, bucket);
+          trashed++;
+        }
       }
 
-      final jobs = <(RemoteTrack, bool)>[
-        for (final t in pl.downloads) (t, false),
-        for (final t in pl.replaces) (t, true),
+      final jobs = <(RemoteTrack, bool, String)>[
+        for (final pl in plans) ...[
+          for (final t in pl.downloads) (t, false, pl.quality),
+          for (final t in pl.replaces) (t, true, pl.quality),
+        ],
       ];
       // Copies the mirror did not write: keep them if the bytes check out
       // (counted as unchanged), otherwise they join the replace queue.
-      for (final a in pl.adoptions) {
-        if (cancelled()) break;
-        if (await _adopt(c, a)) {
-          unchanged++;
-        } else {
-          jobs.add((a.remote, true));
+      for (final pl in plans) {
+        for (final a in pl.adoptions) {
+          if (cancelled()) break;
+          if (await _adopt(c, a)) {
+            unchanged++;
+          } else {
+            jobs.add((a.remote, true, pl.quality));
+          }
         }
       }
       var next = 0;
@@ -173,15 +213,18 @@ class MirrorRunner {
         while (!cancelled()) {
           final k = next++;
           if (k >= jobs.length) return;
-          final (t, replace) = jobs[k];
+          final (t, replace, quality) = jobs[k];
           try {
-            await _fetch(c, t, replace: replace, bucket: bucket);
+            // Landed first, added after: `bytes += await …` would read the
+            // counter before the await and lose the other workers' adds.
+            final landed = await _fetch(c, t,
+                quality: quality, replace: replace, bucket: bucket);
+            bytes += landed;
             if (replace) {
               replaced++;
             } else {
               downloaded++;
             }
-            bytes += t.size ?? 0;
           } catch (_) {
             failed++;
           }
@@ -192,7 +235,8 @@ class MirrorRunner {
 
       await Future.wait([for (var i = 0; i < c.concurrency; i++) worker()]);
       if (!cancelled()) {
-        await _fetchArt(c, [for (final t in remote) if (wanted.contains(t.path)) t]);
+        final pinned = {for (final s in wanted.values) ...s};
+        await _fetchArt(c, [for (final t in remote) if (pinned.contains(t.path)) t]);
       }
       await _sweepTrash(c);
       await _purgeTmp(c);
@@ -300,10 +344,12 @@ class MirrorRunner {
 
   // ── rules ─────────────────────────────────────────────────────────────
 
-  /// Expands the enabled rules to the paths they pin and rewrites their
-  /// required-by edges — see [expandRule] for what each kind claims.
-  Set<String> _expandSubscriptions(MirrorConfig c, List<RemoteTrack> remote) {
-    final wanted = <String>{};
+  /// Expands the enabled rules to the paths they pin, by quality, and
+  /// rewrites their required-by edges — see [expandRule] for what each kind
+  /// claims.
+  Map<String, Set<String>> _expandSubscriptions(
+      MirrorConfig c, List<RemoteTrack> remote) {
+    final wanted = <String, Set<String>>{};
     List<AlbumRow>? albums;
     for (final s in index.subscriptionsFor(c.server)) {
       final id = s.id;
@@ -335,20 +381,20 @@ class MirrorRunner {
               creditedAlbums: credited, memberPaths: members)
           : const <String>[];
       index.setSubscriptionFiles(id, c.server, paths);
-      wanted.addAll(paths);
+      (wanted[s.quality] ??= {}).addAll(paths);
     }
     return wanted;
   }
 
-  Future<void> _preflight(MirrorConfig c, Plan pl) async {
+  Future<void> _preflight(MirrorConfig c, int bytesNeeded) async {
     final probe = freeSpace;
-    if (probe == null || pl.bytesNeeded == 0) return;
+    if (probe == null || bytesNeeded == 0) return;
     await Directory(c.mediaRoot).create(recursive: true);
     final free = await probe(c.mediaRoot);
     if (free == null) return;
     const headroom = 64 << 20;
-    if (free < pl.bytesNeeded + headroom) {
-      throw StateError('not enough free space: need ${pl.bytesNeeded + headroom} '
+    if (free < bytesNeeded + headroom) {
+      throw StateError('not enough free space: need ${bytesNeeded + headroom} '
           'bytes, have $free');
     }
   }
@@ -356,42 +402,60 @@ class MirrorRunner {
   // ── apply ─────────────────────────────────────────────────────────────
 
   Future<void> _rename(MirrorConfig c, Rename r) async {
-    final to = c.localPathFor(r.to.path);
+    final quality = r.from.quality;
+    final to = c.localPathFor(r.to.path, quality: quality);
     await Directory(p.dirname(to)).create(recursive: true);
     await _move(File(r.from.localPath), to);
-    index.removeLocal(c.server, r.from.path);
-    index.upsertLocal(_row(c, r.to, to, size: r.from.size, origin: LocalOrigin.mirror));
+    index.removeLocal(c.server, r.from.path, quality: quality);
+    index.upsertLocal(_row(c, r.to, to,
+        size: r.from.size, origin: LocalOrigin.mirror, quality: quality));
   }
 
+  /// Moves a copy into the dated bucket under its data path — a tier's
+  /// under `<tier>/`, with the tier's extension, beside the original's —
+  /// and forgets the row.
   Future<void> _trash(MirrorConfig c, LocalFile f, String bucket) async {
     final src = File(f.localPath);
     if (await src.exists()) {
-      final dest = p.join(c.trashRoot, bucket, f.path.replaceFirst(RegExp(r'^/+'), ''));
+      final tier = Tier.parse(f.quality);
+      final rel = f.path.replaceFirst(RegExp(r'^/+'), '');
+      final dest = p.join(c.trashRoot, bucket,
+          tier == null ? rel : p.join(tier.id, tier.pathFor(rel)));
       await Directory(p.dirname(dest)).create(recursive: true);
       await _move(src, dest);
     }
-    index.removeLocal(c.server, f.path);
+    index.removeLocal(c.server, f.path, quality: f.quality);
   }
 
   /// Download to a temp file, verify size (and the whole-file MD5 when the
   /// server's hash is one), stamp the server's mtime, then rename into place
-  /// — the old copy of a replace goes to the trash first.
-  Future<void> _fetch(MirrorConfig c, RemoteTrack t,
-      {required bool replace, required String bucket}) async {
-    final dest = c.localPathFor(t.path);
-    final old = index.localFile(c.server, t.path);
+  /// — the old copy of a replace goes to the trash first. A tier's transcode
+  /// has no size or hash to check against: it only has to be non-empty.
+  /// Returns the bytes that landed.
+  Future<int> _fetch(MirrorConfig c, RemoteTrack t,
+      {required String quality,
+      required bool replace,
+      required String bucket}) async {
+    final tier = Tier.parse(quality);
+    final dest = c.localPathFor(t.path, quality: quality);
+    final old = index.localFile(c.server, t.path, quality: quality);
     await Directory(c.tmpRoot).create(recursive: true);
     final tmp = p.join(c.tmpRoot, '${_randomId()}.part');
     try {
-      await downloader.download(t.path, tmp, requiresWiFi: c.wifiOnly);
+      await downloader.download(t.path, tmp,
+          requiresWiFi: c.wifiOnly, tier: tier);
       final f = File(tmp);
       final size = await f.length();
-      if (t.size != null && size != t.size) {
-        throw StateError('size mismatch: got $size, expected ${t.size}');
-      }
-      if (t.hash != null && size < kFullHashMaxBytes) {
-        final digest = (await md5.bind(f.openRead()).first).toString();
-        if (digest != t.hash) throw StateError('checksum mismatch');
+      if (tier == null) {
+        if (t.size != null && size != t.size) {
+          throw StateError('size mismatch: got $size, expected ${t.size}');
+        }
+        if (t.hash != null && size < kFullHashMaxBytes) {
+          final digest = (await md5.bind(f.openRead()).first).toString();
+          if (digest != t.hash) throw StateError('checksum mismatch');
+        }
+      } else if (size == 0) {
+        throw StateError('empty transcode');
       }
       if (t.modified != null) {
         await f.setLastModified(DateTime.fromMillisecondsSinceEpoch(t.modified!));
@@ -404,7 +468,10 @@ class MirrorRunner {
       }
       await _move(f, dest);
       index.upsertLocal(_row(c, t, dest,
-          size: size, origin: old?.origin ?? LocalOrigin.mirror));
+          size: size,
+          origin: old?.origin ?? LocalOrigin.mirror,
+          quality: quality));
+      return size;
     } catch (e) {
       try {
         await File(tmp).delete();
@@ -412,6 +479,7 @@ class MirrorRunner {
       index.upsertLocal(LocalFile(
         server: c.server,
         path: t.path,
+        quality: quality,
         localPath: dest,
         state: LocalState.failed,
         origin: old?.origin ?? LocalOrigin.mirror,
@@ -447,11 +515,16 @@ class MirrorRunner {
     return true;
   }
 
+  /// An `ok` row for a landed copy. A tier row records the source's hash
+  /// and mtime — what the planner compares next run — under its own size.
   LocalFile _row(MirrorConfig c, RemoteTrack t, String localPath,
-          {int? size, required String origin}) =>
+          {int? size,
+          required String origin,
+          String quality = Quality.original}) =>
       LocalFile(
         server: c.server,
         path: t.path,
+        quality: quality,
         localPath: localPath,
         size: size ?? t.size,
         mtime: t.modified,

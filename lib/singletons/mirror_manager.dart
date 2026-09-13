@@ -150,8 +150,11 @@ class MirrorManager {
       }
     }
     if (min != null) {
-      ix.addSubscription(
-          Subscription(server: s.localname, kind: RuleKind.rated, key: '$min'));
+      ix.addSubscription(Subscription(
+          server: s.localname,
+          kind: RuleKind.rated,
+          key: '$min',
+          quality: s.mirrorQuality));
     }
     _publish(s.localname);
     unawaited(sync(s, trigger: 'rule'));
@@ -160,6 +163,47 @@ class MirrorManager {
   bool hasRules(Server s) =>
       (_index?.subscriptionsFor(s.localname) ?? const []).any((r) => r.enabled);
 
+  /// The qualities [setKeepQuality] offers: the original files, then the
+  /// transcode tiers (`<codec>-<kbps>`) worth a phone's storage.
+  static const List<String> qualities = [
+    Quality.original,
+    'mp3-192',
+    'mp3-128',
+    'opus-128',
+    'opus-96',
+    'opus-64',
+    'aac-128',
+  ];
+
+  /// Keeps the entity rules — albums, artists, playlists and the rated rule
+  /// — at [quality], the original files or a transcode tier, re-keying the
+  /// existing ones so the next run swaps their copies: the old quality's
+  /// files go to the trash, the new one's are fetched. Whole-library rules
+  /// stay original. The choice lives on the server object; the caller
+  /// persists it.
+  void setKeepQuality(Server s, String quality) {
+    final ix = _index;
+    if (ix == null ||
+        (quality != Quality.original && Tier.parse(quality) == null)) {
+      return;
+    }
+    s.mirrorQuality = quality;
+    for (final r in ix.subscriptionsFor(s.localname)) {
+      if (r.kind == RuleKind.library || r.quality == quality || r.id == null) {
+        continue;
+      }
+      ix.removeSubscription(r.id!);
+      ix.addSubscription(Subscription(
+          server: s.localname,
+          kind: r.kind,
+          key: r.key,
+          quality: quality,
+          wifiOnly: r.wifiOnly));
+    }
+    _publish(s.localname);
+    unawaited(sync(s, trigger: 'rule'));
+  }
+
   /// Adds or removes the whole-library rule for [vpath] and syncs right away:
   /// on, so the copy starts filling; off, so the files no rule wants any more
   /// move to the trash (recoverable for the retention period).
@@ -167,13 +211,19 @@ class MirrorManager {
       setRule(s, RuleKind.library, vpath, on);
 
   /// Adds or removes the rule of [kind] for [key] — an album or artist's
-  /// "Keep offline" (A6a) works exactly like the whole-library switch.
+  /// "Keep offline" (A6a) works exactly like the whole-library switch. An
+  /// entity rule takes the server's kept quality ([setKeepQuality]); a
+  /// library rule is always the originals.
   void setRule(Server s, String kind, String key, bool on) {
     final ix = _index;
     if (ix == null) return;
     if (on) {
-      ix.addSubscription(
-          Subscription(server: s.localname, kind: kind, key: key));
+      ix.addSubscription(Subscription(
+          server: s.localname,
+          kind: kind,
+          key: key,
+          quality:
+              kind == RuleKind.library ? Quality.original : s.mirrorQuality));
     } else {
       for (final r in ix.subscriptionsFor(s.localname)) {
         if (r.kind == kind && r.key == key && r.id != null) {
@@ -277,6 +327,11 @@ class MirrorManager {
       failed: ix.localCount(server, state: LocalState.failed),
     );
     _status.add({..._status.value, server: st});
+    // What playback may fall back to — see localCopyCandidates.
+    final tiers = ix.qualities(server).toSet();
+    for (final s in ServerManager().serverList) {
+      if (s.localname == server) s.mirrorTiers = tiers;
+    }
   }
 
   // ── downloader plumbing ───────────────────────────────────────────────
@@ -493,9 +548,14 @@ class _MirrorDownloader implements Downloader {
 
   @override
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false}) async {
+      {bool requiresWiFi = false, Tier? tier}) async {
     final task = DownloadTask(
-      url: buildServerDownloadUrl(server, path),
+      // A tier fetches the server's transcode: chunked, no length, so the
+      // task reports no progress — only its end.
+      url: tier == null
+          ? buildServerDownloadUrl(server, path)
+          : buildServerTranscodeUrl(server, path,
+              codec: tier.codec, bitrate: tier.bitrate),
       filename: p.basename(destination),
       baseDirectory: BaseDirectory.root,
       directory: p.dirname(destination),

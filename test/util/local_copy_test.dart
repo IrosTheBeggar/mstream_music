@@ -33,6 +33,24 @@ void main() {
           isEmpty);
     });
 
+    test('transcoded tiers come last, with the tier\'s extension; never for a download', () {
+      final s = server(mirrorRoot: '/mirror')
+        ..mirrorTiers = {'opus-96', 'bogus', 'mp3-128'};
+      expect(localCopyCandidates(s, Directory('/dl'), '/music/A/x.flac'), [
+        '/dl/media/home/music/A/x.flac',
+        p.normalize('/mirror/music/A/x.flac'),
+        '/dl/media-transcoded/opus-96/home/music/A/x.ogg',
+        '/dl/media-transcoded/mp3-128/home/music/A/x.mp3',
+      ]);
+      expect(
+          localCopyCandidates(s, Directory('/dl'), '/music/A/x.flac',
+              transcoded: false),
+          hasLength(2));
+      expect(localCopyCandidates(s, null, '/music/A/x.flac'),
+          [p.normalize('/mirror/music/A/x.flac')],
+          reason: 'no download location, no tiers');
+    });
+
     test('a Windows root and the server\'s slashes normalise to one native path',
         () {
       final c = localCopyCandidates(

@@ -128,33 +128,65 @@ void main() {
       m.setRule(s, RuleKind.playlist, 'Mix', false);
       expect(m.entityRules(s).single.key, 'Alpha');
     });
+
+    test('kept quality: new entity rules take it, existing ones are re-keyed, library rules stay original', () {
+      final s = Server('http://h:1', null, null, null, 'home');
+      final m = MirrorManager();
+      final ix = LibraryIndexManager().index!;
+      m.setKeepFullCopy(s, 'music', true);
+      m.setRule(s, RuleKind.album, 'Alpha', true);
+      m.setRatedThreshold(s, 8);
+      expect(ix.subscriptionsFor('home').map((r) => r.quality), everyElement('original'));
+
+      m.setKeepQuality(s, 'opus-96');
+      expect(s.mirrorQuality, 'opus-96');
+      expect({for (final r in ix.subscriptionsFor('home')) '${r.kind}:${r.key}': r.quality},
+          {'library:music': 'original', 'album:Alpha': 'opus-96', 'rated:8': 'opus-96'});
+      m.setRule(s, RuleKind.artist, 'Ann', true);
+      expect(ix.subscriptionsFor('home').last.quality, 'opus-96');
+      expect(m.keepsRule(s, RuleKind.album, 'Alpha'), isTrue, reason: 'quality-blind');
+      expect(m.ratedThreshold(s), 8);
+      expect(m.entityRules(s), hasLength(2));
+
+      m.setKeepQuality(s, 'flac');
+      expect(s.mirrorQuality, 'opus-96', reason: 'not a tier: ignored');
+      m.setKeepQuality(s, 'original');
+      expect(ix.subscriptionsFor('home').map((r) => r.quality), everyElement('original'));
+      expect(ix.subscriptionsFor('home'), hasLength(4));
+      m.setRule(s, RuleKind.album, 'Alpha', false);
+      expect(m.keepsRule(s, RuleKind.album, 'Alpha'), isFalse);
+    });
   });
 
   group('Server library-copy settings', () {
     const base = {'url': 'u', 'username': null, 'password': null, 'jwt': null, 'localname': 'l'};
 
-    test('defaults: 30 days, Wi-Fi only, sync flag unknown', () {
+    test('defaults: 30 days, Wi-Fi only, sync flag unknown, original quality', () {
       final s = Server.fromJson(Map.of(base));
       expect(s.mirrorRetentionDays, 30);
       expect(s.mirrorWifiOnly, isTrue);
       expect(s.syncAvailable, isNull);
+      expect(s.mirrorQuality, 'original');
+      expect(s.mirrorTiers, isEmpty);
     });
 
     test('round-trips', () {
       final s = Server.fromJson({...base, 'mirrorRetentionDays': 0, 'mirrorWifiOnly': false,
-        'syncAvailable': true});
+        'syncAvailable': true, 'mirrorQuality': 'opus-96'});
       final back = Server.fromJson(s.toJson());
       expect(back.mirrorRetentionDays, 0);
       expect(back.mirrorWifiOnly, isFalse);
       expect(back.syncAvailable, isTrue);
+      expect(back.mirrorQuality, 'opus-96');
     });
 
     test('junk values fall back to the defaults', () {
       final s = Server.fromJson({...base, 'mirrorRetentionDays': 'x', 'mirrorWifiOnly': 3,
-        'syncAvailable': 'yes'});
+        'syncAvailable': 'yes', 'mirrorQuality': 5});
       expect(s.mirrorRetentionDays, 30);
       expect(s.mirrorWifiOnly, isTrue);
       expect(s.syncAvailable, isNull);
+      expect(s.mirrorQuality, 'original');
     });
   });
 }

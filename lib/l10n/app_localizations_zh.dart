@@ -3767,7 +3767,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keepOfflineOn => '已离线保留';
 
   @override
-  String get keepOfflineHelp => '以原始音质下载并在此设备上保持同步。';
+  String get keepOfflineHelp => '下载并在此设备上保持同步。';
 
   @override
   String get keepRatedTitle => '离线保留已评分的歌曲';
@@ -3785,4 +3785,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get keptOfflineNone => '暂无。“离线保留”位于专辑、艺术家和播放列表。';
+
+  @override
+  String get keepQualityTitle => '离线内容的音质';
+
+  @override
+  String get keepQualityHelp => '离线保留的专辑、艺术家、播放列表和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
+
+  @override
+  String get keepQualityOriginal => '原始文件';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps kbps';
+  }
 }

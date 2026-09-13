@@ -4065,7 +4065,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get keepOfflineHelp =>
-      'Загружается в исходном качестве и синхронизируется на этом устройстве.';
+      'Загружается и синхронизируется на этом устройстве.';
 
   @override
   String get keepRatedTitle => 'Хранить оценённые треки офлайн';
@@ -4084,4 +4084,19 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get keptOfflineNone =>
       'Пока ничего. «Хранить офлайн» есть у альбомов, исполнителей и плейлистов.';
+
+  @override
+  String get keepQualityTitle => 'Качество офлайн-копий';
+
+  @override
+  String get keepQualityHelp =>
+      'Альбомы, исполнители, плейлисты и оценённые треки, хранимые офлайн, сохраняются в этом качестве. Копии всей библиотеки всегда хранят исходные файлы.';
+
+  @override
+  String get keepQualityOriginal => 'Исходные файлы';
+
+  @override
+  String keepQualityTier(String codec, int kbps) {
+    return '$codec · $kbps кбит/с';
+  }
 }
