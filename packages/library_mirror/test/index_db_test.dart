@@ -211,6 +211,13 @@ void main() {
       expect(ix.localFile('s', '/m')!.origin, LocalOrigin.external);
     });
 
+    test('insertLocalsIfAbsent leaves existing rows alone', () {
+      ix.upsertLocals([lf('/a', origin: LocalOrigin.auto)]);
+      ix.insertLocalsIfAbsent([lf('/a', origin: LocalOrigin.manual), lf('/b', origin: LocalOrigin.manual)]);
+      expect(ix.localFile('s', '/a')!.origin, LocalOrigin.auto);
+      expect(ix.localFile('s', '/b')!.origin, LocalOrigin.manual);
+    });
+
     test('counts and origin ordering', () {
       ix.upsertLocals([
         lf('/x', origin: LocalOrigin.auto, verifiedAt: 30),
@@ -220,6 +227,11 @@ void main() {
       expect(ix.localCount('s'), 3);
       expect(ix.localCount('s', origin: LocalOrigin.auto), 2);
       expect(ix.localByOrigin('s', LocalOrigin.auto).map((f) => f.path), ['/y', '/x']);
+      ix.upsertLocal(LocalFile(server: 't', path: '/w', localPath: '/dl/t/w', state: LocalState.ok,
+          origin: LocalOrigin.auto, verifiedAt: 5));
+      expect(ix.localByOrigin(null, LocalOrigin.auto).map((f) => f.path), ['/w', '/y', '/x'],
+          reason: 'every server, oldest first');
+      expect(ix.localByOrigin('s', LocalOrigin.auto), hasLength(2));
     });
 
     test('bytes, failed counts and the failed list for the status screen', () {

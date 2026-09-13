@@ -4,78 +4,77 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../objects/auto_download_entry.dart';
-import '../util/write_chain.dart';
+import 'library_index.dart';
 import 'log_manager.dart';
 
-/// Persistent, ordered record of auto-downloaded tracks (keep-queue-offline),
-/// so the auto-download cap can evict the oldest orphans once the total grows
-/// past the user's limit. Ordered oldest-first (newest appended), mirroring the
-/// single-JSON-file approach of QueueStore / servers.json.
+/// The keep-queue-offline cache's eviction order, read off the library
+/// index: every auto-download lands there as an `auto` row (A2), and the cap
+/// evicts the oldest of them once the total grows past the user's limit.
 ///
-/// Only the sweep records here; manual downloads never do and actively forget a
-/// track they touch, so an evictable entry is always something the app chose to
-/// cache on the user's behalf — never a file they asked for.
+/// Only the sweep's downloads are `auto`; a manual download of the same
+/// track re-labels the row `manual` (manual wins), so an evictable entry is
+/// always something the app chose to cache on the user's behalf — never a
+/// file they asked for. Downloads that predate the index were imported as
+/// `manual`, so they cannot be evicted either.
+///
+/// Until A8 this was its own JSON file (`auto_downloads.json`); [load] folds
+/// that file into the index once and deletes it. Without the index (SQLite
+/// failed to load) there is no ledger: nothing is evicted.
 class AutoDownloadLedger {
   static final AutoDownloadLedger _instance = AutoDownloadLedger._();
   factory AutoDownloadLedger() => _instance;
   AutoDownloadLedger._();
 
-  // Oldest first, newest last — the FIFO eviction order.
-  final List<AutoDownloadEntry> _entries = [];
   Future<void>? _loading;
 
-  Future<File> _file() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/auto_downloads.json');
-  }
-
-  /// Read the ledger from disk once. Idempotent; safe to call on every entry
-  /// point that needs it — concurrent callers await the same in-flight read
-  /// instead of proceeding against a half-loaded list.
+  /// Migrates the pre-A8 JSON ledger into the index, once. Idempotent;
+  /// concurrent callers await the same in-flight migration.
   Future<void> load() => _loading ??= _load();
 
   Future<void> _load() async {
+    if (!LibraryIndexManager().available) return;
     try {
-      final f = await _file();
-      if (!await f.exists()) return;
-      final raw = jsonDecode(await f.readAsString());
-      if (raw is List) {
-        for (final e in raw) {
-          if (e is Map) {
-            final entry =
-                AutoDownloadEntry.fromJson(Map<String, dynamic>.from(e));
-            if (entry != null) _entries.add(entry);
-          }
-        }
-      }
+      final dir = await getApplicationDocumentsDirectory();
+      await migrateFrom(File('${dir.path}/auto_downloads.json'));
     } catch (e) {
-      appLog('[auto-dl] ledger load failed: $e');
+      appLog('[auto-dl] ledger migration failed: $e');
     }
   }
 
-  int get length => _entries.length;
-
-  /// Record an auto-download completion. Re-recording a tracked track moves it
-  /// to newest (and updates its localPath after a storage-location change), so
-  /// a re-download doesn't make an old entry look freshly cached.
-  Future<void> record(String server, String path, String localPath) async {
-    await load();
-    _entries.removeWhere((e) => e.server == server && e.path == path);
-    _entries.add(AutoDownloadEntry(server, path, localPath));
-    await _persist();
+  /// Folds [json] — the old ledger, oldest first — into the index and
+  /// deletes it. A missing file is nothing to do. Public for tests.
+  Future<void> migrateFrom(File json) async {
+    if (!await json.exists()) return;
+    final raw = jsonDecode(await json.readAsString());
+    final entries = <AutoDownloadEntry>[];
+    if (raw is List) {
+      for (final e in raw) {
+        if (e is Map) {
+          final entry =
+              AutoDownloadEntry.fromJson(Map<String, dynamic>.from(e));
+          if (entry != null) entries.add(entry);
+        }
+      }
+    }
+    LibraryIndexManager().adoptAutoLedger([
+      for (final e in entries)
+        (server: e.server, path: e.path, localPath: e.localPath),
+    ]);
+    await json.delete();
+    appLog('[auto-dl] folded ${entries.length} ledger entries into the index');
   }
 
-  /// Drop a track from the ledger without deleting its file — used when the
-  /// user downloads it manually (manual wins) and when the cap evicts it.
-  /// Returns whether anything was removed.
-  Future<bool> forget(String server, String path) async {
-    await load();
-    final before = _entries.length;
-    _entries.removeWhere((e) => e.server == server && e.path == path);
-    if (_entries.length == before) return false;
-    await _persist();
-    return true;
-  }
+  /// The auto-downloaded tracks, oldest first.
+  List<AutoDownloadEntry> get entries => [
+        for (final f in LibraryIndexManager().autoDownloads())
+          AutoDownloadEntry(f.server, f.path, f.localPath)
+      ];
+
+  /// Takes a track out of the evictable set without deleting its file — the
+  /// user downloaded it manually, so it is theirs now (manual wins). A no-op
+  /// for anything that is not an auto row.
+  void forget(String server, String path) =>
+      LibraryIndexManager().promoteToManual(server, path);
 
   /// Oldest-first entries to evict so the total count drops to [cap], skipping
   /// any the current queue still needs. Pure over its inputs (unit-tested):
@@ -102,20 +101,5 @@ class AutoDownloadLedger {
 
   List<AutoDownloadEntry> evictionsFor(
           int cap, bool Function(String server, String path) isProtected) =>
-      selectEvictions(_entries, cap, isProtected: isProtected);
-
-  // Serialized: two downloads completing near-simultaneously (routine during
-  // a keep-queue-offline sweep or "Download all") both run record→_persist;
-  // without the chain their truncate+writes interleave on auto_downloads.json.
-  final WriteChain _writeChain = WriteChain();
-
-  Future<void> _persist() => _writeChain.run(() async {
-        try {
-          final f = await _file();
-          await f.writeAsString(
-              jsonEncode(_entries.map((e) => e.toJson()).toList()));
-        } catch (e) {
-          appLog('[auto-dl] ledger persist failed: $e');
-        }
-      });
+      selectEvictions(entries, cap, isProtected: isProtected);
 }

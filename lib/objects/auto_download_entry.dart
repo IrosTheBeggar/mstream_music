@@ -1,11 +1,12 @@
-/// One track kept on disk by the keep-queue-offline auto-downloader, tracked so
-/// the cap can evict the oldest when the total grows past the user's limit.
+/// One track kept on disk by the keep-queue-offline auto-downloader, as the
+/// cap's eviction pass sees it: since A8 a view over the library index's
+/// `auto` rows, oldest first. The JSON shape is the pre-A8 ledger file
+/// (`auto_downloads.json`), read once by the migration.
 ///
 /// Separate from user-initiated downloads ON PURPOSE: eviction must never touch
 /// a file the user asked for explicitly. A manual download of the same track
-/// removes it from the ledger (manual wins permanently), and downloads that
-/// predate this feature are never recorded — so they're grandfathered as
-/// manual and can't be evicted.
+/// re-labels it `manual` (manual wins permanently), and downloads that
+/// predate this feature were imported as manual — so they can't be evicted.
 class AutoDownloadEntry {
   final String server; // server localname
   final String path; // data path on that server

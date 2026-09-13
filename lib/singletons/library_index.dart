@@ -52,9 +52,11 @@ class LibraryIndexManager {
   /// One-time import of the downloads that predate the index: every file
   /// under `<downloadDir>/media/<localname>` becomes a `manual` row (a user
   /// asked for it, or it predates the auto ledger and is grandfathered as
-  /// manual — the same rule AutoDownloadLedger applies). Idempotent per
-  /// server; a server whose location is unavailable right now (SD card
-  /// out) is retried on the next boot. The walk runs on a worker isolate.
+  /// manual). Rows that already exist — a download that completed first, or
+  /// the old auto ledger's entries ([adoptAutoLedger]) — keep their label.
+  /// Idempotent per server; a server whose location is unavailable right
+  /// now (SD card out) is retried on the next boot. The walk runs on a
+  /// worker isolate.
   Future<void> importExistingDownloads(
       {List<Server>? servers,
       Future<Directory?> Function(Server)? dirFor}) async {
@@ -75,7 +77,7 @@ class LibraryIndexManager {
       final root = '${dir.path}/media/${s.localname}';
       final found = await Isolate.run(() => walkDownloadTree(root));
       final now = DateTime.now().millisecondsSinceEpoch;
-      ix.upsertLocals([
+      ix.insertLocalsIfAbsent([
         for (final f in found)
           LocalFile(
             server: s.localname,
@@ -96,6 +98,41 @@ class LibraryIndexManager {
 
   static Future<Directory?> _downloadDir(Server s) =>
       FileExplorer().getDownloadDir(s.storageMode, s.storageBasePath);
+
+  /// The pre-A8 keep-queue-offline ledger, oldest first, becomes `auto`
+  /// rows: each entry whose file is still on disk is recorded — or
+  /// re-labelled, since the ledger knew what was auto and the import walk
+  /// did not — with a verification stamp that keeps the ledger's order.
+  /// Entries whose file is gone are dropped: nothing to evict.
+  void adoptAutoLedger(
+      Iterable<({String server, String path, String localPath})> entries) {
+    final ix = _index;
+    if (ix == null) return;
+    final list = entries.toList();
+    final base = DateTime.now().millisecondsSinceEpoch - list.length;
+    final rows = <LocalFile>[];
+    for (var i = 0; i < list.length; i++) {
+      final e = list[i];
+      final st = File(e.localPath).statSync();
+      if (st.type != FileSystemEntityType.file) continue;
+      rows.add(LocalFile(
+        server: e.server,
+        path: e.path,
+        localPath: e.localPath,
+        size: st.size,
+        mtime: st.modified.millisecondsSinceEpoch,
+        state: LocalState.ok,
+        origin: LocalOrigin.auto,
+        verifiedAt: base + i,
+      ));
+    }
+    ix.upsertLocals(rows);
+  }
+
+  /// Every server's auto-downloaded rows, oldest first — the cap's eviction
+  /// order. Empty without the index.
+  List<LocalFile> autoDownloads() =>
+      _index?.localByOrigin(null, LocalOrigin.auto) ?? const [];
 
   /// A download just landed at [localPath].
   void recordDownloaded(String server, String path, String localPath,

@@ -277,9 +277,29 @@ class LibraryIndex {
         f.hash, f.state, f.origin, f.verifiedAt, f.error,
       ]);
 
-  /// Batched [upsertLocal] in one transaction (the import walk).
+  /// Batched [upsertLocal] in one transaction.
   void upsertLocals(Iterable<LocalFile> files) =>
       transaction(() => files.forEach(upsertLocal));
+
+  /// Batched insert that leaves existing rows untouched — for the import
+  /// walk, which must never re-label a row a completed download or the old
+  /// auto-download ledger already wrote.
+  void insertLocalsIfAbsent(Iterable<LocalFile> files) => transaction(() {
+        final ins = _db.prepare('''
+          INSERT OR IGNORE INTO local_files (server, path, quality, local_path,
+            size, mtime, hash, state, origin, verified_at, error)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''');
+        try {
+          for (final f in files) {
+            ins.execute([
+              f.server, f.path, f.quality, p.normalize(f.localPath), f.size,
+              f.mtime, f.hash, f.state, f.origin, f.verifiedAt, f.error,
+            ]);
+          }
+        } finally {
+          ins.close();
+        }
+      });
 
   /// Every local-copy row of [server] — the planner's input.
   List<LocalFile> localFilesAll(String server) => [
@@ -350,13 +370,13 @@ class LibraryIndex {
           LocalFile.fromRow(r)
       ];
 
-  /// Oldest-first by verification time — the keep-queue-offline eviction
-  /// order once that ledger moves here (A8).
-  List<LocalFile> localByOrigin(String server, String origin) => [
+  /// Rows of [origin] — one server's, or every server's with null — oldest
+  /// first by verification time: the keep-queue-offline eviction order (A8).
+  List<LocalFile> localByOrigin(String? server, String origin) => [
         for (final r in _db.select(
-            'SELECT * FROM local_files WHERE server = ? AND origin = ? '
-            'ORDER BY verified_at, rowid',
-            [server, origin]))
+            'SELECT * FROM local_files WHERE (? IS NULL OR server = ?) '
+            'AND origin = ? ORDER BY verified_at, rowid',
+            [server, server, origin]))
           LocalFile.fromRow(r)
       ];
 
