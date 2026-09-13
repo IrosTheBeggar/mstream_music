@@ -10,6 +10,8 @@
 // album runtime, and the kbps · kHz readout render only when the server reports
 // them (older API builds omit them; see MusicMetadata).
 
+import 'dart:io';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:rxdart/rxdart.dart';
@@ -17,6 +19,7 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../objects/display_item.dart';
 import '../singletons/api.dart';
+import '../singletons/art_cache.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
@@ -104,6 +107,15 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
     final server = widget.album.server;
     if (server == null || aa == null) return null;
     return buildAlbumArtUrl(server, aa, compress: compress);
+  }
+
+  /// The mirror's cached copy of the cover, when this device has it —
+  /// shown offline, and instead of a round-trip online.
+  String? _cachedArt() {
+    final aa = widget.album.altAlbumArt;
+    final server = widget.album.server;
+    if (server == null || aa == null) return null;
+    return ArtCache().pathFor(server.localname, aa);
   }
 
   // ── derived metadata ──
@@ -305,13 +317,19 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
                   child: SizedBox(
                     width: 86,
                     height: 86,
-                    child: artUrl != null
-                        ? Image.network(artUrl,
-                            fit: BoxFit.cover,
-                            cacheWidth: artCacheSize(86),
-                            errorBuilder: (_, _, _) =>
-                                albumArtFallback(iconSize: 30))
-                        : albumArtFallback(iconSize: 30),
+                    child: switch ((_cachedArt(), artUrl)) {
+                      (final String cached, _) => Image.file(File(cached),
+                          fit: BoxFit.cover,
+                          cacheWidth: artCacheSize(86),
+                          errorBuilder: (_, _, _) =>
+                              albumArtFallback(iconSize: 30)),
+                      (null, final String url) => Image.network(url,
+                          fit: BoxFit.cover,
+                          cacheWidth: artCacheSize(86),
+                          errorBuilder: (_, _, _) =>
+                              albumArtFallback(iconSize: 30)),
+                      _ => albumArtFallback(iconSize: 30),
+                    },
                   ),
                 ),
                 const SizedBox(width: 14),
