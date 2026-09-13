@@ -4145,5 +4145,11 @@
   },
   "keepOffline": "Keep offline",
   "keepOfflineOn": "Kept offline",
-  "keepOfflineHelp": "Downloaded in original quality and kept in sync on this device."
+  "keepOfflineHelp": "Downloaded in original quality and kept in sync on this device.",
+  "keepRatedTitle": "Keep rated songs offline",
+  "keepRatedStars": "{n} stars and up",
+  "@keepRatedStars": {"placeholders": {"n": {"type": "int"}}},
+  "keepRatedFiveStars": "5 stars",
+  "keptOfflineSection": "Also kept offline",
+  "keptOfflineNone": "Nothing yet. \"Keep offline\" lives on albums, artists and playlists."
 }

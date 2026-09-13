@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "Teilen ist bei Peer-to-Peer-Servern (iroh) nicht verfügbar – sie haben keine öffentliche URL zum Verlinken.",
   "keepOffline": "Offline behalten",
   "keepOfflineOn": "Wird offline behalten",
-  "keepOfflineHelp": "Wird in Originalqualität heruntergeladen und auf diesem Gerät synchron gehalten."
+  "keepOfflineHelp": "Wird in Originalqualität heruntergeladen und auf diesem Gerät synchron gehalten.",
+  "keepRatedTitle": "Bewertete Titel offline behalten",
+  "keepRatedStars": "Ab {n} Sternen",
+  "keepRatedFiveStars": "5 Sterne",
+  "keptOfflineSection": "Außerdem offline behalten",
+  "keptOfflineNone": "Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern und Playlists."
 }

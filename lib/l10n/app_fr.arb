@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "Le partage n'est pas disponible pour les serveurs pair-à-pair (iroh) — ils n'ont pas d'URL publique vers laquelle pointer.",
   "keepOffline": "Garder hors ligne",
   "keepOfflineOn": "Gardé hors ligne",
-  "keepOfflineHelp": "Téléchargé en qualité d'origine et maintenu à jour sur cet appareil."
+  "keepOfflineHelp": "Téléchargé en qualité d'origine et maintenu à jour sur cet appareil.",
+  "keepRatedTitle": "Garder les titres notés hors ligne",
+  "keepRatedStars": "{n} étoiles et plus",
+  "keepRatedFiveStars": "5 étoiles",
+  "keptOfflineSection": "Également gardé hors ligne",
+  "keptOfflineNone": "Rien pour l'instant. « Garder hors ligne » se trouve sur les albums, artistes et playlists."
 }

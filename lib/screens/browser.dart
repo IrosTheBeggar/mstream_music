@@ -401,6 +401,7 @@ class _BrowserState extends State<Browser> {
                 onSelected: (v) {
                   if (v == 'rename') _renamePlaylist(c, b[i]);
                   if (v == 'delete') _deletePlaylist(c, b[i]);
+                  if (v == 'keep') _togglePlaylistKeep(b[i]);
                 },
                 itemBuilder: (_) => [
                   // Rename is 5.16.0; delete predates the support floor. On an
@@ -410,6 +411,25 @@ class _BrowserState extends State<Browser> {
                   if (!playlistRenameKnownUnsupported(
                       ServerVersion.tryParse(b[i].server?.serverVersion)))
                     PopupMenuItem(value: 'rename', child: Text(l.rename)),
+                  // "Keep offline" (A6b): a playlist rule for the library
+                  // copy, drawn as a toggle so the state reads at a glance.
+                  if (b[i].server != null &&
+                      MirrorManager().canKeep(b[i].server!))
+                    PopupMenuItem(
+                      value: 'keep',
+                      child: Row(children: [
+                        Icon(
+                            _playlistKept(b[i])
+                                ? Icons.offline_pin
+                                : Icons.offline_pin_outlined,
+                            size: 20,
+                            color: _playlistKept(b[i])
+                                ? VelvetColors.primary
+                                : VelvetColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Text(l.keepOffline),
+                      ]),
+                    ),
                   PopupMenuItem(
                     value: 'delete',
                     child: Text(l.delete,
@@ -480,6 +500,18 @@ class _BrowserState extends State<Browser> {
   // Name-entry dialog shared by create + rename. Returns the trimmed name, or
   // null if cancelled. The controller lives inside PlaylistNameDialog (a
   // StatefulWidget) so it's disposed safely after the dialog closes.
+  bool _playlistKept(DisplayItem item) =>
+      item.server != null &&
+      MirrorManager()
+          .keepsRule(item.server!, RuleKind.playlist, item.data ?? item.name);
+
+  void _togglePlaylistKeep(DisplayItem item) {
+    final srv = item.server;
+    if (srv == null) return;
+    MirrorManager().setRule(
+        srv, RuleKind.playlist, item.data ?? item.name, !_playlistKept(item));
+  }
+
   Future<String?> _playlistNameDialog(BuildContext context,
       {required String title, required String action, String? initial}) {
     return PlaylistNameDialog.show(context,

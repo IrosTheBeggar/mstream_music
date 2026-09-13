@@ -4028,4 +4028,22 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Scaricato in qualità originale e mantenuto sincronizzato su questo dispositivo.';
+
+  @override
+  String get keepRatedTitle => 'Tieni offline i brani valutati';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n stelle e oltre';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 stelle';
+
+  @override
+  String get keptOfflineSection => 'Tenuto offline anche';
+
+  @override
+  String get keptOfflineNone =>
+      'Ancora niente. «Tieni offline» si trova su album, artisti e playlist.';
 }

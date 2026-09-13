@@ -4041,4 +4041,22 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Téléchargé en qualité d\'origine et maintenu à jour sur cet appareil.';
+
+  @override
+  String get keepRatedTitle => 'Garder les titres notés hors ligne';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n étoiles et plus';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 étoiles';
+
+  @override
+  String get keptOfflineSection => 'Également gardé hors ligne';
+
+  @override
+  String get keptOfflineNone =>
+      'Rien pour l\'instant. « Garder hors ligne » se trouve sur les albums, artistes et playlists.';
 }

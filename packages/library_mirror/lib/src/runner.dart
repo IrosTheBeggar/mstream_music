@@ -309,15 +309,30 @@ class MirrorRunner {
       final id = s.id;
       if (id == null) continue;
       var credited = const <String>{};
-      if (s.enabled && s.kind == RuleKind.artist) {
-        albums ??= index.albums(c.server);
-        credited = {
-          for (final a in albums)
-            if (a.albumArtist == s.key) a.name
-        };
+      var members = const <String>{};
+      if (s.enabled) {
+        switch (s.kind) {
+          case RuleKind.artist:
+            albums ??= index.albums(c.server);
+            credited = {
+              for (final a in albums)
+                if (a.albumArtist == s.key) a.name
+            };
+          case RuleKind.playlist:
+            members = {
+              for (final i in index.playlistItems(c.server, s.key)) i.path
+            };
+          case RuleKind.rated:
+            final min = int.tryParse(s.key) ?? 0;
+            members = {
+              for (final t in index.rated(c.server))
+                if ((t.rating ?? 0) >= min) t.path
+            };
+        }
       }
       final paths = s.enabled
-          ? expandRule(s, remote, creditedAlbums: credited)
+          ? expandRule(s, remote,
+              creditedAlbums: credited, memberPaths: members)
           : const <String>[];
       index.setSubscriptionFiles(id, c.server, paths);
       wanted.addAll(paths);
@@ -490,10 +505,13 @@ class MirrorRunner {
 /// and `folder` a data-path prefix; `album` is every track tagged with that
 /// album name (the same identity the album screens use); `artist` is every
 /// track by them plus the albums credited to them as album artist —
-/// [creditedAlbums], the names from `remote_albums`. Unknown kinds pin
-/// nothing.
+/// [creditedAlbums], the names from `remote_albums`; `playlist` and `rated`
+/// name their tracks outright — [memberPaths], the playlist's slots or the
+/// tracks rated at least the key, as the index resolved them. Unknown kinds
+/// pin nothing.
 List<String> expandRule(Subscription s, List<RemoteTrack> remote,
-    {Set<String> creditedAlbums = const {}}) {
+    {Set<String> creditedAlbums = const {},
+    Set<String> memberPaths = const {}}) {
   switch (s.kind) {
     case RuleKind.library:
       final prefix = '/${s.key.replaceAll(RegExp(r'^/+|/+$'), '')}/';
@@ -510,6 +528,9 @@ List<String> expandRule(Subscription s, List<RemoteTrack> remote,
               (t.album != null && creditedAlbums.contains(t.album)))
             t.path
       ];
+    case RuleKind.playlist:
+    case RuleKind.rated:
+      return [for (final t in remote) if (memberPaths.contains(t.path)) t.path];
     default:
       return const [];
   }

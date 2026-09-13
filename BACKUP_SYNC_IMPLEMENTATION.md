@@ -35,7 +35,7 @@ tests + one device smoke); no repo-wide format.
 | A4 | app | Offline browsing: albums, artists, album songs, art cache — **[#178](https://github.com/IrosTheBeggar/mstream_music/pull/178)** (`LibrarySource`, `ArtCache`, auto/manual offline flag) | A3 | yes (offline chip) | 🟡 3–4d |
 | A5 | app | Offline: playlists, rated, genres, recent, search (FTS5) — **[#179](https://github.com/IrosTheBeggar/mstream_music/pull/179)** (schema v2 outbox, `LibrarySource` lists, `OutboxManager` replay) | A4 | yes (search offline) | 🟡 3–4d |
 | A6a | app | Rules: album / artist "Keep offline" — **[#180](https://github.com/IrosTheBeggar/mstream_music/pull/180)** (`expandRule` by kind, toolbar pin + artist sheet) | A3 | yes | 🟡 2–3d |
-| A6b | app | Rules: playlist + rated | A6a, A5 | yes | 🟡 1–2d |
+| A6b | app | Rules: playlist + rated — **[#181](https://github.com/IrosTheBeggar/mstream_music/pull/181)** (playlist menu toggle, rated dropdown + rules list in Library copy) | A6a, A5 | yes | 🟡 1–2d |
 | A7 | app | Transcoded quality tier for entity rules | A6a | yes (quality picker) | 🟡 2–3d |
 | A8 | app | Fold the keep-queue-offline ledger into the index | A3 | no | 🟡 1–2d |
 | S2 | mStream | Tombstones + `since` deltas | S1 | no | 🟡 2–3d |

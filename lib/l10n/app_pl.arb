@@ -1053,5 +1053,10 @@
   "irohShareUnavailable": "Udostępnianie nie jest dostępne dla serwerów peer-to-peer (iroh) — nie mają publicznego adresu URL, do którego można linkować.",
   "keepOffline": "Zachowaj offline",
   "keepOfflineOn": "Zachowane offline",
-  "keepOfflineHelp": "Pobrane w oryginalnej jakości i synchronizowane na tym urządzeniu."
+  "keepOfflineHelp": "Pobrane w oryginalnej jakości i synchronizowane na tym urządzeniu.",
+  "keepRatedTitle": "Zachowaj ocenione utwory offline",
+  "keepRatedStars": "{n} gwiazdki i więcej",
+  "keepRatedFiveStars": "5 gwiazdek",
+  "keptOfflineSection": "Zachowane offline również",
+  "keptOfflineNone": "Jeszcze nic. „Zachowaj offline” znajdziesz przy albumach, wykonawcach i playlistach."
 }

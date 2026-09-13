@@ -3990,4 +3990,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Downloaded in original quality and kept in sync on this device.';
+
+  @override
+  String get keepRatedTitle => 'Keep rated songs offline';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n stars and up';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 stars';
+
+  @override
+  String get keptOfflineSection => 'Also kept offline';
+
+  @override
+  String get keptOfflineNone =>
+      'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.';
 }

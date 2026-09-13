@@ -4036,4 +4036,22 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get keepOfflineHelp =>
       'Se descarga en calidad original y se mantiene sincronizado en este dispositivo.';
+
+  @override
+  String get keepRatedTitle => 'Guardar canciones valoradas sin conexión';
+
+  @override
+  String keepRatedStars(int n) {
+    return '$n estrellas o más';
+  }
+
+  @override
+  String get keepRatedFiveStars => '5 estrellas';
+
+  @override
+  String get keptOfflineSection => 'También guardado sin conexión';
+
+  @override
+  String get keptOfflineNone =>
+      'Nada todavía. «Guardar sin conexión» está en álbumes, artistas y listas.';
 }
