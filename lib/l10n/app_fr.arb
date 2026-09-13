@@ -1050,5 +1050,8 @@
   "irohPathDirect": "Directe",
   "irohPathRelay": "Relais",
   "irohCastUnavailable": "La diffusion vers des appareils externes n'est pas disponible pour les serveurs pair-à-pair (iroh) — la lecture reste sur cet appareil.",
-  "irohShareUnavailable": "Le partage n'est pas disponible pour les serveurs pair-à-pair (iroh) — ils n'ont pas d'URL publique vers laquelle pointer."
+  "irohShareUnavailable": "Le partage n'est pas disponible pour les serveurs pair-à-pair (iroh) — ils n'ont pas d'URL publique vers laquelle pointer.",
+  "keepOffline": "Garder hors ligne",
+  "keepOfflineOn": "Gardé hors ligne",
+  "keepOfflineHelp": "Téléchargé en qualité d'origine et maintenu à jour sur cet appareil."
 }

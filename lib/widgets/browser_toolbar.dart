@@ -17,6 +17,7 @@
 
 import 'dart:async';
 
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
 import 'package:material_ui/material_ui.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -26,6 +27,7 @@ import '../objects/display_item.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
+import '../singletons/mirror_manager.dart';
 import '../singletons/settings.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
@@ -178,6 +180,29 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
   List<DisplayItem> get _actionTargets => BrowserManager().albumDetail != null
       ? (BrowserManager().albumDetailSongs ?? const [])
       : BrowserManager().browserList;
+
+  /// "Keep offline" (A6a): an album rule for the library copy — filled while
+  /// the album is pinned. Redraws with the mirror's status stream, which the
+  /// toggle publishes to.
+  Widget _keepButton(AppLocalizations l, DisplayItem album) {
+    final srv = album.server!;
+    final name = album.data ?? album.name;
+    return StreamBuilder<Map<String, MirrorStatus>>(
+      stream: MirrorManager().statusStream,
+      initialData: MirrorManager().current,
+      builder: (context, _) {
+        final on = MirrorManager().keepsRule(srv, RuleKind.album, name);
+        return IconButton(
+          icon: Icon(on ? Icons.offline_pin : Icons.offline_pin_outlined,
+              size: 22),
+          color: on ? VelvetColors.primary : VelvetColors.appBarTextSecondary,
+          tooltip: on ? l.keepOfflineOn : l.keepOffline,
+          onPressed: () =>
+              MirrorManager().setRule(srv, RuleKind.album, name, !on),
+        );
+      },
+    );
+  }
 
   Widget _icon(IconData icon, String tooltip, VoidCallback onTap) => IconButton(
         icon: Icon(icon, size: 22),
@@ -393,6 +418,8 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
         if (_downloadable(albumSongs).isNotEmpty)
           _icon(Icons.download_sharp, l.download,
               () => _downloadAll(context, albumSongs)),
+        if (s.album!.server != null && MirrorManager().canKeep(s.album!.server!))
+          _keepButton(l, s.album!),
       ]);
     }
 

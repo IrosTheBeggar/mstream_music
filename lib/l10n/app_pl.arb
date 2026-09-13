@@ -1050,5 +1050,8 @@
   "irohPathDirect": "Bezpośrednio",
   "irohPathRelay": "Przekaźnik",
   "irohCastUnavailable": "Przesyłanie na urządzenia zewnętrzne nie jest dostępne dla serwerów peer-to-peer (iroh) — odtwarzanie pozostaje na tym urządzeniu.",
-  "irohShareUnavailable": "Udostępnianie nie jest dostępne dla serwerów peer-to-peer (iroh) — nie mają publicznego adresu URL, do którego można linkować."
+  "irohShareUnavailable": "Udostępnianie nie jest dostępne dla serwerów peer-to-peer (iroh) — nie mają publicznego adresu URL, do którego można linkować.",
+  "keepOffline": "Zachowaj offline",
+  "keepOfflineOn": "Zachowane offline",
+  "keepOfflineHelp": "Pobrane w oryginalnej jakości i synchronizowane na tym urządzeniu."
 }

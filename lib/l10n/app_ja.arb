@@ -1050,5 +1050,8 @@
   "irohPathDirect": "直接",
   "irohPathRelay": "リレー",
   "irohCastUnavailable": "ピアツーピア (iroh) サーバーでは外部デバイスへのキャストを利用できません — 再生はこのデバイスで続きます。",
-  "irohShareUnavailable": "ピアツーピア (iroh) サーバーでは共有を利用できません — リンクできる公開 URL がありません。"
+  "irohShareUnavailable": "ピアツーピア (iroh) サーバーでは共有を利用できません — リンクできる公開 URL がありません。",
+  "keepOffline": "オフラインで保持",
+  "keepOfflineOn": "オフラインで保持中",
+  "keepOfflineHelp": "元の音質でダウンロードし、この端末で同期を保ちます。"
 }

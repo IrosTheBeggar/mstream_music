@@ -4031,4 +4031,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Une notification sur le téléphone quand une demande arrive, l\'app ouverte ou en lecture';
+
+  @override
+  String get keepOffline => 'Garder hors ligne';
+
+  @override
+  String get keepOfflineOn => 'Gardé hors ligne';
+
+  @override
+  String get keepOfflineHelp =>
+      'Téléchargé en qualité d\'origine et maintenu à jour sur cet appareil.';
 }

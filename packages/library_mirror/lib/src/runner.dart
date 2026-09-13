@@ -301,28 +301,29 @@ class MirrorRunner {
   // ── rules ─────────────────────────────────────────────────────────────
 
   /// Expands the enabled rules to the paths they pin and rewrites their
-  /// required-by edges. A3 knows `library` (a whole vpath) and `folder` (a
-  /// data-path prefix); the entity kinds arrive with A6.
+  /// required-by edges — see [expandRule] for what each kind claims.
   Set<String> _expandSubscriptions(MirrorConfig c, List<RemoteTrack> remote) {
     final wanted = <String>{};
+    List<AlbumRow>? albums;
     for (final s in index.subscriptionsFor(c.server)) {
       final id = s.id;
       if (id == null) continue;
-      final prefix = s.enabled ? _prefixFor(s) : null;
-      final paths = prefix == null
-          ? const <String>[]
-          : [for (final t in remote) if (t.path.startsWith(prefix)) t.path];
+      var credited = const <String>{};
+      if (s.enabled && s.kind == RuleKind.artist) {
+        albums ??= index.albums(c.server);
+        credited = {
+          for (final a in albums)
+            if (a.albumArtist == s.key) a.name
+        };
+      }
+      final paths = s.enabled
+          ? expandRule(s, remote, creditedAlbums: credited)
+          : const <String>[];
       index.setSubscriptionFiles(id, c.server, paths);
       wanted.addAll(paths);
     }
     return wanted;
   }
-
-  static String? _prefixFor(Subscription s) => switch (s.kind) {
-        'library' => '/${s.key.replaceAll(RegExp(r'^/+|/+$'), '')}/',
-        'folder' => s.key.endsWith('/') ? s.key : '${s.key}/',
-        _ => null,
-      };
 
   Future<void> _preflight(MirrorConfig c, Plan pl) async {
     final probe = freeSpace;
@@ -483,4 +484,33 @@ class MirrorRunner {
   static final Random _rng = Random.secure();
   static String _randomId() =>
       List.generate(12, (_) => _rng.nextInt(36).toRadixString(36)).join();
+}
+
+/// The data paths rule [s] pins among [remote]. `library` is a whole vpath
+/// and `folder` a data-path prefix; `album` is every track tagged with that
+/// album name (the same identity the album screens use); `artist` is every
+/// track by them plus the albums credited to them as album artist —
+/// [creditedAlbums], the names from `remote_albums`. Unknown kinds pin
+/// nothing.
+List<String> expandRule(Subscription s, List<RemoteTrack> remote,
+    {Set<String> creditedAlbums = const {}}) {
+  switch (s.kind) {
+    case RuleKind.library:
+      final prefix = '/${s.key.replaceAll(RegExp(r'^/+|/+$'), '')}/';
+      return [for (final t in remote) if (t.path.startsWith(prefix)) t.path];
+    case RuleKind.folder:
+      final prefix = s.key.endsWith('/') ? s.key : '${s.key}/';
+      return [for (final t in remote) if (t.path.startsWith(prefix)) t.path];
+    case RuleKind.album:
+      return [for (final t in remote) if (t.album == s.key) t.path];
+    case RuleKind.artist:
+      return [
+        for (final t in remote)
+          if (t.artist == s.key ||
+              (t.album != null && creditedAlbums.contains(t.album)))
+            t.path
+      ];
+    default:
+      return const [];
+  }
 }

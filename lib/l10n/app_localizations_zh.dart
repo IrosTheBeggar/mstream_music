@@ -3759,4 +3759,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get federationNotifySubtitle => '应用打开或播放时收到请求，会在手机上发出通知';
+
+  @override
+  String get keepOffline => '离线保留';
+
+  @override
+  String get keepOfflineOn => '已离线保留';
+
+  @override
+  String get keepOfflineHelp => '以原始音质下载并在此设备上保持同步。';
 }

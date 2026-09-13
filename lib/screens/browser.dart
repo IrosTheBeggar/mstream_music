@@ -1,4 +1,5 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:library_mirror/library_mirror.dart' show RuleKind;
 import 'package:material_ui/material_ui.dart';
 import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
@@ -17,6 +18,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../widgets/track_actions_sheet.dart';
 
 import '../singletons/media.dart';
+import '../singletons/mirror_manager.dart';
 import '../singletons/track_capture.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
@@ -734,9 +736,81 @@ class _BrowserState extends State<Browser> {
             leading: b[i].getImage(),
             title: b[i].getText(l: l),
             subtitle: b[i].getSubText(l: l),
+            // An artist row's only action so far: "Keep offline" (A6a).
+            onLongPress: b[i].type == 'artist'
+                ? () => _showArtistActions(b[i], c)
+                : null,
             onTap: () {
               handleTap(b, i, c);
             }));
+  }
+
+  /// Long-press on an artist: "Keep offline" — an artist rule for the
+  /// library copy (every track by them, plus the albums credited to them).
+  /// Nothing to offer on a server without library sync.
+  void _showArtistActions(DisplayItem item, BuildContext c) {
+    final l = AppLocalizations.of(c);
+    final srv = item.server;
+    final name = item.data ?? item.name;
+    if (srv == null || !MirrorManager().canKeep(srv)) return;
+    showModalBottomSheet(
+      context: c,
+      backgroundColor: VelvetColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Row(children: [
+                Icon(Icons.library_music,
+                    color: VelvetColors.textSecondary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: VelvetColors.textPrimary),
+                  ),
+                ),
+              ]),
+            ),
+            Divider(color: VelvetColors.border, height: 17),
+            StreamBuilder<Map<String, MirrorStatus>>(
+              stream: MirrorManager().statusStream,
+              initialData: MirrorManager().current,
+              builder: (context, _) {
+                final on = MirrorManager().keepsRule(srv, RuleKind.artist, name);
+                return SwitchListTile(
+                  secondary: Icon(
+                      on ? Icons.offline_pin : Icons.offline_pin_outlined,
+                      color: on
+                          ? VelvetColors.primary
+                          : VelvetColors.textSecondary),
+                  title: Text(l.keepOffline,
+                      style: TextStyle(color: VelvetColors.textPrimary)),
+                  subtitle: Text(l.keepOfflineHelp,
+                      style: TextStyle(
+                          color: VelvetColors.textTertiary, fontSize: 12)),
+                  value: on,
+                  activeThumbColor: VelvetColors.primary,
+                  onChanged: (v) =>
+                      MirrorManager().setRule(srv, RuleKind.artist, name, v),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Default browser landing: section shortcuts as a card grid ──

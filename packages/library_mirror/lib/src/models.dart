@@ -294,6 +294,19 @@ class PlaylistRow {
   const PlaylistRow({required this.id, required this.name, this.paths = const []});
 }
 
+/// The rule kinds the runner expands (`subscriptions.kind`). `library` and
+/// `folder` match by path (A3); `album` and `artist` by the track's own
+/// tags (A6a); `genre`, `playlist` and `rated` arrive with A6b.
+abstract final class RuleKind {
+  static const String library = 'library';
+  static const String folder = 'folder';
+  static const String album = 'album';
+  static const String artist = 'artist';
+  static const String genre = 'genre';
+  static const String playlist = 'playlist';
+  static const String rated = 'rated';
+}
+
 /// A genre and how many tracks carry it (`db/genres`).
 @immutable
 class GenreRow {

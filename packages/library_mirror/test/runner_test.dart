@@ -11,21 +11,26 @@ import 'package:test/test.dart';
 /// library does.
 class FakeServer {
   final Map<String, (List<int>, int)> files = {};
+  final Map<String, ({String? album, String? artist})> tags = {};
   String revision = 'r1';
   bool scanning = false;
   int nextId = 1;
   final Map<String, int> ids = {};
 
-  void put(String path, String body, {int mtime = 1700000000000}) {
+  void put(String path, String body,
+      {int mtime = 1700000000000, String? album, String? artist}) {
     files[path] = (utf8.encode(body), mtime);
     ids.putIfAbsent(path, () => nextId++);
+    if (album != null || artist != null) tags[path] = (album: album, artist: artist);
   }
 
   RemoteTrack entry(String path) {
     final (bytes, mtime) = files[path]!;
+    final t = tags[path];
     return RemoteTrack(
         id: ids[path]!, path: path, size: bytes.length, modified: mtime,
-        hash: md5.convert(bytes).toString(), hashV: 2, title: p.basename(path));
+        hash: md5.convert(bytes).toString(), hashV: 2, title: p.basename(path),
+        album: t?.album, artist: t?.artist);
   }
 }
 
@@ -312,6 +317,61 @@ void main() {
     expect(dl.calls, isEmpty);
     final ok = await runner(freeSpace: (_) async => 1 << 30).run(cfg);
     expect(ok.downloaded, 3);
+  });
+
+  test('album and artist rules pin by tag; an artist also claims the albums credited to it', () async {
+    // Start from no rule at all, then pin one album.
+    ix.removeSubscription(ix.subscriptionsFor('s').single.id!);
+    srv
+      ..put('/music/A/1.mp3', 'one', album: 'Alpha', artist: 'Ann')
+      ..put('/music/A/2.mp3', 'two', album: 'Alpha', artist: 'Guest')
+      ..put('/music/B/3.mp3', 'three', album: 'Beta', artist: 'Ann')
+      ..put('/music/C/4.mp3', 'four', album: 'Gamma', artist: 'Cy');
+    ix.replaceAlbums('s', const [
+      AlbumRow(name: 'Alpha', albumArtist: 'Ann'),
+      AlbumRow(name: 'Beta', albumArtist: 'Various'),
+      AlbumRow(name: 'Gamma', albumArtist: 'Cy'),
+    ]);
+    final album = ix.addSubscription(const Subscription(server: 's', kind: RuleKind.album, key: 'Alpha'));
+    var run = await runner().run(cfg);
+    expect(run.downloaded, 2);
+    expect(dl.calls, unorderedEquals(['/music/A/1.mp3', '/music/A/2.mp3']));
+    expect(ix.wantedPaths('s'), {'/music/A/1.mp3', '/music/A/2.mp3'});
+
+    // The artist rule adds Beta's track by Ann; Alpha is already pinned.
+    ix.addSubscription(const Subscription(server: 's', kind: RuleKind.artist, key: 'Ann'));
+    dl.calls.clear();
+    run = await runner().run(cfg);
+    expect(run.downloaded, 1);
+    expect(dl.calls, ['/music/B/3.mp3']);
+
+    // Dropping the album rule keeps Alpha's Ann track (artist rule, and the
+    // album is credited to Ann) but lets the guest track go.
+    ix.removeSubscription(album);
+    run = await runner().run(cfg);
+    expect(run.trashed, 0, reason: 'Alpha is credited to Ann, so the artist rule still pins both');
+    ix.replaceAlbums('s', const [AlbumRow(name: 'Alpha', albumArtist: 'Various')]);
+    run = await runner().run(cfg);
+    expect(run.trashed, 1);
+    expect(ix.wantedPaths('s'), {'/music/A/1.mp3', '/music/B/3.mp3'});
+  });
+
+  test('expandRule: kinds, prefixes and an unknown kind', () {
+    final remote = [
+      const RemoteTrack(id: 1, path: '/music/A/1.mp3', album: 'Alpha', artist: 'Ann'),
+      const RemoteTrack(id: 2, path: '/music/A/2.mp3', album: 'Alpha', artist: 'Guest'),
+      const RemoteTrack(id: 3, path: '/musicals/x.mp3', album: 'Other', artist: 'Ann'),
+      const RemoteTrack(id: 4, path: '/music/B/3.mp3'),
+    ];
+    List<String> ex(String kind, String key, {Set<String> credited = const {}}) =>
+        expandRule(Subscription(server: 's', kind: kind, key: key), remote, creditedAlbums: credited);
+    expect(ex(RuleKind.library, 'music'), ['/music/A/1.mp3', '/music/A/2.mp3', '/music/B/3.mp3']);
+    expect(ex(RuleKind.library, '/music/'), ['/music/A/1.mp3', '/music/A/2.mp3', '/music/B/3.mp3']);
+    expect(ex(RuleKind.folder, '/music/A'), ['/music/A/1.mp3', '/music/A/2.mp3']);
+    expect(ex(RuleKind.album, 'Alpha'), ['/music/A/1.mp3', '/music/A/2.mp3']);
+    expect(ex(RuleKind.artist, 'Ann'), ['/music/A/1.mp3', '/musicals/x.mp3']);
+    expect(ex(RuleKind.artist, 'Ann', credited: {'Alpha'}), ['/music/A/1.mp3', '/music/A/2.mp3', '/musicals/x.mp3']);
+    expect(ex('genre', 'Rock'), isEmpty);
   });
 
   test('a disabled rule pins nothing and its edges are cleared', () async {

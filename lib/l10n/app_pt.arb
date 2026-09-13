@@ -1050,5 +1050,8 @@
   "irohPathDirect": "Direta",
   "irohPathRelay": "Relay",
   "irohCastUnavailable": "A transmissão para dispositivos externos não está disponível em servidores peer-to-peer (iroh) — a reprodução continua neste dispositivo.",
-  "irohShareUnavailable": "O compartilhamento não está disponível em servidores peer-to-peer (iroh) — eles não têm uma URL pública para vincular."
+  "irohShareUnavailable": "O compartilhamento não está disponível em servidores peer-to-peer (iroh) — eles não têm uma URL pública para vincular.",
+  "keepOffline": "Manter offline",
+  "keepOfflineOn": "Mantido offline",
+  "keepOfflineHelp": "Transferido na qualidade original e mantido sincronizado neste dispositivo."
 }

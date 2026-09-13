@@ -4032,4 +4032,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Eine Benachrichtigung auf dem Telefon, wenn eine Anfrage eingeht, während die App offen ist oder Musik spielt';
+
+  @override
+  String get keepOffline => 'Offline behalten';
+
+  @override
+  String get keepOfflineOn => 'Wird offline behalten';
+
+  @override
+  String get keepOfflineHelp =>
+      'Wird in Originalqualität heruntergeladen und auf diesem Gerät synchron gehalten.';
 }
