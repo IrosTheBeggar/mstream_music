@@ -1350,6 +1350,20 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryCopyDesktopNote => 'Si sincronizza finché l\'app è aperta.';
 
   @override
+  String get offlineBrowseTitle => 'Sfoglia la copia offline';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Album, artisti e cartelle provengono dall\'indice della libreria su questo dispositivo, e si possono riprodurre solo i file presenti. Si attiva da solo quando il server non è raggiungibile.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Nessun indice della libreria ancora: sincronizza una volta mentre il server è raggiungibile.';
+
+  @override
+  String get offlineChip => 'Copia offline';
+
+  @override
   String get storageChooseFolder => 'Scegli cartella';
 
   @override

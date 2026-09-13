@@ -1300,6 +1300,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryCopyDesktopNote => 'アプリを開いている間に同期します。';
 
   @override
+  String get offlineBrowseTitle => 'オフラインコピーを閲覧';
+
+  @override
+  String get offlineBrowseHelp =>
+      'アルバム、アーティスト、フォルダーはこの端末のライブラリインデックスから表示され、端末にあるファイルのみ再生できます。サーバーに接続できないときは自動的にオンになります。';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'ライブラリインデックスがまだありません。サーバーに接続できるうちに一度同期してください。';
+
+  @override
+  String get offlineChip => 'オフラインコピー';
+
+  @override
   String get storageChooseFolder => 'フォルダを選択';
 
   @override

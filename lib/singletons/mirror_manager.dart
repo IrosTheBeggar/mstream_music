@@ -12,6 +12,7 @@ import '../objects/server.dart';
 import '../util/connectivity_probe.dart';
 import '../util/decode_json.dart';
 import '../util/stream_url.dart';
+import 'art_cache.dart';
 import 'browser_list.dart';
 import 'file_explorer.dart';
 import 'library_index.dart';
@@ -132,11 +133,14 @@ class MirrorManager {
 
   // ── runs ──────────────────────────────────────────────────────────────
 
+  /// Every server that speaks the manifest, rules or not: without a rule a
+  /// run is just the index refresh (manifest + lists, a 304 most of the time)
+  /// that offline browsing lives on; transfers need a rule.
   Future<void> syncAll({required String trigger}) async {
     if (!await hasConnectivity()) return;
     await ServerManager().ensureLoaded();
     for (final s in List<Server>.of(ServerManager().serverList)) {
-      if (!hasRules(s) || s.syncAvailable != true) continue;
+      if (s.syncAvailable != true || s.browseOffline) continue;
       await sync(s, trigger: trigger);
     }
   }
@@ -168,6 +172,7 @@ class MirrorManager {
       return null;
     }
     final cfg = MirrorConfig.under(dir.path, name,
+        artRoot: ArtCache().dirFor(name),
         retentionDays: s.mirrorRetentionDays,
         wifiOnly: s.mirrorWifiOnly && (Platform.isAndroid || Platform.isIOS));
     _running.add(name);
@@ -177,6 +182,8 @@ class MirrorManager {
       index: ix,
       manifest: ServerManifestClient(s),
       downloader: _MirrorDownloader(s, this),
+      lists: ServerListsClient(s),
+      art: ServerArtClient(s),
     );
     try {
       final run = await runner.run(cfg,
@@ -193,6 +200,7 @@ class MirrorManager {
     } finally {
       _running.remove(name);
       _cancelRequested.remove(name);
+      await ArtCache().reload(name);
       _publish(name);
       // Files landed or left: the browser's badges are existence-derived.
       unawaited(BrowserManager().refreshDownloadStatus(s));
@@ -269,6 +277,83 @@ class ServerManifestClient implements ManifestClient {
       }
       final body = await decodeJsonBody(res.body);
       return ManifestPage.fromJson((body as Map).cast<String, dynamic>());
+    } finally {
+      client.close();
+    }
+  }
+}
+
+/// `GET /api/v1/db/albums` and `/db/artists` for the offline index — the
+/// same two calls the browser makes, minus the browser.
+class ServerListsClient implements LibraryListsClient {
+  final Server server;
+  final http.Client Function() _newClient;
+
+  ServerListsClient(this.server, {http.Client Function()? client})
+      : _newClient = client ?? http.Client.new;
+
+  Future<dynamic> _get(String location) async {
+    final client = _newClient();
+    try {
+      final res = await client
+          .get(server.apiUri(location),
+              headers: {'x-access-token': server.authToken ?? ''})
+          .timeout(const Duration(seconds: 60));
+      if (res.statusCode != 200) {
+        throw HttpException('$location: HTTP ${res.statusCode}');
+      }
+      return await decodeJsonBody(res.body);
+    } finally {
+      client.close();
+    }
+  }
+
+  @override
+  Future<List<AlbumRow>> albums() async {
+    final res = await _get('/api/v1/db/albums');
+    return [
+      for (final e in (res['albums'] as List? ?? const []))
+        if (e is Map && e['name'] is String)
+          AlbumRow(
+            name: e['name'] as String,
+            albumArtist:
+                (e['album_artist'] ?? e['albumArtist'] ?? e['artist'])?.toString(),
+            year: (e['year'] as num?)?.toInt(),
+            art: e['album_art_file'] as String?,
+          ),
+    ];
+  }
+
+  @override
+  Future<List<String>> artists() async {
+    final res = await _get('/api/v1/db/artists');
+    return [
+      for (final e in (res['artists'] as List? ?? const []))
+        if (e is String) e else if (e is Map && e['name'] is String) e['name'] as String,
+    ];
+  }
+}
+
+/// One album-art file at the medium size the list rows use, straight to the
+/// runner's temp path.
+class ServerArtClient implements ArtClient {
+  final Server server;
+  final http.Client Function() _newClient;
+
+  ServerArtClient(this.server, {http.Client Function()? client})
+      : _newClient = client ?? http.Client.new;
+
+  @override
+  Future<void> fetchArt(String artFile, String destination) async {
+    final client = _newClient();
+    try {
+      final res = await client
+          .get(Uri.parse(buildAlbumArtUrl(server, artFile, compress: 'm')))
+          .timeout(const Duration(seconds: 60));
+      if (res.statusCode != 200) {
+        throw HttpException('album-art/$artFile: HTTP ${res.statusCode}');
+      }
+      await File(destination).writeAsBytes(res.bodyBytes, flush: true);
     } finally {
       client.close();
     }

@@ -459,6 +459,57 @@ class LibraryIndex {
           r['name'] as String
       ];
 
+  /// Albums credited to [artist]: as the album artist, or holding a track
+  /// by them — close to `db/artists-albums`, which unions the same sources.
+  List<AlbumRow> artistAlbums(String server, String artist) => [
+        for (final r in _db.select(
+            'SELECT * FROM remote_albums WHERE server = ? AND (album_artist = ? '
+            'OR name IN (SELECT album FROM remote_tracks WHERE server = ? '
+            'AND artist = ? AND album IS NOT NULL)) '
+            'ORDER BY year, name COLLATE NOCASE',
+            [server, artist, server, artist]))
+          AlbumRow.fromRow(r)
+      ];
+
+  /// One level of the library as a folder tree: the sub-folders and the
+  /// tracks directly under [dir] (a data path such as `/music/Artist`; `/`
+  /// lists the libraries). Derived from the paths alone, so it works for
+  /// every server the manifest has been pulled for.
+  ({List<String> dirs, List<RemoteTrack> files}) directoryListing(
+      String server, String dir) {
+    final prefix = dir.endsWith('/') ? dir : '$dir/';
+    final n = prefix.length;
+    final dirs = <String>{};
+    final files = <RemoteTrack>[];
+    // Prefix by substr, not LIKE: paths may contain '%' and '_'.
+    for (final r in _db.select(
+        'SELECT * FROM remote_tracks WHERE server = ? AND substr(path, 1, ?) = ? '
+        'ORDER BY path',
+        [server, n, prefix])) {
+      final rest = (r['path'] as String).substring(n);
+      final slash = rest.indexOf('/');
+      if (slash < 0) {
+        files.add(RemoteTrack.fromRow(r));
+      } else {
+        dirs.add(rest.substring(0, slash));
+      }
+    }
+    return (dirs: dirs.toList(), files: files);
+  }
+
+  /// Every track under [dir], in path order (the folder "play / download
+  /// all" listing).
+  List<RemoteTrack> tracksUnder(String server, String dir) {
+    final prefix = dir.endsWith('/') ? dir : '$dir/';
+    return [
+      for (final r in _db.select(
+          'SELECT * FROM remote_tracks WHERE server = ? AND substr(path, 1, ?) = ? '
+          'ORDER BY path',
+          [server, prefix.length, prefix]))
+        RemoteTrack.fromRow(r)
+    ];
+  }
+
   /// Tracks of the album named [album], in disc / track / path order — the
   /// same identity `db/album-songs` uses.
   List<RemoteTrack> albumSongs(String server, String album) => [

@@ -23,6 +23,10 @@ class MirrorConfig {
   final String trashRoot;
   final String tmpRoot;
 
+  /// Where album-art files for mirrored tracks are cached (flat, by their
+  /// content-addressed server name); null = no art caching.
+  final String? artRoot;
+
   /// Days a trashed file survives; 0 = keep forever.
   final int retentionDays;
   final bool wifiOnly;
@@ -34,6 +38,7 @@ class MirrorConfig {
     required this.mediaRoot,
     required this.trashRoot,
     required this.tmpRoot,
+    this.artRoot,
     this.retentionDays = 30,
     this.wifiOnly = false,
     this.concurrency = 3,
@@ -44,7 +49,8 @@ class MirrorConfig {
   /// `<downloadDir>/media/<server>` (the same tree manual downloads use),
   /// `<downloadDir>/.mstream-trash/<server>`, `<downloadDir>/.mstream-tmp/<server>`.
   factory MirrorConfig.under(String downloadDir, String server,
-          {int retentionDays = 30,
+          {String? artRoot,
+          int retentionDays = 30,
           bool wifiOnly = false,
           int concurrency = 3,
           int pageSize = 2000}) =>
@@ -53,6 +59,7 @@ class MirrorConfig {
         mediaRoot: p.join(downloadDir, 'media', server),
         trashRoot: p.join(downloadDir, '.mstream-trash', server),
         tmpRoot: p.join(downloadDir, '.mstream-tmp', server),
+        artRoot: artRoot,
         retentionDays: retentionDays,
         wifiOnly: wifiOnly,
         concurrency: concurrency,
@@ -84,6 +91,14 @@ class MirrorRunner {
   final ManifestClient manifest;
   final Downloader downloader;
 
+  /// The album / artist lists for offline browsing; refreshed whenever the
+  /// manifest changed. Optional — the mirror works without them.
+  final LibraryListsClient? lists;
+
+  /// Album art for the mirrored tracks, cached under [MirrorConfig.artRoot].
+  /// Optional and best-effort: art failures never mark a run.
+  final ArtClient? art;
+
   /// Free bytes on the volume holding [MirrorConfig.mediaRoot]; null (or a
   /// null result) skips the preflight.
   final Future<int?> Function(String dir)? freeSpace;
@@ -93,6 +108,8 @@ class MirrorRunner {
     required this.index,
     required this.manifest,
     required this.downloader,
+    this.lists,
+    this.art,
     this.freeSpace,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now;
@@ -109,7 +126,9 @@ class MirrorRunner {
 
     try {
       onProgress?.call(const MirrorProgress('manifest', 0, 0, 0));
-      final scanning = await _refreshManifest(c);
+      final refreshed = await _refreshManifest(c);
+      if (refreshed.changed) await _refreshLists(c);
+      final scanning = refreshed.scanning;
       final remote = index.remoteTracks(c.server);
       final wanted = _expandSubscriptions(c, remote);
       final pl = plan(
@@ -172,6 +191,9 @@ class MirrorRunner {
       }
 
       await Future.wait([for (var i = 0; i < c.concurrency; i++) worker()]);
+      if (!cancelled()) {
+        await _fetchArt(c, [for (final t in remote) if (wanted.contains(t.path)) t]);
+      }
       await _sweepTrash(c);
       await _purgeTmp(c);
     } catch (e) {
@@ -201,13 +223,12 @@ class MirrorRunner {
   // ── manifest ──────────────────────────────────────────────────────────
 
   /// Walks every page into the index and prunes what the server dropped.
-  /// Returns whether the server reported a scan in progress. A 304 on the
-  /// first page leaves the rows as they are — they are current.
-  Future<bool> _refreshManifest(MirrorConfig c) async {
+  /// A 304 on the first page leaves the rows as they are — they are current.
+  Future<({bool changed, bool scanning})> _refreshManifest(MirrorConfig c) async {
     final previous = index.meta(c.server, 'revision');
     var page = await manifest.fetchPage(
         limit: c.pageSize, ifNoneMatch: previous);
-    if (page == null) return false;
+    if (page == null) return (changed: false, scanning: false);
     final rev = page.revision;
     var scanning = page.scanning;
     while (true) {
@@ -222,7 +243,46 @@ class MirrorRunner {
     // it mid-walk: the next run then sees a changed tag and re-walks.
     index.pruneUnseen(c.server, rev);
     index.setMeta(c.server, 'revision', rev);
-    return scanning;
+    return (changed: true, scanning: scanning);
+  }
+
+  /// The album / artist lists, replaced wholesale whenever the manifest
+  /// moved. Best-effort: a failure leaves the previous lists in place.
+  Future<void> _refreshLists(MirrorConfig c) async {
+    final client = lists;
+    if (client == null) return;
+    try {
+      index.replaceAlbums(c.server, await client.albums());
+      index.replaceArtists(c.server, await client.artists());
+    } catch (_) {
+      // The lists are a convenience for offline browsing; the mirror itself
+      // does not depend on them.
+    }
+  }
+
+  /// Album art for [tracks], one fetch per distinct file not yet cached.
+  /// Best-effort, sequential (art is small and the server compresses it on
+  /// the fly); a failed file is simply tried again next run.
+  Future<void> _fetchArt(MirrorConfig c, List<RemoteTrack> tracks) async {
+    final client = art;
+    final root = c.artRoot;
+    if (client == null || root == null) return;
+    final wanted = {for (final t in tracks) if (t.art != null) t.art!};
+    if (wanted.isEmpty) return;
+    await Directory(root).create(recursive: true);
+    for (final file in wanted) {
+      final dest = p.join(root, file);
+      if (await File(dest).exists()) continue;
+      final tmp = p.join(root, '.${_randomId()}.part');
+      try {
+        await client.fetchArt(file, tmp);
+        await _move(File(tmp), dest);
+      } catch (_) {
+        try {
+          await File(tmp).delete();
+        } catch (_) {}
+      }
+    }
   }
 
   // ── rules ─────────────────────────────────────────────────────────────

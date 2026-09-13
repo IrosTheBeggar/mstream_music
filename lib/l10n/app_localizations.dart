@@ -2322,6 +2322,30 @@ abstract class AppLocalizations {
   /// **'Syncs while the app is open.'**
   String get libraryCopyDesktopNote;
 
+  /// No description provided for @offlineBrowseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the offline copy'**
+  String get offlineBrowseTitle;
+
+  /// No description provided for @offlineBrowseHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums, artists and folders come from the library index on this device, and only the files it holds can play. Switches on by itself when the server can\'t be reached.'**
+  String get offlineBrowseHelp;
+
+  /// No description provided for @offlineBrowseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No library index yet — sync once while the server is reachable.'**
+  String get offlineBrowseUnavailable;
+
+  /// No description provided for @offlineChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline copy'**
+  String get offlineChip;
+
   /// No description provided for @storageChooseFolder.
   ///
   /// In en, this message translates to:

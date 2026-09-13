@@ -8,6 +8,7 @@ import '../theme/velvet_theme.dart';
 import '../util/stream_url.dart';
 import '../util/image_cache.dart';
 import '../util/local_copy.dart';
+import '../singletons/art_cache.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 
@@ -33,6 +34,9 @@ class DisplayItem {
     String? aaFile = altAlbumArt ?? metadata?.albumArt;
 
     if (server != null && aaFile != null) {
+      // Art the mirror cached serves offline and saves a round-trip online.
+      final cached = ArtCache().pathFor(server!.localname, aaFile);
+      if (cached != null) return Image.file(File(cached));
       return Image.network(buildAlbumArtUrl(server!, aaFile));
     }
 
@@ -50,17 +54,26 @@ class DisplayItem {
     final BorderRadius radius =
         BorderRadius.circular(VelvetColors.radiusSmall);
     if (server != null && aaFile != null) {
-      final String url = buildAlbumArtUrl(server!, aaFile);
+      final String? cached = ArtCache().pathFor(server!.localname, aaFile);
       return ClipRRect(
         borderRadius: radius,
-        child: Image.network(
-          url,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          cacheWidth: artCacheSize(size),
-          errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
-        ),
+        child: cached != null
+            ? Image.file(
+                File(cached),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                cacheWidth: artCacheSize(size),
+                errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
+              )
+            : Image.network(
+                buildAlbumArtUrl(server!, aaFile),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                cacheWidth: artCacheSize(size),
+                errorBuilder: (_, _, _) => _albumThumbPlaceholder(size, radius),
+              ),
       );
     }
     return _albumThumbPlaceholder(size, radius);

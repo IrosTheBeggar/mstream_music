@@ -304,6 +304,40 @@ void main() {
       expect(ix.artists('s'), ['Alice', 'bob']);
     });
 
+    test('artist albums: credited as album artist or by a track, year order', () {
+      expect(ix.artistAlbums('s', 'Alice').map((a) => a.name), ['First']);
+      expect(ix.artistAlbums('s', 'Bob').map((a) => a.name), ['Other']);
+      ix.replaceAlbums('s', const [
+        AlbumRow(name: 'Other', albumArtist: 'Bob', year: 2005),
+        AlbumRow(name: 'First', albumArtist: 'Alice', year: 2001),
+        AlbumRow(name: 'Guest Spot', albumArtist: 'Bob', year: 1999),
+      ]);
+      expect(ix.artistAlbums('s', 'Bob').map((a) => a.name), ['Guest Spot', 'Other']);
+      expect(ix.artistAlbums('s', 'Nobody'), isEmpty);
+    });
+
+    test('directory listing and recursive tracks come off the paths', () {
+      final root = ix.directoryListing('s', '/');
+      expect(root.dirs, ['A', 'B']);
+      expect(root.files, isEmpty);
+      final a = ix.directoryListing('s', '/A');
+      expect(a.dirs, ['First']);
+      expect(a.files, isEmpty);
+      final first = ix.directoryListing('s', '/A/First/');
+      expect(first.dirs, isEmpty);
+      expect(first.files.map((t) => t.path),
+          ['/A/First/01.flac', '/A/First/02.flac', '/A/First/d2.flac']);
+      expect(ix.directoryListing('s', '/nope').dirs, isEmpty);
+      expect(ix.tracksUnder('s', '/A').map((t) => t.path),
+          ['/A/First/01.flac', '/A/First/02.flac', '/A/First/d2.flac']);
+      expect(ix.tracksUnder('s', '/').length, 4);
+
+      // '%' and '_' in a folder name must not act as wildcards.
+      ix.upsertTracks('s', [rt(9, '100%_hits/x.mp3', title: 'X')], 'r9');
+      expect(ix.directoryListing('s', '/100%_hits').files.single.id, 9);
+      expect(ix.directoryListing('s', '/100_hits').files, isEmpty);
+    });
+
     test('album songs are in disc / track order', () {
       expect(ix.albumSongs('s', 'First').map((t) => t.title),
           ['Opening', 'Second song', 'Bonus']);

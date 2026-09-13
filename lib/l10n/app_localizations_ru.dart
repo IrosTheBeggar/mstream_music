@@ -1371,6 +1371,20 @@ class AppLocalizationsRu extends AppLocalizations {
       'Синхронизируется, пока приложение открыто.';
 
   @override
+  String get offlineBrowseTitle => 'Просматривать офлайн-копию';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Альбомы, исполнители и папки берутся из индекса библиотеки на этом устройстве, и воспроизводятся только имеющиеся файлы. Включается автоматически, когда сервер недоступен.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Индекса библиотеки ещё нет — синхронизируйте один раз, пока сервер доступен.';
+
+  @override
+  String get offlineChip => 'Офлайн-копия';
+
+  @override
   String get storageChooseFolder => 'Выбрать папку';
 
   @override

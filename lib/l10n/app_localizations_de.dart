@@ -1354,6 +1354,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Synchronisiert, solange die App geöffnet ist.';
 
   @override
+  String get offlineBrowseTitle => 'Offline-Kopie durchsuchen';
+
+  @override
+  String get offlineBrowseHelp =>
+      'Alben, Künstler und Ordner kommen aus dem Bibliotheksindex auf diesem Gerät, und nur die vorhandenen Dateien können abgespielt werden. Schaltet sich von selbst ein, wenn der Server nicht erreichbar ist.';
+
+  @override
+  String get offlineBrowseUnavailable =>
+      'Noch kein Bibliotheksindex — einmal synchronisieren, solange der Server erreichbar ist.';
+
+  @override
+  String get offlineChip => 'Offline-Kopie';
+
+  @override
   String get storageChooseFolder => 'Ordner wählen';
 
   @override

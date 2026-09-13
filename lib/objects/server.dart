@@ -43,6 +43,14 @@ class Server {
   // starts; consumed by [effectiveBaseUrl].
   int? tunnelPort;
 
+  // Runtime-only (never persisted): browse this server from the library
+  // index on this device instead of the server (A4). Set by the user on the
+  // Library copy screen, or automatically ([offlineAuto]) when the server's
+  // capability ping fails while the index has rows for it — and cleared
+  // again on the next successful ping only when it was automatic.
+  bool browseOffline = false;
+  bool offlineAuto = false;
+
   // Runtime-only (never persisted): the iroh tunnel's loopback auth token while
   // this server is active. The local proxy requires it as `__lt=<token>` so other
   // apps on the device can't use it; appended to every loopback URL. Set alongside
