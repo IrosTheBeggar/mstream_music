@@ -127,7 +127,7 @@ class MirrorRunner {
     try {
       onProgress?.call(const MirrorProgress('manifest', 0, 0, 0));
       final refreshed = await _refreshManifest(c);
-      if (refreshed.changed) await _refreshLists(c);
+      await _refreshLists(c, manifestChanged: refreshed.changed);
       final scanning = refreshed.scanning;
       final remote = index.remoteTracks(c.server);
       final wanted = _expandSubscriptions(c, remote);
@@ -248,16 +248,29 @@ class MirrorRunner {
 
   /// The album / artist lists, replaced wholesale whenever the manifest
   /// moved. Best-effort: a failure leaves the previous lists in place.
-  Future<void> _refreshLists(MirrorConfig c) async {
+  /// The browse lists for offline use — a convenience the mirror itself
+  /// does not depend on, so each is fetched on its own and a failure leaves
+  /// the others as they were. Albums and artists follow the manifest (same
+  /// source), so they are refetched only when it moved; the caller's
+  /// playlists and ratings and the genre counts change on their own, so
+  /// those are refreshed every run.
+  Future<void> _refreshLists(MirrorConfig c,
+      {required bool manifestChanged}) async {
     final client = lists;
     if (client == null) return;
-    try {
-      index.replaceAlbums(c.server, await client.albums());
-      index.replaceArtists(c.server, await client.artists());
-    } catch (_) {
-      // The lists are a convenience for offline browsing; the mirror itself
-      // does not depend on them.
+    Future<void> attempt(Future<void> Function() fetch) async {
+      try {
+        await fetch();
+      } catch (_) {}
     }
+
+    if (manifestChanged) {
+      await attempt(() async => index.replaceAlbums(c.server, await client.albums()));
+      await attempt(() async => index.replaceArtists(c.server, await client.artists()));
+    }
+    await attempt(() async => index.replaceGenres(c.server, await client.genres()));
+    await attempt(() async => index.replacePlaylists(c.server, await client.playlists()));
+    await attempt(() async => index.replaceRated(c.server, await client.rated()));
   }
 
   /// Album art for [tracks], one fetch per distinct file not yet cached.

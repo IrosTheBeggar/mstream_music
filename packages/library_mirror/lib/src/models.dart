@@ -58,6 +58,16 @@ class RemoteTrack {
     this.rating,
   });
 
+  /// The same row with the caller's [rating] (the rated list is fresher
+  /// than the manifest's lite block).
+  RemoteTrack withRating(int? rating) => RemoteTrack(
+        id: id, path: path, size: size, modified: modified, hash: hash,
+        audioHash: audioHash, hashV: hashV, albumId: albumId, artistId: artistId,
+        art: art, createdAt: createdAt, title: title, artist: artist, album: album,
+        track: track, disc: disc, year: year, duration: duration, format: format,
+        genres: genres, rating: rating,
+      );
+
   /// Parses one `entries[]` element of `POST /api/v1/sync/manifest`: the lite
   /// `{filepath, metadata}` row every list endpoint returns, plus the
   /// kebab-cased sync fields beside it (mStream #984).
@@ -282,4 +292,49 @@ class PlaylistRow {
   final String name;
   final List<String> paths;
   const PlaylistRow({required this.id, required this.name, this.paths = const []});
+}
+
+/// A genre and how many tracks carry it (`db/genres`).
+@immutable
+class GenreRow {
+  final String name;
+  final int trackCount;
+  const GenreRow({required this.name, required this.trackCount});
+}
+
+/// One slot of a playlist: its position, the data path and — when the
+/// manifest knows the path — the track. A slot whose file is gone stays
+/// (the server keeps such entries too, with empty metadata).
+typedef PlaylistItem = ({int pos, String path, RemoteTrack? track});
+
+/// A write made while the server was unreachable, waiting to be replayed:
+/// [op] names the endpoint, [payload] is the body as it will be sent.
+@immutable
+class OutboxEntry {
+  final int id;
+  final String server;
+  final String op;
+  final Map<String, dynamic> payload;
+  final int created;
+  final int attempts;
+  final String? lastError;
+  const OutboxEntry({
+    required this.id,
+    required this.server,
+    required this.op,
+    required this.payload,
+    required this.created,
+    this.attempts = 0,
+    this.lastError,
+  });
+
+  factory OutboxEntry.fromRow(Map<String, Object?> r) => OutboxEntry(
+        id: r['id'] as int,
+        server: r['server'] as String,
+        op: r['op'] as String,
+        payload: (jsonDecode(r['payload'] as String) as Map).cast<String, dynamic>(),
+        created: r['created'] as int,
+        attempts: (r['attempts'] as int?) ?? 0,
+        lastError: _str(r['last_error']),
+      );
 }

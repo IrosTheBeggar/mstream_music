@@ -343,9 +343,17 @@ void main() {
 
     // 304: lists untouched, cached art not re-fetched.
     art.calls.clear();
+    lists.failPlaylists = true;
     await r().run(withArt);
     expect(lists.calls, 1);
     expect(art.calls, isEmpty);
+    // The caller's lists are refreshed on every run, each on its own: the
+    // failed playlist fetch left the previous playlists in place.
+    expect(lists.userListCalls, 2);
+    expect(ix.genres('s').single.name, 'Rock');
+    expect(ix.playlists('s').single.name, 'Mix');
+    expect(ix.rated('s').single.path, '/music/A/2.mp3');
+    lists.failPlaylists = false;
 
     // A failing art fetch is not a run error and leaves nothing behind.
     art.failFor.add('cc.jpeg');
@@ -377,6 +385,8 @@ void main() {
 
 class _FakeLists implements LibraryListsClient {
   int calls = 0;
+  int userListCalls = 0;
+  bool failPlaylists = false;
   @override
   Future<List<AlbumRow>> albums() async {
     calls++;
@@ -385,6 +395,21 @@ class _FakeLists implements LibraryListsClient {
 
   @override
   Future<List<String>> artists() async => const ['Zed'];
+
+  @override
+  Future<Map<String, int>> genres() async {
+    userListCalls++;
+    return const {'Rock': 2};
+  }
+
+  @override
+  Future<List<PlaylistRow>> playlists() async {
+    if (failPlaylists) throw const SocketException('no playlists');
+    return const [PlaylistRow(id: 'Mix', name: 'Mix', paths: ['/music/A/1.mp3'])];
+  }
+
+  @override
+  Future<Map<String, int>> rated() async => const {'/music/A/2.mp3': 8};
 }
 
 class _FakeArt implements ArtClient {

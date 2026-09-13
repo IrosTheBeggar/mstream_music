@@ -12,7 +12,7 @@
 /// composite key: the FTS5 external-content table addresses rows by it, and an
 /// implicit rowid on a WITHOUT-INTEGER-PRIMARY-KEY table may change on VACUUM,
 /// which would silently desync the search index.
-const int kSchemaVersion = 1;
+const int kSchemaVersion = 2;
 
 const List<String> _v1 = [
   '''
@@ -180,5 +180,30 @@ const List<String> _v1 = [
   END''',
 ];
 
+/// v2 (A5): the offline outbox — writes made while the server was
+/// unreachable (a rating, a playlist edit), replayed in order after the
+/// next successful ping.
+const List<String> _v2 = [
+  '''
+  CREATE TABLE outbox (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    server     TEXT NOT NULL,
+    op         TEXT NOT NULL,          -- rate | playlist-add | playlist-new | ...
+    payload    TEXT NOT NULL,          -- JSON: the request body as it will be sent
+    created    INTEGER NOT NULL,       -- epoch ms
+    attempts   INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT
+  )''',
+  'CREATE INDEX ob_server ON outbox (server, id)',
+];
+
+/// Statements that take an index at schema [from] to [to] (default: the
+/// current version). `from` 0 is an empty database.
+List<String> upgradeStatements(int from, {int to = kSchemaVersion}) =>
+    List.unmodifiable([
+      if (from < 1 && to >= 1) ..._v1,
+      if (from < 2 && to >= 2) ..._v2,
+    ]);
+
 /// Statements that take an empty database to [kSchemaVersion].
-List<String> schemaStatements() => List.unmodifiable(_v1);
+List<String> schemaStatements() => upgradeStatements(0);
