@@ -12,6 +12,7 @@ import './browser_list.dart';
 import './federation_inbox_alerts.dart';
 import './log_manager.dart';
 import './library_index.dart';
+import './outbox.dart';
 import '../build_variant.dart';
 import '../util/insecure_tls_channel.dart';
 import '../util/server_version.dart';
@@ -352,6 +353,8 @@ class ServerManager {
       // allowlist and 403s a peer key.
       final info = await _fetchServerInfo(server);
       _clearAutoOffline(server);
+      // Reachable: send what was written while it was not.
+      unawaited(OutboxManager().replay(server));
 
       final bool? prevAvail = server.transcodeAvailable;
       final String? prevCodec = server.transcodeDefaultCodec;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
@@ -7,6 +8,7 @@ import '../objects/server.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/library_index.dart';
 import '../singletons/mirror_manager.dart';
+import '../singletons/outbox.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/format_bytes.dart';
@@ -168,6 +170,8 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
                 });
                 ServerManager().notifyServerChanged();
                 BrowserManager().goToNavScreen();
+                // Back online by choice: send what was written meanwhile.
+                if (!v) unawaited(OutboxManager().replay(server));
               },
       ),
     ]);

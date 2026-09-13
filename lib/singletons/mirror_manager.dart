@@ -308,6 +308,71 @@ class ServerListsClient implements LibraryListsClient {
     }
   }
 
+  Future<dynamic> _post(String location, Map<String, dynamic> body) async {
+    final client = _newClient();
+    try {
+      final res = await client
+          .post(server.apiUri(location),
+              body: jsonEncode(body),
+              headers: {
+                'Content-Type': 'application/json',
+                'x-access-token': server.authToken ?? ''
+              })
+          .timeout(const Duration(seconds: 60));
+      if (res.statusCode != 200) {
+        throw HttpException('$location: HTTP ${res.statusCode}');
+      }
+      return await decodeJsonBody(res.body);
+    } finally {
+      client.close();
+    }
+  }
+
+  static String _dataPath(String fp) => fp.startsWith('/') ? fp : '/$fp';
+
+  @override
+  Future<Map<String, int>> genres() async {
+    final res = await _post('/api/v1/db/genres', {});
+    return {
+      for (final e in (res['genres'] as List? ?? const []))
+        if (e is Map && e['name'] is String)
+          e['name'] as String: (e['track_count'] as num?)?.toInt() ?? 0,
+    };
+  }
+
+  /// Every playlist with its tracks: `getall` names them, `load` lists
+  /// each. Paths get the leading slash the manifest uses.
+  @override
+  Future<List<PlaylistRow>> playlists() async {
+    final names = await _get('/api/v1/playlist/getall');
+    final out = <PlaylistRow>[];
+    for (final e in (names as List? ?? const [])) {
+      final name = e is Map ? e['name'] : null;
+      if (name is! String) continue;
+      final items =
+          await _post('/api/v1/playlist/load', {'playlistname': name});
+      out.add(PlaylistRow(id: name, name: name, paths: [
+        for (final t in (items as List? ?? const []))
+          if (t is Map && t['filepath'] is String)
+            _dataPath(t['filepath'] as String),
+      ]));
+    }
+    return out;
+  }
+
+  @override
+  Future<Map<String, int>> rated() async {
+    final res = await _get('/api/v1/db/rated');
+    return {
+      for (final e in (res as List? ?? const []))
+        if (e is Map &&
+            e['filepath'] is String &&
+            (e['metadata'] as Map?)?['rating'] is num)
+          _dataPath(e['filepath'] as String):
+              ((e['metadata'] as Map)['rating'] as num).toInt(),
+    };
+  }
+
   @override
   Future<List<AlbumRow>> albums() async {
     final res = await _get('/api/v1/db/albums');

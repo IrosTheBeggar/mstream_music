@@ -4,6 +4,7 @@ import 'package:mstream_music/singletons/file_explorer.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../singletons/browser_list.dart';
+import '../singletons/server_list.dart';
 import '../singletons/api.dart';
 import '../singletons/settings.dart';
 import '../objects/display_item.dart';
@@ -1123,7 +1124,9 @@ class _BrowserState extends State<Browser> {
       builder: (context, _) {
         final term = BrowserManager().currentSearchTerm;
         if (term != null) {
-          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term));
+          final offline = ServerManager().currentServer?.browseOffline == true;
+          return _subheaderStrip(Icons.search, l.searchSubheaderResults(term),
+              badge: offline ? l.offlineChip : null);
         }
         final path = BrowserManager().currentPath;
         if (path != null) {
@@ -1180,7 +1183,8 @@ class _BrowserState extends State<Browser> {
     );
   }
 
-  Widget _subheaderStrip(IconData icon, String text, {bool mono = false}) {
+  Widget _subheaderStrip(IconData icon, String text,
+      {bool mono = false, String? badge}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 4, 12, 5),
@@ -1204,6 +1208,23 @@ class _BrowserState extends State<Browser> {
               ),
             ),
           ),
+          // Results from the library copy on this device (A5): the same pill
+          // the app bar wears while the server is browsed offline.
+          if (badge != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: VelvetColors.warning.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              ),
+              child: Text(badge,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: VelvetColors.warning,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
         ],
       ),
     );

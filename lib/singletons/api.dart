@@ -6,9 +6,9 @@ import './server_list.dart';
 import './browser_list.dart';
 import './app_messenger.dart';
 import './log_manager.dart';
-import './settings.dart';
 import './library_index.dart';
 import './library_source.dart';
+import './outbox.dart';
 import '../objects/server.dart';
 import '../util/local_copy.dart';
 import 'auto_dj_manager.dart';
@@ -63,6 +63,14 @@ class ApiManager {
   }) async {
     final server = useThisServer ?? ServerManager().currentServer;
     if (server == null) throw Exception('No server selected');
+    // Browsing the library copy: the counts the last run stored.
+    final local = _localSource(server);
+    if (local != null) {
+      return [
+        for (final g in local.index.genres(server.localname))
+          {'name': g.name, 'track_count': g.trackCount},
+      ];
+    }
 
     final body = <String, dynamic>{};
     if (ignoreVPaths != null && ignoreVPaths.isNotEmpty) {
@@ -322,26 +330,12 @@ class ApiManager {
     }
   }
 
-  // Builds 'playlist' DisplayItems from a getall response.
-  List<DisplayItem> _playlistItems(dynamic res, Server? server) {
-    final List<DisplayItem> newList = [];
-    res.forEach((e) {
-      newList.add(DisplayItem(server, e['name'], 'playlist', e['name'],
-          Icon(Icons.queue_music, color: VelvetColors.textSecondary), null));
-    });
-    return newList;
-  }
-
   Future<void> getPlaylists({Server? useThisServer}) async {
-    // Parsing runs INSIDE the try (here and in the other browse fetches): a
-    // response-shape surprise (error object with a 2xx, older server) used to
-    // throw NoSuchMethodError past the guard and abort the browse silently.
     try {
-      final res = await makeServerCall(
-          useThisServer, '/api/v1/playlist/getall', {}, 'GET');
-
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).playlists(server);
       BrowserManager().setBrowserLabel('Playlists');
-      BrowserManager().addListToStack(_playlistItems(res, useThisServer));
+      BrowserManager().addListToStack(list);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getPlaylists failed: $err');
@@ -353,10 +347,8 @@ class ApiManager {
   /// without pushing a navigation entry.
   Future<void> refreshPlaylists() async {
     try {
-      final res =
-          await makeServerCall(null, '/api/v1/playlist/getall', {}, 'GET');
-      BrowserManager()
-          .replaceTop(_playlistItems(res, ServerManager().currentServer));
+      final server = _browseServer(null);
+      BrowserManager().replaceTop(await _sourceFor(server).playlists(server));
     } catch (err) {
       appLog('[api] refreshPlaylists failed: $err');
     }
@@ -365,8 +357,17 @@ class ApiManager {
   /// Creates an empty playlist (POST /playlist/new). Throws on failure (e.g. the
   /// server's 400 when the name already exists) so the caller can surface it.
   Future<void> createPlaylist(String title) async {
-    await makeServerCall(null, '/api/v1/playlist/new', {'title': title}, 'POST',
-        cancelable: false);
+    final server = _browseServer(null);
+    final payload = {'title': title};
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.playlistNew, payload)) {
+        throw Exception('Playlist create failed (offline, no index)');
+      }
+    } else {
+      await makeServerCall(server, '/api/v1/playlist/new', payload, 'POST',
+          cancelable: false);
+      OutboxManager().applyLocally(server, OutboxOp.playlistNew, payload);
+    }
     await refreshPlaylists();
   }
 
@@ -380,6 +381,13 @@ class ApiManager {
   Future<void> addSongToPlaylist(
       Server server, String playlist, String filepath) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    final payload = {'playlist': playlist, 'song': fp};
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.playlistAdd, payload)) {
+        throw Exception('Add to playlist failed (offline, no index)');
+      }
+      return;
+    }
     final response = await http
         .post(
           server.apiUri('/api/v1/playlist/add-song'),
@@ -393,6 +401,7 @@ class ApiManager {
     if (response.statusCode > 299) {
       throw Exception('Add to playlist failed (HTTP ${response.statusCode})');
     }
+    OutboxManager().applyLocally(server, OutboxOp.playlistAdd, payload);
   }
 
   /// POST /api/v1/playlist/save — create-or-OVERWRITE [playlist] on
@@ -404,6 +413,13 @@ class ApiManager {
     final songs = [
       for (final f in filepaths) f.startsWith('/') ? f.substring(1) : f,
     ];
+    final payload = {'title': playlist, 'songs': songs};
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.playlistSave, payload)) {
+        throw Exception('Playlist save failed (offline, no index)');
+      }
+      return;
+    }
     final response = await http
         .post(
           server.apiUri('/api/v1/playlist/save'),
@@ -417,159 +433,57 @@ class ApiManager {
     if (response.statusCode > 299) {
       throw Exception('Playlist save failed (HTTP ${response.statusCode})');
     }
+    OutboxManager().applyLocally(server, OutboxOp.playlistSave, payload);
   }
 
   /// Renames a playlist (POST /playlist/rename). Throws on failure.
   Future<void> renamePlaylist(String oldName, String newName) async {
-    await makeServerCall(null, '/api/v1/playlist/rename',
-        {'oldName': oldName, 'newName': newName}, 'POST', cancelable: false);
+    final server = _browseServer(null);
+    final payload = {'oldName': oldName, 'newName': newName};
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.playlistRename, payload)) {
+        throw Exception('Playlist rename failed (offline, no index)');
+      }
+    } else {
+      await makeServerCall(server, '/api/v1/playlist/rename', payload, 'POST',
+          cancelable: false);
+      OutboxManager().applyLocally(server, OutboxOp.playlistRename, payload);
+    }
     await refreshPlaylists();
   }
 
   Future<void> removePlaylist(String playlistId,
       {Server? useThisServer}) async {
-    try {
-      await makeServerCall(useThisServer, '/api/v1/playlist/delete',
-          {'playlistname': playlistId}, 'POST', cancelable: false);
-    } catch (err) {
-      // TODO: Handle Errors
-      appLog('[api] removePlaylist failed: $err');
-      return;
+    final server = _browseServer(useThisServer);
+    final payload = {'playlistname': playlistId};
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.playlistDelete, payload)) {
+        appLog('[api] removePlaylist failed: offline, no index');
+        return;
+      }
+    } else {
+      try {
+        await makeServerCall(server, '/api/v1/playlist/delete', payload, 'POST',
+            cancelable: false);
+      } catch (err) {
+        // TODO: Handle Errors
+        appLog('[api] removePlaylist failed: $err');
+        return;
+      }
+      OutboxManager().applyLocally(server, OutboxOp.playlistDelete, payload);
     }
 
-    BrowserManager().removeAll(playlistId, useThisServer!, 'playlist');
+    BrowserManager().removeAll(playlistId, server, 'playlist');
   }
 
   Future<void> searchServer(String search) async {
     try {
-      // The user's ticked search categories map 1:1 onto the endpoint's five
-      // `no*` flags — the server only does the work that's asked. The default
-      // set (artists+albums+songs) reproduces mStream's classic search.
-      final cats = SettingsManager().searchCategories;
-      // noLyrics is the only one of the five worth gating: the other four
-      // date to 4.7.0, below the support floor, so no server we still talk to
-      // can reject them. noLyrics arrived at 6.13.1, and one unknown key 400s
-      // the whole search — losing artists and albums too, over a category the
-      // server cannot do either way. Dropping it just lets the server apply
-      // its default, which on those versions is "no lyrics search exists".
-      //
-      // Pre-filter only, no learn-and-retry: makeServerCall discards the
-      // response body on an error, so there is nothing here to read the
-      // rejected key out of. Widening that shared error contract is a bigger
-      // change than this one parameter justifies.
-      final server = ServerManager().currentServer;
-      final searchPayload = <String, dynamic>{
-        'search': search,
-        'noArtists': !cats.contains(SearchCategory.artists),
-        'noAlbums': !cats.contains(SearchCategory.albums),
-        'noTitles': !cats.contains(SearchCategory.songs),
-        'noFiles': !cats.contains(SearchCategory.files),
-        'noLyrics': !cats.contains(SearchCategory.lyrics),
-      };
-      final searchBody = server == null
-          ? searchPayload
-          : ServerCapabilities().filter(server, searchPayload).body;
-      var res =
-          await makeServerCall(null, '/api/v1/db/search', searchBody, 'POST');
-
+      final server = _browseServer(null);
+      final list = await _sourceFor(server).search(server, search);
       BrowserManager().setBrowserLabel('Search');
-      List<DisplayItem> newList = [];
-      res['artists'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'artist',
-            e['name'],
-            Icon(Icons.library_music, color: VelvetColors.textSecondary),
-            'artist');
-        newItem.altAlbumArt = e['album_art_file'];
-        newList.add(newItem);
-      });
-
-      res['albums'].forEach((e) {
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'album',
-            e['name'],
-            Icon(Icons.library_music, color: VelvetColors.textSecondary),
-            'album');
-        newItem.altAlbumArt = e['album_art_file'];
-        newList.add(newItem);
-      });
-
-      // Track hits carry the LITE metadata subset (PR #685, same kebab-case keys
-      // as the full block, so fromServerMap parses it directly). Attach it so the
-      // row renders a real card (title / artist) and flag it partial so the queue
-      // refetches the full block (fidelity / counts) on enqueue. Older servers
-      // omit the key → metadata stays null (still partial → still fetched). With
-      // metadata the artist is the subtitle, so the 'song' type hint only matters
-      // on the metadata-less path.
-      res['title'].forEach((e) {
-        final md = e['metadata'];
-        final meta = md is Map ? MusicMetadata.fromServerMap(md) : null;
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.music_note, color: VelvetColors.accent),
-            meta != null ? null : 'song');
-        newItem.altAlbumArt = e['album_art_file'];
-        newItem.metadata = meta;
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
-
-      // Files (filepath matches) — only populated when the scope is `files`.
-      // Carries the lite metadata block too (PR #685); `?.` because older servers
-      // may omit the `files` key entirely. We keep the folder as the subtitle (the
-      // match context — getSubText shows an explicit subtext over the metadata
-      // artist); getText shows the title once metadata is attached, the filename
-      // otherwise. Flagged partial so the queue refetches the full block.
-      res['files']?.forEach((e) {
-        final String fp = e['filepath'];
-        final int slash = fp.lastIndexOf('/');
-        final md = e['metadata'];
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/$fp',
-            Icon(Icons.insert_drive_file, color: VelvetColors.accent),
-            slash > 0 ? fp.substring(0, slash) : null);
-        newItem.altAlbumArt = e['album_art_file'];
-        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
-
-      // Lyric matches (only when the `lyrics` category is ticked; `?.` since
-      // older servers omit the key). Carries the lite metadata block (PR #685)
-      // plus a `snippet` excerpt. We keep the snippet as the subtitle so the user
-      // sees WHY it matched (getSubText prefers an explicit subtext over the
-      // metadata artist); getText shows the real title once metadata is attached.
-      // `snippet` is null on the LIKE / non-FTS path → plain label. Flagged
-      // partial so the queue refetches the full block.
-      res['lyrics']?.forEach((e) {
-        final snippet = (e['snippet'] as String?)?.trim();
-        final md = e['metadata'];
-        DisplayItem newItem = DisplayItem(
-            ServerManager().currentServer,
-            e['name'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.lyrics, color: VelvetColors.accent),
-            snippet != null && snippet.isNotEmpty ? snippet : 'lyrics');
-        newItem.altAlbumArt = e['album_art_file'];
-        if (md is Map) newItem.metadata = MusicMetadata.fromServerMap(md);
-        newItem.partialMetadata = true;
-        newList.add(newItem);
-      });
-
       // Stash the query on the frame so the results view shows a "Results for
       // …" subheader (and it reverts on back-nav, like the file-explorer path).
-      BrowserManager().addListToStack(newList, searchTerm: search);
+      BrowserManager().addListToStack(list, searchTerm: search);
     } catch (err) {
       appLog('[api] searchServer failed: $err');
     }
@@ -628,28 +542,10 @@ class ApiManager {
 
   Future<void> getRecentlyAdded({Server? useThisServer}) async {
     try {
-      final res = await makeServerCall(
-          useThisServer, '/api/v1/db/recent/added', {'limit': 100}, 'POST');
-
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).recent(server);
       BrowserManager().setBrowserLabel('Recent');
-
-      List<DisplayItem> newList = [];
-      res.forEach((e) {
-        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['filepath'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.music_note, color: VelvetColors.accent),
-            null);
-
-        newItem.metadata = m;
-
-        newList.add(newItem);
-      });
-      BrowserManager().addListToStack(newList);
+      BrowserManager().addListToStack(list);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRecentlyAdded failed: $err');
@@ -658,28 +554,10 @@ class ApiManager {
 
   Future<void> getRated({Server? useThisServer}) async {
     try {
-      final res =
-          await makeServerCall(useThisServer, '/api/v1/db/rated', {}, 'GET');
-
+      final server = _browseServer(useThisServer);
+      final list = await _sourceFor(server).rated(server);
       BrowserManager().setBrowserLabel('Rated');
-
-      List<DisplayItem> newList = [];
-      res.forEach((e) {
-        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['filepath'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.music_note, color: VelvetColors.accent),
-            m.artist);
-
-        newItem.metadata = m;
-
-        newList.add(newItem);
-      });
-      BrowserManager().addListToStack(newList);
+      BrowserManager().addListToStack(list);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getRated failed: $err');
@@ -694,6 +572,14 @@ class ApiManager {
   /// a leading "/").
   Future<void> rateSong(Server server, String filepath, int? rating) async {
     final fp = filepath.startsWith('/') ? filepath.substring(1) : filepath;
+    final payload = {'filepath': fp, 'rating': rating};
+    // Browsing the library copy: queued, replayed after the next good ping.
+    if (server.browseOffline) {
+      if (!OutboxManager().enqueue(server, OutboxOp.rate, payload)) {
+        throw Exception('Rating failed (offline, no index)');
+      }
+      return;
+    }
     // Timeout matters here: the star-rating UI updates optimistically and its
     // catch is the ONLY revert path — an unbounded hang against a black-holed
     // server left a rating showing that the server never received.
@@ -710,6 +596,7 @@ class ApiManager {
     if (response.statusCode > 299) {
       throw Exception('Rating failed (HTTP ${response.statusCode})');
     }
+    OutboxManager().applyLocally(server, OutboxOp.rate, payload);
   }
 
   /// POST /api/v1/db/metadata/batch — the full metadata block for many tracks
@@ -1222,29 +1109,13 @@ class ApiManager {
   Future<void> getPlaylistContents(String playlistName,
       {Server? useThisServer}) async {
     try {
-      final res = await makeServerCall(useThisServer, '/api/v1/playlist/load',
-          {'playlistname': playlistName}, 'POST');
-
-      List<DisplayItem> newList = [];
-      res.forEach((e) {
-        MusicMetadata m = MusicMetadata.fromServerMap(e['metadata']);
-
-        DisplayItem newItem = DisplayItem(
-            useThisServer,
-            e['filepath'],
-            'file',
-            '/${e['filepath']}',
-            Icon(Icons.music_note, color: VelvetColors.accent),
-            null);
-
-        newItem.metadata = m;
-        newList.add(newItem);
-      });
-
+      final server = _browseServer(useThisServer);
+      final list =
+          await _sourceFor(server).playlistContents(server, playlistName);
       // Name the frame so the subheader can label it, the toolbar can offer
       // the album-style controls, and an empty result reads as "playlist is
       // empty" rather than a blank list.
-      BrowserManager().addListToStack(newList, playlist: playlistName);
+      BrowserManager().addListToStack(list, playlist: playlistName);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getPlaylistContents failed: $err');
