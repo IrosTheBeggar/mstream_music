@@ -42,7 +42,7 @@ tests + one device smoke); no repo-wide format.
 | A9 | app | Consume deltas | S2, A3 | no | 🟢 1d |
 | S3 | mStream | Device upload libraries | — | admin toggle | 🟡 2d |
 | A10 | app | Back up a desktop folder *to* the server | S3, A2 | yes | 🟡 3–5d |
-| A11 | app | Headless `mstream_mirror` CLI | A3 | no | 🟡 2–3d |
+| A11 | app | Headless `mstream_mirror` CLI — **[#182](https://github.com/IrosTheBeggar/mstream_music/pull/182)** (`bin/mstream_mirror.dart`, pure-Dart HTTP transports) | A3 | no | 🟡 2–3d |
 
 Critical path: **S1 ∥ A2 → A3 → A4 → A5.** A1 is independent and the
 cheapest visible win. A8, S2/A9, S3/A10 and A11 are optional and can trail
