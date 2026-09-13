@@ -34,7 +34,7 @@ tests + one device smoke); no repo-wide format.
 | A3 | app | Mirror engine + "Keep a full copy" — **[#176](https://github.com/IrosTheBeggar/mstream_music/pull/176)** (engine) + **[#177](https://github.com/IrosTheBeggar/mstream_music/pull/177)** (MirrorManager, adapters, Library copy screen; adoption of pre-existing copies) | S1, A2 | yes (Manage Servers ⋮ → Library copy) | 🔴 5–7d |
 | A4 | app | Offline browsing: albums, artists, album songs, art cache — **[#178](https://github.com/IrosTheBeggar/mstream_music/pull/178)** (`LibrarySource`, `ArtCache`, auto/manual offline flag) | A3 | yes (offline chip) | 🟡 3–4d |
 | A5 | app | Offline: playlists, rated, genres, recent, search (FTS5) — **[#179](https://github.com/IrosTheBeggar/mstream_music/pull/179)** (schema v2 outbox, `LibrarySource` lists, `OutboxManager` replay) | A4 | yes (search offline) | 🟡 3–4d |
-| A6a | app | Rules: album / artist "Keep offline" | A3 | yes | 🟡 2–3d |
+| A6a | app | Rules: album / artist "Keep offline" — **[#180](https://github.com/IrosTheBeggar/mstream_music/pull/180)** (`expandRule` by kind, toolbar pin + artist sheet) | A3 | yes | 🟡 2–3d |
 | A6b | app | Rules: playlist + rated | A6a, A5 | yes | 🟡 1–2d |
 | A7 | app | Transcoded quality tier for entity rules | A6a | yes (quality picker) | 🟡 2–3d |
 | A8 | app | Fold the keep-queue-offline ledger into the index | A3 | no | 🟡 1–2d |
