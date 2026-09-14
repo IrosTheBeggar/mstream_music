@@ -467,20 +467,44 @@ class ServerManager {
     }
   }
 
+  /// How long after a failed ping the confirming retry runs. Right after a
+  /// resume the iroh connection is stale for a couple of seconds while the
+  /// native side reconnects on its own (the 2026-09-13 phone log: a ping
+  /// one second after resume failed, the tunnel was back two seconds
+  /// later), so one failure is a suspicion, not evidence. Settable for
+  /// tests.
+  static Duration autoOfflineRetry = const Duration(seconds: 6);
+  final Set<String> _offlineSuspects = {};
+  final Map<String, Timer> _offlineRetries = {};
+
   /// Ping failed: if the index holds this server's library, browse it from
-  /// there until the server answers again. Manual offline mode is left as
-  /// the user set it.
+  /// there until the server answers again — but only once a retry after
+  /// [autoOfflineRetry] has failed too; the first failure just schedules
+  /// it. Any successful ping clears the suspicion. Manual offline mode is
+  /// left as the user set it.
   void _maybeAutoOffline(Server server) {
     if (server.browseOffline) return;
     final ix = LibraryIndexManager().index;
     if (ix == null || ix.remoteCount(server.localname) == 0) return;
+    final name = server.localname;
+    if (_offlineRetries.containsKey(name)) return; // the retry is still due
+    if (_offlineSuspects.add(name)) {
+      _offlineRetries[name] = Timer(autoOfflineRetry, () {
+        _offlineRetries.remove(name);
+        unawaited(getServerPaths(server));
+      });
+      return;
+    }
+    _offlineSuspects.remove(name);
     server.browseOffline = true;
     server.offlineAuto = true;
-    appLog('[offline] ${server.localname}: unreachable — browsing the library copy');
+    appLog('[offline] $name: unreachable — browsing the library copy');
     notifyServerChanged();
   }
 
   void _clearAutoOffline(Server server) {
+    _offlineSuspects.remove(server.localname);
+    _offlineRetries.remove(server.localname)?.cancel();
     if (!server.offlineAuto) return;
     server.browseOffline = false;
     server.offlineAuto = false;
@@ -1861,6 +1885,15 @@ class ServerManager {
       final from = h.lastStatus;
       h.lastStatus = st;
       _transitions.add((server: h.server, from: from, to: st));
+      // Back through the tunnel: a server the copy stood in for is asked
+      // again now, not at the next scheduled ping minutes away.
+      if (st == IrohTunnelStatus.connected) {
+        for (final s in serverList) {
+          if (s.offlineAuto && identical(s.transportServer, h.server)) {
+            unawaited(getServerPaths(s));
+          }
+        }
+      }
     }
     if (st == IrohTunnelStatus.connected) {
       h.notConnectedSince = null;
