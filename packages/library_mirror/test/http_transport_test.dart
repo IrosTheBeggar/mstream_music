@@ -136,10 +136,11 @@ void main() {
     expect(File(dest).readAsStringSync(), '0123456789');
     expect(seen.last['Range'], 'bytes=4-');
 
-    // A partial longer than the file: 416 discards it and fails the call.
+    // A partial the server will not resume from (416, or mStream's 500 for a
+    // range past the end) is discarded and the call fails.
     File(dest).writeAsStringSync('0123456789-and-more');
     final c416 = MockClient.streaming(
-        (r, _) async => http.StreamedResponse(Stream.value(<int>[]), 416));
+        (r, _) async => http.StreamedResponse(Stream.value(<int>[]), 500));
     await expectLater(HttpDownloader(server, c416).download('/music/1.mp3', dest, modified: mtime),
         throwsA(isA<HttpException>()));
     expect(File(dest).existsSync(), isFalse);

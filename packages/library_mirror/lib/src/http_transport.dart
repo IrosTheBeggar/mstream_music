@@ -111,7 +111,8 @@ class HttpManifestClient implements ManifestClient {
 /// bytes (the partial of an interrupted run) is resumed with a `Range`
 /// request, guarded by `If-Range` on the server's mtime so a file that
 /// changed meanwhile comes back whole; the server's answer decides between
-/// appending (206) and starting over (200).
+/// appending (206), starting over (200) and dropping the partial (anything
+/// else).
 class HttpDownloader implements Downloader {
   final MirrorServer server;
   final http.Client client;
@@ -136,14 +137,12 @@ class HttpDownloader implements Downloader {
     }
     final res = await client.send(req).timeout(_timeout);
     final resume = res.statusCode == 206 && offset > 0;
-    if (res.statusCode == 416) {
-      // The partial is longer than the file now is: nothing to resume from.
-      await res.stream.drain<void>();
-      await file.delete();
-      throw HttpException('media$path: HTTP 416, partial discarded');
-    }
     if (res.statusCode != 200 && !resume) {
       await res.stream.drain<void>();
+      // A partial the server would not resume from (416 — or mStream's 500
+      // for a range past the end) is discarded: the next run starts clean
+      // instead of asking the same question again.
+      if (offset > 0) await file.delete();
       throw HttpException(
           '${tier == null ? 'media' : 'transcode'}$path: HTTP ${res.statusCode}');
     }
