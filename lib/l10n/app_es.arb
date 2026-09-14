@@ -350,8 +350,6 @@
   "libraryCopyRetentionForever": "Para siempre",
   "libraryCopyWifiOnly": "Solo con Wi-Fi",
   "libraryCopyDesktopNote": "Se sincroniza mientras la app está abierta.",
-  "offlineBrowseTitle": "Explorar la copia sin conexión",
-  "offlineBrowseHelp": "Los álbumes, artistas y carpetas provienen del índice de la biblioteca en este dispositivo, y solo se pueden reproducir los archivos que contiene. Se activa solo cuando no se puede contactar con el servidor.",
   "offlineBrowseUnavailable": "Aún no hay índice de la biblioteca: sincroniza una vez mientras el servidor esté disponible.",
   "offlineChip": "Copia sin conexión",
   "storageChooseFolder": "Elegir carpeta",
@@ -1062,5 +1060,12 @@
   "keepQualityTitle": "Calidad de lo guardado sin conexión",
   "keepQualityHelp": "Los álbumes, artistas, listas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.",
   "keepQualityOriginal": "Archivos originales",
-  "keepQualityTier": "{codec} · {kbps} kbps"
+  "keepQualityTier": "{codec} · {kbps} kbps",
+  "browserSectionOffline": "Sin conexión",
+  "browserBrowseOffline": "Explorar sin conexión",
+  "browserBackOnline": "Volver a conectar",
+  "browserOfflineReady": "Copia local",
+  "browserOfflineNone": "Aún sin copia",
+  "browserOfflineOn": "Usando la copia local",
+  "browserOfflineAuto": "Servidor inaccesible"
 }

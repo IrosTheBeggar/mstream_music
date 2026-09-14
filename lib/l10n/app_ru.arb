@@ -350,8 +350,6 @@
   "libraryCopyRetentionForever": "Бессрочно",
   "libraryCopyWifiOnly": "Только по Wi-Fi",
   "libraryCopyDesktopNote": "Синхронизируется, пока приложение открыто.",
-  "offlineBrowseTitle": "Просматривать офлайн-копию",
-  "offlineBrowseHelp": "Альбомы, исполнители и папки берутся из индекса библиотеки на этом устройстве, и воспроизводятся только имеющиеся файлы. Включается автоматически, когда сервер недоступен.",
   "offlineBrowseUnavailable": "Индекса библиотеки ещё нет — синхронизируйте один раз, пока сервер доступен.",
   "offlineChip": "Офлайн-копия",
   "storageChooseFolder": "Выбрать папку",
@@ -1062,5 +1060,12 @@
   "keepQualityTitle": "Качество офлайн-копий",
   "keepQualityHelp": "Альбомы, исполнители, плейлисты и оценённые треки, хранимые офлайн, сохраняются в этом качестве. Копии всей библиотеки всегда хранят исходные файлы.",
   "keepQualityOriginal": "Исходные файлы",
-  "keepQualityTier": "{codec} · {kbps} кбит/с"
+  "keepQualityTier": "{codec} · {kbps} кбит/с",
+  "browserSectionOffline": "Офлайн",
+  "browserBrowseOffline": "Просмотр офлайн",
+  "browserBackOnline": "Снова онлайн",
+  "browserOfflineReady": "Локальная копия",
+  "browserOfflineNone": "Копии пока нет",
+  "browserOfflineOn": "Используется локальная копия",
+  "browserOfflineAuto": "Сервер недоступен"
 }

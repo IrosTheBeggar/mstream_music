@@ -1300,13 +1300,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryCopyDesktopNote => 'アプリを開いている間に同期します。';
 
   @override
-  String get offlineBrowseTitle => 'オフラインコピーを閲覧';
-
-  @override
-  String get offlineBrowseHelp =>
-      'アルバム、アーティスト、フォルダーはこの端末のライブラリインデックスから表示され、端末にあるファイルのみ再生できます。サーバーに接続できないときは自動的にオンになります。';
-
-  @override
   String get offlineBrowseUnavailable =>
       'ライブラリインデックスがまだありません。サーバーに接続できるうちに一度同期してください。';
 
@@ -3869,4 +3862,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String keepQualityTier(String codec, int kbps) {
     return '$codec · $kbps kbps';
   }
+
+  @override
+  String get browserSectionOffline => 'オフライン';
+
+  @override
+  String get browserBrowseOffline => 'オフラインで閲覧';
+
+  @override
+  String get browserBackOnline => 'オンラインに戻る';
+
+  @override
+  String get browserOfflineReady => 'ローカルコピー';
+
+  @override
+  String get browserOfflineNone => 'コピーはまだありません';
+
+  @override
+  String get browserOfflineOn => 'ローカルコピーを使用中';
+
+  @override
+  String get browserOfflineAuto => 'サーバーに接続できません';
 }

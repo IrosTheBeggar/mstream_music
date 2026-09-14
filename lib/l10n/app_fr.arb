@@ -350,8 +350,6 @@
   "libraryCopyRetentionForever": "Pour toujours",
   "libraryCopyWifiOnly": "Wi-Fi uniquement",
   "libraryCopyDesktopNote": "Se synchronise tant que l'application est ouverte.",
-  "offlineBrowseTitle": "Parcourir la copie hors ligne",
-  "offlineBrowseHelp": "Les albums, artistes et dossiers proviennent de l'index de la bibliothèque sur cet appareil, et seuls les fichiers qu'il contient peuvent être lus. S'active automatiquement quand le serveur est injoignable.",
   "offlineBrowseUnavailable": "Pas encore d'index de bibliothèque : synchronisez une fois pendant que le serveur est joignable.",
   "offlineChip": "Copie hors ligne",
   "storageChooseFolder": "Choisir un dossier",
@@ -1062,5 +1060,12 @@
   "keepQualityTitle": "Qualité des éléments conservés",
   "keepQualityHelp": "Les albums, artistes, playlists et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d'origine.",
   "keepQualityOriginal": "Fichiers d'origine",
-  "keepQualityTier": "{codec} · {kbps} kbit/s"
+  "keepQualityTier": "{codec} · {kbps} kbit/s",
+  "browserSectionOffline": "Hors ligne",
+  "browserBrowseOffline": "Parcourir hors ligne",
+  "browserBackOnline": "Revenir en ligne",
+  "browserOfflineReady": "Copie locale",
+  "browserOfflineNone": "Pas encore de copie",
+  "browserOfflineOn": "Copie locale en cours",
+  "browserOfflineAuto": "Serveur injoignable"
 }

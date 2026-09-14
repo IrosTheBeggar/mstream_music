@@ -1352,13 +1352,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se sincroniza mientras la app está abierta.';
 
   @override
-  String get offlineBrowseTitle => 'Explorar la copia sin conexión';
-
-  @override
-  String get offlineBrowseHelp =>
-      'Los álbumes, artistas y carpetas provienen del índice de la biblioteca en este dispositivo, y solo se pueden reproducir los archivos que contiene. Se activa solo cuando no se puede contactar con el servidor.';
-
-  @override
   String get offlineBrowseUnavailable =>
       'Aún no hay índice de la biblioteca: sincroniza una vez mientras el servidor esté disponible.';
 
@@ -4069,4 +4062,25 @@ class AppLocalizationsEs extends AppLocalizations {
   String keepQualityTier(String codec, int kbps) {
     return '$codec · $kbps kbps';
   }
+
+  @override
+  String get browserSectionOffline => 'Sin conexión';
+
+  @override
+  String get browserBrowseOffline => 'Explorar sin conexión';
+
+  @override
+  String get browserBackOnline => 'Volver a conectar';
+
+  @override
+  String get browserOfflineReady => 'Copia local';
+
+  @override
+  String get browserOfflineNone => 'Aún sin copia';
+
+  @override
+  String get browserOfflineOn => 'Usando la copia local';
+
+  @override
+  String get browserOfflineAuto => 'Servidor inaccesible';
 }

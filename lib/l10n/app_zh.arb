@@ -350,8 +350,6 @@
   "libraryCopyRetentionForever": "永久",
   "libraryCopyWifiOnly": "仅限 Wi-Fi",
   "libraryCopyDesktopNote": "应用打开时会进行同步。",
-  "offlineBrowseTitle": "浏览离线副本",
-  "offlineBrowseHelp": "专辑、艺术家和文件夹来自此设备上的音乐库索引，并且只能播放设备上已有的文件。当无法连接服务器时会自动开启。",
   "offlineBrowseUnavailable": "尚无音乐库索引——请在服务器可用时同步一次。",
   "offlineChip": "离线副本",
   "storageChooseFolder": "选择文件夹",
@@ -1062,5 +1060,12 @@
   "keepQualityTitle": "离线内容的音质",
   "keepQualityHelp": "离线保留的专辑、艺术家、播放列表和已评分歌曲以此音质保存。整库副本始终保留原始文件。",
   "keepQualityOriginal": "原始文件",
-  "keepQualityTier": "{codec} · {kbps} kbps"
+  "keepQualityTier": "{codec} · {kbps} kbps",
+  "browserSectionOffline": "离线",
+  "browserBrowseOffline": "离线浏览",
+  "browserBackOnline": "恢复在线",
+  "browserOfflineReady": "本地副本",
+  "browserOfflineNone": "还没有副本",
+  "browserOfflineOn": "正在使用本地副本",
+  "browserOfflineAuto": "无法连接服务器"
 }

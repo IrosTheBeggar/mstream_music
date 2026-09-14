@@ -1354,13 +1354,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Synchronisiert, solange die App geöffnet ist.';
 
   @override
-  String get offlineBrowseTitle => 'Offline-Kopie durchsuchen';
-
-  @override
-  String get offlineBrowseHelp =>
-      'Alben, Künstler und Ordner kommen aus dem Bibliotheksindex auf diesem Gerät, und nur die vorhandenen Dateien können abgespielt werden. Schaltet sich von selbst ein, wenn der Server nicht erreichbar ist.';
-
-  @override
   String get offlineBrowseUnavailable =>
       'Noch kein Bibliotheksindex — einmal synchronisieren, solange der Server erreichbar ist.';
 
@@ -4075,4 +4068,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String keepQualityTier(String codec, int kbps) {
     return '$codec · $kbps kbit/s';
   }
+
+  @override
+  String get browserSectionOffline => 'Offline';
+
+  @override
+  String get browserBrowseOffline => 'Offline durchsuchen';
+
+  @override
+  String get browserBackOnline => 'Wieder online';
+
+  @override
+  String get browserOfflineReady => 'Lokale Kopie';
+
+  @override
+  String get browserOfflineNone => 'Noch keine Kopie';
+
+  @override
+  String get browserOfflineOn => 'Lokale Kopie in Gebrauch';
+
+  @override
+  String get browserOfflineAuto => 'Server nicht erreichbar';
 }

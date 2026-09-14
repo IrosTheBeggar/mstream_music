@@ -2322,18 +2322,6 @@ abstract class AppLocalizations {
   /// **'Syncs while the app is open.'**
   String get libraryCopyDesktopNote;
 
-  /// No description provided for @offlineBrowseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse the offline copy'**
-  String get offlineBrowseTitle;
-
-  /// No description provided for @offlineBrowseHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'Albums, artists and folders come from the library index on this device, and only the files it holds can play. Switches on by itself when the server can\'t be reached.'**
-  String get offlineBrowseHelp;
-
   /// No description provided for @offlineBrowseUnavailable.
   ///
   /// In en, this message translates to:
@@ -6695,6 +6683,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{codec} · {kbps} kbps'**
   String keepQualityTier(String codec, int kbps);
+
+  /// No description provided for @browserSectionOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get browserSectionOffline;
+
+  /// No description provided for @browserBrowseOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse offline'**
+  String get browserBrowseOffline;
+
+  /// No description provided for @browserBackOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back online'**
+  String get browserBackOnline;
+
+  /// No description provided for @browserOfflineReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Local copy'**
+  String get browserOfflineReady;
+
+  /// No description provided for @browserOfflineNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No copy yet'**
+  String get browserOfflineNone;
+
+  /// No description provided for @browserOfflineOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Using the local copy'**
+  String get browserOfflineOn;
+
+  /// No description provided for @browserOfflineAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unreachable'**
+  String get browserOfflineAuto;
 }
 
 class _AppLocalizationsDelegate
