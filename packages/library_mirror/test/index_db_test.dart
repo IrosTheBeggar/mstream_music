@@ -375,6 +375,46 @@ void main() {
     });
   });
 
+  test('localOnly narrows every browse list to the tracks with a copy on this device', () {
+    final ix = LibraryIndex.inMemory();
+    addTearDown(ix.close);
+    ix.upsertTracks('s', [
+      RemoteTrack.fromManifestEntry(entry(1, 'm/a/1.flac', title: 'One', artist: 'X', album: 'A', track: 1)),
+      RemoteTrack.fromManifestEntry(entry(2, 'm/a/2.flac', title: 'Two', artist: 'Y', album: 'A', track: 2)),
+      RemoteTrack.fromManifestEntry(entry(3, 'm/b/3.flac', title: 'Three', artist: 'Z', album: 'B')),
+    ], 'r1');
+    ix.replaceAlbums('s', const [AlbumRow(name: 'A', albumArtist: 'X'), AlbumRow(name: 'B', albumArtist: 'Z')]);
+    ix.replaceArtists('s', ['X', 'Y', 'Z']);
+    ix.replacePlaylists('s', const [
+      PlaylistRow(id: 'p1', name: 'P1', paths: ['/m/a/1.flac', '/m/b/3.flac']),
+      PlaylistRow(id: 'p2', name: 'P2', paths: ['/m/b/3.flac']),
+    ]);
+    ix.replaceRated('s', {'/m/a/1.flac': 8, '/m/b/3.flac': 10});
+    ix.upsertLocals([
+      LocalFile(server: 's', path: '/m/a/1.flac', localPath: '/dl/1', state: LocalState.ok, origin: LocalOrigin.mirror),
+      LocalFile(server: 's', path: '/m/a/2.flac', localPath: '/dl/2.ogg', state: LocalState.ok, origin: LocalOrigin.mirror, quality: 'opus-64'),
+      LocalFile(server: 's', path: '/m/b/3.flac', localPath: '/dl/3', state: LocalState.failed, origin: LocalOrigin.mirror),
+    ]);
+    expect(ix.albums('s').map((a) => a.name), ['A', 'B']);
+    expect(ix.albums('s', localOnly: true).map((a) => (a.name, a.albumArtist)), [('A', 'X')]);
+    expect(ix.artists('s', localOnly: true), ['X', 'Y'], reason: 'a transcoded copy counts; a failed one does not');
+    expect(ix.artistAlbums('s', 'Z', localOnly: true), isEmpty);
+    expect(ix.artistAlbums('s', 'Y', localOnly: true).single.name, 'A');
+    expect(ix.directoryListing('s', '/m', localOnly: true).dirs, ['a']);
+    expect(ix.tracksUnder('s', '/m', localOnly: true).map((t) => t.path), ['/m/a/1.flac', '/m/a/2.flac']);
+    expect(ix.albumSongs('s', 'A', localOnly: true), hasLength(2));
+    expect(ix.albumSongs('s', 'B', localOnly: true), isEmpty);
+    expect(ix.search('s', 'thr', localOnly: true), isEmpty);
+    expect(ix.search('s', 'one', localOnly: true).single.path, '/m/a/1.flac');
+    expect(ix.playlists('s', localOnly: true).map((p) => p.id), ['p1']);
+    expect(ix.playlistItems('s', 'p1', localOnly: true).map((i) => i.path), ['/m/a/1.flac']);
+    expect(ix.rated('s', localOnly: true).map((t) => t.path), ['/m/a/1.flac']);
+    expect(ix.recent('s', localOnly: true).map((t) => t.path), ['/m/a/2.flac', '/m/a/1.flac']);
+    expect(ix.artistsMatching('s', '', localOnly: true), ['X', 'Y']);
+    expect(ix.albumsMatching('s', 'a', localOnly: true).single.name, 'A');
+    expect(ix.albumsMatching('s', 'b', localOnly: true), isEmpty);
+  });
+
   test('removeServer drops everything, including what search can see', () {
     ix.upsertTracks('s', [rt(1, 'a/1.flac', title: 'Keep me')], 'r1');
     ix.upsertTracks('t', [rt(1, 'a/1.flac', title: 'Keep me')], 'r1');

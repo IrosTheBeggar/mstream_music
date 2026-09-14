@@ -286,6 +286,10 @@ class HttpLibrarySource implements LibrarySource {
 /// decides per row.
 class LocalLibrarySource implements LibrarySource {
   final LibraryIndex index;
+
+  /// Every list is read `localOnly`: the offline browser shows what is on
+  /// this device — an album, artist, folder, playlist or result without a
+  /// local copy is left out, and every row it shows can play.
   LocalLibrarySource(this.index);
 
   /// The file explorer's root marker maps to the library root.
@@ -296,7 +300,7 @@ class LocalLibrarySource implements LibrarySource {
 
   @override
   Future<List<DisplayItem>> albums(Server s) async => [
-        for (final a in index.albums(s.localname))
+        for (final a in index.albums(s.localname, localOnly: true))
           DisplayItem(s, a.name, 'album', a.name,
               Icon(Icons.album, color: VelvetColors.textSecondary), [
             if (a.albumArtist != null && a.albumArtist!.trim().isNotEmpty)
@@ -308,14 +312,14 @@ class LocalLibrarySource implements LibrarySource {
 
   @override
   Future<List<DisplayItem>> artists(Server s) async => [
-        for (final name in index.artists(s.localname))
+        for (final name in index.artists(s.localname, localOnly: true))
           DisplayItem(s, name, 'artist', name,
               Icon(Icons.library_music, color: VelvetColors.textSecondary), null),
       ];
 
   @override
   Future<List<DisplayItem>> artistAlbums(Server s, String artist) async => [
-        for (final a in index.artistAlbums(s.localname, artist))
+        for (final a in index.artistAlbums(s.localname, artist, localOnly: true))
           DisplayItem(s, a.name, 'album', a.name,
               Icon(Icons.album, color: VelvetColors.textSecondary),
               a.year?.toString() ?? '')
@@ -324,14 +328,14 @@ class LocalLibrarySource implements LibrarySource {
 
   @override
   Future<List<DisplayItem>> albumSongs(Server s, String? album) async => [
-        for (final t in index.albumSongs(s.localname, album ?? ''))
+        for (final t in index.albumSongs(s.localname, album ?? '', localOnly: true))
           _track(s, t),
       ];
 
   @override
   Future<FileListing> fileList(Server s, String directory) async {
     final dir = dirPath(directory);
-    final listing = index.directoryListing(s.localname, dir);
+    final listing = index.directoryListing(s.localname, dir, localOnly: true);
     return FileListing(dir, [
       for (final name in listing.dirs)
         DisplayItem(s, name, 'directory', '$dir$name',
@@ -351,7 +355,7 @@ class LocalLibrarySource implements LibrarySource {
 
   @override
   Future<List<DisplayItem>> playlists(Server s) async => [
-        for (final p in index.playlists(s.localname))
+        for (final p in index.playlists(s.localname, localOnly: true))
           DisplayItem(s, p.name, 'playlist', p.name,
               Icon(Icons.queue_music, color: VelvetColors.textSecondary), null),
       ];
@@ -360,7 +364,7 @@ class LocalLibrarySource implements LibrarySource {
   /// no metadata, as the server's own answer does.
   @override
   Future<List<DisplayItem>> playlistContents(Server s, String playlist) async => [
-        for (final i in index.playlistItems(s.localname, playlist))
+        for (final i in index.playlistItems(s.localname, playlist, localOnly: true))
           i.track != null
               ? _track(s, i.track!)
               : DisplayItem(s, i.path.substring(1), 'file', i.path,
@@ -369,12 +373,12 @@ class LocalLibrarySource implements LibrarySource {
 
   @override
   Future<List<DisplayItem>> rated(Server s) async => [
-        for (final t in index.rated(s.localname)) _track(s, t, subtitle: t.artist),
+        for (final t in index.rated(s.localname, localOnly: true)) _track(s, t, subtitle: t.artist),
       ];
 
   @override
   Future<List<DisplayItem>> recent(Server s) async => [
-        for (final t in index.recent(s.localname)) _track(s, t),
+        for (final t in index.recent(s.localname, localOnly: true)) _track(s, t),
       ];
 
   /// The grouped search over the index — artists, albums, then tracks by
@@ -387,19 +391,19 @@ class LocalLibrarySource implements LibrarySource {
     final n = s.localname;
     return [
       if (cats.contains(SearchCategory.artists))
-        for (final a in index.artistsMatching(n, term))
+        for (final a in index.artistsMatching(n, term, localOnly: true))
           DisplayItem(s, a, 'artist', a,
               Icon(Icons.library_music, color: VelvetColors.textSecondary),
               'artist'),
       if (cats.contains(SearchCategory.albums))
-        for (final a in index.albumsMatching(n, term))
+        for (final a in index.albumsMatching(n, term, localOnly: true))
           DisplayItem(s, a.name, 'album', a.name,
               Icon(Icons.library_music, color: VelvetColors.textSecondary),
               'album')
             ..altAlbumArt = a.art,
       if (cats.contains(SearchCategory.songs) ||
           cats.contains(SearchCategory.files))
-        for (final t in index.search(n, term)) _track(s, t),
+        for (final t in index.search(n, term, localOnly: true)) _track(s, t),
     ];
   }
 
@@ -407,7 +411,7 @@ class LocalLibrarySource implements LibrarySource {
   /// way the batch endpoint keys it (no leading slash), for "play all".
   Future<(List<String>, Map<String, MusicMetadata>)> recursiveTracks(
       Server s, String directory) async {
-    final tracks = index.tracksUnder(s.localname, dirPath(directory));
+    final tracks = index.tracksUnder(s.localname, dirPath(directory), localOnly: true);
     return (
       [for (final t in tracks) t.path],
       {for (final t in tracks) t.path.substring(1): metadataOf(t)},

@@ -33,6 +33,18 @@ void main() {
       AlbumRow(name: 'Other', albumArtist: 'Bob'),
     ]);
     ix.replaceArtists('home', ['Alice', 'Bob']);
+    // The offline source shows only what is on this device: give every
+    // track a copy here, and take some away where a test wants the difference.
+    ix.upsertLocals([
+      for (final p in const [
+        '/music/Alice/First/01.flac',
+        '/music/Alice/First/02.flac',
+        '/music/Bob/Other/x.mp3',
+        '/music/Bob/Other/list.m3u',
+      ])
+        LocalFile(server: 'home', path: p, localPath: '/dl/home$p',
+            state: LocalState.ok, origin: LocalOrigin.mirror),
+    ]);
   });
   tearDown(() => ix.close());
 
@@ -107,7 +119,7 @@ void main() {
     expect(LocalLibrarySource.dirPath('/a/'), '/a/');
   });
 
-  test("playlists, and a playlist's slots (a gone file keeps its slot)", () async {
+  test("playlists, and a playlist's slots (a slot without a copy is left out)", () async {
     ix.replacePlaylists('home', const [
       PlaylistRow(id: 'Mix', name: 'Mix',
           paths: ['/music/Bob/Other/x.mp3', '/music/gone.mp3']),
@@ -117,12 +129,28 @@ void main() {
     expect(lists.single.data, 'Mix');
     expect(lists.single.icon!.icon, Icons.queue_music);
     final rows = await src.playlistContents(server, 'Mix');
-    expect(rows.map((r) => (r.type, r.data)),
-        [('file', '/music/Bob/Other/x.mp3'), ('file', '/music/gone.mp3')]);
-    expect(rows.first.metadata!.title, 'X');
-    expect(rows.last.metadata, isNull);
-    expect(rows.last.name, 'music/gone.mp3');
+    expect(rows.map((r) => (r.type, r.data)), [('file', '/music/Bob/Other/x.mp3')],
+        reason: 'the gone file has no copy here, so its slot is left out');
+    expect(rows.single.metadata!.title, 'X');
     expect(await src.playlistContents(server, 'nope'), isEmpty);
+  });
+
+  test('only what is on this device shows: no copy, no album, artist, folder, playlist or slot', () async {
+    ix.removeLocal('home', '/music/Bob/Other/x.mp3');
+    ix.removeLocal('home', '/music/Bob/Other/list.m3u');
+    expect((await src.albums(server)).map((r) => r.name), ['First']);
+    expect((await src.artists(server)).map((r) => r.name), ['Alice']);
+    expect(await src.artistAlbums(server, 'Bob'), isEmpty);
+    expect((await src.fileList(server, '/music')).items.map((r) => r.name), ['Alice']);
+    expect((await src.recent(server)).map((r) => r.data),
+        ['/music/Alice/First/02.flac', '/music/Alice/First/01.flac']);
+    ix.replacePlaylists('home', const [
+      PlaylistRow(id: 'Mix', name: 'Mix', paths: ['/music/Bob/Other/x.mp3']),
+      PlaylistRow(id: 'Keep', name: 'Keep', paths: ['/music/Alice/First/01.flac', '/music/Bob/Other/x.mp3']),
+    ]);
+    expect((await src.playlists(server)).map((r) => r.data), ['Keep']);
+    expect((await src.playlistContents(server, 'Keep')).map((r) => r.data),
+        ['/music/Alice/First/01.flac']);
   });
 
   test('rated rows: best first, artist as the subtitle', () async {

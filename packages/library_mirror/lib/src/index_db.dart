@@ -473,28 +473,54 @@ class LibraryIndex {
 
   // ── offline browse ────────────────────────────────────────────────────
 
-  List<AlbumRow> albums(String server) => [
+  /// SQL: the `remote_tracks` row aliased [t] has a usable copy on this
+  /// device, at any quality — the offline browser's filter (`localOnly`).
+  static String _hasCopy(String t) =>
+      'EXISTS (SELECT 1 FROM local_files lf WHERE lf.server = $t.server '
+      "AND lf.path = $t.path AND lf.state = 'ok')";
+
+  List<AlbumRow> albums(String server, {bool localOnly = false}) => [
         for (final r in _db.select(
-            'SELECT * FROM remote_albums WHERE server = ? ORDER BY name COLLATE NOCASE',
+            localOnly
+                ? 'SELECT rt.album AS name, ra.album_artist, ra.year, '
+                    'COALESCE(ra.art, MIN(rt.art)) AS art FROM remote_tracks rt '
+                    'LEFT JOIN remote_albums ra ON ra.server = rt.server '
+                    'AND ra.name = rt.album '
+                    'WHERE rt.server = ? AND rt.album IS NOT NULL '
+                    'AND ${_hasCopy('rt')} '
+                    'GROUP BY rt.album ORDER BY rt.album COLLATE NOCASE'
+                : 'SELECT * FROM remote_albums WHERE server = ? '
+                    'ORDER BY name COLLATE NOCASE',
             [server]))
           AlbumRow.fromRow(r)
       ];
 
-  List<String> artists(String server) => [
+  List<String> artists(String server, {bool localOnly = false}) => [
         for (final r in _db.select(
-            'SELECT name FROM remote_artists WHERE server = ? ORDER BY name COLLATE NOCASE',
+            localOnly
+                ? 'SELECT DISTINCT rt.artist AS name FROM remote_tracks rt '
+                    "WHERE rt.server = ? AND rt.artist IS NOT NULL AND rt.artist != '' "
+                    'AND ${_hasCopy('rt')} ORDER BY name COLLATE NOCASE'
+                : 'SELECT name FROM remote_artists WHERE server = ? '
+                    'ORDER BY name COLLATE NOCASE',
             [server]))
           r['name'] as String
       ];
 
   /// Albums credited to [artist]: as the album artist, or holding a track
   /// by them — close to `db/artists-albums`, which unions the same sources.
-  List<AlbumRow> artistAlbums(String server, String artist) => [
+  List<AlbumRow> artistAlbums(String server, String artist,
+          {bool localOnly = false}) =>
+      [
         for (final r in _db.select(
-            'SELECT * FROM remote_albums WHERE server = ? AND (album_artist = ? '
-            'OR name IN (SELECT album FROM remote_tracks WHERE server = ? '
+            'SELECT ra.* FROM remote_albums ra WHERE ra.server = ? '
+            'AND (ra.album_artist = ? '
+            'OR ra.name IN (SELECT album FROM remote_tracks WHERE server = ? '
             'AND artist = ? AND album IS NOT NULL)) '
-            'ORDER BY year, name COLLATE NOCASE',
+            '${localOnly ? 'AND EXISTS (SELECT 1 FROM remote_tracks rt '
+                'WHERE rt.server = ra.server AND rt.album = ra.name '
+                'AND ${_hasCopy('rt')}) ' : ''}'
+            'ORDER BY ra.year, ra.name COLLATE NOCASE',
             [server, artist, server, artist]))
           AlbumRow.fromRow(r)
       ];
@@ -504,15 +530,18 @@ class LibraryIndex {
   /// lists the libraries). Derived from the paths alone, so it works for
   /// every server the manifest has been pulled for.
   ({List<String> dirs, List<RemoteTrack> files}) directoryListing(
-      String server, String dir) {
+      String server, String dir,
+      {bool localOnly = false}) {
     final prefix = dir.endsWith('/') ? dir : '$dir/';
     final n = prefix.length;
     final dirs = <String>{};
     final files = <RemoteTrack>[];
     // Prefix by substr, not LIKE: paths may contain '%' and '_'.
     for (final r in _db.select(
-        'SELECT * FROM remote_tracks WHERE server = ? AND substr(path, 1, ?) = ? '
-        'ORDER BY path',
+        'SELECT rt.* FROM remote_tracks rt WHERE rt.server = ? '
+        'AND substr(rt.path, 1, ?) = ? '
+        '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
+        'ORDER BY rt.path',
         [server, n, prefix])) {
       final rest = (r['path'] as String).substring(n);
       final slash = rest.indexOf('/');
@@ -527,12 +556,15 @@ class LibraryIndex {
 
   /// Every track under [dir], in path order (the folder "play / download
   /// all" listing).
-  List<RemoteTrack> tracksUnder(String server, String dir) {
+  List<RemoteTrack> tracksUnder(String server, String dir,
+      {bool localOnly = false}) {
     final prefix = dir.endsWith('/') ? dir : '$dir/';
     return [
       for (final r in _db.select(
-          'SELECT * FROM remote_tracks WHERE server = ? AND substr(path, 1, ?) = ? '
-          'ORDER BY path',
+          'SELECT rt.* FROM remote_tracks rt WHERE rt.server = ? '
+          'AND substr(rt.path, 1, ?) = ? '
+          '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
+          'ORDER BY rt.path',
           [server, prefix.length, prefix]))
         RemoteTrack.fromRow(r)
     ];
@@ -540,10 +572,13 @@ class LibraryIndex {
 
   /// Tracks of the album named [album], in disc / track / path order — the
   /// same identity `db/album-songs` uses.
-  List<RemoteTrack> albumSongs(String server, String album) => [
+  List<RemoteTrack> albumSongs(String server, String album,
+          {bool localOnly = false}) =>
+      [
         for (final r in _db.select(
-            'SELECT * FROM remote_tracks WHERE server = ? AND album = ? '
-            'ORDER BY disc, track, path',
+            'SELECT rt.* FROM remote_tracks rt WHERE rt.server = ? AND rt.album = ? '
+            '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
+            'ORDER BY rt.disc, rt.track, rt.path',
             [server, album]))
           RemoteTrack.fromRow(r)
       ];
@@ -551,7 +586,8 @@ class LibraryIndex {
   /// Prefix search over title / artist / album / path, best match first.
   /// Each whitespace-separated term must match; quotes in the input are
   /// escaped, never interpreted.
-  List<RemoteTrack> search(String server, String query, {int limit = 50}) {
+  List<RemoteTrack> search(String server, String query,
+      {int limit = 50, bool localOnly = false}) {
     final q = ftsQuery(query);
     if (q.isEmpty) return const [];
     return [
@@ -559,6 +595,7 @@ class LibraryIndex {
           'SELECT rt.* FROM tracks_fts f '
           'JOIN remote_tracks rt ON rt.rt_id = f.rowid '
           'WHERE tracks_fts MATCH ? AND rt.server = ? '
+          '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
           'ORDER BY f.rank LIMIT ?',
           [q, server, limit]))
         RemoteTrack.fromRow(r)
@@ -586,22 +623,35 @@ class LibraryIndex {
       ];
 
   /// The playlists by name, without their tracks.
-  List<PlaylistRow> playlists(String server) => [
+  /// SQL: the `remote_playlist_items` row aliased [i] names a file with a
+  /// usable copy on this device.
+  static String _slotHasCopy(String i) =>
+      'EXISTS (SELECT 1 FROM local_files lf WHERE lf.server = $i.server '
+      "AND lf.path = $i.path AND lf.state = 'ok')";
+
+  List<PlaylistRow> playlists(String server, {bool localOnly = false}) => [
         for (final r in _db.select(
-            'SELECT id, name FROM remote_playlists WHERE server = ? '
-            'ORDER BY name COLLATE NOCASE',
+            'SELECT p.id, p.name FROM remote_playlists p WHERE p.server = ? '
+            '${localOnly ? 'AND EXISTS (SELECT 1 FROM remote_playlist_items i '
+                'WHERE i.server = p.server AND i.playlist_id = p.id '
+                'AND ${_slotHasCopy('i')}) ' : ''}'
+            'ORDER BY p.name COLLATE NOCASE',
             [server]))
           PlaylistRow(id: r['id'] as String, name: r['name'] as String)
       ];
 
   /// The slots of playlist [id] in order, each with its track when the
   /// manifest knows the path — the shape `playlist/load` returns.
-  List<PlaylistItem> playlistItems(String server, String id) => [
+  List<PlaylistItem> playlistItems(String server, String id,
+          {bool localOnly = false}) =>
+      [
         for (final r in _db.select(
             'SELECT i.pos AS item_pos, i.path AS item_path, rt.* '
             'FROM remote_playlist_items i '
             'LEFT JOIN remote_tracks rt ON rt.server = i.server AND rt.path = i.path '
-            'WHERE i.server = ? AND i.playlist_id = ? ORDER BY i.pos',
+            'WHERE i.server = ? AND i.playlist_id = ? '
+            '${localOnly ? 'AND ${_slotHasCopy('i')} ' : ''}'
+            'ORDER BY i.pos',
             [server, id]))
           (
             pos: r['item_pos'] as int,
@@ -613,21 +663,25 @@ class LibraryIndex {
   /// The tracks the caller rated, best first — `db/rated`'s order. The
   /// rating comes from the rated list, which is fresher than the manifest's
   /// lite block.
-  List<RemoteTrack> rated(String server) => [
+  List<RemoteTrack> rated(String server, {bool localOnly = false}) => [
         for (final r in _db.select(
             'SELECT rt.*, rr.rating AS user_rating FROM remote_rated rr '
             'JOIN remote_tracks rt ON rt.server = rr.server AND rt.path = rr.path '
             'WHERE rr.server = ? AND rr.rating > 0 '
+            '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
             'ORDER BY rr.rating DESC, rt.path',
             [server]))
           RemoteTrack.fromRow(r).withRating(r['user_rating'] as int?)
       ];
 
   /// The newest additions — `db/recent/added`'s order.
-  List<RemoteTrack> recent(String server, {int limit = 100}) => [
+  List<RemoteTrack> recent(String server,
+          {int limit = 100, bool localOnly = false}) =>
+      [
         for (final r in _db.select(
-            'SELECT * FROM remote_tracks WHERE server = ? '
-            'ORDER BY created_at DESC, id DESC LIMIT ?',
+            'SELECT rt.* FROM remote_tracks rt WHERE rt.server = ? '
+            '${localOnly ? 'AND ${_hasCopy('rt')} ' : ''}'
+            'ORDER BY rt.created_at DESC, rt.id DESC LIMIT ?',
             [server, limit]))
           RemoteTrack.fromRow(r)
       ];
@@ -635,21 +689,33 @@ class LibraryIndex {
   /// Artists whose name contains [query] (case-insensitive), for the
   /// grouped search offline. [albumsMatching] is the same over albums.
   List<String> artistsMatching(String server, String query,
-          {int limit = 50}) =>
+          {int limit = 50, bool localOnly = false}) =>
       [
         for (final r in _db.select(
-            "SELECT name FROM remote_artists WHERE server = ? "
-            "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
+            localOnly
+                ? 'SELECT DISTINCT rt.artist AS name FROM remote_tracks rt '
+                    "WHERE rt.server = ? AND rt.artist LIKE ? ESCAPE '\\' "
+                    'AND ${_hasCopy('rt')} ORDER BY name COLLATE NOCASE LIMIT ?'
+                : "SELECT name FROM remote_artists WHERE server = ? "
+                    "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
             [server, _like(query), limit]))
           r['name'] as String
       ];
 
   List<AlbumRow> albumsMatching(String server, String query,
-          {int limit = 50}) =>
+          {int limit = 50, bool localOnly = false}) =>
       [
         for (final r in _db.select(
-            "SELECT * FROM remote_albums WHERE server = ? "
-            "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
+            localOnly
+                ? 'SELECT rt.album AS name, ra.album_artist, ra.year, '
+                    'COALESCE(ra.art, MIN(rt.art)) AS art FROM remote_tracks rt '
+                    'LEFT JOIN remote_albums ra ON ra.server = rt.server '
+                    'AND ra.name = rt.album '
+                    "WHERE rt.server = ? AND rt.album LIKE ? ESCAPE '\\' "
+                    'AND ${_hasCopy('rt')} '
+                    'GROUP BY rt.album ORDER BY rt.album COLLATE NOCASE LIMIT ?'
+                : "SELECT * FROM remote_albums WHERE server = ? "
+                    "AND name LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE LIMIT ?",
             [server, _like(query), limit]))
           AlbumRow.fromRow(r)
       ];
