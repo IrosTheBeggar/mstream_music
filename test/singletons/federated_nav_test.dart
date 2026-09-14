@@ -103,6 +103,34 @@ void main() {
     expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
   });
 
+  test('browsing the copy by choice ends with the landing; an automatic switch stays', () {
+    // A closed local port: the ping the exit fires fails fast and, without
+    // an index, changes nothing.
+    final s = Server('http://127.0.0.1:1', null, null, null, 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+
+    s.browseOffline = true;
+    s.offlineAuto = false;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().popBrowser();
+    expect(s.browseOffline, isFalse, reason: 'back from the landing');
+
+    s.browseOffline = true;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().goToNavScreen();
+    expect(s.browseOffline, isFalse, reason: 'a reset that discards the landing');
+
+    s.browseOffline = true;
+    s.offlineAuto = true;
+    BrowserManager().goToOfflineScreen(s);
+    BrowserManager().popBrowser();
+    expect(s.browseOffline, isTrue, reason: 'unreachable: the copy stays until the server answers');
+    s.browseOffline = false;
+    s.offlineAuto = false;
+  });
+
   test('a server that advertises the path route gets Sonic path under Listen',
       () {
     final s = Server('https://home.example.com', null, null, 'JWT', 'home')

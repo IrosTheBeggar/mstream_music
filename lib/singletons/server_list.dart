@@ -512,6 +512,19 @@ class ServerManager {
     notifyServerChanged();
   }
 
+  /// Back to the server after browsing the copy by choice: the writes
+  /// queued meanwhile are sent, and a ping decides whether the server is
+  /// really there — one that is still unreachable flips straight back on
+  /// its own. A no-op when the copy is not being browsed.
+  void leaveOffline(Server s) {
+    if (!s.browseOffline) return;
+    s.browseOffline = false;
+    s.offlineAuto = false;
+    unawaited(OutboxManager().replay(s));
+    unawaited(getServerPaths(s));
+    notifyServerChanged();
+  }
+
   /// Re-emits the server streams after a runtime flag flipped (the app bar's
   /// offline chip, the Library copy screen).
   void notifyServerChanged() {
