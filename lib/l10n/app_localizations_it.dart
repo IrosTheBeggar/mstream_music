@@ -3947,51 +3947,51 @@ class AppLocalizationsIt extends AppLocalizations {
       'Una notifica sul telefono quando arriva una richiesta mentre l’app è aperta o in riproduzione';
 
   @override
-  String get browserListening => 'Listening';
+  String get browserListening => 'Cronologia di ascolto';
 
   @override
-  String get autoRecentlyPlayed => 'Recently Played';
+  String get autoRecentlyPlayed => 'Ascoltati di recente';
 
   @override
-  String get settingsSectionListening => 'Listening history';
+  String get settingsSectionListening => 'Cronologia di ascolto';
 
   @override
-  String get settingsHistoryEnabled => 'Keep listening history';
+  String get settingsHistoryEnabled => 'Conserva la cronologia di ascolto';
 
   @override
   String get settingsHistoryEnabledSubtitle =>
-      'Record what this phone plays, on every server and for local files. Kept on this device only.';
+      'Registra ciò che questo telefono riproduce, su ogni server e per i file locali. Resta solo su questo dispositivo.';
 
   @override
-  String get settingsHistorySend => 'Send plays to your servers';
+  String get settingsHistorySend => 'Invia le riproduzioni ai tuoi server';
 
   @override
   String get settingsHistorySendSubtitle =>
-      'Each play goes to the server the track lives on (a peer\'s track to its parent), so your stats include this phone. Servers forward to Last.fm only if you linked an account there.';
+      'Ogni riproduzione va al server in cui si trova il brano (il brano di un peer al suo server principale), così le tue statistiche includono questo telefono. I server inoltrano a Last.fm solo se vi hai collegato un account.';
 
   @override
-  String get settingsHistoryClear => 'Clear listening history';
+  String get settingsHistoryClear => 'Cancella la cronologia di ascolto';
 
   @override
   String settingsHistoryClearSubtitle(Object size) {
-    return 'Removes this phone\'s record ($size). Your servers keep theirs.';
+    return 'Rimuove il registro di questo telefono ($size). I tuoi server conservano il loro.';
   }
 
   @override
   String get settingsHistoryClearConfirm =>
-      'Delete this phone\'s listening history? Plays already sent to a server stay there.';
+      'Eliminare la cronologia di ascolto di questo telefono? Le riproduzioni già inviate a un server restano lì.';
 
   @override
-  String get settingsHistoryCleared => 'Listening history cleared';
+  String get settingsHistoryCleared => 'Cronologia di ascolto cancellata';
 
   @override
   String settingsHistoryUnsynced(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count plays waiting to be sent',
-      one: '1 play waiting to be sent',
-      zero: 'Everything is synced',
+      other: '$count riproduzioni in attesa di invio',
+      one: '1 riproduzione in attesa di invio',
+      zero: 'Tutto è sincronizzato',
     );
     return '$_temp0';
   }
@@ -4001,8 +4001,8 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count plays on $server',
-      one: '1 play on $server',
+      other: '$count riproduzioni su $server',
+      one: '1 riproduzione su $server',
     );
     return '$_temp0';
   }
@@ -4012,65 +4012,65 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count plays on this phone',
-      one: '1 play on this phone',
+      other: '$count riproduzioni su questo telefono',
+      one: '1 riproduzione su questo telefono',
     );
     return '$_temp0';
   }
 
   @override
   String songInfoLastPlayed(Object ago) {
-    return 'last $ago';
+    return 'ultimo ascolto $ago';
   }
 
   @override
-  String get listeningTitle => 'Listening';
+  String get listeningTitle => 'Cronologia di ascolto';
 
   @override
-  String get listeningScopeThisPhone => 'This phone';
+  String get listeningScopeThisPhone => 'Questo telefono';
 
   @override
-  String get listeningScopeSheetTitle => 'What to show';
+  String get listeningScopeSheetTitle => 'Cosa mostrare';
 
   @override
   String get listeningScopeSheetDevice =>
-      'What this phone played: every server, local files, offline. Kept on this device.';
+      'Ciò che questo telefono ha riprodotto: ogni server, file locali, offline. Resta su questo dispositivo.';
 
   @override
   String get listeningScopeSheetServer =>
-      'Your plays on this server from every app — the web player, other phones, this phone once synced.';
+      'Le tue riproduzioni su questo server da ogni app: il lettore web, altri telefoni e questo telefono una volta sincronizzato.';
 
   @override
   String get listeningScopeSheetLegacy =>
-      'No listening stats yet — needs mStream 6.27 or later.';
+      'Ancora nessuna statistica di ascolto: richiede mStream 6.27 o successivo.';
 
   @override
   String listeningScopeSheetPeer(Object server) {
-    return 'Counted on $server: a peer\'s tracks count where your account lives.';
+    return 'Contate su $server: i brani di un peer contano dove vive il tuo account.';
   }
 
   @override
   String get listeningProvenanceDevice =>
-      'What this phone played, on every server and local files. Kept on this device.';
+      'Ciò che questo telefono ha riprodotto, su ogni server e per i file locali. Resta su questo dispositivo.';
 
   @override
   String listeningProvenanceServer(Object server) {
-    return 'Your plays on $server from every app, including tracks from its peers.';
+    return 'Le tue riproduzioni su $server da ogni app, inclusi i brani dei suoi peer.';
   }
 
   @override
   String listeningProvenancePeer(Object peer, Object server) {
-    return 'Your plays of $peer\'s tracks, counted on $server.';
+    return 'Le tue riproduzioni dei brani di $peer, contate su $server.';
   }
 
   @override
   String listeningProvenanceFallback(Object server) {
-    return '$server did not answer — showing this phone\'s plays on it.';
+    return '$server non ha risposto: vengono mostrate le riproduzioni di questo telefono su di esso.';
   }
 
   @override
   String listeningProvenanceLegacy(Object server) {
-    return '$server has no listening stats yet (mStream 6.27+) — showing this phone\'s plays on it.';
+    return '$server non ha ancora statistiche di ascolto (mStream 6.27+): vengono mostrate le riproduzioni di questo telefono su di esso.';
   }
 
   @override
@@ -4078,110 +4078,110 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count plays not synced yet',
-      one: '1 play not synced yet',
+      other: '$count riproduzioni non ancora sincronizzate',
+      one: '1 riproduzione non ancora sincronizzata',
     );
     return '$_temp0';
   }
 
   @override
-  String get listeningPeriodWeek => 'This week';
+  String get listeningPeriodWeek => 'Questa settimana';
 
   @override
-  String get listeningPeriodMonth => 'This month';
+  String get listeningPeriodMonth => 'Questo mese';
 
   @override
-  String get listeningPeriodQuarter => 'This quarter';
+  String get listeningPeriodQuarter => 'Questo trimestre';
 
   @override
-  String get listeningPeriodYear => 'This year';
+  String get listeningPeriodYear => 'Quest\'anno';
 
   @override
-  String get listeningPeriodAll => 'All time';
+  String get listeningPeriodAll => 'Da sempre';
 
   @override
-  String get listeningTilePlays => 'Plays';
+  String get listeningTilePlays => 'Riproduzioni';
 
   @override
-  String get listeningTileTime => 'Listening time';
+  String get listeningTileTime => 'Tempo di ascolto';
 
   @override
-  String get listeningTileTracks => 'Tracks';
+  String get listeningTileTracks => 'Brani';
 
   @override
-  String get listeningTileSkips => 'Skips';
+  String get listeningTileSkips => 'Saltati';
 
   @override
-  String get listeningTileStreak => 'Streak';
+  String get listeningTileStreak => 'Serie';
 
   @override
-  String get listeningTileSessions => 'Sittings';
+  String get listeningTileSessions => 'Sessioni';
 
   @override
   String listeningDays(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count days',
-      one: '1 day',
+      other: '$count giorni',
+      one: '1 giorno',
     );
     return '$_temp0';
   }
 
   @override
-  String get listeningTileSubCounted => 'counted plays';
+  String get listeningTileSubCounted => 'riproduzioni contate';
 
   @override
-  String get listeningTileSubTracks => 'different tracks';
+  String get listeningTileSubTracks => 'brani diversi';
 
   @override
   String listeningTileSubSkips(Object pct) {
-    return '$pct% of starts';
+    return '$pct% degli avvii';
   }
 
   @override
   String listeningTileSubStreak(Object count) {
-    return 'longest $count';
+    return 'la più lunga: $count';
   }
 
   @override
   String listeningTileSubSessions(Object duration) {
-    return 'about $duration each';
+    return 'circa $duration ciascuna';
   }
 
   @override
-  String get listeningWhenYouListen => 'When you listen';
+  String get listeningWhenYouListen => 'Quando ascolti';
 
   @override
   String listeningMostAround(Object hour) {
-    return 'Most around $hour';
+    return 'Soprattutto verso le $hour';
   }
 
   @override
   String get listeningTop => 'Top';
 
   @override
-  String get listeningTopTracks => 'Tracks';
+  String get listeningTopTracks => 'Brani';
 
   @override
-  String get listeningTopArtists => 'Artists';
+  String get listeningTopArtists => 'Artisti';
 
   @override
-  String get listeningTopAlbums => 'Albums';
+  String get listeningTopAlbums => 'Album';
 
   @override
-  String get listeningByPlays => 'Plays';
+  String get listeningByPlays => 'Riproduzioni';
 
   @override
-  String get listeningByTime => 'Time';
+  String get listeningByTime => 'Tempo';
 
   @override
   String listeningPlays(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count plays',
-      one: '1 play',
+      other: '$count riproduzioni',
+      one: '1 riproduzione',
     );
     return '$_temp0';
   }
@@ -4191,49 +4191,49 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count tracks',
-      one: '1 track',
+      other: '$count brani',
+      one: '1 brano',
     );
     return '$_temp0';
   }
 
   @override
-  String get listeningRecent => 'Recent plays';
+  String get listeningRecent => 'Riproduzioni recenti';
 
   @override
-  String get listeningLoadMore => 'Load more';
+  String get listeningLoadMore => 'Carica altro';
 
   @override
-  String get listeningEmptyTitle => 'No plays yet';
+  String get listeningEmptyTitle => 'Ancora nessuna riproduzione';
 
   @override
   String get listeningEmptyDevice =>
-      'Plays land here as you listen. This phone keeps its own record; your server keeps yours across every app.';
+      'Le riproduzioni compaiono qui mentre ascolti. Questo telefono tiene il proprio registro; il tuo server tiene il tuo per ogni app.';
 
   @override
   String listeningEmptyServer(Object server) {
-    return 'Nothing reported to $server yet. Plays from this phone arrive once they sync.';
+    return 'Nulla è ancora stato segnalato a $server. Le riproduzioni di questo telefono arrivano una volta sincronizzate.';
   }
 
   @override
-  String get listeningEmptyPeriod => 'Nothing in this period.';
+  String get listeningEmptyPeriod => 'Niente in questo periodo.';
 
   @override
-  String get listeningOutcomeCompleted => 'Completed';
+  String get listeningOutcomeCompleted => 'Completata';
 
   @override
-  String get listeningOutcomeSkipped => 'Skipped';
+  String get listeningOutcomeSkipped => 'Saltata';
 
   @override
-  String get listeningOutcomeStopped => 'Stopped';
+  String get listeningOutcomeStopped => 'Interrotta';
 
   @override
   String listeningOutcomeAt(Object outcome, Object position) {
-    return '$outcome at $position';
+    return '$outcome a $position';
   }
 
   @override
-  String get listeningNotCounted => 'not counted';
+  String get listeningNotCounted => 'non contata';
 
   @override
   String listeningVia(Object peer) {
@@ -4246,26 +4246,26 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get listeningLocalFile => 'Local file';
+  String get listeningLocalFile => 'File locale';
 
   @override
   String get listeningHistoryOff =>
-      'Listening history is off. Turn it on in Settings to record plays on this phone.';
+      'La cronologia di ascolto è disattivata. Attivala nelle impostazioni per registrare le riproduzioni su questo telefono.';
 
   @override
   String listeningError(Object message) {
-    return 'Could not load: $message';
+    return 'Impossibile caricare: $message';
   }
 
   @override
-  String get listeningRetry => 'Retry';
+  String get listeningRetry => 'Riprova';
 
   @override
-  String get listeningSettings => 'History settings';
+  String get listeningSettings => 'Impostazioni cronologia';
 
   @override
-  String get listeningToday => 'Today';
+  String get listeningToday => 'Oggi';
 
   @override
-  String get listeningYesterday => 'Yesterday';
+  String get listeningYesterday => 'Ieri';
 }
