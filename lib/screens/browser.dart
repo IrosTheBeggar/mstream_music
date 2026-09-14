@@ -33,7 +33,6 @@ import 'auto_dj.dart';
 import 'sonic_path_screen.dart';
 import 'dart:async';
 import '../singletons/library_index.dart';
-import '../singletons/outbox.dart';
 import '../objects/server.dart';
 import 'library_copy_screen.dart';
 
@@ -798,8 +797,8 @@ class _BrowserState extends State<Browser> {
             }));
   }
 
-  /// The Offline card: switch to the library copy on this device (a choice
-  /// that sticks until "Back online") and open the offline landing.
+  /// The Offline card: switch to the library copy on this device for as
+  /// long as the offline landing is open, and open it.
   void _openOffline(Server s, BuildContext context) {
     if (!s.browseOffline) {
       final rows = LibraryIndexManager().index?.remoteCount(s.localname) ?? 0;
@@ -816,15 +815,9 @@ class _BrowserState extends State<Browser> {
     BrowserManager().goToOfflineScreen(s);
   }
 
-  /// The landing's last row: back to the server. Sends the writes queued
-  /// while offline and pings the server, so one that is still unreachable
-  /// flips straight back by itself.
+  /// The landing's last row: back to the server, home.
   void _leaveOffline(Server s) {
-    s.browseOffline = false;
-    s.offlineAuto = false;
-    unawaited(OutboxManager().replay(s));
-    unawaited(ServerManager().getServerPaths(s));
-    ServerManager().notifyServerChanged();
+    ServerManager().leaveOffline(s);
     BrowserManager().goToNavScreen();
   }
 

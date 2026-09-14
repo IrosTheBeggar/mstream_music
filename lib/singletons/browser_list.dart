@@ -293,6 +293,15 @@ class BrowserManager {
     // folder surviving a server switch) lands on top of the NEW home screen.
     cancelLoading();
     _albumDetail.add(null);
+    // Browsing the copy by choice lasts as long as the offline landing is
+    // open: a reset that discards it (a server switch, the way home) ends
+    // it. An automatic switch stays until the server answers.
+    for (final frame in browserCache) {
+      if (frame.isNotEmpty && frame.first.type == 'offlineHeader') {
+        final s = frame.first.server;
+        if (s != null && !s.offlineAuto) ServerManager().leaveOffline(s);
+      }
+    }
     browserCache.clear();
     browserList.clear();
     // Invariant: scrollCache.length == browserCache.length - 1.
@@ -419,9 +428,10 @@ class BrowserManager {
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
       ],
       // OFFLINE: the library copy on this device — its settings, and the
-      // offline landing ([goToOfflineScreen]); the second card's second line
-      // says what state the copy is in. A federated peer has no copy: the
-      // manifest is off its allowlist.
+      // offline landing ([goToOfflineScreen]), which browses the copy for
+      // as long as it is open; the second card's second line says what
+      // state the copy is in. A federated peer has no copy: the manifest is
+      // off its allowlist.
       if (!federated) ...[
         header('Offline'),
         DisplayItem(server, 'Library copy', 'execAction', 'libraryCopy',
@@ -642,6 +652,12 @@ class BrowserManager {
       return;
     }
 
+    // Backing out of the offline landing ends browsing the copy by choice.
+    final leaving = browserCache.last;
+    if (leaving.isNotEmpty && leaving.first.type == 'offlineHeader') {
+      final s = leaving.first.server;
+      if (s != null && !s.offlineAuto) ServerManager().leaveOffline(s);
+    }
     browserCache.removeLast();
     if (alphabeticalCache.isNotEmpty) alphabeticalCache.removeLast();
     if (pathCache.isNotEmpty) pathCache.removeLast();
