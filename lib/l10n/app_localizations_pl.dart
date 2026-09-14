@@ -205,14 +205,14 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get transcodeUnavailable =>
-      'Ten serwer nie ma włączonej transkodyzacji — jego utwory są przesyłane w oryginalnej jakości.';
+      'Ten serwer nie ma włączonego transkodowania — jego utwory są przesyłane w oryginalnej jakości.';
 
   @override
   String get transcodeReloadQueue => 'Zastosuj do bieżącej kolejki';
 
   @override
   String get transcodeReloadQueueSubtitle =>
-      'Gdy zmienisz ustawienia transkodyzacji — zaznaczone: przeładuj całą kolejkę teraz (odtwarzany utwór na chwilę się buforuje); odznaczone: zmieniają się tylko kolejne utwory, bieżący kończy się bez zmian.';
+      'Gdy zmienisz ustawienia transkodowania — zaznaczone: przeładuj całą kolejkę teraz (odtwarzany utwór na chwilę buforuje się ponownie); odznaczone: zmieniają się tylko kolejne utwory, bieżący kończy się bez zmian.';
 
   @override
   String get settingsTapBehavior => 'Po dotknięciu utworu';
@@ -222,7 +222,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get settingsStartupPageSubtitle =>
-      'Otwórz aplikację w tym widoku przeglądarki; Wstecz wraca do przeglądarki.';
+      'Aplikacja otwiera się w tym widoku przeglądarki; Wstecz wraca do przeglądarki.';
 
   @override
   String get tapSubtitleAddToQueue =>
@@ -518,7 +518,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String shareServerGoneBody(String name) {
-    return 'Serwera „$name” nie ma już na Twojej liście serwerów. Dodaj go ponownie, aby udostępnić jego kolejkę.';
+    return 'Serwera „$name” nie ma już na twojej liście serwerów. Dodaj go ponownie, aby udostępnić jego kolejkę.';
   }
 
   @override
@@ -713,7 +713,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjMultiServerSubtitle =>
-      'Auto DJ wybiera ze wszystkich serwerów naraz, dopasowując się do brzmienia';
+      'Auto DJ wybiera ze wszystkich serwerów naraz, dopasowując się do brzmienia tego, co gra';
 
   @override
   String get autoDjMultiServerNeedsSonic =>
@@ -740,7 +740,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return 'Uczestniczy $count z $total serwerów — pozostałym brakuje discovery, zgodnego modelu osadzeń lub dostatecznie nowej wersji serwera';
+    return 'Uczestniczy $count z $total serwerów — pozostałym brakuje danych odkrywania, zgodnego modelu osadzeń lub dostatecznie nowej wersji serwera';
   }
 
   @override
@@ -1102,6 +1102,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count udostępnionych bibliotek',
+      many: '$count udostępnionych bibliotek',
       few: '$count udostępnione biblioteki',
       one: '1 udostępniona biblioteka',
     );
@@ -1207,8 +1208,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Korektor reguluje dźwięk na tym urządzeniu, więc jest niedostępny podczas przesyłania. Rozłącz, aby go użyć.';
 
   @override
-  String get browserNothingToDownload =>
-      'Brak czegokolwiek do pobrania na tej liście';
+  String get browserNothingToDownload => 'Nie ma czego pobrać z tej listy';
 
   @override
   String get browserDownloadAllTitle => 'Pobierz wszystkie';
@@ -1272,7 +1272,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get storageLocationLabel => 'Lokalizacja pamięci';
 
   @override
-  String get storageAppLocal => 'Lokalna aplikacji';
+  String get storageAppLocal => 'Wewnątrz aplikacji';
 
   @override
   String get storagePermanent => 'Trwała';
@@ -1297,7 +1297,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get storageHelpSdCard =>
-      'Zapisywane w wybranym folderze na karcie SD. Może stać się niedostępne po wyjęciu karty. Niektóre urządzenia nie pozwalają aplikacjom zapisywać na kartach SD — jeśli wybór folderu wciąż się nie udaje, użyj opcji Trwała lub Lokalna aplikacji.';
+      'Zapisywane w wybranym folderze na karcie SD. Może stać się niedostępne po wyjęciu karty. Niektóre urządzenia nie pozwalają aplikacjom zapisywać na kartach SD — jeśli wybór folderu wciąż się nie udaje, użyj opcji Trwała lub Wewnątrz aplikacji.';
 
   @override
   String get storageChooseFolder => 'Wybierz folder';
@@ -1365,7 +1365,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get storageCouldNotCreateFolder => 'Nie można utworzyć folderu';
 
   @override
-  String get storageNoSubfolders => 'Brak podfolderów tutaj';
+  String get storageNoSubfolders => 'Brak podfolderów';
 
   @override
   String get storageUseThisFolder => 'Użyj tego folderu';
@@ -1387,13 +1387,13 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Tych $count pobranych plików serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+          '$count pobranych plików tego serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
       many:
-          'Tych $count pobranych plików serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+          '$count pobranych plików tego serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
       few:
-          'Te $count pobrane pliki serwera ($size) znajdują się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+          '$count pobrane pliki tego serwera ($size) znajdują się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
       one:
-          'Ten 1 pobrany plik serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
+          '1 pobrany plik tego serwera ($size) znajduje się na innym woluminie pamięci niż nowa lokalizacja. Wybierz, co zrobić:',
     );
     return '$_temp0';
   }
@@ -1433,7 +1433,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get storageChooseSdFolderFirst =>
-      'Najpierw wybierz folder na karcie SD. Jeśli każdy folder jest odrzucany, Twoje urządzenie może nie pozwalać aplikacjom na zapis na karcie — użyj zamiast tego opcji Trwała lub Lokalna aplikacji.';
+      'Najpierw wybierz folder na karcie SD. Jeśli każdy folder jest odrzucany, twoje urządzenie może nie pozwalać aplikacjom na zapis na karcie — użyj zamiast tego opcji Trwała lub Wewnątrz aplikacji.';
 
   @override
   String get castPlayOn => 'Odtwórz na';
@@ -1536,7 +1536,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get lanNoCode =>
-      'Quick Connect jest włączony na tym serwerze, ale nie udostępniono kodu parowania. Zaloguj się jako administrator lub poproś operatora o włączenie udostępniania kodu.';
+      'Szybkie połączenie jest włączone na tym serwerze, ale nie udostępniono kodu parowania. Zaloguj się jako administrator lub poproś operatora o włączenie udostępniania kodu.';
 
   @override
   String get settingsResumeQueue => 'Wznów kolejkę po uruchomieniu';
@@ -1604,7 +1604,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get diagnosticsHint =>
-      'Dzienniki pozostają na Twoim urządzeniu. Tokeny są ukrywane przed skopiowaniem lub udostępnieniem.';
+      'Dzienniki pozostają na twoim urządzeniu. Tokeny są ukrywane przed skopiowaniem lub udostępnieniem.';
 
   @override
   String get diagnosticsVerbose => 'Szczegółowe rejestrowanie';
@@ -1646,7 +1646,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Dodaj własne pliki .glsl do rotacji silnika Shader.';
+      'Dodaj własne pliki .glsl do rotacji silnika shaderów.';
 
   @override
   String get importedShadersRescan => 'Przeskanuj folder ponownie';
@@ -1660,7 +1660,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Dostępny przez USB lub menedżer plików (w Android/data). Zaimportowane shadery dołączają do rotacji, gdy aktywny jest silnik Shader.';
+      'Dostępny przez USB lub menedżer plików (w Android/data). Zaimportowane shadery dołączają do rotacji, gdy aktywny jest silnik shaderów.';
 
   @override
   String get importedShadersRemove => 'Usuń';
@@ -1710,7 +1710,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get irohPairingCodeLabel => 'Kod parowania';
 
   @override
-  String get irohPairingCodeHint => 'Wklej kod z panelu Remote Access serwera';
+  String get irohPairingCodeHint =>
+      'Wklej kod z panelu „Remote Access” serwera';
 
   @override
   String get irohShowPairingCode => 'Pokaż kod parowania';
@@ -1721,7 +1722,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get irohQrCaution =>
-      'Każdy, kto ma ten kod, może połączyć się z Twoim serwerem.';
+      'Każdy, kto ma ten kod, może połączyć się z twoim serwerem.';
 
   @override
   String get irohScanQr => 'Skanuj QR';
@@ -1829,7 +1830,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get irohRepairBody =>
-      'Kod parowania tego serwera się zmienił (jego sekret został odnowiony). Wklej lub zeskanuj nowy kod z panelu Remote Access serwera.';
+      'Kod parowania tego serwera się zmienił (jego sekret został odnowiony). Wklej lub zeskanuj nowy kod z panelu „Remote Access” serwera.';
 
   @override
   String get irohRepairFailed =>
@@ -1859,19 +1860,19 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverSimilarTracks => 'Podobne utwory';
 
   @override
-  String get discoverSimilarArtists => 'Podobni artyści';
+  String get discoverSimilarArtists => 'Podobni wykonawcy';
 
   @override
   String get discoverFromNetwork => 'Z sieci';
 
   @override
-  String get discoverFromPeers => 'Od twoich peerów';
+  String get discoverFromPeers => 'Z serwerów partnerskich';
 
   @override
   String get discoverQueueAll => 'Dodaj wszystko do kolejki';
 
   @override
-  String get discoverNewArtistsOnly => 'Tylko nowi artyści';
+  String get discoverNewArtistsOnly => 'Tylko nowi wykonawcy';
 
   @override
   String get discoverNotAnalyzed =>
@@ -1909,7 +1910,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverNetworkWarmingUp =>
-      'Brak danych z sieci — biblioteki peerów pobierają się w tle, gdy tylko zostaną wykryte inne serwery.';
+      'Brak jeszcze danych z sieci — biblioteki innych serwerów pobierają się w tle, gdy tylko zostaną one wykryte.';
 
   @override
   String get discoverNetworkNothingNew =>
@@ -1917,11 +1918,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get discoverPeersUnreachable =>
-      'Twoje peery nie odpowiedziały — mogą być teraz offline.';
+      'Serwery partnerskie nie odpowiedziały — mogą być teraz offline.';
 
   @override
   String get discoverPeersNothingNew =>
-      'Nic nowego dla tego utworu na serwerach twoich peerów.';
+      'Nic nowego dla tego utworu na twoich serwerach partnerskich.';
 
   @override
   String get autoDjSonicTitle => 'Podobieństwo brzmienia';
@@ -1955,7 +1956,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedBanner =>
-      'Wybierz utwór startowy — stuknij dowolny utwór w bibliotece';
+      'Wybierz utwór startowy — dotknij dowolnego utworu w bibliotece';
 
   @override
   String get autoDjSonicSeedSearchHint => 'Szukaj utworu…';
@@ -2018,11 +2019,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPlayPathTo => 'Odtwórz ścieżkę do…';
 
   @override
-  String get pathScreenTitle => 'Ścieżka dźwiękowa';
+  String get pathScreenTitle => 'Ścieżka brzmieniowa';
 
   @override
   String get pathStartNotAnalyzed =>
-      'Utwór startowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
+      'Utwór początkowy nie został jeszcze przeanalizowany — poczekaj na skan odkrywania lub wybierz inny.';
 
   @override
   String get pathEndNotAnalyzed =>
@@ -2032,7 +2033,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get pathStartSong => 'Utwór początkowy';
 
   @override
-  String get pathEndSong => 'Utwór końcowy';
+  String get pathEndSong => 'Utwór docelowy';
 
   @override
   String get pathLength => 'Długość';
@@ -2067,11 +2068,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get pathPickBannerStart =>
-      'Wybierz utwór początkowy — stuknij dowolny utwór w bibliotece';
+      'Wybierz utwór początkowy — dotknij dowolnego utworu w bibliotece';
 
   @override
   String get pathPickBannerEnd =>
-      'Wybierz utwór docelowy — stuknij dowolny utwór w bibliotece';
+      'Wybierz utwór docelowy — dotknij dowolnego utworu w bibliotece';
 
   @override
   String get pathNothingPlaying => 'Nic nie jest odtwarzane';
@@ -2111,15 +2112,15 @@ class AppLocalizationsPl extends AppLocalizations {
       'Kolor akcentu wyróżnia przyciski, suwaki i elementy sterowania odtwarzacza. Dotknij jednego, aby go wypróbować.';
 
   @override
-  String get setupVisualizerTitle => 'Prawdziwy dźwięk dla wizualizacji';
+  String get setupVisualizerTitle => 'Rzeczywisty dźwięk dla wizualizatora';
 
   @override
   String get setupVisualizerBody =>
-      'Wizualizacja używa danych syntetycznych, dopóki ta opcja nie zostanie włączona.';
+      'Wizualizator używa danych syntetycznych, dopóki ta opcja nie zostanie włączona.';
 
   @override
   String get setupVisualizerWarning =>
-      'Włączenie tej opcji prosi o uprawnienie do mikrofonu — Android wymaga go od aplikacji, które dekodują strumień dźwięku urządzenia (a wizualizacja to robi).';
+      'Włączenie tej opcji prosi o uprawnienie do mikrofonu — Android wymaga go od aplikacji, które dekodują strumień dźwięku urządzenia (a wizualizator to robi).';
 
   @override
   String get setupPlaybackTitle => 'Gdy dotkniesz utworu';
@@ -2129,7 +2130,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get setupVisualizerNoMic =>
-      'mStream nigdy nie używa Twojego mikrofonu.';
+      'mStream nigdy nie używa twojego mikrofonu.';
 
   @override
   String get playlistEmpty => 'Playlista jest pusta';
@@ -2157,7 +2158,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wybierz losowy utwór z biblioteki i buduj od niego.';
 
   @override
-  String get autoDjStartPick => 'Wybiorę sam';
+  String get autoDjStartPick => 'Wybiorę samodzielnie';
 
   @override
   String get autoDjStartPickSub =>
@@ -2172,7 +2173,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get autoDjStartPickBanner =>
-      'Wybierz pierwszy utwór — stuknij dowolny utwór w bibliotece';
+      'Wybierz pierwszy utwór — dotknij dowolnego utworu w bibliotece';
 
   @override
   String get autoDjOnEmptyQueue => 'Przy pustej kolejce';
@@ -2592,7 +2593,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationUnavailableNote =>
-      'Komponent iroh nie ma kompilacji dla systemu/procesora tego serwera, więc punkt federacji nie może tu działać.';
+      'Komponent iroh nie ma kompilacji dla systemu/procesora tego serwera, więc punkt końcowy federacji nie może tu działać.';
 
   @override
   String get federationTurnedOn => 'Federacja jest włączona';
@@ -2618,13 +2619,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationConnectedRelay => 'Połączono z przekaźnikiem';
 
   @override
-  String get federationNotRunning => 'Punkt federacji nie działa';
+  String get federationNotRunning => 'Punkt końcowy nie działa';
 
   @override
-  String get federationEndpointId => 'Identyfikator punktu';
+  String get federationEndpointId => 'Identyfikator punktu końcowego';
 
   @override
-  String get federationEndpointCopied => 'Skopiowano identyfikator punktu';
+  String get federationEndpointCopied =>
+      'Skopiowano identyfikator punktu końcowego';
 
   @override
   String get federationPairingRequestsSection => 'Prośby o parowanie';
@@ -2671,11 +2673,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String federationRequestYouOffered(String libraries) {
-    return 'Zaoferowano $libraries';
+    return 'Oferujesz $libraries';
   }
 
   @override
-  String get federationRequestYouOfferedNothing => 'Niczego nie zaoferowano';
+  String get federationRequestYouOfferedNothing => 'Niczego nie oferujesz';
 
   @override
   String get federationReqSending => 'wysyłanie…';
@@ -2788,7 +2790,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationExactNumbers => 'Dokładne wartości';
 
   @override
-  String get federationPresets => 'Ustawienia gotowe';
+  String get federationPresets => 'Gotowe ustawienia';
 
   @override
   String get federationLimitStreamRate => 'Prędkość strumienia';
@@ -2797,7 +2799,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationLimitPerDay => 'Dziennie';
 
   @override
-  String get federationLimitStreams => 'Strumienie jednocześnie';
+  String get federationLimitStreams => 'Jednoczesne strumienie';
 
   @override
   String get federationLimitExpires => 'Wygasa';
@@ -2814,6 +2816,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count dni',
+      many: '$count dni',
       few: '$count dni',
       one: '1 dzień',
     );
@@ -2849,6 +2852,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count strumieni',
+      many: '$count strumieni',
       few: '$count strumienie',
       one: '1 strumień',
     );
@@ -2872,6 +2876,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: 'za $count dni',
+      many: 'za $count dni',
       few: 'za $count dni',
       one: 'za 1 dzień',
     );
@@ -2884,6 +2889,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: 'za $count godzin',
+      many: 'za $count godzin',
       few: 'za $count godziny',
       one: 'za 1 godzinę',
     );
@@ -2900,7 +2906,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationStreamsField => 'Maks. strumieni (0 = bez limitu)';
 
   @override
-  String get federationExpiresField => 'Wygasa za dni (0 = nigdy)';
+  String get federationExpiresField => 'Ważność w dniach (0 = nigdy)';
 
   @override
   String get federationCreateTicket => 'Utwórz bilet';
@@ -2930,7 +2936,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationTicketWarning =>
-      'Każdy, kto ma ten bilet, może czytać te biblioteki, dopóki nie zostanie użyty lub unieważniony. Wyślij go prywatnym kanałem — przejmuje go pierwszy serwer, który go użyje.';
+      'Każdy, kto ma ten bilet, może czytać te biblioteki, dopóki nie zostanie zrealizowany lub unieważniony. Wyślij go prywatnym kanałem — przejmuje go pierwszy serwer, który go użyje.';
 
   @override
   String get federationCopyTicket => 'Kopiuj bilet';
@@ -2943,11 +2949,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationTicketRevokeNote =>
-      'Unieważnij w dowolnej chwili w sekcji Federacja. Jeśli znajomy przeinstalował serwer, „Zresetuj użycie” pozwoli użyć biletu ponownie.';
+      'Unieważnij w dowolnej chwili w sekcji Federacja. Jeśli znajomy przeinstalował serwer, „Zresetuj realizację” pozwoli zrealizować bilet ponownie.';
 
   @override
   String get federationTicketNotRunning =>
-      'Punkt federacji nie działa, więc nie ma jeszcze biletu do wysłania. Włącz federację i wróć.';
+      'Punkt końcowy federacji nie działa, więc nie ma jeszcze biletu do wysłania. Włącz federację i wróć.';
 
   @override
   String federationShareMessage(String libraries, String ticket) {
@@ -2958,10 +2964,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationShareSubject => 'Bilet federacji mStream';
 
   @override
-  String get federationKeyClaimed => 'użyty';
+  String get federationKeyClaimed => 'zrealizowany';
 
   @override
-  String get federationKeyNotClaimed => 'jeszcze nieużyty';
+  String get federationKeyNotClaimed => 'jeszcze niezrealizowany';
 
   @override
   String federationKeyTodayUsage(String amount) {
@@ -2974,22 +2980,22 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get federationKeyNeverUsed => 'Nigdy nieużyty';
+  String get federationKeyNeverUsed => 'Nigdy nieużywany';
 
   @override
   String federationKeyClaimedAgo(String ago) {
-    return 'Użyty $ago';
+    return 'Zrealizowany $ago';
   }
 
   @override
-  String get federationResetBinding => 'Zresetuj użycie';
+  String get federationResetBinding => 'Zresetuj realizację';
 
   @override
   String get federationResetBindingNote =>
-      'Znajomy przeinstalował serwer? Pozwól użyć biletu ponownie.';
+      'Znajomy przeinstalował serwer? Pozwól zrealizować bilet ponownie.';
 
   @override
-  String get federationBindingReset => 'Bilet można użyć ponownie';
+  String get federationBindingReset => 'Bilet można zrealizować ponownie';
 
   @override
   String get federationRevoke => 'Unieważnij';
@@ -3105,7 +3111,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get federationLibrariesYouCanRead => 'Biblioteki, które możesz czytać';
 
   @override
-  String get federationDiscoverySection => 'Wykrywanie';
+  String get federationDiscoverySection => 'Odkrywanie';
 
   @override
   String get federationAskPeerSimilar => 'Pytaj ten serwer o podobną muzykę';
@@ -3130,7 +3136,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationAutoDjNotCandidateNote =>
-      'Potrzebny serwer, który odpowiada na dobór dźwiękowy';
+      'Potrzebny serwer, który obsługuje dobór po brzmieniu';
 
   @override
   String get federationTest => 'Testuj';
@@ -3208,7 +3214,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationDiscoveryFailed =>
-      'Nie udało się zmienić ustawienia wykrywania.';
+      'Nie udało się zmienić ustawienia odkrywania.';
 
   @override
   String get agoJustNow => 'przed chwilą';
@@ -3219,6 +3225,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count min temu',
+      many: '$count min temu',
       few: '$count min temu',
       one: '1 min temu',
     );
@@ -3231,6 +3238,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count godz. temu',
+      many: '$count godz. temu',
       few: '$count godz. temu',
       one: '1 godz. temu',
     );
@@ -3243,6 +3251,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count dni temu',
+      many: '$count dni temu',
       few: '$count dni temu',
       one: '1 dzień temu',
     );
@@ -3270,7 +3279,8 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count sąsiadów',
-      few: '$count sąsiadów',
+      many: '$count sąsiadów',
+      few: '$count sąsiedzi',
       one: '1 sąsiad',
     );
     return '$_temp0';
@@ -3333,9 +3343,10 @@ class AppLocalizationsPl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'do przeszukania, $count bibliotek',
-      few: 'do przeszukania, $count biblioteki',
-      one: 'do przeszukania, 1 biblioteka',
+      other: 'przeszukiwalne, $count bibliotek',
+      many: 'przeszukiwalne, $count bibliotek',
+      few: 'przeszukiwalne, $count biblioteki',
+      one: 'przeszukiwalne, 1 biblioteka',
     );
     return '$_temp0';
   }
@@ -3365,18 +3376,20 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Otwiera Odkrywanie dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+      many:
+          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       few:
-          'Otwiera Odkrywanie dla granego utworu · podpowiedzi z $count pobranych bibliotek',
+          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z $count pobranych bibliotek',
       one:
-          'Otwiera Odkrywanie dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
+          'Otwiera ekran Odkrywaj dla granego utworu · podpowiedzi z 1 pobranej biblioteki',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Najpierw coś odtwórz — Odkrywanie podąża za bieżącym utworem';
+      'Najpierw coś odtwórz — ekran Odkrywaj podąża za bieżącym utworem';
 
   @override
   String get p2pNewArtistsOnlySub =>
@@ -3390,7 +3403,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get p2pNoServersYet =>
-      'Nie usłyszano jeszcze żadnego serwera — dodaj jeden biletem znajomego albo daj gossipowi minutę.';
+      'Nie usłyszano jeszcze żadnego serwera — dodaj jeden biletem znajomego albo daj sieci minutę.';
 
   @override
   String p2pHiddenIncompatible(int count) {
@@ -3398,6 +3411,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count serwerów ukrytych — niezgodny model',
+      many: '$count serwerów ukrytych — niezgodny model',
       few: '$count serwery ukryte — niezgodny model',
       one: '1 serwer ukryty — niezgodny model',
     );
@@ -3427,6 +3441,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count utworów',
+      many: '$count utworów',
       few: '$count utwory',
       one: '1 utwór',
     );
@@ -3439,7 +3454,8 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count seederów',
-      few: '$count seederów',
+      many: '$count seederów',
+      few: '$count seederzy',
       one: '1 seeder',
     );
     return '$_temp0';
@@ -3485,7 +3501,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get p2pJoinTitle => 'Polecenia z bibliotek innych osób';
+  String get p2pJoinTitle => 'Rekomendacje z bibliotek innych osób';
 
   @override
   String get p2pWhatShared => 'Co jest udostępniane';
@@ -3589,7 +3605,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get p2pNotDownloaded => 'Nie pobrano';
 
   @override
-  String get p2pNotDownloadedSub => 'Pobierz, aby przeszukiwać ją z Odkrywania';
+  String get p2pNotDownloadedSub =>
+      'Pobierz, aby przeszukiwać ją z ekranu Odkrywaj';
 
   @override
   String get p2pDownload => 'Pobierz';
@@ -3617,6 +3634,8 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other:
+          'Rotacja zwalnia najrzadziej używane migawki po $count dniach; przypięta zostaje.',
+      many:
           'Rotacja zwalnia najrzadziej używane migawki po $count dniach; przypięta zostaje.',
       few:
           'Rotacja zwalnia najrzadziej używane migawki po $count dniach; przypięta zostaje.',
@@ -3819,7 +3838,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get p2pTicketNotReady =>
-      'Sidecar jeszcze nie działa, więc nie ma jeszcze biletu do udostępnienia.';
+      'Sidecar jeszcze nie działa, więc nie ma biletu do udostępnienia.';
 
   @override
   String get p2pSettingsTitle => 'Ustawienia sieci';
@@ -3869,6 +3888,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count serwerów',
+      many: '$count serwerów',
       few: '$count serwerów',
       one: '1 serwera',
     );
@@ -3888,10 +3908,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get p2pMeshSection => 'Sieć';
 
   @override
-  String get p2pCommunitySeeds => 'Seedy społeczności';
+  String get p2pCommunitySeeds => 'Serwery startowe społeczności';
 
   @override
-  String get p2pCommunitySeedsOn => 'Start przez publiczne serwery seed';
+  String get p2pCommunitySeedsOn => 'Rozruch przez publiczne serwery startowe';
 
   @override
   String get p2pCommunitySeedsOff =>
@@ -3903,6 +3923,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count zablokowanych serwerów',
+      many: '$count zablokowanych serwerów',
       few: '$count zablokowane serwery',
       one: '1 zablokowany serwer',
       zero: 'Brak zablokowanych serwerów',
@@ -3935,6 +3956,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count próśb o federację czeka',
+      many: '$count próśb o federację czeka',
       few: '$count prośby o federację czekają',
       one: '1 prośba o federację czeka',
     );
@@ -3951,6 +3973,7 @@ class AppLocalizationsPl extends AppLocalizations {
       count,
       locale: localeName,
       other: 'Czeka $count próśb o federację',
+      many: 'Czeka $count próśb o federację',
       few: 'Czekają $count prośby o federację',
       one: 'Czeka prośba o federację',
     );
@@ -3967,7 +3990,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get federationInboxChannelDescription =>
-      'Na jednym z Twoich serwerów pojawiła się prośba o udostępnienie bibliotek';
+      'Na jednym z twoich serwerów pojawiła się prośba o udostępnienie bibliotek';
 
   @override
   String get federationNotifyTitle => 'Powiadamiaj o prośbach';

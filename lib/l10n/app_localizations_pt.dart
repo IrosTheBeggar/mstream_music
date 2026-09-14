@@ -54,7 +54,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
       zero: 'Nenhuma faixa',
     );
     return '$_temp0';
@@ -276,14 +276,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Busca título, artista e capa de cada música ao navegar pelos arquivos do servidor. Desligado, mostra os nomes brutos dos arquivos (mais rápido em pastas enormes).';
 
   @override
-  String get settingsLetterStrip => 'Limite do scrubber de letras';
+  String get settingsLetterStrip => 'Limite da barra alfabética';
 
   @override
   String get settingsLetterStripSubtitle =>
-      'Mostra a barra de navegação rápida A-Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
+      'Mostra a barra de navegação rápida A–Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
 
   @override
-  String get settingsLetterStripSide => 'Lado da barra';
+  String get settingsLetterStripSide => 'Lado da barra alfabética';
 
   @override
   String get settingsLetterStripSideSubtitle =>
@@ -322,7 +322,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get visualizerTapHint =>
-      'Toque = próxima predefinição · pressione e segure para fechar';
+      'Toque = próxima predefinição · seta de voltar (canto superior esquerdo) ou pressione e segure para sair';
 
   @override
   String get visualizerFailed => 'Falha ao iniciar o visualizador';
@@ -530,7 +530,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas',
-      one: '1 música',
+      one: '$count música',
     );
     return '$_temp0 de $url';
   }
@@ -680,7 +680,7 @@ class AppLocalizationsPt extends AppLocalizations {
       minutes,
       locale: localeName,
       other: 'Temporizador definido para $minutes minutos',
-      one: 'Temporizador definido para 1 minuto',
+      one: 'Temporizador definido para $minutes minuto',
     );
     return '$_temp0';
   }
@@ -738,7 +738,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$count de $total servidores participando — aos demais falta discovery, um modelo de embeddings compatível ou uma versão de servidor recente o bastante';
+    return '$count de $total servidores participando — aos demais falta a descoberta, um modelo de embeddings compatível ou uma versão de servidor recente o bastante';
   }
 
   @override
@@ -757,7 +757,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas',
-      one: '1 música',
+      one: '$count música',
     );
     return '$_temp0';
   }
@@ -963,7 +963,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count downloads iniciados',
-      one: '1 download iniciado',
+      one: '$count download iniciado',
     );
     return '$_temp0';
   }
@@ -974,7 +974,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas adicionadas à fila',
-      one: '1 música adicionada à fila',
+      one: '$count música adicionada à fila',
     );
     return '$_temp0';
   }
@@ -1009,7 +1009,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
     );
     return '$_temp0';
   }
@@ -1092,7 +1092,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count bibliotecas compartilhadas',
-      one: '1 biblioteca compartilhada',
+      one: '$count biblioteca compartilhada',
     );
     return '$_temp0';
   }
@@ -1134,7 +1134,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'Movimentação concluída — $count arquivos ignorados (sem suporte no destino)',
       one:
-          'Movimentação concluída — 1 arquivo ignorado (sem suporte no destino)',
+          'Movimentação concluída — $count arquivo ignorado (sem suporte no destino)',
     );
     return '$_temp0';
   }
@@ -1156,7 +1156,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas serão baixadas para reprodução offline.',
-      one: '1 faixa será baixada para reprodução offline.',
+      one: '$count faixa será baixada para reprodução offline.',
     );
     return '$_temp0';
   }
@@ -1201,7 +1201,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count arquivos serão baixados.',
-      one: '1 arquivo será baixado.',
+      one: '$count arquivo será baixado.',
     );
     return '$_temp0';
   }
@@ -1314,7 +1314,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count itens',
-      one: '1 item',
+      one: '$count item',
     );
     return '$_temp0';
   }
@@ -1368,7 +1368,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'Os $count arquivos baixados deste servidor ($size) estão em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
       one:
-          'O 1 arquivo baixado deste servidor ($size) está em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
+          'O arquivo baixado deste servidor ($size) está em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
     );
     return '$_temp0';
   }
@@ -1607,7 +1607,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get diagnosticsEmpty => 'Ainda não há registros';
 
   @override
-  String get storageAppExternal => 'App externo';
+  String get storageAppExternal => 'Externo do app';
 
   @override
   String get storageAppSdCard => 'Cartão SD do app';
@@ -1624,7 +1624,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Adicione os seus próprios arquivos .glsl à rotação do motor Shader.';
+      'Adicione os seus próprios arquivos .glsl à rotação do motor de shaders.';
 
   @override
   String get importedShadersRescan => 'Reanalisar pasta';
@@ -1638,7 +1638,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor Shader está ativo.';
+      'Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor de shaders está ativo.';
 
   @override
   String get importedShadersRemove => 'Remover';
@@ -1681,14 +1681,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get irohPairingBody =>
-      'Ative “Remote Access” (acesso remoto) no servidor e depois cole o código de pareamento ou escaneie o QR.';
+      'Ative \"Remote Access\" (acesso remoto) no servidor e depois cole o código de pareamento ou escaneie o QR.';
 
   @override
   String get irohPairingCodeLabel => 'Código de pareamento';
 
   @override
   String get irohPairingCodeHint =>
-      'Cole o código do painel Remote Access do servidor';
+      'Cole o código do painel \"Remote Access\" do servidor';
 
   @override
   String get irohShowPairingCode => 'Mostrar código de pareamento';
@@ -1807,7 +1807,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get irohRepairBody =>
-      'O código de pareamento deste servidor mudou (o segredo foi renovado). Cole ou escaneie o novo código do painel Remote Access do servidor.';
+      'O código de pareamento deste servidor mudou (o segredo foi renovado). Cole ou escaneie o novo código do painel \"Remote Access\" do servidor.';
 
   @override
   String get irohRepairFailed =>
@@ -1870,7 +1870,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pathScanPending =>
-      'Este servidor ainda não analisou nenhuma música, por isso não há nada por onde traçar um percurso. Funciona depois de a análise de descoberta ser executada.';
+      'Este servidor ainda não analisou nenhuma música, por isso não há nada por onde traçar um caminho. Funciona depois de a análise de descoberta ser executada.';
 
   @override
   String get discoverNothingFound => 'Nenhuma correspondência encontrada.';
@@ -2105,7 +2105,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get setupPlaybackTitle => 'Ao tocar em uma música';
 
   @override
-  String get setupOfflineTitle => 'Mantenha sua fila offline';
+  String get setupOfflineTitle => 'Mantenha sua fila disponível offline';
 
   @override
   String get setupVisualizerNoMic => 'O mStream nunca usa seu microfone.';
@@ -2179,7 +2179,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Este servidor é a versão v$version. Alguns recursos exigem v5.5 ou mais recente e ficarão indisponíveis.';
+    return 'Este servidor está na v$version. Alguns recursos exigem a v5.5 ou mais recente e ficarão indisponíveis.';
   }
 
   @override
@@ -2188,7 +2188,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get autoDjSonicNeedsNewerServer =>
-      'Requer servidor 6.15.2 ou mais recente';
+      'Requer um servidor 6.15.2 ou mais recente';
 
   @override
   String get torrentScreenTitle => 'Adicionar torrent';
@@ -2730,7 +2730,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationShareBackNote =>
-      'Nada muda até você aceitar. Eles terão acesso somente leitura às bibliotecas que você marcar — pelo menos uma.';
+      'Nada é trocado até você aceitar. Eles terão acesso somente leitura às bibliotecas que você marcar — pelo menos uma.';
 
   @override
   String get federationTheirLimits => 'Os limites deles';
@@ -2798,7 +2798,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count dias',
-      one: '1 dia',
+      one: '$count dia',
     );
     return '$_temp0';
   }
@@ -2832,7 +2832,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count streams',
-      one: '1 stream',
+      one: '$count stream',
     );
     return '$_temp0';
   }
@@ -2854,7 +2854,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'em $count dias',
-      one: 'em 1 dia',
+      one: 'em $count dia',
     );
     return '$_temp0';
   }
@@ -2865,7 +2865,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'em $count horas',
-      one: 'em 1 hora',
+      one: 'em $count hora',
     );
     return '$_temp0';
   }
@@ -3199,7 +3199,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count min',
-      one: 'há 1 min',
+      one: 'há $count min',
     );
     return '$_temp0';
   }
@@ -3210,7 +3210,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count h',
-      one: 'há 1 h',
+      one: 'há $count h',
     );
     return '$_temp0';
   }
@@ -3221,7 +3221,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count dias',
-      one: 'há 1 dia',
+      one: 'há $count dia',
     );
     return '$_temp0';
   }
@@ -3247,7 +3247,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count vizinhos',
-      one: '1 vizinho',
+      one: '$count vizinho',
     );
     return '$_temp0';
   }
@@ -3310,7 +3310,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'pesquisáveis, $count bibliotecas',
-      one: 'pesquisáveis, 1 biblioteca',
+      one: 'pesquisáveis, $count biblioteca',
     );
     return '$_temp0';
   }
@@ -3343,7 +3343,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'Abre Descobrir para a faixa em reprodução · sugestões de $count bibliotecas baixadas',
       one:
-          'Abre Descobrir para a faixa em reprodução · sugestões de 1 biblioteca baixada',
+          'Abre Descobrir para a faixa em reprodução · sugestões de $count biblioteca baixada',
     );
     return '$_temp0';
   }
@@ -3372,7 +3372,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores ocultos — modelo incompatível',
-      one: '1 servidor oculto — modelo incompatível',
+      one: '$count servidor oculto — modelo incompatível',
     );
     return '$_temp0';
   }
@@ -3400,7 +3400,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
     );
     return '$_temp0';
   }
@@ -3411,7 +3411,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count seeders',
-      one: '1 seeder',
+      one: '$count seeder',
     );
     return '$_temp0';
   }
@@ -3563,7 +3563,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pNotDownloadedSub =>
-      'Baixe-o para pesquisá-lo a partir de Descobrir';
+      'Baixe-o para pesquisar nele a partir de Descobrir';
 
   @override
   String get p2pDownload => 'Baixar';
@@ -3593,7 +3593,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'A rotação libera os snapshots menos usados após $count dias; um fixado permanece.',
       one:
-          'A rotação libera os snapshots menos usados após 1 dia; um fixado permanece.',
+          'A rotação libera os snapshots menos usados após $count dia; um fixado permanece.',
     );
     return '$_temp0';
   }
@@ -3645,7 +3645,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pAskToFederateSub =>
-      'Envia uma solicitação pela rede — nada muda por enquanto';
+      'Envia uma solicitação pela rede — nada é trocado por enquanto';
 
   @override
   String get p2pOpen => 'Abrir';
@@ -3842,7 +3842,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores',
-      one: '1 servidor',
+      one: '$count servidor',
     );
     return '$_temp0';
   }
@@ -3876,7 +3876,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores bloqueados',
-      one: '1 servidor bloqueado',
+      one: '$count servidor bloqueado',
       zero: 'Nenhum servidor bloqueado',
     );
     return '$_temp0';
@@ -3906,7 +3906,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count solicitações de federação aguardando',
-      one: '1 solicitação de federação aguardando',
+      one: '$count solicitação de federação aguardando',
     );
     return '$_temp0';
   }

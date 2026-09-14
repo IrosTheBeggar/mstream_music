@@ -12,7 +12,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mainRemove => '移除';
 
   @override
-  String get playlistActionFailed => '无法保存播放列表——该名称可能已被使用。';
+  String get playlistActionFailed => '无法保存播放列表 — 该名称可能已被使用。';
 
   @override
   String get queueAddNext => '添加为下一首';
@@ -51,7 +51,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 个曲目',
+      other: '$count 首曲目',
       zero: '没有曲目',
     );
     return '$_temp0';
@@ -203,7 +203,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transcodeReloadQueueSubtitle =>
-      '更改转码设置时 — 勾选：立即重新加载整个队列（正在播放的曲目会短暂缓冲）；取消勾选：仅更改后续曲目，当前曲目保持不变播放完毕。';
+      '更改转码设置时 — 勾选：立即重新加载整个队列（正在播放的曲目会短暂缓冲）；取消勾选：仅更改后续曲目，当前曲目将按原样播放完毕。';
 
   @override
   String get settingsTapBehavior => '点击歌曲时';
@@ -212,7 +212,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStartupPage => '启动页面';
 
   @override
-  String get settingsStartupPageSubtitle => '在此浏览器视图打开应用；返回键回到浏览器。';
+  String get settingsStartupPageSubtitle => '启动应用时打开此浏览视图；按返回键回到浏览页面。';
 
   @override
   String get tapSubtitleAddToQueue => '点击歌曲会将其添加到队列。如果队列为空，则自动开始播放。';
@@ -235,7 +235,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get visualizerEngineSubtitleShaders =>
-      'Shadertoy 风格的片段着色器。更轻量、模块化 — 将 .glsl 文件放入 assets/shaders/ 即可扩展目录。';
+      'Shadertoy 风格的片段着色器。更轻量、模块化 — 将 .glsl 文件放入 assets/shaders/ 即可扩展着色器列表。';
 
   @override
   String get settingsVisualizerSource => '可视化音频来源';
@@ -269,10 +269,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '当列表项达到此数量或更多时显示 A-Z 快速滚动条。低于此数量时隐藏滚动条，且较长的文件夹/文件名会换行显示而非截断。设为 0 可始终显示滚动条。';
 
   @override
-  String get settingsLetterStripSide => '快速滑块位置';
+  String get settingsLetterStripSide => '字母滚动条位置';
 
   @override
-  String get settingsLetterStripSideSubtitle => 'A–Z 快速条显示在哪一侧。';
+  String get settingsLetterStripSideSubtitle => 'A–Z 字母滚动条显示在哪一侧。';
 
   @override
   String get settingsLetterStripLeft => '左侧';
@@ -303,7 +303,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get realAudioPermDenied => '权限被拒绝。将继续使用合成音频。';
 
   @override
-  String get visualizerTapHint => '点击 = 下一个预设 · 长按关闭';
+  String get visualizerTapHint => '点击 = 下一个预设 · 左上角返回箭头或长按可退出';
 
   @override
   String get visualizerFailed => '可视化启动失败';
@@ -619,7 +619,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sleepTimerTitle => '睡眠定时器';
 
   @override
-  String get sleepTimerHint => '选择一个时长，之后暂停播放。';
+  String get sleepTimerHint => '选择多长时间后暂停播放。';
 
   @override
   String get sleepTimerCustom => '自定义';
@@ -687,7 +687,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSectionShared => '本次会话';
 
   @override
-  String get autoDjSectionPerServer => '各个媒体库';
+  String get autoDjSectionPerServer => '各个曲库';
 
   @override
   String get autoDjEditingServer => '设置对象';
@@ -704,7 +704,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中有 $count 台参与 — 其余缺少 discovery、匹配的嵌入模型或足够新的服务器版本';
+    return '$total 台中有 $count 台参与 — 其余缺少发现功能、匹配的嵌入模型或足够新的服务器版本';
   }
 
   @override
@@ -715,7 +715,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get autoDjSongsPerFetchSubtitle =>
-      'Auto DJ 每次运行时加入队列的歌曲数量。连续性过滤器以获取时正在播放的歌曲为基准评判整批歌曲。';
+      'Auto DJ 每次运行时加入队列的歌曲数量。连贯性筛选会以获取时正在播放的歌曲为基准评判整批歌曲。';
 
   @override
   String autoDjSongsPerFetchValue(int count) {
@@ -838,7 +838,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjKeywordTitle => '关键词筛选';
 
   @override
-  String get autoDjKeywordSubtitle => '跳过标题、艺术家、专辑或文件路径中包含任一这些词语的曲目。';
+  String get autoDjKeywordSubtitle => '跳过标题、艺术家、专辑或文件路径中包含以下任一词语的曲目。';
 
   @override
   String get autoDjNoKeywords => '暂无关键词。在下方添加词语即可开始筛选。';
@@ -932,7 +932,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get tabBrowser => '媒体库';
+  String get tabBrowser => '浏览';
 
   @override
   String get tabQueue => '队列';
@@ -960,20 +960,20 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 个曲目',
+      other: '$count 首曲目',
     );
     return '$_temp0';
   }
 
   @override
-  String get autoDjEnabled => 'Auto DJ 已启用';
+  String get autoDjEnabled => 'Auto DJ 已开启';
 
   @override
-  String get autoDjDisabled => 'Auto DJ 已禁用';
+  String get autoDjDisabled => 'Auto DJ 已关闭';
 
   @override
   String autoDjEnabledFor(String url) {
-    return '已为 $url 启用 Auto DJ';
+    return '已为 $url 开启 Auto DJ';
   }
 
   @override
@@ -1015,7 +1015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserRated => '已评分';
 
   @override
-  String get browserSectionLibrary => '资料库';
+  String get browserSectionLibrary => '曲库';
 
   @override
   String get browserSectionListen => '聆听';
@@ -1040,7 +1040,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 个共享资料库',
+      other: '$count 个共享曲库',
     );
     return '$_temp0';
   }
@@ -1099,7 +1099,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '将下载 $count 个曲目以供离线播放。',
+      other: '将下载 $count 首曲目以供离线播放。',
     );
     return '$_temp0';
   }
@@ -1176,7 +1176,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dlFatSkip => '部分曲目无法保存到此卡上 — 它们的名称不受支持。将改为流式播放。';
 
   @override
-  String get dlServerGone => '该服务器已不再配置。';
+  String get dlServerGone => '该服务器已不在配置中。';
 
   @override
   String get dlStorageUnavailable =>
@@ -1425,8 +1425,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lanUnreachable => '无法在网络中连接到此服务器。';
 
   @override
-  String get lanNoCode =>
-      '此服务器已启用 Quick Connect，但未共享配对码。请以管理员身份登录，或请服务器运营者启用配对码共享。';
+  String get lanNoCode => '此服务器已开启快速连接，但未共享配对码。请以管理员身份登录，或请服务器运营者启用配对码共享。';
 
   @override
   String get settingsResumeQueue => '启动时恢复播放队列';
@@ -1450,7 +1449,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAutoDownloadCap => '自动下载上限';
 
   @override
-  String get settingsAutoDownloadCapSubtitle => '从正在播放的歌曲开始缓存这么多首；播放过的会随之删除。';
+  String get settingsAutoDownloadCapSubtitle =>
+      '从正在播放的歌曲起，提前缓存此数量的歌曲；播放过的会随之删除。';
 
   @override
   String get settingsAutoDownloadCapSubtitleUnlimited => '缓存整个播放队列（无限制）。';
@@ -1463,7 +1463,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
-      '从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 缓存整个队列。';
+      '从正在播放的歌曲算起，保留多少首已下载的队列歌曲。随着播放推进，落在后面的会被删除。设为 0 则缓存整个队列。';
 
   @override
   String get downloadWaitingWifi => '等待 Wi-Fi';
@@ -1487,7 +1487,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticsEnable => '启用日志记录';
 
   @override
-  String get diagnosticsHint => '日志仅保存在您的设备上。复制或分享前会隐藏令牌。';
+  String get diagnosticsHint => '日志仅保存在你的设备上。复制或分享前会隐藏令牌。';
 
   @override
   String get diagnosticsVerbose => '详细日志';
@@ -1526,8 +1526,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersTitle => '导入的着色器';
 
   @override
-  String get importedShadersSettingsSubtitle =>
-      '将你自己的 .glsl 文件加入 Shader 引擎的轮换。';
+  String get importedShadersSettingsSubtitle => '将你自己的 .glsl 文件加入着色器引擎的轮换。';
 
   @override
   String get importedShadersRescan => '重新扫描文件夹';
@@ -1540,7 +1539,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      '可通过 USB 或文件管理器访问（位于 Android/data 下）。Shader 引擎处于活动状态时，导入的着色器会加入轮换。';
+      '可通过 USB 或文件管理器访问（位于 Android/data 下）。着色器引擎处于活动状态时，导入的着色器会加入轮换。';
 
   @override
   String get importedShadersRemove => '移除';
@@ -1585,7 +1584,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohPairingCodeLabel => '配对码';
 
   @override
-  String get irohPairingCodeHint => '粘贴服务器 Remote Access 面板中的配对码';
+  String get irohPairingCodeHint => '粘贴服务器“Remote Access”面板中的配对码';
 
   @override
   String get irohShowPairingCode => '显示配对码';
@@ -1696,7 +1695,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get irohRepairBody =>
-      '此服务器的配对码已更改（其密钥已轮换）。请从服务器的 Remote Access 面板粘贴或扫描新的配对码。';
+      '此服务器的配对码已更改（其密钥已轮换）。请从服务器的“Remote Access”面板粘贴或扫描新的配对码。';
 
   @override
   String get irohRepairFailed => '无法使用该配对码连接 — 请检查后重试。';
@@ -1708,10 +1707,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohPathRelay => '中继';
 
   @override
-  String get irohCastUnavailable => '点对点 (iroh) 服务器不支持投放到外部设备 — 播放将保留在此设备上。';
+  String get irohCastUnavailable => '点对点（iroh）服务器不支持投放到外部设备 — 播放将保留在此设备上。';
 
   @override
-  String get irohShareUnavailable => '点对点 (iroh) 服务器不支持分享 — 它们没有可链接的公开地址。';
+  String get irohShareUnavailable => '点对点（iroh）服务器不支持分享 — 它们没有可链接的公开地址。';
 
   @override
   String get discoverTitle => '发现';
@@ -1729,7 +1728,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverFromNetwork => '来自网络';
 
   @override
-  String get discoverFromPeers => '来自伙伴服务器';
+  String get discoverFromPeers => '来自对等服务器';
 
   @override
   String get discoverQueueAll => '全部加入队列';
@@ -1769,16 +1768,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverOpenMusicBrainz => '在 MusicBrainz 中打开';
 
   @override
-  String get discoverNetworkWarmingUp => '暂无网络数据 — 发现其他服务器后，伙伴音乐库会在后台下载。';
+  String get discoverNetworkWarmingUp => '暂无网络数据 — 发现其他服务器后，对等服务器的曲库会在后台下载。';
 
   @override
-  String get discoverNetworkNothingNew => '这首歌没有新发现 — 网络中没有陌生的匹配项。';
+  String get discoverNetworkNothingNew => '这首歌没有新发现 — 网络中没有你尚未拥有的匹配歌曲。';
 
   @override
-  String get discoverPeersUnreachable => '伙伴服务器没有响应 — 它们现在可能离线。';
+  String get discoverPeersUnreachable => '对等服务器没有响应 — 它们现在可能离线。';
 
   @override
-  String get discoverPeersNothingNew => '伙伴服务器上没有这首歌的新发现。';
+  String get discoverPeersNothingNew => '对等服务器上没有这首歌的新发现。';
 
   @override
   String get autoDjSonicTitle => '声音相似度';
@@ -1807,7 +1806,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjSonicSeedNone => '未设置 — 以正在播放的歌曲作为会话基准。';
 
   @override
-  String get autoDjSonicSeedBanner => '选择种子歌曲——在曲库中点按任意曲目';
+  String get autoDjSonicSeedBanner => '选择种子歌曲 — 在曲库中点击任意曲目';
 
   @override
   String get autoDjSonicSeedSearchHint => '搜索歌曲…';
@@ -1867,16 +1866,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pathScreenTitle => '声音路径';
 
   @override
-  String get pathStartNotAnalyzed => '起始歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+  String get pathStartNotAnalyzed => '起点歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
 
   @override
-  String get pathEndNotAnalyzed => '目标歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
+  String get pathEndNotAnalyzed => '终点歌曲尚未分析 — 请等待发现扫描或选择其他歌曲。';
 
   @override
-  String get pathStartSong => '起始歌曲';
+  String get pathStartSong => '起点歌曲';
 
   @override
-  String get pathEndSong => '结束歌曲';
+  String get pathEndSong => '终点歌曲';
 
   @override
   String get pathLength => '长度';
@@ -1888,7 +1887,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pathSaveAsPlaylist => '保存为播放列表';
 
   @override
-  String get pathSetupHint => '选择起点和终点歌曲——两者之间的旅程会自动填充。';
+  String get pathSetupHint => '选择起点和终点歌曲 — 两者之间的旅程会自动填充。';
 
   @override
   String get pathNotSet => '未设置';
@@ -1909,10 +1908,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pathStartOver => '重新开始';
 
   @override
-  String get pathPickBannerStart => '选择起点歌曲——在曲库中点按任意曲目';
+  String get pathPickBannerStart => '选择起点歌曲 — 在曲库中点击任意曲目';
 
   @override
-  String get pathPickBannerEnd => '选择终点歌曲——在曲库中点按任意曲目';
+  String get pathPickBannerEnd => '选择终点歌曲 — 在曲库中点击任意曲目';
 
   @override
   String get pathNothingPlaying => '当前没有播放内容';
@@ -1947,7 +1946,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get setupAccentTitle => '选择你的颜色';
 
   @override
-  String get setupAccentBody => '强调色会用于按钮、滑块和播放器控件。点按任意一个即可试用。';
+  String get setupAccentBody => '强调色会用于按钮、滑块和播放器控件。点击任意一个即可试用。';
 
   @override
   String get setupVisualizerTitle => '为可视化效果使用真实音频';
@@ -1957,10 +1956,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get setupVisualizerWarning =>
-      '开启后会请求麦克风权限——Android 会向解码设备音频流的应用要求该权限（可视化效果正是如此）。';
+      '开启后会请求麦克风权限 — Android 会向解码设备音频流的应用要求该权限（可视化效果正是如此）。';
 
   @override
-  String get setupPlaybackTitle => '点按歌曲时';
+  String get setupPlaybackTitle => '点击歌曲时';
 
   @override
   String get setupOfflineTitle => '离线保留播放队列';
@@ -1976,11 +1975,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String albumDiscNumber(int n) {
-    return '第 $n 张';
+    return '第 $n 张碟';
   }
 
   @override
-  String get autoDjStartTitle => 'Auto DJ 从什么开始？';
+  String get autoDjStartTitle => 'Auto DJ 从哪首歌开始？';
 
   @override
   String get autoDjStartSubtitle => '队列为空，DJ 需要一首起始曲目。有队列时，它会直接沿用其中的内容。';
@@ -2004,7 +2003,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get autoDjStartRememberSub => '下次跳过此询问，始终以这种方式开始。';
 
   @override
-  String get autoDjStartPickBanner => '选择起始歌曲——在曲库中点按任意曲目';
+  String get autoDjStartPickBanner => '选择起始歌曲 — 在曲库中点击任意曲目';
 
   @override
   String get autoDjOnEmptyQueue => '队列为空时';
@@ -2072,7 +2071,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String torrentNotATorrent(String name) {
-    return '「$name」不是 .torrent 文件';
+    return '“$name”不是 .torrent 文件';
   }
 
   @override
@@ -2088,7 +2087,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentIntentTitle => '已接收种子';
 
   @override
-  String get torrentIntentBody => '将其添加到 mStream 服务器上的媒体库，或交给其他应用处理。';
+  String get torrentIntentBody => '将其添加到 mStream 服务器上的曲库，或交给其他应用处理。';
 
   @override
   String get torrentIntentAdd => '添加到 mStream';
@@ -2118,13 +2117,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentDetecting => '检测中…';
 
   @override
-  String get torrentDetectNoMetadata => '元数据不足——请手动填写';
+  String get torrentDetectNoMetadata => '元数据不足 — 请手动填写';
 
   @override
   String get torrentDetected => '已检测到元数据';
 
   @override
-  String get torrentDetectGuess => '推测结果——请核对各字段';
+  String get torrentDetectGuess => '推测结果 — 请核对各字段';
 
   @override
   String get torrentMetadataLabel => '元数据';
@@ -2183,7 +2182,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentPathEmpty => '目标路径为空';
 
   @override
-  String get torrentSeeded => '已在磁盘上——正在做种';
+  String get torrentSeeded => '已在磁盘上 — 正在做种';
 
   @override
   String get torrentAlreadyInClient => '已在种子客户端中';
@@ -2192,7 +2191,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentInvalidFile => '无效的种子文件';
 
   @override
-  String get torrentSeedCheckFailed => '无法检查已有文件——将重新下载';
+  String get torrentSeedCheckFailed => '无法检查已有文件 — 将重新下载';
 
   @override
   String get torrentPartialTitle => '部分文件已存在';
@@ -2214,16 +2213,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get torrentDownloadFresh => '仍然重新下载';
 
   @override
-  String get torrentMatchNoFolder => '该匹配没有文件夹名——请改用「仍然重新下载」';
+  String get torrentMatchNoFolder => '该匹配没有文件夹名 — 请改用“仍然重新下载”';
 
   @override
   String torrentAdded(String name) {
-    return '已添加「$name」';
+    return '已添加“$name”';
   }
 
   @override
   String torrentDuplicate(String name) {
-    return '「$name」已在客户端中';
+    return '“$name”已在客户端中';
   }
 
   @override
@@ -2586,13 +2585,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get federationPresets => '预设';
 
   @override
-  String get federationLimitStreamRate => '串流速率';
+  String get federationLimitStreamRate => '码率';
 
   @override
   String get federationLimitPerDay => '每日';
 
   @override
-  String get federationLimitStreams => '同时串流数';
+  String get federationLimitStreams => '并发流数';
 
   @override
   String get federationLimitExpires => '有效期';
@@ -2641,7 +2640,7 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count 路串流',
+      other: '$count 路并发流',
     );
     return '$_temp0';
   }
@@ -2678,13 +2677,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get federationStreamRateField => '串流速率（kbps，0 = 不限）';
+  String get federationStreamRateField => '码率（kbps，0 = 不限）';
 
   @override
   String get federationPerDayField => '每日配额（MB，0 = 不限）';
 
   @override
-  String get federationStreamsField => '最大串流数（0 = 不限）';
+  String get federationStreamsField => '最大并发流数（0 = 不限）';
 
   @override
   String get federationExpiresField => '有效天数（0 = 永不过期）';
@@ -2716,7 +2715,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get federationTicketWarning =>
-      '持有此票据的任何人都能读取这些曲库，直到它被兑换或撤销。请通过私密渠道发送 — 第一个使用它的服务器将占有它。';
+      '持有此票据的任何人都能读取这些曲库，直到它被兑换或撤销。请通过私密渠道发送 — 第一个使用它的服务器将完成兑换。';
 
   @override
   String get federationCopyTicket => '复制票据';
@@ -2763,7 +2762,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String federationKeyClaimedAgo(String ago) {
-    return '兑换于$ago';
+    return '$ago兑换';
   }
 
   @override
@@ -2904,7 +2903,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get federationAutoDjNotCandidate => '不是 Auto DJ 候选';
 
   @override
-  String get federationAutoDjNotCandidateNote => '需要能回应音色选曲的服务器';
+  String get federationAutoDjNotCandidateNote => '需要能回应声音相似度选曲的服务器';
 
   @override
   String get federationTest => '测试';
@@ -2922,7 +2921,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String federationCheckedAgo(String ago) {
-    return '检查于$ago';
+    return '$ago检查过';
   }
 
   @override
@@ -3061,10 +3060,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pStatusUnavailable => '此平台不可用';
 
   @override
-  String get p2pStatNeighbors => '网状邻居';
+  String get p2pStatNeighbors => '网状网络邻居';
 
   @override
-  String get p2pStatNeighborsSub => '活跃的 gossip 连接';
+  String get p2pStatNeighborsSub => '活跃的 gossip 协议连接';
 
   @override
   String get p2pStatKnown => '已知服务器';
@@ -3088,7 +3087,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get p2pStatTracks => '对等曲目';
+  String get p2pStatTracks => '对等服务器曲目';
 
   @override
   String p2pStatTracksSub(int count) {
@@ -3141,7 +3140,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pServersOnNetwork => '网络上的服务器';
 
   @override
-  String get p2pNoServersYet => '还没有听到任何服务器 — 用朋友的票据添加一个，或者给 gossip 一分钟。';
+  String get p2pNoServersYet => '还没有发现任何服务器 — 用朋友的票据添加一个，或者等 gossip 协议传播一分钟。';
 
   @override
   String p2pHiddenIncompatible(int count) {
@@ -3167,7 +3166,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String p2pOfflineFor(String ago) {
-    return '离线 $ago';
+    return '$ago离线';
   }
 
   @override
@@ -3209,7 +3208,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pChipFederated => '已联合';
 
   @override
-  String get p2pChipTheyAsked => '对方向你请求';
+  String get p2pChipTheyAsked => '对方已向你发出请求';
 
   @override
   String get p2pChipRequestSent => '已发送请求';
@@ -3225,7 +3224,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String p2pReconnectingBody(int n) {
-    return 'sidecar 已退出，正在重新启动（第 $n 次）— 无需操作。';
+    return 'P2P 辅助进程（sidecar）已退出，正在重新启动（第 $n 次） — 无需操作。';
   }
 
   @override
@@ -3253,7 +3252,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pServerName => '服务器名称';
 
   @override
-  String get p2pServerNameHint => '在 18,000 个“mStream”旁边再叫“mStream”，是最先要改的东西。';
+  String get p2pServerNameHint => '网络上已有 18,000 个叫“mStream”的服务器，这个名字是最先该改的。';
 
   @override
   String get p2pDescription => '描述';
@@ -3283,7 +3282,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String p2pInboxFailed(String error) {
-    return '发现已开启，但请求收件箱未能启动：$error';
+    return '发现功能已开启，但请求收件箱未能启动：$error';
   }
 
   @override
@@ -3291,7 +3290,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '未找到此平台的 p2p-sidecar 二进制文件，也没有可下载的版本 — 网络不可用。';
 
   @override
-  String get p2pWillDownloadNote => 'sidecar 尚未安装；加入时会先下载。';
+  String get p2pWillDownloadNote => 'P2P 辅助进程（sidecar）尚未安装；加入时会先下载。';
 
   @override
   String get p2pAdminOnlyNote => '只有服务器管理员可以加入。';
@@ -3415,7 +3414,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pForget => '忘记此服务器';
 
   @override
-  String get p2pForgetSub => '离线且未下载任何内容；再次听到时会回来';
+  String get p2pForgetSub => '已离线且未下载任何内容；再次发现时会重新出现';
 
   @override
   String p2pForgotten(String name) {
@@ -3543,7 +3542,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get p2pShareSubject => 'mStream 发现网络票据';
 
   @override
-  String get p2pTicketNotReady => 'sidecar 尚未运行，所以还没有可分享的票据。';
+  String get p2pTicketNotReady => 'P2P 辅助进程（sidecar）尚未运行，所以还没有可分享的票据。';
 
   @override
   String get p2pSettingsTitle => '网络设置';
@@ -3656,7 +3655,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get federationInboxBannerSub => '点按以接受或拒绝';
+  String get federationInboxBannerSub => '点击以接受或拒绝';
 
   @override
   String federationInboxNotificationTitle(int count) {
@@ -3670,14 +3669,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String federationInboxNotificationBody(String server) {
-    return '来自 $server。打开以接受或拒绝。';
+    return '在 $server 上。打开以接受或拒绝。';
   }
 
   @override
   String get federationInboxChannelName => '联合请求';
 
   @override
-  String get federationInboxChannelDescription => '你的某台服务器收到了共享媒体库的请求';
+  String get federationInboxChannelDescription => '你的某台服务器收到了共享曲库的请求';
 
   @override
   String get federationNotifyTitle => '有请求时通知我';
