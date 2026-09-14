@@ -58,11 +58,15 @@ class FakeDownloader implements Downloader {
   final Set<String> failFor = {};
   final Set<String> corruptFor = {};
   final Set<String> emptyFor = {};
+  /// Paths whose transfer dies halfway: half the bytes land, then an error.
+  final Set<String> partialFor = {};
+  /// Paths a call found a partial for, with its length — a resume.
+  final Map<String, int> resumedFrom = {};
   FakeDownloader(this.server);
 
   @override
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false, Tier? tier}) async {
+      {bool requiresWiFi = false, Tier? tier, int? modified}) async {
     calls.add(path);
     if (tier != null) tiers[path] = tier;
     if (failFor.contains(path)) throw const SocketException('boom');
@@ -73,7 +77,18 @@ class FakeDownloader implements Downloader {
         : emptyFor.contains(path)
             ? <int>[]
             : [...utf8.encode('${tier.id}:'), ...bytes];
-    await File(destination).writeAsBytes(corruptFor.contains(path) ? [...out, 0] : out);
+    final body = corruptFor.contains(path) ? [...out, 0] : out;
+    final dest = File(destination);
+    final have = await dest.exists() ? await dest.length() : 0;
+    if (have > 0) resumedFrom[path] = have;
+    if (partialFor.contains(path)) {
+      await dest.writeAsBytes(body.sublist(0, body.length ~/ 2));
+      throw const SocketException('cut off');
+    }
+    // Like the HTTP downloader: an original picks up where its partial stopped.
+    final resume = have > 0 && tier == null;
+    await dest.writeAsBytes(resume ? body.sublist(have) : body,
+        mode: resume ? FileMode.append : FileMode.write);
   }
 }
 
@@ -152,6 +167,9 @@ void main() {
     final narrowed = await runner().run(cfg);
     expect(narrowed.trashed, 1, reason: '/music/B/3.mp3 is no longer wanted');
     expect(File(local('/music/B/3.mp3')).existsSync(), isFalse);
+    expect(Directory(p.dirname(local('/music/B/3.mp3'))).existsSync(), isFalse,
+        reason: 'the emptied folder went with the file');
+    expect(Directory(cfg.mediaRoot).existsSync(), isTrue, reason: 'the root stays');
     expect(ix.localFile('s', '/music/B/3.mp3'), isNull);
     expect(ix.localCount('s'), 2);
   });
@@ -275,6 +293,35 @@ void main() {
     final retry = await runner().run(cfg);
     expect(retry.downloaded, 2);
     expect(ix.localFile('s', '/music/A/1.mp3')!.state, LocalState.ok);
+  });
+
+  test('an original that broke off mid-transfer keeps its partial and resumes next run', () async {
+    srv.put('/music/A/1.mp3', 'one-two-three-four');
+    dl.partialFor.add('/music/A/1.mp3');
+    var run = await runner().run(cfg);
+    expect(run.failed, 1);
+    expect(run.downloaded, 2);
+    final partials = Directory(cfg.tmpRoot).listSync();
+    expect(partials, hasLength(1), reason: 'only the broken transfer keeps a partial');
+    expect(File(partials.single.path).lengthSync(), 9);
+    expect(ix.localFile('s', '/music/A/1.mp3')!.state, LocalState.failed);
+
+    dl.partialFor.clear();
+    dl.calls.clear();
+    run = await runner().run(cfg);
+    expect(run.downloaded, 1);
+    expect(dl.resumedFrom, {'/music/A/1.mp3': 9});
+    expect(read('/music/A/1.mp3'), 'one-two-three-four');
+    expect(ix.localFile('s', '/music/A/1.mp3')!.state, LocalState.ok);
+    expect(Directory(cfg.tmpRoot).existsSync(), isFalse, reason: 'nothing left to resume');
+
+    // A copy that landed but failed its checks starts over: no partial kept.
+    srv.put('/music/A/1.mp3', 'uno', mtime: 1700000005000);
+    srv.revision = 'r2';
+    dl.corruptFor.add('/music/A/1.mp3');
+    run = await runner().run(cfg);
+    expect(run.failed, 1);
+    expect(Directory(cfg.tmpRoot).existsSync(), isFalse);
   });
 
   test('a checksum mismatch with the right size is caught', () async {
@@ -475,6 +522,9 @@ void main() {
     run = await runner().run(cfg);
     expect(run.trashed, 2);
     expect(File(ogg).existsSync(), isFalse);
+    expect(Directory(p.dirname(ogg)).existsSync(), isFalse, reason: 'emptied tier folder pruned');
+    expect(Directory(p.join(tmp.path, 'media-transcoded', tier, 's')).existsSync(), isTrue,
+        reason: 'the tier root stays');
     expect(read('/music/A/1.mp3'), 'uno');
     expect(ix.qualities('s'), isEmpty);
   });

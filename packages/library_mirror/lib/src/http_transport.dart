@@ -107,7 +107,12 @@ class HttpManifestClient implements ManifestClient {
 }
 
 /// Streams `/media/<path>` — or, for a tier, `/transcode/<path>` — straight
-/// to the destination file.
+/// to the destination file. An original whose destination already holds
+/// bytes (the partial of an interrupted run) is resumed with a `Range`
+/// request, guarded by `If-Range` on the server's mtime so a file that
+/// changed meanwhile comes back whole; the server's answer decides between
+/// appending (206), starting over (200) and dropping the partial (anything
+/// else).
 class HttpDownloader implements Downloader {
   final MirrorServer server;
   final http.Client client;
@@ -115,20 +120,45 @@ class HttpDownloader implements Downloader {
 
   @override
   Future<void> download(String path, String destination,
-      {bool requiresWiFi = false, Tier? tier}) async {
-    final url = tier == null ? server.media(path) : server.transcode(path, tier);
-    final res = await client.send(http.Request('GET', url)).timeout(_timeout);
-    if (res.statusCode != 200) {
+      {bool requiresWiFi = false, Tier? tier, int? modified}) async {
+    final file = File(destination);
+    final req = http.Request(
+        'GET', tier == null ? server.media(path) : server.transcode(path, tier));
+    var offset = 0;
+    if (tier == null && await file.exists()) {
+      offset = await file.length();
+      if (offset > 0) {
+        req.headers['Range'] = 'bytes=$offset-';
+        if (modified != null) {
+          req.headers['If-Range'] = HttpDate.format(
+              DateTime.fromMillisecondsSinceEpoch(modified, isUtc: true));
+        }
+      }
+    }
+    final res = await client.send(req).timeout(_timeout);
+    final resume = res.statusCode == 206 && offset > 0;
+    if (res.statusCode != 200 && !resume) {
       await res.stream.drain<void>();
+      // A partial the server would not resume from (416 — or mStream's 500
+      // for a range past the end) is discarded: the next run starts clean
+      // instead of asking the same question again.
+      if (offset > 0) await file.delete();
       throw HttpException(
           '${tier == null ? 'media' : 'transcode'}$path: HTTP ${res.statusCode}');
     }
-    final sink = File(destination).openWrite();
+    final sink =
+        file.openWrite(mode: resume ? FileMode.append : FileMode.write);
     try {
       await sink.addStream(res.stream);
-    } finally {
-      await sink.close();
+    } catch (_) {
+      // The bytes that arrived stay on disk for a later resume; the sink is
+      // already dead, so close it quietly and surface the transfer error.
+      try {
+        await sink.close();
+      } catch (_) {}
+      rethrow;
     }
+    await sink.close();
   }
 }
 

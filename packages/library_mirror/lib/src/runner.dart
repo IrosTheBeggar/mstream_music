@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -122,6 +123,10 @@ class MirrorRunner {
   final Future<int?> Function(String dir)? freeSpace;
   final DateTime Function() now;
 
+  /// Partials (by file name) that broke off mid-transfer this run and stay
+  /// in the temp tree for the next run to resume.
+  final Set<String> _keepPartials = {};
+
   MirrorRunner({
     required this.index,
     required this.manifest,
@@ -136,6 +141,7 @@ class MirrorRunner {
       {String trigger = 'manual',
       void Function(MirrorProgress)? onProgress,
       bool Function()? isCancelled}) async {
+    _keepPartials.clear();
     final started = now().millisecondsSinceEpoch;
     var downloaded = 0, replaced = 0, renamed = 0, trashed = 0, failed = 0;
     var unchanged = 0, conflicts = 0, bytes = 0;
@@ -406,6 +412,7 @@ class MirrorRunner {
     final to = c.localPathFor(r.to.path, quality: quality);
     await Directory(p.dirname(to)).create(recursive: true);
     await _move(File(r.from.localPath), to);
+    await _pruneEmpty(p.dirname(r.from.localPath), _rootFor(c, quality));
     index.removeLocal(c.server, r.from.path, quality: quality);
     index.upsertLocal(_row(c, r.to, to,
         size: r.from.size, origin: LocalOrigin.mirror, quality: quality));
@@ -423,6 +430,7 @@ class MirrorRunner {
           tier == null ? rel : p.join(tier.id, tier.pathFor(rel)));
       await Directory(p.dirname(dest)).create(recursive: true);
       await _move(src, dest);
+      await _pruneEmpty(p.dirname(src.path), _rootFor(c, f.quality));
     }
     index.removeLocal(c.server, f.path, quality: f.quality);
   }
@@ -431,7 +439,9 @@ class MirrorRunner {
   /// server's hash is one), stamp the server's mtime, then rename into place
   /// — the old copy of a replace goes to the trash first. A tier's transcode
   /// has no size or hash to check against: it only has to be non-empty.
-  /// Returns the bytes that landed.
+  /// The temp file is named for the transfer, so an original that broke off
+  /// is resumed next run by a downloader that can. Returns the bytes that
+  /// landed.
   Future<int> _fetch(MirrorConfig c, RemoteTrack t,
       {required String quality,
       required bool replace,
@@ -440,10 +450,12 @@ class MirrorRunner {
     final dest = c.localPathFor(t.path, quality: quality);
     final old = index.localFile(c.server, t.path, quality: quality);
     await Directory(c.tmpRoot).create(recursive: true);
-    final tmp = p.join(c.tmpRoot, '${_randomId()}.part');
+    final tmp = _tmpFor(c, t, quality);
+    var landed = false;
     try {
       await downloader.download(t.path, tmp,
-          requiresWiFi: c.wifiOnly, tier: tier);
+          requiresWiFi: c.wifiOnly, tier: tier, modified: t.modified);
+      landed = true;
       final f = File(tmp);
       final size = await f.length();
       if (tier == null) {
@@ -473,9 +485,16 @@ class MirrorRunner {
           quality: quality));
       return size;
     } catch (e) {
-      try {
-        await File(tmp).delete();
-      } catch (_) {}
+      // A transfer that broke off leaves its partial for the next run to
+      // resume (originals only: a transcode has no byte range to ask for);
+      // a copy that landed but failed its checks starts over.
+      if (!landed && tier == null && await _hasBytes(tmp)) {
+        _keepPartials.add(p.basename(tmp));
+      } else {
+        try {
+          await File(tmp).delete();
+        } catch (_) {}
+      }
       index.upsertLocal(LocalFile(
         server: c.server,
         path: t.path,
@@ -534,6 +553,45 @@ class MirrorRunner {
         verifiedAt: now().millisecondsSinceEpoch,
       );
 
+  /// The partial file of one transfer — stable across runs, so an
+  /// interrupted original resumes where it stopped.
+  static String _tmpFor(MirrorConfig c, RemoteTrack t, String quality) =>
+      p.join(c.tmpRoot, '${md5.convert(utf8.encode('$quality:${t.path}'))}.part');
+
+  static Future<bool> _hasBytes(String path) async {
+    try {
+      return await File(path).length() > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The tree a copy of [quality] lives in — what [_pruneEmpty] keeps.
+  static String _rootFor(MirrorConfig c, String quality) {
+    final tier = Tier.parse(quality);
+    return tier == null
+        ? c.mediaRoot
+        : p.join(c.transcodedRoot, tier.id, c.server);
+  }
+
+  /// Removes [dir] and then each parent a move left empty, stopping at
+  /// [root] (kept even when empty) — so the Local Files browser never lists
+  /// hollow album folders.
+  static Future<void> _pruneEmpty(String dir, String root) async {
+    var d = p.normalize(dir);
+    final stop = p.normalize(root);
+    while (p.isWithin(stop, d)) {
+      final entity = Directory(d);
+      try {
+        if (!await entity.exists() || !await entity.list().isEmpty) return;
+        await entity.delete();
+      } catch (_) {
+        return;
+      }
+      d = p.dirname(d);
+    }
+  }
+
   /// rename(), with a copy + delete fallback for a target on another volume.
   static Future<void> _move(File from, String to) async {
     try {
@@ -560,9 +618,19 @@ class MirrorRunner {
     }
   }
 
+  /// Clears the temp tree — except the partials of originals that broke off
+  /// mid-transfer this run, which the next run resumes.
   Future<void> _purgeTmp(MirrorConfig c) async {
     final root = Directory(c.tmpRoot);
-    if (await root.exists()) await root.delete(recursive: true);
+    if (!await root.exists()) return;
+    if (_keepPartials.isEmpty) {
+      await root.delete(recursive: true);
+      return;
+    }
+    await for (final e in root.list()) {
+      if (_keepPartials.contains(p.basename(e.path))) continue;
+      await e.delete(recursive: true);
+    }
   }
 
   static String _bucketName(DateTime t) =>
