@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "ローカルコピー",
   "browserOfflineNone": "コピーはまだありません",
   "browserOfflineOn": "ローカルコピーを使用中",
-  "browserOfflineAuto": "サーバーに接続できません"
+  "browserOfflineAuto": "サーバーに接続できません",
+  "offlineHeaderStatus": "{files} ファイル · {size}"
 }

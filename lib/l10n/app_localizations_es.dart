@@ -4083,4 +4083,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => 'Servidor inaccesible';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files archivos · $size';
+  }
 }

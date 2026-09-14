@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "Lokale Kopie",
   "browserOfflineNone": "Noch keine Kopie",
   "browserOfflineOn": "Lokale Kopie in Gebrauch",
-  "browserOfflineAuto": "Server nicht erreichbar"
+  "browserOfflineAuto": "Server nicht erreichbar",
+  "offlineHeaderStatus": "{files} Dateien · {size}"
 }

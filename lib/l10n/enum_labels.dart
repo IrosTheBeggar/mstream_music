@@ -166,6 +166,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserBrowseOffline;
     case 'Back online':
       return l.browserBackOnline;
+    case 'Offline copy':
+      return l.offlineChip;
     case 'Auto DJ':
       return l.autoDjTitle;
     case 'Sonic path':

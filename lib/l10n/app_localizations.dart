@@ -6725,6 +6725,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server unreachable'**
   String get browserOfflineAuto;
+
+  /// No description provided for @offlineHeaderStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{files} files · {size}'**
+  String offlineHeaderStatus(int files, String size);
 }
 
 class _AppLocalizationsDelegate

@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "Kopia lokalna",
   "browserOfflineNone": "Brak kopii",
   "browserOfflineOn": "Używana kopia lokalna",
-  "browserOfflineAuto": "Serwer niedostępny"
+  "browserOfflineAuto": "Serwer niedostępny",
+  "offlineHeaderStatus": "Pliki: {files} · {size}"
 }

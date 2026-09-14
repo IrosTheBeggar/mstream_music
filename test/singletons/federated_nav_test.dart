@@ -64,7 +64,7 @@ void main() {
     expect(_headers(), ['Library', 'Listen', 'Server', 'Offline']);
   });
 
-  test('the Offline card names the way back while the copy is browsed', () {
+  test('the Offline card says what state the copy is in', () {
     final s = Server('https://home.example.com', null, null, 'JWT', 'home');
     manager.serverList.add(s);
     manager.currentServer = s;
@@ -77,12 +77,30 @@ void main() {
 
     s.browseOffline = true;
     BrowserManager().goToNavScreen();
-    expect(card().name, 'Back online');
+    expect(card().name, 'Browse offline', reason: 'the way back lives on the landing');
     expect(card().subtext, 'offline:on');
 
     s.offlineAuto = true;
     BrowserManager().goToNavScreen();
     expect(card().subtext, 'offline:auto');
+  });
+
+  test('the offline landing lists what the copy can browse, headed by its status, ending with the way back', () {
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home');
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    BrowserManager().goToOfflineScreen(s);
+    final list = BrowserManager().browserList;
+    expect(BrowserManager.isHomeList(list), isFalse, reason: 'a list frame, not the home grid');
+    expect(list.first.type, 'offlineHeader');
+    expect(list.first.subtext, 'offlineFiles:0:0', reason: 'no index in this test');
+    expect(_sections(),
+        ['fileExplorer', 'playlists', 'albums', 'artists', 'rated', 'recent', 'backOnline']);
+    expect(BrowserManager().listName, 'Offline copy');
+    expect(BrowserManager().browserCache, hasLength(2));
+    BrowserManager().popBrowser();
+    expect(BrowserManager.isHomeList(BrowserManager().browserList), isTrue);
   });
 
   test('a server that advertises the path route gets Sonic path under Listen',

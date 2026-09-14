@@ -419,9 +419,9 @@ class BrowserManager {
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
       ],
       // OFFLINE: the library copy on this device — its settings, and the
-      // switch between browsing the server and browsing the copy (A4). The
-      // second card names the way back while the copy is being browsed. A
-      // federated peer has no copy: the manifest is off its allowlist.
+      // offline landing ([goToOfflineScreen]); the second card's second line
+      // says what state the copy is in. A federated peer has no copy: the
+      // manifest is off its allowlist.
       if (!federated) ...[
         header('Offline'),
         DisplayItem(server, 'Library copy', 'execAction', 'libraryCopy',
@@ -429,14 +429,10 @@ class BrowserManager {
             null),
         DisplayItem(
             server,
-            server.browseOffline ? 'Back online' : 'Browse offline',
+            'Browse offline',
             'execAction',
             'browseOffline',
-            Icon(
-                server.browseOffline
-                    ? Icons.cloud_outlined
-                    : Icons.cloud_off_outlined,
-                color: VelvetColors.textSecondary),
+            Icon(Icons.cloud_off_outlined, color: VelvetColors.textSecondary),
             server.browseOffline
                 ? (server.offlineAuto ? 'offline:auto' : 'offline:on')
                 : ((LibraryIndexManager().index?.remoteCount(server.localname) ??
@@ -473,6 +469,38 @@ class BrowserManager {
         Icon(Icons.add, color: VelvetColors.textSecondary), 'Click here to add server'));
 
     _browserStream.sink.add(browserList);
+  }
+
+  /// The offline landing: a list frame of what the copy on this device can
+  /// browse, headed by a status row and ending with the way back. Its first
+  /// row is not an action, so [isHomeList] leaves it a list rather than the
+  /// home grid; the action rows dispatch exactly like the home's, and the
+  /// browse flag routes them to the index.
+  void goToOfflineScreen(Server server) {
+    final ix = LibraryIndexManager().index;
+    final files = ix?.localCount(server.localname) ?? 0;
+    final bytes = ix?.localBytes(server.localname) ?? 0;
+    Icon icon(IconData d) => Icon(d, color: VelvetColors.textSecondary);
+    addListToStack([
+      DisplayItem(server, 'Offline copy', 'offlineHeader', null,
+          Icon(Icons.cloud_off_outlined, color: VelvetColors.primary),
+          'offlineFiles:$files:$bytes'),
+      DisplayItem(server, 'File Explorer', 'execAction', 'fileExplorer',
+          Icon(Icons.folder, color: VelvetColors.warning), null),
+      DisplayItem(server, 'Playlists', 'execAction', 'playlists',
+          icon(Icons.queue_music), null),
+      DisplayItem(server, 'Albums', 'execAction', 'albums', icon(Icons.album),
+          null),
+      DisplayItem(server, 'Artists', 'execAction', 'artists',
+          icon(Icons.library_music), null),
+      DisplayItem(server, 'Rated', 'execAction', 'rated', icon(Icons.star),
+          null),
+      DisplayItem(server, 'Recent', 'execAction', 'recent',
+          icon(Icons.query_builder), null),
+      DisplayItem(server, 'Back online', 'execAction', 'backOnline',
+          icon(Icons.cloud_outlined), null),
+    ]);
+    setBrowserLabel('Offline copy');
   }
 
   void addListToStack(List<DisplayItem> newList,
@@ -641,6 +669,10 @@ class BrowserManager {
 
     if (BrowserManager().browserCache.length == 1) {
       _browserLabel.sink.add('Browser');
+    } else if (browserList.isNotEmpty &&
+        browserList.first.type == 'offlineHeader') {
+      // Back on the offline landing: the label a deeper list set goes.
+      setBrowserLabel('Offline copy');
     }
   }
 

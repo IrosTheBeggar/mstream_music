@@ -146,7 +146,13 @@ class _BrowserState extends State<Browser> {
     if (browserList[index].type == 'execAction' &&
         browserList[index].data == 'browseOffline') {
       final s = browserList[index].server;
-      if (s != null) _toggleBrowseOffline(s, context);
+      if (s != null) _openOffline(s, context);
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'backOnline') {
+      final s = browserList[index].server;
+      if (s != null) _leaveOffline(s);
       return;
     }
 
@@ -792,11 +798,9 @@ class _BrowserState extends State<Browser> {
             }));
   }
 
-  /// The Offline card: browse the library copy on this device instead of
-  /// the server, or go back. Going back also sends the writes queued while
-  /// offline and pings the server, so one that is still unreachable flips
-  /// straight back by itself.
-  void _toggleBrowseOffline(Server s, BuildContext context) {
+  /// The Offline card: switch to the library copy on this device (a choice
+  /// that sticks until "Back online") and open the offline landing.
+  void _openOffline(Server s, BuildContext context) {
     if (!s.browseOffline) {
       final rows = LibraryIndexManager().index?.remoteCount(s.localname) ?? 0;
       if (rows == 0) {
@@ -807,12 +811,19 @@ class _BrowserState extends State<Browser> {
       }
       s.browseOffline = true;
       s.offlineAuto = false;
-    } else {
-      s.browseOffline = false;
-      s.offlineAuto = false;
-      unawaited(OutboxManager().replay(s));
-      unawaited(ServerManager().getServerPaths(s));
+      ServerManager().notifyServerChanged();
     }
+    BrowserManager().goToOfflineScreen(s);
+  }
+
+  /// The landing's last row: back to the server. Sends the writes queued
+  /// while offline and pings the server, so one that is still unreachable
+  /// flips straight back by itself.
+  void _leaveOffline(Server s) {
+    s.browseOffline = false;
+    s.offlineAuto = false;
+    unawaited(OutboxManager().replay(s));
+    unawaited(ServerManager().getServerPaths(s));
     ServerManager().notifyServerChanged();
     BrowserManager().goToNavScreen();
   }
