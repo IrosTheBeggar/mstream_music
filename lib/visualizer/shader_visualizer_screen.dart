@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../native/audio_capture.dart';
 import '../native/viz_decoder.dart';
 import '../singletons/media.dart';
@@ -286,7 +287,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
             child: IconButton(
               icon: const Icon(Icons.close),
               color: Colors.white70,
-              tooltip: 'Close visualizer',
+              tooltip: AppLocalizations.of(context).visualizerClose,
               onPressed: () => Navigator.of(context).maybePop(),
             ),
           ),
@@ -317,7 +318,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 color: Colors.white70,
-                tooltip: 'Previous preset',
+                tooltip: AppLocalizations.of(context).visualizerPreviousPreset,
                 onPressed: _prev,
               ),
               Expanded(
@@ -333,7 +334,7 @@ class _ShaderVisualizerScreenState extends State<ShaderVisualizerScreen>
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 color: Colors.white70,
-                tooltip: 'Next preset',
+                tooltip: AppLocalizations.of(context).visualizerNextPreset,
                 onPressed: _next,
               ),
             ],

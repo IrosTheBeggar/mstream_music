@@ -343,6 +343,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visualizerTapToClose => 'Tap anywhere to close';
 
   @override
+  String get visualizerClose => 'Close visualizer';
+
+  @override
+  String get visualizerPreviousPreset => 'Previous preset';
+
+  @override
+  String get visualizerNextPreset => 'Next preset';
+
+  @override
   String get visualizerUnsupported =>
       'Visualizer is currently only supported on Android.';
 
@@ -1410,10 +1419,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stream the visualizer to the TV · Chromecast only';
 
   @override
+  String get castThisDevice => 'This device';
+
+  @override
   String get visualizerNoKnobs => 'This shader exposes no knobs.';
 
   @override
   String get nowPlaying => 'Now Playing';
+
+  @override
+  String get settingsPlayerLayout => 'Now Playing layout';
 
   @override
   String get playerLayoutSmall => 'Small';

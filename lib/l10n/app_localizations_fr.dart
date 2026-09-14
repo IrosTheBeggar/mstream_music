@@ -105,16 +105,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get songInfoTitle => 'Infos du morceau';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => 'Paroles';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'Aucunes paroles trouvées pour ce morceau';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => 'Impossible de charger les paroles';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => 'Réessayer';
 
   @override
   String get eqTitle => 'Égaliseur';
@@ -343,6 +343,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get visualizerTapToClose => 'Touchez n\'importe où pour fermer';
+
+  @override
+  String get visualizerClose => 'Fermer le visualiseur';
+
+  @override
+  String get visualizerPreviousPreset => 'Préréglage précédent';
+
+  @override
+  String get visualizerNextPreset => 'Préréglage suivant';
 
   @override
   String get visualizerUnsupported =>
@@ -580,10 +589,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get fieldPassword => 'Mot de passe';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'Afficher le mot de passe';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'Masquer le mot de passe';
 
   @override
   String get fieldSdCard => 'Télécharger sur la carte SD';
@@ -919,34 +928,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get browserSearchHint => 'Rechercher dans la base de données';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => 'Où rechercher';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => 'Rechercher dans';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'Artistes';
 
   @override
   String get searchCategoryAlbums => 'Albums';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => 'Morceaux';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'Fichiers';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => 'Paroles';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return 'Résultats pour « $term »';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return 'Recherche dans : $categories';
   }
 
   @override
@@ -1255,11 +1264,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get storageSdCard => 'Carte SD';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'Enregistrer sur la carte SD';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'Enregistré dans le dossier de l\'application sur la carte SD — aucune autorisation requise, mais supprimé si vous désinstallez l\'application.';
 
   @override
   String get storageHelpAppLocal =>
@@ -1425,10 +1434,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Diffuser le visualiseur sur le téléviseur · Chromecast uniquement';
 
   @override
+  String get castThisDevice => 'Cet appareil';
+
+  @override
   String get visualizerNoKnobs => 'Ce shader n’expose aucun réglage.';
 
   @override
   String get nowPlaying => 'Lecture en cours';
+
+  @override
+  String get settingsPlayerLayout => 'Disposition de la lecture en cours';
 
   @override
   String get playerLayoutSmall => 'Petit';
@@ -1525,7 +1540,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Attend une connexion Wi-Fi avant de télécharger les pistes de la file d\'attente.';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => 'Limite de téléchargement automatique';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1536,10 +1551,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Met en cache toute la file d\'attente (sans limite).';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => 'Illimité';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => 'Nombre de morceaux';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1572,11 +1587,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les journaux restent sur votre appareil. Les jetons sont masqués avant copie ou partage.';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => 'Journalisation détaillée';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'Journalise aussi les événements très fréquents, comme les changements de focus de l\'application. Utile uniquement pour diagnostiquer un problème de lecture.';
 
   @override
   String get diagnosticsCopy => 'Copier';
@@ -1643,19 +1658,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'N’est peut-être pas un shader valide — aucun point d’entrée mainImage/main.';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads =>
+      'Importer des .glsl depuis Téléchargements';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return '$count shader(s) importé(s) depuis Téléchargements';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone =>
+      'Aucun nouveau fichier .glsl dans Téléchargements';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'L\'autorisation de stockage est nécessaire pour lire Téléchargements';
 
   @override
   String get addServerTabUrl => 'URL du serveur';
@@ -2386,28 +2403,28 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => 'Serveur en lecture seule';
 
   @override
   String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+      'Les listes de lecture et les notes restent sur votre propre serveur';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      'Les morceaux d\'un serveur partagé ne peuvent pas être partagés d\'ici — ils sont dans la bibliothèque de quelqu\'un d\'autre.';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => 'Oublier';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'Masquer dans le sélecteur';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'Afficher dans le sélecteur';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return 'Plus partagé par $parent';
   }
 
   @override

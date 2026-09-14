@@ -107,16 +107,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get songInfoTitle => 'Сведения о треке';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => 'Текст песни';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'Текст для этого трека не найден';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => 'Не удалось загрузить текст';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => 'Повторить';
 
   @override
   String get eqTitle => 'Эквалайзер';
@@ -346,6 +346,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get visualizerTapToClose => 'Нажмите в любом месте, чтобы закрыть';
+
+  @override
+  String get visualizerClose => 'Закрыть визуализацию';
+
+  @override
+  String get visualizerPreviousPreset => 'Предыдущий пресет';
+
+  @override
+  String get visualizerNextPreset => 'Следующий пресет';
 
   @override
   String get visualizerUnsupported =>
@@ -586,10 +595,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fieldPassword => 'Пароль';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'Показать пароль';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'Скрыть пароль';
 
   @override
   String get fieldSdCard => 'Загружать на SD-карту';
@@ -927,34 +936,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserSearchHint => 'Поиск в базе данных';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => 'Где искать';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => 'Искать в';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'Исполнители';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => 'Альбомы';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => 'Треки';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'Файлы';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => 'Тексты песен';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return 'Результаты по запросу «$term»';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return 'Поиск в: $categories';
   }
 
   @override
@@ -1276,11 +1285,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get storageSdCard => 'SD-карта';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'Сохранять на SD-карту';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'Хранится в папке приложения на SD-карте — разрешение не нужно, но при удалении приложения файлы удаляются.';
 
   @override
   String get storageHelpAppLocal =>
@@ -1451,10 +1460,16 @@ class AppLocalizationsRu extends AppLocalizations {
       'Транслировать визуализацию на ТВ · только Chromecast';
 
   @override
+  String get castThisDevice => 'Это устройство';
+
+  @override
   String get visualizerNoKnobs => 'Этот шейдер не предоставляет регуляторов.';
 
   @override
   String get nowPlaying => 'Сейчас играет';
+
+  @override
+  String get settingsPlayerLayout => 'Макет экрана «Сейчас играет»';
 
   @override
   String get playerLayoutSmall => 'Маленький';
@@ -1549,7 +1564,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ожидает подключения к Wi-Fi перед загрузкой треков из очереди.';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => 'Лимит автозагрузки';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1560,10 +1575,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Кэшировать всю очередь (без ограничений).';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => 'Без ограничений';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => 'Количество треков';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1596,11 +1611,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Журналы хранятся на вашем устройстве. Токены скрываются перед копированием или отправкой.';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => 'Подробное журналирование';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'Также записывает частые события, например смену фокуса приложения. Нужно только при диагностике проблем с воспроизведением.';
 
   @override
   String get diagnosticsCopy => 'Копировать';
@@ -1666,19 +1681,21 @@ class AppLocalizationsRu extends AppLocalizations {
       'Возможно, это недопустимый шейдер — нет точки входа mainImage/main.';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads =>
+      'Импортировать .glsl из «Загрузок»';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return 'Импортировано шейдеров из «Загрузок»: $count';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone =>
+      'В «Загрузках» нет новых файлов .glsl';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'Для чтения «Загрузок» нужно разрешение на доступ к хранилищу';
 
   @override
   String get addServerTabUrl => 'URL сервера';
@@ -2400,32 +2417,32 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverPickerVia(String parent) {
-    return 'via $parent';
+    return 'через $parent';
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => 'Сервер только для чтения';
 
   @override
   String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+      'Плейлисты и оценки остаются на вашем сервере';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      'Треки с общего сервера нельзя отправить отсюда — они находятся в чужой библиотеке.';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => 'Забыть';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'Скрыть из списка серверов';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'Показать в списке серверов';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return '$parent больше не делится этим сервером';
   }
 
   @override

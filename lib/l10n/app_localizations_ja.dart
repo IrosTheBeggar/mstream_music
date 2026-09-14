@@ -103,16 +103,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get songInfoTitle => '曲の情報';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => '歌詞';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'この曲の歌詞が見つかりません';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => '歌詞を読み込めませんでした';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => '再試行';
 
   @override
   String get eqTitle => 'イコライザー';
@@ -334,6 +334,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get visualizerTapToClose => 'どこかをタップして閉じる';
+
+  @override
+  String get visualizerClose => 'ビジュアライザーを閉じる';
+
+  @override
+  String get visualizerPreviousPreset => '前のプリセット';
+
+  @override
+  String get visualizerNextPreset => '次のプリセット';
 
   @override
   String get visualizerUnsupported => 'ビジュアライザーは現在 Android でのみ対応しています。';
@@ -563,10 +572,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fieldPassword => 'パスワード';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'パスワードを表示';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'パスワードを隠す';
 
   @override
   String get fieldSdCard => 'SD カードにダウンロード';
@@ -887,34 +896,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserSearchHint => 'データベースを検索';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => '検索対象を選択';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => '検索対象';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'アーティスト';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => 'アルバム';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => '曲';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'ファイル';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => '歌詞';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return '「$term」の検索結果';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return '検索対象: $categories';
   }
 
   @override
@@ -1208,11 +1217,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storageSdCard => 'SD カード';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'SD カードに保存';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'SD カード内のアプリ用フォルダに保存されます — 権限は不要ですが、アプリをアンインストールすると削除されます。';
 
   @override
   String get storageHelpAppLocal => 'アプリ内に保存されます。アンインストールまたはアプリのデータ消去で削除されます。';
@@ -1367,10 +1376,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get castVisualizerSubtitle => 'ビジュアライザーをテレビにストリーミング · Chromecast のみ';
 
   @override
+  String get castThisDevice => 'この端末';
+
+  @override
   String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
 
   @override
   String get nowPlaying => '再生中';
+
+  @override
+  String get settingsPlayerLayout => '再生中画面のレイアウト';
 
   @override
   String get playerLayoutSmall => '小';
@@ -1461,7 +1476,7 @@ class AppLocalizationsJa extends AppLocalizations {
       'キュー内の曲のダウンロードをWi-Fi接続まで待機します。';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => '自動ダウンロードの上限';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1471,10 +1486,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsAutoDownloadCapSubtitleUnlimited => 'キュー全体を保存します（制限なし）。';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => '無制限';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => '曲数';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1505,11 +1520,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get diagnosticsHint => 'ログは端末内にのみ保存されます。コピーや共有の前にトークンは隠されます。';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => '詳細ログ';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'アプリのフォーカス変更など、頻繁に発生するイベントも記録します。再生の問題を診断するときにのみ必要です。';
 
   @override
   String get diagnosticsCopy => 'コピー';
@@ -1574,19 +1589,19 @@ class AppLocalizationsJa extends AppLocalizations {
       '有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads => 'ダウンロードから .glsl をインポート';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return 'ダウンロードから $count 個のシェーダーをインポートしました';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone => 'ダウンロードに新しい .glsl ファイルはありません';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'ダウンロードを読み取るにはストレージの権限が必要です';
 
   @override
   String get addServerTabUrl => 'サーバー URL';
@@ -2265,32 +2280,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverPickerVia(String parent) {
-    return 'via $parent';
+    return '$parent 経由';
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => '読み取り専用サーバー';
 
   @override
-  String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+  String get browserFederatedReadOnlyNote => 'プレイリストと評価は自分のサーバーに残ります';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      '共有サーバー上の曲はここから共有できません — 他の人のライブラリにあるためです。';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => '忘れる';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'セレクターで非表示にする';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'セレクターに表示する';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return '$parent による共有は終了しました';
   }
 
   @override

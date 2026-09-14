@@ -102,16 +102,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get songInfoTitle => '歌曲信息';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => '歌词';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => '未找到这首歌曲的歌词';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => '无法加载歌词';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => '重试';
 
   @override
   String get eqTitle => '均衡器';
@@ -324,6 +324,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get visualizerTapToClose => '点击任意位置关闭';
+
+  @override
+  String get visualizerClose => '关闭可视化';
+
+  @override
+  String get visualizerPreviousPreset => '上一个预设';
+
+  @override
+  String get visualizerNextPreset => '下一个预设';
 
   @override
   String get visualizerUnsupported => '可视化目前仅支持 Android。';
@@ -552,10 +561,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fieldPassword => '密码';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => '显示密码';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => '隐藏密码';
 
   @override
   String get fieldSdCard => '下载到 SD 卡';
@@ -872,34 +881,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserSearchHint => '搜索数据库';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => '选择搜索范围';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => '搜索范围';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => '艺术家';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => '专辑';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => '歌曲';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => '文件';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => '歌词';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return '“$term”的搜索结果';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return '搜索范围：$categories';
   }
 
   @override
@@ -1189,11 +1198,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get storageSdCard => 'SD 卡';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => '保存到 SD 卡';
 
   @override
-  String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+  String get storageSdSwitchSubtitle => '保存在 SD 卡的应用文件夹中 — 无需权限，但卸载应用时会被删除。';
 
   @override
   String get storageHelpAppLocal => '保存在应用内部。卸载或清除应用时会被删除。';
@@ -1341,10 +1349,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get castVisualizerSubtitle => '将可视化效果投放到电视 · 仅限 Chromecast';
 
   @override
+  String get castThisDevice => '此设备';
+
+  @override
   String get visualizerNoKnobs => '此着色器没有可调节的旋钮。';
 
   @override
   String get nowPlaying => '正在播放';
+
+  @override
+  String get settingsPlayerLayout => '正在播放布局';
 
   @override
   String get playerLayoutSmall => '小';
@@ -1433,7 +1447,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsOfflineQueueWifiOnlySubtitle => '等待连接 Wi-Fi 后再下载队列中的曲目。';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => '自动下载上限';
 
   @override
   String get settingsAutoDownloadCapSubtitle => '从正在播放的歌曲开始缓存这么多首；播放过的会随之删除。';
@@ -1442,10 +1456,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAutoDownloadCapSubtitleUnlimited => '缓存整个播放队列（无限制）。';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => '不限';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => '歌曲数量';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1476,11 +1490,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticsHint => '日志仅保存在您的设备上。复制或分享前会隐藏令牌。';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => '详细日志';
 
   @override
-  String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+  String get diagnosticsVerboseHint => '同时记录应用焦点变化等高频事件。仅在诊断播放问题时需要。';
 
   @override
   String get diagnosticsCopy => '复制';
@@ -1543,19 +1556,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importedShadersInvalid => '可能不是有效的着色器 — 没有 mainImage/main 入口点。';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads => '从“下载”导入 .glsl';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return '已从“下载”导入 $count 个着色器';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone => '“下载”中没有新的 .glsl 文件';
 
   @override
-  String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+  String get importedShadersDownloadsNoPermission => '读取“下载”需要存储权限';
 
   @override
   String get addServerTabUrl => '服务器地址';
@@ -2216,32 +2228,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String serverPickerVia(String parent) {
-    return 'via $parent';
+    return '经由 $parent';
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => '只读服务器';
 
   @override
-  String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+  String get browserFederatedReadOnlyNote => '播放列表和评分保留在你自己的服务器上';
 
   @override
-  String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+  String get federatedShareUnavailable => '共享服务器上的歌曲无法从这里分享 — 它们位于他人的曲库中。';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => '忘记';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => '在选择器中隐藏';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => '在选择器中显示';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return '$parent 已停止共享';
   }
 
   @override

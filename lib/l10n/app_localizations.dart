@@ -696,6 +696,24 @@ abstract class AppLocalizations {
   /// **'Tap anywhere to close'**
   String get visualizerTapToClose;
 
+  /// Tooltip on the shader visualizer's close (X) button.
+  ///
+  /// In en, this message translates to:
+  /// **'Close visualizer'**
+  String get visualizerClose;
+
+  /// Tooltip on the shader visualizer's previous-preset arrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous preset'**
+  String get visualizerPreviousPreset;
+
+  /// Tooltip on the shader visualizer's next-preset arrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Next preset'**
+  String get visualizerNextPreset;
+
   /// Shown when the visualizer runs on a non-Android platform.
   ///
   /// In en, this message translates to:
@@ -2436,6 +2454,12 @@ abstract class AppLocalizations {
   /// **'Stream the visualizer to the TV · Chromecast only'**
   String get castVisualizerSubtitle;
 
+  /// The local (phone) target in the cast picker — playback stays on this device instead of a Chromecast/DLNA renderer.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get castThisDevice;
+
   /// No description provided for @visualizerNoKnobs.
   ///
   /// In en, this message translates to:
@@ -2447,6 +2471,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Now Playing'**
   String get nowPlaying;
+
+  /// Settings row title for the Now Playing panel size picker (Small / Medium / Large / XL).
+  ///
+  /// In en, this message translates to:
+  /// **'Now Playing layout'**
+  String get settingsPlayerLayout;
 
   /// No description provided for @playerLayoutSmall.
   ///
