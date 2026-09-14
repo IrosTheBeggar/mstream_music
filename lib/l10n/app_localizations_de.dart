@@ -4079,15 +4079,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get browserBackOnline => 'Wieder online';
 
   @override
-  String get browserOfflineReady =>
-      'Alben, Künstler und Ordner von diesem Gerät';
+  String get browserOfflineReady => 'Lokale Kopie';
 
   @override
-  String get browserOfflineNone => 'Noch nichts auf diesem Gerät';
+  String get browserOfflineNone => 'Noch keine Kopie';
 
   @override
-  String get browserOfflineOn => 'Zeigt die Kopie auf diesem Gerät';
+  String get browserOfflineOn => 'Lokale Kopie in Gebrauch';
 
   @override
-  String get browserOfflineAuto => 'Der Server ist nicht erreichbar';
+  String get browserOfflineAuto => 'Server nicht erreichbar';
 }

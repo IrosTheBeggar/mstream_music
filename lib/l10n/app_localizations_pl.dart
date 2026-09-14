@@ -4094,15 +4094,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get browserBackOnline => 'Wróć online';
 
   @override
-  String get browserOfflineReady =>
-      'Albumy, wykonawcy i foldery z tego urządzenia';
+  String get browserOfflineReady => 'Kopia lokalna';
 
   @override
-  String get browserOfflineNone => 'Na tym urządzeniu nie ma jeszcze nic';
+  String get browserOfflineNone => 'Brak kopii';
 
   @override
-  String get browserOfflineOn => 'Wyświetlana jest kopia z tego urządzenia';
+  String get browserOfflineOn => 'Używana kopia lokalna';
 
   @override
-  String get browserOfflineAuto => 'Nie można połączyć się z serwerem';
+  String get browserOfflineAuto => 'Serwer niedostępny';
 }

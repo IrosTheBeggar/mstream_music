@@ -3873,13 +3873,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserBackOnline => 'オンラインに戻る';
 
   @override
-  String get browserOfflineReady => 'この端末のアルバム、アーティスト、フォルダー';
+  String get browserOfflineReady => 'ローカルコピー';
 
   @override
-  String get browserOfflineNone => 'この端末にはまだ何もありません';
+  String get browserOfflineNone => 'コピーはまだありません';
 
   @override
-  String get browserOfflineOn => 'この端末のコピーを表示中';
+  String get browserOfflineOn => 'ローカルコピーを使用中';
 
   @override
   String get browserOfflineAuto => 'サーバーに接続できません';

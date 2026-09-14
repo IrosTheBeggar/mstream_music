@@ -4078,15 +4078,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get browserBackOnline => 'Revenir en ligne';
 
   @override
-  String get browserOfflineReady =>
-      'Albums, artistes et dossiers de cet appareil';
+  String get browserOfflineReady => 'Copie locale';
 
   @override
-  String get browserOfflineNone => 'Rien sur cet appareil pour l\'instant';
+  String get browserOfflineNone => 'Pas encore de copie';
 
   @override
-  String get browserOfflineOn => 'Affiche la copie de cet appareil';
+  String get browserOfflineOn => 'Copie locale en cours';
 
   @override
-  String get browserOfflineAuto => 'Le serveur est injoignable';
+  String get browserOfflineAuto => 'Serveur injoignable';
 }

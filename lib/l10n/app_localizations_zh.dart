@@ -3803,14 +3803,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get browserBackOnline => '恢复在线';
 
   @override
-  String get browserOfflineReady => '此设备上的专辑、艺术家和文件夹';
+  String get browserOfflineReady => '本地副本';
 
   @override
-  String get browserOfflineNone => '此设备上还没有内容';
+  String get browserOfflineNone => '还没有副本';
 
   @override
-  String get browserOfflineOn => '正在浏览此设备上的副本';
+  String get browserOfflineOn => '正在使用本地副本';
 
   @override
-  String get browserOfflineAuto => '无法连接到服务器';
+  String get browserOfflineAuto => '无法连接服务器';
 }

@@ -6705,25 +6705,25 @@ abstract class AppLocalizations {
   /// No description provided for @browserOfflineReady.
   ///
   /// In en, this message translates to:
-  /// **'Albums, artists and folders from this device'**
+  /// **'Local copy'**
   String get browserOfflineReady;
 
   /// No description provided for @browserOfflineNone.
   ///
   /// In en, this message translates to:
-  /// **'Nothing on this device yet'**
+  /// **'No copy yet'**
   String get browserOfflineNone;
 
   /// No description provided for @browserOfflineOn.
   ///
   /// In en, this message translates to:
-  /// **'Browsing the copy on this device'**
+  /// **'Using the local copy'**
   String get browserOfflineOn;
 
   /// No description provided for @browserOfflineAuto.
   ///
   /// In en, this message translates to:
-  /// **'The server can\'t be reached'**
+  /// **'Server unreachable'**
   String get browserOfflineAuto;
 }
 

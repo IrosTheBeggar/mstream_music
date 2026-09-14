@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "Офлайн",
   "browserBrowseOffline": "Просмотр офлайн",
   "browserBackOnline": "Снова онлайн",
-  "browserOfflineReady": "Альбомы, исполнители и папки с этого устройства",
-  "browserOfflineNone": "На этом устройстве пока ничего нет",
-  "browserOfflineOn": "Показана копия на этом устройстве",
+  "browserOfflineReady": "Локальная копия",
+  "browserOfflineNone": "Копии пока нет",
+  "browserOfflineOn": "Используется локальная копия",
   "browserOfflineAuto": "Сервер недоступен"
 }

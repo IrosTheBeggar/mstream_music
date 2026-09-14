@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "Offline",
   "browserBrowseOffline": "Offline durchsuchen",
   "browserBackOnline": "Wieder online",
-  "browserOfflineReady": "Alben, Künstler und Ordner von diesem Gerät",
-  "browserOfflineNone": "Noch nichts auf diesem Gerät",
-  "browserOfflineOn": "Zeigt die Kopie auf diesem Gerät",
-  "browserOfflineAuto": "Der Server ist nicht erreichbar"
+  "browserOfflineReady": "Lokale Kopie",
+  "browserOfflineNone": "Noch keine Kopie",
+  "browserOfflineOn": "Lokale Kopie in Gebrauch",
+  "browserOfflineAuto": "Server nicht erreichbar"
 }

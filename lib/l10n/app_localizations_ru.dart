@@ -4103,14 +4103,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserBackOnline => 'Снова онлайн';
 
   @override
-  String get browserOfflineReady =>
-      'Альбомы, исполнители и папки с этого устройства';
+  String get browserOfflineReady => 'Локальная копия';
 
   @override
-  String get browserOfflineNone => 'На этом устройстве пока ничего нет';
+  String get browserOfflineNone => 'Копии пока нет';
 
   @override
-  String get browserOfflineOn => 'Показана копия на этом устройстве';
+  String get browserOfflineOn => 'Используется локальная копия';
 
   @override
   String get browserOfflineAuto => 'Сервер недоступен';

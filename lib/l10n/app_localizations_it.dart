@@ -4065,15 +4065,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get browserBackOnline => 'Torna online';
 
   @override
-  String get browserOfflineReady =>
-      'Album, artisti e cartelle di questo dispositivo';
+  String get browserOfflineReady => 'Copia locale';
 
   @override
-  String get browserOfflineNone => 'Ancora niente su questo dispositivo';
+  String get browserOfflineNone => 'Ancora nessuna copia';
 
   @override
-  String get browserOfflineOn => 'Mostra la copia su questo dispositivo';
+  String get browserOfflineOn => 'Copia locale in uso';
 
   @override
-  String get browserOfflineAuto => 'Il server non è raggiungibile';
+  String get browserOfflineAuto => 'Server non raggiungibile';
 }

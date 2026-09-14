@@ -4158,8 +4158,8 @@
   "browserSectionOffline": "Offline",
   "browserBrowseOffline": "Browse offline",
   "browserBackOnline": "Back online",
-  "browserOfflineReady": "Albums, artists and folders from this device",
-  "browserOfflineNone": "Nothing on this device yet",
-  "browserOfflineOn": "Browsing the copy on this device",
-  "browserOfflineAuto": "The server can't be reached"
+  "browserOfflineReady": "Local copy",
+  "browserOfflineNone": "No copy yet",
+  "browserOfflineOn": "Using the local copy",
+  "browserOfflineAuto": "Server unreachable"
 }

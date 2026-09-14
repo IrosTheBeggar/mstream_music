@@ -4062,15 +4062,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get browserBackOnline => 'Voltar a ficar online';
 
   @override
-  String get browserOfflineReady =>
-      'Álbuns, artistas e pastas deste dispositivo';
+  String get browserOfflineReady => 'Cópia local';
 
   @override
-  String get browserOfflineNone => 'Ainda nada neste dispositivo';
+  String get browserOfflineNone => 'Ainda sem cópia';
 
   @override
-  String get browserOfflineOn => 'A mostrar a cópia deste dispositivo';
+  String get browserOfflineOn => 'A usar a cópia local';
 
   @override
-  String get browserOfflineAuto => 'Não é possível contactar o servidor';
+  String get browserOfflineAuto => 'Servidor inacessível';
 }

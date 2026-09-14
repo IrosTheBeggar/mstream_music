@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "离线",
   "browserBrowseOffline": "离线浏览",
   "browserBackOnline": "恢复在线",
-  "browserOfflineReady": "此设备上的专辑、艺术家和文件夹",
-  "browserOfflineNone": "此设备上还没有内容",
-  "browserOfflineOn": "正在浏览此设备上的副本",
-  "browserOfflineAuto": "无法连接到服务器"
+  "browserOfflineReady": "本地副本",
+  "browserOfflineNone": "还没有副本",
+  "browserOfflineOn": "正在使用本地副本",
+  "browserOfflineAuto": "无法连接服务器"
 }

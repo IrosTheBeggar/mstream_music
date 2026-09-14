@@ -4073,15 +4073,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get browserBackOnline => 'Volver a conectar';
 
   @override
-  String get browserOfflineReady =>
-      'Álbumes, artistas y carpetas de este dispositivo';
+  String get browserOfflineReady => 'Copia local';
 
   @override
-  String get browserOfflineNone => 'Aún no hay nada en este dispositivo';
+  String get browserOfflineNone => 'Aún sin copia';
 
   @override
-  String get browserOfflineOn => 'Mostrando la copia de este dispositivo';
+  String get browserOfflineOn => 'Usando la copia local';
 
   @override
-  String get browserOfflineAuto => 'No se puede conectar con el servidor';
+  String get browserOfflineAuto => 'Servidor inaccesible';
 }

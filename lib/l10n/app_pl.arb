@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "Offline",
   "browserBrowseOffline": "Przeglądaj offline",
   "browserBackOnline": "Wróć online",
-  "browserOfflineReady": "Albumy, wykonawcy i foldery z tego urządzenia",
-  "browserOfflineNone": "Na tym urządzeniu nie ma jeszcze nic",
-  "browserOfflineOn": "Wyświetlana jest kopia z tego urządzenia",
-  "browserOfflineAuto": "Nie można połączyć się z serwerem"
+  "browserOfflineReady": "Kopia lokalna",
+  "browserOfflineNone": "Brak kopii",
+  "browserOfflineOn": "Używana kopia lokalna",
+  "browserOfflineAuto": "Serwer niedostępny"
 }

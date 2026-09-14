@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "Offline",
   "browserBrowseOffline": "Sfoglia offline",
   "browserBackOnline": "Torna online",
-  "browserOfflineReady": "Album, artisti e cartelle di questo dispositivo",
-  "browserOfflineNone": "Ancora niente su questo dispositivo",
-  "browserOfflineOn": "Mostra la copia su questo dispositivo",
-  "browserOfflineAuto": "Il server non è raggiungibile"
+  "browserOfflineReady": "Copia locale",
+  "browserOfflineNone": "Ancora nessuna copia",
+  "browserOfflineOn": "Copia locale in uso",
+  "browserOfflineAuto": "Server non raggiungibile"
 }

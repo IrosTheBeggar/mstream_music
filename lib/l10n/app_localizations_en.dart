@@ -4026,15 +4026,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get browserBackOnline => 'Back online';
 
   @override
-  String get browserOfflineReady =>
-      'Albums, artists and folders from this device';
+  String get browserOfflineReady => 'Local copy';
 
   @override
-  String get browserOfflineNone => 'Nothing on this device yet';
+  String get browserOfflineNone => 'No copy yet';
 
   @override
-  String get browserOfflineOn => 'Browsing the copy on this device';
+  String get browserOfflineOn => 'Using the local copy';
 
   @override
-  String get browserOfflineAuto => 'The server can\'t be reached';
+  String get browserOfflineAuto => 'Server unreachable';
 }

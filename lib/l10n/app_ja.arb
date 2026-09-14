@@ -1064,8 +1064,8 @@
   "browserSectionOffline": "オフライン",
   "browserBrowseOffline": "オフラインで閲覧",
   "browserBackOnline": "オンラインに戻る",
-  "browserOfflineReady": "この端末のアルバム、アーティスト、フォルダー",
-  "browserOfflineNone": "この端末にはまだ何もありません",
-  "browserOfflineOn": "この端末のコピーを表示中",
+  "browserOfflineReady": "ローカルコピー",
+  "browserOfflineNone": "コピーはまだありません",
+  "browserOfflineOn": "ローカルコピーを使用中",
   "browserOfflineAuto": "サーバーに接続できません"
 }
