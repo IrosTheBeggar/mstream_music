@@ -356,6 +356,7 @@ class PlayHistory {
   List<PlayEvent>? _ring; // loaded lazily; newest last
   Timer? _statsTimer;
   bool _loaded = false;
+  Future<void>? _loading;
   bool _statsDirty = false;
 
   /// Off = record nothing (Settings "Keep listening history").
@@ -381,10 +382,19 @@ class PlayHistory {
   Future<File> get _outboxFile => _file('play_outbox.json');
 
   /// Load the aggregates and the outbox (the ring stays on disk until a
-  /// screen asks for it). Idempotent.
+  /// screen asks for it). Idempotent, and every caller waits for the one
+  /// load: a record or enqueue that arrives while the files are still being
+  /// read (the session recovered at launch) must not fold into an empty
+  /// store that the load then replaces. (An async function on purpose: the
+  /// caller gets a future of its own zone — widget tests pump their own
+  /// microtasks — and only joins the shared load while one is in flight.)
   Future<void> init() async {
     if (_loaded) return;
-    _loaded = true;
+    await (_loading ??= _load());
+  }
+
+  Future<void> _load() async {
+    if (_loaded) return;
     try {
       final f = await _statsFile;
       if (await f.exists()) {
@@ -417,6 +427,7 @@ class PlayHistory {
       appLog('[history] outbox load failed, starting empty: $e');
       _outbox.clear();
     }
+    _loaded = true;
   }
 
   /// Under test: forget everything in memory (the files are the caller's).
@@ -426,6 +437,7 @@ class PlayHistory {
     _outbox.clear();
     _ring = null;
     _loaded = false;
+    _loading = null;
     _statsDirty = false;
     enabled = true;
   }

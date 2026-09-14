@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../objects/play_event.dart';
 import 'log_manager.dart';
 import 'play_history.dart';
@@ -127,8 +129,12 @@ class PlaySync {
   final Backoff backoff = Backoff();
   final Set<String> _parked = {}; // 401/403 until credentials change
   Future<void>? _draining;
+  bool _drainAgain = false; // a call landed while a pass was running
+  bool _drainAgainBypass = false;
   StreamSubscription<PlayEvent>? _sub;
   Timer? _tick;
+  Timer? _retry; // fires when the earliest backoff ends
+  DateTime? _retryAt;
 
   /// Counters for the settings copy and the smoke recipe.
   int posted = 0;
@@ -153,6 +159,32 @@ class PlaySync {
     _sub?.cancel();
     _sub = null;
     _tick?.cancel();
+    _retry?.cancel();
+    _retry = null;
+    _retryAt = null;
+  }
+
+  /// When the earliest backoff ends and the outbox is tried again on its
+  /// own — not only at the next track end, tick or resume. Null when nothing
+  /// is waiting.
+  DateTime? get retryAt => _retryAt;
+
+  void _armRetry(DateTime until) {
+    if (_retryAt != null && (_retry?.isActive ?? false) && !until.isBefore(_retryAt!)) return;
+    _retry?.cancel();
+    _retryAt = until;
+    var wait = until.difference(now()) + const Duration(seconds: 1);
+    if (wait.isNegative) wait = Duration.zero;
+    _retry = Timer(wait, () => unawaited(retryNow()));
+  }
+
+  /// The armed retry, run now: the timer's body, and under test in its place.
+  @visibleForTesting
+  Future<void> retryNow() {
+    _retry?.cancel();
+    _retry = null;
+    _retryAt = null;
+    return drain(reason: 'retry');
   }
 
   /// A session closed: queue it for its target and try to drain.
@@ -187,19 +219,34 @@ class PlaySync {
     _tick = playing ? Timer.periodic(playingTick, (_) => drain(reason: 'tick')) : null;
   }
 
-  /// Drain every target with pending events. One drain at a time; a second
-  /// call while one runs is folded into it. [bypassBackoff] is for the
-  /// triggers that are news about the network — a connectivity change, a
-  /// tunnel coming up, the app resuming — where waiting out a backoff set
-  /// under the old conditions would be wrong.
+  /// Post what the outbox holds, target by target, oldest first. One pass at
+  /// a time: a call while one runs is folded into it and the pass goes once
+  /// more when it finishes (the running one may be on a network that is
+  /// already gone). [bypassBackoff] is for the triggers that mean the
+  /// network just changed — connectivity, tunnel up, resume — so a target in
+  /// backoff is tried again at once.
   Future<void> drain({String reason = 'manual', bool bypassBackoff = false}) {
     if (bypassBackoff) backoff.clear();
     final running = _draining;
-    if (running != null) return running;
+    if (running != null) {
+      // The running pass may already be committed to a network that is
+      // going away (cellular comes back a few seconds before Wi-Fi after
+      // airplane mode): remember to go once more when it finishes, with
+      // this call's backoff bypass, instead of losing the trigger.
+      _drainAgain = true;
+      _drainAgainBypass = _drainAgainBypass || bypassBackoff;
+      return running;
+    }
     final f = _drain(reason).catchError((Object e) {
       appLog('[sync] drain failed: $e');
     }).whenComplete(() {
       _draining = null;
+      if (_drainAgain) {
+        final bypass = _drainAgainBypass;
+        _drainAgain = false;
+        _drainAgainBypass = false;
+        unawaited(drain(reason: '$reason, again', bypassBackoff: bypass));
+      }
     });
     _draining = f;
     return f;
@@ -227,7 +274,17 @@ class PlaySync {
     if (!t.statsCapable || !t.reachable || _parked.contains(target)) return;
     while (true) {
       final at = now();
-      if (backoff.blocked(target, at)) return;
+      if (backoff.blocked(target, at)) {
+        // Still in backoff: keep a retry armed for when it ends. On an idle
+        // phone (screen off, nothing playing) there is no other trigger — the
+        // interface often comes up a minute or two before the route does, so
+        // the connectivity event already fired and failed, and without this a
+        // reconnect that lands mid-backoff would leave the outbox until the
+        // next playback or app resume.
+        final rem = backoff.remaining(target, at);
+        if (rem != null) _armRetry(at.add(rem));
+        return;
+      }
       final batch = history.pending(target, limit: batchSize);
       if (batch.isEmpty) return;
       try {
@@ -260,6 +317,8 @@ class PlaySync {
             break;
           case PostFailure.network:
             backoff.failed(target, at);
+            final rem = backoff.remaining(target, at);
+            if (rem != null) _armRetry(at.add(rem));
             appLog('[sync] $target unreachable (${e.message}); retry in ${backoff.remaining(target, at)?.inMinutes ?? 0} min');
             break;
           case PostFailure.server:
@@ -276,6 +335,8 @@ class PlaySync {
   void resetForTest() {
     dispose();
     _parked.clear();
+    _drainAgain = false;
+    _drainAgainBypass = false;
     backoff.clear();
     enabled = true;
     posted = 0;

@@ -40,6 +40,26 @@ PlayEvent ev(String id, DateTime at,
 final t0 = DateTime(2026, 9, 10, 20, 0);
 
 void main() {
+  group('PlayHistory init', () {
+    test('an enqueue during the load waits for it: neither the on-disk outbox nor the new event is lost', () async {
+      final dir = await Directory.systemTemp.createTemp('play-history-init-');
+      PlayHistory.storageDirectory = () async => dir;
+      final h = PlayHistory();
+      h.resetForTest();
+      await File('${dir.path}/play_outbox.json').writeAsString(jsonEncode({
+        'home': [ev('on-disk', t0).toJson()],
+      }));
+      final load = h.init(); // not awaited: the store is mid-load, as at launch
+      await h.enqueue('home', ev('recovered', t0.add(const Duration(minutes: 5))));
+      await load;
+      expect(h.pending('home').map((e) => e.id).toList(), ['on-disk', 'recovered']);
+      final saved = jsonDecode(await File('${dir.path}/play_outbox.json').readAsString()) as Map;
+      expect((saved['home'] as List).length, 2, reason: 'the file carries both too');
+      h.resetForTest();
+      await dir.delete(recursive: true);
+    });
+  });
+
   group('PlayStatsFold', () {
     test('fold: counters, first/last, snapshot strings, day and month rollups', () {
       final s = PlayStatsData();

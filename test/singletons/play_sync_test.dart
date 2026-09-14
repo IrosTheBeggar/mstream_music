@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -52,6 +53,78 @@ void main() {
     sync.resetForTest();
     history.resetForTest();
     await dir.delete(recursive: true);
+  });
+
+  test('a drain asked for while one is in flight runs again after it (Wi-Fi back a moment after cellular)', () async {
+    await history.enqueue('home', ev('e1'));
+    var attempts = 0;
+    final gate = Completer<void>();
+    answer = (t, b) async {
+      attempts++;
+      if (attempts == 1) {
+        await gate.future; // the attempt that started on cellular, still in flight
+        throw const PostPlaysException(PostFailure.network, 'Software caused connection abort');
+      }
+      return PostPlaysResult(accepted: b.map((e) => e.id).toList());
+    };
+    final first = sync.drain(reason: 'connectivity', bypassBackoff: true);
+    final second = sync.drain(reason: 'connectivity', bypassBackoff: true); // Wi-Fi came up mid-attempt
+    expect(identical(first, second), isTrue, reason: 'folded into the running pass');
+    gate.complete();
+    await first;
+    for (var i = 0; i < 100 && (attempts < 2 || history.outboxCount > 0); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+    }
+    expect(attempts, 2, reason: 'the pass ran once more after the doomed attempt');
+    expect(history.outboxCount, 0, reason: 'posted on the live network despite the fresh backoff');
+    expect(sync.posted, 1);
+  });
+
+  test('a network failure arms a retry for when the backoff ends; the retry posts', () async {
+    await history.enqueue('home', ev('r1'));
+    var attempts = 0;
+    answer = (t, b) async {
+      attempts++;
+      if (attempts == 1) throw const PostPlaysException(PostFailure.network, 'No route to host');
+      return PostPlaysResult(accepted: b.map((e) => e.id).toList());
+    };
+    await sync.drain(reason: 'connectivity', bypassBackoff: true);
+    expect(attempts, 1);
+    expect(sync.retryAt, clock.add(Backoff.first), reason: 'armed for the end of the first backoff');
+    clock = clock.add(Backoff.first + const Duration(seconds: 1));
+    await sync.retryNow();
+    expect(attempts, 2);
+    expect(history.outboxCount, 0);
+    expect(sync.retryAt, isNull);
+  });
+
+  test('a retry that lands while the target is still in backoff re-arms instead of giving up', () async {
+    await history.enqueue('home', ev('b1'));
+    var attempts = 0;
+    answer = (t, b) async {
+      attempts++;
+      if (attempts <= 2) throw const PostPlaysException(PostFailure.network, 'No route to host');
+      return PostPlaysResult(accepted: b.map((e) => e.id).toList());
+    };
+    await sync.drain(reason: 'connectivity', bypassBackoff: true); // attempt 1 fails
+    expect(attempts, 1);
+    final armed = sync.retryAt;
+    expect(armed, isNotNull);
+    // Fire the retry too early: the backoff has not elapsed (clock unchanged).
+    await sync.retryNow();
+    expect(attempts, 1, reason: 'blocked, so it did not post');
+    expect(sync.retryAt, armed, reason: 're-armed for the same expiry, not cleared');
+    // The backoff ends: the next retry posts.
+    clock = clock.add(Backoff.first + const Duration(seconds: 1));
+    await sync.retryNow(); // attempt 2 fails, extends backoff, re-arms
+    expect(attempts, 2);
+    expect(history.outboxCount, 1, reason: 'still unsent');
+    expect(sync.retryAt, isNotNull, reason: 'a fresh retry for the longer backoff');
+    clock = clock.add(Backoff.first * 2 + const Duration(seconds: 1));
+    await sync.retryNow(); // attempt 3 succeeds
+    expect(attempts, 3);
+    expect(history.outboxCount, 0);
+    expect(sync.retryAt, isNull);
   });
 
   test('routing: a server track to its server, a peer track to the parent, a local file nowhere', () async {

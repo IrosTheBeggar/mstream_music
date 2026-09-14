@@ -122,6 +122,21 @@ json.dump({"version":1,"index":0,"items":items}, open(dst,'w'))
 print(' | '.join(i['title'] for i in items))
 PY
 app_stop; cfg_write servers.json "$OUT/servers.json"; cfg_write queue.json "$OUT/queue.json"
+# Disable Auto DJ for the run: each play's source reflects the playback mode,
+# and a phone with Auto DJ enabled (the user's real config, backed up and
+# restored) would tag the restored queue's plays `autodj`, not `manual`. Null
+# the enabled server so playback of the restored queue is plain manual.
+python3 - "$CFG_BACKUP/auto_dj.json" "$OUT/auto_dj.json" <<'DJOFF'
+import json, sys
+src, dst = sys.argv[1:]
+try:
+    d = json.load(open(src))
+except Exception:
+    d = {}
+d['enabledServer'] = None
+json.dump(d, open(dst, 'w'))
+DJOFF
+cfg_write auto_dj.json "$OUT/auto_dj.json"; rm -f "$OUT/auto_dj.json"
 logcat_clear; wake; app_start
 wait_for_log "\[app\] default server ready: $NAME" 40 && pass "app launched on $NAME" || { fail "app did not settle on $NAME"; save_applog launch; summary; exit 1; }
 sleep 4
@@ -141,23 +156,39 @@ shot after-skips
 
 # ── 3. airplane mode: the play waits in the outbox and drains on reconnect at its own time ──
 ensure_playing 10 || fail "playback stopped before the airplane phase"
-# On a phone airplane mode drops the radios; the emulator's virtual network
-# survives it, so Wi-Fi AND mobile data are switched off as well.
-airplane on; wifi disable; adbx shell svc data disable; sleep 3
+# The outage is Wi-Fi off + mobile data off. Airplane mode is not used on a
+# phone: Android 13+ remembers a Wi-Fi switched on during an airplane
+# transition and then keeps Wi-Fi up in airplane mode (a Galaxy S25 did, after
+# two rounds of back-to-back `airplane off; wifi enable`). The emulator's
+# virtual network survives everything but all three together.
+radios_off() { [ "$HOST" = 10.0.2.2 ] && airplane on; wifi disable; adbx shell svc data disable; }
+radios_on()  { [ "$HOST" = 10.0.2.2 ] && airplane off; wifi enable; adbx shell svc data enable; }
+# A re-joined Wi-Fi client can take a while to reach this Mac again (the LAN
+# path, not the app): the drain is timed from when the phone can ping us.
+wait_for_route() { local i; for i in $(seq 1 "$1"); do adbx shell "ping -c 1 -W 1 $HOST" >/dev/null 2>&1 && { log "route to $HOST back after ${i}s"; return 0; }; sleep 1; done; log "no route to $HOST after $1 s (continuing)"; return 1; }
+radios_off; sleep 3
 wait_for_log "\[net\] connectivity → \[none\]" 15 && pass "the phone saw the network go" || fail "no connectivity → [none] line: the network is still up, the offline phase cannot be trusted"
 T3=$(now_ts); sleep 35; media_next
 wait_for_log_after "$T3" "\[history\] skipped play" 10 && pass "offline skip recorded on the phone" || fail "no history line for the offline skip"
 if wait_for_log_after "$T3" "\[sync\] $NAME unreachable" 25; then pass "outbox held the play while offline"; else fail "no unreachable line while offline"; fi
 PENDING=$(adbx shell "run-as $PKG cat app_flutter/play_outbox.json" 2>/dev/null | grep -c '"id"')
 [ "$PENDING" -ge 1 ] && pass "play_outbox.json holds $PENDING play(s)" || fail "play_outbox.json is empty while offline"
-airplane off; wifi enable; adbx shell svc data enable; T4=$(now_ts)
-wait_for_log_after "$T4" "\[sync\] $NAME: 1 accepted" 45 && pass "outbox drained after the network returned" || fail "outbox did not drain after reconnect"
+# Pause before the reconnect: a real phone's Wi-Fi can be minutes reaching this
+# Mac again, and a queue left playing would complete an extra track (an event
+# the tally does not expect). Pausing also isolates the drain to the app's own
+# retry — the interface reports "connected" (a doomed drain) before the route
+# works, and the retry posts once its backoff ends and the route is up.
+media_key pause; sleep 2
+radios_on; [ "$HOST" = 10.0.2.2 ] && wait_for_route 20 || wait_for_route 120
+# Timed from when the LAN path is actually back, not from the toggle.
+T4=$(now_ts)
+wait_for_log_after "$T4" "\[sync\] $NAME: [1-9][0-9]* accepted" 150 && pass "outbox drained after the network returned" || fail "outbox did not drain after reconnect"
 
 # ── 4. force-kill mid-track: the checkpoint closes it as stopped on relaunch ──
 ensure_playing 10 || fail "playback stopped before the kill phase"
 sleep 20; save_applog phase1; app_stop; sleep 2; logcat_clear; wake; app_start
 wait_for_log "\[history\] recovered a session cut short by a kill" 40 && pass "killed session recovered as stopped" || fail "no recovery line after the kill"
-wait_for_log "\[sync\] $NAME: 1 accepted" 40 && pass "the recovered session was posted" || fail "the recovered session was not posted"
+wait_for_log "\[sync\] $NAME: [12] accepted" 40 && pass "the recovered session was posted" || fail "the recovered session was not posted"
 
 # ── the two records agree ──
 LINES=$(ring_lines)

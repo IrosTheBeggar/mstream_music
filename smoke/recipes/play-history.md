@@ -12,7 +12,7 @@ saw:
 | skip at 35 s | `[history] skipped play 35s/…` then `[sync] stats-rig: 1 accepted` | `outcome: skipped, counted: true` |
 | skip at 10 s | `[history] skipped no-play` then `1 accepted` | `skipped, counted: false` (the server decides, the app still reports) |
 | airplane mode, skip at 35 s | `[history] skipped play` then `[sync] stats-rig unreachable`; `play_outbox.json` holds it | nothing yet |
-| airplane off | `[sync] stats-rig: 1 accepted` within 45 s | the row's `startedAt` is the phone's play time, not the sync time |
+| network back | playback is paused first (so a slow reconnect doesn't complete an extra track), then `[sync] stats-rig: N accepted` once the phone can reach the Mac again — the script pings it first, since a re-joined Wi-Fi client can be a minute+ from a working LAN path, and the app retries on its own backoff after the doomed first attempt | the row's `startedAt` is the phone's play time, not the sync time |
 | force-kill at 20 s, relaunch | `[history] recovered a session cut short by a kill` then `1 accepted` | `stopped, counted: false` |
 | end | `play_history.jsonl` has 4 lines; `play_stats.json` ring 4, 2 counted | `stats/history` lists 4 plays from `mstream-music`; `stats/tracks` counts the first track |
 | Listening page | home › Listening: "This phone" renders; the server chip renders from the Stats API (no "did not answer") | — |
@@ -21,11 +21,12 @@ Run it:
 
 ```bash
 smoke/android/play-history.sh                       # emulator: the server binds 127.0.0.1, the phone dials 10.0.2.2
-SMOKE_HOST=192.168.1.20 smoke/android/play-history.sh   # a real phone: the Mac's LAN address, server binds 0.0.0.0
+SMOKE_HOST=192.168.1.20 smoke/android/play-history.sh   # a real phone: the Mac's LAN address, server binds 0.0.0.0 (the outage is Wi-Fi + mobile data off, no airplane mode)
+SMOKE_ADB_SERIAL=RFGYB2FPD8E                            # pick the phone when an emulator is attached too
 SMOKE_SRC=~/code/mstream SMOKE_MUSIC=~/code/mstream-demo-music   # defaults
 ```
 
-It backs up and restores `servers.json` / `queue.json`, deletes the phone's
+It backs up and restores `servers.json` / `queue.json` / `auto_dj.json` (Auto DJ is disabled for the run so the restored queue's plays are `manual`, not `autodj`), deletes the phone's
 play-history files first (they are the thing under test), boots its own
 server in `smoke/out/<run>/srv/` and kills it on exit.
 
