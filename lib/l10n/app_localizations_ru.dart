@@ -4113,4 +4113,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => 'Сервер недоступен';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return 'Файлов: $files · $size';
+  }
 }

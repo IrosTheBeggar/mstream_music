@@ -3813,4 +3813,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => '无法连接服务器';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files 个文件 · $size';
+  }
 }

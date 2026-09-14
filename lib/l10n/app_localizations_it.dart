@@ -4075,4 +4075,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => 'Server non raggiungibile';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files file · $size';
+  }
 }

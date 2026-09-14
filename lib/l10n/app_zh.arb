@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "本地副本",
   "browserOfflineNone": "还没有副本",
   "browserOfflineOn": "正在使用本地副本",
-  "browserOfflineAuto": "无法连接服务器"
+  "browserOfflineAuto": "无法连接服务器",
+  "offlineHeaderStatus": "{files} 个文件 · {size}"
 }

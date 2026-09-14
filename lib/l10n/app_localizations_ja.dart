@@ -3883,4 +3883,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => 'サーバーに接続できません';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return '$files ファイル · $size';
+  }
 }

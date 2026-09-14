@@ -4161,5 +4161,7 @@
   "browserOfflineReady": "Local copy",
   "browserOfflineNone": "No copy yet",
   "browserOfflineOn": "Using the local copy",
-  "browserOfflineAuto": "Server unreachable"
+  "browserOfflineAuto": "Server unreachable",
+  "offlineHeaderStatus": "{files} files · {size}",
+  "@offlineHeaderStatus": {"placeholders": {"files": {"type": "int"}, "size": {"type": "String"}}}
 }

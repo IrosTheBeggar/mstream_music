@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "Copie locale",
   "browserOfflineNone": "Pas encore de copie",
   "browserOfflineOn": "Copie locale en cours",
-  "browserOfflineAuto": "Serveur injoignable"
+  "browserOfflineAuto": "Serveur injoignable",
+  "offlineHeaderStatus": "{files} fichiers · {size}"
 }

@@ -11,6 +11,7 @@ import '../util/local_copy.dart';
 import '../singletons/art_cache.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
+import '../util/format_bytes.dart';
 
 class DisplayItem {
   final Server? server;
@@ -136,7 +137,10 @@ class DisplayItem {
       // Server folder/file names pass through browserChromeLabel
       // unchanged (default case), so real data is never mistranslated.
       (l != null &&
-              (type == 'execAction' || type == 'addServer' || type == 'note'))
+              (type == 'execAction' ||
+                  type == 'addServer' ||
+                  type == 'note' ||
+                  type == 'offlineHeader'))
           ? browserChromeLabel(l, name)
           : name,
       // Same style as the metadata and file branches above. This used to
@@ -150,6 +154,19 @@ class DisplayItem {
   }
 
   Widget? getSubText({AppLocalizations? l}) {
+    // The offline landing's status row carries its counts as a code.
+    if (type == 'offlineHeader' && l != null && subtext != null) {
+      final m = RegExp(r'^offlineFiles:(\d+):(\d+)$').firstMatch(subtext!);
+      if (m != null) {
+        return Text(
+          l.offlineHeaderStatus(
+              int.parse(m.group(1)!), formatBytes(int.parse(m.group(2)!))),
+          style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      }
+    }
     // An explicitly-set subtext wins over the derived artist line. Search rows
     // rely on this to keep their match context — a lyric snippet, a file's
     // folder — visible even though the full metadata block (which carries the

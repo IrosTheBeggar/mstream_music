@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "Copia locale",
   "browserOfflineNone": "Ancora nessuna copia",
   "browserOfflineOn": "Copia locale in uso",
-  "browserOfflineAuto": "Server non raggiungibile"
+  "browserOfflineAuto": "Server non raggiungibile",
+  "offlineHeaderStatus": "{files} file · {size}"
 }

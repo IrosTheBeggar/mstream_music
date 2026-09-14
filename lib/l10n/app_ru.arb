@@ -1067,5 +1067,6 @@
   "browserOfflineReady": "Локальная копия",
   "browserOfflineNone": "Копии пока нет",
   "browserOfflineOn": "Используется локальная копия",
-  "browserOfflineAuto": "Сервер недоступен"
+  "browserOfflineAuto": "Сервер недоступен",
+  "offlineHeaderStatus": "Файлов: {files} · {size}"
 }

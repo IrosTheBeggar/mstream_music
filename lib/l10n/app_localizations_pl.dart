@@ -4104,4 +4104,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get browserOfflineAuto => 'Serwer niedostępny';
+
+  @override
+  String offlineHeaderStatus(int files, String size) {
+    return 'Pliki: $files · $size';
+  }
 }
