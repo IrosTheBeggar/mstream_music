@@ -1058,7 +1058,7 @@
   "keptOfflineSection": "Também mantido offline",
   "keptOfflineNone": "Nada ainda. «Manter offline» está nos álbuns, artistas, playlists e pastas.",
   "keepQualityTitle": "Qualidade dos itens guardados",
-  "keepQualityHelp": "Álbuns, artistas, playlists e músicas avaliadas guardados offline são armazenados nesta qualidade. As cópias da biblioteca inteira mantêm sempre os ficheiros originais.",
+  "keepQualityHelp": "Álbuns, artistas, playlists, pastas e músicas avaliadas guardados offline são armazenados nesta qualidade. As cópias da biblioteca inteira mantêm sempre os ficheiros originais.",
   "keepQualityOriginal": "Ficheiros originais",
   "keepQualityTier": "{codec} · {kbps} kbps",
   "browserSectionOffline": "Offline",

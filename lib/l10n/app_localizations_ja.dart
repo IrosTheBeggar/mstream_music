@@ -3854,7 +3854,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'オフラインで保持するアルバム、アーティスト、プレイリスト、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
+      'オフラインで保持するアルバム、アーティスト、プレイリスト、フォルダー、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
 
   @override
   String get keepQualityOriginal => '元のファイル';

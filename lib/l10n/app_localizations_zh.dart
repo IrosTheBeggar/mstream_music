@@ -3783,7 +3783,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keepQualityTitle => '离线内容的音质';
 
   @override
-  String get keepQualityHelp => '离线保留的专辑、艺术家、播放列表和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
+  String get keepQualityHelp =>
+      '离线保留的专辑、艺术家、播放列表、文件夹和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
 
   @override
   String get keepQualityOriginal => '原始文件';

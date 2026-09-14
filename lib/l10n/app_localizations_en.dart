@@ -4006,7 +4006,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.';
+      'Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.';
 
   @override
   String get keepQualityOriginal => 'Original files';

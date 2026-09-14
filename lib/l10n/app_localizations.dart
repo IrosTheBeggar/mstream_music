@@ -6669,7 +6669,7 @@ abstract class AppLocalizations {
   /// No description provided for @keepQualityHelp.
   ///
   /// In en, this message translates to:
-  /// **'Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
+  /// **'Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
   String get keepQualityHelp;
 
   /// No description provided for @keepQualityOriginal.

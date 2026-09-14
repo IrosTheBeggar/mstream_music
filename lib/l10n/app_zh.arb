@@ -1058,7 +1058,7 @@
   "keptOfflineSection": "另外离线保留",
   "keptOfflineNone": "暂无。“离线保留”位于专辑、艺术家、播放列表和文件夹。",
   "keepQualityTitle": "离线内容的音质",
-  "keepQualityHelp": "离线保留的专辑、艺术家、播放列表和已评分歌曲以此音质保存。整库副本始终保留原始文件。",
+  "keepQualityHelp": "离线保留的专辑、艺术家、播放列表、文件夹和已评分歌曲以此音质保存。整库副本始终保留原始文件。",
   "keepQualityOriginal": "原始文件",
   "keepQualityTier": "{codec} · {kbps} kbps",
   "browserSectionOffline": "离线",

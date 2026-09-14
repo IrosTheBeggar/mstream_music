@@ -4058,7 +4058,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'Les albums, artistes, playlists et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d\'origine.';
+      'Les albums, artistes, playlists, dossiers et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d\'origine.';
 
   @override
   String get keepQualityOriginal => 'Fichiers d\'origine';

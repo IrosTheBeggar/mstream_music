@@ -4053,7 +4053,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'Los álbumes, artistas, listas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
+      'Los álbumes, artistas, listas, carpetas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
 
   @override
   String get keepQualityOriginal => 'Archivos originales';

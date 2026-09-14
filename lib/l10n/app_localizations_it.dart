@@ -4045,7 +4045,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'Album, artisti, playlist e brani valutati conservati offline vengono salvati con questa qualità. Le copie dell\'intera libreria mantengono sempre i file originali.';
+      'Album, artisti, playlist, cartelle e brani valutati conservati offline vengono salvati con questa qualità. Le copie dell\'intera libreria mantengono sempre i file originali.';
 
   @override
   String get keepQualityOriginal => 'File originali';

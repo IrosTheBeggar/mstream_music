@@ -4074,7 +4074,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get keepQualityHelp =>
-      'Albumy, wykonawcy, playlisty i ocenione utwory trzymane offline są zapisywane w tej jakości. Kopie całej biblioteki zawsze zachowują oryginalne pliki.';
+      'Albumy, wykonawcy, playlisty, foldery i ocenione utwory trzymane offline są zapisywane w tej jakości. Kopie całej biblioteki zawsze zachowują oryginalne pliki.';
 
   @override
   String get keepQualityOriginal => 'Pliki oryginalne';

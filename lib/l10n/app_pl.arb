@@ -1058,7 +1058,7 @@
   "keptOfflineSection": "Zachowane offline również",
   "keptOfflineNone": "Jeszcze nic. „Zachowaj offline” znajdziesz przy albumach, wykonawcach, playlistach i folderach.",
   "keepQualityTitle": "Jakość elementów offline",
-  "keepQualityHelp": "Albumy, wykonawcy, playlisty i ocenione utwory trzymane offline są zapisywane w tej jakości. Kopie całej biblioteki zawsze zachowują oryginalne pliki.",
+  "keepQualityHelp": "Albumy, wykonawcy, playlisty, foldery i ocenione utwory trzymane offline są zapisywane w tej jakości. Kopie całej biblioteki zawsze zachowują oryginalne pliki.",
   "keepQualityOriginal": "Pliki oryginalne",
   "keepQualityTier": "{codec} · {kbps} kb/s",
   "browserSectionOffline": "Offline",

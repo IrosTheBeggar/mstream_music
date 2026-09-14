@@ -4151,7 +4151,7 @@
   "keptOfflineSection": "Also kept offline",
   "keptOfflineNone": "Nothing yet. \"Keep offline\" lives on albums, artists, playlists and folders.",
   "keepQualityTitle": "Quality of kept items",
-  "keepQualityHelp": "Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.",
+  "keepQualityHelp": "Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.",
   "keepQualityOriginal": "Original files",
   "keepQualityTier": "{codec} · {kbps} kbps",
   "@keepQualityTier": {"placeholders": {"codec": {"type": "String"}, "kbps": {"type": "int"}}},
