@@ -158,6 +158,14 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserSectionNetwork;
     case 'Server':
       return l.browserSectionServer;
+    case 'Offline':
+      return l.browserSectionOffline;
+    case 'Library copy':
+      return l.libraryCopyTitle;
+    case 'Browse offline':
+      return l.browserBrowseOffline;
+    case 'Back online':
+      return l.browserBackOnline;
     case 'Auto DJ':
       return l.autoDjTitle;
     case 'Sonic path':
@@ -208,6 +216,10 @@ String browserChromeLabel(AppLocalizations l, String? english) {
 String homeCardSubtext(AppLocalizations l, String subtext) {
   if (subtext == 'p2p:on') return l.browserP2pOn;
   if (subtext == 'p2p:off') return l.browserP2pOff;
+  if (subtext == 'offline:ready') return l.browserOfflineReady;
+  if (subtext == 'offline:none') return l.browserOfflineNone;
+  if (subtext == 'offline:on') return l.browserOfflineOn;
+  if (subtext == 'offline:auto') return l.browserOfflineAuto;
   final shared = RegExp(r'^sharedLibraries:(\d+)$').firstMatch(subtext);
   if (shared != null) {
     return l.browserSharedLibraries(int.parse(shared.group(1)!));

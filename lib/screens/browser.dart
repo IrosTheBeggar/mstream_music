@@ -31,6 +31,11 @@ import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
 import 'sonic_path_screen.dart';
+import 'dart:async';
+import '../singletons/library_index.dart';
+import '../singletons/outbox.dart';
+import '../objects/server.dart';
+import 'library_copy_screen.dart';
 
 class Browser extends StatefulWidget {
   const Browser({super.key});
@@ -130,8 +135,18 @@ class _BrowserState extends State<Browser> {
     }
 
     if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'localFiles') {
-      FileExplorer().getPathForServer(browserList[index].server!);
+        browserList[index].data == 'libraryCopy') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => LibraryCopyScreen(server: s)));
+      }
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'browseOffline') {
+      final s = browserList[index].server;
+      if (s != null) _toggleBrowseOffline(s, context);
       return;
     }
 
@@ -775,6 +790,31 @@ class _BrowserState extends State<Browser> {
             onTap: () {
               handleTap(b, i, c);
             }));
+  }
+
+  /// The Offline card: browse the library copy on this device instead of
+  /// the server, or go back. Going back also sends the writes queued while
+  /// offline and pings the server, so one that is still unreachable flips
+  /// straight back by itself.
+  void _toggleBrowseOffline(Server s, BuildContext context) {
+    if (!s.browseOffline) {
+      final rows = LibraryIndexManager().index?.remoteCount(s.localname) ?? 0;
+      if (rows == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(AppLocalizations.of(context).offlineBrowseUnavailable)));
+        return;
+      }
+      s.browseOffline = true;
+      s.offlineAuto = false;
+    } else {
+      s.browseOffline = false;
+      s.offlineAuto = false;
+      unawaited(OutboxManager().replay(s));
+      unawaited(ServerManager().getServerPaths(s));
+    }
+    ServerManager().notifyServerChanged();
+    BrowserManager().goToNavScreen();
   }
 
   /// Long-press on an artist: "Keep offline" — an artist rule for the

@@ -7,18 +7,17 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../objects/server.dart';
-import '../singletons/browser_list.dart';
 import '../singletons/library_index.dart';
 import '../singletons/mirror_manager.dart';
-import '../singletons/outbox.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/format_bytes.dart';
 
 /// Library copy for one server: which libraries to keep a full copy of, the
-/// mirror's status with a Sync now / Cancel button, and the two settings
-/// (trash retention, Wi-Fi only on mobile). Reached from the server's ⋮ menu
-/// in Manage Servers.
+/// mirror's status with a Sync now / Cancel button, the rules and the
+/// settings (quality, trash retention, Wi-Fi only on mobile). Reached from
+/// the Offline group on the server's home screen; browsing the copy is the
+/// card next to it.
 class LibraryCopyScreen extends StatefulWidget {
   final Server server;
   const LibraryCopyScreen({super.key, required this.server});
@@ -93,8 +92,6 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
                 const SizedBox(height: 16),
                 _status(context, l, st),
                 const SizedBox(height: 16),
-                _offlineSwitch(l),
-                const SizedBox(height: 16),
                 _ratedRule(l),
                 const SizedBox(height: 12),
                 _keptRules(l),
@@ -151,37 +148,6 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
         },
       ),
     );
-  }
-
-  /// Browse from the index instead of the server (A4). Needs index rows,
-  /// i.e. one completed run; flips the runtime flag and resets the browser so
-  /// the next list comes from the chosen source.
-  Widget _offlineSwitch(AppLocalizations l) {
-    final indexed =
-        (LibraryIndexManager().index?.remoteCount(server.localname) ?? 0) > 0;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        secondary: const Icon(Icons.cloud_off_outlined),
-        title: Text(l.offlineBrowseTitle, style: _body),
-        subtitle: Text(indexed ? l.offlineBrowseHelp : l.offlineBrowseUnavailable,
-            style: _help),
-        value: server.browseOffline,
-        activeThumbColor: VelvetColors.primary,
-        onChanged: !indexed && !server.browseOffline
-            ? null
-            : (v) {
-                setState(() {
-                  server.browseOffline = v;
-                  server.offlineAuto = false;
-                });
-                ServerManager().notifyServerChanged();
-                BrowserManager().goToNavScreen();
-                // Back online by choice: send what was written meanwhile.
-                if (!v) unawaited(OutboxManager().replay(server));
-              },
-      ),
-    ]);
   }
 
   /// The server's 0–10 rating for "3, 4 or 5 stars and up"; 0 is off.

@@ -11,6 +11,7 @@ import '../singletons/downloads.dart';
 import '../objects/display_item.dart';
 import '../objects/server.dart';
 import '../theme/velvet_theme.dart';
+import 'library_index.dart';
 
 class BrowserManager {
   /// Whether [list] is the home section list: its first row that is not a
@@ -368,13 +369,6 @@ class BrowserManager {
             Icon(Icons.star, color: VelvetColors.textSecondary), null),
       DisplayItem(server, 'Recent', 'execAction', 'recent',
           Icon(Icons.query_builder, color: VelvetColors.textSecondary), null),
-      DisplayItem(
-          server,
-          'Local Files',
-          'execAction',
-          'localFiles',
-          Icon(Icons.folder_open_outlined, color: VelvetColors.textSecondary),
-          null),
       // LISTEN. Auto DJ runs on every server, a peer included (random-songs
       // is on the federation allowlist since mStream #946). Sonic path only
       // where the server advertised the route (mStream #762) — the flag is
@@ -423,6 +417,33 @@ class BrowserManager {
         header('Server'),
         DisplayItem(server, 'Add torrent', 'execAction', 'torrents',
             Icon(Icons.downloading, color: VelvetColors.textSecondary), null),
+      ],
+      // OFFLINE: the library copy on this device — its settings, and the
+      // switch between browsing the server and browsing the copy (A4). The
+      // second card names the way back while the copy is being browsed. A
+      // federated peer has no copy: the manifest is off its allowlist.
+      if (!federated) ...[
+        header('Offline'),
+        DisplayItem(server, 'Library copy', 'execAction', 'libraryCopy',
+            Icon(Icons.cloud_sync_outlined, color: VelvetColors.textSecondary),
+            null),
+        DisplayItem(
+            server,
+            server.browseOffline ? 'Back online' : 'Browse offline',
+            'execAction',
+            'browseOffline',
+            Icon(
+                server.browseOffline
+                    ? Icons.cloud_outlined
+                    : Icons.cloud_off_outlined,
+                color: VelvetColors.textSecondary),
+            server.browseOffline
+                ? (server.offlineAuto ? 'offline:auto' : 'offline:on')
+                : ((LibraryIndexManager().index?.remoteCount(server.localname) ??
+                            0) >
+                        0
+                    ? 'offline:ready'
+                    : 'offline:none')),
       ],
     ];
 

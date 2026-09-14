@@ -350,8 +350,6 @@
   "libraryCopyRetentionForever": "Für immer",
   "libraryCopyWifiOnly": "Nur über WLAN",
   "libraryCopyDesktopNote": "Synchronisiert, solange die App geöffnet ist.",
-  "offlineBrowseTitle": "Offline-Kopie durchsuchen",
-  "offlineBrowseHelp": "Alben, Künstler und Ordner kommen aus dem Bibliotheksindex auf diesem Gerät, und nur die vorhandenen Dateien können abgespielt werden. Schaltet sich von selbst ein, wenn der Server nicht erreichbar ist.",
   "offlineBrowseUnavailable": "Noch kein Bibliotheksindex — einmal synchronisieren, solange der Server erreichbar ist.",
   "offlineChip": "Offline-Kopie",
   "storageChooseFolder": "Ordner wählen",
@@ -1062,5 +1060,12 @@
   "keepQualityTitle": "Qualität der Offline-Inhalte",
   "keepQualityHelp": "Offline behaltene Alben, Künstler, Playlists und bewertete Titel werden in dieser Qualität gespeichert. Komplette Bibliothekskopien behalten immer die Originaldateien.",
   "keepQualityOriginal": "Originaldateien",
-  "keepQualityTier": "{codec} · {kbps} kbit/s"
+  "keepQualityTier": "{codec} · {kbps} kbit/s",
+  "browserSectionOffline": "Offline",
+  "browserBrowseOffline": "Offline durchsuchen",
+  "browserBackOnline": "Wieder online",
+  "browserOfflineReady": "Alben, Künstler und Ordner von diesem Gerät",
+  "browserOfflineNone": "Noch nichts auf diesem Gerät",
+  "browserOfflineOn": "Zeigt die Kopie auf diesem Gerät",
+  "browserOfflineAuto": "Der Server ist nicht erreichbar"
 }

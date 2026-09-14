@@ -1350,13 +1350,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Se synchronise tant que l\'application est ouverte.';
 
   @override
-  String get offlineBrowseTitle => 'Parcourir la copie hors ligne';
-
-  @override
-  String get offlineBrowseHelp =>
-      'Les albums, artistes et dossiers proviennent de l\'index de la bibliothèque sur cet appareil, et seuls les fichiers qu\'il contient peuvent être lus. S\'active automatiquement quand le serveur est injoignable.';
-
-  @override
   String get offlineBrowseUnavailable =>
       'Pas encore d\'index de bibliothèque : synchronisez une fois pendant que le serveur est joignable.';
 
@@ -4074,4 +4067,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String keepQualityTier(String codec, int kbps) {
     return '$codec · $kbps kbit/s';
   }
+
+  @override
+  String get browserSectionOffline => 'Hors ligne';
+
+  @override
+  String get browserBrowseOffline => 'Parcourir hors ligne';
+
+  @override
+  String get browserBackOnline => 'Revenir en ligne';
+
+  @override
+  String get browserOfflineReady =>
+      'Albums, artistes et dossiers de cet appareil';
+
+  @override
+  String get browserOfflineNone => 'Rien sur cet appareil pour l\'instant';
+
+  @override
+  String get browserOfflineOn => 'Affiche la copie de cet appareil';
+
+  @override
+  String get browserOfflineAuto => 'Le serveur est injoignable';
 }

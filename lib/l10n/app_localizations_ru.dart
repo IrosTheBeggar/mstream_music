@@ -1371,13 +1371,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Синхронизируется, пока приложение открыто.';
 
   @override
-  String get offlineBrowseTitle => 'Просматривать офлайн-копию';
-
-  @override
-  String get offlineBrowseHelp =>
-      'Альбомы, исполнители и папки берутся из индекса библиотеки на этом устройстве, и воспроизводятся только имеющиеся файлы. Включается автоматически, когда сервер недоступен.';
-
-  @override
   String get offlineBrowseUnavailable =>
       'Индекса библиотеки ещё нет — синхронизируйте один раз, пока сервер доступен.';
 
@@ -4099,4 +4092,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String keepQualityTier(String codec, int kbps) {
     return '$codec · $kbps кбит/с';
   }
+
+  @override
+  String get browserSectionOffline => 'Офлайн';
+
+  @override
+  String get browserBrowseOffline => 'Просмотр офлайн';
+
+  @override
+  String get browserBackOnline => 'Снова онлайн';
+
+  @override
+  String get browserOfflineReady =>
+      'Альбомы, исполнители и папки с этого устройства';
+
+  @override
+  String get browserOfflineNone => 'На этом устройстве пока ничего нет';
+
+  @override
+  String get browserOfflineOn => 'Показана копия на этом устройстве';
+
+  @override
+  String get browserOfflineAuto => 'Сервер недоступен';
 }
