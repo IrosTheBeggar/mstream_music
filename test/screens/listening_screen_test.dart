@@ -11,7 +11,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:mstream_music/l10n/app_localizations.dart';
+import 'package:mstream_music/l10n/localizations_delegates.dart';
 import 'package:mstream_music/objects/play_event.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/listening/listening_screen.dart';
@@ -69,8 +69,8 @@ void main() {
 
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: appSupportedLocales,
       home: const ListeningScreen(),
     ));
     await tester.pumpAndSettle();
