@@ -6657,7 +6657,7 @@ abstract class AppLocalizations {
   /// No description provided for @keptOfflineNone.
   ///
   /// In en, this message translates to:
-  /// **'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.'**
+  /// **'Nothing yet. \"Keep offline\" lives on albums, artists, playlists and folders.'**
   String get keptOfflineNone;
 
   /// No description provided for @keepQualityTitle.
@@ -6669,7 +6669,7 @@ abstract class AppLocalizations {
   /// No description provided for @keepQualityHelp.
   ///
   /// In en, this message translates to:
-  /// **'Albums, artists, playlists and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
+  /// **'Albums, artists, playlists, folders and rated songs kept offline are stored at this quality. Whole-library copies always keep the original files.'**
   String get keepQualityHelp;
 
   /// No description provided for @keepQualityOriginal.
@@ -6731,6 +6731,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{files} files · {size}'**
   String offlineHeaderStatus(int files, String size);
+
+  /// No description provided for @keepFolderHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder and everything in it, kept in sync on this device.'**
+  String get keepFolderHelp;
 }
 
 class _AppLocalizationsDelegate

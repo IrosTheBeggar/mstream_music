@@ -1056,9 +1056,9 @@
   "keepRatedStars": "{n} étoiles et plus",
   "keepRatedFiveStars": "5 étoiles",
   "keptOfflineSection": "Également gardé hors ligne",
-  "keptOfflineNone": "Rien pour l'instant. « Garder hors ligne » se trouve sur les albums, artistes et playlists.",
+  "keptOfflineNone": "Rien pour l'instant. « Garder hors ligne » se trouve sur les albums, artistes, playlists et dossiers.",
   "keepQualityTitle": "Qualité des éléments conservés",
-  "keepQualityHelp": "Les albums, artistes, playlists et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d'origine.",
+  "keepQualityHelp": "Les albums, artistes, playlists, dossiers et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d'origine.",
   "keepQualityOriginal": "Fichiers d'origine",
   "keepQualityTier": "{codec} · {kbps} kbit/s",
   "browserSectionOffline": "Hors ligne",
@@ -1068,5 +1068,6 @@
   "browserOfflineNone": "Pas encore de copie",
   "browserOfflineOn": "Copie locale en cours",
   "browserOfflineAuto": "Serveur injoignable",
-  "offlineHeaderStatus": "{files} fichiers · {size}"
+  "offlineHeaderStatus": "{files} fichiers · {size}",
+  "keepFolderHelp": "Ce dossier et tout son contenu, maintenus à jour sur cet appareil."
 }

@@ -3846,14 +3846,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keptOfflineSection => 'その他のオフライン保持';
 
   @override
-  String get keptOfflineNone => 'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリストにあります。';
+  String get keptOfflineNone =>
+      'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリスト・フォルダーにあります。';
 
   @override
   String get keepQualityTitle => 'オフライン保存の音質';
 
   @override
   String get keepQualityHelp =>
-      'オフラインで保持するアルバム、アーティスト、プレイリスト、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
+      'オフラインで保持するアルバム、アーティスト、プレイリスト、フォルダー、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。';
 
   @override
   String get keepQualityOriginal => '元のファイル';
@@ -3888,4 +3889,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files ファイル · $size';
   }
+
+  @override
+  String get keepFolderHelp => 'このフォルダーとその中身すべてを、この端末で同期します。';
 }

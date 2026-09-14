@@ -20,6 +20,18 @@ import 'migration_manager.dart';
 import 'log_manager.dart';
 import 'server_list.dart';
 
+/// A folder rule's key: the folder's data path with the leading slash and
+/// no trailing one — the form the engine's prefix match expects. The
+/// explorer's rows carry either form depending on the source.
+String folderRuleKey(String dataPath) {
+  var p = dataPath.trim();
+  if (!p.startsWith('/')) p = '/$p';
+  while (p.length > 1 && p.endsWith('/')) {
+    p = p.substring(0, p.length - 1);
+  }
+  return p;
+}
+
 /// background_downloader group of the mirror's transfers. DownloadManager
 /// hands their updates to [MirrorManager.onTaskUpdate] instead of the
 /// manual-download path: they complete into a temp tree the runner owns.
@@ -118,15 +130,16 @@ class MirrorManager {
   /// and the index is open.
   bool canKeep(Server s) => s.syncAvailable == true && _index != null;
 
-  /// The album, artist and playlist rules of [s] — what "Keep offline" is
-  /// switched on for, oldest first.
+  /// The album, artist, playlist and folder rules of [s] — what "Keep
+  /// offline" is switched on for, oldest first.
   List<Subscription> entityRules(Server s) => [
         for (final r
             in _index?.subscriptionsFor(s.localname) ?? const <Subscription>[])
           if (r.enabled &&
               (r.kind == RuleKind.album ||
                   r.kind == RuleKind.artist ||
-                  r.kind == RuleKind.playlist))
+                  r.kind == RuleKind.playlist ||
+                  r.kind == RuleKind.folder))
             r
       ];
 

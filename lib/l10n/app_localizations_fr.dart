@@ -4051,14 +4051,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Rien pour l\'instant. « Garder hors ligne » se trouve sur les albums, artistes et playlists.';
+      'Rien pour l\'instant. « Garder hors ligne » se trouve sur les albums, artistes, playlists et dossiers.';
 
   @override
   String get keepQualityTitle => 'Qualité des éléments conservés';
 
   @override
   String get keepQualityHelp =>
-      'Les albums, artistes, playlists et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d\'origine.';
+      'Les albums, artistes, playlists, dossiers et titres notés conservés hors ligne sont stockés dans cette qualité. Les copies de bibliothèque entière gardent toujours les fichiers d\'origine.';
 
   @override
   String get keepQualityOriginal => 'Fichiers d\'origine';
@@ -4093,4 +4093,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files fichiers · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Ce dossier et tout son contenu, maintenus à jour sur cet appareil.';
 }

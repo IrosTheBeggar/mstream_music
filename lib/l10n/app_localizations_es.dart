@@ -4046,14 +4046,14 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Nada todavía. «Guardar sin conexión» está en álbumes, artistas y listas.';
+      'Nada todavía. «Guardar sin conexión» está en álbumes, artistas, listas y carpetas.';
 
   @override
   String get keepQualityTitle => 'Calidad de lo guardado sin conexión';
 
   @override
   String get keepQualityHelp =>
-      'Los álbumes, artistas, listas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
+      'Los álbumes, artistas, listas, carpetas y canciones valoradas guardados sin conexión se almacenan con esta calidad. Las copias de biblioteca completa conservan siempre los archivos originales.';
 
   @override
   String get keepQualityOriginal => 'Archivos originales';
@@ -4088,4 +4088,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files archivos · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Esta carpeta y todo su contenido, sincronizados en este dispositivo.';
 }

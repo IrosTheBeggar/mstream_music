@@ -127,6 +127,16 @@ void main() {
       expect(m.ratedThreshold(s), isNull);
       m.setRule(s, RuleKind.playlist, 'Mix', false);
       expect(m.entityRules(s).single.key, 'Alpha');
+      m.setRule(s, RuleKind.folder, '/music/Live', true);
+      expect(m.entityRules(s).map((r) => (r.kind, r.key)),
+          [(RuleKind.album, 'Alpha'), (RuleKind.folder, '/music/Live')]);
+    });
+
+    test('folderRuleKey: leading slash on, trailing slash off', () {
+      expect(folderRuleKey('music/Live'), '/music/Live');
+      expect(folderRuleKey('/music/Live/'), '/music/Live');
+      expect(folderRuleKey('/'), '/');
+      expect(folderRuleKey(''), '/');
     });
 
     test('kept quality: new entity rules take it, existing ones are re-keyed, library rules stay original', () {

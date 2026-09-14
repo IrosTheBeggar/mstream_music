@@ -3777,13 +3777,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keptOfflineSection => '另外离线保留';
 
   @override
-  String get keptOfflineNone => '暂无。“离线保留”位于专辑、艺术家和播放列表。';
+  String get keptOfflineNone => '暂无。“离线保留”位于专辑、艺术家、播放列表和文件夹。';
 
   @override
   String get keepQualityTitle => '离线内容的音质';
 
   @override
-  String get keepQualityHelp => '离线保留的专辑、艺术家、播放列表和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
+  String get keepQualityHelp =>
+      '离线保留的专辑、艺术家、播放列表、文件夹和已评分歌曲以此音质保存。整库副本始终保留原始文件。';
 
   @override
   String get keepQualityOriginal => '原始文件';
@@ -3818,4 +3819,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files 个文件 · $size';
   }
+
+  @override
+  String get keepFolderHelp => '此文件夹及其中的所有内容，在此设备上保持同步。';
 }

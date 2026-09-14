@@ -273,6 +273,7 @@ class _LibraryCopyScreenState extends State<LibraryCopyScreen> {
   static IconData _kindIcon(String kind) => switch (kind) {
         RuleKind.album => Icons.album,
         RuleKind.artist => Icons.library_music,
+        RuleKind.folder => Icons.folder,
         _ => Icons.queue_music,
       };
 

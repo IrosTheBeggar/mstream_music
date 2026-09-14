@@ -1056,9 +1056,9 @@
   "keepRatedStars": "{n}つ星以上",
   "keepRatedFiveStars": "5つ星",
   "keptOfflineSection": "その他のオフライン保持",
-  "keptOfflineNone": "まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリストにあります。",
+  "keptOfflineNone": "まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリスト・フォルダーにあります。",
   "keepQualityTitle": "オフライン保存の音質",
-  "keepQualityHelp": "オフラインで保持するアルバム、アーティスト、プレイリスト、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。",
+  "keepQualityHelp": "オフラインで保持するアルバム、アーティスト、プレイリスト、フォルダー、評価済みの曲はこの音質で保存されます。ライブラリ全体のコピーは常に元のファイルを保持します。",
   "keepQualityOriginal": "元のファイル",
   "keepQualityTier": "{codec} · {kbps} kbps",
   "browserSectionOffline": "オフライン",
@@ -1068,5 +1068,6 @@
   "browserOfflineNone": "コピーはまだありません",
   "browserOfflineOn": "ローカルコピーを使用中",
   "browserOfflineAuto": "サーバーに接続できません",
-  "offlineHeaderStatus": "{files} ファイル · {size}"
+  "offlineHeaderStatus": "{files} ファイル · {size}",
+  "keepFolderHelp": "このフォルダーとその中身すべてを、この端末で同期します。"
 }

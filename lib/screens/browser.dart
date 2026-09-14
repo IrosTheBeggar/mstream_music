@@ -1178,6 +1178,35 @@ class _BrowserState extends State<Browser> {
               ]),
             ),
             Divider(color: VelvetColors.border, height: 17),
+            // "Keep offline" (a folder rule): this folder and everything
+            // under it, kept in sync — the same switch the artist sheet has.
+            if (item.server != null && MirrorManager().canKeep(item.server!))
+              StreamBuilder<Map<String, MirrorStatus>>(
+                stream: MirrorManager().statusStream,
+                initialData: MirrorManager().current,
+                builder: (context, _) {
+                  final srv = item.server!;
+                  final key = folderRuleKey(item.data ?? item.name);
+                  final on =
+                      MirrorManager().keepsRule(srv, RuleKind.folder, key);
+                  return SwitchListTile(
+                    secondary: Icon(
+                        on ? Icons.offline_pin : Icons.offline_pin_outlined,
+                        color: on
+                            ? VelvetColors.primary
+                            : VelvetColors.textSecondary),
+                    title: Text(l.keepOffline,
+                        style: TextStyle(color: VelvetColors.textPrimary)),
+                    subtitle: Text(l.keepFolderHelp,
+                        style: TextStyle(
+                            color: VelvetColors.textTertiary, fontSize: 12)),
+                    value: on,
+                    activeThumbColor: VelvetColors.primary,
+                    onChanged: (v) =>
+                        MirrorManager().setRule(srv, RuleKind.folder, key, v),
+                  );
+                },
+              ),
             ListTile(
               leading: Icon(Icons.library_add, color: VelvetColors.primary),
               title: Text(l.addAll,

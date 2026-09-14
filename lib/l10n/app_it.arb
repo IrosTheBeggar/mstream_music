@@ -1056,9 +1056,9 @@
   "keepRatedStars": "{n} stelle e oltre",
   "keepRatedFiveStars": "5 stelle",
   "keptOfflineSection": "Tenuto offline anche",
-  "keptOfflineNone": "Ancora niente. «Tieni offline» si trova su album, artisti e playlist.",
+  "keptOfflineNone": "Ancora niente. «Tieni offline» si trova su album, artisti, playlist e cartelle.",
   "keepQualityTitle": "Qualità degli elementi conservati",
-  "keepQualityHelp": "Album, artisti, playlist e brani valutati conservati offline vengono salvati con questa qualità. Le copie dell'intera libreria mantengono sempre i file originali.",
+  "keepQualityHelp": "Album, artisti, playlist, cartelle e brani valutati conservati offline vengono salvati con questa qualità. Le copie dell'intera libreria mantengono sempre i file originali.",
   "keepQualityOriginal": "File originali",
   "keepQualityTier": "{codec} · {kbps} kbps",
   "browserSectionOffline": "Offline",
@@ -1068,5 +1068,6 @@
   "browserOfflineNone": "Ancora nessuna copia",
   "browserOfflineOn": "Copia locale in uso",
   "browserOfflineAuto": "Server non raggiungibile",
-  "offlineHeaderStatus": "{files} file · {size}"
+  "offlineHeaderStatus": "{files} file · {size}",
+  "keepFolderHelp": "Questa cartella e tutto il suo contenuto, sincronizzati su questo dispositivo."
 }
