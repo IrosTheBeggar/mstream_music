@@ -3999,7 +3999,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Nothing yet. \"Keep offline\" lives on albums, artists and playlists.';
+      'Nothing yet. \"Keep offline\" lives on albums, artists, playlists and folders.';
 
   @override
   String get keepQualityTitle => 'Quality of kept items';
@@ -4041,4 +4041,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files files · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'This folder and everything in it, kept in sync on this device.';
 }

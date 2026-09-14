@@ -4035,7 +4035,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Nada ainda. «Manter offline» está nos álbuns, artistas e playlists.';
+      'Nada ainda. «Manter offline» está nos álbuns, artistas, playlists e pastas.';
 
   @override
   String get keepQualityTitle => 'Qualidade dos itens guardados';
@@ -4077,4 +4077,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files ficheiros · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Esta pasta e tudo o que contém, sincronizados neste dispositivo.';
 }

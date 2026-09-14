@@ -1056,7 +1056,7 @@
   "keepRatedStars": "{n} estrelas ou mais",
   "keepRatedFiveStars": "5 estrelas",
   "keptOfflineSection": "Também mantido offline",
-  "keptOfflineNone": "Nada ainda. «Manter offline» está nos álbuns, artistas e playlists.",
+  "keptOfflineNone": "Nada ainda. «Manter offline» está nos álbuns, artistas, playlists e pastas.",
   "keepQualityTitle": "Qualidade dos itens guardados",
   "keepQualityHelp": "Álbuns, artistas, playlists e músicas avaliadas guardados offline são armazenados nesta qualidade. As cópias da biblioteca inteira mantêm sempre os ficheiros originais.",
   "keepQualityOriginal": "Ficheiros originais",
@@ -1068,5 +1068,6 @@
   "browserOfflineNone": "Ainda sem cópia",
   "browserOfflineOn": "A usar a cópia local",
   "browserOfflineAuto": "Servidor inacessível",
-  "offlineHeaderStatus": "{files} ficheiros · {size}"
+  "offlineHeaderStatus": "{files} ficheiros · {size}",
+  "keepFolderHelp": "Esta pasta e tudo o que contém, sincronizados neste dispositivo."
 }

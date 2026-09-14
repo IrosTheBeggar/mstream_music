@@ -4038,7 +4038,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Ancora niente. «Tieni offline» si trova su album, artisti e playlist.';
+      'Ancora niente. «Tieni offline» si trova su album, artisti, playlist e cartelle.';
 
   @override
   String get keepQualityTitle => 'Qualità degli elementi conservati';
@@ -4080,4 +4080,8 @@ class AppLocalizationsIt extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files file · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Questa cartella e tutto il suo contenuto, sincronizzati su questo dispositivo.';
 }

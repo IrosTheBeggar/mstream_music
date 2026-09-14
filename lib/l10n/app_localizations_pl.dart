@@ -4067,7 +4067,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Jeszcze nic. „Zachowaj offline” znajdziesz przy albumach, wykonawcach i playlistach.';
+      'Jeszcze nic. „Zachowaj offline” znajdziesz przy albumach, wykonawcach, playlistach i folderach.';
 
   @override
   String get keepQualityTitle => 'Jakość elementów offline';
@@ -4109,4 +4109,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return 'Pliki: $files · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Ten folder i cała jego zawartość, synchronizowane na tym urządzeniu.';
 }

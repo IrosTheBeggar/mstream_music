@@ -3846,7 +3846,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keptOfflineSection => 'その他のオフライン保持';
 
   @override
-  String get keptOfflineNone => 'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリストにあります。';
+  String get keptOfflineNone =>
+      'まだありません。「オフラインで保持」はアルバム・アーティスト・プレイリスト・フォルダーにあります。';
 
   @override
   String get keepQualityTitle => 'オフライン保存の音質';
@@ -3888,4 +3889,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return '$files ファイル · $size';
   }
+
+  @override
+  String get keepFolderHelp => 'このフォルダーとその中身すべてを、この端末で同期します。';
 }

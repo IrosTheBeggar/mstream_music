@@ -1056,7 +1056,7 @@
   "keepRatedStars": "Ab {n} Sternen",
   "keepRatedFiveStars": "5 Sterne",
   "keptOfflineSection": "Außerdem offline behalten",
-  "keptOfflineNone": "Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern und Playlists.",
+  "keptOfflineNone": "Noch nichts. „Offline behalten“ findest du bei Alben, Künstlern, Playlists und Ordnern.",
   "keepQualityTitle": "Qualität der Offline-Inhalte",
   "keepQualityHelp": "Offline behaltene Alben, Künstler, Playlists und bewertete Titel werden in dieser Qualität gespeichert. Komplette Bibliothekskopien behalten immer die Originaldateien.",
   "keepQualityOriginal": "Originaldateien",
@@ -1068,5 +1068,6 @@
   "browserOfflineNone": "Noch keine Kopie",
   "browserOfflineOn": "Lokale Kopie in Gebrauch",
   "browserOfflineAuto": "Server nicht erreichbar",
-  "offlineHeaderStatus": "{files} Dateien · {size}"
+  "offlineHeaderStatus": "{files} Dateien · {size}",
+  "keepFolderHelp": "Dieser Ordner mit allem darin, auf diesem Gerät synchron gehalten."
 }

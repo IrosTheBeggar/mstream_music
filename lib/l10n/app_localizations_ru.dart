@@ -4076,7 +4076,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get keptOfflineNone =>
-      'Пока ничего. «Хранить офлайн» есть у альбомов, исполнителей и плейлистов.';
+      'Пока ничего. «Хранить офлайн» есть у альбомов, исполнителей, плейлистов и папок.';
 
   @override
   String get keepQualityTitle => 'Качество офлайн-копий';
@@ -4118,4 +4118,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String offlineHeaderStatus(int files, String size) {
     return 'Файлов: $files · $size';
   }
+
+  @override
+  String get keepFolderHelp =>
+      'Эта папка и всё её содержимое синхронизируются на этом устройстве.';
 }
