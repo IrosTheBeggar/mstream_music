@@ -16,6 +16,7 @@ import '../objects/lyrics.dart';
 import '../objects/metadata.dart';
 import 'media.dart';
 import '../util/decode_json.dart';
+import '../util/album_songs_body.dart';
 import '../util/media_format.dart';
 import '../util/seed_vector.dart';
 import '../util/server_version.dart';
@@ -279,7 +280,7 @@ class ApiManager {
           id: buildServerStreamUrl(useThisServer, p),
           title: m?.title ?? p.split("/").last,
           album: m?.album,
-          artist: m?.artist,
+          artist: m?.artistDisplay ?? m?.artist,
           genre: m?.genreLabel,
           duration: m?.duration,
           artUri: artUrl == null ? null : Uri.parse(artUrl),
@@ -598,6 +599,10 @@ class ApiManager {
             Icon(Icons.album, color: VelvetColors.textSecondary),
             subtitle);
         newItem.altAlbumArt = e['album_art_file'];
+        // Carried so the album detail's album-songs call opens exactly this
+        // album when two share a name (see albumSongsBody).
+        newItem.albumArtist = albumArtistOf(e['album_artist']);
+        newItem.year = albumYearOf(e['year']);
         newList.add(newItem);
       });
 
@@ -612,9 +617,12 @@ class ApiManager {
   /// the browser stack — used by the album detail screen, which renders its own
   /// tracklist. Throws on a server error so the caller can show its own state.
   Future<List<DisplayItem>> fetchAlbumSongs(String? album,
-      {Server? useThisServer}) async {
+      {Server? useThisServer, int? year, String? albumArtist}) async {
     final res = await makeServerCall(
-        useThisServer, '/api/v1/db/album-songs', {'album': album}, 'POST');
+        useThisServer,
+        '/api/v1/db/album-songs',
+        albumSongsBody(album, year: year, albumArtist: albumArtist),
+        'POST');
 
     final List<DisplayItem> newList = [];
     res.forEach((e) {
@@ -635,10 +643,12 @@ class ApiManager {
     return newList;
   }
 
-  Future<void> getAlbumSongs(String? album, {Server? useThisServer}) async {
+  Future<void> getAlbumSongs(String? album,
+      {Server? useThisServer, int? year, String? albumArtist}) async {
     List<DisplayItem> newList;
     try {
-      newList = await fetchAlbumSongs(album, useThisServer: useThisServer);
+      newList = await fetchAlbumSongs(album,
+          useThisServer: useThisServer, year: year, albumArtist: albumArtist);
     } catch (err) {
       // TODO: Handle Errors
       appLog('[api] getAlbumSongs failed: $err');
@@ -1256,6 +1266,8 @@ class ApiManager {
             Icon(Icons.album, color: VelvetColors.textSecondary),
             e['year']?.toString() ?? '');
         newItem.altAlbumArt = e['album_art_file'];
+        newItem.albumArtist = albumArtistOf(e['album_artist']);
+        newItem.year = albumYearOf(e['year']);
 
         newList.add(newItem);
       });

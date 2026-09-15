@@ -66,7 +66,10 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   Future<void> _load() async {
     try {
       final songs = await ApiManager()
-          .fetchAlbumSongs(widget.album.data, useThisServer: widget.album.server);
+          .fetchAlbumSongs(widget.album.data,
+              useThisServer: widget.album.server,
+              year: widget.album.year,
+              albumArtist: widget.album.albumArtist);
       // Publish to BrowserManager so the top toolbar's download / add-all act on
       // these songs.
       BrowserManager().albumDetailSongs = songs;

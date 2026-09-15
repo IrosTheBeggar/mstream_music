@@ -118,6 +118,11 @@ class MetadataScreen extends StatelessWidget {
       if (fidelity.isNotEmpty) _chip(Icons.high_quality_rounded, fidelity),
       if (extras['bpm'] != null)
         _chip(Icons.speed_rounded, '${_v(extras['bpm'])} BPM'),
+      // Composer credit (6.28+ servers, V73 roles) — a self-labelling chip
+      // like the others, so no new translated string.
+      if (extras['composer'] is String &&
+          (extras['composer'] as String).trim().isNotEmpty)
+        _chip(Icons.edit_note_rounded, (extras['composer'] as String).trim()),
       if (key != null && key.trim().isNotEmpty)
         _chip(Icons.music_note_rounded, key.trim()),
       if (genre != null && genre.trim().isNotEmpty)

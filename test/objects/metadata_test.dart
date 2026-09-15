@@ -121,4 +121,40 @@ void main() {
       expect(m.bitrate, isNull);
     });
   });
+
+  group('V73 credits (6.28+ servers)', () {
+    test('fromServerMap reads artist-display and composer', () {
+      final m = MusicMetadata.fromServerMap({
+        'artist': 'Ann',
+        'artist-display': 'Ann feat. Bob',
+        'composer': 'Carl Composer',
+        'title': 'Together',
+        'hash': 'h',
+      });
+      expect(m.artist, 'Ann', reason: 'the primary artist stays the key');
+      expect(m.artistDisplay, 'Ann feat. Bob');
+      expect(m.composer, 'Carl Composer');
+    });
+
+    test('an older server leaves both null', () {
+      final m = MusicMetadata.fromServerMap({'artist': 'Ann', 'hash': 'h'});
+      expect(m.artistDisplay, isNull);
+      expect(m.composer, isNull);
+    });
+
+    test('they round-trip through toJson / fromJson and into queueExtras', () {
+      final m = MusicMetadata.fromServerMap({
+        'artist': 'Ann',
+        'artist-display': 'Ann feat. Bob',
+        'composer': 'Carl',
+        'hash': 'h',
+      });
+      final back = MusicMetadata.fromJson(m.toJson());
+      expect(back.artistDisplay, 'Ann feat. Bob');
+      expect(back.composer, 'Carl');
+      final extras = queueExtras(m, server: 's', path: '/p');
+      expect(extras['artistDisplay'], 'Ann feat. Bob');
+      expect(extras['composer'], 'Carl');
+    });
+  });
 }
