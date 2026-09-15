@@ -3777,7 +3777,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsHistorySendSubtitle =>
-      '各再生は、トラックのあるサーバー（ピアのトラックはその親サーバー）に送られ、この端末の分も統計に含まれます。サーバーは、Last.fm アカウントを連携している場合にのみ転送します。';
+      '各再生は、曲のあるサーバー（ピアの曲はその親サーバー）に送られ、この端末の分も統計に含まれます。サーバーは、Last.fm アカウントを連携している場合にのみ転送します。';
 
   @override
   String get settingsHistoryClear => '再生履歴を消去';
@@ -3853,7 +3853,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String listeningScopeSheetPeer(Object server) {
-    return '$server でカウント：ピアのトラックは、あなたのアカウントがあるサーバーで数えられます。';
+    return '$server でカウント：ピアの曲は、あなたのアカウントがあるサーバーで数えられます。';
   }
 
   @override
@@ -3862,12 +3862,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String listeningProvenanceServer(Object server) {
-    return '$server でのあなたの再生（すべてのアプリから、ピアのトラックを含む）。';
+    return '$server でのあなたの再生（すべてのアプリから、ピアの曲を含む）。';
   }
 
   @override
   String listeningProvenancePeer(Object peer, Object server) {
-    return '$peer のトラックの再生。$server でカウントされています。';
+    return '$peer の曲の再生。$server でカウントされています。';
   }
 
   @override
@@ -3912,7 +3912,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listeningTileTime => '再生時間';
 
   @override
-  String get listeningTileTracks => 'トラック';
+  String get listeningTileTracks => '曲';
 
   @override
   String get listeningTileSkips => 'スキップ';
@@ -3966,7 +3966,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listeningTop => 'トップ';
 
   @override
-  String get listeningTopTracks => 'トラック';
+  String get listeningTopTracks => '曲';
 
   @override
   String get listeningTopArtists => 'アーティスト';

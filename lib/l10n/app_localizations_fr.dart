@@ -3981,7 +3981,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsHistorySendSubtitle =>
-      'Chaque lecture est envoyée au serveur où se trouve la piste (celle d\'un pair à son serveur parent), pour que vos statistiques incluent ce téléphone. Les serveurs ne transmettent à Last.fm que si vous y avez lié un compte.';
+      'Chaque lecture est envoyée au serveur où se trouve le morceau (celui d\'un pair à son serveur parent), pour que vos statistiques incluent ce téléphone. Les serveurs ne transmettent à Last.fm que si vous y avez lié un compte.';
 
   @override
   String get settingsHistoryClear => 'Effacer l\'historique d\'écoute';
@@ -4004,7 +4004,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count lectures en attente d\'envoi',
-      one: '1 lecture en attente d\'envoi',
+      one: '$count lecture en attente d\'envoi',
       zero: 'Tout est synchronisé',
     );
     return '$_temp0';
@@ -4016,7 +4016,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count lectures sur $server',
-      one: '1 lecture sur $server',
+      one: '$count lecture sur $server',
     );
     return '$_temp0';
   }
@@ -4027,7 +4027,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count lectures sur ce téléphone',
-      one: '1 lecture sur ce téléphone',
+      one: '$count lecture sur ce téléphone',
     );
     return '$_temp0';
   }
@@ -4060,7 +4060,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String listeningScopeSheetPeer(Object server) {
-    return 'Comptées sur $server : les pistes d\'un pair comptent là où vit votre compte.';
+    return 'Comptés sur $server : les morceaux d\'un pair comptent là où vit votre compte.';
   }
 
   @override
@@ -4069,12 +4069,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String listeningProvenanceServer(Object server) {
-    return 'Vos lectures sur $server depuis toutes les applications, y compris les pistes de ses pairs.';
+    return 'Vos lectures sur $server depuis toutes les applications, y compris les morceaux de ses pairs.';
   }
 
   @override
   String listeningProvenancePeer(Object peer, Object server) {
-    return 'Vos lectures des pistes de $peer, comptées sur $server.';
+    return 'Vos lectures des morceaux de $peer, comptées sur $server.';
   }
 
   @override
@@ -4093,7 +4093,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count lectures pas encore synchronisées',
-      one: '1 lecture pas encore synchronisée',
+      one: '$count lecture pas encore synchronisée',
     );
     return '$_temp0';
   }
@@ -4120,7 +4120,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listeningTileTime => 'Temps d\'écoute';
 
   @override
-  String get listeningTileTracks => 'Pistes';
+  String get listeningTileTracks => 'Morceaux';
 
   @override
   String get listeningTileSkips => 'Ignorées';
@@ -4137,7 +4137,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count jours',
-      one: '1 jour',
+      one: '$count jour',
     );
     return '$_temp0';
   }
@@ -4146,7 +4146,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listeningTileSubCounted => 'lectures comptées';
 
   @override
-  String get listeningTileSubTracks => 'pistes différentes';
+  String get listeningTileSubTracks => 'morceaux différents';
 
   @override
   String listeningTileSubSkips(Object pct) {
@@ -4175,7 +4175,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listeningTop => 'Top';
 
   @override
-  String get listeningTopTracks => 'Pistes';
+  String get listeningTopTracks => 'Morceaux';
 
   @override
   String get listeningTopArtists => 'Artistes';
@@ -4195,7 +4195,7 @@ class AppLocalizationsFr extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count lectures',
-      one: '1 lecture',
+      one: '$count lecture',
     );
     return '$_temp0';
   }
@@ -4205,8 +4205,8 @@ class AppLocalizationsFr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pistes',
-      one: '1 piste',
+      other: '$count morceaux',
+      one: '$count morceau',
     );
     return '$_temp0';
   }

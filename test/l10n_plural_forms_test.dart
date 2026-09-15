@@ -41,6 +41,13 @@ void main() {
     expect(l('pt').p2pNeighborsCount(0), '0 vizinho');
     expect(l('pt').p2pNeighborsCount(1), '1 vizinho');
     expect(l('pt').p2pNeighborsCount(2), '2 vizinhos');
+    // The listening-history counts.
+    expect(l('fr').listeningPlays(0), '0 lecture');
+    expect(l('fr').listeningPlays(21), '21 lectures');
+    expect(l('fr').songInfoDevicePlays(0), '0 lecture sur ce téléphone');
+    expect(l('pt').listeningTracksCount(0), '0 faixa');
+    expect(l('pt').listeningTracksCount(1), '1 faixa');
+    expect(l('pt').songInfoServerPlays(0, 'x'), '0 reprodução em x');
   });
 
   test('every locale keeps the number in a count of 21 and of 0', () {
@@ -54,6 +61,11 @@ void main() {
         t.storageItemCount,
         t.agoMinutes,
         t.federationStreamsCount,
+        t.listeningPlays,
+        t.listeningTracksCount,
+        t.listeningDays,
+        t.listeningUnsynced,
+        t.songInfoDevicePlays,
       ]) {
         expect(f(21), contains('21'), reason: '$locale ${f(21)}');
         expect(f(0), contains('0'), reason: '$locale ${f(0)}');
