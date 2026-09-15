@@ -16,6 +16,7 @@ import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
 import '../singletons/sonic_path_state.dart';
 import '../theme/velvet_theme.dart';
+import '../util/media_item_credits.dart';
 import '../util/queue_actions.dart';
 import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
@@ -152,7 +153,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       path = extras?['path'] as String?;
       server = ServerManager().byLocalname(extras?['server'] as String?);
       title = item?.title;
-      artist = item?.artist;
+      artist = item == null ? null : primaryArtistOf(item);
     }
 
     if (!leadsOnly) {

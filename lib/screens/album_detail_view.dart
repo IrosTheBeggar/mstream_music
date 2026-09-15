@@ -30,8 +30,8 @@ import '../widgets/player_panel.dart';
 import '../widgets/track_actions_sheet.dart';
 
 class AlbumDetailView extends StatefulWidget {
-  /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`)
-  /// and subtext, from getAlbums().
+  /// The tapped album row — carries name, server, altAlbumArt (`album_art_file`),
+  /// subtext, albumArtist and year, from getAlbums().
   final DisplayItem album;
 
   const AlbumDetailView({super.key, required this.album});
@@ -270,7 +270,10 @@ class _AlbumDetailViewState extends State<AlbumDetailView> {
   // ── banner: back/overflow + medium-player-style art-left header over the splash ──
   Widget _banner(AppLocalizations l, List<DisplayItem>? songs) {
     final artUrl = _artUrl();
-    final artist = songs == null ? '' : _artistLabel(songs, l);
+    // The server's album credit (what the card showed) when it gave one; else
+    // derived from the tracks — Various Artists when they disagree.
+    final artist = widget.album.albumArtist ??
+        (songs == null ? '' : _artistLabel(songs, l));
 
     final metaParts = <String>[];
     if (songs != null) {

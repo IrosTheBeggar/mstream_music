@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../util/media_item_credits.dart';
 import '../util/image_cache.dart';
 import '../widgets/star_rating.dart';
 import 'discover_screen.dart';
@@ -108,7 +109,7 @@ class MetadataScreen extends StatelessWidget {
                 seedServer: lyricsServer,
                 seedPath: path,
                 seedTitle: item.title,
-                seedArtist: item.artist,
+                seedArtist: primaryArtistOf(item),
               ),
             ),
           ),

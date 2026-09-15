@@ -155,6 +155,8 @@ void main() {
       final extras = queueExtras(m, server: 's', path: '/p');
       expect(extras['artistDisplay'], 'Ann feat. Bob');
       expect(extras['composer'], 'Carl');
+      expect(extras['artist'], 'Ann',
+          reason: 'the primary artist rides along for the name lookups');
     });
   });
 }

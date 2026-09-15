@@ -36,6 +36,10 @@ Map<String, dynamic> queueExtras(
       'playCount': meta?.playCount,
       // Drives the lyrics badge (tap → fetch via GET /api/v1/lyrics).
       'hasLyrics': meta?.hasLyrics ?? false,
+      // The primary artist, for the lookups that key on an artist NAME
+      // (Discover's similar-artists seed): the MediaItem's own `artist` carries
+      // the display string below. Read it back with primaryArtistOf().
+      'artist': meta?.artist,
       // V73 credits (6.28+): the ARTIST tag as written and the composer, for
       // the Song Info chips. Null on older servers.
       'artistDisplay': meta?.artistDisplay,
