@@ -485,6 +485,104 @@ class _Tile extends StatelessWidget {
 // ── when you listen ───────────────────────────────────────────────────
 
 /// Twenty-four thin bars, the peak hour in the accent, a note naming it.
+/// A column chart with a y axis, as the webapp draws them: the bars scale
+/// to the top tick of [niceTicks], a hairline gridline at every tick, the
+/// tick labels in a gutter on the left that the x labels skip.
+class _BarChart extends StatelessWidget {
+  final List<int> values;
+
+  /// The bar painted in the accent colour; -1 for none.
+  final int best;
+
+  /// One per bar, '' where the slot carries no label.
+  final List<String> xLabels;
+  final double gap;
+  const _BarChart(
+      {required this.values,
+      required this.best,
+      required this.xLabels,
+      required this.gap});
+
+  static const double _plotH = 72;
+  static const double _gutter = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final ticks = niceTicks(values.fold<int>(0, (m, v) => v > m ? v : m));
+    final top = ticks.last;
+    final tickStyle = TextStyle(
+        fontSize: 10,
+        color: VelvetColors.textTertiary,
+        fontFeatures: const [FontFeature.tabularFigures()]);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        height: _plotH,
+        child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          // The axis: each label centred on its gridline. The top one rides
+          // 6 px above the plot, into the card's padding.
+          SizedBox(
+            width: _gutter,
+            child: Stack(clipBehavior: Clip.none, children: [
+              for (final t in ticks)
+                Positioned(
+                  left: 0,
+                  right: 6,
+                  bottom: _plotH * t / top - 6,
+                  child: Text('$t',
+                      textAlign: TextAlign.right, style: tickStyle),
+                ),
+            ]),
+          ),
+          Expanded(
+            child: Stack(clipBehavior: Clip.none, children: [
+              for (final t in ticks)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: _plotH * t / top,
+                  child: Container(height: 1, color: VelvetColors.border),
+                ),
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                for (var i = 0; i < values.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: gap),
+                      child: Container(
+                        height: values[i] == 0 ? 2 : _plotH * values[i] / top,
+                        decoration: BoxDecoration(
+                          color: values[i] == 0
+                              ? VelvetColors.primary.withValues(alpha: 0.25)
+                              : i == best
+                                  ? VelvetColors.accent
+                                  : VelvetColors.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 6),
+      Row(children: [
+        const SizedBox(width: _gutter),
+        for (var i = 0; i < xLabels.length; i++)
+          Expanded(
+            child: Text(xLabels[i],
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.visible,
+                style: TextStyle(
+                    fontSize: 10, color: VelvetColors.textTertiary)),
+          ),
+      ]),
+    ]);
+  }
+}
+
 class _HoursCard extends StatelessWidget {
   final List<int> hours;
   final int? peakHour;
@@ -495,43 +593,19 @@ class _HoursCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final max = hours.fold<int>(0, (m, v) => v > m ? v : m);
     return FedCard(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-            height: 64,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          _BarChart(
+            values: hours,
+            best: peakHour ?? -1,
+            xLabels: [
               for (var h = 0; h < hours.length; h++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                    child: Container(
-                      height: max == 0 ? 2 : 2 + 62 * hours[h] / max,
-                      decoration: BoxDecoration(
-                        color: hours[h] == 0
-                            ? VelvetColors.primary.withValues(alpha: 0.25)
-                            : h == peakHour
-                                ? VelvetColors.accent
-                                : VelvetColors.primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                ),
-            ]),
+                _labelled.contains(h) ? '$h' : ''
+            ],
+            gap: 1.5,
           ),
-          const SizedBox(height: 6),
-          Row(children: [
-            for (var h = 0; h < hours.length; h++)
-              Expanded(
-                child: Text(_labelled.contains(h) ? '$h' : '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 10, color: VelvetColors.textTertiary)),
-              ),
-          ]),
           if (peakHour != null)
             Padding(
               padding: const EdgeInsets.only(top: 10),
@@ -630,49 +704,21 @@ class _SeriesCard extends StatelessWidget {
         best = i;
       }
     }
-    final gap = buckets.length > 40 ? 0.5 : (buckets.length > 14 ? 1.0 : 1.5);
     return FedCard(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
-            height: 64,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              for (var i = 0; i < values.length; i++)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: gap),
-                    child: Container(
-                      height: max == 0 ? 2 : 2 + 62 * values[i] / max,
-                      decoration: BoxDecoration(
-                        color: values[i] == 0
-                            ? VelvetColors.primary.withValues(alpha: 0.25)
-                            : i == best
-                                ? VelvetColors.accent
-                                : VelvetColors.primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                ),
-            ]),
+          _BarChart(
+            values: values,
+            best: best,
+            xLabels: [
+              for (var i = 0; i < buckets.length; i++)
+                _labelled(buckets[i], i, buckets.length)
+                    ? _label(context, buckets[i], buckets.length)
+                    : ''
+            ],
+            gap: buckets.length > 40 ? 0.5 : (buckets.length > 14 ? 1.0 : 1.5),
           ),
-          const SizedBox(height: 6),
-          Row(children: [
-            for (var i = 0; i < buckets.length; i++)
-              Expanded(
-                child: Text(
-                    _labelled(buckets[i], i, buckets.length)
-                        ? _label(context, buckets[i], buckets.length)
-                        : '',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.visible,
-                    style: TextStyle(
-                        fontSize: 10, color: VelvetColors.textTertiary)),
-              ),
-          ]),
           if (best >= 0)
             Padding(
               padding: const EdgeInsets.only(top: 10),

@@ -43,6 +43,31 @@ String listeningTime(DateTime t) {
 /// "20:00" for an hour-of-day bucket.
 String listeningHour(int h) => '${h.toString().padLeft(2, '0')}:00';
 
+/// The y-axis ticks of a column chart whose tallest bar is [max]: 0 up to
+/// a round number at or past [max], about four steps of 1 / 2 / 5 × a power
+/// of ten (the webapp's niceTicks). `[0, 1]` for an empty chart.
+List<int> niceTicks(int max) {
+  if (max <= 0) return const [0, 1];
+  final raw = max / 4;
+  var mag = 1;
+  while (mag * 10 <= raw) {
+    mag *= 10;
+  }
+  var step = 10 * mag;
+  for (final s in const [1, 2, 5, 10]) {
+    if (s * mag >= raw) {
+      step = s * mag;
+      break;
+    }
+  }
+  final ticks = <int>[];
+  for (var t = 0; t < max + step; t += step) {
+    ticks.add(t);
+  }
+  if (ticks.last < max) ticks.add(ticks.last + step);
+  return ticks;
+}
+
 /// Today / Yesterday / "Sep 8" / "Sep 8, 2025", relative to [now].
 String listeningDayLabel(BuildContext context, DateTime t, DateTime now) {
   final l = AppLocalizations.of(context);

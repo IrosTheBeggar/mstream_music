@@ -202,5 +202,16 @@ void main() {
       expect(listeningHour(20), '20:00');
       expect(listeningHour(7), '07:00');
     });
+
+    test('axis ticks: round steps that reach the tallest bar', () {
+      expect(niceTicks(0), [0, 1]);
+      expect(niceTicks(1), [0, 1]);
+      expect(niceTicks(3), [0, 1, 2, 3]);
+      expect(niceTicks(5), [0, 2, 4, 6]);
+      expect(niceTicks(17), [0, 5, 10, 15, 20]);
+      expect(niceTicks(20), [0, 5, 10, 15, 20]);
+      expect(niceTicks(276), [0, 100, 200, 300]);
+      expect(niceTicks(1000), [0, 500, 1000]);
+    });
   });
 }
