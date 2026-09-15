@@ -196,11 +196,12 @@ class _TargetRow extends StatelessWidget {
   });
 
   // Connection type, shown as a subtitle so the same TV appearing as both a
-  // DLNA renderer and a Chromecast device is distinguishable.
-  String get _kindLabel {
+  // DLNA renderer and a Chromecast device is distinguishable. DLNA and
+  // Chromecast are product names and stay as they are in every language.
+  String _kindLabel(AppLocalizations l) {
     switch (target.kind) {
       case CastTargetKind.local:
-        return 'This device';
+        return l.castThisDevice;
       case CastTargetKind.dlna:
         return 'DLNA';
       case CastTargetKind.chromecast:
@@ -210,6 +211,7 @@ class _TargetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
@@ -217,17 +219,19 @@ class _TargetRow extends StatelessWidget {
         color: selected ? VelvetColors.primary : VelvetColors.textSecondary,
       ),
       title: Text(
-        target.name,
+        // CastTarget.local carries a fixed English name (the media layer has
+        // no locale); a remote's name is whatever the renderer advertises.
+        target.isLocal ? l.castThisDevice : target.name,
         style: TextStyle(
           color: selected ? VelvetColors.primary : VelvetColors.textPrimary,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
-      // Local's name ("This device") already says it, so only label remotes.
+      // Local's title ("This device") already says it, so only label remotes.
       subtitle: target.isLocal
           ? null
           : Text(
-              _kindLabel,
+              _kindLabel(l),
               style: TextStyle(
                 color: VelvetColors.textSecondary,
                 fontSize: 12,

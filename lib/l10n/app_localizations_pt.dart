@@ -13,7 +13,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get playlistActionFailed =>
-      'Não foi possível guardar a playlist — o nome pode já estar em uso.';
+      'Não foi possível salvar a playlist — o nome pode já estar em uso.';
 
   @override
   String get queueAddNext => 'Adicionar a seguir';
@@ -54,7 +54,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
       zero: 'Nenhuma faixa',
     );
     return '$_temp0';
@@ -105,16 +105,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get songInfoTitle => 'Informações da música';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => 'Letra';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'Nenhuma letra encontrada para esta música';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => 'Não foi possível carregar a letra';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => 'Tentar novamente';
 
   @override
   String get eqTitle => 'Equalizador';
@@ -210,7 +210,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get transcodeReloadQueueSubtitle =>
-      'Ao alterar as definições de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.';
+      'Ao alterar as configurações de transcodificação — marcado: recarregar toda a fila agora (a faixa em reprodução faz buffer por instantes); desmarcado: só mudam as faixas seguintes, a atual termina sem alterações.';
 
   @override
   String get settingsTapBehavior => 'Ao tocar em uma música';
@@ -276,14 +276,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Busca título, artista e capa de cada música ao navegar pelos arquivos do servidor. Desligado, mostra os nomes brutos dos arquivos (mais rápido em pastas enormes).';
 
   @override
-  String get settingsLetterStrip => 'Limite do scrubber de letras';
+  String get settingsLetterStrip => 'Limite da barra alfabética';
 
   @override
   String get settingsLetterStripSubtitle =>
-      'Mostra a barra de navegação rápida A-Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
+      'Mostra a barra de navegação rápida A–Z quando uma lista tiver esta quantidade de itens ou mais. Abaixo disso, a barra fica oculta e nomes longos de pastas/arquivos quebram em várias linhas em vez de serem cortados. Defina 0 para sempre mostrar a barra.';
 
   @override
-  String get settingsLetterStripSide => 'Lado da barra';
+  String get settingsLetterStripSide => 'Lado da barra alfabética';
 
   @override
   String get settingsLetterStripSideSubtitle =>
@@ -322,7 +322,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get visualizerTapHint =>
-      'Toque = próxima predefinição · pressione e segure para fechar';
+      'Toque = próxima predefinição · seta de voltar (canto superior esquerdo) ou pressione e segure para sair';
 
   @override
   String get visualizerFailed => 'Falha ao iniciar o visualizador';
@@ -343,6 +343,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get visualizerTapToClose => 'Toque em qualquer lugar para fechar';
+
+  @override
+  String get visualizerClose => 'Fechar visualizador';
+
+  @override
+  String get visualizerPreviousPreset => 'Predefinição anterior';
+
+  @override
+  String get visualizerNextPreset => 'Próxima predefinição';
 
   @override
   String get visualizerUnsupported =>
@@ -521,7 +530,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas',
-      one: '1 música',
+      one: '$count música',
     );
     return '$_temp0 de $url';
   }
@@ -580,10 +589,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get fieldPassword => 'Senha';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'Mostrar senha';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'Ocultar senha';
 
   @override
   String get fieldSdCard => 'Baixar para o cartão SD';
@@ -671,7 +680,7 @@ class AppLocalizationsPt extends AppLocalizations {
       minutes,
       locale: localeName,
       other: 'Temporizador definido para $minutes minutos',
-      one: 'Temporizador definido para 1 minuto',
+      one: 'Temporizador definido para $minutes minuto',
     );
     return '$_temp0';
   }
@@ -729,7 +738,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$count de $total servidores participando — aos demais falta discovery, um modelo de embeddings compatível ou uma versão de servidor recente o bastante';
+    return '$count de $total servidores participando — aos demais falta a descoberta, um modelo de embeddings compatível ou uma versão de servidor recente o bastante';
   }
 
   @override
@@ -748,7 +757,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas',
-      one: '1 música',
+      one: '$count música',
     );
     return '$_temp0';
   }
@@ -918,34 +927,34 @@ class AppLocalizationsPt extends AppLocalizations {
   String get browserSearchHint => 'Pesquisar no banco de dados';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => 'O que pesquisar';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => 'Pesquisar em';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'Artistas';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => 'Álbuns';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => 'Músicas';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'Arquivos';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => 'Letras';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return 'Resultados para “$term”';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return 'Pesquisando em: $categories';
   }
 
   @override
@@ -954,7 +963,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count downloads iniciados',
-      one: '1 download iniciado',
+      one: '$count download iniciado',
     );
     return '$_temp0';
   }
@@ -965,7 +974,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count músicas adicionadas à fila',
-      one: '1 música adicionada à fila',
+      one: '$count música adicionada à fila',
     );
     return '$_temp0';
   }
@@ -1000,7 +1009,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
     );
     return '$_temp0';
   }
@@ -1083,7 +1092,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count bibliotecas compartilhadas',
-      one: '1 biblioteca compartilhada',
+      one: '$count biblioteca compartilhada',
     );
     return '$_temp0';
   }
@@ -1125,7 +1134,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'Movimentação concluída — $count arquivos ignorados (sem suporte no destino)',
       one:
-          'Movimentação concluída — 1 arquivo ignorado (sem suporte no destino)',
+          'Movimentação concluída — $count arquivo ignorado (sem suporte no destino)',
     );
     return '$_temp0';
   }
@@ -1147,7 +1156,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas serão baixadas para reprodução offline.',
-      one: '1 faixa será baixada para reprodução offline.',
+      one: '$count faixa será baixada para reprodução offline.',
     );
     return '$_temp0';
   }
@@ -1192,7 +1201,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count arquivos serão baixados.',
-      one: '1 arquivo será baixado.',
+      one: '$count arquivo será baixado.',
     );
     return '$_temp0';
   }
@@ -1252,11 +1261,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get storageSdCard => 'Cartão SD';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'Salvar no cartão SD';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'Salvo na pasta do app no cartão SD — não exige permissão, mas é removido ao desinstalar o app.';
 
   @override
   String get storageHelpAppLocal =>
@@ -1305,7 +1314,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count itens',
-      one: '1 item',
+      one: '$count item',
     );
     return '$_temp0';
   }
@@ -1359,7 +1368,7 @@ class AppLocalizationsPt extends AppLocalizations {
       other:
           'Os $count arquivos baixados deste servidor ($size) estão em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
       one:
-          'O 1 arquivo baixado deste servidor ($size) está em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
+          'O arquivo baixado deste servidor ($size) está em um volume de armazenamento diferente do novo local. Escolha o que fazer:',
     );
     return '$_temp0';
   }
@@ -1423,10 +1432,16 @@ class AppLocalizationsPt extends AppLocalizations {
       'Transmite o visualizador para a TV · apenas Chromecast';
 
   @override
+  String get castThisDevice => 'Este dispositivo';
+
+  @override
   String get visualizerNoKnobs => 'Este shader não expõe nenhum controle.';
 
   @override
   String get nowPlaying => 'Tocando agora';
+
+  @override
+  String get settingsPlayerLayout => 'Layout de Tocando agora';
 
   @override
   String get playerLayoutSmall => 'Pequeno';
@@ -1498,7 +1513,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get lanNoCode =>
-      'O Quick Connect está ativado neste servidor, mas ele não compartilhou um código de pareamento. Entre como administrador ou peça ao operador para ativar o compartilhamento do código.';
+      'A Conexão rápida está ativada neste servidor, mas ele não compartilhou um código de pareamento. Entre como administrador ou peça ao operador para ativar o compartilhamento do código.';
 
   @override
   String get settingsResumeQueue => 'Retomar a fila ao iniciar';
@@ -1522,7 +1537,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Aguarda uma conexão Wi-Fi antes de baixar as faixas da fila.';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => 'Limite de download automático';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1533,10 +1548,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Guarda a fila inteira (sem limite).';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => 'Ilimitado';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => 'Número de músicas';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1569,11 +1584,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Os registros ficam no seu dispositivo. Os tokens são ocultados antes de copiar ou compartilhar.';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => 'Registro detalhado';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'Também registra eventos muito frequentes, como mudanças de foco do app. Só é necessário ao diagnosticar um problema de reprodução.';
 
   @override
   String get diagnosticsCopy => 'Copiar';
@@ -1592,7 +1607,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get diagnosticsEmpty => 'Ainda não há registros';
 
   @override
-  String get storageAppExternal => 'App externo';
+  String get storageAppExternal => 'Externo do app';
 
   @override
   String get storageAppSdCard => 'Cartão SD do app';
@@ -1609,7 +1624,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Adicione os seus próprios arquivos .glsl à rotação do motor Shader.';
+      'Adicione os seus próprios arquivos .glsl à rotação do motor de shaders.';
 
   @override
   String get importedShadersRescan => 'Reanalisar pasta';
@@ -1623,7 +1638,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor Shader está ativo.';
+      'Acessível via USB ou um gerenciador de arquivos (em Android/data). Os shaders importados entram na rotação quando o motor de shaders está ativo.';
 
   @override
   String get importedShadersRemove => 'Remover';
@@ -1640,19 +1655,20 @@ class AppLocalizationsPt extends AppLocalizations {
       'Pode não ser um shader válido — sem ponto de entrada mainImage/main.';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads => 'Importar .glsl de Downloads';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return 'Importados de Downloads: $count shader(s)';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone =>
+      'Nenhum arquivo .glsl novo em Downloads';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'É necessária a permissão de armazenamento para ler Downloads';
 
   @override
   String get addServerTabUrl => 'URL do servidor';
@@ -1665,14 +1681,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get irohPairingBody =>
-      'Ative “Remote Access” (acesso remoto) no servidor e depois cole o código de pareamento ou escaneie o QR.';
+      'Ative \"Remote Access\" (acesso remoto) no servidor e depois cole o código de pareamento ou escaneie o QR.';
 
   @override
   String get irohPairingCodeLabel => 'Código de pareamento';
 
   @override
   String get irohPairingCodeHint =>
-      'Cole o código do painel Remote Access do servidor';
+      'Cole o código do painel \"Remote Access\" do servidor';
 
   @override
   String get irohShowPairingCode => 'Mostrar código de pareamento';
@@ -1706,7 +1722,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get irohAndroidOnly =>
-      'A conexão rápida não está disponível neste dispositivo.';
+      'A Conexão rápida não está disponível neste dispositivo.';
 
   @override
   String get irohCameraPermission =>
@@ -1791,7 +1807,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get irohRepairBody =>
-      'O código de pareamento deste servidor mudou (o segredo foi renovado). Cole ou escaneie o novo código do painel Remote Access do servidor.';
+      'O código de pareamento deste servidor mudou (o segredo foi renovado). Cole ou escaneie o novo código do painel \"Remote Access\" do servidor.';
 
   @override
   String get irohRepairFailed =>
@@ -1854,7 +1870,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pathScanPending =>
-      'Este servidor ainda não analisou nenhuma música, por isso não há nada por onde traçar um percurso. Funciona depois de a análise de descoberta ser executada.';
+      'Este servidor ainda não analisou nenhuma música, por isso não há nada por onde traçar um caminho. Funciona depois de a análise de descoberta ser executada.';
 
   @override
   String get discoverNothingFound => 'Nenhuma correspondência encontrada.';
@@ -2089,7 +2105,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get setupPlaybackTitle => 'Ao tocar em uma música';
 
   @override
-  String get setupOfflineTitle => 'Mantenha sua fila offline';
+  String get setupOfflineTitle => 'Mantenha sua fila disponível offline';
 
   @override
   String get setupVisualizerNoMic => 'O mStream nunca usa seu microfone.';
@@ -2163,7 +2179,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'Este servidor é a versão v$version. Alguns recursos exigem v5.5 ou mais recente e ficarão indisponíveis.';
+    return 'Este servidor está na v$version. Alguns recursos exigem a v5.5 ou mais recente e ficarão indisponíveis.';
   }
 
   @override
@@ -2172,7 +2188,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get autoDjSonicNeedsNewerServer =>
-      'Requer servidor 6.15.2 ou mais recente';
+      'Requer um servidor 6.15.2 ou mais recente';
 
   @override
   String get torrentScreenTitle => 'Adicionar torrent';
@@ -2380,78 +2396,78 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => 'Servidor somente leitura';
 
   @override
   String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+      'Playlists e avaliações ficam no seu próprio servidor';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      'Músicas de um servidor compartilhado não podem ser compartilhadas daqui — elas estão na biblioteca de outra pessoa.';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => 'Esquecer';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'Ocultar no seletor';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'Mostrar no seletor';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return 'Não é mais compartilhado por $parent';
   }
 
   @override
   String get federationTitle => 'Federação';
 
   @override
-  String get federationStatusOn => 'Ligada · conectada ao relay';
+  String get federationStatusOn => 'Ativada · conectada ao relay';
 
   @override
-  String get federationStatusConnecting => 'Ligada · a ligar…';
+  String get federationStatusConnecting => 'Ativada · conectando…';
 
   @override
-  String get federationStatusOff => 'Desligada';
+  String get federationStatusOff => 'Desativada';
 
   @override
   String get federationStatusUnavailable => 'Indisponível nesta plataforma';
 
   @override
-  String get federationSharedWithYou => 'Partilhado consigo';
+  String get federationSharedWithYou => 'Compartilhado com você';
 
   @override
-  String get federationRequestsSection => 'Pedidos';
+  String get federationRequestsSection => 'Solicitações';
 
   @override
-  String get federationYourSharedLibraries => 'As suas bibliotecas partilhadas';
+  String get federationYourSharedLibraries => 'Suas bibliotecas compartilhadas';
 
   @override
   String get federationAddPeer => 'Adicionar um par';
 
   @override
-  String get federationShareLibrary => 'Partilhar uma biblioteca';
+  String get federationShareLibrary => 'Compartilhar uma biblioteca';
 
   @override
   String get federationNoPeersYet =>
-      'Ainda nada é partilhado com este servidor.';
+      'Nada foi compartilhado com este servidor ainda.';
 
   @override
   String get federationNoKeysYet =>
-      'Ainda sem tickets — partilhe uma biblioteca para criar um.';
+      'Ainda sem tickets — compartilhe uma biblioteca para criar um.';
 
   @override
   String get federationNoRequests =>
-      'Ainda sem pedidos — os servidores da rede de descoberta podem encontrá-lo aqui.';
+      'Ainda sem solicitações — os servidores da rede de descoberta podem encontrar você aqui.';
 
   @override
   String get federationClipboardTicket => 'Ticket na área de transferência';
 
   @override
   String federationTicketPreview(String name, String libraries) {
-    return '$name · partilha $libraries';
+    return '$name · compartilha $libraries';
   }
 
   @override
@@ -2469,7 +2485,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get federationPeerLive => 'ativo';
 
   @override
-  String get federationPeerConnecting => 'a ligar…';
+  String get federationPeerConnecting => 'conectando…';
 
   @override
   String get federationPeerDirectTunnel => 'túnel direto';
@@ -2481,150 +2497,151 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationPeerViaTunnel(String parent) {
-    return 'via o túnel de $parent';
+    return 'pelo túnel de $parent';
   }
 
   @override
-  String get federationPeerMissing => 'já não é partilhado';
+  String get federationPeerMissing => 'não é mais compartilhado';
 
   @override
   String get federationPeerHidden => 'oculto no seletor';
 
   @override
   String federationMemberNote(String server) {
-    return 'Partilhar é tarefa do administrador. Criar tickets, adicionar pares e responder a pedidos de emparelhamento exigem uma sessão de administrador em $server — a mesma que abre o painel de administração.';
+    return 'Compartilhar é tarefa do administrador. Criar tickets, adicionar pares e responder a solicitações de pareamento exigem login de administrador em $server — o mesmo que abre o painel de administração.';
   }
 
   @override
   String get federationRestrictedNote =>
-      'Este servidor só aceita chamadas de administração a partir da sua própria rede. Ligue-se a partir de casa para gerir a partilha aqui.';
+      'Este servidor só aceita chamadas de administração vindas da própria rede. Conecte-se de casa para gerenciar o compartilhamento aqui.';
 
   @override
   String get federationDisabledNote =>
-      'A API de administração está desligada neste servidor.';
+      'A API de administração está desativada neste servidor.';
 
   @override
   String get federationUnsupportedNote =>
-      'Este servidor é demasiado antigo para gerir a federação a partir da app. Atualize o mStream.';
+      'Este servidor é antigo demais para gerenciar a federação pelo app. Atualize o mStream.';
 
   @override
-  String get federationLoadFailed => 'Não foi possível contactar o servidor.';
+  String get federationLoadFailed => 'Não foi possível alcançar o servidor.';
 
   @override
   String get federationRetry => 'Tentar novamente';
 
   @override
   String get federationOffTitle =>
-      'Partilhe bibliotecas com os servidores dos seus amigos';
+      'Compartilhe bibliotecas com os servidores dos seus amigos';
 
   @override
   String get federationOffBody =>
-      'Emparelhe dois servidores mStream para ouvirem a música um do outro. Trocam-se tickets — envie um por mensagem, digitalize-o ou cole-o.';
+      'Pareie dois servidores mStream para que cada um leia a música do outro. Vocês trocam tickets — envie um por mensagem, escaneie um, cole um.';
 
   @override
-  String get federationOffPoint1Title => 'Só leitura, cifrado de ponta a ponta';
+  String get federationOffPoint1Title =>
+      'Somente leitura, criptografado de ponta a ponta';
 
   @override
   String get federationOffPoint1Body =>
-      'As listas e as classificações nunca saem do seu servidor';
+      'Playlists e avaliações nunca saem do seu servidor';
 
   @override
   String get federationOffPoint2Title =>
-      'Sem reencaminhamento de portas nem DNS';
+      'Sem redirecionamento de portas nem DNS';
 
   @override
   String get federationOffPoint2Body =>
-      'O iroh encontra o caminho — direto quando pode, por relay quando é preciso';
+      'O iroh encontra um caminho — direto quando pode, por relay quando precisa';
 
   @override
-  String get federationOffPoint3Title => 'Tickets que pode revogar';
+  String get federationOffPoint3Title => 'Tickets que você pode revogar';
 
   @override
   String get federationOffPoint3Body =>
-      'Cada um é resgatado uma vez e cortado a qualquer momento';
+      'Cada um é resgatado uma vez e pode ser cortado a qualquer momento';
 
   @override
   String get federationOffAdminOnly =>
-      'Só o administrador do servidor pode ligar isto.';
+      'Só o administrador do servidor pode ativar isso.';
 
   @override
   String federationOffMemberNote(String server) {
-    return 'A federação está desligada em $server. O administrador pode ligá-la.';
+    return 'A federação está desativada em $server. O administrador pode ativá-la.';
   }
 
   @override
-  String get federationTurnOn => 'Ligar a federação';
+  String get federationTurnOn => 'Ativar federação';
 
   @override
   String get federationUnavailableNote =>
-      'O componente iroh não tem uma compilação para o sistema/CPU deste servidor, por isso o ponto de federação não pode correr aqui.';
+      'O componente iroh não tem build para o sistema/CPU deste servidor, então o endpoint de federação não pode ser executado aqui.';
 
   @override
-  String get federationTurnedOn => 'A federação está ligada';
+  String get federationTurnedOn => 'A federação está ativada';
 
   @override
-  String get federationTurnedOff => 'A federação está desligada';
+  String get federationTurnedOff => 'A federação está desativada';
 
   @override
   String get federationToggleFailed =>
-      'Não foi possível alterar a definição de federação.';
+      'Não foi possível atualizar a configuração de federação.';
 
   @override
-  String get federationSettingsTitle => 'Definições de federação';
+  String get federationSettingsTitle => 'Configurações de federação';
 
   @override
   String get federationSwitchSubtitle =>
-      'Entre pares, cifrado de ponta a ponta. Sem reencaminhamento de portas, sem DNS.';
+      'Peer-to-peer, criptografado de ponta a ponta. Sem redirecionamento de portas, sem DNS.';
 
   @override
-  String get federationStatusSection => 'Estado';
+  String get federationStatusSection => 'Status';
 
   @override
-  String get federationConnectedRelay => 'Ligado ao relay';
+  String get federationConnectedRelay => 'Conectado ao relay';
 
   @override
-  String get federationNotRunning => 'Ponto de federação parado';
+  String get federationNotRunning => 'Endpoint parado';
 
   @override
-  String get federationEndpointId => 'ID do ponto';
+  String get federationEndpointId => 'ID do endpoint';
 
   @override
-  String get federationEndpointCopied => 'ID do ponto copiado';
+  String get federationEndpointCopied => 'ID do endpoint copiado';
 
   @override
-  String get federationPairingRequestsSection => 'Pedidos de emparelhamento';
+  String get federationPairingRequestsSection => 'Solicitações de pareamento';
 
   @override
   String get federationRequestsInboxTitle =>
-      'Aceitar pedidos da rede de descoberta';
+      'Aceitar solicitações da rede de descoberta';
 
   @override
   String get federationRequestsInboxSubtitle =>
-      'Desligado por predefinição. Quando desligado, os novos pedidos são recusados no transporte; as respostas aos seus próprios pedidos continuam a chegar.';
+      'Desativado por padrão. Quando desativado, novas solicitações são recusadas no transporte; as respostas às suas próprias solicitações continuam chegando.';
 
   @override
   String get federationInboxFailed =>
-      'Não foi possível alterar a caixa de pedidos.';
+      'Não foi possível atualizar a caixa de solicitações.';
 
   @override
-  String get federationDefaultsSection => 'Predefinições para novos tickets';
+  String get federationDefaultsSection => 'Padrões para novos tickets';
 
   @override
   String get federationDefaultsNote =>
-      'Da configuração do servidor — cada ticket pode alterá-las';
+      'Da configuração do servidor — cada ticket pode alterá-los';
 
   @override
   String get federationOffWarning =>
-      'Desligar a federação corta todas as pontes com os pares e esconde os seus tickets até voltar a ligar. Os pares mantêm os seus tickets.';
+      'Desativar a federação derruba todas as pontes com os pares e oculta seus tickets até ela ser reativada. Os pares mantêm os tickets deles.';
 
   @override
   String federationRequestWantsToPair(String name) {
-    return '$name quer emparelhar';
+    return '$name quer parear';
   }
 
   @override
   String federationRequestToName(String name) {
-    return 'Pedido a $name';
+    return 'Solicitação para $name';
   }
 
   @override
@@ -2637,82 +2654,83 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationRequestYouOffered(String libraries) {
-    return 'Ofereceu $libraries';
+    return 'Você ofereceu $libraries';
   }
 
   @override
-  String get federationRequestYouOfferedNothing => 'Não ofereceu nada';
+  String get federationRequestYouOfferedNothing => 'Você não ofereceu nada';
 
   @override
-  String get federationReqSending => 'a enviar…';
+  String get federationReqSending => 'enviando…';
 
   @override
-  String get federationReqWaiting => 'à espera da resposta';
+  String get federationReqWaiting => 'aguardando resposta';
 
   @override
-  String get federationReqSharingBack => 'a partilhar de volta…';
+  String get federationReqSharingBack => 'compartilhando de volta…';
 
   @override
   String get federationReqNeedsAnswer => 'precisa da sua resposta';
 
   @override
-  String get federationReqSendingTicket => 'a enviar o seu ticket…';
+  String get federationReqSendingTicket => 'enviando seu ticket…';
 
   @override
-  String get federationReqWaitingShare => 'à espera da partilha deles';
+  String get federationReqWaitingShare => 'aguardando o compartilhamento deles';
 
   @override
-  String get federationReqDeclined => 'recusado';
+  String get federationReqDeclined => 'recusada';
 
   @override
-  String get federationReqYouDeclined => 'recusado por si';
+  String get federationReqYouDeclined => 'você recusou';
 
   @override
-  String get federationReqInboxClosed => 'a caixa deles está fechada';
+  String get federationReqInboxClosed =>
+      'a caixa de entrada deles está fechada';
 
   @override
-  String get federationReqFederated => 'federado';
+  String get federationReqFederated => 'federada';
 
   @override
-  String get federationReqWithdrawn => 'retirado';
+  String get federationReqWithdrawn => 'retirada';
 
   @override
-  String get federationReqExpired => 'expirado';
+  String get federationReqExpired => 'expirada';
 
   @override
   String get federationAccept => 'Aceitar…';
 
   @override
-  String get federationAcceptAndShare => 'Aceitar e partilhar';
+  String get federationAcceptAndShare => 'Aceitar e compartilhar';
 
   @override
   String get federationDecline => 'Recusar';
 
   @override
-  String get federationCancelRequest => 'Cancelar pedido';
+  String get federationCancelRequest => 'Cancelar solicitação';
 
   @override
   String get federationDismiss => 'Dispensar';
 
   @override
-  String get federationRequestTitle => 'Pedido de emparelhamento';
+  String get federationRequestTitle => 'Solicitação de pareamento';
 
   @override
   String federationRequestReceived(String ago) {
-    return 'Recebido $ago pela rede de descoberta';
+    return 'Recebida $ago pela rede de descoberta';
   }
 
   @override
   String federationRequestSent(String ago) {
-    return 'Enviado $ago pela rede de descoberta';
+    return 'Enviada $ago pela rede de descoberta';
   }
 
   @override
-  String get federationShareBack => 'Partilhar de volta';
+  String get federationShareBack => 'Compartilhar de volta';
 
   @override
   String get federationShareBackNote =>
-      'Nada muda até aceitar. Terão acesso só de leitura às bibliotecas que marcar — pelo menos uma.';
+      'Nada é trocado até você aceitar. Eles terão acesso somente leitura às bibliotecas que você marcar — pelo menos uma.';
 
   @override
   String get federationTheirLimits => 'Os limites deles';
@@ -2722,30 +2740,30 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationRequestIgnored =>
-      'Os pedidos deste servidor são ignorados durante 7 dias';
+      'As solicitações deste servidor serão ignoradas por 7 dias';
 
   @override
-  String get federationRequestAccepted => 'Pedido aceite';
+  String get federationRequestAccepted => 'Solicitação aceita';
 
   @override
-  String get federationRequestDeclined => 'Pedido recusado';
+  String get federationRequestDeclined => 'Solicitação recusada';
 
   @override
-  String get federationRequestCancelled => 'Pedido retirado';
+  String get federationRequestCancelled => 'Solicitação retirada';
 
   @override
   String get federationRequestActionFailed =>
-      'Não foi possível atualizar o pedido.';
+      'Não foi possível atualizar a solicitação.';
 
   @override
   String get federationTicketNameLabel => 'Para quem é?';
 
   @override
   String get federationTicketNameHint =>
-      'Só você vê este nome — identifica o ticket na sua lista.';
+      'Só você vê este nome — ele identifica o ticket na sua lista.';
 
   @override
-  String get federationLibrariesTheyCanRead => 'Bibliotecas que podem ler';
+  String get federationLibrariesTheyCanRead => 'Bibliotecas que eles podem ler';
 
   @override
   String get federationLimitsSection => 'Limites';
@@ -2757,13 +2775,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get federationPresets => 'Predefinições';
 
   @override
-  String get federationLimitStreamRate => 'Débito de streaming';
+  String get federationLimitStreamRate => 'Taxa de streaming';
 
   @override
   String get federationLimitPerDay => 'Por dia';
 
   @override
-  String get federationLimitStreams => 'Streams em simultâneo';
+  String get federationLimitStreams => 'Streams simultâneos';
 
   @override
   String get federationLimitExpires => 'Expira';
@@ -2780,7 +2798,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count dias',
-      one: '1 dia',
+      one: '$count dia',
     );
     return '$_temp0';
   }
@@ -2814,7 +2832,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count streams',
-      one: '1 stream',
+      one: '$count stream',
     );
     return '$_temp0';
   }
@@ -2835,8 +2853,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'dentro de $count dias',
-      one: 'dentro de 1 dia',
+      other: 'em $count dias',
+      one: 'em $count dia',
     );
     return '$_temp0';
   }
@@ -2846,17 +2864,17 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'dentro de $count horas',
-      one: 'dentro de 1 hora',
+      other: 'em $count horas',
+      one: 'em $count hora',
     );
     return '$_temp0';
   }
 
   @override
-  String get federationStreamRateField => 'Débito (kbps, 0 = ilimitado)';
+  String get federationStreamRateField => 'Taxa (kbps, 0 = ilimitada)';
 
   @override
-  String get federationPerDayField => 'Quota diária (MB, 0 = ilimitada)';
+  String get federationPerDayField => 'Cota diária (MB, 0 = ilimitada)';
 
   @override
   String get federationStreamsField => 'Streams máx. (0 = ilimitado)';
@@ -2872,10 +2890,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationNoLibraries =>
-      'Este servidor não tem bibliotecas para partilhar.';
+      'Este servidor não tem bibliotecas para compartilhar.';
 
   @override
-  String get federationTicketTitle => 'O seu ticket';
+  String get federationTicketTitle => 'Seu ticket';
 
   @override
   String federationTicketFor(String name) {
@@ -2889,11 +2907,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationTicketQrHint =>
-      'Na mesma sala? Deixe-os digitalizar isto.';
+      'Na mesma sala? Deixe que escaneiem isto.';
 
   @override
   String get federationTicketWarning =>
-      'Quem tiver este ticket pode ler essas bibliotecas até ele ser resgatado ou revogado. Envie-o por um canal privado — o primeiro servidor a usá-lo fica com ele.';
+      'Qualquer pessoa com este ticket pode ler essas bibliotecas até ele ser resgatado ou revogado. Envie-o por um canal privado — o primeiro servidor a usá-lo fica com ele.';
 
   @override
   String get federationCopyTicket => 'Copiar ticket';
@@ -2906,15 +2924,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationTicketRevokeNote =>
-      'Revogue-o a qualquer momento em Federação. Se reinstalarem, «Repor resgate» permite resgatar o ticket de novo.';
+      'Revogue-o a qualquer momento em Federação. Se reinstalarem, \"Redefinir resgate\" permite que o ticket seja resgatado novamente.';
 
   @override
   String get federationTicketNotRunning =>
-      'O ponto de federação não está a correr, por isso ainda não há ticket para enviar. Ligue a federação e volte.';
+      'O endpoint de federação não está em execução, então ainda não há ticket para enviar. Ative a federação e volte.';
 
   @override
   String federationShareMessage(String libraries, String ticket) {
-    return 'Estou a partilhar consigo a minha biblioteca de música mStream — $libraries, só de leitura. Na app mStream abra Federação → Adicionar um par e cole este ticket:\n\n$ticket\n\nFunciona uma vez — posso revogá-lo a qualquer momento.';
+    return 'Estou compartilhando minha biblioteca de música do mStream com você — $libraries, somente leitura. No app mStream, abra Federação → Adicionar um par e cole este ticket:\n\n$ticket\n\nEle funciona uma vez — posso revogá-lo a qualquer momento.';
   }
 
   @override
@@ -2933,11 +2951,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationKeyLastUsed(String ago) {
-    return 'Última utilização $ago';
+    return 'Último uso $ago';
   }
 
   @override
-  String get federationKeyNeverUsed => 'Nunca utilizado';
+  String get federationKeyNeverUsed => 'Nunca usado';
 
   @override
   String federationKeyClaimedAgo(String ago) {
@@ -2945,54 +2963,54 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get federationResetBinding => 'Repor resgate';
+  String get federationResetBinding => 'Redefinir resgate';
 
   @override
   String get federationResetBindingNote =>
-      'Reinstalaram? Permita resgatar o ticket de novo.';
+      'Seu amigo reinstalou? Permita que o ticket seja resgatado novamente.';
 
   @override
-  String get federationBindingReset => 'O ticket pode ser resgatado de novo';
+  String get federationBindingReset => 'O ticket pode ser resgatado novamente';
 
   @override
   String get federationRevoke => 'Revogar';
 
   @override
   String federationRevokeConfirm(String name) {
-    return 'Revogar este ticket? $name perde o acesso de imediato.';
+    return 'Revogar este ticket? $name perde o acesso imediatamente.';
   }
 
   @override
   String get federationRevoked => 'Ticket revogado';
 
   @override
-  String get federationSaveLimits => 'Guardar limites';
+  String get federationSaveLimits => 'Salvar limites';
 
   @override
-  String get federationLimitsSaved => 'Limites guardados';
+  String get federationLimitsSaved => 'Limites salvos';
 
   @override
-  String get federationLimitsFailed => 'Não foi possível guardar os limites.';
+  String get federationLimitsFailed => 'Não foi possível salvar os limites.';
 
   @override
   String get federationSend => 'Enviar';
 
   @override
-  String get federationKeyTitle => 'Biblioteca partilhada';
+  String get federationKeyTitle => 'Biblioteca compartilhada';
 
   @override
   String federationActionFailed(String error) {
-    return 'Isso não resultou: $error';
+    return 'Isso não funcionou: $error';
   }
 
   @override
   String get federationTheirTicket => 'O ticket deles';
 
   @override
-  String get federationScanQr => 'Digitalizar um código QR';
+  String get federationScanQr => 'Escanear um código QR';
 
   @override
-  String get federationScannerTitle => 'Digitalizar um ticket de federação';
+  String get federationScannerTitle => 'Escanear um ticket de federação';
 
   @override
   String get federationPaste => 'Colar';
@@ -3005,13 +3023,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationTicketTooNew =>
-      'Este ticket vem de um mStream mais recente do que esta app entende.';
+      'Este ticket vem de um mStream mais recente do que este app entende.';
 
   @override
   String get federationTicketExpiredNote => 'Este ticket expirou.';
 
   @override
-  String get federationDisplayName => 'Nome a mostrar';
+  String get federationDisplayName => 'Nome de exibição';
 
   @override
   String get federationDisplayNameHint =>
@@ -3019,7 +3037,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationSharesLibraries(String libraries) {
-    return 'Partilha $libraries';
+    return 'Compartilha $libraries';
   }
 
   @override
@@ -3032,24 +3050,24 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationAddPeerShowsUnder(String server) {
-    return 'Aparece sob $server';
+    return 'Aparece abaixo de $server';
   }
 
   @override
   String federationAddPeerReadOnly(String branch, String name) {
-    return 'Só leitura · $branch $name no seletor';
+    return 'Somente leitura · $branch $name no seletor';
   }
 
   @override
-  String get federationAddPeerDials => 'O seu servidor liga-se a ele por iroh';
+  String get federationAddPeerDials => 'Seu servidor se conecta a ele por iroh';
 
   @override
   String get federationAddPeerEncrypted =>
-      'Cifrado de ponta a ponta · sem reencaminhamento de portas';
+      'Criptografado de ponta a ponta · sem redirecionamento de portas';
 
   @override
   String get federationAddPeerNoTicket =>
-      'Ainda sem ticket? Peça que lhe enviem um por mensagem.';
+      'Ainda sem ticket? Peça para enviarem um por mensagem.';
 
   @override
   String federationPeerAdded(String name) {
@@ -3064,48 +3082,48 @@ class AppLocalizationsPt extends AppLocalizations {
       'Este ticket já está adicionado como par.';
 
   @override
-  String get federationLibrariesYouCanRead => 'Bibliotecas que pode ler';
+  String get federationLibrariesYouCanRead => 'Bibliotecas que você pode ler';
 
   @override
   String get federationDiscoverySection => 'Descoberta';
 
   @override
-  String get federationAskPeerSimilar => 'Pedir música semelhante a este par';
+  String get federationAskPeerSimilar => 'Pedir músicas semelhantes a este par';
 
   @override
   String get federationAskPeerSimilarNote =>
-      'Envia o que está a ouvir — só a este par.';
+      'Envia o que você está ouvindo — só para este par.';
 
   @override
   String get federationAutoDjSection => 'Auto DJ';
 
   @override
   String get federationAutoDjParticipates =>
-      'Participa no Auto DJ multisservidor';
+      'Participa do Auto DJ multisservidor';
 
   @override
   String get federationAutoDjParticipatesNote =>
-      'Responde com a sua própria biblioteca quando o DJ está ligado';
+      'Responde com a própria biblioteca quando o DJ está ativado';
 
   @override
   String get federationAutoDjNotCandidate => 'Não é candidato ao Auto DJ';
 
   @override
   String get federationAutoDjNotCandidateNote =>
-      'Precisa de um servidor capaz de responder a escolhas sónicas';
+      'Precisa de um servidor capaz de responder a seleções sonoras';
 
   @override
   String get federationTest => 'Testar';
 
   @override
-  String get federationTesting => 'A testar…';
+  String get federationTesting => 'Testando…';
 
   @override
   String get federationTestOk => 'Acessível';
 
   @override
   String federationTestFailed(String error) {
-    return 'Não foi possível contactar: $error';
+    return 'Não foi possível alcançá-lo: $error';
   }
 
   @override
@@ -3129,7 +3147,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationRemovePeerConfirm(String name) {
-    return 'Remover $name? As faixas em fila vindas dele deixam de tocar.';
+    return 'Remover $name? As faixas na fila vindas dele param de tocar.';
   }
 
   @override
@@ -3142,19 +3160,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get federationShowInPickerNote =>
-      'Os pares ocultos continuam a tocar o que pôs em fila a partir deles.';
+      'Pares ocultos continuam tocando o que você colocou na fila a partir deles.';
 
   @override
   String get federationPeerReadOnlyNote =>
-      'Só leitura — as listas e as classificações ficam no seu próprio servidor.';
+      'Somente leitura — playlists e avaliações ficam no seu próprio servidor.';
 
   @override
   String get federationPeerLibrariesUnknown =>
       'Ainda não listadas — abra-o uma vez para carregar as bibliotecas.';
 
   @override
-  String get federationTransportDirect =>
-      'Túnel direto a partir deste telemóvel';
+  String get federationTransportDirect => 'Túnel direto a partir deste celular';
 
   @override
   String get federationTransportRelay => 'Relay em espera';
@@ -3166,12 +3183,12 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String federationTransportViaParentTunnel(String parent) {
-    return 'Através de $parent pelo seu túnel';
+    return 'Através de $parent, pelo túnel dele';
   }
 
   @override
   String get federationDiscoveryFailed =>
-      'Não foi possível alterar a definição de descoberta.';
+      'Não foi possível atualizar a configuração de descoberta.';
 
   @override
   String get agoJustNow => 'agora mesmo';
@@ -3182,7 +3199,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count min',
-      one: 'há 1 min',
+      one: 'há $count min',
     );
     return '$_temp0';
   }
@@ -3193,7 +3210,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count h',
-      one: 'há 1 h',
+      one: 'há $count h',
     );
     return '$_temp0';
   }
@@ -3204,7 +3221,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'há $count dias',
-      one: 'há 1 dia',
+      one: 'há $count dia',
     );
     return '$_temp0';
   }
@@ -3213,16 +3230,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get browserP2pNetwork => 'Rede P2P';
 
   @override
-  String get browserP2pOn => 'Ligada';
+  String get browserP2pOn => 'Ativada';
 
   @override
-  String get browserP2pOff => 'Desligada';
+  String get browserP2pOff => 'Desativada';
 
   @override
   String get p2pTitle => 'Rede P2P';
 
   @override
-  String get p2pStatusConnected => 'Ligado';
+  String get p2pStatusConnected => 'Conectado';
 
   @override
   String p2pNeighborsCount(int count) {
@@ -3230,29 +3247,29 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count vizinhos',
-      one: '1 vizinho',
+      one: '$count vizinho',
     );
     return '$_temp0';
   }
 
   @override
   String p2pAnnouncingAs(String name) {
-    return 'anunciado como $name';
+    return 'anunciando como $name';
   }
 
   @override
-  String get p2pStatusSearching => 'Entrou · à espera de vizinhos';
+  String get p2pStatusSearching => 'Na rede · aguardando vizinhos';
 
   @override
   String p2pStatusReconnecting(int n) {
-    return 'A religar · tentativa $n';
+    return 'Reconectando · tentativa $n';
   }
 
   @override
   String get p2pStatusNotJoined => 'Ainda não entrou';
 
   @override
-  String get p2pStatusOff => 'Desligada';
+  String get p2pStatusOff => 'Desativada';
 
   @override
   String get p2pStatusUnavailable => 'Indisponível nesta plataforma';
@@ -3261,7 +3278,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pStatNeighbors => 'vizinhos na malha';
 
   @override
-  String get p2pStatNeighborsSub => 'ligações gossip ativas';
+  String get p2pStatNeighborsSub => 'conexões gossip ativas';
 
   @override
   String get p2pStatKnown => 'servidores conhecidos';
@@ -3272,7 +3289,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get p2pStatHeld => 'snapshots guardados';
+  String get p2pStatHeld => 'snapshots retidos';
 
   @override
   String p2pStatHeldOf(int held, int max) {
@@ -3293,7 +3310,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: 'pesquisáveis, $count bibliotecas',
-      one: 'pesquisáveis, 1 biblioteca',
+      one: 'pesquisáveis, $count biblioteca',
     );
     return '$_temp0';
   }
@@ -3306,11 +3323,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pActivityEmpty =>
-      'Ainda nada — entradas na malha, descargas de snapshots, rotação e recuperações aparecem aqui à medida que acontecem.';
+      'Ainda nada — entradas na malha, downloads de snapshots, rotações e recuperações aparecem aqui conforme acontecem.';
 
   @override
   String get p2pActivityNote =>
-      'O histórico completo está nos registos do servidor.';
+      'O histórico completo fica nos registros do servidor.';
 
   @override
   String get p2pFromNetwork => 'Da rede';
@@ -3324,30 +3341,30 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Abre Descobrir para a faixa em reprodução · sugestões de $count bibliotecas descarregadas',
+          'Abre Descobrir para a faixa em reprodução · sugestões de $count bibliotecas baixadas',
       one:
-          'Abre Descobrir para a faixa em reprodução · sugestões de 1 biblioteca descarregada',
+          'Abre Descobrir para a faixa em reprodução · sugestões de $count biblioteca baixada',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Reproduza algo primeiro — Descobrir segue a faixa atual';
+      'Toque algo primeiro — Descobrir segue a faixa atual';
 
   @override
   String get p2pNewArtistsOnlySub =>
       'Ocultar sugestões de artistas que já estão nesta biblioteca';
 
   @override
-  String get p2pServersYouFollow => 'Servidores que segue';
+  String get p2pServersYouFollow => 'Servidores que você segue';
 
   @override
   String get p2pServersOnNetwork => 'Servidores na rede';
 
   @override
   String get p2pNoServersYet =>
-      'Ainda não se ouviu nenhum servidor — adicione um com o ticket de um amigo ou dê um minuto ao gossip.';
+      'Nenhum servidor detectado ainda — adicione um com o ticket de um amigo ou dê um minuto ao gossip.';
 
   @override
   String p2pHiddenIncompatible(int count) {
@@ -3355,7 +3372,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores ocultos — modelo incompatível',
-      one: '1 servidor oculto — modelo incompatível',
+      one: '$count servidor oculto — modelo incompatível',
     );
     return '$_temp0';
   }
@@ -3383,7 +3400,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count faixas',
-      one: '1 faixa',
+      one: '$count faixa',
     );
     return '$_temp0';
   }
@@ -3394,22 +3411,22 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count seeders',
-      one: '1 seeder',
+      one: '$count seeder',
     );
     return '$_temp0';
   }
 
   @override
-  String get p2pChipDownloaded => 'descarregado';
+  String get p2pChipDownloaded => 'baixado';
 
   @override
   String get p2pChipUpdate => 'atualização disponível';
 
   @override
-  String get p2pChipNotDownloaded => 'não descarregado';
+  String get p2pChipNotDownloaded => 'não baixado';
 
   @override
-  String get p2pChipPinned => 'afixado';
+  String get p2pChipPinned => 'fixado';
 
   @override
   String get p2pChipIncompatible => 'modelo incompatível';
@@ -3418,55 +3435,55 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pChipFederated => 'federado';
 
   @override
-  String get p2pChipTheyAsked => 'pediram-lhe';
+  String get p2pChipTheyAsked => 'pediram a você';
 
   @override
-  String get p2pChipRequestSent => 'pedido enviado';
+  String get p2pChipRequestSent => 'solicitação enviada';
 
   @override
-  String get p2pSearchingTitle => 'À procura de pares';
+  String get p2pSearchingTitle => 'Procurando pares';
 
   @override
   String get p2pSearchingBody =>
-      'A malha forma-se em cerca de um minuto. Este ecrã atualiza-se sozinho.';
+      'A malha se forma em cerca de um minuto. Esta tela se atualiza sozinha.';
 
   @override
-  String get p2pReconnectingTitle => 'A religar';
+  String get p2pReconnectingTitle => 'Reconectando';
 
   @override
   String p2pReconnectingBody(int n) {
-    return 'O sidecar morreu e está a ser relançado (tentativa $n) — não é preciso fazer nada.';
+    return 'O sidecar parou e está sendo reiniciado (tentativa $n) — nenhuma ação necessária.';
   }
 
   @override
   String get p2pJoinTitle => 'Recomendações das bibliotecas de outras pessoas';
 
   @override
-  String get p2pWhatShared => 'O que é partilhado';
+  String get p2pWhatShared => 'O que é compartilhado';
 
   @override
   String get p2pShared1 => 'Um snapshot só com metadados';
 
   @override
   String get p2pShared1Sub =>
-      'Artista, título, duração, impressões sonoras — nunca ficheiros de áudio';
+      'Artista, título, duração, impressões sonoras — nunca arquivos de áudio';
 
   @override
   String get p2pShared2 => 'O nome e a descrição do seu servidor';
 
   @override
   String get p2pShared2Sub =>
-      'Visíveis para todos na rede, por predefinição a rede pública da comunidade';
+      'Visíveis para todos na rede — por padrão, a rede pública da comunidade';
 
   @override
-  String get p2pHowYouAppear => 'Como aparece';
+  String get p2pHowYouAppear => 'Como você aparece';
 
   @override
   String get p2pServerName => 'Nome do servidor';
 
   @override
   String get p2pServerNameHint =>
-      '“mStream” ao lado de outros 18 000 mStream é a primeira coisa a mudar.';
+      '“mStream” ao lado de outros 18.000 mStreams é a primeira coisa a mudar.';
 
   @override
   String get p2pDescription => 'Descrição';
@@ -3475,21 +3492,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pDescriptionHint => '180 caracteres, opcional.';
 
   @override
-  String get p2pAlsoAcceptRequests => 'Aceitar também pedidos de federação';
+  String get p2pAlsoAcceptRequests =>
+      'Aceitar também solicitações de federação';
 
   @override
   String get p2pAlsoAcceptRequestsSub =>
-      'Convites para partilhar bibliotecas — nada é partilhado até aprovar cada um. Liga a federação.';
+      'Convites para compartilhar bibliotecas — nada é compartilhado até você aprovar cada um. Ativa a federação.';
 
   @override
   String get p2pJoin => 'Entrar na rede';
 
   @override
-  String get p2pJoining => 'A entrar…';
+  String get p2pJoining => 'Entrando…';
 
   @override
   String get p2pJoined =>
-      'Entrou na rede de descoberta — dê um minuto à malha.';
+      'Entrou na rede de descoberta — dê um minuto para a malha se formar.';
 
   @override
   String p2pJoinFailed(String error) {
@@ -3498,28 +3516,28 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String p2pInboxFailed(String error) {
-    return 'A descoberta está ligada, mas a caixa de pedidos não arrancou: $error';
+    return 'A descoberta está ativada, mas a caixa de solicitações não iniciou: $error';
   }
 
   @override
   String get p2pUnavailableNote =>
-      'O binário p2p-sidecar não foi encontrado para esta plataforma e não há nenhum para descarregar — a rede está indisponível.';
+      'O binário p2p-sidecar não foi encontrado para esta plataforma e não há build para baixar — a rede está indisponível.';
 
   @override
   String get p2pWillDownloadNote =>
-      'O sidecar ainda não está instalado; ao entrar é descarregado primeiro.';
+      'O sidecar ainda não está instalado; ao entrar, ele é baixado primeiro.';
 
   @override
   String get p2pAdminOnlyNote => 'Só o administrador do servidor pode entrar.';
 
   @override
   String p2pMemberOffNote(String server) {
-    return 'A rede de descoberta está desligada em $server. O administrador pode entrar.';
+    return 'A rede de descoberta está desativada em $server. O administrador pode entrar.';
   }
 
   @override
   String p2pMemberNote(String server) {
-    return 'Entrar, convidar e gerir snapshots são tarefas do administrador. Inicie sessão em $server como administrador para gerir a rede aqui.';
+    return 'Entrar, convidar e gerenciar snapshots são tarefas do administrador. Faça login em $server como administrador para gerenciar a rede aqui.';
   }
 
   @override
@@ -3527,7 +3545,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String p2pDownloadedSize(String size) {
-    return 'Descarregado · $size';
+    return 'Baixado · $size';
   }
 
   @override
@@ -3541,31 +3559,31 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get p2pNotDownloaded => 'Não descarregado';
+  String get p2pNotDownloaded => 'Não baixado';
 
   @override
   String get p2pNotDownloadedSub =>
-      'Descarregue-o para o pesquisar a partir de Descobrir';
+      'Baixe-o para pesquisar nele a partir de Descobrir';
 
   @override
-  String get p2pDownload => 'Descarregar';
+  String get p2pDownload => 'Baixar';
 
   @override
   String get p2pUpdate => 'Atualizar';
 
   @override
-  String get p2pDownloading => 'A descarregar…';
+  String get p2pDownloading => 'Baixando…';
 
   @override
-  String get p2pDownloaded => 'Snapshot descarregado';
+  String get p2pDownloaded => 'Snapshot baixado';
 
   @override
   String p2pDownloadFailed(String error) {
-    return 'Não foi possível descarregar o snapshot: $error';
+    return 'Não foi possível baixar o snapshot: $error';
   }
 
   @override
-  String get p2pPin => 'Afixar este snapshot';
+  String get p2pPin => 'Fixar este snapshot';
 
   @override
   String p2pPinSub(int count) {
@@ -3573,16 +3591,16 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'A rotação liberta os snapshots menos usados após $count dias; um afixado fica.',
+          'A rotação libera os snapshots menos usados após $count dias; um fixado permanece.',
       one:
-          'A rotação liberta os snapshots menos usados após 1 dia; um afixado fica.',
+          'A rotação libera os snapshots menos usados após $count dia; um fixado permanece.',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pPinSubNoRotation =>
-      'A rotação está desligada; um snapshot afixado também sobrevive à falta de espaço.';
+      'A rotação está desativada; um snapshot fixado também sobrevive à falta de espaço.';
 
   @override
   String get p2pRemoveSnapshot => 'Remover snapshot';
@@ -3591,7 +3609,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pSnapshotRemoved => 'Snapshot removido';
 
   @override
-  String get p2pHeldSince => 'guardado desde';
+  String get p2pHeldSince => 'retido desde';
 
   @override
   String get p2pTracksLabel => 'faixas';
@@ -3600,46 +3618,47 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pSeedersLabel => 'seeders';
 
   @override
-  String get p2pSeedersSub => 'a servir o snapshot';
+  String get p2pSeedersSub => 'servindo o snapshot';
 
   @override
-  String get p2pFederatedWithYou => 'Federado consigo';
+  String get p2pFederatedWithYou => 'Federado com você';
 
   @override
   String get p2pFederatedWithYouSub =>
-      'Abra Federação para ver o que leem um do outro';
+      'Abra Federação para ver o que vocês leem um do outro';
 
   @override
-  String get p2pTheyAskedYou => 'Pediram para federar';
+  String get p2pTheyAskedYou => 'Eles pediram para federar';
 
   @override
-  String get p2pTheyAskedYouSub => 'Reveja o pedido em Federação';
+  String get p2pTheyAskedYouSub => 'Revise a solicitação em Federação';
 
   @override
-  String get p2pRequestSentTitle => 'Pedido enviado';
+  String get p2pRequestSentTitle => 'Solicitação enviada';
 
   @override
-  String get p2pRequestSentSub => 'À espera deles · acompanhe em Federação';
+  String get p2pRequestSentSub =>
+      'Aguardando resposta · acompanhe em Federação';
 
   @override
-  String get p2pAskToFederate => 'Pedir para partilhar bibliotecas';
+  String get p2pAskToFederate => 'Pedir para compartilhar bibliotecas';
 
   @override
   String get p2pAskToFederateSub =>
-      'Envia um pedido pela rede — por agora nada muda';
+      'Envia uma solicitação pela rede — nada é trocado por enquanto';
 
   @override
   String get p2pOpen => 'Abrir';
 
   @override
-  String get p2pReview => 'Rever';
+  String get p2pReview => 'Revisar';
 
   @override
   String get p2pForget => 'Esquecer este servidor';
 
   @override
   String get p2pForgetSub =>
-      'Offline e sem nada descarregado; volta se for ouvido de novo';
+      'Offline e sem nada baixado; volta se for detectado de novo';
 
   @override
   String p2pForgotten(String name) {
@@ -3651,7 +3670,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String p2pBlockConfirm(String name) {
-    return 'Bloquear $name? Os seus anúncios são ignorados e o seu snapshot removido.';
+    return 'Bloquear $name? Seus anúncios serão ignorados e seu snapshot removido.';
   }
 
   @override
@@ -3667,7 +3686,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pIncompatibleNote =>
-      'Modelo de embeddings incompatível — a sua biblioteca não pode alimentar a pesquisa de semelhantes deste servidor.';
+      'Modelo de embeddings incompatível — a biblioteca dele não pode alimentar a pesquisa de semelhantes deste servidor.';
 
   @override
   String get p2pCompatible => 'modelo compatível';
@@ -3682,11 +3701,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pUnnamedServer => 'Servidor sem nome';
 
   @override
-  String get p2pFederateTitle => 'Pedir federação';
+  String get p2pFederateTitle => 'Pedir para federar';
 
   @override
   String get p2pFederateNote =>
-      'Envia um pedido pela rede de descoberta. Agora não se troca nenhum acesso — veem o seu nome, a mensagem e a oferta; as bibliotecas só são partilhadas se aceitarem.';
+      'Envia uma solicitação pela rede de descoberta. Nenhum acesso é trocado agora — eles veem seu nome, sua mensagem e sua oferta; as bibliotecas só são compartilhadas se eles aceitarem.';
 
   @override
   String get p2pMessage => 'Mensagem';
@@ -3698,21 +3717,21 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pShareBackLibraries =>
-      'Bibliotecas que partilhará em troca se aceitarem';
+      'Bibliotecas que você compartilhará de volta se eles aceitarem';
 
   @override
   String get p2pShareBackNote =>
-      'Desmarque tudo para um pedido unilateral — só leria as deles.';
+      'Desmarque tudo para uma solicitação unilateral — você só leria as deles.';
 
   @override
-  String get p2pSendRequest => 'Enviar pedido';
+  String get p2pSendRequest => 'Enviar solicitação';
 
   @override
-  String get p2pRequestSent => 'Pedido enviado — acompanhe em Federação';
+  String get p2pRequestSent => 'Solicitação enviada — acompanhe em Federação';
 
   @override
   String p2pRequestFailed(String error) {
-    return 'Não foi possível enviar o pedido: $error';
+    return 'Não foi possível enviar a solicitação: $error';
   }
 
   @override
@@ -3720,7 +3739,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pTheirTicketHint =>
-      'Um amigo encontra o dele em “Convidar um amigo” no ecrã Rede P2P.';
+      'Um amigo encontra o dele em “Convidar um amigo” na tela Rede P2P.';
 
   @override
   String get p2pTicketPasted => 'Colado da área de transferência.';
@@ -3730,13 +3749,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pRememberFriendSub =>
-      'Guardado na configuração do servidor para a amizade sobreviver a reinícios.';
+      'Salvo na configuração do servidor para que a amizade sobreviva a reinícios.';
 
   @override
   String get p2pJoinFriend => 'Entrar';
 
   @override
-  String get p2pJoinedFriend => 'Entrou — a malha forma-se num minuto';
+  String get p2pJoinedFriend => 'Entrou — a malha se forma em um minuto';
 
   @override
   String p2pJoinFriendFailed(String error) {
@@ -3744,20 +3763,20 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get p2pNotATicket => 'Isso não parece um ticket de ponto de ligação.';
+  String get p2pNotATicket => 'Isso não parece um ticket de endpoint.';
 
   @override
-  String get p2pScanQr => 'Digitalizar um código QR';
+  String get p2pScanQr => 'Escanear um código QR';
 
   @override
-  String get p2pScannerTitle => 'Digitalizar um ticket de rede';
+  String get p2pScannerTitle => 'Escanear um ticket de rede';
 
   @override
   String get p2pInviteFriend => 'Convidar um amigo';
 
   @override
   String p2pYourTicketNote(String name) {
-    return 'O seu ticket — um amigo cola-o aqui no telemóvel para adicionar $name. É um endereço, não uma credencial.';
+    return 'Seu ticket — um amigo cola isto no celular dele para adicionar $name. É um endereço, não uma credencial.';
   }
 
   @override
@@ -3765,7 +3784,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String p2pShareMessage(String ticket) {
-    return 'Adiciona o meu servidor mStream na rede de descoberta — na app mStream abre Rede P2P → Adicionar um servidor amigo e cola este ticket:\n\n$ticket';
+    return 'Adicione meu servidor mStream na rede de descoberta — no app mStream, abra Rede P2P → Adicionar um servidor amigo e cole este ticket:\n\n$ticket';
   }
 
   @override
@@ -3773,21 +3792,21 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pTicketNotReady =>
-      'O sidecar ainda não está a correr, por isso ainda não há ticket para partilhar.';
+      'O sidecar ainda não está em execução, então ainda não há ticket para compartilhar.';
 
   @override
-  String get p2pSettingsTitle => 'Definições de rede';
+  String get p2pSettingsTitle => 'Configurações de rede';
 
   @override
   String get p2pSwitchTitle => 'Rede de descoberta';
 
   @override
   String get p2pSwitchSub =>
-      'Anuncia à rede um snapshot só com metadados. Desligue para sair — os dados recolhidos ficam locais.';
+      'Anuncia à rede um snapshot só com metadados. Desative para sair — os dados coletados permanecem locais.';
 
   @override
   String get p2pLeaveConfirm =>
-      'Sair da rede de descoberta? O seu servidor deixa de anunciar e descarregar snapshots. A descoberta local continua a funcionar.';
+      'Sair da rede de descoberta? Seu servidor para de anunciar e de baixar snapshots. A descoberta local continua funcionando.';
 
   @override
   String get p2pLeave => 'Sair';
@@ -3804,18 +3823,18 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pEditIdentity => 'Nome e descrição';
 
   @override
-  String get p2pIdentitySaved => 'Guardado — anunciado à rede';
+  String get p2pIdentitySaved => 'Salvo — anunciado à rede';
 
   @override
   String p2pSaveFailed(String error) {
-    return 'Não foi possível guardar: $error';
+    return 'Não foi possível salvar: $error';
   }
 
   @override
   String get p2pSnapshotsSection => 'Snapshots';
 
   @override
-  String get p2pAutoDownload => 'Descarga automática até';
+  String get p2pAutoDownload => 'Download automático de até';
 
   @override
   String p2pServersCount(int count) {
@@ -3823,7 +3842,7 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores',
-      one: '1 servidor',
+      one: '$count servidor',
     );
     return '$_temp0';
   }
@@ -3832,7 +3851,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get p2pStorageCap => 'Limite de armazenamento';
 
   @override
-  String get p2pRotate => 'Rodar descargas';
+  String get p2pRotate => 'Rotacionar downloads';
 
   @override
   String get p2pForgetOffline => 'Esquecer servidores offline';
@@ -3845,11 +3864,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get p2pCommunitySeedsOn =>
-      'Arranque através dos servidores seed públicos';
+      'Inicialização pelos servidores seed públicos';
 
   @override
   String get p2pCommunitySeedsOff =>
-      'Desligados — só servidores amigos; definido na configuração do servidor';
+      'Desativados — só servidores amigos; definido na configuração do servidor';
 
   @override
   String p2pBlockedServers(int count) {
@@ -3857,27 +3876,26 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count servidores bloqueados',
-      one: '1 servidor bloqueado',
+      one: '$count servidor bloqueado',
       zero: 'Nenhum servidor bloqueado',
     );
     return '$_temp0';
   }
 
   @override
-  String get p2pBlockedSub =>
-      'Anúncios ignorados, snapshots nunca descarregados';
+  String get p2pBlockedSub => 'Anúncios ignorados, snapshots nunca baixados';
 
   @override
   String get p2pBlockedTitle => 'Servidores bloqueados';
 
   @override
-  String get p2pSaved => 'Guardado';
+  String get p2pSaved => 'Salvo';
 
   @override
-  String get p2pOff => 'Desligada';
+  String get p2pOff => 'Desativada';
 
   @override
-  String get p2pSave => 'Guardar';
+  String get p2pSave => 'Salvar';
 
   @override
   String get p2pSearchServers => 'Procurar servidores — nome ou descrição';
@@ -3887,8 +3905,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pedidos de federação à espera',
-      one: '1 pedido de federação à espera',
+      other: '$count solicitações de federação aguardando',
+      one: '$count solicitação de federação aguardando',
     );
     return '$_temp0';
   }
@@ -3901,8 +3919,8 @@ class AppLocalizationsPt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Há $count pedidos de federação à espera',
-      one: 'Há um pedido de federação à espera',
+      other: 'Há $count solicitações de federação aguardando',
+      one: 'Há uma solicitação de federação aguardando',
     );
     return '$_temp0';
   }
@@ -3913,16 +3931,16 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get federationInboxChannelName => 'Pedidos de federação';
+  String get federationInboxChannelName => 'Solicitações de federação';
 
   @override
   String get federationInboxChannelDescription =>
-      'Chegou um pedido para partilhar bibliotecas num dos seus servidores';
+      'Chegou uma solicitação para compartilhar bibliotecas em um dos seus servidores';
 
   @override
-  String get federationNotifyTitle => 'Avisar-me sobre pedidos';
+  String get federationNotifyTitle => 'Notificar sobre solicitações';
 
   @override
   String get federationNotifySubtitle =>
-      'Uma notificação no telemóvel quando chega um pedido com a app aberta ou a reproduzir';
+      'Uma notificação no celular quando chega uma solicitação com o app aberto ou tocando';
 }

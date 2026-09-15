@@ -53,7 +53,7 @@ class AppLocalizationsJa extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count 曲',
-      zero: 'トラックなし',
+      zero: '曲なし',
     );
     return '$_temp0';
   }
@@ -103,16 +103,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get songInfoTitle => '曲の情報';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => '歌詞';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'この曲の歌詞が見つかりません';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => '歌詞を読み込めませんでした';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => '再試行';
 
   @override
   String get eqTitle => 'イコライザー';
@@ -195,7 +195,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get transcodeBitrate => 'ビットレート';
 
   @override
-  String get transcodeAuto => 'サーバー既定';
+  String get transcodeAuto => 'サーバーのデフォルト';
 
   @override
   String get transcodeUnavailable =>
@@ -206,7 +206,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get transcodeReloadQueueSubtitle =>
-      'トランスコード設定を変更したとき — オン：キュー全体を今すぐ再読み込み（再生中の曲は一瞬バッファリングします）。オフ：次以降の曲のみ変更し、再生中の曲はそのまま再生します。';
+      'トランスコード設定を変更したとき — オン: キュー全体を今すぐ再読み込み（再生中の曲は一瞬バッファリングします）。オフ: 次以降の曲のみ変更し、再生中の曲はそのまま再生します。';
 
   @override
   String get settingsTapBehavior => '曲をタップしたとき';
@@ -216,7 +216,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsStartupPageSubtitle =>
-      'アプリをこのブラウザー画面で開きます。戻ると、ブラウザーに戻ります。';
+      'アプリをこのブラウザー画面で開きます。「戻る」でブラウザーに戻ります。';
 
   @override
   String get tapSubtitleAddToQueue =>
@@ -277,10 +277,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'リストの項目数がこの値以上のとき、A〜Z のクイックスクラブ用ストリップを表示します。これより少ない場合はストリップを隠し、長いフォルダ名やファイル名を省略せず複数行に折り返します。0 に設定すると常にストリップを表示します。';
 
   @override
-  String get settingsLetterStripSide => 'スクロールバーの位置';
+  String get settingsLetterStripSide => '頭文字スクラバーの位置';
 
   @override
-  String get settingsLetterStripSideSubtitle => 'A–Z バーをどちらの端に置くか。';
+  String get settingsLetterStripSideSubtitle => 'A〜Z バーをどちらの端に置くか。';
 
   @override
   String get settingsLetterStripLeft => '左';
@@ -307,7 +307,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get realAudioPermPermanentlyDenied =>
-      '権限が完全に拒否されました。実音声を使用するにはシステム設定で有効にしてください。';
+      '権限が恒久的に拒否されました。実音声を使用するにはシステム設定で有効にしてください。';
 
   @override
   String get realAudioPermDenied => '権限が拒否されました。シンセサイズ音声のままにします。';
@@ -336,6 +336,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get visualizerTapToClose => 'どこかをタップして閉じる';
 
   @override
+  String get visualizerClose => 'ビジュアライザーを閉じる';
+
+  @override
+  String get visualizerPreviousPreset => '前のプリセット';
+
+  @override
+  String get visualizerNextPreset => '次のプリセット';
+
+  @override
   String get visualizerUnsupported => 'ビジュアライザーは現在 Android でのみ対応しています。';
 
   @override
@@ -359,7 +368,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutAttributions => 'クレジット';
 
   @override
-  String get aboutAttributionsSubtitle => 'ライセンス、シェーダーのクレジット、オープンソースのお知らせ。';
+  String get aboutAttributionsSubtitle => 'ライセンス、シェーダーのクレジット、オープンソースのライセンス表示。';
 
   @override
   String get aboutSponsor => 'mStream を支援';
@@ -473,7 +482,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get playlistFallbackTitle => 'プレイリスト';
 
   @override
-  String get playlistEmptyDetail => 'プレイリストが空です。\nキューからトラックを追加してください。';
+  String get playlistEmptyDetail => 'プレイリストが空です。\nキューから曲を追加してください。';
 
   @override
   String get shareEmptyTitle => 'キューが空です';
@@ -508,7 +517,7 @@ class AppLocalizationsJa extends AppLocalizations {
       locale: localeName,
       other: '$count 曲',
     );
-    return '$_temp0 （$url から）';
+    return '$_temp0（$url から）';
   }
 
   @override
@@ -563,10 +572,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get fieldPassword => 'パスワード';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'パスワードを表示';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'パスワードを隠す';
 
   @override
   String get fieldSdCard => 'SD カードにダウンロード';
@@ -603,10 +612,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get couldNotReachServer =>
-      'サーバーに到達できませんでした。ログインが必要な場合は「パブリックアクセス」をオフにして認証情報を追加してください。';
+      'サーバーに到達できませんでした。サインインが必要な場合は「パブリックアクセス」をオフにして認証情報を追加してください。';
 
   @override
-  String get failedToLogin => 'ログインに失敗しました';
+  String get failedToLogin => 'サインインに失敗しました';
 
   @override
   String testConnected(String version) {
@@ -707,14 +716,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return '$total 台中 $count 台が参加中 — 残りは discovery、同じ埋め込みモデル、または十分に新しいサーバー版が不足しています';
+    return '$total 台中 $count 台が参加中 — 残りはディスカバリーがないか、埋め込みモデルが一致しないか、サーバーのバージョンが古すぎます';
   }
 
   @override
   String get autoDjSectionQueue => 'キュー';
 
   @override
-  String get autoDjSongsPerFetchTitle => '1回あたりの曲数';
+  String get autoDjSongsPerFetchTitle => '1 回あたりの曲数';
 
   @override
   String get autoDjSongsPerFetchSubtitle =>
@@ -725,8 +734,8 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count曲',
-      one: '1曲',
+      other: '$count 曲',
+      one: '1 曲',
     );
     return '$_temp0';
   }
@@ -783,7 +792,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjDurationAllowUnknown => '長さが不明な曲も含める';
 
   @override
-  String get autoDjDurationAllowUnknownSub => 'サーバーが長さを読み取れなかった曲は、通常はスキップされます';
+  String get autoDjDurationAllowUnknownSub =>
+      'オフのときは、サーバーが長さを読み取れなかった曲はスキップされます';
 
   @override
   String get autoDjStatusOn => 'Auto DJ はオンです';
@@ -821,8 +831,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjGenreTitle => 'ジャンルフィルター';
 
   @override
-  String get autoDjGenreSubtitle =>
-      'ホワイトリストは一致するトラックのみを再生し、ブラックリストはそれらをスキップします。';
+  String get autoDjGenreSubtitle => 'ホワイトリストは一致する曲のみを再生し、ブラックリストはそれらをスキップします。';
 
   @override
   String get autoDjWhitelist => 'ホワイトリスト';
@@ -887,34 +896,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserSearchHint => 'データベースを検索';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => '検索対象を選択';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => '検索対象';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'アーティスト';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => 'アルバム';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => '曲';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'ファイル';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => '歌詞';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return '「$term」の検索結果';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return '検索対象: $categories';
   }
 
   @override
@@ -938,7 +947,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get tabBrowser => 'ブラウザ';
+  String get tabBrowser => 'ブラウザー';
 
   @override
   String get tabQueue => 'キュー';
@@ -1025,7 +1034,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get browserSectionLibrary => 'ライブラリ';
 
   @override
-  String get browserSectionListen => 'リッスン';
+  String get browserSectionListen => '聴く';
 
   @override
   String get browserSectionNetwork => 'ネットワーク';
@@ -1125,7 +1134,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsCastQualitySubtitle720 =>
-      'ビジュアライザーをテレビにストリーミングする解像度です。720p — スマートフォンへの負荷が最も軽い。';
+      'ビジュアライザーをテレビにストリーミングする解像度です。720p — スマートフォンへの負荷が最も軽くなります。';
 
   @override
   String get settingsCastQualitySubtitle1080 =>
@@ -1133,7 +1142,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsCastQualitySubtitle4k =>
-      'ビジュアライザーをテレビにストリーミングする解像度です。4K — 4K 対応の Chromecast が必要で、スマートフォンへの負荷がはるかに重い。';
+      'ビジュアライザーをテレビにストリーミングする解像度です。4K — 4K 対応の Chromecast が必要で、スマートフォンへの負荷がはるかに重くなります。';
 
   @override
   String get eqCasting =>
@@ -1183,10 +1192,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dlFatSkip =>
-      '一部のトラックはこのカードに保存できません — 名前が対応していません。代わりにストリーミングされます。';
+      '一部の曲はこのカードに保存できません — ファイル名が対応していないためです。代わりにストリーミング再生されます。';
 
   @override
-  String get dlServerGone => 'そのサーバーは設定されていません。';
+  String get dlServerGone => 'そのサーバーはもう設定されていません。';
 
   @override
   String get dlStorageUnavailable =>
@@ -1208,11 +1217,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storageSdCard => 'SD カード';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'SD カードに保存';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'SD カード内のアプリ用フォルダに保存されます — 権限は不要ですが、アプリをアンインストールすると削除されます。';
 
   @override
   String get storageHelpAppLocal => 'アプリ内に保存されます。アンインストールまたはアプリのデータ消去で削除されます。';
@@ -1242,7 +1251,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storageDownloadFolderHelp =>
-      'ファイルはこの端末の \'media/<folder>\' ディレクトリにダウンロードされます。以前のサーバーのフォルダを再利用すると、失われたサーバーを再追加したときにダウンロード済みの曲を保持できます。';
+      'ファイルはこの端末の「media/<folder>」ディレクトリにダウンロードされます。以前のサーバーのフォルダを再利用すると、失われたサーバーを再追加したときにダウンロード済みの曲を保持できます。';
 
   @override
   String get storageNoStorageAvailable => '利用できるストレージがありません';
@@ -1295,7 +1304,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get storageMovedToNewFolder => 'ダウンロードしたファイルを新しいフォルダに移動しました。';
 
   @override
-  String get storageMoveAlreadyRunning => 'すでに移動が進行中です — まず完了させてください。';
+  String get storageMoveAlreadyRunning => '既に移動が進行中です — まず完了させてください。';
 
   @override
   String get storageMigrateTitle => 'ストレージボリュームが異なります';
@@ -1321,7 +1330,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get storageMigrateMoveBody =>
-      'バックグラウンドで新しい保存先にコピーし、進むにつれて古いコピーを削除します。完了するまでアプリを開いたままにしてください。';
+      'バックグラウンドで新しい保存先にコピーし、コピーが済んだものから古いコピーを削除します。完了するまでアプリを開いたままにしてください。';
 
   @override
   String get storageMigrateLeave => 'そのままにする';
@@ -1358,7 +1367,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get castSearching => 'キャストデバイスを検索中…';
 
   @override
-  String get castNotSeeing => 'デバイスが表示されませんか？ 同じ Wi-Fi に接続されているか確認してください。';
+  String get castNotSeeing => 'デバイスが表示されませんか？同じ Wi-Fi に接続されているか確認してください。';
 
   @override
   String get castVisualizer => 'ビジュアライザーをキャスト';
@@ -1367,10 +1376,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get castVisualizerSubtitle => 'ビジュアライザーをテレビにストリーミング · Chromecast のみ';
 
   @override
+  String get castThisDevice => 'この端末';
+
+  @override
   String get visualizerNoKnobs => 'このシェーダーにはつまみがありません。';
 
   @override
   String get nowPlaying => '再生中';
+
+  @override
+  String get settingsPlayerLayout => '再生中画面のレイアウト';
 
   @override
   String get playerLayoutSmall => '小';
@@ -1409,7 +1424,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsAccentColorSubtitle => 'アプリ全体で使用される強調表示の色。';
 
   @override
-  String get accentThemeDefault => 'テーマの既定';
+  String get accentThemeDefault => 'テーマのデフォルト';
 
   @override
   String get accentCustom => 'カスタム';
@@ -1438,13 +1453,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get lanNoCode =>
-      'このサーバーではQuick Connectが有効ですが、ペアリングコードが共有されていません。管理者としてサインインするか、運営者にコード共有の有効化を依頼してください。';
+      'このサーバーではクイック接続がオンですが、ペアリングコードが共有されていません。管理者としてサインインするか、運営者にコード共有の有効化を依頼してください。';
 
   @override
   String get settingsResumeQueue => '起動時にキューを復元';
 
   @override
-  String get settingsResumeQueueSubtitle => '再生キューと再生位置を保存し、アプリを再び開いたときに復元します。';
+  String get settingsResumeQueueSubtitle => 'キューと再生位置を保存し、アプリを再び開いたときに復元します。';
 
   @override
   String get settingsOfflineQueue => 'キューをオフラインで利用可能にする';
@@ -1454,14 +1469,14 @@ class AppLocalizationsJa extends AppLocalizations {
       'キュー内の曲を自動的にこの端末にダウンロードし、接続が切れても再生を続けられるようにします。';
 
   @override
-  String get settingsOfflineQueueWifiOnly => 'Wi-Fi接続時のみダウンロード';
+  String get settingsOfflineQueueWifiOnly => 'Wi-Fi 接続時のみダウンロード';
 
   @override
   String get settingsOfflineQueueWifiOnlySubtitle =>
-      'キュー内の曲のダウンロードをWi-Fi接続まで待機します。';
+      'キュー内の曲のダウンロードを Wi-Fi 接続まで待機します。';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => '自動ダウンロードの上限';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1471,17 +1486,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsAutoDownloadCapSubtitleUnlimited => 'キュー全体を保存します（制限なし）。';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => '無制限';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => '曲数';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
       '再生中の曲から数えて、キューの何曲をダウンロード済みのまま保つか。再生が進むと、通り過ぎた曲は削除されます。0 でキュー全体。';
 
   @override
-  String get downloadWaitingWifi => 'Wi-Fi接続を待機中';
+  String get downloadWaitingWifi => 'Wi-Fi 接続を待機中';
 
   @override
   String get settingsRatingHalf => '半星評価';
@@ -1505,11 +1520,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get diagnosticsHint => 'ログは端末内にのみ保存されます。コピーや共有の前にトークンは隠されます。';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => '詳細ログ';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'アプリのフォーカス変更など、頻繁に発生するイベントも記録します。再生の問題を診断するときにのみ必要です。';
 
   @override
   String get diagnosticsCopy => 'コピー';
@@ -1544,7 +1559,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      '独自の .glsl ファイルを Shader エンジンのローテーションに追加します。';
+      '独自の .glsl ファイルをシェーダーエンジンのローテーションに追加します。';
 
   @override
   String get importedShadersRescan => 'フォルダを再スキャン';
@@ -1557,7 +1572,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーは Shader エンジンが有効なときにローテーションに加わります。';
+      'USB やファイルマネージャーからアクセスできます（Android/data 以下）。インポートしたシェーダーはシェーダーエンジンが有効なときにローテーションに加わります。';
 
   @override
   String get importedShadersRemove => '削除';
@@ -1574,19 +1589,19 @@ class AppLocalizationsJa extends AppLocalizations {
       '有効なシェーダーではない可能性があります — mainImage/main のエントリーポイントがありません。';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads => 'ダウンロードから .glsl をインポート';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return 'ダウンロードから $count 個のシェーダーをインポートしました';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone => 'ダウンロードに新しい .glsl ファイルはありません';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'ダウンロードフォルダを読み取るにはストレージの権限が必要です';
 
   @override
   String get addServerTabUrl => 'サーバー URL';
@@ -1612,7 +1627,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get irohQrBody =>
-      '別のデバイスの mStream アプリでスキャンしてこのサーバーに接続するか、コードをコピーしてそちらに貼り付けてください。';
+      '別の端末の mStream アプリでスキャンしてこのサーバーに接続するか、コードをコピーしてそちらに貼り付けてください。';
 
   @override
   String get irohQrCaution => 'このコードを知っている人は誰でもあなたのサーバーに接続できます。';
@@ -1633,10 +1648,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get irohScannerTitle => 'ペアリング QR をスキャン';
 
   @override
-  String get irohQrAndroidOnly => 'このデバイスでは QR スキャンを利用できません。';
+  String get irohQrAndroidOnly => 'この端末では QR スキャンを利用できません。';
 
   @override
-  String get irohAndroidOnly => 'このデバイスではクイック接続を利用できません。';
+  String get irohAndroidOnly => 'この端末ではクイック接続を利用できません。';
 
   @override
   String get irohCameraPermission => 'コードをスキャンするにはカメラの権限が必要です。';
@@ -1688,7 +1703,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String irohSignInFailedHttp(int status) {
-    return 'サインインに失敗しました (HTTP $status)。ユーザー名とパスワードを確認してください。';
+    return 'サインインに失敗しました（HTTP $status）。ユーザー名とパスワードを確認してください。';
   }
 
   @override
@@ -1730,11 +1745,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get irohCastUnavailable =>
-      'ピアツーピア (iroh) サーバーでは外部デバイスへのキャストを利用できません — 再生はこのデバイスで続きます。';
+      'ピアツーピア（iroh）サーバーでは外部デバイスへのキャストを利用できません — 再生はこの端末で続きます。';
 
   @override
   String get irohShareUnavailable =>
-      'ピアツーピア (iroh) サーバーでは共有を利用できません — リンクできる公開 URL がありません。';
+      'ピアツーピア（iroh）サーバーでは共有を利用できません — リンクできる公開 URL がありません。';
 
   @override
   String get discoverTitle => 'ディスカバー';
@@ -1769,17 +1784,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverScanPendingBody =>
-      'このサーバーではディスカバリーが有効ですが、まだ音楽が解析されていません。ディスカバリースキャンが実行されると、似ている曲が表示されます。';
+      'このサーバーではディスカバリーがオンですが、まだ音楽が解析されていません。ディスカバリースキャンが実行されると、似ている曲が表示されます。';
 
   @override
   String get discoverCheckAgain => '再確認';
 
   @override
-  String get discoverTurnedOff => 'このサーバーではディスカバリーが無効になっています。';
+  String get discoverTurnedOff => 'このサーバーではディスカバリーがオフになっています。';
 
   @override
   String get pathScanPending =>
-      'このサーバーはまだ音楽を解析していないため、経路を作るための曲がありません。ディスカバリースキャンが実行されると利用できます。';
+      'このサーバーはまだ音楽を解析していないため、パスを作るための曲がありません。ディスカバリースキャンが実行されると利用できます。';
 
   @override
   String get discoverNothingFound => '一致する曲が見つかりませんでした。';
@@ -1795,7 +1810,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get discoverNetworkWarmingUp =>
-      'ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドでダウンロードされます。';
+      'ネットワークのデータはまだありません — 他のサーバーが見つかると、ピアのライブラリがバックグラウンドで取得されます。';
 
   @override
   String get discoverNetworkNothingNew =>
@@ -1819,7 +1834,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get autoDjSonicNotReady =>
-      'ディスカバリーは有効ですが、スキャンがまだデータを生成していません — それまで選曲はランダムのままです。';
+      'ディスカバリーはオンですが、スキャンがまだデータを生成していません — それまで選曲はランダムのままです。';
 
   @override
   String get autoDjSonicStrictness => '類似度のしきい値';
@@ -1851,7 +1866,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjSonicSeedFailed => 'サーバーから曲を取得できませんでした。';
 
   @override
-  String get autoDjSeedNoMatch => 'Auto DJ のフィルターに一致する曲がありません。条件を緩めてください';
+  String get autoDjSeedNoMatch => 'Auto DJ のフィルターに一致する曲がありません — 条件を緩めてみてください';
 
   @override
   String get discoverFindSimilar => '似ている曲を探す';
@@ -1903,13 +1918,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get pathEndNotAnalyzed =>
-      '目的の曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
+      '目的曲はまだ解析されていません — ディスカバリースキャンを待つか、別の曲を選んでください。';
 
   @override
   String get pathStartSong => '開始曲';
 
   @override
-  String get pathEndSong => '終了曲';
+  String get pathEndSong => '目的曲';
 
   @override
   String get pathLength => '長さ';
@@ -2023,7 +2038,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get autoDjStartRandom => 'おまかせ';
 
   @override
-  String get autoDjStartRandomSub => 'ライブラリからランダムに1曲選び、そこから広げます。';
+  String get autoDjStartRandomSub => 'ライブラリからランダムに 1 曲選び、そこから広げます。';
 
   @override
   String get autoDjStartPick => '自分で選ぶ';
@@ -2065,12 +2080,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverTooOldWarning(String version) {
-    return 'このサーバーはバージョン v$version です。一部の機能には v5.5 以降が必要で、利用できません。';
+    return 'このサーバーは v$version です。v5.5 以降が必要な一部の機能は利用できません。';
   }
 
   @override
   String get autoDjNeedsNewerServer =>
-      'BPM 連続性、ハーモニックミックス、ジャンルフィルターには新しいサーバーが必要です。更新すると利用できます。';
+      'BPM の連続性、ハーモニックミキシング、ジャンルフィルターには新しいサーバーが必要です。更新すると利用できます。';
 
   @override
   String get autoDjSonicNeedsNewerServer => 'サーバー 6.15.2 以降が必要です';
@@ -2114,7 +2129,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get torrentOpenWith => '別のアプリで開く';
 
   @override
-  String get torrentOpenWithNone => 'このデバイスには .torrent ファイルを開けるアプリがありません';
+  String get torrentOpenWithNone => 'この端末には .torrent ファイルを開けるアプリがありません';
 
   @override
   String get torrentOpenWithFailed => 'トレントを別のアプリに渡せませんでした';
@@ -2138,7 +2153,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsTorrentAskSub => 'mStream でトレントを開いたとき、別のアプリに渡す選択肢を表示します';
 
   @override
-  String get settingsTorrentDefaultTitle => 'トレントの既定のアプリ';
+  String get settingsTorrentDefaultTitle => 'トレントのデフォルトアプリ';
 
   @override
   String get settingsTorrentDefaultSub =>
@@ -2213,7 +2228,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get torrentPickLibrary => 'ライブラリを選択してください';
 
   @override
-  String get torrentOneSource => 'マグネットリンクか .torrent ファイルをどちらか一つ指定してください';
+  String get torrentOneSource => 'マグネットリンクか .torrent ファイルのどちらか 1 つを指定してください';
 
   @override
   String get torrentPathEmpty => '保存先パスが空です';
@@ -2265,32 +2280,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String serverPickerVia(String parent) {
-    return 'via $parent';
+    return '$parent 経由';
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => '読み取り専用サーバー';
 
   @override
-  String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+  String get browserFederatedReadOnlyNote => 'プレイリストと評価は自分のサーバーに残ります';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      '共有サーバー上の曲はここから共有できません — 他の人のライブラリにあるためです。';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => '忘れる';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'セレクターで非表示にする';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'セレクターに表示する';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return '$parent による共有は終了しました';
   }
 
   @override
@@ -2353,10 +2367,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get federationAddPeerAction => 'ピアを追加';
 
   @override
-  String get federationPeerLive => '接続中';
+  String get federationPeerLive => '接続済み';
 
   @override
-  String get federationPeerConnecting => '接続しています…';
+  String get federationPeerConnecting => '接続中…';
 
   @override
   String get federationPeerDirectTunnel => '直接トンネル';
@@ -2379,12 +2393,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String federationMemberNote(String server) {
-    return '共有の管理は管理者の役割です。チケットの発行、ピアの追加、ペアリングリクエストへの返答には $server への管理者ログインが必要です — 管理パネルを開くのと同じログインです。';
+    return '共有の管理は管理者の役割です。チケットの発行、ピアの追加、ペアリングリクエストへの返答には $server への管理者サインインが必要です — 管理パネルを開くのと同じサインインです。';
   }
 
   @override
   String get federationRestrictedNote =>
-      'このサーバーは自身のネットワークからの管理呼び出ししか受け付けません。自宅から接続して共有を管理してください。';
+      'このサーバーは自身のネットワーク内からの管理 API 呼び出ししか受け付けません。自宅のネットワークから接続して共有を管理してください。';
 
   @override
   String get federationDisabledNote => 'このサーバーでは管理 API が無効になっています。';
@@ -2400,7 +2414,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get federationRetry => '再試行';
 
   @override
-  String get federationOffTitle => '友人のサーバーとライブラリを共有';
+  String get federationOffTitle => '友達のサーバーとライブラリを共有';
 
   @override
   String get federationOffBody =>
@@ -2477,13 +2491,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get federationRequestsInboxSubtitle =>
-      '初期設定はオフ。オフの間、新しいリクエストはトランスポート層で拒否されますが、自分が送ったリクエストへの返答は届きます。';
+      'デフォルトはオフ。オフの間、新しいリクエストはトランスポート層で拒否されますが、自分が送ったリクエストへの返答は届きます。';
 
   @override
   String get federationInboxFailed => 'リクエストの受信設定を変更できませんでした。';
 
   @override
-  String get federationDefaultsSection => '新しいチケットの初期値';
+  String get federationDefaultsSection => '新しいチケットのデフォルト';
 
   @override
   String get federationDefaultsNote => 'サーバー設定より — チケットごとに変更できます';
@@ -2546,7 +2560,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get federationReqInboxClosed => '相手の受信箱は閉じています';
 
   @override
-  String get federationReqFederated => '連携済み';
+  String get federationReqFederated => 'フェデレーション済み';
 
   @override
   String get federationReqWithdrawn => '取り下げ';
@@ -2722,13 +2736,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get federationStreamRateField => 'ストリーミング速度 (kbps、0 = 無制限)';
+  String get federationStreamRateField => 'ストリーミング速度（kbps、0 = 無制限）';
 
   @override
-  String get federationPerDayField => '1 日の上限 (MB、0 = 無制限)';
+  String get federationPerDayField => '1 日の上限（MB、0 = 無制限）';
 
   @override
-  String get federationStreamsField => '最大ストリーム数 (0 = 無制限)';
+  String get federationStreamsField => '最大ストリーム数（0 = 無制限）';
 
   @override
   String get federationExpiresField => '有効期限（日数、0 = 無期限）';
@@ -2804,11 +2818,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get federationKeyNeverUsed => '未使用';
+  String get federationKeyNeverUsed => '使用履歴なし';
 
   @override
   String federationKeyClaimedAgo(String ago) {
-    return '使用: $ago';
+    return '使用開始: $ago';
   }
 
   @override
@@ -2923,7 +2937,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get federationAddPeerFailed => 'ピアを追加できませんでした。';
 
   @override
-  String get federationPeerAlreadyAdded => 'このチケットはすでにピアとして追加されています。';
+  String get federationPeerAlreadyAdded => 'このチケットは既にピアとして追加されています。';
 
   @override
   String get federationLibrariesYouCanRead => '読めるライブラリ';
@@ -2932,7 +2946,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get federationDiscoverySection => 'ディスカバリー';
 
   @override
-  String get federationAskPeerSimilar => 'このピアに似た音楽を問い合わせる';
+  String get federationAskPeerSimilar => '似ている音楽をこのピアに問い合わせる';
 
   @override
   String get federationAskPeerSimilarNote => '再生中の曲の情報を送ります — このピアにのみ。';
@@ -2963,7 +2977,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String federationTestFailed(String error) {
-    return '到達できません: $error';
+    return '到達できませんでした: $error';
   }
 
   @override
@@ -2976,7 +2990,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String federationLastSeen(String ago) {
-    return '最終確認: $ago';
+    return '最終検出: $ago';
   }
 
   @override
@@ -3171,16 +3185,17 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '再生中の曲で「発見」を開きます · 取得済み $count ライブラリからの候補',
+      other: '再生中の曲で「ディスカバー」を開きます · 取得済み $count ライブラリからの候補',
     );
     return '$_temp0';
   }
 
   @override
-  String get p2pFindSimilarNothingPlaying => 'まず何かを再生してください — 「発見」は再生中の曲に追従します';
+  String get p2pFindSimilarNothingPlaying =>
+      'まず何かを再生してください — 「ディスカバー」は再生中の曲に追従します';
 
   @override
-  String get p2pNewArtistsOnlySub => 'このライブラリにすでにいるアーティストの候補を隠す';
+  String get p2pNewArtistsOnlySub => 'このライブラリに既にいるアーティストの候補を隠す';
 
   @override
   String get p2pServersYouFollow => 'フォロー中のサーバー';
@@ -3190,7 +3205,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get p2pNoServersYet =>
-      'まだサーバーが見つかりません — 友人のチケットで追加するか、ゴシップに 1 分ほど待ってください。';
+      'まだサーバーが見つかりません — 友達のチケットでサーバーを追加するか、ゴシップが広がるまで 1 分ほど待ってください。';
 
   @override
   String p2pHiddenIncompatible(int count) {
@@ -3274,7 +3289,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String p2pReconnectingBody(int n) {
-    return 'サイドカーが停止したため再起動しています（$n 回目）— 操作は不要です。';
+    return 'サイドカーが停止したため再起動しています（$n 回目） — 操作は不要です。';
   }
 
   @override
@@ -3293,7 +3308,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get p2pShared2 => 'サーバーの名前と説明';
 
   @override
-  String get p2pShared2Sub => 'ネットワーク上の全員に公開され、既定では公開コミュニティネットワークに載ります';
+  String get p2pShared2Sub => 'ネットワーク上の全員に公開され、デフォルトでは公開コミュニティネットワークに載ります';
 
   @override
   String get p2pHowYouAppear => '表示のされ方';
@@ -3354,7 +3369,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String p2pMemberNote(String server) {
-    return '参加・招待・スナップショットの管理は管理者の役割です。$server に管理者としてログインすると、ここでネットワークを管理できます。';
+    return '参加・招待・スナップショットの管理は管理者の役割です。$server に管理者としてサインインすると、ここでネットワークを管理できます。';
   }
 
   @override
@@ -3379,7 +3394,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get p2pNotDownloaded => '未取得';
 
   @override
-  String get p2pNotDownloadedSub => '取得すると「発見」から検索できます';
+  String get p2pNotDownloadedSub => '取得すると「ディスカバー」から検索できます';
 
   @override
   String get p2pDownload => '取得';
@@ -3544,7 +3559,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get p2pTheirTicket => '相手のチケット';
 
   @override
-  String get p2pTheirTicketHint => '友人は自分の P2P ネットワーク画面の「友達を招待」でチケットを確認できます。';
+  String get p2pTheirTicketHint => '友達は自分の P2P ネットワーク画面の「友達を招待」でチケットを確認できます。';
 
   @override
   String get p2pTicketPasted => 'クリップボードから貼り付けました。';
@@ -3580,7 +3595,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String p2pYourTicketNote(String name) {
-    return 'あなたのチケット — 友人がスマートフォンでここに貼り付けると $name を追加できます。これは住所であり、認証情報ではありません。';
+    return 'あなたのチケット — 友達がスマートフォンでここに貼り付けると $name を追加できます。これはアドレスであり、認証情報ではありません。';
   }
 
   @override

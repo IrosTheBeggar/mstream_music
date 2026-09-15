@@ -281,6 +281,18 @@
   "@visualizerTapToClose": {
     "description": "Hint on the visualizer status placeholder."
   },
+  "visualizerClose": "Close visualizer",
+  "@visualizerClose": {
+    "description": "Tooltip on the shader visualizer's close (X) button."
+  },
+  "visualizerPreviousPreset": "Previous preset",
+  "@visualizerPreviousPreset": {
+    "description": "Tooltip on the shader visualizer's previous-preset arrow."
+  },
+  "visualizerNextPreset": "Next preset",
+  "@visualizerNextPreset": {
+    "description": "Tooltip on the shader visualizer's next-preset arrow."
+  },
   "visualizerUnsupported": "Visualizer is currently only supported on Android.",
   "@visualizerUnsupported": {
     "description": "Shown when the visualizer runs on a non-Android platform."
@@ -1042,8 +1054,16 @@
   "castNotSeeing": "Don't see your device? Make sure it's on the same Wi-Fi.",
   "castVisualizer": "Cast visualizer",
   "castVisualizerSubtitle": "Stream the visualizer to the TV · Chromecast only",
+  "castThisDevice": "This device",
+  "@castThisDevice": {
+    "description": "The local (phone) target in the cast picker — playback stays on this device instead of a Chromecast/DLNA renderer."
+  },
   "visualizerNoKnobs": "This shader exposes no knobs.",
   "nowPlaying": "Now Playing",
+  "settingsPlayerLayout": "Now Playing layout",
+  "@settingsPlayerLayout": {
+    "description": "Settings row title for the Now Playing panel size picker (Small / Medium / Large / XL)."
+  },
   "playerLayoutSmall": "Small",
   "playerLayoutMedium": "Medium",
   "playerLayoutLarge": "Large",

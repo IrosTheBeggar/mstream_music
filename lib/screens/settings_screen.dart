@@ -95,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ListTile(
-            title: const Text('Now Playing layout'),
+            title: Text(l.settingsPlayerLayout),
             subtitle: Text(
               _playerLayoutSubtitle(l, SettingsManager().playerLayout),
               style: TextStyle(

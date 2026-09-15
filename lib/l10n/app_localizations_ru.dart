@@ -37,11 +37,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLanguage => 'Язык';
 
   @override
-  String get languageSystemDefault => 'Системный по умолчанию';
+  String get languageSystemDefault => 'Как в системе';
 
   @override
   String get settingsLanguageSubtitle =>
-      'Язык интерфейса приложения. «Системный по умолчанию» следует за настройками устройства.';
+      'Язык интерфейса приложения. «Как в системе» повторяет язык устройства.';
 
   @override
   String couldNotOpen(String url) {
@@ -107,16 +107,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get songInfoTitle => 'Сведения о треке';
 
   @override
-  String get lyricsTitle => 'Lyrics';
+  String get lyricsTitle => 'Текст песни';
 
   @override
-  String get lyricsEmpty => 'No lyrics found for this song';
+  String get lyricsEmpty => 'Текст для этого трека не найден';
 
   @override
-  String get lyricsError => 'Couldn\'t load lyrics';
+  String get lyricsError => 'Не удалось загрузить текст';
 
   @override
-  String get lyricsRetry => 'Retry';
+  String get lyricsRetry => 'Повторить';
 
   @override
   String get eqTitle => 'Эквалайзер';
@@ -201,18 +201,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get transcodeBitrate => 'Битрейт';
 
   @override
-  String get transcodeAuto => 'По умолчанию сервера';
+  String get transcodeAuto => 'Как на сервере';
 
   @override
   String get transcodeUnavailable =>
-      'На этом сервере транскодирование не включено — его треки воспроизводятся в оригинальном качестве.';
+      'На этом сервере перекодирование не включено — его треки воспроизводятся в оригинальном качестве.';
 
   @override
   String get transcodeReloadQueue => 'Применить к текущей очереди';
 
   @override
   String get transcodeReloadQueueSubtitle =>
-      'При изменении настроек транскодирования — включено: перезагрузить всю очередь сейчас (текущий трек ненадолго буферизуется); выключено: меняются только следующие треки, текущий доигрывает без изменений.';
+      'При изменении настроек перекодирования — включено: перезагрузить всю очередь сейчас (текущий трек ненадолго буферизуется); выключено: меняются только следующие треки, текущий доигрывает без изменений.';
 
   @override
   String get settingsTapBehavior => 'При нажатии на трек';
@@ -222,7 +222,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsStartupPageSubtitle =>
-      'Открывать приложение в этом разделе браузера; «Назад» возвращает к браузеру.';
+      'Открывать приложение на этом разделе «Обзора»; «Назад» возвращает в «Обзор».';
 
   @override
   String get tapSubtitleAddToQueue =>
@@ -285,7 +285,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Показывать полосу быстрой прокрутки A–Z, когда в списке столько элементов или больше. Ниже этого размера полоса скрывается, а длинные имена папок и файлов переносятся на несколько строк вместо обрезки. Установите 0, чтобы полоса показывалась всегда.';
 
   @override
-  String get settingsLetterStripSide => 'Сторона ползунка';
+  String get settingsLetterStripSide => 'Сторона полосы A–Z';
 
   @override
   String get settingsLetterStripSideSubtitle =>
@@ -348,6 +348,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get visualizerTapToClose => 'Нажмите в любом месте, чтобы закрыть';
 
   @override
+  String get visualizerClose => 'Закрыть визуализацию';
+
+  @override
+  String get visualizerPreviousPreset => 'Предыдущий пресет';
+
+  @override
+  String get visualizerNextPreset => 'Следующий пресет';
+
+  @override
   String get visualizerUnsupported =>
       'Визуализация сейчас поддерживается только на Android.';
 
@@ -356,7 +365,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String aboutBuiltBy(String name) {
-    return 'Разработано $name';
+    return 'Разработчик: $name';
   }
 
   @override
@@ -369,7 +378,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get linkHomepageSubtitle => 'Домашняя страница проекта';
 
   @override
-  String get aboutAttributions => 'Упоминания';
+  String get aboutAttributions => 'Благодарности и лицензии';
 
   @override
   String get aboutAttributionsSubtitle =>
@@ -418,7 +427,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get copiedToClipboard => 'Скопировано в буфер обмена';
 
   @override
-  String get attributionsTitle => 'Упоминания';
+  String get attributionsTitle => 'Благодарности и лицензии';
 
   @override
   String get attributionsSectionLicense => 'Лицензия';
@@ -551,7 +560,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shareAction => 'Поделиться';
 
   @override
-  String get shareDoneTitle => 'Плейлист отправлен';
+  String get shareDoneTitle => 'Плейлист доступен по ссылке';
 
   @override
   String get shareDoneBody =>
@@ -586,10 +595,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fieldPassword => 'Пароль';
 
   @override
-  String get fieldPasswordShow => 'Show password';
+  String get fieldPasswordShow => 'Показать пароль';
 
   @override
-  String get fieldPasswordHide => 'Hide password';
+  String get fieldPasswordHide => 'Скрыть пароль';
 
   @override
   String get fieldSdCard => 'Загружать на SD-карту';
@@ -710,7 +719,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjMultiServerSubtitle =>
-      'Auto DJ выбирает сразу со всех серверов, подстраиваясь под звучание';
+      'Авто-DJ выбирает сразу со всех серверов, подстраиваясь под звучание того, что играет';
 
   @override
   String get autoDjMultiServerNeedsSonic =>
@@ -737,7 +746,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String autoDjMultiServerSomeExcluded(int count, int total) {
-    return 'Участвуют $count из $total серверов — остальным не хватает discovery, совпадающей модели эмбеддингов или достаточно новой версии сервера';
+    return 'Участвуют $count из $total серверов — у остальных нет подбора по звучанию, совпадающей модели эмбеддингов или достаточно новой версии сервера';
   }
 
   @override
@@ -748,7 +757,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSongsPerFetchSubtitle =>
-      'Сколько треков Auto DJ добавляет в очередь при каждом запуске. Фильтры непрерывности оценивают всю партию по треку, звучавшему в момент запроса.';
+      'Сколько треков Авто-DJ добавляет в очередь при каждом запуске. Фильтры непрерывности оценивают всю партию по треку, звучавшему в момент запроса.';
 
   @override
   String autoDjSongsPerFetchValue(int count) {
@@ -790,7 +799,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjDurationSubtitle =>
-      'Пропускает интерлюдии и длинные миксы, выбирая треки только заданной длительности';
+      'Пропускать интерлюдии и длинные миксы, выбирая только треки в заданном диапазоне длительности';
 
   @override
   String get autoDjDurationRange => 'Длительность';
@@ -883,7 +892,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjKeywordSubtitle =>
-      'Пропускать выбор, в названии, исполнителе, альбоме или пути к файлу которого есть любое из этих слов.';
+      'Пропускать треки, у которых в названии, исполнителе, альбоме или пути к файлу встречается любое из этих слов.';
 
   @override
   String get autoDjNoKeywords =>
@@ -927,34 +936,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get browserSearchHint => 'Поиск в базе данных';
 
   @override
-  String get searchCategoriesTooltip => 'What to search';
+  String get searchCategoriesTooltip => 'Где искать';
 
   @override
-  String get searchCategoriesHeader => 'Search in';
+  String get searchCategoriesHeader => 'Искать в';
 
   @override
-  String get searchCategoryArtists => 'Artists';
+  String get searchCategoryArtists => 'Исполнители';
 
   @override
-  String get searchCategoryAlbums => 'Albums';
+  String get searchCategoryAlbums => 'Альбомы';
 
   @override
-  String get searchCategorySongs => 'Songs';
+  String get searchCategorySongs => 'Треки';
 
   @override
-  String get searchCategoryFiles => 'Files';
+  String get searchCategoryFiles => 'Файлы';
 
   @override
-  String get searchCategoryLyrics => 'Lyrics';
+  String get searchCategoryLyrics => 'Тексты песен';
 
   @override
   String searchSubheaderResults(String term) {
-    return 'Results for “$term”';
+    return 'Результаты по запросу «$term»';
   }
 
   @override
   String searchSubheaderCategories(String categories) {
-    return 'Searching: $categories';
+    return 'Поиск в: $categories';
   }
 
   @override
@@ -1098,8 +1107,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count общих библиотек',
+      many: '$count общих библиотек',
       few: '$count общие библиотеки',
-      one: '1 общая библиотека',
+      one: '$count общая библиотека',
     );
     return '$_temp0';
   }
@@ -1118,7 +1128,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsVisualizerKnobsSubtitle =>
-      'Показывать живые ползунки поверх визуализации для подстройки реактивности звука каждого шейдера. Только для движка шейдеров.';
+      'Показывать живые ползунки поверх визуализации, чтобы подстраивать реакцию каждого шейдера на звук. Только для движка шейдеров.';
 
   @override
   String get visualizerTuningTitle => 'Настройка';
@@ -1250,7 +1260,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dlFatSkip =>
-      'Некоторые треки нельзя сохранить на этой карте — их имена не поддерживаются. Вместо этого они транслируются.';
+      'Некоторые треки нельзя сохранить на этой карте — их имена не поддерживаются. Вместо этого они будут воспроизводиться потоком с сервера.';
 
   @override
   String get dlServerGone => 'Этот сервер больше не настроен.';
@@ -1276,11 +1286,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get storageSdCard => 'SD-карта';
 
   @override
-  String get storageSdSwitchTitle => 'Save to SD card';
+  String get storageSdSwitchTitle => 'Сохранять на SD-карту';
 
   @override
   String get storageSdSwitchSubtitle =>
-      'Stored in the SD card\'s app folder — no permission needed, but removed if you uninstall the app.';
+      'Хранится в папке приложения на SD-карте — разрешение не нужно, но при удалении приложения файлы удаляются.';
 
   @override
   String get storageHelpAppLocal =>
@@ -1288,11 +1298,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get storageHelpPermanent =>
-      'Сохраняется в выбранную вами папку. Сохраняется при удалении приложения. Требуется «Доступ ко всем файлам».';
+      'Сохраняется в выбранную вами папку. Не удаляется при удалении приложения. Требуется «Доступ ко всем файлам».';
 
   @override
   String get storageHelpSdCard =>
-      'Сохраняется в выбранную вами папку на SD-карте. Может стать недоступным, если карту извлечь. Некоторые устройства не позволяют приложениям записывать на SD-карты — если выбор папки постоянно не удаётся, используйте «Постоянное» или «Локально в приложении».';
+      'Сохраняется в выбранную вами папку на SD-карте. Файлы могут стать недоступными, если извлечь карту. Некоторые устройства не позволяют приложениям записывать на SD-карты — если выбор папки постоянно не удаётся, используйте «Постоянное» или «Локально в приложении».';
 
   @override
   String get storageChooseFolder => 'Выбрать папку';
@@ -1451,10 +1461,16 @@ class AppLocalizationsRu extends AppLocalizations {
       'Транслировать визуализацию на ТВ · только Chromecast';
 
   @override
+  String get castThisDevice => 'Это устройство';
+
+  @override
   String get visualizerNoKnobs => 'Этот шейдер не предоставляет регуляторов.';
 
   @override
   String get nowPlaying => 'Сейчас играет';
+
+  @override
+  String get settingsPlayerLayout => 'Макет экрана «Сейчас играет»';
 
   @override
   String get playerLayoutSmall => 'Маленький';
@@ -1517,7 +1533,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String lanLoginTitle(String name) {
-    return 'Вход на $name';
+    return 'Вход на сервер $name';
   }
 
   @override
@@ -1525,14 +1541,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get lanNoCode =>
-      'Quick Connect включён на этом сервере, но код сопряжения не был опубликован. Войдите как администратор или попросите оператора включить публикацию кода.';
+      'Быстрое подключение включено на этом сервере, но код сопряжения не был опубликован. Войдите как администратор или попросите оператора включить публикацию кода.';
 
   @override
   String get settingsResumeQueue => 'Восстанавливать очередь при запуске';
 
   @override
   String get settingsResumeQueueSubtitle =>
-      'Сохраняет очередь воспроизведения и позицию и восстанавливает их при повторном открытии приложения.';
+      'Сохранять очередь воспроизведения и позицию в ней и восстанавливать их при повторном открытии приложения.';
 
   @override
   String get settingsOfflineQueue => 'Держать очередь доступной офлайн';
@@ -1549,7 +1565,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ожидает подключения к Wi-Fi перед загрузкой треков из очереди.';
 
   @override
-  String get settingsAutoDownloadCap => 'Auto-download limit';
+  String get settingsAutoDownloadCap => 'Лимит автозагрузки';
 
   @override
   String get settingsAutoDownloadCapSubtitle =>
@@ -1560,10 +1576,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Кэшировать всю очередь (без ограничений).';
 
   @override
-  String get settingsAutoDownloadCapUnlimited => 'Unlimited';
+  String get settingsAutoDownloadCapUnlimited => 'Без ограничений';
 
   @override
-  String get settingsAutoDownloadCapField => 'Number of tracks';
+  String get settingsAutoDownloadCapField => 'Количество треков';
 
   @override
   String get settingsAutoDownloadCapDialogBody =>
@@ -1573,11 +1589,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get downloadWaitingWifi => 'Ожидание Wi-Fi';
 
   @override
-  String get settingsRatingHalf => 'Оценки с половиной звезды';
+  String get settingsRatingHalf => 'Оценки с шагом в ползвезды';
 
   @override
   String get settingsRatingHalfSubtitle =>
-      'Оценивать песни с шагом в ползвезды (долгое нажатие на звезду).';
+      'Оценивать треки с шагом в ползвезды (долгое нажатие на звезду).';
 
   @override
   String get ratingTitle => 'Оценить';
@@ -1596,11 +1612,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Журналы хранятся на вашем устройстве. Токены скрываются перед копированием или отправкой.';
 
   @override
-  String get diagnosticsVerbose => 'Verbose logging';
+  String get diagnosticsVerbose => 'Подробное журналирование';
 
   @override
   String get diagnosticsVerboseHint =>
-      'Also logs high-frequency events like app focus changes. Only needed when diagnosing a playback issue.';
+      'Также записывает частые события, например смену фокуса приложения. Нужно только при диагностике проблем с воспроизведением.';
 
   @override
   String get diagnosticsCopy => 'Копировать';
@@ -1618,7 +1634,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get diagnosticsEmpty => 'Журналов пока нет';
 
   @override
-  String get storageAppExternal => 'Внешнее (приложение)';
+  String get storageAppExternal => 'Внешнее хранилище приложения';
 
   @override
   String get storageAppSdCard => 'SD-карта приложения';
@@ -1635,7 +1651,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersSettingsSubtitle =>
-      'Добавьте свои файлы .glsl в ротацию движка Shader.';
+      'Добавьте свои файлы .glsl в ротацию движка шейдеров.';
 
   @override
   String get importedShadersRescan => 'Пересканировать папку';
@@ -1649,7 +1665,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersReachableHint =>
-      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок Shader.';
+      'Доступно по USB или через файловый менеджер (в Android/data). Импортированные шейдеры входят в ротацию, когда активен движок шейдеров.';
 
   @override
   String get importedShadersRemove => 'Удалить';
@@ -1663,22 +1679,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get importedShadersInvalid =>
-      'Возможно, это недопустимый шейдер — нет точки входа mainImage/main.';
+      'Возможно, это нерабочий шейдер — нет точки входа mainImage/main.';
 
   @override
-  String get importedShadersImportDownloads => 'Import .glsl from Downloads';
+  String get importedShadersImportDownloads =>
+      'Импортировать .glsl из «Загрузок»';
 
   @override
   String importedShadersDownloadsImported(int count) {
-    return 'Imported $count shader(s) from Downloads';
+    return 'Импортировано шейдеров из «Загрузок»: $count';
   }
 
   @override
-  String get importedShadersDownloadsNone => 'No new .glsl files in Downloads';
+  String get importedShadersDownloadsNone =>
+      'В «Загрузках» нет новых файлов .glsl';
 
   @override
   String get importedShadersDownloadsNoPermission =>
-      'Storage permission is needed to read Downloads';
+      'Для чтения «Загрузок» нужно разрешение на доступ к хранилищу';
 
   @override
   String get addServerTabUrl => 'URL сервера';
@@ -1698,7 +1716,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get irohPairingCodeHint =>
-      'Вставьте код из панели Remote Access сервера';
+      'Вставьте код из панели «Remote Access» сервера';
 
   @override
   String get irohShowPairingCode => 'Показать код сопряжения';
@@ -1808,7 +1826,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Сопряжение сервера изменилось — выполните его заново, чтобы переподключиться.';
 
   @override
-  String get irohRepairAction => 'Сопрячь заново';
+  String get irohRepairAction => 'Повторить сопряжение';
 
   @override
   String get irohRetry => 'Повторить';
@@ -1818,7 +1836,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get irohRepairBody =>
-      'Код сопряжения этого сервера изменился (его секрет был обновлён). Вставьте или отсканируйте новый код из панели Remote Access сервера.';
+      'Код сопряжения этого сервера изменился (его секрет был обновлён). Вставьте или отсканируйте новый код из панели «Remote Access» сервера.';
 
   @override
   String get irohRepairFailed =>
@@ -1917,15 +1935,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSonicSubtitle =>
-      'Выбирает только треки, звучащие как сессия, по аудио-анализу сервера.';
+      'Выбирать только треки, похожие по звучанию на сессию, на основе аудиоанализа сервера.';
 
   @override
   String get autoDjSonicUnavailable =>
-      'На этом сервере нет данных для открытий — выбор останется случайным.';
+      'На этом сервере нет данных подбора по звучанию — выбор останется случайным.';
 
   @override
   String get autoDjSonicNotReady =>
-      'Открытия включены, но сканирование ещё не дало данных — до тех пор выбор останется случайным.';
+      'Подбор по звучанию включён, но сканирование ещё не дало данных — до тех пор выбор останется случайным.';
 
   @override
   String get autoDjSonicStrictness => 'Порог похожести';
@@ -1943,7 +1961,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSonicSeedBanner =>
-      'Выберите опорный трек — коснитесь любого трека в библиотеке';
+      'Выберите стартовый трек — коснитесь любого трека в библиотеке';
 
   @override
   String get autoDjSonicSeedSearchHint => 'Найти трек…';
@@ -1959,7 +1977,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjSeedNoMatch =>
-      'Нет треков, подходящих под фильтры Auto DJ — попробуйте смягчить их';
+      'Нет треков, подходящих под фильтры Авто-DJ — попробуйте смягчить их';
 
   @override
   String get discoverFindSimilar => 'Найти похожие';
@@ -1977,7 +1995,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get discoverSessionStarted =>
-      'Звуковая сессия запущена — Auto DJ включён.';
+      'Звуковая сессия запущена — Авто-DJ включён.';
 
   @override
   String get autoDjSonicAnchorLabel => 'Якорь';
@@ -2010,17 +2028,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get pathStartNotAnalyzed =>
-      'Стартовый трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
+      'Начальный трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
 
   @override
   String get pathEndNotAnalyzed =>
       'Конечный трек ещё не проанализирован — дождитесь сканирования или выберите другой.';
 
   @override
-  String get pathStartSong => 'Начальная песня';
+  String get pathStartSong => 'Начальный трек';
 
   @override
-  String get pathEndSong => 'Конечная песня';
+  String get pathEndSong => 'Конечный трек';
 
   @override
   String get pathLength => 'Длина';
@@ -2066,7 +2084,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String pathPickOnServer(String server) {
-    return 'Выберите трек на $server';
+    return 'Выберите трек на сервере $server';
   }
 
   @override
@@ -2099,21 +2117,21 @@ class AppLocalizationsRu extends AppLocalizations {
       'Акцентный цвет выделяет кнопки, ползунки и элементы управления плеером. Коснитесь любого, чтобы попробовать.';
 
   @override
-  String get setupVisualizerTitle => 'Реальный звук для визуализатора';
+  String get setupVisualizerTitle => 'Реальный звук для визуализации';
 
   @override
   String get setupVisualizerBody =>
-      'Пока это не включено, визуализатор использует синтезированные данные.';
+      'Пока это не включено, визуализация использует синтезированные данные.';
 
   @override
   String get setupVisualizerWarning =>
-      'При включении запрашивается разрешение на микрофон — Android требует его от приложений, которые декодируют аудиопоток устройства (а визуализатор это делает).';
+      'При включении запрашивается разрешение на микрофон — Android требует его от приложений, которые декодируют аудиопоток устройства (а визуализация это делает).';
 
   @override
-  String get setupPlaybackTitle => 'При нажатии на песню';
+  String get setupPlaybackTitle => 'При нажатии на трек';
 
   @override
-  String get setupOfflineTitle => 'Держите очередь офлайн';
+  String get setupOfflineTitle => 'Очередь доступна и офлайн';
 
   @override
   String get setupVisualizerNoMic =>
@@ -2131,7 +2149,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get autoDjStartTitle => 'С чего начать Auto DJ?';
+  String get autoDjStartTitle => 'С чего начать Авто-DJ?';
 
   @override
   String get autoDjStartSubtitle =>
@@ -2145,7 +2163,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Выбрать случайный трек из библиотеки и строить от него.';
 
   @override
-  String get autoDjStartPick => 'Выберу сам';
+  String get autoDjStartPick => 'Выбрать самостоятельно';
 
   @override
   String get autoDjStartPickSub =>
@@ -2167,7 +2185,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjOnEmptyQueueSub =>
-      'Что делает Auto DJ, когда вы включаете его с пустой очередью.';
+      'Что делает Авто-DJ, когда вы включаете его с пустой очередью.';
 
   @override
   String get autoDjStartAskShort => 'Спрашивать';
@@ -2193,7 +2211,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get autoDjNeedsNewerServer =>
-      'Непрерывность BPM, гармоничное сведение и фильтр жанров требуют более новой версии сервера. Обновите, чтобы получить их.';
+      'Непрерывность по BPM, гармоническое сведение и фильтр по жанрам требуют более новой версии сервера. Обновите его, чтобы получить их.';
 
   @override
   String get autoDjSonicNeedsNewerServer => 'Требуется сервер 6.15.2 или новее';
@@ -2306,7 +2324,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get torrentYearLabel => 'Год';
 
   @override
-  String get torrentDestinationLabel => 'Назначение';
+  String get torrentDestinationLabel => 'Место назначения';
 
   @override
   String get torrentPathLabel => 'Путь в библиотеке';
@@ -2323,7 +2341,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get torrentRenameRoot => 'Переименовать корневую папку торрента';
 
   @override
-  String get torrentRenameRootSub => 'Совместить с именем папки назначения';
+  String get torrentRenameRootSub =>
+      'Сделать таким же, как имя папки назначения';
 
   @override
   String get torrentForceFresh => 'Принудительно скачать заново';
@@ -2400,39 +2419,39 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String serverPickerVia(String parent) {
-    return 'via $parent';
+    return 'через $parent';
   }
 
   @override
-  String get browserFederatedReadOnly => 'Read-only server';
+  String get browserFederatedReadOnly => 'Сервер только для чтения';
 
   @override
   String get browserFederatedReadOnlyNote =>
-      'Playlists and ratings stay on your own';
+      'Плейлисты и оценки остаются на вашем сервере';
 
   @override
   String get federatedShareUnavailable =>
-      'Tracks on a shared server can\'t be shared from here — they live in someone else\'s library.';
+      'Треками с общего сервера нельзя поделиться отсюда — они находятся в чужой библиотеке.';
 
   @override
-  String get federatedForget => 'Forget';
+  String get federatedForget => 'Забыть';
 
   @override
-  String get federatedHide => 'Hide from the picker';
+  String get federatedHide => 'Скрыть из списка серверов';
 
   @override
-  String get federatedShow => 'Show in the picker';
+  String get federatedShow => 'Показать в списке серверов';
 
   @override
   String federatedNoLongerListed(String parent) {
-    return 'No longer shared by $parent';
+    return '$parent больше не делится этим сервером';
   }
 
   @override
   String get federationTitle => 'Федерация';
 
   @override
-  String get federationStatusOn => 'Включена · подключено к релею';
+  String get federationStatusOn => 'Включена · подключено к ретранслятору';
 
   @override
   String get federationStatusConnecting => 'Включена · подключение…';
@@ -2504,18 +2523,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String federationPeerViaTunnel(String parent) {
-    return 'через туннель $parent';
+    return 'через туннель сервера $parent';
   }
 
   @override
   String get federationPeerMissing => 'больше не доступен';
 
   @override
-  String get federationPeerHidden => 'скрыт в списке серверов';
+  String get federationPeerHidden => 'скрыт из списка серверов';
 
   @override
   String federationMemberNote(String server) {
-    return 'Делиться может только администратор. Создание билетов, добавление пиров и ответы на запросы объединения требуют входа администратором на $server — того же, что открывает панель администратора.';
+    return 'Делиться может только администратор. Создание билетов, добавление пиров и ответы на запросы объединения требуют входа администратором на сервер $server — того же, что открывает панель администратора.';
   }
 
   @override
@@ -2541,7 +2560,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationOffBody =>
-      'Объедините два сервера mStream, чтобы слушать музыку друг друга. Обмениваются билетами — отправьте сообщением, отсканируйте или вставьте.';
+      'Объедините два сервера mStream, чтобы слушать музыку друг друга. Вы обмениваетесь билетами — билет можно отправить сообщением, отсканировать или вставить.';
 
   @override
   String get federationOffPoint1Title => 'Только чтение, сквозное шифрование';
@@ -2555,14 +2574,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationOffPoint2Body =>
-      'iroh находит путь — напрямую, когда может, через релей, когда нужно';
+      'iroh находит путь — напрямую, когда может, через ретранслятор, когда нужно';
 
   @override
   String get federationOffPoint3Title => 'Билеты можно отозвать';
 
   @override
   String get federationOffPoint3Body =>
-      'Каждый используется один раз и отключается в любой момент';
+      'Каждый используется один раз, и его можно отключить в любой момент';
 
   @override
   String get federationOffAdminOnly =>
@@ -2570,7 +2589,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String federationOffMemberNote(String server) {
-    return 'Федерация на $server выключена. Администратор может её включить.';
+    return 'Федерация на сервере $server выключена. Администратор может её включить.';
   }
 
   @override
@@ -2595,13 +2614,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationSwitchSubtitle =>
-      'Пир-к-пиру, сквозное шифрование. Без проброса портов, без DNS.';
+      'Одноранговое соединение, сквозное шифрование. Без проброса портов, без DNS.';
 
   @override
   String get federationStatusSection => 'Состояние';
 
   @override
-  String get federationConnectedRelay => 'Подключено к релею';
+  String get federationConnectedRelay => 'Подключено к ретранслятору';
 
   @override
   String get federationNotRunning => 'Конечная точка не запущена';
@@ -2621,7 +2640,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationRequestsInboxSubtitle =>
-      'По умолчанию выключено. Когда выключено, новые запросы отклоняются на транспорте; ответы на ваши собственные запросы всё равно приходят.';
+      'По умолчанию выключено. Когда выключено, новые запросы отклоняются на транспортном уровне; ответы на ваши собственные запросы всё равно приходят.';
 
   @override
   String get federationInboxFailed => 'Не удалось изменить приём запросов.';
@@ -2645,7 +2664,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String federationRequestToName(String name) {
-    return 'Запрос к $name';
+    return 'Запрос серверу $name';
   }
 
   @override
@@ -2680,7 +2699,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get federationReqSendingTicket => 'отправляем ваш билет…';
 
   @override
-  String get federationReqWaitingShare => 'ждём их доступа';
+  String get federationReqWaitingShare => 'ждём ответного доступа';
 
   @override
   String get federationReqDeclined => 'отклонён';
@@ -2689,7 +2708,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get federationReqYouDeclined => 'вы отклонили';
 
   @override
-  String get federationReqInboxClosed => 'их приём закрыт';
+  String get federationReqInboxClosed => 'они не принимают запросы';
 
   @override
   String get federationReqFederated => 'объединено';
@@ -2733,7 +2752,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationShareBackNote =>
-      'Ничего не меняется, пока вы не примете. Они получат доступ только для чтения к отмеченным библиотекам — хотя бы одной.';
+      'Ничего не передаётся, пока вы не примете запрос. Они получат доступ только для чтения к отмеченным библиотекам — хотя бы одной.';
 
   @override
   String get federationTheirLimits => 'Их ограничения';
@@ -2762,7 +2781,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationTicketNameHint =>
-      'Это имя видите только вы — оно подписывает билет в вашем списке.';
+      'Это имя видите только вы — так билет будет подписан в вашем списке.';
 
   @override
   String get federationLibrariesTheyCanRead =>
@@ -2801,8 +2820,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count дней',
+      many: '$count дней',
       few: '$count дня',
-      one: '1 день',
+      one: '$count день',
     );
     return '$_temp0';
   }
@@ -2836,8 +2856,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count потоков',
+      many: '$count потоков',
       few: '$count потока',
-      one: '1 поток',
+      one: '$count поток',
     );
     return '$_temp0';
   }
@@ -2859,8 +2880,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: 'через $count дней',
+      many: 'через $count дней',
       few: 'через $count дня',
-      one: 'через 1 день',
+      one: 'через $count день',
     );
     return '$_temp0';
   }
@@ -2871,8 +2893,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: 'через $count часов',
+      many: 'через $count часов',
       few: 'через $count часа',
-      one: 'через 1 час',
+      one: 'через $count час',
     );
     return '$_temp0';
   }
@@ -2888,7 +2911,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get federationStreamsField => 'Макс. потоков (0 = без ограничений)';
 
   @override
-  String get federationExpiresField => 'Истекает через дней (0 = никогда)';
+  String get federationExpiresField => 'Срок действия, дней (0 = бессрочно)';
 
   @override
   String get federationCreateTicket => 'Создать билет';
@@ -2905,7 +2928,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String federationTicketFor(String name) {
-    return 'Билет для $name';
+    return 'Билет: $name';
   }
 
   @override
@@ -3057,7 +3080,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String federationAddPeerShowsUnder(String server) {
-    return 'Появится под $server';
+    return 'Появится в группе «$server»';
   }
 
   @override
@@ -3093,11 +3116,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Библиотеки, которые вы можете читать';
 
   @override
-  String get federationDiscoverySection => 'Обнаружение';
+  String get federationDiscoverySection => 'Открытия';
 
   @override
   String get federationAskPeerSimilar =>
-      'Спрашивать у этого пира похожую музыку';
+      'Запрашивать у этого пира похожую музыку';
 
   @override
   String get federationAskPeerSimilarNote =>
@@ -3119,7 +3142,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationAutoDjNotCandidateNote =>
-      'Нужен сервер, способный отвечать на звуковой подбор';
+      'Нужен сервер, умеющий подбирать треки по звучанию';
 
   @override
   String get federationTest => 'Проверить';
@@ -3183,7 +3206,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get federationTransportDirect => 'Прямой туннель с этого телефона';
 
   @override
-  String get federationTransportRelay => 'Релей наготове';
+  String get federationTransportRelay => 'Ретранслятор наготове';
 
   @override
   String federationTransportViaParent(String parent) {
@@ -3197,7 +3220,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get federationDiscoveryFailed =>
-      'Не удалось изменить настройку обнаружения.';
+      'Не удалось изменить настройку подбора похожей музыки.';
 
   @override
   String get agoJustNow => 'только что';
@@ -3208,8 +3231,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count мин назад',
+      many: '$count мин назад',
       few: '$count мин назад',
-      one: '1 мин назад',
+      one: '$count мин назад',
     );
     return '$_temp0';
   }
@@ -3220,8 +3244,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count ч назад',
+      many: '$count ч назад',
       few: '$count ч назад',
-      one: '1 ч назад',
+      one: '$count ч назад',
     );
     return '$_temp0';
   }
@@ -3232,8 +3257,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count дней назад',
+      many: '$count дней назад',
       few: '$count дня назад',
-      one: '1 день назад',
+      one: '$count день назад',
     );
     return '$_temp0';
   }
@@ -3259,15 +3285,16 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count соседей',
+      many: '$count соседей',
       few: '$count соседа',
-      one: '1 сосед',
+      one: '$count сосед',
     );
     return '$_temp0';
   }
 
   @override
   String p2pAnnouncingAs(String name) {
-    return 'объявлен как $name';
+    return 'объявляется как $name';
   }
 
   @override
@@ -3291,7 +3318,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get p2pStatNeighbors => 'соседей в сети';
 
   @override
-  String get p2pStatNeighborsSub => 'активные gossip-связи';
+  String get p2pStatNeighborsSub => 'активные gossip-соединения';
 
   @override
   String get p2pStatKnown => 'известных серверов';
@@ -3323,8 +3350,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: 'доступно для поиска, $count библиотек',
+      many: 'доступно для поиска, $count библиотек',
       few: 'доступно для поиска, $count библиотеки',
-      one: 'доступно для поиска, 1 библиотека',
+      one: 'доступно для поиска, $count библиотека',
     );
     return '$_temp0';
   }
@@ -3337,7 +3365,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pActivityEmpty =>
-      'Пока ничего — подключения к сети, загрузки снимков, ротация и восстановление появляются здесь по мере событий.';
+      'Пока ничего — подключения к сети, загрузки снимков, ротация и восстановление появляются здесь по мере того, как происходят.';
 
   @override
   String get p2pActivityNote => 'Полная история — в журналах сервера.';
@@ -3354,18 +3382,20 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Открывает «Открыть для себя» для играющего трека · подсказки из $count загруженных библиотек',
+          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
+      many:
+          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
       few:
-          'Открывает «Открыть для себя» для играющего трека · подсказки из $count загруженных библиотек',
+          'Открывает «Открытия» для играющего трека · подсказки из $count загруженных библиотек',
       one:
-          'Открывает «Открыть для себя» для играющего трека · подсказки из 1 загруженной библиотеки',
+          'Открывает «Открытия» для играющего трека · подсказки из $count загруженной библиотеки',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Сначала включите что-нибудь — «Открыть для себя» следует за текущим треком';
+      'Сначала включите что-нибудь — «Открытия» следуют за текущим треком';
 
   @override
   String get p2pNewArtistsOnlySub =>
@@ -3379,7 +3409,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pNoServersYet =>
-      'Пока ни одного сервера — добавьте сервер по билету друга или дайте gossip минуту.';
+      'Пока ни одного сервера — добавьте сервер по билету друга или дайте сети минуту.';
 
   @override
   String p2pHiddenIncompatible(int count) {
@@ -3387,8 +3417,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count серверов скрыто — несовместимая модель',
+      many: '$count серверов скрыто — несовместимая модель',
       few: '$count сервера скрыты — несовместимая модель',
-      one: '1 сервер скрыт — несовместимая модель',
+      one: '$count сервер скрыт — несовместимая модель',
     );
     return '$_temp0';
   }
@@ -3416,8 +3447,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count треков',
+      many: '$count треков',
       few: '$count трека',
-      one: '1 трек',
+      one: '$count трек',
     );
     return '$_temp0';
   }
@@ -3428,8 +3460,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count сидов',
+      many: '$count сидов',
       few: '$count сида',
-      one: '1 сид',
+      one: '$count сид',
     );
     return '$_temp0';
   }
@@ -3470,7 +3503,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String p2pReconnectingBody(int n) {
-    return 'Sidecar упал и перезапускается (попытка $n) — ничего делать не нужно.';
+    return 'Вспомогательный процесс (sidecar) упал и перезапускается (попытка $n) — ничего делать не нужно.';
   }
 
   @override
@@ -3517,7 +3550,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Приглашения делиться библиотеками — ничего не передаётся, пока вы не одобрите каждое. Включает федерацию.';
 
   @override
-  String get p2pJoin => 'Войти в сеть';
+  String get p2pJoin => 'Подключиться к сети';
 
   @override
   String get p2pJoining => 'Подключение…';
@@ -3527,7 +3560,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String p2pJoinFailed(String error) {
-    return 'Не удалось войти в сеть: $error';
+    return 'Не удалось подключиться к сети: $error';
   }
 
   @override
@@ -3541,20 +3574,20 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pWillDownloadNote =>
-      'Sidecar ещё не установлен; при входе он будет загружен.';
+      'Вспомогательный процесс (sidecar) ещё не установлен; при подключении он будет загружен.';
 
   @override
   String get p2pAdminOnlyNote =>
-      'Войти в сеть может только администратор сервера.';
+      'Подключиться к сети может только администратор сервера.';
 
   @override
   String p2pMemberOffNote(String server) {
-    return 'Сеть обнаружения на $server выключена. Администратор может её включить.';
+    return 'Сеть обнаружения на сервере $server выключена. Администратор может её включить.';
   }
 
   @override
   String p2pMemberNote(String server) {
-    return 'Вход, приглашения и снимки — задачи администратора. Войдите на $server как администратор, чтобы управлять сетью здесь.';
+    return 'Подключение к сети, приглашения и снимки — задачи администратора. Войдите на сервер $server как администратор, чтобы управлять сетью здесь.';
   }
 
   @override
@@ -3580,7 +3613,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pNotDownloadedSub =>
-      'Загрузите, чтобы искать по нему в «Открыть для себя»';
+      'Загрузите, чтобы искать по нему в «Открытиях»';
 
   @override
   String get p2pDownload => 'Загрузить';
@@ -3609,10 +3642,12 @@ class AppLocalizationsRu extends AppLocalizations {
       locale: localeName,
       other:
           'Ротация освобождает наименее используемые снимки через $count дней; закреплённый остаётся.',
+      many:
+          'Ротация освобождает наименее используемые снимки через $count дней; закреплённый остаётся.',
       few:
           'Ротация освобождает наименее используемые снимки через $count дня; закреплённый остаётся.',
       one:
-          'Ротация освобождает наименее используемые снимки через 1 день; закреплённый остаётся.',
+          'Ротация освобождает наименее используемые снимки через $count день; закреплённый остаётся.',
     );
     return '$_temp0';
   }
@@ -3663,7 +3698,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pAskToFederateSub =>
-      'Отправляет запрос через сеть — пока ничего не меняется';
+      'Отправляет запрос через сеть — пока ничего не передаётся';
 
   @override
   String get p2pOpen => 'Открыть';
@@ -3688,7 +3723,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String p2pBlockConfirm(String name) {
-    return 'Заблокировать $name? Его объявления будут игнорироваться, а снимок удалён.';
+    return 'Заблокировать $name? Его объявления будут игнорироваться, а снимок будет удалён.';
   }
 
   @override
@@ -3811,7 +3846,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pTicketNotReady =>
-      'Sidecar ещё не запущен, поэтому делиться пока нечем.';
+      'Вспомогательный процесс (sidecar) ещё не запущен, поэтому делиться пока нечем.';
 
   @override
   String get p2pSettingsTitle => 'Настройки сети';
@@ -3825,7 +3860,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get p2pLeaveConfirm =>
-      'Выйти из сети обнаружения? Сервер перестанет объявлять и загружать снимки. Локальное обнаружение продолжит работать.';
+      'Выйти из сети обнаружения? Сервер перестанет объявлять и загружать снимки. Локальный подбор по звучанию продолжит работать.';
 
   @override
   String get p2pLeave => 'Выйти';
@@ -3861,8 +3896,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count серверов',
+      many: '$count серверов',
       few: '$count серверов',
-      one: '1 сервера',
+      one: '$count сервера',
     );
     return '$_temp0';
   }
@@ -3874,16 +3910,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get p2pRotate => 'Ротация загрузок';
 
   @override
-  String get p2pForgetOffline => 'Забывать серверы не в сети';
+  String get p2pForgetOffline => 'Забывать недоступные серверы';
 
   @override
   String get p2pMeshSection => 'Сеть';
 
   @override
-  String get p2pCommunitySeeds => 'Сиды сообщества';
+  String get p2pCommunitySeeds => 'Стартовые серверы сообщества';
 
   @override
-  String get p2pCommunitySeedsOn => 'Подключение через публичные сид-серверы';
+  String get p2pCommunitySeedsOn =>
+      'Подключение через публичные стартовые серверы';
 
   @override
   String get p2pCommunitySeedsOff =>
@@ -3895,8 +3932,9 @@ class AppLocalizationsRu extends AppLocalizations {
       count,
       locale: localeName,
       other: '$count заблокированных серверов',
+      many: '$count заблокированных серверов',
       few: '$count заблокированных сервера',
-      one: '1 заблокированный сервер',
+      one: '$count заблокированный сервер',
       zero: 'Нет заблокированных серверов',
     );
     return '$_temp0';
@@ -3913,7 +3951,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get p2pSaved => 'Сохранено';
 
   @override
-  String get p2pOff => 'Выкл.';
+  String get p2pOff => 'Выключена';
 
   @override
   String get p2pSave => 'Сохранить';
@@ -3926,9 +3964,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count запросов на федерацию ожидают',
-      few: '$count запроса на федерацию ожидают',
-      one: '1 запрос на федерацию ожидает',
+      other: '$count запросов объединения ожидают',
+      many: '$count запросов объединения ожидают',
+      few: '$count запроса объединения ожидают',
+      one: '$count запрос объединения ожидает',
     );
     return '$_temp0';
   }
@@ -3941,20 +3980,21 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Ожидают $count запросов на федерацию',
-      few: 'Ожидают $count запроса на федерацию',
-      one: 'Ожидает запрос на федерацию',
+      other: 'Ожидают $count запросов объединения',
+      many: 'Ожидают $count запросов объединения',
+      few: 'Ожидают $count запроса объединения',
+      one: 'Ожидает $count запрос объединения',
     );
     return '$_temp0';
   }
 
   @override
   String federationInboxNotificationBody(String server) {
-    return 'На $server. Откройте, чтобы принять или отклонить.';
+    return 'На сервере $server. Откройте, чтобы принять или отклонить.';
   }
 
   @override
-  String get federationInboxChannelName => 'Запросы на федерацию';
+  String get federationInboxChannelName => 'Запросы объединения';
 
   @override
   String get federationInboxChannelDescription =>
