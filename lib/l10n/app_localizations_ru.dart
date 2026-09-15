@@ -4006,4 +4006,367 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get federationNotifySubtitle =>
       'Уведомление на телефоне, когда запрос приходит при открытом приложении или во время воспроизведения';
+
+  @override
+  String get autoRecentlyPlayed => 'Недавно прослушанные';
+
+  @override
+  String get settingsSectionListening => 'История прослушиваний';
+
+  @override
+  String get settingsHistoryEnabled => 'Сохранять историю прослушиваний';
+
+  @override
+  String get settingsHistoryEnabledSubtitle =>
+      'Записывает, что воспроизводит этот телефон, — на каждом сервере и для локальных файлов. Хранится только на этом устройстве.';
+
+  @override
+  String get settingsHistorySend => 'Отправлять прослушивания на ваши серверы';
+
+  @override
+  String get settingsHistorySendSubtitle =>
+      'Каждое прослушивание уходит на сервер, где лежит трек (трек пира — на его родительский сервер), чтобы ваша статистика включала этот телефон. Серверы передают данные в Last.fm, только если вы привязали там аккаунт.';
+
+  @override
+  String get settingsHistoryClear => 'Очистить историю прослушиваний';
+
+  @override
+  String settingsHistoryClearSubtitle(Object size) {
+    return 'Удаляет запись на этом телефоне ($size). Серверы сохранят свою.';
+  }
+
+  @override
+  String get settingsHistoryClearConfirm =>
+      'Удалить историю прослушиваний на этом телефоне? Прослушивания, уже отправленные на сервер, останутся там.';
+
+  @override
+  String get settingsHistoryCleared => 'История прослушиваний очищена';
+
+  @override
+  String settingsHistoryUnsynced(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count прослушивания ждут отправки',
+      many: '$count прослушиваний ждут отправки',
+      few: '$count прослушивания ждут отправки',
+      one: '$count прослушивание ждёт отправки',
+      zero: 'Всё синхронизировано',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoServerPlays(num count, Object server) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count прослушивания на $server',
+      many: '$count прослушиваний на $server',
+      few: '$count прослушивания на $server',
+      one: '$count прослушивание на $server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoDevicePlays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count прослушивания на этом телефоне',
+      many: '$count прослушиваний на этом телефоне',
+      few: '$count прослушивания на этом телефоне',
+      one: '$count прослушивание на этом телефоне',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoLastPlayed(Object ago) {
+    return 'последний раз $ago';
+  }
+
+  @override
+  String get listeningTitle => 'Статистика прослушиваний';
+
+  @override
+  String get listeningScopeThisPhone => 'Этот телефон';
+
+  @override
+  String get listeningScopeSheetTitle => 'Что показывать';
+
+  @override
+  String get listeningScopeSheetDevice =>
+      'Что воспроизводил этот телефон: все серверы, локальные файлы, офлайн. Хранится на этом устройстве.';
+
+  @override
+  String get listeningScopeSheetServer =>
+      'Ваши прослушивания на этом сервере из всех приложений — веб-плеера, других телефонов и этого телефона после синхронизации.';
+
+  @override
+  String get listeningScopeSheetLegacy =>
+      'Статистики прослушиваний пока нет — нужен mStream 6.27 или новее.';
+
+  @override
+  String listeningScopeSheetPeer(Object server) {
+    return 'Учитываются на $server: треки пира считаются там, где живёт ваш аккаунт.';
+  }
+
+  @override
+  String get listeningProvenanceDevice =>
+      'Что воспроизводил этот телефон, на всех серверах и для локальных файлов. Хранится на этом устройстве.';
+
+  @override
+  String listeningProvenanceServer(Object server) {
+    return 'Ваши прослушивания на $server из всех приложений, включая треки его пиров.';
+  }
+
+  @override
+  String listeningProvenancePeer(Object peer, Object server) {
+    return 'Ваши прослушивания треков $peer, учтённые на $server.';
+  }
+
+  @override
+  String listeningProvenanceFallback(Object server) {
+    return '$server не ответил — показаны прослушивания этого телефона на нём.';
+  }
+
+  @override
+  String listeningProvenanceLegacy(Object server) {
+    return '$server пока не ведёт статистику прослушиваний (mStream 6.27+) — показаны прослушивания этого телефона на нём.';
+  }
+
+  @override
+  String listeningUnsynced(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count прослушивания ещё не синхронизированы',
+      many: '$count прослушиваний ещё не синхронизированы',
+      few: '$count прослушивания ещё не синхронизированы',
+      one: '$count прослушивание ещё не синхронизировано',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningPeriodWeek => 'Эта неделя';
+
+  @override
+  String get listeningPeriodMonth => 'Этот месяц';
+
+  @override
+  String get listeningPeriodQuarter => 'Этот квартал';
+
+  @override
+  String get listeningPeriodYear => 'Этот год';
+
+  @override
+  String get listeningPeriodAll => 'За всё время';
+
+  @override
+  String get listeningTilePlays => 'Прослушивания';
+
+  @override
+  String get listeningTileTime => 'Время прослушивания';
+
+  @override
+  String get listeningTileTracks => 'Треки';
+
+  @override
+  String get listeningTileSkips => 'Пропуски';
+
+  @override
+  String get listeningTileStreak => 'Серия';
+
+  @override
+  String get listeningTileSessions => 'Сеансы';
+
+  @override
+  String listeningDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дня',
+      many: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningTileSubCounted => 'засчитанные прослушивания';
+
+  @override
+  String get listeningTileSubTracks => 'разных треков';
+
+  @override
+  String listeningTileSubSkips(Object pct) {
+    return '$pct % запусков';
+  }
+
+  @override
+  String listeningTileSubStreak(Object count) {
+    return 'самая длинная: $count';
+  }
+
+  @override
+  String listeningTileSubSessions(Object duration) {
+    return 'около $duration каждый';
+  }
+
+  @override
+  String get listeningWhenYouListen => 'Когда вы слушаете';
+
+  @override
+  String listeningMostAround(Object hour) {
+    return 'Больше всего около $hour';
+  }
+
+  @override
+  String get listeningTop => 'Топ';
+
+  @override
+  String get listeningTopTracks => 'Треки';
+
+  @override
+  String get listeningTopArtists => 'Исполнители';
+
+  @override
+  String get listeningTopAlbums => 'Альбомы';
+
+  @override
+  String get listeningByPlays => 'Прослушивания';
+
+  @override
+  String get listeningByTime => 'Время';
+
+  @override
+  String listeningPlays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count прослушивания',
+      many: '$count прослушиваний',
+      few: '$count прослушивания',
+      one: '$count прослушивание',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningTracksCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count трека',
+      many: '$count треков',
+      few: '$count трека',
+      one: '$count трек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningRecent => 'Недавние прослушивания';
+
+  @override
+  String get listeningLoadMore => 'Загрузить ещё';
+
+  @override
+  String get listeningEmptyTitle => 'Прослушиваний пока нет';
+
+  @override
+  String get listeningEmptyDevice =>
+      'Прослушивания появляются здесь по мере того, как вы слушаете. Этот телефон ведёт свою запись; ваш сервер ведёт вашу — по всем приложениям.';
+
+  @override
+  String listeningEmptyServer(Object server) {
+    return 'На $server пока ничего не передано. Прослушивания с этого телефона появятся после синхронизации.';
+  }
+
+  @override
+  String get listeningEmptyPeriod => 'За этот период ничего нет.';
+
+  @override
+  String get listeningOutcomeCompleted => 'Дослушано';
+
+  @override
+  String get listeningOutcomeSkipped => 'Пропущено';
+
+  @override
+  String get listeningOutcomeStopped => 'Остановлено';
+
+  @override
+  String listeningOutcomeAt(Object outcome, Object position) {
+    return '$outcome на $position';
+  }
+
+  @override
+  String get listeningNotCounted => 'не засчитано';
+
+  @override
+  String listeningVia(Object peer) {
+    return 'через $peer';
+  }
+
+  @override
+  String listeningRepeats(Object count) {
+    return '×$count';
+  }
+
+  @override
+  String get listeningLocalFile => 'Локальный файл';
+
+  @override
+  String get listeningHistoryOff =>
+      'История прослушиваний выключена. Включите её в настройках, чтобы записывать прослушивания на этом телефоне.';
+
+  @override
+  String listeningError(Object message) {
+    return 'Не удалось загрузить: $message';
+  }
+
+  @override
+  String get listeningRetry => 'Повторить';
+
+  @override
+  String get listeningToday => 'Сегодня';
+
+  @override
+  String get listeningYesterday => 'Вчера';
+
+  @override
+  String get listeningPlaysPerDay => 'Прослушиваний в день';
+
+  @override
+  String get listeningPlaysPerMonth => 'Прослушиваний в месяц';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Больше всего $date: $count прослушивания',
+      many: 'Больше всего $date: $count прослушиваний',
+      few: 'Больше всего $date: $count прослушивания',
+      one: 'Больше всего $date: $count прослушивание',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Больше всего: $month — $count прослушивания',
+      many: 'Больше всего: $month — $count прослушиваний',
+      few: 'Больше всего: $month — $count прослушивания',
+      one: 'Больше всего: $month — $count прослушивание',
+    );
+    return '$_temp0';
+  }
 }

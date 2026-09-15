@@ -13,6 +13,8 @@ import '../singletons/downloads.dart';
 import '../singletons/media.dart';
 import '../singletons/queue_store.dart';
 import '../singletons/settings.dart';
+import '../singletons/play_history.dart';
+import '../widgets/federation_widgets.dart';
 import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
@@ -606,6 +608,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           Divider(color: VelvetColors.border, height: 1),
+          _sectionHeader(l.settingsSectionListening),
+          SwitchListTile(
+            title: Text(l.settingsHistoryEnabled),
+            subtitle: Text(l.settingsHistoryEnabledSubtitle,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+            value: SettingsManager().historyEnabled,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setHistoryEnabled(v);
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          SwitchListTile(
+            title: Text(l.settingsHistorySend),
+            subtitle: Text(
+                '${l.settingsHistorySendSubtitle}\n${l.settingsHistoryUnsynced(PlayHistory().outboxCount)}',
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12)),
+            value: SettingsManager().historySendToServer,
+            onChanged: (v) async {
+              setState(() {});
+              await SettingsManager().setHistorySendToServer(v);
+              setState(() {});
+            },
+            activeThumbColor: VelvetColors.primary,
+          ),
+          ListTile(
+            leading: Icon(Icons.delete_outline, color: VelvetColors.textSecondary),
+            title: Text(l.settingsHistoryClear),
+            subtitle: FutureBuilder<int>(
+              future: PlayHistory().sizeBytes(),
+              builder: (context, snap) => Text(
+                l.settingsHistoryClearSubtitle(_fmtBytes(snap.data ?? 0)),
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+            ),
+            onTap: () async {
+              final ok = await fedConfirm(context,
+                  message: l.settingsHistoryClearConfirm,
+                  confirmLabel: l.settingsHistoryClear,
+                  danger: true);
+              if (!ok) return;
+              await PlayHistory().clear();
+              if (!mounted) return;
+              setState(() {});
+              showGlobalSnack(l.settingsHistoryCleared);
+            },
+          ),
+          Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionAbout),
           ListTile(
             leading: Icon(Icons.tune),
@@ -753,6 +807,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SettingsManager().setAutoDownloadCap(result);
     if (lowered) unawaited(DownloadManager().enforceAutoDownloadCap());
     if (mounted) setState(() {});
+  }
+
+  String _fmtBytes(int n) {
+    if (n < 1024) return '$n B';
+    if (n < 1024 * 1024) return '${(n / 1024).toStringAsFixed(0)} KB';
+    return '${(n / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Widget _sectionHeader(String label) {

@@ -3683,4 +3683,335 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get federationNotifySubtitle => '应用打开或播放时收到请求，会在手机上发出通知';
+
+  @override
+  String get autoRecentlyPlayed => '最近播放';
+
+  @override
+  String get settingsSectionListening => '收听记录';
+
+  @override
+  String get settingsHistoryEnabled => '保留收听记录';
+
+  @override
+  String get settingsHistoryEnabledSubtitle =>
+      '记录这部手机播放的内容，包括所有服务器和本地文件。仅保存在本机。';
+
+  @override
+  String get settingsHistorySend => '将播放发送到你的服务器';
+
+  @override
+  String get settingsHistorySendSubtitle =>
+      '每次播放都会发送到曲目所在的服务器（伙伴服务器的曲目发送到其上级服务器），这样你的统计就包含这部手机。只有在服务器上关联了 Last.fm 账号时才会转发。';
+
+  @override
+  String get settingsHistoryClear => '清除收听记录';
+
+  @override
+  String settingsHistoryClearSubtitle(Object size) {
+    return '删除这部手机上的记录（$size）。服务器上的记录会保留。';
+  }
+
+  @override
+  String get settingsHistoryClearConfirm => '删除这部手机的收听记录？已发送到服务器的播放会保留在那里。';
+
+  @override
+  String get settingsHistoryCleared => '收听记录已清除';
+
+  @override
+  String settingsHistoryUnsynced(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 次播放等待发送',
+      zero: '全部已同步',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoServerPlays(num count, Object server) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '在 $server 播放 $count 次',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoDevicePlays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '在这部手机上播放 $count 次',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String songInfoLastPlayed(Object ago) {
+    return '上次 $ago';
+  }
+
+  @override
+  String get listeningTitle => '收听统计';
+
+  @override
+  String get listeningScopeThisPhone => '这部手机';
+
+  @override
+  String get listeningScopeSheetTitle => '显示内容';
+
+  @override
+  String get listeningScopeSheetDevice => '这部手机播放过的内容：所有服务器、本地文件，包括离线。保存在本机。';
+
+  @override
+  String get listeningScopeSheetServer =>
+      '你在此服务器上的播放，来自所有应用：网页播放器、其他手机，以及同步后的这部手机。';
+
+  @override
+  String get listeningScopeSheetLegacy => '尚无收听统计 — 需要 mStream 6.27 或更高版本。';
+
+  @override
+  String listeningScopeSheetPeer(Object server) {
+    return '在 $server 上计数：伙伴服务器的曲目在你的账号所在的服务器上计数。';
+  }
+
+  @override
+  String get listeningProvenanceDevice => '这部手机播放过的内容，包括所有服务器和本地文件。保存在本机。';
+
+  @override
+  String listeningProvenanceServer(Object server) {
+    return '你在 $server 上的播放，来自所有应用，包括其伙伴服务器的曲目。';
+  }
+
+  @override
+  String listeningProvenancePeer(Object peer, Object server) {
+    return '你对 $peer 曲目的播放，在 $server 上计数。';
+  }
+
+  @override
+  String listeningProvenanceFallback(Object server) {
+    return '$server 没有响应 — 显示这部手机在其上的播放。';
+  }
+
+  @override
+  String listeningProvenanceLegacy(Object server) {
+    return '$server 尚无收听统计（mStream 6.27+）— 显示这部手机在其上的播放。';
+  }
+
+  @override
+  String listeningUnsynced(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 次播放尚未同步',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningPeriodWeek => '本周';
+
+  @override
+  String get listeningPeriodMonth => '本月';
+
+  @override
+  String get listeningPeriodQuarter => '本季度';
+
+  @override
+  String get listeningPeriodYear => '今年';
+
+  @override
+  String get listeningPeriodAll => '全部时间';
+
+  @override
+  String get listeningTilePlays => '播放';
+
+  @override
+  String get listeningTileTime => '收听时长';
+
+  @override
+  String get listeningTileTracks => '曲目';
+
+  @override
+  String get listeningTileSkips => '跳过';
+
+  @override
+  String get listeningTileStreak => '连续天数';
+
+  @override
+  String get listeningTileSessions => '会话';
+
+  @override
+  String listeningDays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningTileSubCounted => '计入的播放';
+
+  @override
+  String get listeningTileSubTracks => '不同曲目';
+
+  @override
+  String listeningTileSubSkips(Object pct) {
+    return '占开始播放的 $pct%';
+  }
+
+  @override
+  String listeningTileSubStreak(Object count) {
+    return '最长 $count';
+  }
+
+  @override
+  String listeningTileSubSessions(Object duration) {
+    return '每次约 $duration';
+  }
+
+  @override
+  String get listeningWhenYouListen => '收听时段';
+
+  @override
+  String listeningMostAround(Object hour) {
+    return '$hour 前后最多';
+  }
+
+  @override
+  String get listeningTop => '排行';
+
+  @override
+  String get listeningTopTracks => '曲目';
+
+  @override
+  String get listeningTopArtists => '艺术家';
+
+  @override
+  String get listeningTopAlbums => '专辑';
+
+  @override
+  String get listeningByPlays => '播放';
+
+  @override
+  String get listeningByTime => '时长';
+
+  @override
+  String listeningPlays(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 次播放',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningTracksCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首曲目',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listeningRecent => '最近播放';
+
+  @override
+  String get listeningLoadMore => '加载更多';
+
+  @override
+  String get listeningEmptyTitle => '还没有播放记录';
+
+  @override
+  String get listeningEmptyDevice =>
+      '收听时播放记录会出现在这里。这部手机保存自己的记录；你的服务器保存你在所有应用中的记录。';
+
+  @override
+  String listeningEmptyServer(Object server) {
+    return '尚未向 $server 报告任何播放。这部手机的播放会在同步后到达。';
+  }
+
+  @override
+  String get listeningEmptyPeriod => '本时段没有内容。';
+
+  @override
+  String get listeningOutcomeCompleted => '已播完';
+
+  @override
+  String get listeningOutcomeSkipped => '已跳过';
+
+  @override
+  String get listeningOutcomeStopped => '已停止';
+
+  @override
+  String listeningOutcomeAt(Object outcome, Object position) {
+    return '在 $position $outcome';
+  }
+
+  @override
+  String get listeningNotCounted => '未计入';
+
+  @override
+  String listeningVia(Object peer) {
+    return '通过 $peer';
+  }
+
+  @override
+  String listeningRepeats(Object count) {
+    return '×$count';
+  }
+
+  @override
+  String get listeningLocalFile => '本地文件';
+
+  @override
+  String get listeningHistoryOff => '收听记录已关闭。在设置中打开后，这部手机的播放才会被记录。';
+
+  @override
+  String listeningError(Object message) {
+    return '无法加载：$message';
+  }
+
+  @override
+  String get listeningRetry => '重试';
+
+  @override
+  String get listeningToday => '今天';
+
+  @override
+  String get listeningYesterday => '昨天';
+
+  @override
+  String get listeningPlaysPerDay => '每日播放次数';
+
+  @override
+  String get listeningPlaysPerMonth => '每月播放次数';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多在 $date：$count 次播放',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多在 $month：$count 次播放',
+    );
+    return '$_temp0';
+  }
 }

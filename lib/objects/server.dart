@@ -85,6 +85,14 @@ class Server {
   //                                  answered (an older build never does).
   //                                  Feeds the home banner and the alerts.
   int? federationInbox;
+  //   statsVersion                 — the Stats API generation the server
+  //                                  advertises (`features.stats`; 2 = Stats
+  //                                  API v2: plays post, history reads). Null
+  //                                  from a build too old to say, and pinned
+  //                                  null on a federated peer: a peer's plays
+  //                                  are the user's plays on its PARENT, which
+  //                                  is the server they post to.
+  int? statsVersion;
   // The discovery engine as the server reports it, never pinned: whether it
   // is switched on at all, and — mStream #879 — whether the scan has
   // produced vectors yet (null from a server too old to say). The UI flags
@@ -164,6 +172,14 @@ class Server {
   Server? parentServer;
 
   bool get isFederated => federationParent != null;
+
+  /// Stats API v2 answered: plays can be posted and the listening pages
+  /// read. For a peer this is its parent's answer (see [statsServer]).
+  bool get statsCapable => (statsServer?.statsVersion ?? 0) >= 2;
+
+  /// The server a play of one of this server's tracks lands on: itself, or
+  /// the parent for a federated peer.
+  Server? get statsServer => isFederated ? parentServer : this;
 
   // ─── Direct access (issue #143) ─────────────────────────────────────
   // Runtime-only, never persisted. The parent hands out a guest ticket for
@@ -369,6 +385,8 @@ class Server {
             : null,
         federationInbox =
             json['federationInbox'] is int ? json['federationInbox'] : null,
+        statsVersion =
+            json['statsVersion'] is int ? json['statsVersion'] : null,
         discoveryEnabled =
             json['discoveryEnabled'] is bool ? json['discoveryEnabled'] : null,
         discoveryReady =
@@ -412,6 +430,7 @@ class Server {
         'federationAvailable': federationAvailable,
         'p2pAvailable': p2pAvailable,
         'federationInbox': federationInbox,
+        'statsVersion': statsVersion,
         'discoveryEnabled': discoveryEnabled,
         'discoveryReady': discoveryReady,
         'connectionType': connectionType,

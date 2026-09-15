@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io' show HttpOverrides;
 
+import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -24,6 +26,7 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/add_torrent_screen.dart';
 import 'screens/manage_server.dart';
+import 'screens/listening/listening_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/setup_flow.dart';
 import 'screens/welcome_screen.dart';
@@ -36,6 +39,11 @@ import 'singletons/auto_dj_manager.dart';
 import 'singletons/media.dart';
 import 'singletons/federation_inbox_alerts.dart';
 import 'singletons/queue_store.dart';
+import 'singletons/play_tracker.dart';
+import 'objects/play_event.dart';
+import 'singletons/play_history.dart';
+import 'singletons/play_sync.dart';
+import 'util/stats_api.dart';
 import 'singletons/log_manager.dart';
 import 'app_version.dart';
 import 'build_variant.dart';
@@ -87,6 +95,13 @@ Future<void> _implicitViewReady() async {
 
 Future<void> _startApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A smoke build (`--dart-define=SMOKE_SEMANTICS=true`) publishes the
+  // accessibility tree unconditionally so `uiautomator dump` can find and
+  // tap widgets by their text; production builds only do so when the OS
+  // asks (a screen reader).
+  if (const bool.fromEnvironment('SMOKE_SEMANTICS')) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
   // Full flavor only: route API HTTPS through an override that accepts a
   // self-signed cert for servers the user explicitly opted in
   // (Server.allowSelfSigned). Must be set before any HttpClient is created.
@@ -193,6 +208,9 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _outerScaffoldKey = GlobalKey<ScaffoldState>();
   StreamSubscription<String>? _castErrorSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<PlayEvent>? _playEventsSub;
+  StreamSubscription<IrohTunnelStatus>? _tunnelSub;
+  StreamSubscription<PlaybackState>? _playingSub;
   // Coalesces the burst connectivity_plus emits for one transport switch.
   Timer? _connectivityDebounce;
   StreamSubscription<List<Server>>? _serverListSub;
@@ -229,6 +247,10 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         SettingsManager().startupView != StartupView.browser;
     ServerManager().ensureLoaded().then((_) {
       QueueStore().init();
+      // Listening history: sessions key on the handler's server + path and
+      // peer ids resolve through the server list, so it starts here too.
+      PlayTracker().start();
+      _wireListeningHistory();
       unawaited(_migrateAutoDjGenreFilter());
       unawaited(_restoreAutoDj());
       unawaited(_handleIncomingTorrent());
@@ -273,6 +295,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
       _connectivityDebounce?.cancel();
       _connectivityDebounce = Timer(const Duration(milliseconds: 1500), () {
         _connectivityDebounce = null;
+        unawaited(PlaySync().drain(reason: 'connectivity', bypassBackoff: true));
         unawaited(ServerManager()
             .handleNetworkChange(reason: 'connectivity:$names'));
         // Resume on-device playback if a network outage had paused it (no-op
@@ -541,6 +564,53 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     }
   }
 
+  /// Listening history (PLAY_HISTORY_PLAN.md §5–6): every closed session is
+  /// recorded on this phone and posted to the server that owns the user's
+  /// stats — the track's own server, or the parent for a federated peer.
+  /// Wired after the server list has loaded, next to the tracker.
+  void _wireListeningHistory() {
+    final history = PlayHistory();
+    final sync = PlaySync();
+    history.enabled = SettingsManager().historyEnabled;
+    sync.enabled = SettingsManager().historySendToServer;
+    StatsApi.appVersion = kAppVersion;
+    sync.resolveTarget = (name) {
+      final s = ServerManager().byLocalname(name);
+      if (s == null) return null;
+      return SyncTarget(
+        localname: name,
+        statsCapable: s.statsCapable,
+        reachable: !s.ownsTunnel || ServerManager().tunnelServes(s),
+      );
+    };
+    sync.targetFor = (name) =>
+        ServerManager().byLocalname(name)?.statsServer?.localname ?? name;
+    sync.post = (target, batch) {
+      final s = ServerManager().byLocalname(target);
+      if (s == null) {
+        throw const PostPlaysException(PostFailure.server, 'unknown server');
+      }
+      return StatsApi(s).postPlays(batch);
+    };
+    _playEventsSub?.cancel();
+    _playEventsSub = PlayTracker().events.listen((e) {
+      unawaited(history.record(e));
+    });
+    sync.start(PlayTracker().events);
+    unawaited(history.init().then((_) => sync.drain(reason: 'launch')));
+    _tunnelSub?.cancel();
+    _tunnelSub = ServerManager().tunnelStatusStream.listen((st) {
+      if (st == IrohTunnelStatus.connected) {
+        unawaited(sync.drain(reason: 'tunnel', bypassBackoff: true));
+      }
+    });
+    _playingSub?.cancel();
+    _playingSub = MediaManager()
+        .audioHandler
+        .playbackState
+        .listen((st) => sync.setPlaying(st.playing));
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Diagnostic (verbose-only): the lifecycle transition right before a playback
@@ -562,6 +632,7 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // native start can block for tens of seconds.
     if (state == AppLifecycleState.resumed) {
       unawaited(ServerManager().handleNetworkChange(reason: 'resume'));
+      unawaited(PlaySync().drain(reason: 'resume', bypassBackoff: true));
     }
     // Flush the queue/position to disk when leaving the foreground, so a
     // backgrounded app that's later killed by the OS still reopens in place.
@@ -569,11 +640,17 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       QueueStore().saveNow();
+      PlayTracker().checkpointNow();
+      unawaited(PlayHistory().flush());
     }
   }
 
   @override
   void dispose() {
+    _playEventsSub?.cancel();
+    _tunnelSub?.cancel();
+    _playingSub?.cancel();
+    PlaySync().dispose();
     WidgetsBinding.instance.removeObserver(this);
     _castErrorSub?.cancel();
     _connectivitySub?.cancel();
@@ -1173,6 +1250,20 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ManageServersScreen()),
+            );
+          },
+        ),
+        // Listening stats are one record across every server — this phone's
+        // own plus each server's, picked on the page — so the entry lives here
+        // rather than as a per-server home node. Opens on this phone's record.
+        ListTile(
+          leading: Icon(Icons.insights_rounded),
+          title: Text(l.listeningTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ListeningScreen()),
             );
           },
         ),

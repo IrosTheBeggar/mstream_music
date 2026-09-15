@@ -9,6 +9,8 @@ import 'package:rxdart/rxdart.dart';
 import '../objects/player_layout.dart';
 import '../theme/velvet_theme.dart';
 import '../util/write_chain.dart';
+import 'play_history.dart';
+import 'play_sync.dart';
 import 'transcode.dart';
 
 /// How tapping a song in the browser should behave. The default
@@ -222,6 +224,11 @@ class SettingsManager {
   // inbox (FederationInboxAlerts). On by default; the OS permission is only
   // asked for when there is something to show.
   bool notifyFederationRequests = true;
+  // Listening history (PLAY_HISTORY_PLAN.md §8): record plays on this phone,
+  // and post them to the server that owns your stats. Both on by default —
+  // posting is what the web player does for the same account.
+  bool historyEnabled = true;
+  bool historySendToServer = true;
   // Whether in-app diagnostic logging is captured (see LogManager) so users can
   // view / copy / share logs from the Diagnostics screen. On by default.
   bool diagnosticsLogging = true;
@@ -351,6 +358,8 @@ class SettingsManager {
       autoDownloadCap = (cap is int && cap >= 0) ? cap : 50;
       discoverNewArtistsOnly = m['discoverNewArtistsOnly'] ?? false;
       notifyFederationRequests = m['notifyFederationRequests'] ?? true;
+      historyEnabled = m['historyEnabled'] ?? true;
+      historySendToServer = m['historySendToServer'] ?? true;
       diagnosticsLogging = m['diagnosticsLogging'] ?? true;
       verboseLogging = m['verboseLogging'] ?? false;
       final rawGains = m['eqBandGains'];
@@ -557,6 +566,8 @@ class SettingsManager {
       'autoDownloadCap': autoDownloadCap,
       'discoverNewArtistsOnly': discoverNewArtistsOnly,
       'notifyFederationRequests': notifyFederationRequests,
+      'historyEnabled': historyEnabled,
+      'historySendToServer': historySendToServer,
       'diagnosticsLogging': diagnosticsLogging,
       'verboseLogging': verboseLogging,
       'eqBandGains': eqBandGains,
@@ -657,6 +668,21 @@ class SettingsManager {
   Future<void> setNotifyFederationRequests(bool v) async {
     notifyFederationRequests = v;
     await _save();
+  }
+
+  /// Off: stop recording and delete this phone's record; servers untouched.
+  Future<void> setHistoryEnabled(bool v) async {
+    historyEnabled = v;
+    await _save();
+    PlayHistory().enabled = v;
+    if (!v) await PlayHistory().clear();
+  }
+
+  /// Off: stop posting and drop what is waiting; recording continues.
+  Future<void> setHistorySendToServer(bool v) async {
+    historySendToServer = v;
+    await _save();
+    PlaySync().setEnabled(v);
   }
 
   /// Toggle whether [c] is one of the searched categories. Keeps at least one
