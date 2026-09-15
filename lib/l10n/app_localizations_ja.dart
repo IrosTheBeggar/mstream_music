@@ -4064,4 +4064,30 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listeningYesterday => '昨日';
+
+  @override
+  String get listeningPlaysPerDay => '1日あたりの再生数';
+
+  @override
+  String get listeningPlaysPerMonth => '月ごとの再生数';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多は $date：$count 回再生',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多は $month：$count 回再生',
+    );
+    return '$_temp0';
+  }
 }

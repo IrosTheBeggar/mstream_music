@@ -1138,5 +1138,9 @@
   "listeningError": "Konnte nicht laden: {message}",
   "listeningRetry": "Erneut versuchen",
   "listeningToday": "Heute",
-  "listeningYesterday": "Gestern"
+  "listeningYesterday": "Gestern",
+  "listeningPlaysPerDay": "Wiedergaben pro Tag",
+  "listeningPlaysPerMonth": "Wiedergaben pro Monat",
+  "listeningMostOnDay": "{count, plural, =1{Am meisten am {date}: 1 Wiedergabe} other{Am meisten am {date}: {count} Wiedergaben}}",
+  "listeningMostInMonth": "{count, plural, =1{Am meisten im {month}: 1 Wiedergabe} other{Am meisten im {month}: {count} Wiedergaben}}"
 }

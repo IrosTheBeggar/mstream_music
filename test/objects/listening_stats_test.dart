@@ -135,6 +135,20 @@ void main() {
       expect(buckets[now.subtract(const Duration(hours: 5)).hour], 1);
       expect(buckets[now.subtract(const Duration(hours: 2)).hour], 0, reason: 'the skipped hour is empty');
     });
+
+    test('plays per day and per month bucket counted plays by local date', () {
+      final days = DeviceStats.playsBy(events);
+      expect(days.values.fold<int>(0, (a, b) => a + b), 4, reason: 'the skip is not a play');
+      expect(days.keys, everyElement(matches(RegExp(r'^\d{4}-\d\d-\d\d$'))));
+      expect(days[seriesBucketKey(now.subtract(const Duration(hours: 5)), monthly: false)], greaterThanOrEqualTo(1));
+      final months = DeviceStats.playsBy(events, monthly: true);
+      expect(months.values.fold<int>(0, (a, b) => a + b), 4);
+      expect(months.keys, everyElement(matches(RegExp(r'^\d{4}-\d\d$'))));
+      // A range narrows the series like every other query.
+      expect(DeviceStats.playsBy(events, from: now.add(const Duration(days: 1))), isEmpty);
+      expect(seriesBucketKey(DateTime(2026, 3, 7, 9), monthly: false), '2026-03-07');
+      expect(seriesBucketKey(DateTime(2026, 3, 7, 9), monthly: true), '2026-03');
+    });
   });
 
   group('server parsers', () {

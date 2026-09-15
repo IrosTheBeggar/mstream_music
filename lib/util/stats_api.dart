@@ -218,6 +218,26 @@ class StatsApi {
     return out;
   }
 
+  /// Counted plays per local day (`bucket=day`, keys `YYYY-MM-DD`) or, when
+  /// [monthly], per month (`bucket=month`, keys `YYYY-MM`). The server sends
+  /// only the buckets with plays; a bucket it spells as a full instant is
+  /// cut down to its day or month.
+  Future<Map<String, int>> playsBy({StatsPeriod period = StatsPeriod.month, int offset = 0, String origin = 'all', bool monthly = false, String? tz}) async {
+    final v = await _get('/api/v1/stats/timeseries${_query({..._range(period: period, offset: offset, tz: tz), 'bucket': monthly ? 'month' : 'day', 'origin': origin})}');
+    final out = <String, int>{};
+    final width = monthly ? 7 : 10;
+    if (v is Map && v['items'] is List) {
+      for (final it in v['items'] as List) {
+        if (it is! Map) continue;
+        final b = it['bucket']?.toString() ?? '';
+        if (b.length < width) continue;
+        final k = b.substring(0, width);
+        out[k] = (out[k] ?? 0) + (it['plays'] is num ? (it['plays'] as num).round() : 0);
+      }
+    }
+    return out;
+  }
+
   /// Per-track counters for a batch of paths and/or hashes (either the
   /// audio hash or the file hash — the server resolves both).
   Future<List<TrackCounters>> tracks({List<String> filePaths = const [], List<String> hashes = const []}) async {

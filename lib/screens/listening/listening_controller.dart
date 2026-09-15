@@ -72,6 +72,13 @@ class ListeningController extends ChangeNotifier {
   List<TopItem> top = const [];
   List<HistoryItem> history = const [];
   List<int> hours = List<int>.filled(24, 0);
+
+  /// Counted plays per day of the period — per month for the year and
+  /// all-time views ([monthly]) — keyed as [seriesBucketKey]; only buckets
+  /// with a play are present. [range] is the period the series spans.
+  Map<String, int> playsBy = const {};
+  ({DateTime? from, DateTime? to}) range = (from: null, to: null);
+  bool get monthly => period == StatsPeriod.year || period == StatsPeriod.all;
   String? _historyNext;
   bool loadingMore = false;
   int unsynced = 0;
@@ -125,6 +132,8 @@ class ListeningController extends ChangeNotifier {
     top = const [];
     history = const [];
     hours = List<int>.filled(24, 0);
+    playsBy = const {};
+    range = (from: null, to: null);
     _historyNext = null;
     error = null;
     fellBack = false;
@@ -210,6 +219,8 @@ class ListeningController extends ChangeNotifier {
     top = _nameDevicePeers(DeviceStats.top(events, entity: topEntity, metric: topMetric, from: r.from, to: r.to, limit: 10, peerName: (_) => null));
     history = HistoryItem.collapse(DeviceStats.history(events, from: r.from, to: r.to, limit: 60).map(_namePeer).toList());
     hours = DeviceStats.hourOfDay(events, from: r.from, to: r.to);
+    playsBy = DeviceStats.playsBy(events, from: r.from, to: r.to, monthly: monthly);
+    range = r;
     _historyNext = null;
   }
 
@@ -226,6 +237,7 @@ class ListeningController extends ChangeNotifier {
       api.top(entity: topEntity, metric: topMetric, period: period, origin: origin, limit: 10),
       api.history(period: period, origin: origin, limit: 30),
       api.hourOfDay(period: period, origin: origin),
+      api.playsBy(period: period, origin: origin, monthly: monthly),
     ]);
     summary = results[0] as ListeningSummary;
     top = results[1] as List<TopItem>;
@@ -233,6 +245,8 @@ class ListeningController extends ChangeNotifier {
     history = HistoryItem.collapse(h.items);
     _historyNext = h.next;
     hours = results[3] as List<int>;
+    playsBy = results[4] as Map<String, int>;
+    range = period.range(now());
   }
 
   Future<void> loadMoreHistory() async {

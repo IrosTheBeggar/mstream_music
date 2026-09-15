@@ -106,6 +106,13 @@ class _ListeningScreenState extends State<ListeningScreen>
     }
     out.addAll([
       _Tiles(summary: c.summary),
+      FedSection(c.monthly ? l.listeningPlaysPerMonth : l.listeningPlaysPerDay),
+      _SeriesCard(
+          series: c.playsBy,
+          from: c.range.from,
+          to: c.range.to,
+          monthly: c.monthly,
+          now: c.now()),
       FedSection(l.listeningWhenYouListen),
       _HoursCard(hours: c.hours, peakHour: c.summary.peakHour),
       FedSection(l.listeningTop),
@@ -529,6 +536,157 @@ class _HoursCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 10),
               child: Text(l.listeningMostAround(listeningHour(peakHour!)),
+                  style: TextStyle(
+                      fontSize: 12, color: VelvetColors.textSecondary)),
+            ),
+        ]),
+      ),
+    ]);
+  }
+}
+
+/// Counted plays per day of the period — per month for the year and
+/// all-time views — one bar per bucket, zero where nothing played, the
+/// busiest bucket in the accent colour and named under the bars (the
+/// webapp's "Plays per day" card).
+class _SeriesCard extends StatelessWidget {
+  final Map<String, int> series;
+  final DateTime? from;
+  final DateTime? to;
+  final bool monthly;
+  final DateTime now;
+  const _SeriesCard(
+      {required this.series,
+      required this.from,
+      required this.to,
+      required this.monthly,
+      required this.now});
+
+  /// The buckets of the range, oldest first. All time (no bounds) runs from
+  /// the first month with a play to the current month. Calendar arithmetic
+  /// through the constructor, so a DST day is still one day.
+  List<DateTime> _buckets() {
+    final n = now.toLocal();
+    final out = <DateTime>[];
+    if (monthly) {
+      DateTime start, end;
+      if (from != null && to != null) {
+        start = DateTime(from!.year, from!.month);
+        end = DateTime(to!.year, to!.month);
+      } else {
+        final keys = series.keys.toList()..sort();
+        final first =
+            keys.isEmpty ? null : DateTime.tryParse('${keys.first}-01');
+        start = first == null
+            ? DateTime(n.year, n.month)
+            : DateTime(first.year, first.month);
+        end = DateTime(n.year, n.month + 1);
+      }
+      for (var d = start; d.isBefore(end); d = DateTime(d.year, d.month + 1)) {
+        out.add(d);
+      }
+      return out;
+    }
+    final start = from ?? DateTime(n.year, n.month, n.day);
+    final end = to ?? DateTime(n.year, n.month, n.day + 1);
+    for (var d = DateTime(start.year, start.month, start.day);
+        d.isBefore(end);
+        d = DateTime(d.year, d.month, d.day + 1)) {
+      out.add(d);
+    }
+    return out;
+  }
+
+  /// Which bars carry a label: every day of a week, the 1st / 8th / 15th /
+  /// 22nd / 29th of a month, the first of each month across a quarter, and
+  /// every month (every third once there are more than a year of them).
+  bool _labelled(DateTime d, int i, int n) {
+    if (monthly) return n <= 12 || i % 3 == 0;
+    if (n <= 7) return true;
+    if (n <= 31) return d.day % 7 == 1;
+    return d.day == 1;
+  }
+
+  String _label(BuildContext context, DateTime d, int n) {
+    final locale = Localizations.localeOf(context).toString();
+    if (monthly || n > 31) return DateFormat.MMM(locale).format(d);
+    if (n <= 7) return MaterialLocalizations.of(context).narrowWeekdays[d.weekday % 7];
+    return '${d.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final buckets = _buckets();
+    final values = [
+      for (final d in buckets) series[seriesBucketKey(d, monthly: monthly)] ?? 0
+    ];
+    // The busiest bucket; the latest one on a tie, like the summary's top day.
+    var max = 0;
+    var best = -1;
+    for (var i = 0; i < values.length; i++) {
+      if (values[i] > 0 && values[i] >= max) {
+        max = values[i];
+        best = i;
+      }
+    }
+    final gap = buckets.length > 40 ? 0.5 : (buckets.length > 14 ? 1.0 : 1.5);
+    return FedCard(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+            height: 64,
+            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              for (var i = 0; i < values.length; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: gap),
+                    child: Container(
+                      height: max == 0 ? 2 : 2 + 62 * values[i] / max,
+                      decoration: BoxDecoration(
+                        color: values[i] == 0
+                            ? VelvetColors.primary.withValues(alpha: 0.25)
+                            : i == best
+                                ? VelvetColors.accent
+                                : VelvetColors.primary,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 6),
+          Row(children: [
+            for (var i = 0; i < buckets.length; i++)
+              Expanded(
+                child: Text(
+                    _labelled(buckets[i], i, buckets.length)
+                        ? _label(context, buckets[i], buckets.length)
+                        : '',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(
+                        fontSize: 10, color: VelvetColors.textTertiary)),
+              ),
+          ]),
+          if (best >= 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                  monthly
+                      ? l.listeningMostInMonth(
+                          max,
+                          DateFormat.yMMMM(
+                                  Localizations.localeOf(context).toString())
+                              .format(buckets[best]))
+                      : l.listeningMostOnDay(
+                          max,
+                          MaterialLocalizations.of(context)
+                              .formatShortMonthDay(buckets[best])),
                   style: TextStyle(
                       fontSize: 12, color: VelvetColors.textSecondary)),
             ),

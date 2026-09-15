@@ -4260,4 +4260,32 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get listeningYesterday => 'Ontem';
+
+  @override
+  String get listeningPlaysPerDay => 'Reproduções por dia';
+
+  @override
+  String get listeningPlaysPerMonth => 'Reproduções por mês';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mais em $date: $count reproduções',
+      one: 'Mais em $date: $count reprodução',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mais em $month: $count reproduções',
+      one: 'Mais em $month: $count reprodução',
+    );
+    return '$_temp0';
+  }
 }

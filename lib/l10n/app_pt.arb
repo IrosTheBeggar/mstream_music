@@ -1138,5 +1138,9 @@
   "listeningError": "Não foi possível carregar: {message}",
   "listeningRetry": "Tentar novamente",
   "listeningToday": "Hoje",
-  "listeningYesterday": "Ontem"
+  "listeningYesterday": "Ontem",
+  "listeningPlaysPerDay": "Reproduções por dia",
+  "listeningPlaysPerMonth": "Reproduções por mês",
+  "listeningMostOnDay": "{count, plural, one{Mais em {date}: {count} reprodução} other{Mais em {date}: {count} reproduções}}",
+  "listeningMostInMonth": "{count, plural, one{Mais em {month}: {count} reprodução} other{Mais em {month}: {count} reproduções}}"
 }

@@ -529,6 +529,27 @@ class DeviceStats {
     }
     return out;
   }
+
+  /// Counted plays per local day (`YYYY-MM-DD`) or, [monthly], per month
+  /// (`YYYY-MM`) — the server's `bucket=day` / `bucket=month` shape. Only
+  /// buckets with a play are present; the chart zero-fills the range.
+  static Map<String, int> playsBy(List<PlayEvent> all, {DateTime? from, DateTime? to, bool monthly = false}) {
+    final out = <String, int>{};
+    for (final e in inPeriod(all, from, to)) {
+      if (!e.counted) continue;
+      final k = seriesBucketKey(e.startedAt, monthly: monthly);
+      out[k] = (out[k] ?? 0) + 1;
+    }
+    return out;
+  }
+}
+
+/// The day (`YYYY-MM-DD`) or month (`YYYY-MM`) bucket of an instant, in
+/// local time — the keys of [DeviceStats.playsBy] and of the server's series.
+String seriesBucketKey(DateTime t, {required bool monthly}) {
+  final l = t.toLocal();
+  final m = l.month.toString().padLeft(2, '0');
+  return monthly ? '${l.year}-$m' : '${l.year}-$m-${l.day.toString().padLeft(2, '0')}';
 }
 
 class _Agg {

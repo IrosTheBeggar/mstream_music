@@ -1138,5 +1138,9 @@
   "listeningError": "Не удалось загрузить: {message}",
   "listeningRetry": "Повторить",
   "listeningToday": "Сегодня",
-  "listeningYesterday": "Вчера"
+  "listeningYesterday": "Вчера",
+  "listeningPlaysPerDay": "Прослушиваний в день",
+  "listeningPlaysPerMonth": "Прослушиваний в месяц",
+  "listeningMostOnDay": "{count, plural, one{Больше всего {date}: {count} прослушивание} few{Больше всего {date}: {count} прослушивания} many{Больше всего {date}: {count} прослушиваний} other{Больше всего {date}: {count} прослушивания}}",
+  "listeningMostInMonth": "{count, plural, one{Больше всего: {month} — {count} прослушивание} few{Больше всего: {month} — {count} прослушивания} many{Больше всего: {month} — {count} прослушиваний} other{Больше всего: {month} — {count} прослушивания}}"
 }

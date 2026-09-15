@@ -161,6 +161,9 @@ void main() {
     expect(find.text('counted plays'), findsOneWidget);
     expect(find.text('WHEN YOU LISTEN'), findsOneWidget);
     expect(find.textContaining('Most around'), findsOneWidget);
+    // All time draws the series per month, with the busiest month named.
+    expect(find.text('PLAYS PER MONTH'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Most in .+: \d+ plays$')), findsOneWidget);
 
     // Top tracks: two rows; Recent: the repeat folded into one row.
     expect(find.text('TOP'), findsOneWidget);

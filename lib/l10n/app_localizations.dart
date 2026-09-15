@@ -6947,6 +6947,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yesterday'**
   String get listeningYesterday;
+
+  /// Section title of the plays-per-day bars (week, month, quarter).
+  ///
+  /// In en, this message translates to:
+  /// **'Plays per day'**
+  String get listeningPlaysPerDay;
+
+  /// Section title of the same bars per month (year, all time).
+  ///
+  /// In en, this message translates to:
+  /// **'Plays per month'**
+  String get listeningPlaysPerMonth;
+
+  /// Under the plays-per-day bars; {date} is a short date like 'Sep 3'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Most on {date}: 1 play} other{Most on {date}: {count} plays}}'**
+  String listeningMostOnDay(int count, String date);
+
+  /// Under the plays-per-month bars; {month} is a month and year like 'September 2026'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Most in {month}: 1 play} other{Most in {month}: {count} plays}}'**
+  String listeningMostInMonth(int count, String month);
 }
 
 class _AppLocalizationsDelegate

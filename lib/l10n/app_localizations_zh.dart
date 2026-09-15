@@ -3988,4 +3988,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listeningYesterday => '昨天';
+
+  @override
+  String get listeningPlaysPerDay => '每日播放次数';
+
+  @override
+  String get listeningPlaysPerMonth => '每月播放次数';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多在 $date：$count 次播放',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多在 $month：$count 次播放',
+    );
+    return '$_temp0';
+  }
 }

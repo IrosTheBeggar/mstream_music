@@ -1138,5 +1138,9 @@
   "listeningError": "Chargement impossible : {message}",
   "listeningRetry": "Réessayer",
   "listeningToday": "Aujourd'hui",
-  "listeningYesterday": "Hier"
+  "listeningYesterday": "Hier",
+  "listeningPlaysPerDay": "Lectures par jour",
+  "listeningPlaysPerMonth": "Lectures par mois",
+  "listeningMostOnDay": "{count, plural, one{Le plus le {date} : {count} lecture} other{Le plus le {date} : {count} lectures}}",
+  "listeningMostInMonth": "{count, plural, one{Le plus en {month} : {count} lecture} other{Le plus en {month} : {count} lectures}}"
 }

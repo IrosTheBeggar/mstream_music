@@ -110,6 +110,28 @@ void main() {
       expect(urls.last.queryParameters['bucket'], 'hourOfDay');
     });
 
+    test('playsBy asks for day or month buckets and folds them by their date', () async {
+      final urls = <Uri>[];
+      final a = api((req) async {
+        urls.add(req.url);
+        return json({
+          'items': [
+            {'bucket': '2026-09-03T00:00:00.000Z', 'plays': 4},
+            {'bucket': '2026-09-03', 'plays': 1},
+            {'bucket': '2026-09-05', 'plays': 2},
+            {'bucket': '', 'plays': 9},
+          ]
+        });
+      });
+      final days = await a.playsBy(period: StatsPeriod.month, tz: 'UTC');
+      expect(days, {'2026-09-03': 5, '2026-09-05': 2}, reason: 'an instant folds into its day; a blank bucket is dropped');
+      expect(urls.last.queryParameters['bucket'], 'day');
+      expect(urls.last.queryParameters['period'], 'month');
+      final months = await a.playsBy(period: StatsPeriod.year, monthly: true, tz: 'UTC');
+      expect(months, {'2026-09': 7});
+      expect(urls.last.queryParameters['bucket'], 'month');
+    });
+
     test('tracks strips leading slashes and parses counters; a read error names the status', () async {
       http.Request? seen;
       final a = api((req) async {

@@ -4337,4 +4337,36 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get listeningYesterday => 'Вчера';
+
+  @override
+  String get listeningPlaysPerDay => 'Прослушиваний в день';
+
+  @override
+  String get listeningPlaysPerMonth => 'Прослушиваний в месяц';
+
+  @override
+  String listeningMostOnDay(int count, String date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Больше всего $date: $count прослушивания',
+      many: 'Больше всего $date: $count прослушиваний',
+      few: 'Больше всего $date: $count прослушивания',
+      one: 'Больше всего $date: $count прослушивание',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listeningMostInMonth(int count, String month) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Больше всего: $month — $count прослушивания',
+      many: 'Больше всего: $month — $count прослушиваний',
+      few: 'Больше всего: $month — $count прослушивания',
+      one: 'Больше всего: $month — $count прослушивание',
+    );
+    return '$_temp0';
+  }
 }

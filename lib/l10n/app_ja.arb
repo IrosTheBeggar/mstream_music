@@ -1138,5 +1138,9 @@
   "listeningError": "読み込めませんでした: {message}",
   "listeningRetry": "再試行",
   "listeningToday": "今日",
-  "listeningYesterday": "昨日"
+  "listeningYesterday": "昨日",
+  "listeningPlaysPerDay": "1日あたりの再生数",
+  "listeningPlaysPerMonth": "月ごとの再生数",
+  "listeningMostOnDay": "{count, plural, other{最多は {date}：{count} 回再生}}",
+  "listeningMostInMonth": "{count, plural, other{最多は {month}：{count} 回再生}}"
 }
