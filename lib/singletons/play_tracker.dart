@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../media/audio_stuff.dart';
 import '../objects/play_event.dart';
+import '../util/media_item_credits.dart';
 import '../util/stream_url.dart';
 import '../util/write_chain.dart';
 import 'log_manager.dart';
@@ -503,7 +504,10 @@ class PlayTracker {
       path: extras['path'] as String? ?? item.id,
       hash: extras['hash'] as String?,
       title: item.title.isEmpty ? null : item.title,
-      artist: item.artist,
+      // The primary artist, not the "A feat. B" credit the item displays:
+      // the phone's Top artists and the server's snapshot fallback both group
+      // plays by this name.
+      artist: primaryArtistOf(item),
       album: item.album,
       artFile: artUrl is String ? albumArtFileFromUrl(artUrl) : null,
       durationMs: item.duration?.inMilliseconds,

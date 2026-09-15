@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart' show MediaItem;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mstream_music/objects/play_event.dart';
 import 'package:mstream_music/singletons/play_tracker.dart';
@@ -81,6 +82,21 @@ void main() {
       final r3 = PlaySessionFold.onPosition(
           noDur, Duration.zero, t0.add(const Duration(seconds: 10)));
       expect(r3.restarted, isFalse);
+    });
+  });
+
+  group('PlayTracker.factsFor', () {
+    test('records the primary artist, not the credit the item displays', () {
+      final duet = MediaItem(
+          id: 'https://h/x.flac',
+          title: 'Duet',
+          artist: 'Ann feat. Bob',
+          extras: <String, dynamic>{'path': '/music/x.flac', 'artist': 'Ann'});
+      expect(PlayTracker.factsFor(duet).artist, 'Ann');
+      // An entry an older build persisted carries no primary in its extras;
+      // its displayed artist is the primary anyway.
+      final old = MediaItem(id: 'https://h/y.flac', title: 'Y', artist: 'Ann');
+      expect(PlayTracker.factsFor(old).artist, 'Ann');
     });
   });
 
