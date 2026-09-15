@@ -25,6 +25,13 @@ class DisplayItem {
   bool partialMetadata = false;
   String? altAlbumArt;
   String? subtext;
+  // Album items only (type 'album'): the facts an album list carries that
+  // identify the album beyond its name on servers since 6.28 — sent back to
+  // album-songs so a tap opens exactly this album when two share a name.
+  // `albumArtist` is the group's single credit and null when its collapsed
+  // rows disagree (see albumSongsBody). Both null on older servers.
+  String? albumArtist;
+  int? year;
 
   int downloadProgress = 0;
 
@@ -153,9 +160,12 @@ class DisplayItem {
       );
     }
 
-    if (metadata?.artist != null) {
+    // The ARTIST tag as written ("A feat. B") when the server sends it
+    // (`artist-display`, 6.28+), else the primary artist.
+    final artistLine = metadata?.artistDisplay ?? metadata?.artist;
+    if (artistLine != null) {
       return Text(
-        metadata!.artist!,
+        artistLine,
         style: TextStyle(fontSize: 13, color: VelvetColors.textPrimary),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -176,6 +186,7 @@ class DisplayItem {
     return hit(name) ||
         hit(metadata?.title) ||
         hit(metadata?.artist) ||
+        hit(metadata?.artistDisplay) ||
         hit(metadata?.album) ||
         hit(subtext) ||
         hit(data?.split('/').last);

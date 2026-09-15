@@ -4263,7 +4263,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       id: mediaUrl,
       title: meta.title ?? filepath.split('/').last,
       album: meta.album,
-      artist: meta.artist,
+      // The ARTIST tag as written when the server sends it (6.28+); the
+      // primary artist otherwise. Song Info reads the primary from extras.
+      artist: meta.artistDisplay ?? meta.artist,
       genre: meta.genreLabel,
       // Duration from the server payload (browse-added parity). Without it a
       // restore of an Auto-DJ track can't clamp a saved at-the-end position

@@ -83,7 +83,7 @@ Future<MediaItem?> _buildServerFileMediaItemWithDir(
     id: streamUrl,
     title: meta?.title ?? i.name,
     album: meta?.album,
-    artist: meta?.artist,
+    artist: meta?.artistDisplay ?? meta?.artist,
     genre: meta?.genreLabel,
     // Duration when the server reported it — surfaces in the queue list and the
     // now-playing readout before playback loads (just_audio refines it later).

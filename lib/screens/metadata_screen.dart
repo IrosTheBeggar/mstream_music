@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../singletons/server_list.dart';
 import '../theme/velvet_theme.dart';
 import '../util/media_format.dart';
+import '../util/media_item_credits.dart';
 import '../util/image_cache.dart';
 import '../widgets/star_rating.dart';
 import 'discover_screen.dart';
@@ -108,7 +109,7 @@ class MetadataScreen extends StatelessWidget {
                 seedServer: lyricsServer,
                 seedPath: path,
                 seedTitle: item.title,
-                seedArtist: item.artist,
+                seedArtist: primaryArtistOf(item),
               ),
             ),
           ),
@@ -118,6 +119,11 @@ class MetadataScreen extends StatelessWidget {
       if (fidelity.isNotEmpty) _chip(Icons.high_quality_rounded, fidelity),
       if (extras['bpm'] != null)
         _chip(Icons.speed_rounded, '${_v(extras['bpm'])} BPM'),
+      // Composer credit (6.28+ servers, V73 roles) — a self-labelling chip
+      // like the others, so no new translated string.
+      if (extras['composer'] is String &&
+          (extras['composer'] as String).trim().isNotEmpty)
+        _chip(Icons.edit_note_rounded, (extras['composer'] as String).trim()),
       if (key != null && key.trim().isNotEmpty)
         _chip(Icons.music_note_rounded, key.trim()),
       if (genre != null && genre.trim().isNotEmpty)

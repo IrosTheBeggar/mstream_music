@@ -30,6 +30,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import 'auto_buckets.dart';
 import '../objects/display_item.dart';
+import '../util/album_songs_body.dart';
 import '../objects/metadata.dart';
 import '../objects/server.dart';
 import '../singletons/log_manager.dart';
@@ -166,10 +167,11 @@ class AutoBrowse {
       if (srv == null || v == null) return;
       List<DisplayItem> songs = const [];
       if (u.host == 'album') {
-        songs = await AutoApi.albumSongs(srv, v);
+        songs = await AutoApi.albumSongs(srv, v,
+            year: albumYearOf(qp['y']), albumArtist: qp['aa']);
       } else if (u.host == 'artist') {
-        final album = _firstNamed(await AutoApi.artistAlbums(srv, v));
-        if (album != null) songs = await AutoApi.albumSongs(srv, album);
+        final album = _firstNamedItem(await AutoApi.artistAlbums(srv, v));
+        if (album != null) songs = await AutoApi.albumSongsOf(srv, album);
       }
       if (songs.isEmpty) {
         appLog('[auto] playNode($id): nothing playable');
@@ -295,7 +297,11 @@ class AutoBrowse {
               moreStyle: _gridChildren));
         case 'album':
           return _orEmptyNotice(_paginate(
-              _trackNodes(await AutoApi.albumSongs(srv, qp['v']), srv, 'album',
+              _trackNodes(
+                  await AutoApi.albumSongs(srv, qp['v'],
+                      year: albumYearOf(qp['y']), albumArtist: qp['aa']),
+                  srv,
+                  'album',
                   qp['v']),
               u));
         case 'playlist':
@@ -520,9 +526,9 @@ class AutoBrowse {
         return;
       }
       // Skip null-named ('Singles') buckets — the server can't load album:null.
-      final album = _firstNamed(r.albums);
+      final album = _firstNamedItem(r.albums);
       if (album != null) {
-        final songs = await AutoApi.albumSongs(server, album);
+        final songs = await AutoApi.albumSongsOf(server, album);
         if (songs.isNotEmpty) {
           await playFromHere(songs, 0);
           return;
@@ -530,9 +536,10 @@ class AutoBrowse {
       }
       final artist = _firstNamed(r.artists);
       if (artist != null) {
-        final albumOf = _firstNamed(await AutoApi.artistAlbums(server, artist));
+        final albumOf =
+            _firstNamedItem(await AutoApi.artistAlbums(server, artist));
         if (albumOf != null) {
-          final songs = await AutoApi.albumSongs(server, albumOf);
+          final songs = await AutoApi.albumSongsOf(server, albumOf);
           if (songs.isNotEmpty) {
             await playFromHere(songs, 0);
             return;
@@ -551,6 +558,15 @@ class AutoBrowse {
   static String? _firstNamed(List<DisplayItem> items) {
     for (final i in items) {
       if (i.data != null) return i.data;
+    }
+    return null;
+  }
+
+  /// [_firstNamed], but the item itself — for albums, whose year and album
+  /// artist ride along to album-songs.
+  static DisplayItem? _firstNamedItem(List<DisplayItem> items) {
+    for (final i in items) {
+      if (i.data != null) return i;
     }
     return null;
   }
@@ -684,7 +700,14 @@ class AutoBrowse {
           ? buildAlbumArtUrl(srv, r.altAlbumArt!, compress: 'm')
           : null;
       out.add(_browse(
-        _id('album', {'s': srv.localname, 'v': r.data}),
+        // 'aa' / 'y': the album artist and year the list carried, read back
+        // by the album handlers so a namesake album opens as this card.
+        _id('album', {
+          's': srv.localname,
+          'v': r.data,
+          if (r.albumArtist != null) 'aa': r.albumArtist,
+          if (r.year != null) 'y': r.year.toString(),
+        }),
         r.name,
         subtitle: r.subtext,
         artUri: art == null ? null : _artContentUri(art),
@@ -743,7 +766,7 @@ class AutoBrowse {
           'cv': containerValue,
         }),
         title: m?.title ?? r.data!.split('/').last,
-        artist: m?.artist,
+        artist: m?.artistDisplay ?? m?.artist,
         album: m?.album,
         duration: m?.duration,
         artUri: art == null ? null : Uri.parse(_artContentUri(art)),
@@ -912,6 +935,8 @@ class AutoApi {
           s, e['name'] ?? '', 'album', e['name'], null,
           subtitle.isEmpty ? null : subtitle);
       di.altAlbumArt = e['album_art_file'];
+      di.albumArtist = albumArtistOf(e['album_artist']);
+      di.year = albumYearOf(e['year']);
       out.add(di);
     }
     return out;
@@ -935,15 +960,24 @@ class AutoApi {
           s, e['name'] ?? 'Singles', 'album', e['name'], null,
           e['year']?.toString());
       di.altAlbumArt = e['album_art_file'];
+      di.albumArtist = albumArtistOf(e['album_artist']);
+      di.year = albumYearOf(e['year']);
       out.add(di);
     }
     return out;
   }
 
-  static Future<List<DisplayItem>> albumSongs(Server s, String? album) async {
-    final res = await _call(s, '/api/v1/db/album-songs', body: {'album': album});
+  static Future<List<DisplayItem>> albumSongs(Server s, String? album,
+      {int? year, String? albumArtist}) async {
+    final res = await _call(s, '/api/v1/db/album-songs',
+        body: albumSongsBody(album, year: year, albumArtist: albumArtist));
     return _fileItems(res, s);
   }
+
+  /// [albumSongs] for a list item: sends the year and album artist the item
+  /// carries, so a namesake album opens as exactly the card that was tapped.
+  static Future<List<DisplayItem>> albumSongsOf(Server s, DisplayItem album) =>
+      albumSongs(s, album.data, year: album.year, albumArtist: album.albumArtist);
 
   static Future<List<DisplayItem>> playlists(Server s) async {
     final res = await _call(s, '/api/v1/playlist/getall');

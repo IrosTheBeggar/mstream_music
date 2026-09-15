@@ -36,12 +36,26 @@ Map<String, dynamic> queueExtras(
       'playCount': meta?.playCount,
       // Drives the lyrics badge (tap → fetch via GET /api/v1/lyrics).
       'hasLyrics': meta?.hasLyrics ?? false,
+      // The primary artist, for the lookups that key on an artist NAME
+      // (Discover's similar-artists seed): the MediaItem's own `artist` carries
+      // the display string below. Read it back with primaryArtistOf().
+      'artist': meta?.artist,
+      // V73 credits (6.28+): the ARTIST tag as written and the composer, for
+      // the Song Info chips. Null on older servers.
+      'artistDisplay': meta?.artistDisplay,
+      'composer': meta?.composer,
     };
 
 class MusicMetadata {
   String hash;
 
   String? artist;
+  // The ARTIST tag as written — "A feat. B", or several artists joined with
+  // ", " — while [artist] stays the primary artist (what artist pages key on).
+  // Servers since 6.28 send it as `artist-display`; null before that.
+  String? artistDisplay;
+  // The COMPOSER / TCOM credit(s), joined. Same provenance and nullability.
+  String? composer;
   String? album;
   String? title;
   int? track;
@@ -93,10 +107,14 @@ class MusicMetadata {
       this.trackTotal,
       this.discTotal,
       this.playCount,
-      this.hasLyrics = false});
+      this.hasLyrics = false,
+      this.artistDisplay,
+      this.composer});
 
   MusicMetadata.fromJson(Map<String, dynamic> json)
       : artist = json['artist'],
+        artistDisplay = json['artistDisplay'],
+        composer = json['composer'],
         album = json['album'],
         title = json['title'],
         track = json['track'],
@@ -119,6 +137,8 @@ class MusicMetadata {
 
   Map<String, dynamic> toJson() => {
         'artist': artist,
+        'artistDisplay': artistDisplay,
+        'composer': composer,
         'album': album,
         'title': title,
         'track': track,
@@ -168,6 +188,9 @@ class MusicMetadata {
             m['samplerate'] ??
             m['sample_rate']),
         format: _asString(m['format']),
+        // V73 credits, kebab-case on the wire; absent on older servers → null.
+        artistDisplay: _asString(m['artist-display'] ?? m['artistDisplay']),
+        composer: _asString(m['composer']),
         trackTotal: _asInt(m['track-total'] ?? m['trackTotal']),
         discTotal: _asInt(m['disc-total'] ?? m['discTotal']),
         playCount: _asInt(m['play-count'] ?? m['playCount']),
