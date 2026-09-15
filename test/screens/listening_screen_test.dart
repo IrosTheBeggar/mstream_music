@@ -79,7 +79,7 @@ void main() {
   testWidgets('renders the title and the This phone scope chip',
       (tester) async {
     await pumpScreen(tester);
-    expect(find.text('Listening'), findsOneWidget);
+    expect(find.text('Listening Stats'), findsOneWidget);
     expect(find.text('This phone'), findsOneWidget);
     expect(find.text('This month'), findsOneWidget, reason: 'default period');
   });

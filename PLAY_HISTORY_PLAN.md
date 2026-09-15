@@ -641,5 +641,5 @@ then A5.
   play's thin snapshot is completed by the parent from the peer's metadata.
   App: A0, A1, A3 and A4 landed on this branch (`PlayHistory`,
   `PlaySync`, `StatsApi`, `Server.statsVersion`, the Listening page, the
-  home node, the Auto/CarPlay tab, Song Info counts, the settings) with the
+  drawer entry, the Auto/CarPlay tab, Song Info counts, the settings) with the
   smoke round in `smoke/android/play-history.sh` + `smoke/recipes/play-history.md`.

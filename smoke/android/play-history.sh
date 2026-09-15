@@ -233,7 +233,10 @@ A11Y_PREV=$(adbx shell settings get secure accessibility_enabled | tr -d '\r'); 
 adbx shell settings put secure accessibility_enabled 1
 wake; app_start; sleep 3
 ui_dump > "$OUT/home-ui.xml"
-find_listening() { tap_text "Listening" && return 0; adbx shell input swipe 540 1800 540 700 400; sleep 1; ui_dump > "$OUT/home-ui-scrolled.xml"; tap_text "Listening"; }
+# Listening Stats is a drawer entry (one record across every server): open
+# the drawer by the hamburger's accessibility label, its top-left position
+# as the fallback, then tap the entry.
+find_listening() { tap_text "Open navigation menu" || tap 84 187; sleep 1; ui_dump > "$OUT/drawer-ui.xml"; tap_text "Listening Stats"; }
 if ! grep -qE '(text|content-desc)="[^"]' "$OUT/home-ui.xml"; then
   skip "no text in the accessibility dump — build with --dart-define=SMOKE_SEMANTICS=true for the page checks"
 elif find_listening; then
@@ -248,7 +251,7 @@ elif find_listening; then
   else fail "no server chip on the Listening page"; fi
   key KEYCODE_BACK
 else
-  fail "no Listening node on the home screen"
+  fail "no Listening Stats entry in the drawer (see drawer-ui.xml)"
 fi
 save_applog phase2
 summary

@@ -4008,9 +4008,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Уведомление на телефоне, когда запрос приходит при открытом приложении или во время воспроизведения';
 
   @override
-  String get browserListening => 'История прослушиваний';
-
-  @override
   String get autoRecentlyPlayed => 'Недавно прослушанные';
 
   @override
@@ -4091,7 +4088,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => 'История прослушиваний';
+  String get listeningTitle => 'Статистика прослушиваний';
 
   @override
   String get listeningScopeThisPhone => 'Этот телефон';

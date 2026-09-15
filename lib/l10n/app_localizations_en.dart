@@ -3909,9 +3909,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'A phone notification when a request arrives while the app is open or playing';
 
   @override
-  String get browserListening => 'Listening';
-
-  @override
   String get autoRecentlyPlayed => 'Recently Played';
 
   @override
@@ -3986,7 +3983,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => 'Listening';
+  String get listeningTitle => 'Listening Stats';
 
   @override
   String get listeningScopeThisPhone => 'This phone';

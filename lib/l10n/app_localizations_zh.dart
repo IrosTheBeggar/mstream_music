@@ -3685,9 +3685,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get federationNotifySubtitle => '应用打开或播放时收到请求，会在手机上发出通知';
 
   @override
-  String get browserListening => '收听记录';
-
-  @override
   String get autoRecentlyPlayed => '最近播放';
 
   @override
@@ -3758,7 +3755,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => '收听记录';
+  String get listeningTitle => '收听统计';
 
   @override
   String get listeningScopeThisPhone => '这部手机';

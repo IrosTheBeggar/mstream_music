@@ -4000,9 +4000,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Powiadomienie na telefonie, gdy prośba przyjdzie, a aplikacja jest otwarta lub odtwarza';
 
   @override
-  String get browserListening => 'Historia słuchania';
-
-  @override
   String get autoRecentlyPlayed => 'Ostatnio odtwarzane';
 
   @override
@@ -4083,7 +4080,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => 'Historia słuchania';
+  String get listeningTitle => 'Statystyki słuchania';
 
   @override
   String get listeningScopeThisPhone => 'Ten telefon';

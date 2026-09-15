@@ -6510,12 +6510,6 @@ abstract class AppLocalizations {
   /// **'A phone notification when a request arrives while the app is open or playing'**
   String get federationNotifySubtitle;
 
-  /// Home LISTEN-group node: the listening stats page.
-  ///
-  /// In en, this message translates to:
-  /// **'Listening'**
-  String get browserListening;
-
   /// Android Auto / CarPlay tab: this phone's recent plays of the server's tracks.
   ///
   /// In en, this message translates to:
@@ -6600,10 +6594,10 @@ abstract class AppLocalizations {
   /// **'last {ago}'**
   String songInfoLastPlayed(Object ago);
 
-  /// App bar title of the listening stats page.
+  /// Drawer entry + app bar title of the listening stats page.
   ///
   /// In en, this message translates to:
-  /// **'Listening'**
+  /// **'Listening Stats'**
   String get listeningTitle;
 
   /// Scope pill: the device's own record.

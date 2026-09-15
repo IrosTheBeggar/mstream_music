@@ -3961,9 +3961,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Une notification sur le téléphone quand une demande arrive pendant que l\'application est ouverte ou en lecture';
 
   @override
-  String get browserListening => 'Historique d\'écoute';
-
-  @override
   String get autoRecentlyPlayed => 'Écoutés récemment';
 
   @override
@@ -4038,7 +4035,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => 'Historique d\'écoute';
+  String get listeningTitle => 'Statistiques d\'écoute';
 
   @override
   String get listeningScopeThisPhone => 'Ce téléphone';

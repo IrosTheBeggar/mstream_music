@@ -15,7 +15,7 @@ saw:
 | network back | playback is paused first (so a slow reconnect doesn't complete an extra track), then `[sync] stats-rig: N accepted` once the phone can reach the Mac again — the script pings it first, since a re-joined Wi-Fi client can be a minute+ from a working LAN path, and the app retries on its own backoff after the doomed first attempt | the row's `startedAt` is the phone's play time, not the sync time |
 | force-kill at 20 s, relaunch | `[history] recovered a session cut short by a kill` then `1 accepted` | `stopped, counted: false` |
 | end | `play_history.jsonl` has 4 lines; `play_stats.json` ring 4, 2 counted | `stats/history` lists 4 plays from `mstream-music`; `stats/tracks` counts the first track |
-| Listening page | home › Listening: "This phone" renders; the server chip renders from the Stats API (no "did not answer") | — |
+| Listening page | ☰ menu › Listening Stats: "This phone" renders; the server chip renders from the Stats API (no "did not answer") | — |
 
 Run it:
 
@@ -33,7 +33,7 @@ server in `smoke/out/<run>/srv/` and kills it on exit.
 ## What the script cannot see — do by hand once per release
 
 1. **A real listen.** Play an album for twenty minutes with the screen off.
-   Home › Listening › This phone: the plays are there with the right times,
+   ☰ menu › Listening Stats › This phone: the plays are there with the right times,
    the streak tile moved, the hour bar has today's hour. Switch the scope to
    the server: the same plays, now with the client column ("mstream-music")
    — and any plays from the web player on the same account.

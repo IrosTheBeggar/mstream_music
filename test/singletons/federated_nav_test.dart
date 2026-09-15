@@ -55,7 +55,6 @@ void main() {
       'recent',
       'localFiles',
       'autoDj',
-      'listening',
       'torrents',
     ]);
     expect(BrowserManager().browserList.any((i) => i.type == 'note'), isFalse);
@@ -174,7 +173,6 @@ void main() {
       'recent',
       'localFiles',
       'autoDj',
-      'listening',
     ]);
     // A peer hosts the DJ (mStream #946) but takes no torrents and has no
     // peers of its own: LISTEN stays, NETWORK and SERVER go.

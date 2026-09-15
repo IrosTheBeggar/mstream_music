@@ -26,6 +26,7 @@ import 'singletons/migration_manager.dart';
 import 'screens/add_server.dart';
 import 'screens/add_torrent_screen.dart';
 import 'screens/manage_server.dart';
+import 'screens/listening/listening_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/setup_flow.dart';
 import 'screens/welcome_screen.dart';
@@ -1249,6 +1250,20 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ManageServersScreen()),
+            );
+          },
+        ),
+        // Listening stats are one record across every server — this phone's
+        // own plus each server's, picked on the page — so the entry lives here
+        // rather than as a per-server home node. Opens on this phone's record.
+        ListTile(
+          leading: Icon(Icons.insights_rounded),
+          title: Text(l.listeningTitle),
+          onTap: () {
+            Navigator.of(context).pop();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ListeningScreen()),
             );
           },
         ),

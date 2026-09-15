@@ -4134,10 +4134,6 @@
   "@federationNotifySubtitle": {
     "description": "Federation settings switch subtitle."
   },
-  "browserListening": "Listening",
-  "@browserListening": {
-    "description": "Home LISTEN-group node: the listening stats page."
-  },
   "autoRecentlyPlayed": "Recently Played",
   "@autoRecentlyPlayed": {
     "description": "Android Auto / CarPlay tab: this phone's recent plays of the server's tracks."
@@ -4194,9 +4190,9 @@
   "@songInfoLastPlayed": {
     "description": "Song Info stats line suffix; {ago} is a relative time like '3 h ago'."
   },
-  "listeningTitle": "Listening",
+  "listeningTitle": "Listening Stats",
   "@listeningTitle": {
-    "description": "App bar title of the listening stats page."
+    "description": "Drawer entry + app bar title of the listening stats page."
   },
   "listeningScopeThisPhone": "This phone",
   "@listeningScopeThisPhone": {

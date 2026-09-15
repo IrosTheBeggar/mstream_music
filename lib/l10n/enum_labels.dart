@@ -158,8 +158,6 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.browserSectionNetwork;
     case 'Server':
       return l.browserSectionServer;
-    case 'Listening':
-      return l.browserListening;
     case 'Auto DJ':
       return l.autoDjTitle;
     case 'Sonic path':

@@ -3757,9 +3757,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'アプリを開いているか再生中にリクエストが届いたら、スマートフォンに通知します';
 
   @override
-  String get browserListening => '再生履歴';
-
-  @override
   String get autoRecentlyPlayed => '最近再生した曲';
 
   @override
@@ -3831,7 +3828,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => '再生履歴';
+  String get listeningTitle => '再生統計';
 
   @override
   String get listeningScopeThisPhone => 'この端末';

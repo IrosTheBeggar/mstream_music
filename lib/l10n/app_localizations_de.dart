@@ -3962,9 +3962,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Eine Benachrichtigung auf dem Telefon, wenn eine Anfrage eingeht, während die App offen ist oder Musik spielt';
 
   @override
-  String get browserListening => 'Hörverlauf';
-
-  @override
   String get autoRecentlyPlayed => 'Zuletzt gehört';
 
   @override
@@ -4039,7 +4036,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get listeningTitle => 'Hörverlauf';
+  String get listeningTitle => 'Hörstatistik';
 
   @override
   String get listeningScopeThisPhone => 'Dieses Telefon';
