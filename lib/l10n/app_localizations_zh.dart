@@ -3984,9 +3984,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listeningRetry => '重试';
 
   @override
-  String get listeningSettings => '记录设置';
-
-  @override
   String get listeningToday => '今天';
 
   @override

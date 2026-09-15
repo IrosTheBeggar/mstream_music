@@ -8,7 +8,6 @@ import '../../singletons/play_history.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/server_tree.dart';
 import '../../widgets/federation_widgets.dart';
-import '../settings_screen.dart';
 import 'listening_controller.dart';
 import 'listening_widgets.dart';
 
@@ -50,14 +49,6 @@ class _ListeningScreenState extends State<ListeningScreen>
     if (state == AppLifecycleState.resumed) c.load(quiet: true);
   }
 
-  Future<void> _openSettings() async {
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-    if (!mounted) return;
-    // The history and sync toggles live there; re-read them on the way back.
-    c.load(quiet: true);
-  }
-
   Future<void> _showScopeSheet() async {
     final picked = await showModalBottomSheet<ListeningScope>(
       context: context,
@@ -75,16 +66,7 @@ class _ListeningScreenState extends State<ListeningScreen>
     return ListenableBuilder(
       listenable: c,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(
-          title: Text(l.listeningTitle),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: l.listeningSettings,
-              onPressed: _openSettings,
-            ),
-          ],
-        ),
+        appBar: AppBar(title: Text(l.listeningTitle)),
         body: SafeArea(
           top: false,
           child: RefreshIndicator(
@@ -120,7 +102,6 @@ class _ListeningScreenState extends State<ListeningScreen>
     if (c.summary.isEmpty) {
       // An error already explains the blank; the empty copy would contradict it.
       if (c.error == null) out.add(_EmptyCard(controller: c));
-      out.add(_footer(l));
       return out;
     }
     out.addAll([
@@ -131,22 +112,9 @@ class _ListeningScreenState extends State<ListeningScreen>
       ListeningTopCard(controller: c),
       FedSection(l.listeningRecent),
       ListeningRecentCard(controller: c),
-      _footer(l),
     ]);
     return out;
   }
-
-  Widget _footer(AppLocalizations l) => Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: FedCard(children: [
-          FedRow(
-            icon: Icons.history,
-            title: l.listeningSettings,
-            trailing: fedChevron(),
-            onTap: _openSettings,
-          ),
-        ]),
-      );
 }
 
 // ── scope ─────────────────────────────────────────────────────────────

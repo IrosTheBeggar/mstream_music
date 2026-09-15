@@ -91,7 +91,6 @@ void main() {
     expect(find.textContaining('Plays land here'), findsOneWidget);
     // Nothing recorded anywhere: the onboarding copy, not the period one.
     expect(find.text('Nothing in this period.'), findsNothing);
-    expect(find.text('History settings'), findsWidgets);
   });
 
   testWidgets('the info button opens the scope sheet', (tester) async {

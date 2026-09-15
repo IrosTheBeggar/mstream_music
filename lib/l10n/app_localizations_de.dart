@@ -4273,9 +4273,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get listeningRetry => 'Erneut versuchen';
 
   @override
-  String get listeningSettings => 'Verlaufseinstellungen';
-
-  @override
   String get listeningToday => 'Heute';
 
   @override

@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "Historia słuchania jest wyłączona. Włącz ją w ustawieniach, aby rejestrować odtworzenia na tym telefonie.",
   "listeningError": "Nie udało się wczytać: {message}",
   "listeningRetry": "Ponów",
-  "listeningSettings": "Ustawienia historii",
   "listeningToday": "Dzisiaj",
   "listeningYesterday": "Wczoraj"
 }

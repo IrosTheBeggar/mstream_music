@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "Der Hörverlauf ist aus. Schalte ihn in den Einstellungen ein, um Wiedergaben auf diesem Telefon aufzuzeichnen.",
   "listeningError": "Konnte nicht laden: {message}",
   "listeningRetry": "Erneut versuchen",
-  "listeningSettings": "Verlaufseinstellungen",
   "listeningToday": "Heute",
   "listeningYesterday": "Gestern"
 }

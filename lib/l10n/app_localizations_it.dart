@@ -4258,9 +4258,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get listeningRetry => 'Riprova';
 
   @override
-  String get listeningSettings => 'Impostazioni cronologia';
-
-  @override
   String get listeningToday => 'Oggi';
 
   @override

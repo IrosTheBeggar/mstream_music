@@ -4418,10 +4418,6 @@
   "@listeningRetry": {
     "description": "Error state button."
   },
-  "listeningSettings": "History settings",
-  "@listeningSettings": {
-    "description": "Footer link to Settings."
-  },
   "listeningToday": "Today",
   "@listeningToday": {
     "description": "Day label."

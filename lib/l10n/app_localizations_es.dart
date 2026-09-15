@@ -4266,9 +4266,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get listeningRetry => 'Reintentar';
 
   @override
-  String get listeningSettings => 'Ajustes del historial';
-
-  @override
   String get listeningToday => 'Hoy';
 
   @override

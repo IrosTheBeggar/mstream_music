@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "История прослушиваний выключена. Включите её в настройках, чтобы записывать прослушивания на этом телефоне.",
   "listeningError": "Не удалось загрузить: {message}",
   "listeningRetry": "Повторить",
-  "listeningSettings": "Настройки истории",
   "listeningToday": "Сегодня",
   "listeningYesterday": "Вчера"
 }

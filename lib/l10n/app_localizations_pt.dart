@@ -4256,9 +4256,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get listeningRetry => 'Tentar novamente';
 
   @override
-  String get listeningSettings => 'Configurações do histórico';
-
-  @override
   String get listeningToday => 'Hoje';
 
   @override

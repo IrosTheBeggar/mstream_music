@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "收听记录已关闭。在设置中打开后，这部手机的播放才会被记录。",
   "listeningError": "无法加载：{message}",
   "listeningRetry": "重试",
-  "listeningSettings": "记录设置",
   "listeningToday": "今天",
   "listeningYesterday": "昨天"
 }

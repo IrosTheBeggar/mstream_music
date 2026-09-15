@@ -4272,9 +4272,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listeningRetry => 'Réessayer';
 
   @override
-  String get listeningSettings => 'Paramètres de l\'historique';
-
-  @override
   String get listeningToday => 'Aujourd\'hui';
 
   @override

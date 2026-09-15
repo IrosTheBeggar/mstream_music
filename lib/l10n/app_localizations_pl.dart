@@ -4325,9 +4325,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listeningRetry => 'Ponów';
 
   @override
-  String get listeningSettings => 'Ustawienia historii';
-
-  @override
   String get listeningToday => 'Dzisiaj';
 
   @override

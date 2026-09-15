@@ -4333,9 +4333,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listeningRetry => 'Повторить';
 
   @override
-  String get listeningSettings => 'Настройки истории';
-
-  @override
   String get listeningToday => 'Сегодня';
 
   @override

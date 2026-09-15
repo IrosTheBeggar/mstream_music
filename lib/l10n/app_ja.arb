@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "再生履歴はオフです。この端末で再生を記録するには、設定でオンにしてください。",
   "listeningError": "読み込めませんでした: {message}",
   "listeningRetry": "再試行",
-  "listeningSettings": "履歴の設定",
   "listeningToday": "今日",
   "listeningYesterday": "昨日"
 }

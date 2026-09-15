@@ -6936,12 +6936,6 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get listeningRetry;
 
-  /// Footer link to Settings.
-  ///
-  /// In en, this message translates to:
-  /// **'History settings'**
-  String get listeningSettings;
-
   /// Day label.
   ///
   /// In en, this message translates to:

@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "L'historique d'écoute est désactivé. Activez-le dans les paramètres pour enregistrer les lectures sur ce téléphone.",
   "listeningError": "Chargement impossible : {message}",
   "listeningRetry": "Réessayer",
-  "listeningSettings": "Paramètres de l'historique",
   "listeningToday": "Aujourd'hui",
   "listeningYesterday": "Hier"
 }

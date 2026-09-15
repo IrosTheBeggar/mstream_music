@@ -4060,9 +4060,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listeningRetry => '再試行';
 
   @override
-  String get listeningSettings => '履歴の設定';
-
-  @override
   String get listeningToday => '今日';
 
   @override

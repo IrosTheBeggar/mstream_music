@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "El historial de escucha está desactivado. Actívalo en los ajustes para registrar las reproducciones en este teléfono.",
   "listeningError": "No se pudo cargar: {message}",
   "listeningRetry": "Reintentar",
-  "listeningSettings": "Ajustes del historial",
   "listeningToday": "Hoy",
   "listeningYesterday": "Ayer"
 }

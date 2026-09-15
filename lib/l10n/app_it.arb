@@ -1137,7 +1137,6 @@
   "listeningHistoryOff": "La cronologia di ascolto è disattivata. Attivala nelle impostazioni per registrare le riproduzioni su questo telefono.",
   "listeningError": "Impossibile caricare: {message}",
   "listeningRetry": "Riprova",
-  "listeningSettings": "Impostazioni cronologia",
   "listeningToday": "Oggi",
   "listeningYesterday": "Ieri"
 }
