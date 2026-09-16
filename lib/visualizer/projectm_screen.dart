@@ -46,7 +46,12 @@ class _ProjectMScreenState extends State<ProjectMScreen>
     // Capture real playback audio (WASAPI loopback) while the visualizer is
     // open; the PCM feed prefers it and falls back to synth when unavailable.
     AudioCapture.instance.start();
-    _setup();
+    // Engine init is a synchronous ~0.5s native call. Let the screen paint its
+    // spinner first (the desktop shell switches tabs into this widget), then
+    // bring the engine up on the next frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _setup();
+    });
   }
 
   Future<void> _setup() async {
