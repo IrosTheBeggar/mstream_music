@@ -28,8 +28,9 @@ Future<void> initDesktopWindow() async {
     minimumSize: const Size(960, 640),
     center: true,
     title: 'mStream Music',
-    // With the custom title bar the shell draws its own band (wordmark +
-    // drag area) under the native traffic lights, which stay visible.
+    // With the custom title bar (macOS, Windows) the shell draws its own band
+    // — wordmark, section tabs, server picker, drag area — under the native
+    // traffic lights on macOS, and with its own window controls on Windows.
     titleBarStyle:
         usesCustomTitleBar ? TitleBarStyle.hidden : TitleBarStyle.normal,
   );

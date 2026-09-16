@@ -770,10 +770,12 @@ class _Wordmark extends StatelessWidget {
 /// The app-drawn band across the top of the window: the wordmark, the
 /// section tabs (Now Playing · Library · P2P · Federation · Visualizer ·
 /// Stats · Settings — the network pair only when the server serves them) and
-/// the server picker at the right end. On macOS it is also the window title
-/// bar (TitleBarStyle.hidden — set in initDesktopWindow): the native traffic
-/// lights float over its left end and DragToMoveArea gives the band
-/// window-drag plus double-click zoom. Windows/Linux keep their native chrome
+/// the server picker at the right end. On macOS and Windows it is also the
+/// window title bar (TitleBarStyle.hidden — set in initDesktopWindow) and a
+/// DragToMoveArea: macOS floats its native traffic lights over the left end
+/// and zooms on double-click by itself; Windows gets an app-drawn
+/// minimize / maximize / close cluster at the right end and an explicit
+/// double-click zoom on the band's empty stretch. Linux keeps native chrome
 /// above it.
 class _DesktopTopBar extends StatelessWidget {
   final _ShellTab tab;
@@ -789,6 +791,24 @@ class _DesktopTopBar extends StatelessWidget {
   /// at its standard spot over the band's left end: three buttons ending at
   /// x ≈ 70 in the hidden-titlebar layout, plus breathing room.
   static const double _trafficLightInset = 80;
+
+  // Windows: double-click on the band's empty stretch toggles maximize, as a
+  // native caption does (macOS gets that from the drag itself). Only the
+  // stretch, not the tabs — a double-tap recognizer over a tap target would
+  // hold every single click back for the double-tap timeout.
+  static Widget _zoomOnDoubleClick(Widget child) => drawsWindowControls
+      ? GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onDoubleTap: () async {
+            if (await windowManager.isMaximized()) {
+              await windowManager.unmaximize();
+            } else {
+              await windowManager.maximize();
+            }
+          },
+          child: child,
+        )
+      : child;
 
   static String _label(AppLocalizations l, _ShellTab t) => switch (t) {
         _ShellTab.nowPlaying => l.nowPlaying,
@@ -825,14 +845,20 @@ class _DesktopTopBar extends StatelessWidget {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(width: usesCustomTitleBar ? _trafficLightInset : 20),
-                    Center(
-                      child: _Wordmark(
-                        iconSize: 22,
-                        fontSize: 17,
-                        gap: 8,
-                        bright: VelvetColors.appBarText,
-                        dim: VelvetColors.appBarTextSecondary,
+                    SizedBox(
+                      width: usesCustomTitleBar && !drawsWindowControls
+                          ? _trafficLightInset
+                          : 20,
+                    ),
+                    _zoomOnDoubleClick(
+                      Center(
+                        child: _Wordmark(
+                          iconSize: 22,
+                          fontSize: 17,
+                          gap: 8,
+                          bright: VelvetColors.appBarText,
+                          dim: VelvetColors.appBarTextSecondary,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -842,9 +868,14 @@ class _DesktopTopBar extends StatelessWidget {
                         selected: t == tab,
                         onTap: () => onTab(t),
                       ),
-                    const Spacer(),
-                    Center(child: _ServerPicker(onManageServers: onManageServers)),
+                    Expanded(
+                      child: _zoomOnDoubleClick(const SizedBox.expand()),
+                    ),
+                    Center(
+                      child: _ServerPicker(onManageServers: onManageServers),
+                    ),
                     const SizedBox(width: 12),
+                    if (drawsWindowControls) const _WindowControls(),
                   ],
                 );
               },
@@ -908,6 +939,167 @@ class _TopTabState extends State<_TopTab> {
       ),
     );
   }
+}
+
+/// Windows draws no caption once the title bar is hidden, so the band ends
+/// with its own minimize · maximize/restore · close cluster — the system's
+/// 46px caption buttons, close going red on hover as the native one does.
+/// macOS keeps its traffic lights over the band's left end instead.
+class _WindowControls extends StatefulWidget {
+  const _WindowControls();
+
+  @override
+  State<_WindowControls> createState() => _WindowControlsState();
+}
+
+class _WindowControlsState extends State<_WindowControls> with WindowListener {
+  bool _maximized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    windowManager.isMaximized().then((m) {
+      if (mounted && m != _maximized) setState(() => _maximized = m);
+    });
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    super.dispose();
+  }
+
+  @override
+  void onWindowMaximize() => setState(() => _maximized = true);
+
+  @override
+  void onWindowUnmaximize() => setState(() => _maximized = false);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _CaptionButton(
+          glyph: _CaptionGlyph.minimize,
+          tooltip: 'Minimize',
+          onTap: windowManager.minimize,
+        ),
+        _CaptionButton(
+          glyph: _maximized ? _CaptionGlyph.restore : _CaptionGlyph.maximize,
+          tooltip: _maximized ? 'Restore' : 'Maximize',
+          onTap: () => _maximized
+              ? windowManager.unmaximize()
+              : windowManager.maximize(),
+        ),
+        _CaptionButton(
+          glyph: _CaptionGlyph.close,
+          tooltip: 'Close',
+          danger: true,
+          onTap: windowManager.close,
+        ),
+      ],
+    );
+  }
+}
+
+enum _CaptionGlyph { minimize, maximize, restore, close }
+
+class _CaptionButton extends StatefulWidget {
+  final _CaptionGlyph glyph;
+  final String tooltip;
+  final bool danger;
+  final VoidCallback onTap;
+  const _CaptionButton({
+    required this.glyph,
+    required this.tooltip,
+    required this.onTap,
+    this.danger = false,
+  });
+
+  @override
+  State<_CaptionButton> createState() => _CaptionButtonState();
+}
+
+class _CaptionButtonState extends State<_CaptionButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg = !_hover
+        ? Colors.transparent
+        : widget.danger
+            ? const Color(0xFFC42B1C)
+            : VelvetColors.hover;
+    final Color ink = !_hover
+        ? VelvetColors.appBarTextSecondary
+        : widget.danger
+            ? Colors.white
+            : VelvetColors.appBarText;
+    return Tooltip(
+      message: widget.tooltip,
+      waitDuration: const Duration(milliseconds: 600),
+      child: InkWell(
+        onTap: widget.onTap,
+        onHover: (h) => setState(() => _hover = h),
+        hoverColor: Colors.transparent,
+        child: Container(
+          width: 46,
+          color: bg,
+          alignment: Alignment.center,
+          child: CustomPaint(
+            size: const Size(10, 10),
+            painter: _CaptionGlyphPainter(widget.glyph, ink),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The four caption glyphs as 1px strokes on a 10px box, the way the system
+/// draws them (Segoe's are 10px hairlines too), so they stay crisp at every
+/// scale instead of reading as icon-font shapes.
+class _CaptionGlyphPainter extends CustomPainter {
+  final _CaptionGlyph glyph;
+  final Color color;
+  const _CaptionGlyphPainter(this.glyph, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+    final w = size.width;
+    final h = size.height;
+    switch (glyph) {
+      case _CaptionGlyph.minimize:
+        canvas.drawLine(Offset(0, h / 2 + 0.5), Offset(w, h / 2 + 0.5), p);
+      case _CaptionGlyph.maximize:
+        canvas.drawRect(Rect.fromLTWH(0.5, 0.5, w - 1, h - 1), p);
+      case _CaptionGlyph.restore:
+        // Front square low-left, the back one peeking out top-right.
+        canvas.drawRect(Rect.fromLTWH(0.5, 2.5, w - 3, h - 3), p);
+        canvas.drawPath(
+          Path()
+            ..moveTo(2.5, 2.5)
+            ..lineTo(2.5, 0.5)
+            ..lineTo(w - 0.5, 0.5)
+            ..lineTo(w - 0.5, h - 2.5)
+            ..lineTo(w - 2.5, h - 2.5),
+          p,
+        );
+      case _CaptionGlyph.close:
+        canvas.drawLine(Offset.zero, Offset(w, h), p);
+        canvas.drawLine(Offset(w, 0), Offset(0, h), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CaptionGlyphPainter old) =>
+      old.glyph != glyph || old.color != color;
 }
 
 /// Current-server pill + a popup to switch servers, add one, or open Manage
