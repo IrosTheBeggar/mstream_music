@@ -34,10 +34,12 @@ import '../screens/album_detail_view.dart';
 import '../screens/auto_dj.dart';
 import '../screens/browser.dart';
 import '../screens/desktop_search.dart';
+import '../screens/discover_screen.dart';
 import '../screens/federation/federation_screen.dart';
 import '../screens/listening/listening_screen.dart';
 import '../screens/p2p/p2p_screen.dart';
 import '../screens/manage_server.dart';
+import '../screens/metadata_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/share_playlist_dialog.dart';
 import '../screens/transcode_screen.dart';
@@ -128,6 +130,8 @@ class _DesktopShellState extends State<DesktopShell> {
   // category key ('albums', …), a tool key, or 'search'.
   String _active = '';
   bool _queueOpen = false;
+  // Which dock panel shows beside the browse pane while the dock is open.
+  _DockTab _dockTab = _DockTab.queue;
   // The top bar's current tab. Now Playing (polish #7) lays over whichever
   // tab it was opened from — via the bar's expand glyph or its own tab — and
   // returns there on close (esc / the corner chip / any other tab).
@@ -413,13 +417,16 @@ class _DesktopShellState extends State<DesktopShell> {
             ),
           ),
         ),
-        // Queue column (header + list) — no divider against the browse pane:
-        // both sit on one flat field, web-app style, and only their content
-        // rows rise above it.
+        // Dock column (queue · lyrics · similar · info) — no divider against
+        // the browse pane: both sit on one flat field, web-app style, and only
+        // their content rows rise above it.
         if (_queueOpen)
           SizedBox(
             width: queueWidth,
-            child: const _DesktopQueuePanel(),
+            child: _DesktopDock(
+              tab: _dockTab,
+              onTab: (t) => setState(() => _dockTab = t),
+            ),
           ),
       ],
     );
@@ -1144,8 +1151,23 @@ class _DesktopBrowseView extends StatelessWidget {
 
 // Collapsing the panel is the bar's queue glyph only — a header ✕ read as
 // "clear the queue" next to the trash button, so it's gone.
-class _DesktopQueuePanel extends StatelessWidget {
-  const _DesktopQueuePanel();
+// The four panels that ride beside the browse pane: the queue, and three
+// views of the playing track — lyrics, similar tracks (Discover) and song
+// info. One shows at a time; the others are built on entry, so nothing
+// fetches for a panel nobody is looking at.
+enum _DockTab { queue, lyrics, similar, info }
+
+class _DesktopDock extends StatelessWidget {
+  final _DockTab tab;
+  final void Function(_DockTab) onTab;
+  const _DesktopDock({required this.tab, required this.onTab});
+
+  static String _label(AppLocalizations l, _DockTab t) => switch (t) {
+        _DockTab.queue => 'Queue',
+        _DockTab.lyrics => l.lyricsTitle,
+        _DockTab.similar => 'Similar',
+        _DockTab.info => 'Info',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -1154,71 +1176,170 @@ class _DesktopQueuePanel extends StatelessWidget {
       color: VelvetColors.surface,
       child: Column(
         children: [
-          // "Queue" header carrying the queue's actions — no now-playing card
-          // up here (the bar's full-height tab shows the playing track), so
-          // the column reads header → list. 56 matches the content panes'
-          // top bars; like them it sits directly on the flat content field.
+          // The tab strip takes the 56px header band the "Queue" title used
+          // to own (it matches the content panes' top bars and sits directly
+          // on the flat content field); the queue's actions keep its right
+          // end while the queue is the showing panel.
           SizedBox(
             height: 56,
             child: Padding(
-              padding: const EdgeInsets.only(left: 16, right: 8),
+              padding: const EdgeInsets.only(left: 8, right: 8),
               child: Row(
                 children: [
-                  Text(
-                    'Queue',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: VelvetColors.textPrimary,
+                  for (final t in _DockTab.values)
+                    _DockTabChip(
+                      label: _label(l, t),
+                      selected: t == tab,
+                      onTap: () => onTab(t),
                     ),
-                  ),
                   const Spacer(),
-                  // Clear is the most-reached-for queue action, so it gets
-                  // its own button (same no-confirm behavior as the phone
-                  // queue header). Light red: it's destructive, and the tint
-                  // separates it from the neutral actions beside it.
-                  IconButton(
-                    icon: const Icon(Icons.delete_sweep, size: 20),
-                    color: VelvetColors.error,
-                    tooltip: l.mainClearQueue,
-                    onPressed: () => MediaManager()
-                        .audioHandler
-                        .customAction('clearPlaylist'),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 20),
-                    color: VelvetColors.surface,
-                    tooltip: l.mainMore,
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'save':
-                          _saveQueueAsPlaylist(context);
-                          break;
-                        case 'download':
-                          downloadQueue(context);
-                          break;
-                        case 'share':
-                          showSharePlaylistDialog(context);
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      _queueMenuItem(
-                          'save', Icons.playlist_add, 'Save as playlist'),
-                      _queueMenuItem(
-                        'download',
-                        Icons.download_for_offline,
-                        l.queueDownloadAll,
-                      ),
-                      _queueMenuItem('share', Icons.share_outlined, l.shareTitle),
-                    ],
-                  ),
+                  if (tab == _DockTab.queue) ...[
+                    // Clear is the most-reached-for queue action, so it gets
+                    // its own button (same no-confirm behavior as the phone
+                    // queue header). Light red: it's destructive, and the tint
+                    // separates it from the neutral actions beside it.
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep, size: 20),
+                      color: VelvetColors.error,
+                      tooltip: l.mainClearQueue,
+                      onPressed: () => MediaManager()
+                          .audioHandler
+                          .customAction('clearPlaylist'),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      color: VelvetColors.surface,
+                      tooltip: l.mainMore,
+                      onSelected: (v) {
+                        switch (v) {
+                          case 'save':
+                            _saveQueueAsPlaylist(context);
+                            break;
+                          case 'download':
+                            downloadQueue(context);
+                            break;
+                          case 'share':
+                            showSharePlaylistDialog(context);
+                            break;
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        _queueMenuItem(
+                            'save', Icons.playlist_add, 'Save as playlist'),
+                        _queueMenuItem(
+                          'download',
+                          Icons.download_for_offline,
+                          l.queueDownloadAll,
+                        ),
+                        _queueMenuItem(
+                            'share', Icons.share_outlined, l.shareTitle),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
-          const Expanded(child: QueueList(showItemMenu: true)),
+          Expanded(child: _body(l)),
         ],
+      ),
+    );
+  }
+
+  Widget _body(AppLocalizations l) {
+    switch (tab) {
+      case _DockTab.queue:
+        return const QueueList(showItemMenu: true);
+      case _DockTab.lyrics:
+        // The full-screen view's synced pane, following the playing track.
+        return StreamBuilder<MediaItem?>(
+          stream: MediaManager().audioHandler.mediaItem,
+          builder: (context, snap) => _NowPlayingLyrics(
+            item: snap.data,
+            placeholder: _DockNote(
+              snap.data == null ? 'Nothing playing' : l.lyricsEmpty,
+            ),
+          ),
+        );
+      case _DockTab.similar:
+        // No explicit seed: the screen follows the playing track and
+        // refreshes on track change — the phone player's Discover entry,
+        // minus its app bar.
+        return const DiscoverScreen(embedded: true);
+      case _DockTab.info:
+        return StreamBuilder<MediaItem?>(
+          stream: MediaManager().audioHandler.mediaItem,
+          builder: (context, snap) {
+            final item = snap.data;
+            if (item == null) return const _DockNote('Nothing playing');
+            return MetadataScreen(
+              key: ValueKey(item.id),
+              item: item,
+              embedded: true,
+            );
+          },
+        );
+    }
+  }
+}
+
+/// One dock tab: a rounded chip, the showing one lifted on the accent tint.
+class _DockTabChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _DockTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Material(
+        color: selected
+            ? VelvetColors.primary.withValues(alpha: 0.14)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected
+                    ? VelvetColors.textPrimary
+                    : VelvetColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A dock panel with nothing to show yet (no track, no lyrics).
+class _DockNote extends StatelessWidget {
+  final String text;
+  const _DockNote(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: VelvetColors.textSecondary, fontSize: 14),
+        ),
       ),
     );
   }
@@ -2646,7 +2767,10 @@ class _LrcLine {
 /// ensureVisible; tapping a line seeks there. Plain lyrics just scroll.
 class _NowPlayingLyrics extends StatefulWidget {
   final MediaItem? item;
-  const _NowPlayingLyrics({required this.item});
+  // Shown instead of nothing when the track has no lyrics (the dock's note);
+  // the full-screen view leaves it null and shows nothing, as before.
+  final Widget? placeholder;
+  const _NowPlayingLyrics({required this.item, this.placeholder});
 
   @override
   State<_NowPlayingLyrics> createState() => _NowPlayingLyricsState();
@@ -2749,7 +2873,13 @@ class _NowPlayingLyricsState extends State<_NowPlayingLyrics> {
   @override
   Widget build(BuildContext context) {
     final res = _result;
-    if (res == null) return const SizedBox.shrink();
+    if (res == null) {
+      // _key stays null when the track has no lyrics to fetch; while a fetch
+      // is in flight it is set, so nothing flashes in the meantime.
+      return _key == null && widget.placeholder != null
+          ? widget.placeholder!
+          : const SizedBox.shrink();
+    }
 
     final Widget body;
     if (_lines != null) {

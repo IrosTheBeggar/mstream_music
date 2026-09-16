@@ -46,12 +46,16 @@ class DiscoverScreen extends StatefulWidget {
   final String? seedTitle;
   final String? seedArtist;
 
+  /// Inside the desktop dock: no app bar (the dock's tab strip is the title).
+  final bool embedded;
+
   const DiscoverScreen(
       {super.key,
       this.seedServer,
       this.seedPath,
       this.seedTitle,
-      this.seedArtist});
+      this.seedArtist,
+      this.embedded = false});
 
   bool get hasExplicitSeed => seedServer != null && seedPath != null;
 
@@ -333,7 +337,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     return Scaffold(
       backgroundColor: VelvetColors.bg,
-      appBar: AppBar(
+      appBar: widget.embedded ? null : AppBar(
         backgroundColor: VelvetColors.bg,
         elevation: 0,
         scrolledUnderElevation: 0,
