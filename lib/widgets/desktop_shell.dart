@@ -1,9 +1,12 @@
 // desktop_shell.dart — the wide/desktop layout, in the shape of a traditional
-// desktop music player: a persistent left sidebar (server picker · library ·
-// tools), the browse / album-detail area in a nested Navigator so tool screens
-// (Settings, Diagnostics, …) open inside the content pane while the sidebar and
-// player stay put, an optional right-hand queue panel, and a full-width Now
-// Playing bar pinned to the bottom (art · transport · seek · volume · queue).
+// desktop music player: a top bar of section tabs (Now Playing · Library ·
+// P2P · Federation · Visualizer · Stats · Settings) with the server picker,
+// the Library tab keeping a persistent left sidebar (search · music · tools)
+// beside the browse / album-detail area in a nested Navigator (tool screens
+// open inside the content pane while the sidebar and player stay put) and an
+// optional right-hand queue panel, the other tabs hosting their phone screens
+// in Navigators of their own, and a full-width Now Playing bar pinned to the
+// bottom under all of it (art · transport · seek · volume · queue).
 //
 // Chosen over the phone shell by a width breakpoint in MStreamApp.build (desktop
 // platforms only). This is a VIEW only: it reads the same singletons / streams
@@ -26,13 +29,14 @@ import '../media/cast_target.dart';
 import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/server.dart';
-import '../screens/about_screen.dart';
 import '../screens/add_server.dart';
 import '../screens/album_detail_view.dart';
 import '../screens/auto_dj.dart';
 import '../screens/browser.dart';
 import '../screens/desktop_search.dart';
-import '../screens/diagnostics_screen.dart';
+import '../screens/federation/federation_screen.dart';
+import '../screens/listening/listening_screen.dart';
+import '../screens/p2p/p2p_screen.dart';
 import '../screens/manage_server.dart';
 import '../screens/settings_screen.dart';
 import '../screens/share_playlist_dialog.dart';
@@ -66,9 +70,9 @@ import 'queue_list.dart';
 // Width of the fixed left navigation rail. The right queue panel's width is
 // computed at build time to match the now-playing view (see _DesktopShellState).
 const double _kSidebarWidth = 208;
-// App-drawn window title bar (usesCustomTitleBar platforms): the
-// chrome-black band carrying the wordmark, with the native traffic lights
-// floating over its left end.
+// The app-drawn top bar (_DesktopTopBar): the chrome-black band carrying the
+// wordmark, the section tabs and the server picker. On macOS it is also the
+// window title bar, with the native traffic lights floating over its left end.
 const double _kTitleBarHeight = 52;
 // Now Playing bar, top to bottom: breathing room, the elapsed/duration row,
 // the waveform seek strip, then the controls row (which keeps the original
@@ -87,24 +91,55 @@ class DesktopShell extends StatefulWidget {
   State<DesktopShell> createState() => _DesktopShellState();
 }
 
+// The top bar's destinations. Now Playing is a full-window view laid over
+// whichever tab it was opened from (see _tabUnderNowPlaying); the rest are
+// bodies of their own.
+enum _ShellTab { nowPlaying, library, p2p, federation, visualizer, stats, settings }
+
+// Which tabs the top bar shows for [s] — the phone home's group rule: a group
+// the server cannot serve is left out, never greyed. P2P and Federation need
+// a non-federated server that advertises them (Federation also shows for
+// anyone with peers to browse).
+List<_ShellTab> _tabsFor(Server? s) {
+  final network = s != null && !s.isFederated;
+  return [
+    _ShellTab.nowPlaying,
+    _ShellTab.library,
+    if (network && (s.p2pAvailable == true || s.discoveryP2pAvailable == true))
+      _ShellTab.p2p,
+    if (network &&
+        (s.federationAvailable == true ||
+            ServerManager().federatedChildren(s).isNotEmpty))
+      _ShellTab.federation,
+    _ShellTab.visualizer,
+    _ShellTab.stats,
+    _ShellTab.settings,
+  ];
+}
+
 class _DesktopShellState extends State<DesktopShell> {
-  // The content pane is its own Navigator so tool screens push WITHIN it —
-  // keeping the sidebar and the Now Playing bar visible — instead of covering
-  // the whole window the way a root-level push would.
+  // The Library tab's content pane is its own Navigator so tool screens push
+  // WITHIN it — keeping the sidebar, the top bar and the Now Playing bar
+  // visible — instead of covering the whole window the way a root-level push
+  // would. Every other tab's body gets the same treatment (_TabNavigator).
   final GlobalKey<NavigatorState> _contentNav = GlobalKey<NavigatorState>();
 
   // Highlighted sidebar destination, by key. '' = the browse landing; a
-  // category key ('albums', …), a tool key, 'search', or a visualizer key.
+  // category key ('albums', …), a tool key, or 'search'.
   String _active = '';
   bool _queueOpen = false;
-  // Full-screen Now Playing overlay (polish #7): opened from the bar card's
-  // album art, closed with esc / the corner chip. _npVisualizer switches its
-  // backdrop between blurred album art and the live shader visualizer.
-  bool _nowPlayingOpen = false;
+  // The top bar's current tab. Now Playing (polish #7) lays over whichever
+  // tab it was opened from — via the bar's expand glyph or its own tab — and
+  // returns there on close (esc / the corner chip / any other tab).
+  // _npVisualizer switches its backdrop between blurred album art and the
+  // live shader visualizer.
+  _ShellTab _tab = _ShellTab.library;
+  _ShellTab _tabUnderNowPlaying = _ShellTab.library;
   bool _npVisualizer = false;
   // Party mode: OS fullscreen + a soft lock that removes the exits (esc /
-  // close), holds the display awake, and disables library-affecting controls.
-  // Unlocked by hold-to-confirm, gated behind the optional PIN when one is set.
+  // close / the top bar, which the view then covers), holds the display
+  // awake, and disables library-affecting controls. Unlocked by
+  // hold-to-confirm, gated behind the optional PIN when one is set.
   bool _npLocked = false;
 
   Future<void> _setPartyMode(bool on) async {
@@ -118,10 +153,35 @@ class _DesktopShellState extends State<DesktopShell> {
     }
   }
 
+  bool get _nowPlayingOpen => _tab == _ShellTab.nowPlaying;
+
+  void _openNowPlaying() {
+    if (_nowPlayingOpen) return;
+    setState(() {
+      _tabUnderNowPlaying = _tab;
+      _tab = _ShellTab.nowPlaying;
+    });
+  }
+
   void _closeNowPlaying() {
-    // A lingering fullscreen/lock must never outlive the overlay.
+    // A lingering fullscreen/lock must never outlive the view.
     if (_npLocked) _setPartyMode(false);
-    setState(() => _nowPlayingOpen = false);
+    setState(() => _tab = _tabUnderNowPlaying);
+  }
+
+  void _openTab(_ShellTab tab) {
+    if (tab == _ShellTab.nowPlaying) {
+      _openNowPlaying();
+      return;
+    }
+    if (_npLocked) return; // party mode owns the exits
+    setState(() => _tab = tab);
+  }
+
+  // Sidebar and search actions belong to the Library tab; reaching them from
+  // elsewhere (the server picker's Manage Servers, ⌘K) lands there first.
+  void _ensureLibrary() {
+    if (_tab != _ShellTab.library) _openTab(_ShellTab.library);
   }
 
   // Native Milkdrop visualizer is desktop-only and needs the engine DLL loaded.
@@ -187,34 +247,14 @@ class _DesktopShellState extends State<DesktopShell> {
     ),
   ];
 
-  // Bottom gear overflow: settings / admin, kept out of the primary nav per
-  // desktop convention.
-  late final List<_NavItem> _gearItems = [
-    _NavItem(
-      'manageServers',
-      Icons.dns_outlined,
-      (l) => l.manageServersTitle,
-      (_) => ManageServersScreen(),
-    ),
-    _NavItem(
-      'settings',
-      Icons.settings_outlined,
-      (l) => l.settingsTitle,
-      (_) => SettingsScreen(),
-    ),
-    _NavItem(
-      'diagnostics',
-      Icons.bug_report_outlined,
-      (l) => l.diagnosticsTitle,
-      (_) => DiagnosticsScreen(),
-    ),
-    _NavItem(
-      'about',
-      Icons.info_outline,
-      (l) => l.aboutTitle,
-      (_) => AboutScreen(),
-    ),
-  ];
+  // Reached from the server picker's menu rather than the sidebar; opens in
+  // the Library's content pane like any tool.
+  late final _NavItem _manageServers = _NavItem(
+    'manageServers',
+    Icons.dns_outlined,
+    (l) => l.manageServersTitle,
+    (_) => ManageServersScreen(),
+  );
 
   // Sidebar highlight for the startup section: the launch loader and a server
   // switch open a section directly (bypassing _openCategory), so mirror it here.
@@ -238,8 +278,18 @@ class _DesktopShellState extends State<DesktopShell> {
     // server switches — both load their section directly, so _openCategory
     // (which normally sets the highlight) never runs.
     _active = _startupKey;
-    _serverSub = ServerManager().currentServerStream.distinct().listen((_) {
-      if (mounted) setState(() => _active = _startupKey);
+    _serverSub = ServerManager().currentServerStream.distinct().listen((s) {
+      if (!mounted) return;
+      setState(() {
+        _active = _startupKey;
+        // A tab the new server cannot serve (P2P / Federation) folds back to
+        // the Library rather than showing a screen for the wrong server.
+        final visible = _tabsFor(s);
+        if (!visible.contains(_tab)) _tab = _ShellTab.library;
+        if (!visible.contains(_tabUnderNowPlaying)) {
+          _tabUnderNowPlaying = _ShellTab.library;
+        }
+      });
     });
   }
 
@@ -259,6 +309,7 @@ class _DesktopShellState extends State<DesktopShell> {
   }
 
   void _openCategory(_Category cat) {
+    _ensureLibrary();
     _showBrowse();
     cat.load();
     setState(() => _active = cat.key);
@@ -270,6 +321,7 @@ class _DesktopShellState extends State<DesktopShell> {
   // extra bindings in build().
   bool _searchOpen = false;
   void _openSearch() {
+    _ensureLibrary();
     if (_searchOpen) {
       _contentNav.currentState?.maybePop();
       return;
@@ -291,6 +343,7 @@ class _DesktopShellState extends State<DesktopShell> {
   }
 
   void _openTool(_NavItem tool) {
+    _ensureLibrary();
     _showBrowse();
     _contentNav.currentState?.push(
       MaterialPageRoute(builder: (_) => tool.build(context)),
@@ -298,32 +351,78 @@ class _DesktopShellState extends State<DesktopShell> {
     setState(() => _active = tool.key);
   }
 
-  void _openVisualizer() {
-    _showBrowse();
-    _contentNav.currentState?.push(
-      MaterialPageRoute(builder: (_) => const ShaderVisualizerScreen()),
-    );
-    setState(() => _active = 'visualizer');
-  }
-
-  void _openProjectM() {
-    _showBrowse();
-    _contentNav.currentState?.push(
-      MaterialPageRoute(builder: (_) => const ProjectMScreen()),
-    );
-    setState(() => _active = 'milkdrop');
+  // The body of a top-bar tab other than Library: the phone's screen, in its
+  // own Navigator so its sub-screens (peer detail, federation settings, …)
+  // push inside the pane. Built only while the tab shows — the visualizer in
+  // particular must not keep rendering offstage.
+  Widget _tabBody(_ShellTab tab, Server? server) {
+    switch (tab) {
+      case _ShellTab.p2p:
+        return server == null
+            ? const _NoServerPane()
+            : P2pScreen(server: server);
+      case _ShellTab.federation:
+        return server == null
+            ? const _NoServerPane()
+            : FederationScreen(parent: server);
+      case _ShellTab.visualizer:
+        // The engine picked in Settings, when the native one is loadable here.
+        final milkdrop = _projectMAvailable &&
+            SettingsManager().visualizerEngine == VisualizerEngine.milkdrop;
+        return milkdrop
+            ? const ProjectMScreen()
+            : const ShaderVisualizerScreen();
+      case _ShellTab.stats:
+        return const ListeningScreen();
+      case _ShellTab.settings:
+        return SettingsScreen();
+      case _ShellTab.library:
+      case _ShellTab.nowPlaying:
+        return const SizedBox.shrink(); // never a tab body — see build()
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final server = _server;
     // Match the queue panel's width to the now-playing view — the bar's right
     // third (Expanded flex 1 of the flex-2 center + flex-1 now-playing split).
     // When the queue opens it then covers exactly that region and the transport
-    // doesn't shift. -1 accounts for the divider between the content and queue.
-    // (No dividers off this width: sidebar↔content is a tone boundary and
-    // browse↔queue share one flat field.)
+    // doesn't shift. (No dividers off this width: sidebar↔content is a tone
+    // boundary and browse↔queue share one flat field.)
     final queueWidth =
         (MediaQuery.sizeOf(context).width - _kSidebarWidth) / 3;
+    // Now Playing lays over the tab it opened from, which keeps rendering
+    // underneath — state and all — exactly as it was left.
+    final under = _nowPlayingOpen ? _tabUnderNowPlaying : _tab;
+    final library = Row(
+      children: [
+        _DesktopSidebar(
+          categories: _categories,
+          tools: _tools,
+          active: _active,
+          onCategory: _openCategory,
+          onSearch: _openSearch,
+          onTool: _openTool,
+        ),
+        Expanded(
+          child: Navigator(
+            key: _contentNav,
+            onGenerateRoute: (_) => MaterialPageRoute(
+              builder: (_) => const _DesktopBrowseView(),
+            ),
+          ),
+        ),
+        // Queue column (header + list) — no divider against the browse pane:
+        // both sit on one flat field, web-app style, and only their content
+        // rows rise above it.
+        if (_queueOpen)
+          SizedBox(
+            width: queueWidth,
+            child: const _DesktopQueuePanel(),
+          ),
+      ],
+    );
     // Material, not Scaffold, on purpose: a Scaffold here would register with
     // the root ScaffoldMessenger and render every SnackBar full-width across
     // the window bottom — over the Now Playing bar. Desktop notifications go
@@ -332,60 +431,37 @@ class _DesktopShellState extends State<DesktopShell> {
     // the content pane, which ends above the bar.
     final shell = Material(
       color: VelvetColors.bg,
-      child: Row(
+      child: Column(
         children: [
-          // Sidebar runs the full window height down the left edge (like the
-          // queue on the right); the Now Playing bar begins where it ends, so
-          // the nav gets the bar's height back as extra vertical space.
-          _DesktopSidebar(
-            categories: _categories,
-            tools: _tools,
-            gearItems: _gearItems,
-            active: _active,
-            onCategory: _openCategory,
-            onSearch: _openSearch,
-            onTool: _openTool,
-            onVisualizer: _openVisualizer,
-            onProjectM: _projectMAvailable ? _openProjectM : null,
-          ),
-          // Everything right of the sidebar: content (+ the queue column when
-          // open) stacked ABOVE a full-width Now Playing bar — so the bar and
-          // its top-edge scrub line always run to the screen's right edge,
-          // queue open or closed, and every control sits along the bottom.
           Expanded(
-            child: Column(
+            // The Library keeps its navigator, browse state and queue column
+            // alive across tab switches (IndexedStack pauses its tickers while
+            // hidden); the other tabs are rebuilt on entry, so the visualizer
+            // stops when it is left and P2P / Federation start on a fresh
+            // controller for the current server.
+            child: IndexedStack(
+              index: under == _ShellTab.library ? 0 : 1,
+              sizing: StackFit.expand,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Navigator(
-                          key: _contentNav,
-                          onGenerateRoute: (_) => MaterialPageRoute(
-                            builder: (_) => const _DesktopBrowseView(),
-                          ),
-                        ),
-                      ),
-                      // Queue column (header + list) — no divider against
-                      // the browse pane: both sit on one flat field, web-app
-                      // style, and only their content rows rise above it.
-                      if (_queueOpen)
-                        SizedBox(
-                          width: queueWidth,
-                          child: const _DesktopQueuePanel(),
-                        ),
-                    ],
+                library,
+                if (under == _ShellTab.library)
+                  const SizedBox.shrink()
+                else
+                  _TabNavigator(
+                    key: ValueKey('${under.name}:${server?.localname}'),
+                    child: _tabBody(under, server),
                   ),
-                ),
-                DesktopNowPlayingBar(
-                  queueOpen: _queueOpen,
-                  onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
-                  onOpenNowPlaying: () =>
-                      setState(() => _nowPlayingOpen = true),
-                  nowPlayingWidth: queueWidth,
-                ),
               ],
             ),
+          ),
+          // Full-width Now Playing bar under every pane — the sidebar included
+          // — so the bar and its scrub line run edge to edge, queue open or
+          // closed, and every control sits along the bottom.
+          DesktopNowPlayingBar(
+            queueOpen: _queueOpen,
+            onToggleQueue: () => setState(() => _queueOpen = !_queueOpen),
+            onOpenNowPlaying: _openNowPlaying,
+            nowPlayingWidth: queueWidth,
           ),
         ],
       ),
@@ -407,30 +483,30 @@ class _DesktopShellState extends State<DesktopShell> {
       },
       child: Stack(
         children: [
-          // The window title bar sits above the shell columns but INSIDE this
-          // stack, so the full-screen Now Playing overlay still covers the
-          // whole window, chrome included. Native-chrome platforms skip the
-          // wrapper and keep the plain shell tree.
-          if (usesCustomTitleBar)
-            Column(
-              children: [
-                const _WindowTitleBar(),
-                Expanded(child: shell),
-              ],
-            )
-          else
-            shell,
+          // The top bar sits above the shell columns but INSIDE this stack,
+          // so the locked Now Playing view can still cover the whole window,
+          // chrome included.
+          Column(
+            children: [
+              _DesktopTopBar(
+                tab: _tab,
+                onTab: _openTab,
+                onManageServers: () => _openTool(_manageServers),
+              ),
+              Expanded(child: shell),
+            ],
+          ),
           // The scrub strip is the TOP BAND of the Now Playing bar itself —
           // the bar reserves _kSeekStripHeight for it (see
           // DesktopNowPlayingBar), and the strip floats over that band,
-          // spanning sidebar → the bar's now-playing tab (which owns the
-          // bar's full-height right corner) in both queue states. The 12px
-          // side insets match the elapsed/duration row's padding above, so
-          // the strip's ends line up with the time stamps. The waveform bars
-          // rise and reflect around the band's center line; with no waveform
-          // available the band draws the slim line there.
+          // spanning the window's left edge → the bar's now-playing tab
+          // (which owns the bar's full-height right corner) in both queue
+          // states. The 12px side insets match the elapsed/duration row's
+          // padding above, so the strip's ends line up with the time stamps.
+          // The waveform bars rise and reflect around the band's center line;
+          // with no waveform available the band draws the slim line there.
           Positioned(
-            left: _kSidebarWidth + 12,
+            left: 12,
             right: queueWidth + 12,
             bottom: _kControlsHeight,
             height: _kSeekStripHeight,
@@ -444,10 +520,15 @@ class _DesktopShellState extends State<DesktopShell> {
             bottom: _kNowPlayingHeight + 16,
             child: const DesktopToastHost(),
           ),
-          // Full-screen Now Playing dwell mode — topmost, covers the whole
-          // shell (chrome included; the V2 "backdrop" design).
+          // Full-window Now Playing dwell mode — topmost. It leaves the top
+          // bar clickable (the tabs are a way out) until party mode locks it,
+          // when it covers the chrome too (the V2 "backdrop" design).
           if (_nowPlayingOpen)
-            Positioned.fill(
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              top: _npLocked ? 0 : _kTitleBarHeight,
               child: _NowPlayingOverlay(
                 visualizer: _npVisualizer,
                 locked: _npLocked,
@@ -459,6 +540,37 @@ class _DesktopShellState extends State<DesktopShell> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// A tab body's own Navigator: the phone screen is the root route, and whatever
+// it pushes (peer detail, a settings sub-page) stays inside the pane under the
+// top bar and above the Now Playing bar.
+class _TabNavigator extends StatelessWidget {
+  final Widget child;
+  const _TabNavigator({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => child),
+    );
+  }
+}
+
+// P2P / Federation with no server selected — the tabs hide in that state,
+// so this only shows if one was reached mid-switch.
+class _NoServerPane extends StatelessWidget {
+  const _NoServerPane();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'No server selected',
+        style: TextStyle(color: VelvetColors.textSecondary),
       ),
     );
   }
@@ -509,23 +621,17 @@ class _SectionHeader extends StatelessWidget {
 class _DesktopSidebar extends StatelessWidget {
   final List<_Category> categories;
   final List<_NavItem> tools;
-  final List<_NavItem> gearItems;
   final String active;
   final void Function(_Category) onCategory;
   final VoidCallback onSearch;
   final void Function(_NavItem) onTool;
-  final VoidCallback onVisualizer;
-  final VoidCallback? onProjectM; // null when projectM isn't available
   const _DesktopSidebar({
     required this.categories,
     required this.tools,
-    required this.gearItems,
     required this.active,
     required this.onCategory,
     required this.onSearch,
     required this.onTool,
-    required this.onVisualizer,
-    required this.onProjectM,
   });
 
   @override
@@ -537,7 +643,7 @@ class _DesktopSidebar extends StatelessWidget {
       // webapp's scheme — dark frame, a lighter nav panel (navBg), the
       // content field in between. Older themes set navBg = appBarBg and the
       // sidebar shares the frame tone. The quiet right-edge hairline is the
-      // shell's only structural divider besides the title bar's accent line
+      // shell's only structural divider besides the top bar's accent line
       // (the bar | content boundary is a bare tone shift) — drawn inside the
       // sidebar's width, so nothing shifts.
       decoration: BoxDecoration(
@@ -546,115 +652,33 @@ class _DesktopSidebar extends StatelessWidget {
           right: BorderSide(color: VelvetColors.border2, width: 1),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      // The wordmark, the server picker and Settings all live in the top bar
+      // now, so the sidebar is the Library's own navigation and nothing else.
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          // With the custom window title bar the wordmark lives up there;
-          // elsewhere it heads the sidebar, pinned to the shared top-bar
-          // height so it stays one band with the browse toolbar and the
-          // queue header.
-          if (!usesCustomTitleBar)
-            const SizedBox(
-              height: VelvetColors.desktopTopBarHeight,
-              child: _SidebarLogo(),
-            ),
-          // Server switcher (hidden with a single server) sits under the
-          // aligned header line rather than stretching the header.
-          const _SidebarServer(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                _SidebarTile(
-                  icon: Icons.search,
-                  label: 'Search',
-                  selected: active == 'search',
-                  onTap: onSearch,
-                ),
-                const _SectionHeader('MUSIC'),
-                for (final c in categories)
-                  _SidebarTile(
-                    icon: c.icon,
-                    label: c.label,
-                    selected: active == c.key,
-                    onTap: () => onCategory(c),
-                  ),
-                const _SectionHeader('TOOLS'),
-                for (final t in tools)
-                  _SidebarTile(
-                    icon: t.icon,
-                    label: t.label(l),
-                    selected: active == t.key,
-                    onTap: () => onTool(t),
-                  ),
-                _SidebarTile(
-                  icon: Icons.graphic_eq,
-                  label: 'Visualizer',
-                  selected: active == 'visualizer',
-                  onTap: onVisualizer,
-                ),
-                if (onProjectM != null)
-                  _SidebarTile(
-                    icon: Icons.auto_awesome,
-                    label: 'Milkdrop',
-                    selected: active == 'milkdrop',
-                    onTap: onProjectM!,
-                  ),
-              ],
-            ),
+          _SidebarTile(
+            icon: Icons.search,
+            label: 'Search',
+            selected: active == 'search',
+            onTap: onSearch,
           ),
-          // Bottom: a Settings/admin overflow, kept out of the primary nav
-          // (desktop-style). Presented as a full-width tile that opens the menu.
-          Divider(height: 1, color: VelvetColors.border),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: PopupMenuButton<_NavItem>(
-              tooltip: '',
-              color: VelvetColors.surface,
-              onSelected: onTool,
-              itemBuilder: (_) => [
-                for (final g in gearItems)
-                  PopupMenuItem<_NavItem>(
-                    value: g,
-                    child: Row(
-                      children: [
-                        Icon(
-                          g.icon,
-                          size: 18,
-                          color: VelvetColors.textSecondary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(g.label(l)),
-                      ],
-                    ),
-                  ),
-              ],
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 11,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.settings_outlined,
-                      size: 20,
-                      color: VelvetColors.textSecondary,
-                    ),
-                    const SizedBox(width: 14),
-                    Text(
-                      'Settings',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: VelvetColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          const _SectionHeader('MUSIC'),
+          for (final c in categories)
+            _SidebarTile(
+              icon: c.icon,
+              label: c.label,
+              selected: active == c.key,
+              onTap: () => onCategory(c),
             ),
-          ),
+          const _SectionHeader('TOOLS'),
+          for (final t in tools)
+            _SidebarTile(
+              icon: t.icon,
+              label: t.label(l),
+              selected: active == t.key,
+              onTap: () => onTool(t),
+            ),
         ],
       ),
     );
@@ -705,72 +729,146 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
-class _SidebarLogo extends StatelessWidget {
-  const _SidebarLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: _Wordmark(
-        iconSize: 26,
-        fontSize: 20,
-        gap: 10,
-        bright: VelvetColors.textPrimary,
-        dim: VelvetColors.textSecondary,
-      ),
-    );
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Window title bar (macOS custom chrome)
+// Top bar: wordmark · section tabs · server picker
 // ---------------------------------------------------------------------------
 
-/// The app-drawn title bar: a chrome-black band with the mStream wordmark,
-/// the standard traffic-light buttons floating natively over its left end
-/// (TitleBarStyle.hidden — set in initDesktopWindow). DragToMoveArea
-/// gives the whole band window-drag plus double-click zoom, matching a native
-/// title bar's behaviour.
-class _WindowTitleBar extends StatelessWidget {
-  const _WindowTitleBar();
+/// The app-drawn band across the top of the window: the wordmark, the
+/// section tabs (Now Playing · Library · P2P · Federation · Visualizer ·
+/// Stats · Settings — the network pair only when the server serves them) and
+/// the server picker at the right end. On macOS it is also the window title
+/// bar (TitleBarStyle.hidden — set in initDesktopWindow): the native traffic
+/// lights float over its left end and DragToMoveArea gives the band
+/// window-drag plus double-click zoom. Windows/Linux keep their native chrome
+/// above it.
+class _DesktopTopBar extends StatelessWidget {
+  final _ShellTab tab;
+  final void Function(_ShellTab) onTab;
+  final VoidCallback onManageServers;
+  const _DesktopTopBar({
+    required this.tab,
+    required this.onTab,
+    required this.onManageServers,
+  });
 
   /// Clearance for the native close/minimize/zoom cluster, which macOS pins
   /// at its standard spot over the band's left end: three buttons ending at
   /// x ≈ 70 in the hidden-titlebar layout, plus breathing room.
   static const double _trafficLightInset = 80;
 
+  static String _label(AppLocalizations l, _ShellTab t) => switch (t) {
+        _ShellTab.nowPlaying => l.nowPlaying,
+        _ShellTab.library => 'Library',
+        _ShellTab.p2p => 'P2P',
+        _ShellTab.federation => l.federationTitle,
+        _ShellTab.visualizer => l.visualizerTitle,
+        _ShellTab.stats => 'Stats',
+        _ShellTab.settings => l.settingsTitle,
+      };
+
   @override
   Widget build(BuildContext context) {
-    return DragToMoveArea(
-      // The band sits OUTSIDE the shell's Material (above it in the column),
-      // so Text needs an explicit ancestor style — without one it renders in
-      // the debug yellow-underline fallback. DefaultTextStyle alone is
-      // enough; a Material here would retain ink/elevation machinery for a
-      // band that has neither.
-      child: DefaultTextStyle(
-        style: Theme.of(context).textTheme.bodyMedium!,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: VelvetColors.titleBarBg,
-            border: Border(
-              bottom: BorderSide(color: VelvetColors.titleBarLine),
+    final l = AppLocalizations.of(context);
+    // A Material (not a bare DecoratedBox like the old title band): the tabs
+    // and the picker are ink surfaces and need one above them.
+    final band = Material(
+      color: VelvetColors.titleBarBg,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: VelvetColors.titleBarLine)),
+        ),
+        child: SizedBox(
+          height: _kTitleBarHeight,
+          // The tab set depends on the current server's capabilities, which
+          // the ping fills in after the switch — so rebuild on both streams.
+          child: StreamBuilder<List<Server>>(
+            stream: ServerManager().serverListStream,
+            initialData: ServerManager().serverList,
+            builder: (context, _) => StreamBuilder<Server?>(
+              stream: ServerManager().currentServerStream,
+              initialData: ServerManager().currentServer,
+              builder: (context, snap) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(width: usesCustomTitleBar ? _trafficLightInset : 20),
+                    Center(
+                      child: _Wordmark(
+                        iconSize: 22,
+                        fontSize: 17,
+                        gap: 8,
+                        bright: VelvetColors.appBarText,
+                        dim: VelvetColors.appBarTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    for (final t in _tabsFor(snap.data))
+                      _TopTab(
+                        label: _label(l, t),
+                        selected: t == tab,
+                        onTap: () => onTab(t),
+                      ),
+                    const Spacer(),
+                    Center(child: _ServerPicker(onManageServers: onManageServers)),
+                    const SizedBox(width: 12),
+                  ],
+                );
+              },
             ),
           ),
-          child: SizedBox(
-            height: _kTitleBarHeight,
-            child: Row(
-              children: [
-                const SizedBox(width: _trafficLightInset),
-                _Wordmark(
-                  iconSize: 22,
-                  fontSize: 17,
-                  gap: 8,
-                  bright: VelvetColors.appBarText,
-                  dim: VelvetColors.appBarTextSecondary,
-                ),
-              ],
+        ),
+      ),
+    );
+    return usesCustomTitleBar ? DragToMoveArea(child: band) : band;
+  }
+}
+
+/// One top-bar destination: label only, the selected one in the primary ink
+/// with an accent underline sitting on the band's bottom edge; hover
+/// brightens the rest.
+class _TopTab extends StatefulWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _TopTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<_TopTab> createState() => _TopTabState();
+}
+
+class _TopTabState extends State<_TopTab> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = widget.selected || _hover;
+    return InkWell(
+      onTap: widget.onTap,
+      onHover: (h) => setState(() => _hover = h),
+      hoverColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: widget.selected ? VelvetColors.primary : Colors.transparent,
+              width: 2,
             ),
+          ),
+        ),
+        child: Text(
+          widget.label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
+            color: lit
+                ? VelvetColors.appBarText
+                : VelvetColors.appBarTextSecondary,
           ),
         ),
       ),
@@ -778,16 +876,26 @@ class _WindowTitleBar extends StatelessWidget {
   }
 }
 
-// Current-server readout + a popup to switch servers or add a new one. Mirrors
-// the phone app bar's server picker (same ServerManager calls).
-class _SidebarServer extends StatelessWidget {
-  const _SidebarServer();
+/// Current-server pill + a popup to switch servers, add one, or open Manage
+/// Servers. Mirrors the phone app bar's server picker (same ServerManager
+/// calls); unlike the old sidebar row it shows with a single server too, since
+/// it is the one place Add/Manage Servers live on desktop.
+class _ServerPicker extends StatelessWidget {
+  final VoidCallback onManageServers;
+  const _ServerPicker({required this.onManageServers});
+
+  static const int _addServer = -1;
+  static const int _manageServers = -2;
 
   Future<void> _switchTo(BuildContext context, int index) async {
-    if (index == -1) {
+    if (index == _addServer) {
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (_) => AddServerScreen()));
+      return;
+    }
+    if (index == _manageServers) {
+      onManageServers();
       return;
     }
     // Capture the localized error before any await — the context may be gone by
@@ -824,88 +932,99 @@ class _SidebarServer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return StreamBuilder<List<Server>>(
       stream: ServerManager().serverListStream,
       initialData: ServerManager().serverList,
-      builder: (context, listSnap) {
-        // With a single server (the common desktop case: just the built-in
-        // one) a switcher is noise — hide the whole row. Adding servers stays
-        // reachable via Manage Servers, and the dropdown reappears as soon as
-        // a second server exists.
-        if ((listSnap.data ?? const <Server>[]).length <= 1) {
-          return const SizedBox.shrink();
-        }
-        return _dropdown(context);
-      },
-    );
-  }
-
-  Widget _dropdown(BuildContext context) {
-    return StreamBuilder<Server?>(
-      stream: ServerManager().currentServerStream,
-      initialData: ServerManager().currentServer,
-      builder: (context, snap) {
-        final server = snap.data;
-        return PopupMenuButton<int>(
-          tooltip: '',
-          onSelected: (i) => _switchTo(context, i),
-          color: VelvetColors.raised,
-          itemBuilder: (context) => [
-            for (final s in ServerManager().serverList)
-              PopupMenuItem(
-                value: ServerManager().serverList.indexOf(s),
-                child: Text(
-                  s.url,
-                  style: TextStyle(
-                    color: s == ServerManager().currentServer
-                        ? VelvetColors.primary
-                        : VelvetColors.textPrimary,
-                  ),
-                ),
-              ),
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              value: -1,
-              child: Row(
-                children: [
-                  Icon(Icons.add, size: 18, color: VelvetColors.textSecondary),
-                  const SizedBox(width: 8),
-                  const Text('Add server'),
-                ],
-              ),
-            ),
-          ],
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 12, 10),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.dns_outlined,
-                  size: 18,
-                  color: VelvetColors.textSecondary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
+      builder: (context, _) => StreamBuilder<Server?>(
+        stream: ServerManager().currentServerStream,
+        initialData: ServerManager().currentServer,
+        builder: (context, snap) {
+          final server = snap.data;
+          final servers = ServerManager().serverList;
+          return PopupMenuButton<int>(
+            tooltip: '',
+            onSelected: (i) => _switchTo(context, i),
+            color: VelvetColors.raised,
+            itemBuilder: (context) => [
+              for (final s in servers)
+                PopupMenuItem(
+                  value: servers.indexOf(s),
                   child: Text(
-                    server?.url ?? 'No server',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    s.displayName,
                     style: TextStyle(
-                      fontSize: 13,
-                      color: VelvetColors.textSecondary,
+                      color: s == server
+                          ? VelvetColors.primary
+                          : VelvetColors.textPrimary,
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.unfold_more,
-                  size: 18,
-                  color: VelvetColors.textTertiary,
+              if (servers.isNotEmpty) const PopupMenuDivider(),
+              PopupMenuItem(
+                value: _addServer,
+                child: Row(
+                  children: [
+                    Icon(Icons.add, size: 18, color: VelvetColors.textSecondary),
+                    const SizedBox(width: 8),
+                    const Text('Add server'),
+                  ],
                 ),
-              ],
+              ),
+              PopupMenuItem(
+                value: _manageServers,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.dns_outlined,
+                      size: 18,
+                      color: VelvetColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(l.manageServersTitle),
+                  ],
+                ),
+              ),
+            ],
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.fromLTRB(10, 0, 6, 0),
+              decoration: BoxDecoration(
+                color: VelvetColors.bg,
+                borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.dns_outlined,
+                    size: 16,
+                    color: VelvetColors.appBarTextSecondary,
+                  ),
+                  const SizedBox(width: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      server?.displayName ?? 'No server',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: VelvetColors.appBarTextSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.unfold_more,
+                    size: 16,
+                    color: VelvetColors.textTertiary,
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
