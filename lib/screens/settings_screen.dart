@@ -25,7 +25,6 @@ import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
 import 'about_screen.dart';
 import 'diagnostics_screen.dart';
-import '../util/desktop_platform.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
