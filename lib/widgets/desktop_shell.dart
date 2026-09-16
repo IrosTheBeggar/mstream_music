@@ -771,12 +771,11 @@ class _Wordmark extends StatelessWidget {
 /// section tabs (Now Playing · Library · P2P · Federation · Visualizer ·
 /// Stats · Settings — the network pair only when the server serves them) and
 /// the server picker at the right end. On macOS and Windows it is also the
-/// window title bar (TitleBarStyle.hidden — set in initDesktopWindow) and a
-/// DragToMoveArea: macOS floats its native traffic lights over the left end
-/// and zooms on double-click by itself; Windows gets an app-drawn
-/// minimize / maximize / close cluster at the right end and an explicit
-/// double-click zoom on the band's empty stretch. Linux keeps native chrome
-/// above it.
+/// window title bar (TitleBarStyle.hidden — set in initDesktopWindow): drag
+/// from anywhere on it, double-click its empty stretch to zoom. macOS floats
+/// its native traffic lights over the left end; Windows gets an app-drawn
+/// minimize / maximize / close cluster at the right end. Linux keeps native
+/// chrome above it.
 class _DesktopTopBar extends StatelessWidget {
   final _ShellTab tab;
   final void Function(_ShellTab) onTab;
@@ -792,11 +791,11 @@ class _DesktopTopBar extends StatelessWidget {
   /// x ≈ 70 in the hidden-titlebar layout, plus breathing room.
   static const double _trafficLightInset = 80;
 
-  // Windows: double-click on the band's empty stretch toggles maximize, as a
-  // native caption does (macOS gets that from the drag itself). Only the
-  // stretch, not the tabs — a double-tap recognizer over a tap target would
-  // hold every single click back for the double-tap timeout.
-  static Widget _zoomOnDoubleClick(Widget child) => drawsWindowControls
+  // Double-click on the band's empty stretch toggles maximize / zoom, as a
+  // native title bar does. Only the stretch and the wordmark, never the tabs
+  // — a double-tap recognizer over a tap target holds every single click
+  // back for the double-tap timeout (see build).
+  static Widget _zoomOnDoubleClick(Widget child) => usesCustomTitleBar
       ? GestureDetector(
           behavior: HitTestBehavior.opaque,
           onDoubleTap: () async {
@@ -884,7 +883,19 @@ class _DesktopTopBar extends StatelessWidget {
         ),
       ),
     );
-    return usesCustomTitleBar ? DragToMoveArea(child: band) : band;
+    // Window drag from anywhere on the band — a bare pan recognizer, NOT the
+    // package's DragToMoveArea: that widget also carries an onDoubleTap, and
+    // a double-tap recognizer above the tabs makes Flutter hold every single
+    // click for the double-tap timeout (300ms) before the tab underneath
+    // gets it. The zoom-on-double-click it provided lives on the band's empty
+    // stretch instead (_zoomOnDoubleClick), where nothing waits on it.
+    return usesCustomTitleBar
+        ? GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onPanStart: (_) => windowManager.startDragging(),
+            child: band,
+          )
+        : band;
   }
 }
 
