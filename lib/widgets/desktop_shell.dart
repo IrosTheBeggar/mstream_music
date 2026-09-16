@@ -30,6 +30,7 @@ import '../objects/display_item.dart';
 import '../objects/lyrics.dart';
 import '../objects/server.dart';
 import '../screens/add_server.dart';
+import '../screens/add_torrent_screen.dart';
 import '../screens/album_detail_view.dart';
 import '../screens/auto_dj.dart';
 import '../screens/browser.dart';
@@ -42,6 +43,7 @@ import '../screens/manage_server.dart';
 import '../screens/metadata_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/share_playlist_dialog.dart';
+import '../screens/sonic_path_screen.dart';
 import '../screens/transcode_screen.dart';
 import '../singletons/api.dart';
 import '../singletons/app_messenger.dart';
@@ -51,6 +53,7 @@ import '../singletons/cast_manager.dart';
 import '../singletons/media.dart';
 import '../singletons/server_list.dart';
 import '../singletons/settings.dart';
+import '../singletons/sonic_path_state.dart';
 import '../native/projectm_controller.dart';
 import '../native/projectm_desktop.dart';
 import '../theme/velvet_theme.dart';
@@ -235,21 +238,45 @@ class _DesktopShellState extends State<DesktopShell> {
     ),
   ];
 
-  // TOOLS section: screens pushed into the content pane.
-  late final List<_NavItem> _tools = [
-    _NavItem(
-      'autodj',
-      Icons.album_outlined,
-      (l) => l.autoDjTitle,
-      (_) => AutoDJScreen(),
-    ),
-    _NavItem(
-      'transcode',
-      Icons.transform,
-      (l) => l.transcodeTitle,
-      (_) => TranscodeScreen(),
-    ),
-  ];
+  // TOOLS section: screens pushed into the content pane. The phone home's
+  // LISTEN / SERVER entries that had no desktop home join Auto DJ and
+  // Transcoding, under the phone's gates: Sonic path only where the server
+  // advertised the route, Add torrent never on a federated peer. Rebuilt per
+  // build so the gates track the current server; _active matches by key.
+  List<_NavItem> get _tools {
+    final s = _server;
+    return [
+      _NavItem(
+        'autodj',
+        Icons.all_inclusive,
+        (l) => l.autoDjTitle,
+        (_) => AutoDJScreen(),
+      ),
+      if (s?.discoveryPathAvailable == true)
+        _NavItem(
+          'sonicPath',
+          Icons.route,
+          (l) => l.pathScreenTitle,
+          (_) {
+            SonicPathState().beginSetup(s!);
+            return const SonicPathScreen();
+          },
+        ),
+      if (s != null && !s.isFederated)
+        _NavItem(
+          'torrents',
+          Icons.downloading,
+          (l) => l.torrentScreenTitle,
+          (_) => AddTorrentScreen(),
+        ),
+      _NavItem(
+        'transcode',
+        Icons.transform,
+        (l) => l.transcodeTitle,
+        (_) => TranscodeScreen(),
+      ),
+    ];
+  }
 
   // Reached from the server picker's menu rather than the sidebar; opens in
   // the Library's content pane like any tool.
