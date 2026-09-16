@@ -23,6 +23,9 @@ import 'hotkeys_dialog.dart';
 import '../widgets/accent_color_sheet.dart';
 import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
+import 'about_screen.dart';
+import 'diagnostics_screen.dart';
+import '../util/desktop_platform.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -721,6 +724,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Divider(color: VelvetColors.border, height: 1),
           _sectionHeader(l.settingsSectionAbout),
+          // Desktop: the phone drawer's Diagnostics / About entries live here —
+          // the shell's Settings tab is their only way in.
+          if (isDesktopPlatform) ...[
+            ListTile(
+              leading: Icon(Icons.bug_report_outlined),
+              title: Text(l.diagnosticsTitle),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DiagnosticsScreen()),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text(l.aboutTitle),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => AboutScreen()),
+              ),
+            ),
+          ],
           ListTile(
             leading: Icon(Icons.tune),
             title: Text(l.settingsReset),
