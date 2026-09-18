@@ -231,6 +231,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // is the same call the cold-start path makes, so there is one delivery
     // route rather than a race between a push and a pull.
     TorrentChannel.onTorrentWaiting(() => unawaited(_handleIncomingTorrent()));
+    // A browse-to-pick request needs the library in view: the asking control
+    // may sit in the expanded player (the empty-queue Auto DJ prompt, the
+    // queue header's DJ button), and popping routes alone leaves the panel
+    // over the browser.
+    TrackCapture.active.addListener(_collapsePanelForCapture);
     // Keep the system navigation/status bars visible (drawn edge-to-edge behind
     // the app) whenever the main screen is up. The Visualizer flips to immersive
     // and restores this on exit, but a kill mid-immersive can leak that mode to
@@ -645,8 +650,13 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     }
   }
 
+  void _collapsePanelForCapture() {
+    if (TrackCapture.active.value != null) _panelKey.currentState?.collapse();
+  }
+
   @override
   void dispose() {
+    TrackCapture.active.removeListener(_collapsePanelForCapture);
     _playEventsSub?.cancel();
     _tunnelSub?.cancel();
     _playingSub?.cancel();

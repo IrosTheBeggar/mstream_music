@@ -1004,6 +1004,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get mainQueueEmpty => 'Kolejka jest pusta';
 
   @override
+  String get queueEmptyDjHint =>
+      'Auto DJ jest włączony i potrzebuje pierwszego utworu.';
+
+  @override
+  String get queueEmptyDjRandom => 'Losowy utwór';
+
+  @override
+  String get queueEmptyDjChoose => 'Wybierz utwór';
+
+  @override
   String get visualizerTitle => 'Wizualizator';
 
   @override

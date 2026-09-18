@@ -999,6 +999,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mainQueueEmpty => 'Warteschlange ist leer';
 
   @override
+  String get queueEmptyDjHint => 'Auto DJ ist an und braucht einen Starttitel.';
+
+  @override
+  String get queueEmptyDjRandom => 'Zufälligen Titel wählen';
+
+  @override
+  String get queueEmptyDjChoose => 'Titel auswählen';
+
+  @override
   String get visualizerTitle => 'Visualizer';
 
   @override

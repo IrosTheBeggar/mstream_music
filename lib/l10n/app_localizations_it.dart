@@ -995,6 +995,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get mainQueueEmpty => 'La coda è vuota';
 
   @override
+  String get queueEmptyDjHint =>
+      'Auto DJ è attivo e ha bisogno di un brano iniziale.';
+
+  @override
+  String get queueEmptyDjRandom => 'Brano a caso';
+
+  @override
+  String get queueEmptyDjChoose => 'Scegli un brano';
+
+  @override
   String get visualizerTitle => 'Visualizzatore';
 
   @override

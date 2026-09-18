@@ -947,6 +947,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mainQueueEmpty => '队列为空';
 
   @override
+  String get queueEmptyDjHint => 'Auto DJ 已开启，需要一首起始曲目。';
+
+  @override
+  String get queueEmptyDjRandom => '随机选一首';
+
+  @override
+  String get queueEmptyDjChoose => '选择曲目';
+
+  @override
   String get visualizerTitle => '可视化';
 
   @override

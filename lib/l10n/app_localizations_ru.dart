@@ -1008,6 +1008,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mainQueueEmpty => 'Очередь пуста';
 
   @override
+  String get queueEmptyDjHint => 'Авто-DJ включён, и ему нужен первый трек.';
+
+  @override
+  String get queueEmptyDjRandom => 'Случайный трек';
+
+  @override
+  String get queueEmptyDjChoose => 'Выбрать трек';
+
+  @override
   String get visualizerTitle => 'Визуализация';
 
   @override
