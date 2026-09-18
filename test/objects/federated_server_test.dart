@@ -51,13 +51,20 @@ void main() {
     });
 
     test('survives a JSON round trip', () {
-      final peer = _pair().peer..federationMissing = true;
+      final peer = _pair().peer
+        ..federationMissing = true
+        ..federationEndpointId = 'ep-basement';
       final back = Server.fromJson(peer.toJson());
       expect(back.federationParent, 'home');
       expect(back.federationPeerId, 3);
       expect(back.federationPeerName, 'Basement');
       expect(back.federationMissing, isTrue);
       expect(back.isFederated, isTrue);
+      // The listing's endpoint id (FEDERATION_PLAN 8c) rides along; a record
+      // written before it was kept, or by a parent too old to say, has none.
+      expect(back.federationEndpointId, 'ep-basement');
+      expect(Server.fromJson(_pair().peer.toJson()).federationEndpointId,
+          isNull);
       // The parent link is runtime-only — it is never persisted, and
       // ServerManager re-establishes it after the list loads.
       expect(back.parentServer, isNull);
@@ -386,12 +393,12 @@ void main() {
       final peer = _pair().peer
         ..directTicket = 'mstrfedg1:x'
         ..directGuestToken = 'g'
-        ..directDenied = true
+        ..directDeniedAt = DateTime.utc(2026, 9, 18)
         ..tunnelPort = 1;
       final back = Server.fromJson(peer.toJson());
       expect(back.directTicket, isNull);
       expect(back.directGuestToken, isNull);
-      expect(back.directDenied, isFalse);
+      expect(back.directDeniedAt, isNull);
       expect(back.tunnelPort, isNull);
       expect(back.isDirect, isFalse);
 

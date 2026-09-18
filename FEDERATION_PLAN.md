@@ -371,6 +371,209 @@ PR. Galaxy S25: the whole Android smoke suite green on the release
 candidate; iOS simulator: the full direct round green; iPhone: needs
 Developer Mode for a launched test.
 
+### Phase 8 — direct access hardening (8a–8c ✅ 2026-09-18; 8d awaits the server PR)
+
+Four gaps found while porting Phase 7's rules to the terminal player
+(mstream-terminal-player, `docs/ux-contracts/multi-server.md` and the
+"Per-server tunnels and guest tickets" plan in its PLAN.md, whose T3 slice
+adopts the same 401 rule). Three are app-side, one is a server-side enabler.
+Written against `origin/master` at `72501f4`; `feat/windows-desktop` carries
+the same functions under the same names. Nothing here changes the wire, the
+`TunnelTiming` constants Phase 7 set, or what the strip shows.
+
+**8a — a direct peer's stream 401 refreshes the ticket instead of skipping
+the track.** Today `_onPlaybackError` hands a failed direct-peer item to
+`_recoverHttpError`, where `_isTransientNetworkError` lists `response code: 4`
+as a bad source, so on iOS and web the track is skipped at once; on Android
+the generic "Source error" walks the bounded retry ladder and is skipped
+after it. Only the browse layer (`singletons/api.dart`, the
+`statusCode == 401 && server.isDirect` check) calls `onDirectAuthRejected`,
+and the poll (`_maintainDirect`) refreshes only on the device's own clock
+(`stale`, `expired`) or a handshake refusal (`rejected`). A guest token the
+peer stops honouring before the phone's clock says so — clock skew between
+the phone and the peer, an app frozen past expiry before the 2 s poll
+wakes — costs a skipped track, and with several of that peer's tracks in a
+row the whole run: `_failedSkips` counts them and ends in "Can't play these
+tracks — check the files or server." with the connectivity probe saying
+online.
+
+The change: in `_onPlaybackError`, before the iroh/http split, a failed
+item whose server `isDirect` (its own tunnel is serving, so the transport
+is not in question — the *answer* is) asks the stream URL what it thinks:
+one `GET` with `Range: bytes=0-0` through the live loopback (an `HttpClient`
+the `_probeTunnel` way, `probeLoopbackTimeout` to connect,
+`probeResponseTimeout` to answer) and reads the status. 401 or 403 →
+`_recoverDirectAuth(server)`: chained on `_switchChain` like
+`_recoverIrohPlayback`, throttled per server by `_lastRecoveryByServer`
+(10 s), it resets `_failedSkips` (an auth lapse is not a bad source), calls
+`onDirectAuthRejected(server)` — which starts returning its
+`DirectAccessOutcome` instead of `void`, with a new `throttled` member for
+the 60 s gap refusing the attempt — and re-seeds: `issued` → rebuild every
+URL (`_withRebuiltUrl` / `_withRebuiltArt`; `authToken` reads the new guest
+token) and `_loadAtSpot(_reviveSpot())`, playing again when `_playIntent`
+and not `_recentlyInterrupted`; `denied` → `_refreshDirectCredential` has
+already released the peer's tunnel, `isDirect` is false, so the same
+rebuild yields the parent's proxy URLs and the same re-seed plays the track
+through the proxy; `failed` / `throttled` → the original error goes to
+`_recoverHttpError`, the walk as today. Other statuses: 2xx → transient (the
+walk, with the probed status in the log line); 404 → bad source (skip, as
+today); no answer → the walk. This also cures the Android blindness for
+direct rows: the status comes from the probe, not from the player's error
+text.
+
+The decision is pure — `AudioPlayerHandler.directAuthAction({isDirect,
+probedStatus, recovering, skipPending, sinceLastRecovery})` → `refresh | walk
+| skip` — and tested the way `healAction` is
+(`test/media/tunnel_heal_action_test.dart` is the model;
+`test/media/direct_auth_action_test.dart`). Log lines: `[play] direct auth
+lapsed for=<peer> (http 401) — refreshing the guest ticket`, then Phase 7's
+`[federation] <peer>: direct access issued` and `[iroh] guest credential
+refreshed in place (401)`; on a denial `[play] direct access withdrawn
+for=<peer> — the proxy takes over`.
+
+**8b — a denial does not hold forever.** `Server.directDenied`
+(runtime-only) is set by `_refreshDirectAccess` on `direct: false` and
+cleared only by a later grant; `_directWanted` refuses while it is set and
+nothing asks again. The parent's `direct-available` edge in
+`getServerPaths` re-runs `ensureTunnels`, but `_directWanted` still says no.
+A peer upgraded to a minting build, or federation switched back on there,
+stays on the proxy until the app restarts — on a phone, days.
+
+The change: `directDenied` becomes `DateTime? directDeniedAt`, and
+`TunnelPolicy.directDenialExpired({deniedAt, now})` (pure, beside
+`directTicketStale`) says when a denial is old enough to ask again —
+`TunnelTiming.directDeniedRetry = Duration(hours: 1)`. An hour, not the
+60 s `directRefusedRetryGap`: a refusal is a token problem, a denial is a
+build problem, and the access call is one bridge round trip. Two events
+clear it outright: the parent's capability refresh seeing
+`federationDirectAvailable` go true (the edge that exists), and the
+Federation screen's refresh (user intent; wherever it reaches
+`_reconcilePeers`). Log: `[federation] <peer>: asking for direct access again
+(denied <n>h ago)`. Tests: `tunnel_policy_test.dart` — null, 0, 59 min, 61
+min; `server_list`'s denied → not wanted → wanted after the gap, through the
+pure rule.
+
+**8c — one peer listed by two parents.** The peers listing carries
+`endpointId` (the server's projection: "how a client tells that two parents
+list the same server") and the access payload carries it too
+(`DirectAccess.endpointId` → `Server.directEndpointId`), but the app keeps
+nothing from the listing and keys handles by `localname` — a peer reachable
+through two parents is two `Server`s, two picker rows, two guest tickets and
+two tunnels to one endpoint. No such setup is known, so only the groundwork
+now: parse the listing's `endpointId` in `_reconcilePeers` and persist it on
+the peer (`Server.fromJson` / `toJson`, `federated_server_test.dart`
+round-trips it). When a listener has two parents, the cheap half is the
+tunnel — `TunnelHandle.keyFor` a direct peer by its endpoint id when known,
+one handle for both `Server`s, `tunnelPort` bound and cleared on every peer
+sharing the id, each parent still supplying its own ticket (tokens are per
+key, either one works on the peer). The picker half is a product question
+(which parent's row wins; the download folder is per localname) and waits
+for that listener.
+
+**8d — the server-side enabler: a per-peer `direct` hint in the peers
+listing** (mStream, its own PR). `federationDirect` in `/api/` says the
+build has the route and a peer exists; whether a given peer mints is learned
+one access call at a time, and 8b's denial state exists only because of
+that. The parent already knows: `guestAccessFor` caches successes in
+`guestAccess`, and `mintGuestFromPeer` answers `null` when the peer's wall
+says 403 or 404. A `guestRefused` map beside the cache (set on the null,
+cleared on a success, dropped with `forgetPeerAccess`) lets
+`GET /api/v1/federation/peers` project `direct: true | false | null` — a
+token is cached, the last mint was refused, never asked. No schema change;
+an older server omits the key. App side: `_reconcilePeers` records it,
+`_directWanted` treats `false` as denied-now (still aging by 8b) and `null`
+as today; `true` still fetches the token through the access route but makes
+the first dial certain. Both clients benefit; gated by the key's presence,
+the house rule.
+
+**Order and size.** 8a first — the wrongly skipped track is the one a
+listener meets (M: the probe, the decision, the chain, one test file, one
+rig leg). 8b next (S: a field, a pure rule, a constant, two tests). 8c's
+parsing now (S), its dedupe later. 8d when the server PR lands (S on the
+app side; the server half carries its own test in mStream's federation
+suite).
+
+**Verification.** `smoke/android/federation-rig.sh` gains a leg between the
+renewal and the revoke: a short guest TTL on A
+(`MSTREAM_TEST_FED_GUEST_TTL_MS`, the knob `federation-guest.js` reads), B
+taken down after the ticket is issued so the phone's scheduled renewal at
+three quarters fails (`directRefreshFailedAt`, next try in five minutes), B
+back up once the token has lapsed, then a track change to another A track →
+expect `direct auth lapsed … (http 401)`, `direct access issued`, `guest
+credential refreshed in place (401)`, the new track playing, and no
+`playback error — skipping track` in between. The same leg on the iOS
+simulator round (`SMOKE_RIG_SERVERS_ONLY=1`). 8b is unit-tested only until a
+peer can be upgraded under the rig.
+
+**Done (2026-09-18) — 8a, 8b, 8c.** 8a as planned, with one refinement:
+the loopback is asked about the URL as it would be built *now*
+(`_withRebuiltUrl`), not the one the player tried, so a ticket renewed
+under a playing item probes clean and takes the walk's fresh-URL reload
+instead of a needless round trip through the parent. The decision is one
+pure function called twice (`directAuthAction` — `probed` false for the
+gate, true for the verdict), the probe is `probeStreamStatus`, the
+recovery `_recoverDirectAuth`, chained and guarded like the iroh one;
+`onDirectAuthRejected` and `_refreshDirectCredential` report their
+`DirectAccessOutcome`, with `skipped` for an attempt not made. 8b:
+`Server.directDeniedAt`, `TunnelPolicy.directDenialExpired`,
+`TunnelTiming.directDeniedRetry` (an hour), and
+`ServerManager.forgiveDirectDenials` on the parent's direct-available edge
+and the Federation screen's load. 8c: `Server.federationEndpointId` from
+the listing, on new and existing peers, persisted. Tests:
+`test/media/direct_auth_action_test.dart`, `test/media/stream_probe_test.dart`
+(a local `HttpServer`), the new group in `direct_access_test.dart`, the
+round trips in `federated_server_test.dart`. The rig's lapse leg
+(`SMOKE_RIG_LAPSE`, on by default with the TTL) is written and has not run
+on a phone yet — the Galaxy and iPhone rounds are the next step.
+
+**Galaxy S25 (2026-09-18), three rig runs.** The first: 17 pass, 0 fail,
+the lapse leg skipped — the peer's log had the three "jwt expired" 401s,
+but on Android the idle park lands a millisecond before the error callback,
+so the tunnel heal's park trigger took the failure first, re-seeded with
+the same expired token, and `_onPlaybackError` stepped aside as "already
+recovering"; the player sat silent until the poll renewed. So the renewal
+lives in one helper (`_renewLapsedGuestToken`) that both paths call: the
+heal probes and renews before it re-seeds a direct peer's parked track, and
+the error path keeps doing the same for the orderings where it gets there
+first (iOS). The second: 20 pass, 1 fail — the heal saw the 401 and asked,
+and `onDirectAuthRejected` answered `skipped`: the poll's failed attempt
+55 s earlier sat inside the 60 s refusal gap. A failed attempt is exactly
+when the gap must not count (the parent may be back), so
+`TunnelPolicy.directAuthRefreshDue` holds the gap only after an attempt
+that handed a ticket out. The third: **21 pass, 0 fail, 0 skip** — the
+whole lapse in 70 ms: park, probe 401, ticket issued, credential swapped
+in place (`(401)`), reload, ready, no track skipped, and the revocation
+leg unchanged. Quick Connect mode (`SMOKE_RIG_IROH=1`): **26 pass, 0 fail,
+0 skip** — the parent reached over its own tunnel, released once the peer
+went direct, re-dialed for the renewal, and re-dialed again inside the
+playback path's refresh after the lapse (the failed renewal there is the
+parent's tunnel not coming up, which the rig's lapse leg now recognises).
+
+**iPhone (iPhone X, iOS 16.7.16, release build), one hand-driven round
+against `SMOKE_RIG_SERVERS_ONLY=1` servers, read from the peer's log and
+the app's Diagnostics share.** Direct access holds up on iOS: the ticket
+is fetched at launch for a restored peer queue, the peer's own tunnel is up
+in 3.2 s on a direct path, the restored queue is rebuilt onto it, and
+three albums played through without a gap. A lapsed token was renewed
+twice by two different paths and never surfaced to the listener: (1)
+tapping an album sends `album-songs` over the direct tunnel first, the
+401 hit the browse hook, and the ticket was renewed in 47 ms — with the
+poll's failed attempt only 8 s earlier, which the old gap rule would have
+refused (8b's `directAuthRefreshDue`, exercised for real); (2) a seek to
+the end of a track advanced the queue onto a track AVPlayer had preloaded
+under the old token, and the refusal landed on the *preload of the item
+after next* — silent to the player, no error event — which the poll had
+re-tokened before it was due. So on iOS the playback-path renewal (8a)
+was never reached in normal queue play: AVPlayer's preload-ahead absorbs
+the lapse, and the browse hook or the poll renews first. No regression,
+and `[play] playback error` never appears in the session. Two tooling
+findings on the way, both in `smoke/README.md`: a `flutter run` app on
+this iOS 16 device halts for good if it is backgrounded and resumed
+(ios-deploy's lldb loop ignores a later stop with no reason), and an
+Xcode 26 debug-dylib build crashes at a cold home-screen launch in the
+background-downloader plugin's registration (nil messenger) — a release
+build is the one to hand-drive.
+
 ### Phase 5 — optional: make Discover leads actionable
 
 `/api/v1/discovery/federation/similar` already returns `peer:{id,name}` on the
@@ -391,3 +594,8 @@ the localname format.
 still says the route "is mounted before the wall and resolves the key itself"
 — untrue as of #934, though the both-spellings justification below it still
 holds. Server-side nit, not an app blocker.
+
+**8a probes on the failure path only.** A direct peer whose loopback answers
+slowly holds the decision for `probeResponseTimeout` (6 s) before the walk
+takes over — bounded, and only after a load already failed. 8d's `direct`
+key is new: an older server omits it and the app behaves as today.

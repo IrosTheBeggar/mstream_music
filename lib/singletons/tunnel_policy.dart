@@ -101,6 +101,14 @@ class TunnelTiming {
   static const Duration directRefreshMinGap = Duration(minutes: 5);
   static const Duration directRefusedRetryGap = Duration(seconds: 60);
 
+  /// How long a parent's `direct: false` holds before the peer is asked for
+  /// again. An hour, not [directRefusedRetryGap]: a refusal is a token
+  /// problem, a denial is a build problem (an older peer, federation off
+  /// there), and the access call is one bridge round trip. Before this a
+  /// denial held until the app restarted — on a phone, days after the peer
+  /// was upgraded.
+  static const Duration directDeniedRetry = Duration(hours: 1);
+
   /// How long after an audio-focus interruption began an auto rebuild must not
   /// resume playback. A window, not a flag: Android never delivers the `end`
   /// for a permanent loss (6 begins, 0 ends across the two drive logs).
@@ -281,6 +289,30 @@ class TunnelPolicy {
     final life = expiresAt.difference(fetchedAt);
     if (life <= Duration.zero) return true;
     return now.difference(fetchedAt) >= life * TunnelTiming.directRefreshAt;
+  }
+
+  /// Whether a 401 from a direct peer may ask the parent for a fresh guest
+  /// token now. The gap ([TunnelTiming.directRefusedRetryGap]) exists so a
+  /// run of 401s cannot hammer the parent — but it only means something
+  /// after an attempt that WORKED: a token handed out seconds ago is fresh,
+  /// so the 401 is not about age. After an attempt that failed (the parent
+  /// unreachable at the scheduled point) the gap is void: the parent may be
+  /// back now, and waiting it out is a silent player (Galaxy S25,
+  /// 2026-09-18: the poll's failed try 55 s earlier blocked the 401 path).
+  /// Pure; unit-tested.
+  static bool directAuthRefreshDue(
+      {required Duration? sinceLastAttempt, required bool lastAttemptFailed}) {
+    if (lastAttemptFailed || sinceLastAttempt == null) return true;
+    return sinceLastAttempt >= TunnelTiming.directRefusedRetryGap;
+  }
+
+  /// Whether a parent's `direct: false` has aged enough to ask again: never
+  /// denied, or denied [TunnelTiming.directDeniedRetry] or longer ago.
+  /// Pure; unit-tested.
+  static bool directDenialExpired(
+      {required DateTime? deniedAt, required DateTime now}) {
+    if (deniedAt == null) return true;
+    return now.difference(deniedAt) >= TunnelTiming.directDeniedRetry;
   }
 
   /// Delay before retry number [attempt] (0-based) after a failed cold dial.

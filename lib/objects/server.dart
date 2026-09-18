@@ -149,6 +149,13 @@ class Server {
   // just a new label, and never moves [localname].
   String? federationPeerName;
 
+  // The peer's federation endpoint id (a public key, not a credential) as the
+  // parent's peer listing reports it — how a client can tell that two parents
+  // list the same server. Recorded on every reconcile; null from a parent too
+  // old to say. Groundwork only: nothing dedupes on it yet (FEDERATION_PLAN
+  // 8c).
+  String? federationEndpointId;
+
   // The parent stopped listing this peer. Flagged rather than deleted: a
   // queued track and a downloaded file both point at this localname, and
   // dropping the record would strand them. Hidden from the picker; removed
@@ -198,10 +205,12 @@ class Server {
   String? directEndpointId;
   DateTime? directExpiresAt;
   DateTime? directFetchedAt;
-  // The parent answered `direct: false` (an older peer, or federation
-  // switched off there), or refused to mint anything fresh for a token the
-  // peer rejected: the proxy is all there is this session.
-  bool directDenied = false;
+  // When the parent last answered `direct: false` (an older peer, or
+  // federation switched off there): the proxy is all there is — until the
+  // denial has aged past [TunnelTiming.directDeniedRetry], the parent's flag
+  // rises, or the user refreshes the Federation screen, when the manager
+  // asks again. Null when never denied, or denied and since granted.
+  DateTime? directDeniedAt;
 
   /// True while this peer is reached over a tunnel of its own.
   bool get isDirect => isFederated && tunnelPort != null;
@@ -397,6 +406,7 @@ class Server {
         federationPeerId =
             json['federationPeerId'] is int ? json['federationPeerId'] : null,
         federationPeerName = json['federationPeerName'] as String?,
+        federationEndpointId = json['federationEndpointId'] as String?,
         federationMissing = json['federationMissing'] == true,
         federationHidden = json['federationHidden'] == true,
         serverVersion = json['serverVersion'] as String?,
@@ -438,6 +448,7 @@ class Server {
         'federationParent': federationParent,
         'federationPeerId': federationPeerId,
         'federationPeerName': federationPeerName,
+        'federationEndpointId': federationEndpointId,
         'federationMissing': federationMissing,
         'federationHidden': federationHidden,
         'serverVersion': serverVersion,
