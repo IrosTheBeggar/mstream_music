@@ -291,6 +291,21 @@ class TunnelPolicy {
     return now.difference(fetchedAt) >= life * TunnelTiming.directRefreshAt;
   }
 
+  /// Whether a 401 from a direct peer may ask the parent for a fresh guest
+  /// token now. The gap ([TunnelTiming.directRefusedRetryGap]) exists so a
+  /// run of 401s cannot hammer the parent — but it only means something
+  /// after an attempt that WORKED: a token handed out seconds ago is fresh,
+  /// so the 401 is not about age. After an attempt that failed (the parent
+  /// unreachable at the scheduled point) the gap is void: the parent may be
+  /// back now, and waiting it out is a silent player (Galaxy S25,
+  /// 2026-09-18: the poll's failed try 55 s earlier blocked the 401 path).
+  /// Pure; unit-tested.
+  static bool directAuthRefreshDue(
+      {required Duration? sinceLastAttempt, required bool lastAttemptFailed}) {
+    if (lastAttemptFailed || sinceLastAttempt == null) return true;
+    return sinceLastAttempt >= TunnelTiming.directRefusedRetryGap;
+  }
+
   /// Whether a parent's `direct: false` has aged enough to ask again: never
   /// denied, or denied [TunnelTiming.directDeniedRetry] or longer ago.
   /// Pure; unit-tested.

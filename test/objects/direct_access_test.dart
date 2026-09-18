@@ -68,6 +68,36 @@ void main() {
     });
   });
 
+  // FEDERATION_PLAN 8a: the 401 path's gap only counts after an attempt
+  // that worked. Galaxy S25, 2026-09-18: the poll's failed try 55 s earlier
+  // blocked the renewal the lapsed token needed.
+  group('TunnelPolicy.directAuthRefreshDue', () {
+    test('inside the gap after a successful attempt → wait', () {
+      expect(
+          TunnelPolicy.directAuthRefreshDue(
+              sinceLastAttempt: const Duration(seconds: 55),
+              lastAttemptFailed: false),
+          isFalse);
+      expect(
+          TunnelPolicy.directAuthRefreshDue(
+              sinceLastAttempt: TunnelTiming.directRefusedRetryGap,
+              lastAttemptFailed: false),
+          isTrue);
+    });
+
+    test('after a failed attempt, or none, → ask now', () {
+      expect(
+          TunnelPolicy.directAuthRefreshDue(
+              sinceLastAttempt: const Duration(seconds: 5),
+              lastAttemptFailed: true),
+          isTrue);
+      expect(
+          TunnelPolicy.directAuthRefreshDue(
+              sinceLastAttempt: null, lastAttemptFailed: false),
+          isTrue);
+    });
+  });
+
   // FEDERATION_PLAN 8b: a `direct: false` used to hold until the app
   // restarted — on a phone, days after the peer was upgraded to a build
   // that mints. It ages out instead.

@@ -1794,8 +1794,12 @@ class ServerManager {
     if (!server.isDirect) return DirectAccessOutcome.skipped;
     final h = _tunnels[server.localname];
     if (h == null || h.directRefreshing) return DirectAccessOutcome.skipped;
-    final gap = _since(h.directRefreshedAt);
-    if (gap != null && gap < TunnelTiming.directRefusedRetryGap) {
+    // directRefreshFailedAt is set by an in-place attempt that came back
+    // empty-handed and cleared by one that swapped a ticket in, so its
+    // presence says the last attempt failed.
+    if (!TunnelPolicy.directAuthRefreshDue(
+        sinceLastAttempt: _since(h.directRefreshedAt),
+        lastAttemptFailed: h.directRefreshFailedAt != null)) {
       return DirectAccessOutcome.skipped;
     }
     return _refreshDirectCredential(h, force: true, why: '401');
