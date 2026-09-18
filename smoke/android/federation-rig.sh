@@ -16,8 +16,11 @@
 # renewed in place at 75% of its life when SMOKE_RIG_TTL_MS is set (default
 # 180000; 0 = skip the renewal wait), and — in Quick Connect mode — the
 # parent's tunnel released once the peer is direct and re-dialed for the
-# renewal. SMOKE_RIG_REVOKE=1 (default) ends by revoking the key on A: the
-# app must park without a crash or a hot loop.
+# renewal. SMOKE_RIG_LAPSE=1 (default; needs the TTL) then lets the token run
+# out under the live tunnel with the parent down and back: the next track's
+# 401 must renew the ticket from the playback path, not skip the track
+# (FEDERATION_PLAN 8a). SMOKE_RIG_REVOKE=1 (default) ends by revoking the
+# key on A: the app must park without a crash or a hot loop.
 #
 # SMOKE_RIG_PA / SMOKE_RIG_PB pick the ports (3101/3102). SMOKE_RIG_SERVERS_ONLY=1
 # starts and pairs the servers, prints their details as JSON, and leaves them
@@ -206,6 +209,27 @@ print(on, off)" 2>/dev/null; }
         [ "$(count_log "tunnel up .*for=$PARENT")" -ge 2 ] && pass "parent's Quick Connect tunnel re-dialed for the access call" || fail "the renewal did not re-dial the parent's tunnel"
       fi
     else save_applog rig-renewal; fail "no in-place renewal within ${WAIT}s (TTL ${TTL}ms)"; fi
+    if [ "${SMOKE_RIG_LAPSE:-1}" = 1 ]; then
+      # FEDERATION_PLAN 8a: the guest token lapses UNDER a live tunnel. The
+      # parent is down across the phone's next scheduled renewal (which fails
+      # and backs off), the token runs out, the parent comes back, and the
+      # next track's load is a 401 from the peer — which the playback path
+      # must answer by renewing the ticket and playing on, not by skipping
+      # the track (and, with a run of the peer's tracks queued, the run).
+      kill "$PB_PID"; sleep 1; NODES="$A_PID"; log "parent B down for the lapse leg"
+      if wait_for_log "$PEER_LN: direct access failed" $(( TTL * 3 / 4000 + 60 )); then pass "scheduled renewal failed with the parent down"; else fail "no failed renewal logged with the parent down"; fi
+      sleep $(( TTL / 4000 + 5 ))   # past the token's end (the renewal above was due at 75%)
+      restart_b
+      N0=$(applog | wc -l | tr -d ' '); T=$(now_ts); adbx shell input keyevent 87   # NEXT: a fresh load the peer refuses
+      if wait_for_log_after "$T" "direct auth lapsed for=$PEER_LN \(http 40[13]\)" 25; then
+        pass "the playback path saw the lapsed token"
+        wait_for_log_after "$T" "guest credential refreshed in place \(401\) for=$PEER_LN" 40 && pass "guest ticket renewed from the playback path" || fail "no renewal after the 401"
+        if ensure_playing 20; then pass "playback continues after the lapse ($(session_state))"; else save_applog rig-lapse; fail "playback lost after the lapse ($(session_state))"; fi
+        SK=$(applog | tail -n +$N0 | grep -c "skipping track"); [ "$SK" -eq 0 ] && pass "no track skipped over the lapse" || fail "$SK track(s) skipped over the lapse"
+      elif wait_for_log_after "$T" "guest credential refreshed in place \(stale\) for=$PEER_LN" 5; then
+        skip "the poll renewed the ticket before the next track asked — lapse leg not exercised"
+      else save_applog rig-lapse; fail "no 401 seen from the playback path after the token lapsed"; fi
+    fi
   fi
 fi
 if [ "$IROH" = 1 ]; then

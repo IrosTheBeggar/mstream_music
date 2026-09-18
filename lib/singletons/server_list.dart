@@ -1696,8 +1696,10 @@ class ServerManager {
   /// native side in place — same port, same token, the queued URLs survive;
   /// only upcoming items take the new guest token. A parent that declines
   /// releases the tunnel (the proxy takes over); a swap the native side
-  /// refuses (a different endpoint id) rebuilds instead.
-  Future<void> _refreshDirectCredential(TunnelHandle h,
+  /// refuses (a different endpoint id) rebuilds instead. Returns what the
+  /// parent's answer came to, so the playback path can re-seed on `issued`
+  /// or `denied` and walk on the rest (FEDERATION_PLAN 8a).
+  Future<DirectAccessOutcome> _refreshDirectCredential(TunnelHandle h,
       {required bool force, required String why}) async {
     final s = h.server;
     final name = s.localname;
@@ -1710,22 +1712,23 @@ class ServerManager {
         // The parent's own cache is not due for a re-mint yet: make it.
         outcome = await _refreshDirectAccess(s, force: true);
       }
-      if (!h.assigned || h.nativeKey == null) return;
+      if (!h.assigned || h.nativeKey == null) return outcome;
       switch (outcome) {
         case DirectAccessOutcome.denied:
           appLog('[iroh] direct access withdrawn ($why) — back to the proxy '
               'for=$name');
           await _releaseHandle(h, 'direct-withdrawn');
-          return;
+          return outcome;
         case DirectAccessOutcome.failed:
         case DirectAccessOutcome.unchanged:
+        case DirectAccessOutcome.skipped:
           h.directRefreshFailedAt = DateTime.now();
-          return; // try again after the gap
+          return outcome; // try again after the gap
         case DirectAccessOutcome.issued:
           break;
       }
       final ticket = s.directTicket;
-      if (ticket == null || ticket == before) return;
+      if (ticket == null || ticket == before) return outcome;
       try {
         IrohTunnel.instance.setCredential(h.nativeKey!, ticket);
         h.code = ticket;
@@ -1748,21 +1751,27 @@ class ServerManager {
         await _hardRebuild(h,
             code: h.code, port: h.port, reason: 'credential', user: true);
       }
+      return outcome;
     } finally {
       h.directRefreshing = false;
     }
   }
 
-  /// The browse layer saw a 401 from a direct peer: its guest token is no
-  /// longer honoured (expired early, or the key was rotated). Refresh it now
-  /// rather than at the next scheduled point.
-  Future<void> onDirectAuthRejected(Server server) async {
-    if (!server.isDirect) return;
+  /// The browse layer — or the playback path (FEDERATION_PLAN 8a) — saw a
+  /// 401 from a direct peer: its guest token is no longer honoured (expired
+  /// early, or the key was rotated). Refresh it now rather than at the next
+  /// scheduled point. Returns what the refresh came to, [DirectAccessOutcome
+  /// .skipped] when none was made: the peer is not direct, one is already in
+  /// flight, or the last one was inside [TunnelTiming.directRefusedRetryGap].
+  Future<DirectAccessOutcome> onDirectAuthRejected(Server server) async {
+    if (!server.isDirect) return DirectAccessOutcome.skipped;
     final h = _tunnels[server.localname];
-    if (h == null || h.directRefreshing) return;
+    if (h == null || h.directRefreshing) return DirectAccessOutcome.skipped;
     final gap = _since(h.directRefreshedAt);
-    if (gap != null && gap < TunnelTiming.directRefusedRetryGap) return;
-    await _refreshDirectCredential(h, force: true, why: '401');
+    if (gap != null && gap < TunnelTiming.directRefusedRetryGap) {
+      return DirectAccessOutcome.skipped;
+    }
+    return _refreshDirectCredential(h, force: true, why: '401');
   }
 
   Future<({bool ok, String reason, int ms})> _probeTunnel(Server s) async {
@@ -2521,4 +2530,8 @@ enum DirectAccessOutcome {
 
   /// Unreachable, an HTTP error, or an unreadable answer: try again later.
   failed,
+
+  /// No attempt was made: the peer is not direct, a refresh is already in
+  /// flight, or the last one was too recent (the 401 path's gap).
+  skipped,
 }

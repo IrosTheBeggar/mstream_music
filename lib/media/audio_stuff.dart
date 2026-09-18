@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File;
+import 'dart:io' show File, HttpClient, HttpHeaders;
 import 'dart:typed_data';
 
 import 'package:audio_service/audio_service.dart';
@@ -64,6 +64,13 @@ enum HealAction { run, rearm, drop }
 /// What to do after a tunnel-heal resume failed: try again later, or stop
 /// blaming the tunnel and let the failing track take the ordinary skip walk.
 enum ResumeFailureAction { rearm, skipTrack }
+
+/// What [AudioPlayerHandler.directAuthAction] decided about a failed track
+/// from a direct peer whose own tunnel is serving: [probe] its stream URL for
+/// a status first; then [refresh] the guest ticket through the parent and
+/// re-seed (a 401/403), [skip] a source the peer says is gone (a 404), or
+/// [walk] the ordinary retry/skip path.
+enum DirectAuthAction { probe, refresh, skip, walk }
 
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
@@ -1068,6 +1075,27 @@ class AudioPlayerHandler extends BaseAudioHandler
       _recoverIrohPlayback(itemServer);
       return;
     }
+    // A direct peer whose own tunnel IS serving answered the load with a
+    // refusal, not silence. The player's error text cannot say which
+    // (ExoPlayer folds everything into "Source error"; iOS names a 4xx but
+    // not whether it was the token), and a guest token the peer has stopped
+    // honouring is the parent's to renew — so ask the loopback for the
+    // status first and let the answer pick the path (FEDERATION_PLAN 8a).
+    // Only the browse layer used to notice a 401; the playback path skipped
+    // the track, and with a run of the peer's tracks queued, the whole run.
+    if (!badLocalCopy &&
+        failed != null &&
+        itemServer != null &&
+        directAuthAction(
+              isDirect: itemServer.isDirect,
+              tunnelServes: ServerManager().tunnelServes(itemServer),
+              sinceLastRecovery: _sinceRecovery(itemServer),
+              probed: false,
+            ) ==
+            DirectAuthAction.probe) {
+      _recoverDirectAuth(itemServer, failed, error);
+      return;
+    }
     // The tunnel claims to be serving this server and the load still died.
     // The shim only flips to reconnecting once the QUIC connection's close
     // actually arrives, so a link that went away underneath it keeps
@@ -1255,6 +1283,172 @@ class AudioPlayerHandler extends BaseAudioHandler
     }).catchError((Object e) {
       castLog('iroh playback recovery failed', error: e);
     }).whenComplete(() => _recoveringPlayback = false);
+  }
+
+  Duration? _sinceRecovery(Server s) {
+    final t = _lastRecoveryByServer[s.localname];
+    return t == null ? null : DateTime.now().difference(t);
+  }
+
+  /// The gap inside which a second failure from the same direct peer is not
+  /// probed again: a token the parent renewed seconds ago cannot have lapsed,
+  /// so the walk owns it. Shares the iroh recovery's per-server cooldown.
+  static const Duration kDirectAuthRecoveryGap = Duration(seconds: 10);
+
+  /// What to do about a failed track from a direct peer. Pure; unit-tested.
+  ///
+  /// Two calls per failure. With [probed] false it says whether the loopback
+  /// is worth asking at all ([DirectAuthAction.probe]): the peer is direct,
+  /// its tunnel reports serving (a tunnel that is down is the iroh
+  /// recovery's case), and no recovery for it ran inside
+  /// [kDirectAuthRecoveryGap]. With [probed] true it says what the answer
+  /// means: 401/403 → [DirectAuthAction.refresh] (the guest token is no
+  /// longer honoured — the parent can renew it), 404/410 →
+  /// [DirectAuthAction.skip] (the peer says the file is gone), anything
+  /// else — a 2xx now, a 5xx, no answer — → [DirectAuthAction.walk], the
+  /// ordinary retry/skip path with its connectivity probe.
+  static DirectAuthAction directAuthAction({
+    required bool isDirect,
+    required bool tunnelServes,
+    required Duration? sinceLastRecovery,
+    required bool probed,
+    int? probedStatus,
+  }) {
+    if (!isDirect || !tunnelServes) return DirectAuthAction.walk;
+    if (sinceLastRecovery != null &&
+        sinceLastRecovery < kDirectAuthRecoveryGap) {
+      return DirectAuthAction.walk;
+    }
+    if (!probed) return DirectAuthAction.probe;
+    switch (probedStatus) {
+      case 401:
+      case 403:
+        return DirectAuthAction.refresh;
+      case 404:
+      case 410:
+        return DirectAuthAction.skip;
+      default:
+        return DirectAuthAction.walk;
+    }
+  }
+
+  /// Ask a direct peer's own loopback what it makes of [url] right now: the
+  /// HTTP status of a one-byte range request, or null when nothing answered
+  /// within the tunnel probe's timeouts. The player's error text cannot be
+  /// trusted for this, and the answer decides whether the guest token lapsed.
+  static Future<int?> probeStreamStatus(String url) async {
+    final client = HttpClient()
+      ..connectionTimeout = TunnelTiming.probeLoopbackTimeout;
+    try {
+      final req = await client
+          .getUrl(Uri.parse(url))
+          .timeout(TunnelTiming.probeLoopbackTimeout);
+      req.headers.set(HttpHeaders.rangeHeader, 'bytes=0-0');
+      final resp =
+          await req.close().timeout(TunnelTiming.probeResponseTimeout);
+      final status = resp.statusCode;
+      // Nothing to read past the status; a body that never ends must not
+      // hold the decision.
+      unawaited(resp.drain<void>().catchError((_) {}));
+      return status;
+    } catch (e) {
+      // The URL carries the token, so the error is named by kind only.
+      appLog('[play] stream probe got no answer (${e.runtimeType})');
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  // Recover from a load that a direct peer's own tunnel refused
+  // (FEDERATION_PLAN 8a): probe the stream URL for its status on the chain,
+  // and on a 401/403 renew the guest ticket through the parent and re-seed at
+  // the spot — playing again with the user's intent, and through the proxy
+  // when the parent declined. A 404 skips; anything else hands the original
+  // error to the ordinary walk once the chain is free. Guarded like the iroh
+  // recovery: one at a time, and one probe per server per
+  // [kDirectAuthRecoveryGap].
+  void _recoverDirectAuth(Server server, MediaItem failed, Object error) {
+    if (_recoveringPlayback) return;
+    _recoveringPlayback = true;
+    _lastRecoveryByServer[server.localname] = DateTime.now();
+    final name = server.localname;
+    Object? followUp;
+    var skip = false;
+    _switchChain = _switchChain.then((_) async {
+      if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
+      // The URL as it would be built NOW, not the one the player tried: a
+      // ticket renewed under a playing item (the in-place swap leaves it
+      // alone) makes the fresh URL fine and the stale one a 401, and then
+      // the walk's reload with fresh URLs is the whole fix.
+      final status = await probeStreamStatus(_withRebuiltUrl(failed).id);
+      final action = directAuthAction(
+        isDirect: server.isDirect,
+        tunnelServes: ServerManager().tunnelServes(server),
+        sinceLastRecovery: null,
+        probed: true,
+        probedStatus: status,
+      );
+      appLog('[play] direct peer answered ${status ?? 'nothing'} for the '
+          'failed track → ${action.name} for=$name');
+      switch (action) {
+        case DirectAuthAction.refresh:
+          appLog('[play] direct auth lapsed for=$name (http $status) — '
+              'refreshing the guest ticket');
+          // A lapsed token is not a bad source: the budget is the walk's.
+          _failedSkips = 0;
+          final outcome = await ServerManager().onDirectAuthRejected(server);
+          switch (outcome) {
+            case DirectAccessOutcome.issued:
+            case DirectAccessOutcome.denied:
+              if (outcome == DirectAccessOutcome.denied) {
+                appLog('[play] direct access withdrawn for=$name — the '
+                    'proxy takes over');
+              }
+              // Every URL against the transport that is live now: the
+              // peer's loopback with the new token, or the parent's proxy.
+              final spot = _reviveSpot();
+              final fresh = queue.value
+                  .map((m) => _withRebuiltArt(_withRebuiltUrl(m)))
+                  .toList();
+              queue.add(fresh);
+              await _loadAtSpot(_localBackend, fresh, spot);
+              if (_playIntent && !_recentlyInterrupted) {
+                unawaited(_localBackend.play());
+              }
+            case DirectAccessOutcome.unchanged:
+            case DirectAccessOutcome.failed:
+            case DirectAccessOutcome.skipped:
+              appLog('[play] guest ticket not renewed (${outcome.name}) '
+                  'for=$name — the walk takes the track');
+              followUp = error;
+          }
+        case DirectAuthAction.skip:
+          skip = true;
+        case DirectAuthAction.walk:
+        case DirectAuthAction.probe:
+          // Answered, and not about the token: count it against the
+          // tunnel as any other load failure, then walk.
+          unawaited(_noteTunnelLoadFailure(server));
+          followUp = error;
+      }
+    }).catchError((Object e) {
+      castLog('direct-auth recovery failed', error: e);
+      followUp = error;
+    }).whenComplete(() {
+      _recoveringPlayback = false;
+      if (skip) {
+        _skipPending = true;
+        _switchChain = _switchChain
+            .then((_) => _skipFailedTrack(error))
+            .catchError((Object e) => castLog(
+                'skip-to-next after a direct peer 404 failed',
+                error: e))
+            .whenComplete(() => _skipPending = false);
+      } else if (followUp != null) {
+        _recoverHttpError(followUp!);
+      }
+    });
   }
 
   // Consecutive failed tracks since one last loaded (reset on a `ready` state).
