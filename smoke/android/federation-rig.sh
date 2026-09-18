@@ -217,7 +217,10 @@ print(on, off)" 2>/dev/null; }
       # must answer by renewing the ticket and playing on, not by skipping
       # the track (and, with a run of the peer's tracks queued, the run).
       kill "$PB_PID"; sleep 1; NODES="$A_PID"; log "parent B down for the lapse leg"
-      if wait_for_log "$PEER_LN: direct access failed" $(( TTL * 3 / 4000 + 60 )); then pass "scheduled renewal failed with the parent down"; else fail "no failed renewal logged with the parent down"; fi
+      # Over HTTP the refresh fails on the socket ("direct access failed: …"); over Quick
+      # Connect it fails on the parent's tunnel not coming up ("direct access needs
+      # <parent>'s tunnel, which is not up") — both are the renewal not happening.
+      if wait_for_log "$PEER_LN: direct access (failed|needs .* not up)" $(( TTL * 3 / 4000 + 60 )); then pass "scheduled renewal failed with the parent down"; else fail "no failed renewal logged with the parent down"; fi
       sleep $(( TTL / 4000 + 5 ))   # past the token's end (the renewal above was due at 75%)
       restart_b
       N0=$(applog | wc -l | tr -d ' '); T=$(now_ts); adbx shell input keyevent 87   # NEXT: a fresh load the peer refuses
