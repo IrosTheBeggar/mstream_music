@@ -526,15 +526,24 @@ round trips in `federated_server_test.dart`. The rig's lapse leg
 (`SMOKE_RIG_LAPSE`, on by default with the TTL) is written and has not run
 on a phone yet — the Galaxy and iPhone rounds are the next step.
 
-**Galaxy S25, first run (2026-09-18).** 17 pass, 0 fail, and the lapse leg
-skipped — the peer's log had the three "jwt expired" 401s, but on Android
-the idle park lands a millisecond before the error callback, so the tunnel
-heal's park trigger took the failure first, re-seeded with the same expired
-token, and `_onPlaybackError` stepped aside as "already recovering"; the
-player sat silent until the poll renewed. So the renewal lives in one
-helper (`_renewLapsedGuestToken`) that both paths call: the heal probes and
-renews before it re-seeds a direct peer's parked track, and the error path
-keeps doing the same for the orderings where it gets there first (iOS).
+**Galaxy S25 (2026-09-18), three rig runs.** The first: 17 pass, 0 fail,
+the lapse leg skipped — the peer's log had the three "jwt expired" 401s,
+but on Android the idle park lands a millisecond before the error callback,
+so the tunnel heal's park trigger took the failure first, re-seeded with
+the same expired token, and `_onPlaybackError` stepped aside as "already
+recovering"; the player sat silent until the poll renewed. So the renewal
+lives in one helper (`_renewLapsedGuestToken`) that both paths call: the
+heal probes and renews before it re-seeds a direct peer's parked track, and
+the error path keeps doing the same for the orderings where it gets there
+first (iOS). The second: 20 pass, 1 fail — the heal saw the 401 and asked,
+and `onDirectAuthRejected` answered `skipped`: the poll's failed attempt
+55 s earlier sat inside the 60 s refusal gap. A failed attempt is exactly
+when the gap must not count (the parent may be back), so
+`TunnelPolicy.directAuthRefreshDue` holds the gap only after an attempt
+that handed a ticket out. The third: **21 pass, 0 fail, 0 skip** — the
+whole lapse in 70 ms: park, probe 401, ticket issued, credential swapped
+in place (`(401)`), reload, ready, no track skipped, and the revocation
+leg unchanged. iPhone: not yet run.
 
 ### Phase 5 — optional: make Discover leads actionable
 
