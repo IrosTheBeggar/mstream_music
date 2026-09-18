@@ -543,7 +543,11 @@ when the gap must not count (the parent may be back), so
 that handed a ticket out. The third: **21 pass, 0 fail, 0 skip** — the
 whole lapse in 70 ms: park, probe 401, ticket issued, credential swapped
 in place (`(401)`), reload, ready, no track skipped, and the revocation
-leg unchanged.
+leg unchanged. Quick Connect mode (`SMOKE_RIG_IROH=1`): **26 pass, 0 fail,
+0 skip** — the parent reached over its own tunnel, released once the peer
+went direct, re-dialed for the renewal, and re-dialed again inside the
+playback path's refresh after the lapse (the failed renewal there is the
+parent's tunnel not coming up, which the rig's lapse leg now recognises).
 
 **iPhone (iPhone X, iOS 16.7.16, release build), one hand-driven round
 against `SMOKE_RIG_SERVERS_ONLY=1` servers, read from the peer's log and
