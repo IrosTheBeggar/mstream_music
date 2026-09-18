@@ -997,6 +997,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mainQueueEmpty => 'La cola está vacía';
 
   @override
+  String get queueEmptyDjHint =>
+      'Auto DJ está activado y necesita una primera canción.';
+
+  @override
+  String get queueEmptyDjRandom => 'Canción al azar';
+
+  @override
+  String get queueEmptyDjChoose => 'Elegir una canción';
+
+  @override
   String get visualizerTitle => 'Visualizador';
 
   @override

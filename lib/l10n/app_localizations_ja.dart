@@ -962,6 +962,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mainQueueEmpty => 'キューが空です';
 
   @override
+  String get queueEmptyDjHint => 'Auto DJ はオンです。最初の曲が必要です。';
+
+  @override
+  String get queueEmptyDjRandom => 'ランダムに 1 曲選ぶ';
+
+  @override
+  String get queueEmptyDjChoose => '曲を選ぶ';
+
+  @override
   String get visualizerTitle => 'ビジュアライザー';
 
   @override

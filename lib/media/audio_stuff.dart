@@ -2728,6 +2728,20 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
 
         break;
+      case 'startAutoDJFromSeed':
+        // The armed-DJ counterpart of the seeded arm above: the DJ is already
+        // on, the queue was cleared under it (a clear keeps it armed but adds
+        // nothing, see _doClearPlaylist), and the user has just named an
+        // opening song from the empty-queue prompt. Re-arming on the same
+        // server is not a fresh session, so setAutoDJ would never read the
+        // seed — this does, with the same guards (armed, empty queue, seed
+        // from the DJ's own server). A seed that cannot open is dropped
+        // rather than left to hijack a later arm.
+        if (!await _startAutoDJFromSeed()) {
+          unawaited(AutoDJManager().clearSonicSeed());
+          return false;
+        }
+        return true;
       case 'rebuildTranscodeUrls':
         // Serialized with every other local-backend load. Two setSources
         // overlapping does NOT merely interrupt the older one: an interrupt
@@ -3222,7 +3236,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     await customAction('clearPlaylist');
     await addQueueItem(seed);
     await skipToQueueItem(0);
-    await play();
+    // NOT awaited: just_audio's play() future completes only when playback
+    // pauses or stops (see LocalPlaybackBackend.seek). Awaited, the follower
+    // fetch below slept until the seed track ENDED — or until the next queue
+    // clear stopped the player, at which point it woke under the new lane's
+    // epoch and refilled the queue the user had just emptied (simulator,
+    // 2026-09-17: clear → four picks back within 10 ms).
+    unawaited(play());
     // Followers, not a first pick: the seed IS track one. At least two more
     // so the session feels underway before the queue-end top-up takes over.
     // The first fetch is awaited so a failure surfaces here and not in a

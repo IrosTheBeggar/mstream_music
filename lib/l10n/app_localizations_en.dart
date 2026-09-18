@@ -987,6 +987,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainQueueEmpty => 'Queue is empty';
 
   @override
+  String get queueEmptyDjHint => 'Auto DJ is on and needs an opening song.';
+
+  @override
+  String get queueEmptyDjRandom => 'Pick a random song';
+
+  @override
+  String get queueEmptyDjChoose => 'Choose a song';
+
+  @override
   String get visualizerTitle => 'Visualizer';
 
   @override

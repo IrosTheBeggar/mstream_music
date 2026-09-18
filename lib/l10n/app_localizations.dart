@@ -1782,6 +1782,24 @@ abstract class AppLocalizations {
   /// **'Queue is empty'**
   String get mainQueueEmpty;
 
+  /// Empty-queue placeholder line under "Queue is empty" while Auto DJ is armed; the two buttons below give it an opening song.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto DJ is on and needs an opening song.'**
+  String get queueEmptyDjHint;
+
+  /// Empty-queue button: seed the armed Auto DJ with a random (filtered) song.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a random song'**
+  String get queueEmptyDjRandom;
+
+  /// Empty-queue button: browse the library and pick the Auto DJ opening song.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a song'**
+  String get queueEmptyDjChoose;
+
   /// No description provided for @visualizerTitle.
   ///
   /// In en, this message translates to:

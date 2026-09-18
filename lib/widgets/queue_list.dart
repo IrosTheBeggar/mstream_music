@@ -74,15 +74,7 @@ class QueueList extends StatelessWidget {
       builder: (context, snapshot) {
         final queue = snapshot.data ?? const <MediaItem>[];
 
-        if (queue.isEmpty) {
-          return Center(
-            child: Text(
-              l.mainQueueEmpty,
-              style:
-                  TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
-          );
-        }
+        if (queue.isEmpty) return const _EmptyQueue();
 
         return ReorderableListView.builder(
           // We supply our own per-row drag grip so reorder never competes with
@@ -637,57 +629,142 @@ Future<bool> _seedEmptyQueue(BuildContext context, Server server) async {
     if (picked == null) return false; // dismissed — leave the DJ off
     choice = picked;
   }
+  if (!context.mounted) return false;
 
-  if (choice == EmptyQueueStart.random) {
-    // The FILTERED pick, not the plain random one: this track opens the
-    // session, so it has to obey the same rating/genre/length rules every
-    // later pick does.
-    final seed = await ApiManager().fetchAutoDjSeed(server);
-    final path = seed.item?.data;
-    if (path == null) {
-      if (context.mounted) {
-        final l = AppLocalizations.of(context);
-        // "Nothing matched" is a different problem from "the request
-        // failed", and only one of them the user can do anything about.
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                seed.noMatch ? l.autoDjSeedNoMatch : l.autoDjSonicSeedFailed)));
-      }
-      return false;
-    }
-    final item = seed.item!;
-    await mgr.setSonicSeed(
-        path: path,
-        title: item.metadata?.title ?? item.name.split('/').last,
-        server: server.localname);
-    return true;
-  }
+  if (choice == EmptyQueueStart.random) return _seedRandom(context, server);
 
   // Pick-from-library: hand off to the browser. Switching the DJ on happens in
   // onPicked, not here — there is nothing to start from until a row lands, and
   // arming it now would open on a random track instead of the chosen one.
-  if (!context.mounted) return false;
+  _armLibraryPick(
+      context,
+      server,
+      () => MediaManager()
+          .audioHandler
+          .customAction('setAutoDJ', {'autoDJServer': server}));
+  return false;
+}
+
+/// Store a random opening track as the one-shot sonic seed. True when a seed
+/// is set; false (with a snackbar) when the server had nothing to offer.
+Future<bool> _seedRandom(BuildContext context, Server server) async {
+  // The FILTERED pick, not the plain random one: this track opens the
+  // session, so it has to obey the same rating/genre/length rules every
+  // later pick does.
+  final seed = await ApiManager().fetchAutoDjSeed(server);
+  final path = seed.item?.data;
+  if (path == null) {
+    if (context.mounted) {
+      final l = AppLocalizations.of(context);
+      // "Nothing matched" is a different problem from "the request
+      // failed", and only one of them the user can do anything about.
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              seed.noMatch ? l.autoDjSeedNoMatch : l.autoDjSonicSeedFailed)));
+    }
+    return false;
+  }
+  final item = seed.item!;
+  await AutoDJManager().setSonicSeed(
+      path: path,
+      title: item.metadata?.title ?? item.name.split('/').last,
+      server: server.localname);
+  return true;
+}
+
+/// Arm browse-to-pick for the DJ's opening track on [server]. The tapped row
+/// becomes the one-shot sonic seed and then [onSeeded] runs — after the
+/// arming widget is gone, so it must touch singletons only. Drops every
+/// pushed route so the library is in view (the player panel collapses on its
+/// own: main.dart watches TrackCapture.active).
+void _armLibraryPick(
+    BuildContext context, Server server, Future<void> Function() onSeeded) {
   TrackCapture.arm(TrackCaptureRequest(
     server: server,
     bannerLabel: (l) => l.autoDjStartPickBanner,
-    // No return screen: the question came from a sheet over the browser, so
-    // the pick simply starts the DJ and leaves the user where they are.
+    // No return screen: the question came from the queue, so the pick simply
+    // starts the DJ and leaves the user where they are.
     onPicked: (item) {
       final path = item.data;
       if (path == null) return;
-      // Runs after the arming widget is gone — singletons only.
-      unawaited(mgr
+      unawaited(AutoDJManager()
           .setSonicSeed(
               path: path,
               title: item.metadata?.title ?? item.name.split('/').last,
               server: server.localname)
-          .then((_) => MediaManager()
-              .audioHandler
-              .customAction('setAutoDJ', {'autoDJServer': server})));
+          .then((_) => onSeeded()));
     },
   ));
   Navigator.of(context).popUntil((r) => r.isFirst);
-  return false;
+}
+
+/// The empty-queue placeholder. With the DJ armed the queue is waiting on an
+/// opening song (a clear keeps the DJ on but adds nothing itself), so this
+/// offers the two ways to give it one; with the DJ off it is just the label.
+/// Reads the DJ state live, so switching the DJ off takes the buttons away.
+class _EmptyQueue extends StatelessWidget {
+  const _EmptyQueue();
+
+  static Future<void> _start() =>
+      MediaManager().audioHandler.customAction('startAutoDJFromSeed');
+
+  Future<void> _random(BuildContext context, Server server) async {
+    if (await _seedRandom(context, server)) await _start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final label = Text(
+      l.mainQueueEmpty,
+      textAlign: TextAlign.center,
+      style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
+    );
+    return StreamBuilder<dynamic>(
+      stream: MediaManager().audioHandler.customState,
+      initialData: MediaManager().audioHandler.customState.valueOrNull,
+      builder: (context, snap) {
+        final Server? dj = snap.data?.autoDJState as Server?;
+        if (dj == null) return Center(child: label);
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                label,
+                const SizedBox(height: 6),
+                Text(
+                  l.queueEmptyDjHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: VelvetColors.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _random(context, dj),
+                      icon: const Icon(Icons.casino, size: 18),
+                      label: Text(l.queueEmptyDjRandom),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _armLibraryPick(context, dj, _start),
+                      icon: const Icon(Icons.library_music_outlined, size: 18),
+                      label: Text(l.queueEmptyDjChoose),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Auto DJ state at a glance in the queue header (the ∞-icon-on-the-queue

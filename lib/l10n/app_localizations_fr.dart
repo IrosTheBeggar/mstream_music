@@ -996,6 +996,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mainQueueEmpty => 'La file est vide';
 
   @override
+  String get queueEmptyDjHint =>
+      'Auto DJ est activé et a besoin d\'un premier morceau.';
+
+  @override
+  String get queueEmptyDjRandom => 'Morceau au hasard';
+
+  @override
+  String get queueEmptyDjChoose => 'Choisir un morceau';
+
+  @override
   String get visualizerTitle => 'Visualiseur';
 
   @override

@@ -995,6 +995,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get mainQueueEmpty => 'A fila está vazia';
 
   @override
+  String get queueEmptyDjHint =>
+      'O Auto DJ está ligado e precisa de uma primeira música.';
+
+  @override
+  String get queueEmptyDjRandom => 'Música aleatória';
+
+  @override
+  String get queueEmptyDjChoose => 'Escolher uma música';
+
+  @override
   String get visualizerTitle => 'Visualizador';
 
   @override
