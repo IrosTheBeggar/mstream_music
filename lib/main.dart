@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show HttpOverrides;
+import 'dart:io' show HttpOverrides, Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:material_ui/material_ui.dart';
@@ -270,7 +270,11 @@ class _MStreamAppState extends State<MStreamApp> with WidgetsBindingObserver {
     // silently fails. Fire-and-forget — first call shows the system dialog,
     // subsequent calls are no-ops once granted. Must run after runApp so the
     // permission_handler plugin has an Activity to attach the dialog to.
-    Permission.notification.request();
+    // Android only: iOS needs no permission for the lock-screen player, and
+    // its one notification use (federation pairing-request alerts) asks in
+    // context — see FederationInboxAlerts — so an unguarded call here put the
+    // system prompt over the welcome screen before a server was even added.
+    if (Platform.isAndroid) Permission.notification.request();
     // Surface cast failures (renderer unreachable / session won't connect) as a
     // toast; the handler has already fallen back to local playback.
     _castErrorSub = CastManager().castErrorStream.listen((msg) {
