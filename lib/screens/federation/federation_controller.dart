@@ -77,6 +77,10 @@ class FederationController extends ChangeNotifier {
       error = null;
       notifyListeners();
     }
+    // Opening or refreshing this screen is the user asking about federation:
+    // a peer the parent once declined direct access for is asked about again
+    // (FEDERATION_PLAN 8b). A no-op when nothing was declined.
+    ServerManager().forgiveDirectDenials(parent);
     try {
       status = await api.status();
       access = FederationAccess.admin;

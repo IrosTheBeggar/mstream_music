@@ -443,6 +443,7 @@ class ServerManager {
       // The parent just started offering direct access: any peer of it that
       // is browsed or queued is worth a tunnel of its own right away.
       if (server.federationDirectAvailable == true && prevFedDirect != true) {
+        forgiveDirectDenials(server, reason: 'direct-available');
         unawaited(ensureTunnels(reason: 'direct-available'));
       }
 
@@ -727,15 +728,35 @@ class ServerManager {
   }
 
   /// Whether [peer] should have a tunnel of its own: its parent offers
-  /// direct access (the `federationDirect` flag), nobody declined for this
-  /// peer this session, and the parent still lists it.
+  /// direct access (the `federationDirect` flag), no denial for this peer is
+  /// still standing (a `direct: false` ages out after
+  /// [TunnelTiming.directDeniedRetry], or is forgiven — FEDERATION_PLAN 8b),
+  /// and the parent still lists it.
   bool _directWanted(Server peer) {
     final parent = peer.parentServer;
     return IrohTunnel.isSupported &&
         parent != null &&
         parent.federationDirectAvailable == true &&
-        !peer.directDenied &&
+        TunnelPolicy.directDenialExpired(
+            deniedAt: peer.directDeniedAt, now: DateTime.now()) &&
         !peer.federationMissing;
+  }
+
+  /// Clear every standing `direct: false` among [parent]'s peers so the next
+  /// reconcile asks again — the parent just started offering direct access,
+  /// or the user opened or refreshed the Federation screen (FEDERATION_PLAN
+  /// 8b). Nothing is dialled here that the targets would not dial anyway.
+  void forgiveDirectDenials(Server parent, {String reason = 'refresh'}) {
+    var any = false;
+    for (final c in federatedChildren(parent)) {
+      if (c.directDeniedAt == null) continue;
+      c.directDeniedAt = null;
+      any = true;
+    }
+    if (!any) return;
+    appLog('[federation] ${parent.localname}: direct-access denials '
+        'forgiven ($reason) — asking again');
+    unawaited(ensureTunnels(reason: 'direct-forgiven'));
   }
 
   /// The peer's own tunnel is up but its supervisor gave up on the guest
@@ -1025,6 +1046,12 @@ class ServerManager {
       if (credential == null ||
           _directTicketStale(s) ||
           credential == h.refusedCredential) {
+        final denied = s.directDeniedAt;
+        if (denied != null) {
+          // A denial that aged out (or was forgiven): one more ask.
+          appLog('[federation] $name: asking for direct access again '
+              '(denied ${_since(denied)!.inMinutes}m ago)');
+        }
         final outcome = await _refreshDirectAccess(s,
             force: credential != null && credential == h.refusedCredential);
         credential = TunnelHandle.credentialFor(s);
@@ -1635,14 +1662,14 @@ class ServerManager {
       if (body is! Map) return DirectAccessOutcome.failed;
       final access = DirectAccess.fromJson(body);
       if (access == null) {
-        peer.directDenied = true;
+        peer.directDeniedAt = DateTime.now();
         appLog('[federation] $name: no direct access '
             '(${body['reason'] ?? 'declined'}) — staying on '
             '${parent.localname}\'s proxy');
         return DirectAccessOutcome.denied;
       }
       final changed = access.ticket != peer.directTicket;
-      peer.directDenied = false;
+      peer.directDeniedAt = null;
       if (changed) {
         // The staleness clock starts at the fetch of a NEW ticket only: the
         // same one handed out again would otherwise look fresh again.
@@ -2292,14 +2319,23 @@ class ServerManager {
     // id nobody holds is adopted by a child of the same name whose own id is
     // no longer listed.
     final Set<int> listed = {};
-    final entries = <({int id, String name})>[];
+    final entries = <({int id, String name, String? endpointId})>[];
     for (final p in peers) {
       if (p is! Map) continue;
       final id = p['id'];
       final name = p['name'];
       if (id is! int || name is! String || name.isEmpty) continue;
       listed.add(id);
-      entries.add((id: id, name: name));
+      // The peer's endpoint id (a public key), when the parent's build reads
+      // tickets: kept for telling one peer under two parents apart later
+      // (FEDERATION_PLAN 8c).
+      final endpointId = p['endpointId'];
+      entries.add((
+        id: id,
+        name: name,
+        endpointId:
+            endpointId is String && endpointId.isNotEmpty ? endpointId : null,
+      ));
     }
     for (final e in entries) {
       final id = e.id;
@@ -2318,7 +2354,8 @@ class ServerManager {
         }
       }
       if (existing == null) {
-        final fresh = _newFederatedServer(parent, id, name);
+        final fresh =
+            _newFederatedServer(parent, id, name, endpointId: e.endpointId);
         serverList.add(fresh);
         await _ensureDownloadDir(fresh);
         changed = true;
@@ -2329,6 +2366,13 @@ class ServerManager {
       if (existing.federationPeerName != name || existing.federationMissing) {
         existing.federationPeerName = name;
         existing.federationMissing = false;
+        changed = true;
+      }
+      // An id the parent reports replaces what we hold; one it stopped
+      // reporting (an older build) leaves the last known value standing.
+      if (e.endpointId != null &&
+          existing.federationEndpointId != e.endpointId) {
+        existing.federationEndpointId = e.endpointId;
         changed = true;
       }
     }
@@ -2384,12 +2428,14 @@ class ServerManager {
   /// capabilities start at the federated floor rather than unknown: the
   /// allowlist already rules them out, and leaving transcodeAvailable null
   /// would send the first stream URL to /transcode optimistically.
-  Server _newFederatedServer(Server parent, int id, String name) {
+  Server _newFederatedServer(Server parent, int id, String name,
+      {String? endpointId}) {
     final s = Server('federated://${parent.localname}/$id', null, null, null,
         _federatedLocalname(name))
       ..federationParent = parent.localname
       ..federationPeerId = id
       ..federationPeerName = name
+      ..federationEndpointId = endpointId
       ..parentServer = parent
       ..storageMode = parent.storageMode
       ..storageBasePath = parent.storageBasePath;

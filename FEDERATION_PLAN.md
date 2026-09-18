@@ -371,7 +371,7 @@ PR. Galaxy S25: the whole Android smoke suite green on the release
 candidate; iOS simulator: the full direct round green; iPhone: needs
 Developer Mode for a launched test.
 
-### Phase 8 — direct access hardening (planned 2026-09-18)
+### Phase 8 — direct access hardening (8a–8c ✅ 2026-09-18; 8d awaits the server PR)
 
 Four gaps found while porting Phase 7's rules to the terminal player
 (mstream-terminal-player, `docs/ux-contracts/multi-server.md` and the
@@ -504,6 +504,27 @@ credential refreshed in place (401)`, the new track playing, and no
 `playback error — skipping track` in between. The same leg on the iOS
 simulator round (`SMOKE_RIG_SERVERS_ONLY=1`). 8b is unit-tested only until a
 peer can be upgraded under the rig.
+
+**Done (2026-09-18) — 8a, 8b, 8c.** 8a as planned, with one refinement:
+the loopback is asked about the URL as it would be built *now*
+(`_withRebuiltUrl`), not the one the player tried, so a ticket renewed
+under a playing item probes clean and takes the walk's fresh-URL reload
+instead of a needless round trip through the parent. The decision is one
+pure function called twice (`directAuthAction` — `probed` false for the
+gate, true for the verdict), the probe is `probeStreamStatus`, the
+recovery `_recoverDirectAuth`, chained and guarded like the iroh one;
+`onDirectAuthRejected` and `_refreshDirectCredential` report their
+`DirectAccessOutcome`, with `skipped` for an attempt not made. 8b:
+`Server.directDeniedAt`, `TunnelPolicy.directDenialExpired`,
+`TunnelTiming.directDeniedRetry` (an hour), and
+`ServerManager.forgiveDirectDenials` on the parent's direct-available edge
+and the Federation screen's load. 8c: `Server.federationEndpointId` from
+the listing, on new and existing peers, persisted. Tests:
+`test/media/direct_auth_action_test.dart`, `test/media/stream_probe_test.dart`
+(a local `HttpServer`), the new group in `direct_access_test.dart`, the
+round trips in `federated_server_test.dart`. The rig's lapse leg
+(`SMOKE_RIG_LAPSE`, on by default with the TTL) is written and has not run
+on a phone yet — the Galaxy and iPhone rounds are the next step.
 
 ### Phase 5 — optional: make Discover leads actionable
 

@@ -67,4 +67,33 @@ void main() {
       expect(TunnelPolicy.directTicketStale(fetchedAt: fetched, expiresAt: fetched, now: fetched), isTrue);
     });
   });
+
+  // FEDERATION_PLAN 8b: a `direct: false` used to hold until the app
+  // restarted — on a phone, days after the peer was upgraded to a build
+  // that mints. It ages out instead.
+  group('TunnelPolicy.directDenialExpired', () {
+    final denied = DateTime.utc(2026, 9, 18, 12);
+
+    test('never denied → ask', () {
+      expect(TunnelPolicy.directDenialExpired(deniedAt: null, now: denied), isTrue);
+    });
+
+    test('holds inside the retry gap, expires at it', () {
+      expect(
+          TunnelPolicy.directDenialExpired(deniedAt: denied, now: denied),
+          isFalse);
+      expect(
+          TunnelPolicy.directDenialExpired(
+              deniedAt: denied, now: denied.add(const Duration(minutes: 59))),
+          isFalse);
+      expect(
+          TunnelPolicy.directDenialExpired(
+              deniedAt: denied, now: denied.add(TunnelTiming.directDeniedRetry)),
+          isTrue);
+      expect(
+          TunnelPolicy.directDenialExpired(
+              deniedAt: denied, now: denied.add(const Duration(days: 2))),
+          isTrue);
+    });
+  });
 }
