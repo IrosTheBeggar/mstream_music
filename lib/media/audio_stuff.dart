@@ -1360,51 +1360,74 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  /// A direct peer's parked or failed track: ask its loopback whether the
+  /// guest token still holds, and renew it through the parent when it does
+  /// not (FEDERATION_PLAN 8a). The probe is on [item]'s URL as it would be
+  /// built NOW, not the one the player tried: a ticket renewed under a
+  /// playing item (the in-place swap leaves it alone) makes the fresh URL
+  /// fine and the stale one a 401, and then a reload with fresh URLs is the
+  /// whole fix. Returns the verdict and, after a refresh, what the parent
+  /// said; the caller reloads.
+  Future<({DirectAuthAction action, DirectAccessOutcome? outcome})>
+      _renewLapsedGuestToken(Server server, MediaItem item) async {
+    final name = server.localname;
+    final status = await probeStreamStatus(_withRebuiltUrl(item).id);
+    final action = directAuthAction(
+      isDirect: server.isDirect,
+      tunnelServes: ServerManager().tunnelServes(server),
+      sinceLastRecovery: null,
+      probed: true,
+      probedStatus: status,
+    );
+    appLog('[play] direct peer answered ${status ?? 'nothing'} for the '
+        'failed track → ${action.name} for=$name');
+    if (action != DirectAuthAction.refresh) {
+      return (action: action, outcome: null);
+    }
+    appLog('[play] direct auth lapsed for=$name (http $status) — '
+        'refreshing the guest ticket');
+    // A lapsed token is not a bad source: the budget is the walk's.
+    _failedSkips = 0;
+    final outcome = await ServerManager().onDirectAuthRejected(server);
+    switch (outcome) {
+      case DirectAccessOutcome.issued:
+        break;
+      case DirectAccessOutcome.denied:
+        appLog('[play] direct access withdrawn for=$name — the proxy '
+            'takes over');
+      case DirectAccessOutcome.unchanged:
+      case DirectAccessOutcome.failed:
+      case DirectAccessOutcome.skipped:
+        appLog('[play] guest ticket not renewed (${outcome.name}) '
+            'for=$name — the walk takes the track');
+    }
+    return (action: action, outcome: outcome);
+  }
+
   // Recover from a load that a direct peer's own tunnel refused
-  // (FEDERATION_PLAN 8a): probe the stream URL for its status on the chain,
-  // and on a 401/403 renew the guest ticket through the parent and re-seed at
-  // the spot — playing again with the user's intent, and through the proxy
-  // when the parent declined. A 404 skips; anything else hands the original
-  // error to the ordinary walk once the chain is free. Guarded like the iroh
-  // recovery: one at a time, and one probe per server per
+  // (FEDERATION_PLAN 8a), when the error callback gets there first (iOS;
+  // on Android the idle park usually lands a moment earlier and the tunnel
+  // heal runs the same renewal — see _onTunnelReconnected). On the chain:
+  // probe, and on a 401/403 renew the guest ticket through the parent and
+  // re-seed at the spot — playing again with the user's intent, and through
+  // the proxy when the parent declined. A 404 skips; anything else hands
+  // the original error to the ordinary walk once the chain is free. Guarded
+  // like the iroh recovery: one at a time, and one probe per server per
   // [kDirectAuthRecoveryGap].
   void _recoverDirectAuth(Server server, MediaItem failed, Object error) {
     if (_recoveringPlayback) return;
     _recoveringPlayback = true;
     _lastRecoveryByServer[server.localname] = DateTime.now();
-    final name = server.localname;
     Object? followUp;
     var skip = false;
     _switchChain = _switchChain.then((_) async {
       if (queue.value.isEmpty || !identical(_backend, _localBackend)) return;
-      // The URL as it would be built NOW, not the one the player tried: a
-      // ticket renewed under a playing item (the in-place swap leaves it
-      // alone) makes the fresh URL fine and the stale one a 401, and then
-      // the walk's reload with fresh URLs is the whole fix.
-      final status = await probeStreamStatus(_withRebuiltUrl(failed).id);
-      final action = directAuthAction(
-        isDirect: server.isDirect,
-        tunnelServes: ServerManager().tunnelServes(server),
-        sinceLastRecovery: null,
-        probed: true,
-        probedStatus: status,
-      );
-      appLog('[play] direct peer answered ${status ?? 'nothing'} for the '
-          'failed track → ${action.name} for=$name');
-      switch (action) {
+      final verdict = await _renewLapsedGuestToken(server, failed);
+      switch (verdict.action) {
         case DirectAuthAction.refresh:
-          appLog('[play] direct auth lapsed for=$name (http $status) — '
-              'refreshing the guest ticket');
-          // A lapsed token is not a bad source: the budget is the walk's.
-          _failedSkips = 0;
-          final outcome = await ServerManager().onDirectAuthRejected(server);
-          switch (outcome) {
+          switch (verdict.outcome) {
             case DirectAccessOutcome.issued:
             case DirectAccessOutcome.denied:
-              if (outcome == DirectAccessOutcome.denied) {
-                appLog('[play] direct access withdrawn for=$name — the '
-                    'proxy takes over');
-              }
               // Every URL against the transport that is live now: the
               // peer's loopback with the new token, or the parent's proxy.
               final spot = _reviveSpot();
@@ -1419,8 +1442,7 @@ class AudioPlayerHandler extends BaseAudioHandler
             case DirectAccessOutcome.unchanged:
             case DirectAccessOutcome.failed:
             case DirectAccessOutcome.skipped:
-              appLog('[play] guest ticket not renewed (${outcome.name}) '
-                  'for=$name — the walk takes the track');
+            case null:
               followUp = error;
           }
         case DirectAuthAction.skip:
@@ -1864,6 +1886,14 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Re-check the park under the chain: something queued ahead of us (a
       // backend switch, a user play) may already have revived the player.
       if (_localBackend.processingState != BackendProcessingState.idle) return;
+      // A direct peer's park is the heal's first on Android: the idle state
+      // lands a moment before the error callback, so _onPlaybackError finds
+      // this recovery already running and steps aside. A guest token the
+      // peer stopped honouring would then be re-seeded as-is (Galaxy S25,
+      // 2026-09-18: three 401s, a silent player until the poll renewed) —
+      // ask the loopback first and renew before the reload (FEDERATION_PLAN
+      // 8a). Anything but a lapsed token leaves the heal as it was.
+      if (server.isDirect) await _renewLapsedGuestToken(server, item!);
       await _reseedLocalAtSpot();
     }).catchError((Object e) async {
       // appLog, not castLog: no cast is involved, and the incident log this

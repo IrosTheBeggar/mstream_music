@@ -526,6 +526,16 @@ round trips in `federated_server_test.dart`. The rig's lapse leg
 (`SMOKE_RIG_LAPSE`, on by default with the TTL) is written and has not run
 on a phone yet — the Galaxy and iPhone rounds are the next step.
 
+**Galaxy S25, first run (2026-09-18).** 17 pass, 0 fail, and the lapse leg
+skipped — the peer's log had the three "jwt expired" 401s, but on Android
+the idle park lands a millisecond before the error callback, so the tunnel
+heal's park trigger took the failure first, re-seeded with the same expired
+token, and `_onPlaybackError` stepped aside as "already recovering"; the
+player sat silent until the poll renewed. So the renewal lives in one
+helper (`_renewLapsedGuestToken`) that both paths call: the heal probes and
+renews before it re-seeds a direct peer's parked track, and the error path
+keeps doing the same for the orderings where it gets there first (iOS).
+
 ### Phase 5 — optional: make Discover leads actionable
 
 `/api/v1/discovery/federation/similar` already returns `peer:{id,name}` on the
