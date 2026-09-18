@@ -23,33 +23,40 @@ class DiagnosticsScreen extends StatefulWidget {
 }
 
 class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
+  Stream<List<String>> get _activeStream => LogManager().stream;
+  List<String> get _activeLines => LogManager().lines;
+  String _activeDump() => LogManager().dump();
+
   Future<void> _copy() async {
     final l = AppLocalizations.of(context);
-    await Clipboard.setData(ClipboardData(text: LogManager().dump()));
+    await Clipboard.setData(ClipboardData(text: _activeDump()));
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(l.diagnosticsCopied)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l.diagnosticsCopied)));
   }
 
   Future<void> _share() async {
-    final text = LogManager().dump();
+    final text = _activeDump();
     final body = text.isEmpty ? '(no logs)' : text;
     try {
       // Share a .txt file so a long log isn't truncated the way a text share
       // can be; fall back to a plain-text share if the file write fails.
       final dir = await getTemporaryDirectory();
       final file = File(
-          '${dir.path}/mstream-log-${DateTime.now().millisecondsSinceEpoch}.txt');
+        '${dir.path}/mstream-log-${DateTime.now().millisecondsSinceEpoch}.txt',
+      );
       await file.writeAsString(body);
-      await SharePlus.instance.share(ShareParams(
-        files: [XFile(file.path, mimeType: 'text/plain')],
-        subject: 'mStream logs',
-      ));
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'text/plain')],
+          subject: 'mStream logs',
+        ),
+      );
     } catch (_) {
-      await SharePlus.instance.share(ShareParams(
-        text: body,
-        subject: 'mStream logs',
-      ));
+      await SharePlus.instance.share(
+        ShareParams(text: body, subject: 'mStream logs'),
+      );
     }
   }
 
@@ -71,8 +78,10 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               title: Text(l.diagnosticsVerbose),
               subtitle: Text(
                 l.diagnosticsVerboseHint,
-                style:
-                    TextStyle(color: VelvetColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: VelvetColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               value: SettingsManager().verboseLogging,
               onChanged: (v) async {
@@ -84,15 +93,16 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
             Divider(height: 1, color: VelvetColors.border),
             Expanded(
               child: StreamBuilder<List<String>>(
-                stream: LogManager().stream,
-                initialData: LogManager().lines,
+                stream: _activeStream,
+                initialData: _activeLines,
                 builder: (context, snap) {
                   final lines = snap.data ?? const <String>[];
                   if (lines.isEmpty) {
                     return Center(
-                      child: Text(l.diagnosticsEmpty,
-                          style:
-                              TextStyle(color: VelvetColors.textSecondary)),
+                      child: Text(
+                        l.diagnosticsEmpty,
+                        style: TextStyle(color: VelvetColors.textSecondary),
+                      ),
                     );
                   }
                   // Terminal-style: oldest at the top, newest at the bottom,
@@ -103,7 +113,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   return ListView.builder(
                     reverse: true,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     itemCount: display.length,
                     itemBuilder: (context, i) => Padding(
                       padding: const EdgeInsets.only(bottom: 2),
@@ -126,14 +138,21 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: Row(
                 children: [
-                  Expanded(child: _action(Icons.copy, l.diagnosticsCopy, _copy)),
+                  Expanded(
+                    child: _action(Icons.copy, l.diagnosticsCopy, _copy),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                      child: _action(Icons.share, l.diagnosticsShare, _share)),
+                    child: _action(Icons.share, l.diagnosticsShare, _share),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                      child: _action(
-                          Icons.delete_outline, l.diagnosticsClear, _clear)),
+                    child: _action(
+                      Icons.delete_outline,
+                      l.diagnosticsClear,
+                      _clear,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -153,7 +172,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         side: BorderSide(color: VelvetColors.primary.withValues(alpha: 0.5)),
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(VelvetColors.radiusSmall)),
+          borderRadius: BorderRadius.circular(VelvetColors.radiusSmall),
+        ),
       ),
     );
   }

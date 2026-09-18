@@ -23,9 +23,14 @@ import 'lyrics_screen.dart';
 /// location with a copy button. Reads straight off the [MediaItem], so every
 /// field the queue carries is surfaced — and only when present.
 class MetadataScreen extends StatelessWidget {
-  const MetadataScreen({super.key, required this.item});
+  const MetadataScreen(
+      {super.key, required this.item, this.embedded = false});
 
   final MediaItem item;
+
+  /// Inside the desktop dock: no app bar, and no allowance for one above
+  /// the cover.
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -164,7 +169,7 @@ class MetadataScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: VelvetColors.bg,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
+      appBar: embedded ? null : AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -225,7 +230,8 @@ class MetadataScreen extends StatelessWidget {
           ],
           // Content.
           ListView(
-            padding: EdgeInsets.fromLTRB(24, mq.padding.top + kToolbarHeight + 12,
+            padding: EdgeInsets.fromLTRB(
+                24, (embedded ? 0 : mq.padding.top + kToolbarHeight) + 12,
                 24, 28 + mq.padding.bottom),
             children: [
               // Hero cover.

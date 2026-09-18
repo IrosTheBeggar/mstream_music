@@ -178,8 +178,15 @@ class ProjectMBindings {
       // (matches libprojectM v4.x SONAME).
       return DynamicLibrary.open('libprojectM-4.so');
     }
+    if (Platform.isWindows) {
+      // Bundled next to the executable (windows/projectm/projectM-4.dll, built
+      // from libprojectM v4.1.6 with MSVC). It imports glew32.dll, also bundled.
+      // Loading + reading the version needs no GL context; the per-frame render
+      // bridge (offscreen GL + FBO) is separate native work still to come.
+      return DynamicLibrary.open('projectM-4.dll');
+    }
     throw UnsupportedError(
-        'libprojectM is only bundled for Android in this build');
+        'libprojectM is only bundled for Android and Windows in this build');
   }
 }
 

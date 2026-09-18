@@ -93,7 +93,8 @@ class _AccentColorSheetState extends State<AccentColorSheet> {
     final current = SettingsManager().accentColor;
     // The current theme's built-in accent (ignoring any override) — shown on
     // the "Theme default" chip so the user sees what reverting looks like.
-    final themeDefault = paletteFor(SettingsManager().appTheme).primary;
+    final themeDefault =
+        paletteFor(SettingsManager().effectiveAppTheme).primary;
 
     return SafeArea(
       child: SingleChildScrollView(
