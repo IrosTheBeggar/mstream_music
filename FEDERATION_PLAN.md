@@ -543,7 +543,32 @@ when the gap must not count (the parent may be back), so
 that handed a ticket out. The third: **21 pass, 0 fail, 0 skip** — the
 whole lapse in 70 ms: park, probe 401, ticket issued, credential swapped
 in place (`(401)`), reload, ready, no track skipped, and the revocation
-leg unchanged. iPhone: not yet run.
+leg unchanged.
+
+**iPhone (iPhone X, iOS 16.7.16, release build), one hand-driven round
+against `SMOKE_RIG_SERVERS_ONLY=1` servers, read from the peer's log and
+the app's Diagnostics share.** Direct access holds up on iOS: the ticket
+is fetched at launch for a restored peer queue, the peer's own tunnel is up
+in 3.2 s on a direct path, the restored queue is rebuilt onto it, and
+three albums played through without a gap. A lapsed token was renewed
+twice by two different paths and never surfaced to the listener: (1)
+tapping an album sends `album-songs` over the direct tunnel first, the
+401 hit the browse hook, and the ticket was renewed in 47 ms — with the
+poll's failed attempt only 8 s earlier, which the old gap rule would have
+refused (8b's `directAuthRefreshDue`, exercised for real); (2) a seek to
+the end of a track advanced the queue onto a track AVPlayer had preloaded
+under the old token, and the refusal landed on the *preload of the item
+after next* — silent to the player, no error event — which the poll had
+re-tokened before it was due. So on iOS the playback-path renewal (8a)
+was never reached in normal queue play: AVPlayer's preload-ahead absorbs
+the lapse, and the browse hook or the poll renews first. No regression,
+and `[play] playback error` never appears in the session. Two tooling
+findings on the way, both in `smoke/README.md`: a `flutter run` app on
+this iOS 16 device halts for good if it is backgrounded and resumed
+(ios-deploy's lldb loop ignores a later stop with no reason), and an
+Xcode 26 debug-dylib build crashes at a cold home-screen launch in the
+background-downloader plugin's registration (nil messenger) — a release
+build is the one to hand-drive.
 
 ### Phase 5 — optional: make Discover leads actionable
 

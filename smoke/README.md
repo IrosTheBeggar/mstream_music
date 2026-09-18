@@ -20,6 +20,13 @@ switching, CarPlay, background playback. Two kinds:
   use USB.
 - iOS: a booted simulator with `flutter build ios --simulator --debug`; the CarPlay
   round needs the Simulator GUI (I/O › External Displays › CarPlay) and one click.
+  On a physical iOS 16 device (2026-09-18, iPhone X): a `flutter run` app halts for
+  good once it is backgrounded and resumed — ios-deploy's lldb loop treats a later
+  stop with no reason like a launch stop and never continues — and an Xcode 26
+  debug-dylib build crashes at a cold home-screen launch in the background-downloader
+  plugin's registration (nil messenger; fine under the debugger). For a hand-driven
+  round on the phone, install a release build (`flutter build ios --release`, then
+  the bundled ios-deploy with `--bundle`) and read Diagnostics › Share afterwards.
 - Screen coordinates default to a Galaxy S25 (1080×2340); override with the
   `SMOKE_*_XY` variables named at the top of each script for other phones.
 
