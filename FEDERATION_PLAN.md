@@ -371,7 +371,7 @@ PR. Galaxy S25: the whole Android smoke suite green on the release
 candidate; iOS simulator: the full direct round green; iPhone: needs
 Developer Mode for a launched test.
 
-### Phase 8 — direct access hardening (8a–8c ✅ 2026-09-18; 8d awaits the server PR)
+### Phase 8 — direct access hardening ✅ 2026-09-18
 
 Four gaps found while porting Phase 7's rules to the terminal player
 (mstream-terminal-player, `docs/ux-contracts/multi-server.md` and the
@@ -485,6 +485,17 @@ an older server omits the key. App side: `_reconcilePeers` records it,
 as today; `true` still fetches the token through the access route but makes
 the first dial certain. Both clients benefit; gated by the key's presence,
 the house rule.
+
+**Done (2026-09-18).** Server side: mStream #1003 (`guestRefused` beside
+the mint cache, `direct` in the listing, `null` after a 502). App side:
+`Server.federationDirectHint` (runtime-only) and
+`ServerManager.applyDirectHint`, applied by the reconcile on change —
+`true` lifts a denial, `false` files one once and never resets a denial
+that aged out, so the hourly re-ask still reaches the parent and refreshes
+its memory (a peer upgraded to a minting build is otherwise rediscovered
+by nobody) — with `ensureTunnels('direct-hint')` when a denial lifts or
+lands. Older servers omit the key and the app behaves as before; the rig's
+peer always mints, so the `false` path is unit-tested only.
 
 **Order and size.** 8a first — the wrongly skipped track is the one a
 listener meets (M: the probe, the decision, the chain, one test file, one

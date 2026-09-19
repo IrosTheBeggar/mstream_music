@@ -163,6 +163,31 @@ void main() {
           ..federationPeerId = id
           ..federationPeerName = name;
 
+    // FEDERATION_PLAN 8d: the parent's `direct` hint (mStream #1003) folds
+    // into the client's denial state — once per change, never resetting a
+    // denial that aged out, so the hourly re-ask still reaches the parent.
+    test('the direct hint: true lifts, false files once, null is silent', () {
+      final now = DateTime.utc(2026, 9, 18, 13);
+      final earlier = now.subtract(const Duration(minutes: 20));
+      DateTime? apply({bool? previous, bool? hint, DateTime? deniedAt}) =>
+          ServerManager.applyDirectHint(
+              previousHint: previous, hint: hint, deniedAt: deniedAt, now: now);
+      // Never asked, or a parent too old to say: nothing changes.
+      expect(apply(hint: null, deniedAt: earlier), earlier);
+      expect(apply(previous: false, hint: null, deniedAt: null), isNull);
+      // The parent holds a token: any denial is lifted.
+      expect(apply(previous: false, hint: true, deniedAt: earlier), isNull);
+      expect(apply(hint: true, deniedAt: null), isNull);
+      // A refusal first heard of files a denial from now — unless the client
+      // already holds one from an ask of its own.
+      expect(apply(hint: false, deniedAt: null), now);
+      expect(apply(previous: true, hint: false, deniedAt: null), now);
+      expect(apply(hint: false, deniedAt: earlier), earlier);
+      // A steady false leaves an aged-out denial alone.
+      expect(apply(previous: false, hint: false, deniedAt: null), isNull);
+      expect(apply(previous: false, hint: false, deniedAt: earlier), earlier);
+    });
+
     test('a re-added peer is adopted by its old record, by name', () {
       // The admin removed "Basement" (id 3) and re-added it: the parent now
       // lists id 7 under the same name and nobody holds 7.
@@ -394,11 +419,13 @@ void main() {
         ..directTicket = 'mstrfedg1:x'
         ..directGuestToken = 'g'
         ..directDeniedAt = DateTime.utc(2026, 9, 18)
+        ..federationDirectHint = false
         ..tunnelPort = 1;
       final back = Server.fromJson(peer.toJson());
       expect(back.directTicket, isNull);
       expect(back.directGuestToken, isNull);
       expect(back.directDeniedAt, isNull);
+      expect(back.federationDirectHint, isNull);
       expect(back.tunnelPort, isNull);
       expect(back.isDirect, isFalse);
 

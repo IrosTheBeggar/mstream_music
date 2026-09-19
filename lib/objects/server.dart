@@ -211,6 +211,14 @@ class Server {
   // rises, or the user refreshes the Federation screen, when the manager
   // asks again. Null when never denied, or denied and since granted.
   DateTime? directDeniedAt;
+  // What the parent's peer listing last said about reaching this peer
+  // directly (`direct`, mStream #1003): true — the parent holds a guest
+  // token, the peer mints; false — the peer refused the parent's last mint;
+  // null — never asked, or a parent too old to say. Runtime-only; folded
+  // into [directDeniedAt] on change by the reconcile
+  // (ServerManager.applyDirectHint), so a steady `false` does not keep
+  // re-arming the denial and the hourly re-ask still reaches the parent.
+  bool? federationDirectHint;
 
   /// True while this peer is reached over a tunnel of its own.
   bool get isDirect => isFederated && tunnelPort != null;
