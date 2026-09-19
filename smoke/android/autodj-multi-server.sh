@@ -127,7 +127,13 @@ READY=$(curl -s "http://127.0.0.1:$PB/api/" -H "x-access-token: $TB" | python3 -
 [ "$READY" = True ] && pass "B reports discoveryReady after the pass (the app's sonic gate reads it)" || fail "B reports discoveryReady=$READY after the pass"
 
 # ── pair them (A grants B its library) ─────────────────────────────────────
-TICKET=$(curl -s -X POST "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "$J" -H "x-access-token: $TA" -d '{"name":"Rig Parent B","vpaths":["demo"]}' | python3 -c "import sys,json; print(json.load(sys.stdin)['ticket'])")
+# The key's concurrent-stream cap (server default 3): expect_pick skips through
+# the album in seconds, and over the direct path a guest shares the cap, so the
+# streams left closing behind a run of NEXT presses tripped it (429, 2026-09-19).
+# Minted generous by default; SMOKE_DJ_MAX_STREAMS=3 puts the app's back-off
+# under test instead.
+DJ_MAX_STREAMS=${SMOKE_DJ_MAX_STREAMS:-12}
+TICKET=$(curl -s -X POST "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "$J" -H "x-access-token: $TA" -d "{\"name\":\"Rig Parent B\",\"vpaths\":[\"demo\"],\"maxStreams\":$DJ_MAX_STREAMS}" | python3 -c "import sys,json; print(json.load(sys.stdin)['ticket'])")
 PEER=$(curl -s -X POST "http://127.0.0.1:$PB/api/v1/admin/federation/peers" -H "$J" -H "x-access-token: $TB" -d "{\"ticket\":$(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "$TICKET")}")
 PEER_ID=$(echo "$PEER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
 STATUS=$(curl -s "http://127.0.0.1:$PB/api/v1/federation/peers" -H "x-access-token: $TB" | python3 -c "import sys,json; p=json.load(sys.stdin)['peers']; print(p[0]['lastStatus'] if p else 'none')")
@@ -178,8 +184,11 @@ expect_pick() { # <phase> <track count> <server a localname> <server b localname
   T=$(now_ts)
   for i in $(seq 2 "$n"); do adbx shell input keyevent 87; sleep 1.5; done
   if wait_for_log_after "$T" '\[dj\] multi-server: [0-9]+/[0-9]+ answered' 90; then
-    line=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -oE '\[dj\] multi-server: [0-9]+/[0-9]+ answered, [0-9]+ usable, best [0-9.-]+ from [^ ]+' | head -1)
+    line=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -oE '\[dj\] multi-server: [0-9]+/[0-9]+ answered, [0-9]+ usable, (queueing [0-9]+; )?best [0-9.-]+ from [^ ]+' | head -1)
     ans=$(echo "$line" | grep -oE '[0-9]+/[0-9]+' | head -1); total=${ans#*/}; who=${line##* }
+    # The pick queues its N best answers best-first (songsPerFetch), so the
+    # winner's track is the FIRST of that batch: N back from the end.
+    local batch; batch=$(echo "$line" | grep -oE 'queueing [0-9]+' | grep -oE '[0-9]+'); batch=${batch:-1}
     [ "$ans" = "2/2" ] && pass "$ph: both servers answered — $line" || fail "$ph: not every server answered — $line"
     local hs; hs=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE "\[dj\] ($sa|$sb) answers in model test-fake")
     [ "$hs" -ge 1 ] && pass "$ph: model handshake logged for $hs server(s) this pick" || log "note: no fresh handshake line this pick (cached from an earlier one)"
@@ -190,8 +199,9 @@ expect_pick() { # <phase> <track count> <server a localname> <server b localname
       for i in $(seq 1 10); do
         srv=$(cfg_read queue.json | python3 -c "
 import sys,json
-d=json.load(sys.stdin); it=(d.get('items') or [])[-1]; ex=it.get('extras') or {}
-print(ex.get('server'), ex.get('djPick'), ex.get('djSonic'))" 2>/dev/null)
+d=json.load(sys.stdin); items=d.get('items') or []; n=int(sys.argv[1])
+it=items[-n] if len(items) >= n else items[-1]; ex=it.get('extras') or {}
+print(ex.get('server'), ex.get('djPick'), ex.get('djSonic'))" "$batch" 2>/dev/null)
         case "$srv" in *" True True") break;; esac; sleep 1
       done
       [ "${srv%% *}" = "$who" ] && [ "${srv#* }" = "True True" ] && pass "$ph: the winner's track ($who) is the queued pick (djPick + djSonic set)" || fail "$ph: queued pick reads '$srv', the fan-out said $who"
@@ -231,7 +241,13 @@ app_stop; cfg_write auto_dj.json "$RIG/auto_dj.json"; logcat_clear; wake; app_st
 wait_for_log '\[app\] default server ready' 30 || fail "phase 1b: default never published"
 wait_for_log '\[autodj\] restored on peer-rig-peer-a' 15 && pass "phase 1b: DJ restored armed on the peer" || fail "phase 1b: DJ not restored on the peer"
 PEER_Y=366  # picker rows 222, 366, …: the peer sits directly under its parent, which is row 1
-tap $PICKER; sleep 1.5; shot p1b-picker; tap 639 $PEER_Y; sleep 3
+sleep 2; tap $PICKER; sleep 1.5; shot p1b-picker; tap 639 $PEER_Y; sleep 3
+if ! wait_for_log '\[srv\] switched to peer-rig-peer-a' 5; then
+  # A slow device (the emulator) can swallow the first tap after a relaunch
+  # while the restored queue is still seeding: once more before failing.
+  log "phase 1b: first picker tap did not switch — trying once more"
+  tap $PICKER; sleep 2; tap 639 $PEER_Y; sleep 3
+fi
 wait_for_log '\[srv\] switched to peer-rig-peer-a' 5 && pass "phase 1b: peer selected from the picker" || fail "phase 1b: no switch to the peer"
 sleep 1; shot p1b-home  # the peer's home before the tap, for re-calibrating PEER_ALBUMS
 tap $PEER_ALBUMS; sleep 4; shot p1b-albums; tap $ALBUM1; sleep 3; tap $TRACK1; sleep 6

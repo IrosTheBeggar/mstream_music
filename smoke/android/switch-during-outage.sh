@@ -10,7 +10,23 @@
 source "$(dirname "$0")/../lib.sh"; pick_device; cfg_backup
 IROH=$(localname_of iroh); STD=$(localname_of standard)
 if [ -z "$IROH" ] || [ -z "$STD" ]; then skip "needs one Quick Connect and one standard server"; summary; exit; fi
-ALBUMS=${SMOKE_ALBUMS_XY:-"281 1030"}; PICKER=${SMOKE_PICKER_XY:-"1007 187"}; ROW2=${SMOKE_PICKER_ROW2_XY:-"782 366"}
+# The picker seats a server's federated peers directly under it, so the
+# standard server's row depends on how many peers the Quick Connect server
+# (first after cfg_order) has — computed from the backup, overridable.
+picker_row_y() { # <localname> → the row's y, after `cfg_order iroh`
+  python3 - "$CFG_BACKUP/servers.json" "$1" <<'PY2'
+import json,sys
+L=json.load(open(sys.argv[1])); name=sys.argv[2]
+top=[s for s in L if not s.get('federationParent')]
+order=[s for s in top if s.get('connectionType')=='iroh']+[s for s in top if s.get('connectionType')!='iroh']
+rows=[]
+for s in order:
+    rows.append(s['localname']); rows+=[p['localname'] for p in L if p.get('federationParent')==s['localname']]
+print(222+144*rows.index(name) if name in rows else '')
+PY2
+}
+ALBUMS=${SMOKE_ALBUMS_XY:-"281 1030"}; PICKER=${SMOKE_PICKER_XY:-"1007 187"}
+ROW2=${SMOKE_PICKER_ROW2_XY:-"782 $(picker_row_y "$STD")"}; [ "$ROW2" != "782 " ] || ROW2="782 366"
 trap 'airplane disable; cfg_restore' EXIT
 log "order: $(cfg_order iroh)"
 app_stop; logcat_clear; wake; app_start
