@@ -143,8 +143,8 @@ Future<void> _startApp() async {
   unawaited(AutoDJManager().load());
   appLog('[app] mStream $kAppVersion started');
   // Which tunnel binary shipped: the crate version names the exact build a
-  // diagnostics export came from (tool/iroh-tunnel.version is what the
-  // checkout expected); a binary from before the symbol reads "pre-0.2.0".
+  // diagnostics export came from (tool/iroh-tunnel.properties is what the
+  // checkout pinned); a binary from before the symbol reads "pre-0.2.0".
   appLog('[iroh] native tunnel supported: ${IrohTunnel.isSupported}'
       '${IrohTunnel.isSupported ? ' (ABI v${IrohTunnel.instance.abiVersion}, crate ${IrohTunnel.instance.version ?? 'pre-0.2.0'})' : ''}'
       '${IrohTunnel.unsupportedReason == null ? '' : ' — ${IrohTunnel.unsupportedReason}'}');

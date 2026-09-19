@@ -77,16 +77,16 @@ dependencies:
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
   wifi_lock_shim:
     path: packages/wifi_lock_shim
-  # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM binaryTarget
-  # that links/embeds the committed iroh_tunnel.xcframework into Runner
-  # (fetched from a mstream-iroh-tunnel release by tool/fetch-iroh-tunnel.sh).
-  # Android is unchanged (jniLibs).
+  # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM remote
+  # binaryTarget on a tagged mstream-iroh-tunnel release (url + checksum in its
+  # Package.swift; tool/fetch-iroh-tunnel.sh moves the pin). Android fetches
+  # the same release's .so's at build time (android/app/build.gradle).
   iroh_tunnel_native:
     path: packages/iroh_tunnel_native
   # In-repo iOS packaging for the Rust visualizer audio sidecar: decodes the
   # playing track (file / HTTP Range) so the shader visualizer reacts to the
-  # real audio instead of the synthesized signal. Same committed-xcframework
-  # model (built by rust/viz_decoder/build-ios.sh).
+  # real audio instead of the synthesized signal. A committed xcframework
+  # (built by rust/viz_decoder/build-ios.sh), unlike the tunnel's remote one.
   viz_decoder_native:
     path: packages/viz_decoder_native
   material_ui: ^1.1.0

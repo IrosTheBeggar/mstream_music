@@ -85,9 +85,11 @@ consumes the crate — PLAN.md in that repo) and Phase 8 of
   1.1.0). A CHANGELOG from the first tag.
 - C ABI: `ABI_VERSION` (2), bumped only for a breaking change; this app's
   binding refuses `< 2` (`IrohTunnel.isSupported`).
-- Pins: this app in `tool/iroh-tunnel.version` (one line; read by the fetch
-  script, printed by the `[iroh]` startup diagnostic once
-  `mstream_iroh_version` exists); the player in its `Cargo.toml`.
+- Pins: this app in `tool/iroh-tunnel.properties` (the tag and the Android zip's
+  SHA-256, read by the Gradle download task) and in the iOS `Package.swift`
+  (the remote binaryTarget's url + checksum), both written by the fetch
+  script; the `[iroh]` startup diagnostic prints what actually loaded
+  (`mstream_iroh_version`); the player in its `Cargo.toml`.
 
 ## 5. CI in the new repo
 
@@ -122,6 +124,20 @@ go; docs follow (`IROH_TRANSPORT_PLAN.md`'s header, `windows/iroh/README.md`,
 `binaryTarget(url:checksum:)` for Apple and a Gradle download task for
 Android, so binaries stop being committed — the history cost is already paid,
 so do it when the next binary bump would add another 40 MB.
+
+**Done 2026-09-19, ahead of the next bump.** The iOS `Package.swift` is a
+remote `binaryTarget(url:checksum:)` on the release asset (Xcode downloads it
+at package resolution and checks the published SwiftPM checksum); the Android
+build has `downloadIrohTunnel` + `unpackIrohTunnel` tasks in
+`android/app/build.gradle` (the zip cached under
+`~/.gradle/caches/mstream-iroh-tunnel/`, checked against the SHA-256 in
+`tool/iroh-tunnel.properties`, unpacked into `build/` and added to the jniLibs
+source set). `tool/fetch-iroh-tunnel.sh <tag>` now verifies a release and
+moves the two pins instead of staging files; the `Frameworks/` xcframework
+and the two `libiroh_tunnel.so` are gone from git. The release workflow's
+three verification steps are unchanged and now also prove the fetch. The
+desktop branch's macOS and Windows binaries stay committed until it does the
+same.
 
 **The terminal player.** T1 of its plan: `mstream-iroh-tunnel = { version,
 default-features = false, features = ["os-trust"] }` under its non-wasm

@@ -1,11 +1,12 @@
 name: iroh_tunnel_native
 description: >-
   In-repo iOS packaging for the Rust iroh tunnel (the shared crate
-  github.com/IrosTheBeggar/mstream-iroh-tunnel): vends the
-  prebuilt iroh_tunnel.xcframework to Runner via Swift Package Manager so it
-  is linked and embedded automatically. No Dart code — the FFI bindings live
-  in the app at lib/native/iroh_tunnel.dart. Android is unchanged (committed
-  jniLibs .so; both come from a crate release via tool/fetch-iroh-tunnel.sh).
+  github.com/IrosTheBeggar/mstream-iroh-tunnel): vends the crate release's
+  iroh_tunnel.xcframework to Runner as a Swift Package Manager remote
+  binaryTarget (url + checksum in Package.swift), so it is downloaded, linked
+  and embedded automatically. No Dart code — the FFI bindings live in the app
+  at lib/native/iroh_tunnel.dart. Android fetches the same release's .so's at
+  build time; tool/fetch-iroh-tunnel.sh moves both pins.
 version: 0.1.0
 publish_to: none
 
