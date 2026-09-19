@@ -165,7 +165,11 @@ mStream repo; its `docs/iroh-pairing-code.md` and
   committed one, `SHA256SUMS`, the SwiftPM checksums; `workflow_dispatch`
   re-runs it for an existing tag. Exercised by `v0.2.0` and a dispatched
   `v0.1.0`, so the binaries this app committed have matching assets. (M)
-- **E5 ✅ 2026-09-19** (this branch) — this app: the fetch script and version file; delete
+- **E5 ✅ 2026-09-19** (this branch; binaries re-staged from the `v0.2.0`
+  release by the script — 15 exports on every slice, one more than the
+  committed ones, `mstream_iroh_version`; sizes within 1 % of the hand builds;
+  the Android and iOS smoke suites have NOT run on them yet, which is the
+  review's job before this merges) — this app: the fetch script and version file; delete
   `rust/iroh_tunnel` and the build scripts; the docs; re-stage every binary
   from the release and diff the exported symbols against the committed ones
   (same source, same toolchain — sizes may differ by build host); run the
