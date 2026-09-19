@@ -1,4 +1,4 @@
-//! C ABI for Dart FFI (`dart:ffi`), following rust/iroh_tunnel/src/c_api.rs:
+//! C ABI for Dart FFI (`dart:ffi`), following the mstream-iroh-tunnel crate/src/c_api.rs:
 //! a tiny hand-written surface, every entry point panic-guarded so nothing
 //! unwinds across the `extern "C"` boundary — a panic lands in the last-error
 //! slot and the call reports failure, and the Dart side falls back to the

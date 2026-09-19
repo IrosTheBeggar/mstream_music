@@ -1,6 +1,6 @@
 # iroh tunnel — keepalive & battery policy
 
-How the iroh remote-access tunnel (`rust/iroh_tunnel/`) behaves with respect to
+How the iroh remote-access tunnel (the shared crate, <https://github.com/IrosTheBeggar/mstream-iroh-tunnel>) behaves with respect to
 QUIC keepalive, idle timeouts, and Android battery — and why the client sets **no
 custom transport config**. Verified against the pinned **iroh 1.1.0** source (noq-proto 1.2.0); re-checked on the
 2026-09-07 update from 1.0.0 — every constant below is unchanged.

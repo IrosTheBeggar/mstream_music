@@ -1,8 +1,8 @@
 // swift-tools-version: 5.9
-// Vends the prebuilt Rust iroh tunnel (rust/iroh_tunnel) to Runner as a
+// Vends the prebuilt Rust iroh tunnel (the mstream-iroh-tunnel crate) to Runner as a
 // dynamic xcframework. Flutter's SwiftPM integration links it into the app
 // and Xcode embeds + signs it automatically. Rebuild the binary with
-// rust/iroh_tunnel/build-ios.sh (the xcframework is committed to git).
+// tool/fetch-iroh-tunnel.sh from a crate release (the xcframework is committed to git).
 import PackageDescription
 
 let package = Package(
