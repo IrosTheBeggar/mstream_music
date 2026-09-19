@@ -20,7 +20,7 @@ symphonia = { version = "0.5", features = ["mp3", "aac", "isomp4", "alac", "caf"
 # to the synthesized signal rather than skipping verification.
 ureq = { version = "2", default-features = false, features = ["tls"] }
 
-# Size-optimized release, matching rust/iroh_tunnel. rustc strips cdylibs with
+# Size-optimized release, matching the mstream-iroh-tunnel crate. rustc strips cdylibs with
 # `strip -x`, which keeps the exported C symbols.
 [profile.release]
 opt-level = "z"

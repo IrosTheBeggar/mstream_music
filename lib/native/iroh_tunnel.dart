@@ -1,11 +1,12 @@
-// Dart FFI binding for the iroh remote-access tunnel (rust/iroh_tunnel).
+// Dart FFI binding for the iroh remote-access tunnel — the shared crate
+// github.com/IrosTheBeggar/mstream-iroh-tunnel (formerly rust/iroh_tunnel here).
 //
-// Talks to the C ABI in `rust/iroh_tunnel/src/c_api.rs` via a prebuilt
+// Talks to the C ABI in the crate's `src/c_api.rs` via a prebuilt
 // native library:
 //   - Android: `libiroh_tunnel.so` (android/app/src/main/jniLibs/<abi>/,
-//     built by rust/iroh_tunnel/build-android.sh)
+//     fetched from a crate release by tool/fetch-iroh-tunnel.sh)
 //   - iOS: `iroh_tunnel.framework` embedded in the app bundle (vended by
-//     packages/iroh_tunnel_native, built by rust/iroh_tunnel/build-ios.sh)
+//     packages/iroh_tunnel_native, fetched the same way)
 //
 // ABI v2: tunnels are keyed by an app-chosen id — the server's identity, so
 // several can run at once (a Quick Connect server and a directly-reached
@@ -104,7 +105,7 @@ class _Bindings {
       abi = lib.lookupFunction<_Int32Native, _Int32Dart>('mstream_iroh_abi_version')();
     } on ArgumentError {
       throw IrohTunnelException(
-          'native tunnel binary predates ABI v$kIrohTunnelAbiVersion — rebuild it (rust/iroh_tunnel/build-*.sh)');
+          'native tunnel binary predates ABI v$kIrohTunnelAbiVersion — refresh it (tool/fetch-iroh-tunnel.sh)');
     }
     if (abi < kIrohTunnelAbiVersion) {
       throw IrohTunnelException(
@@ -329,10 +330,10 @@ class IrohTunnel {
 }
 
 /// Tunnel connection status — mirrors the STATUS_* codes in
-/// rust/iroh_tunnel/src/lib.rs (index == code).
+/// the crate's src/lib.rs (index == code).
 enum IrohTunnelStatus { connecting, connected, reconnecting, rejected, down }
 
-/// Tunnel path kind — mirrors the PATH_* codes in rust/iroh_tunnel/src/lib.rs
+/// Tunnel path kind — mirrors the PATH_* codes in the crate's src/lib.rs
 /// (index == code). `direct` is a hole-punched peer-to-peer path (fast);
 /// `relay` means traffic is routed via a relay server (works anywhere, slower).
 enum IrohPathKind { unknown, direct, relay }

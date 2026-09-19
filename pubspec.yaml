@@ -79,7 +79,8 @@ dependencies:
     path: packages/wifi_lock_shim
   # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM binaryTarget
   # that links/embeds the committed iroh_tunnel.xcframework into Runner
-  # (built by rust/iroh_tunnel/build-ios.sh). Android is unchanged (jniLibs).
+  # (fetched from a mstream-iroh-tunnel release by tool/fetch-iroh-tunnel.sh).
+  # Android is unchanged (jniLibs).
   iroh_tunnel_native:
     path: packages/iroh_tunnel_native
   # In-repo iOS packaging for the Rust visualizer audio sidecar: decodes the

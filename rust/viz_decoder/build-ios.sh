@@ -3,7 +3,7 @@
 # into the viz_decoder_native plugin, where Flutter's SwiftPM support links it
 # into Runner and embeds + signs it automatically.
 #
-# Same model as rust/iroh_tunnel/build-ios.sh: the xcframework is COMMITTED to
+# Same model as the mstream-iroh-tunnel crate/build-ios.sh: the xcframework is COMMITTED to
 # git (release CI has no Rust toolchain and ships the committed binary).
 # RULE: after changing rust/viz_decoder/, re-run this script and commit the
 # updated xcframework.

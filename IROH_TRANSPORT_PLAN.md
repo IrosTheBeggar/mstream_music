@@ -1,5 +1,7 @@
 # iroh P2P Transport — Android App Implementation Plan
 
+**Where the client lives now (2026-09-19):** the Rust core, its C ABI, the build scripts and the interop harness moved out of this repo into the shared crate <https://github.com/IrosTheBeggar/mstream-iroh-tunnel> (`rust/iroh_tunnel/` here is gone). This app loads the crate's prebuilt binaries, fetched from a tagged release by `tool/fetch-iroh-tunnel.sh` (the version in `tool/iroh-tunnel.version`) into the same committed places as before; the C ABI and the Dart binding are unchanged. The plan below is the history of building it. See `IROH_TUNNEL_CRATE_PLAN.md` for the move.
+
 **Status:** server side **DONE** — mStream [PR #643](https://github.com/IrosTheBeggar/mStream/pull/643) "feat(iroh): opt-in P2P remote-access tunnel (Phase 2A)". This plan covers the **Android client** ("Phase 2B"). · **Feasibility:** confirmed by Phase 0 spikes + the shipped server. · Updated 2026-06-19.
 
 Add [iroh](https://www.iroh.computer/) as an **alternative way for the app to reach an mStream server** — dial the server by its cryptographic EndpointId, no port-forwarding / DDNS / public IP / reverse proxy, and no self-signed-TLS friction. It's an *addition*: HTTP(S) stays the default. The **server half already exists and defines the protocol** — the app must match it exactly.
@@ -53,7 +55,7 @@ A passing server test tunnels a literal `GET /probe HTTP/1.0` and gets a `200` w
 ## 4. Architecture (app)
 
 ### 4.1 Native shim (Rust, `iroh` core) — a 1:1 port of `mstream-iroh-client.mjs` ✅ built
-Lives in `rust/iroh_tunnel/` (`src/lib.rs` async core, `src/ffi.rs` owned Tokio runtime, `src/c_api.rs` C ABI). C ABI surface (consumed via `dart:ffi` in `lib/native/iroh_tunnel.dart`):
+Lived in `rust/iroh_tunnel/` — now the shared crate (`src/lib.rs` async core, `src/ffi.rs` owned Tokio runtime, `src/c_api.rs` C ABI). C ABI surface (consumed via `dart:ffi` in `lib/native/iroh_tunnel.dart`):
 - `mstream_iroh_start(pairing_code, local_port) -> port` — parse the composite code, bind ephemeral endpoint, `online()`, connect on `mstream/tunnel/2`, **do the secret handshake**, start the localhost TCP listener, return the port.
 - `mstream_iroh_stop()`, `mstream_iroh_is_active()`, `mstream_iroh_last_error()`.
 - (status stream — `connecting | online | handshaking | connected | rejected | error` — deferred to M3 UI; not needed for the M1 connect proof.)
@@ -81,9 +83,9 @@ Keep the endpoint + proxy alive during background playback via the existing `aud
 ## 5. Milestones (app only — server M1 is done)
 
 ### M1 — Shim + binding + on-device connect **against the live PR #643 server** *(retires the last unknown)*
-- ✅ `iroh` core-only Rust crate implementing the full §2 contract (incl. handshake) — `rust/iroh_tunnel/`.
-- ✅ **Interop proven on desktop:** the Rust client tunnels JSON + a Range/seek (206) request + concurrency against a faithful replica of the PR #643 server (`rust/iroh_tunnel/interop/harness.mjs`).
-- ✅ C ABI (`src/c_api.rs`) + Dart FFI binding (`lib/native/iroh_tunnel.dart`); cross-compiles for both ABIs (`build-android.sh`).
+- ✅ `iroh` core-only Rust crate implementing the full §2 contract (incl. handshake) — `rust/iroh_tunnel/`, now the shared crate.
+- ✅ **Interop proven on desktop:** the Rust client tunnels JSON + a Range/seek (206) request + concurrency against a faithful replica of the PR #643 server (the crate's `interop/harness.mjs`).
+- ✅ C ABI (`src/c_api.rs`) + Dart FFI binding (`lib/native/iroh_tunnel.dart`); cross-compiles for both ABIs (the crate's `build-android.sh`).
 - ✅ **Device-verified (2026-06-21, Galaxy S25):** scanning the server's QR + Test connection completed the handshake and returned the server version through the tunnel. Also fixed an Android-only crash — iroh needs the app `Context` via `ndk_context` (now registered from `IrohNative`/`MainActivity` at startup) and the C ABI is panic-guarded (`catch_unwind`).
 
 ### M2 — Connection model + QR pairing UI + sign-in + playback

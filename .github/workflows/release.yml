@@ -110,8 +110,8 @@ jobs:
         # android/app/src/main/jniLibs/<abi>/libiroh_tunnel.so (same model as
         # libprojectM — this runner has no Rust/NDK toolchain). Fail loudly if it is
         # missing from the built artifacts, so a dropped/forgotten .so can't silently
-        # ship a release with no remote access. Rebuild + recommit via
-        # rust/iroh_tunnel/build-android.sh when the Rust shim changes.
+        # ship a release with no remote access. Refresh + recommit via
+        # tool/fetch-iroh-tunnel.sh when the tunnel crate is bumped.
         run: |
           set -euo pipefail
           apk=build/app/outputs/flutter-apk/app-full-release.apk
