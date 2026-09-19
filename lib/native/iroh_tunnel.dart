@@ -81,6 +81,10 @@ DynamicLibrary _openNativeLib() {
 
 class _Bindings {
   final int abiVersion;
+  /// `mstream_iroh_version` — the crate version the binary was built from.
+  /// Additive to ABI v2 (crate 0.2.0), so a binary from before it simply
+  /// lacks the symbol; null then.
+  final _StrNative? versionPtr;
   final _StartDart start;
   final _KeyVoidDart stop;
   final _KeyBoolDart isActive;
@@ -111,8 +115,15 @@ class _Bindings {
       throw IrohTunnelException(
           'native tunnel binary is ABI v$abi; this app needs v$kIrohTunnelAbiVersion — rebuild it');
     }
+    _StrNative? version;
+    try {
+      version = lib.lookupFunction<_StrNative, _StrNative>('mstream_iroh_version');
+    } on ArgumentError {
+      version = null; // a v0.1.x binary: ABI 2 without the version symbol
+    }
     return _Bindings._(
       abi,
+      version,
       lib.lookupFunction<_StartNative, _StartDart>('mstream_iroh_start'),
       lib.lookupFunction<_KeyVoidNative, _KeyVoidDart>('mstream_iroh_stop'),
       lib.lookupFunction<_KeyBoolNative, _KeyBoolDart>('mstream_iroh_is_active'),
@@ -131,6 +142,7 @@ class _Bindings {
 
   _Bindings._(
       this.abiVersion,
+      this.versionPtr,
       this.start,
       this.stop,
       this.isActive,
@@ -166,6 +178,13 @@ class _Bindings {
   }
 
   String? takeLastError() => takeString(lastError());
+
+  /// The crate version the binary was built from, or null on a binary from
+  /// before the symbol existed.
+  String? takeVersion() {
+    final f = versionPtr;
+    return f == null ? null : takeString(f());
+  }
 }
 
 /// Thin Dart wrapper over the native tunnel table. Available only where the
@@ -211,6 +230,10 @@ class IrohTunnel {
 
   /// The running binary's C ABI version, or 0 when unsupported.
   int get abiVersion => isSupported ? _b.abiVersion : 0;
+
+  /// The tunnel crate's version (`mstream_iroh_version`, e.g. "0.2.0"), or
+  /// null when the binary predates the symbol or the tunnel is unsupported.
+  String? get version => isSupported ? _b.takeVersion() : null;
 
   /// Start the tunnel for [key] from [code] — a Quick Connect pairing code or
   /// a federation guest ticket; returns the loopback port to use as that
