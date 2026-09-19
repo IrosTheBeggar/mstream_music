@@ -495,7 +495,12 @@ that aged out, so the hourly re-ask still reaches the parent and refreshes
 its memory (a peer upgraded to a minting build is otherwise rediscovered
 by nobody) — with `ensureTunnels('direct-hint')` when a denial lifts or
 lands. Older servers omit the key and the app behaves as before; the rig's
-peer always mints, so the `false` path is unit-tested only.
+peer always mints, so the `false` path is unit-tested only. Emulator (arm64
+AVD, the merged server): the rig with two new assertions — the listing says
+`direct: null` before anyone asks and `true` once the token is cached —
+**23 pass, 0 fail, 0 skip**; the two earlier runs failed only on the rig's
+own play nudge (now a poll) and on a stale peer record from an older
+session on that emulator.
 
 **Order and size.** 8a first — the wrongly skipped track is the one a
 listener meets (M: the probe, the decision, the chain, one test file, one
