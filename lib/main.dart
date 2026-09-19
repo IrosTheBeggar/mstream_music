@@ -142,6 +142,12 @@ Future<void> _startApp() async {
   unawaited(PlaylistManager().load());
   unawaited(AutoDJManager().load());
   appLog('[app] mStream $kAppVersion started');
+  // Which tunnel binary shipped: the crate version names the exact build a
+  // diagnostics export came from (tool/iroh-tunnel.version is what the
+  // checkout expected); a binary from before the symbol reads "pre-0.2.0".
+  appLog('[iroh] native tunnel supported: ${IrohTunnel.isSupported}'
+      '${IrohTunnel.isSupported ? ' (ABI v${IrohTunnel.instance.abiVersion}, crate ${IrohTunnel.instance.version ?? 'pre-0.2.0'})' : ''}'
+      '${IrohTunnel.unsupportedReason == null ? '' : ' — ${IrohTunnel.unsupportedReason}'}');
 
   // Wrap MaterialApp in a StreamBuilder bound to the theme + locale
   // settings so switching either triggers a full rebuild. setActive runs
