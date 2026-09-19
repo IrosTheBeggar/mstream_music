@@ -237,7 +237,7 @@ print(on, off)" 2>/dev/null; }
       if wait_for_log_after "$T" "direct auth lapsed for=$PEER_LN \(http 40[13]\)" 25; then
         pass "the playback path saw the lapsed token"
         wait_for_log_after "$T" "guest credential refreshed in place \(401\) for=$PEER_LN" 40 && pass "guest ticket renewed from the playback path" || fail "no renewal after the 401"
-        if ensure_playing 20; then pass "playback continues after the lapse ($(session_state))"; else save_applog rig-lapse; fail "playback lost after the lapse ($(session_state))"; fi
+        if wait_playing 20; then pass "playback continues after the lapse ($(session_state))"; else save_applog rig-lapse; fail "playback lost after the lapse ($(session_state))"; fi
         SK=$(applog | tail -n +$N0 | grep -c "skipping track"); [ "$SK" -eq 0 ] && pass "no track skipped over the lapse" || fail "$SK track(s) skipped over the lapse"
       elif wait_for_log_after "$T" "guest credential refreshed in place \(stale\) for=$PEER_LN" 5; then
         skip "the poll renewed the ticket before the next track asked — lapse leg not exercised"
