@@ -124,6 +124,16 @@ ensure_playing() { # <timeout s> → 0 when PLAYING
   while [ "$i" -lt "$t" ]; do is_playing && return 0; sleep 1; i=$((i+1)); done
   return 1
 }
+# Like ensure_playing, but never presses anything: for a moment the app is
+# expected to resume on its own (a renewal's re-seed, a heal). A PLAY key sent
+# while the app already considers itself playing is folded into the media
+# toggle and PAUSES it (emulator, 2026-09-18: the reload was still in flight
+# when the check looked, and the nudge undid the resume it was waiting for).
+wait_playing() { # <timeout s> → 0 when PLAYING
+  local t="${1:-15}" i=0
+  while [ "$i" -lt "$t" ]; do is_playing && return 0; sleep 1; i=$((i+1)); done
+  return 1
+}
 
 # ── device config (servers.json / auto_dj.json / queue.json), backed up + restored on exit ──
 # queue.json too: a run that queues tracks from a server it then removes (the

@@ -102,6 +102,14 @@ STATUS=$(curl -s "http://127.0.0.1:$PB/api/v1/federation/peers" -H "x-access-tok
 [ "$STATUS" = ok ] && pass "B dialed A over the federation endpoint (peer id $PEER_ID, status ok)" || fail "peer status on B: $STATUS"
 VIA=$(curl -s "http://127.0.0.1:$PB/api/v1/federation/peers/$PEER_ID/api/api/" -H "x-access-token: $TB" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('server'), d.get('user',{}).get('vpaths'))")
 case "$VIA" in *"['demo']"*) pass "proxied /api/ reaches A scoped to the granted library ($VIA)";; *) fail "proxied /api/ answered: $VIA";; esac
+# The listing's per-peer `direct` hint (mStream #1003, FEDERATION_PLAN 8d): what
+# B has learned about reaching A directly. Nobody has asked yet, so null; an
+# older server omits the key and the leg is skipped, not failed.
+direct_hint() { curl -s "http://127.0.0.1:$PB/api/v1/federation/peers" -H "x-access-token: $TB" | python3 -c "
+import sys,json
+p=json.load(sys.stdin)['peers']; print('absent' if not p or 'direct' not in p[0] else json.dumps(p[0]['direct']))"; }
+HINT=$(direct_hint)
+case "$HINT" in null) pass "the peers listing carries direct=null before anyone asks";; absent) skip "this server build has no direct hint in the peers listing";; *) fail "direct hint before any ask: $HINT";; esac
 KEY_ID=$(curl -s "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "x-access-token: $TA" | python3 -c "import sys,json; k=json.load(sys.stdin); k=k.get('keys', k) if isinstance(k, dict) else k; print(k[0]['id'] if k else '')" 2>/dev/null)
 if [ "${SMOKE_RIG_SERVERS_ONLY:-0}" = 1 ]; then
   trap - EXIT; cfg_restore >/dev/null 2>&1
@@ -162,6 +170,8 @@ restart_b() { # the parent again, same config and env; the access cache starts e
 peer_port() { applog | grep -oE "tunnel up port=[0-9]+ .*for=$PEER_LN" | tail -1 | grep -oE 'port=[0-9]+' | cut -d= -f2; }
 DIRECT=0
 if wait_for_log "\[federation\] $PEER_LN: direct access issued" 30; then DIRECT=1; pass "guest ticket issued by the parent"
+  # ...and B now says so in the listing: a cached token is the hint.
+  [ "$HINT" = absent ] || { H2=$(direct_hint); [ "$H2" = true ] && pass "the peers listing says direct=true once the token is cached" || fail "direct hint after the mint: $H2"; }
 elif applog | grep -q "no direct access"; then skip "the parent declined direct access ($(applog | grep -oE 'no direct access \([^)]*\)' | head -1)) — proxy path only"
 else skip "no direct access from this server build — proxy path only"; fi
 if [ "$DIRECT" = 1 ]; then
@@ -227,7 +237,7 @@ print(on, off)" 2>/dev/null; }
       if wait_for_log_after "$T" "direct auth lapsed for=$PEER_LN \(http 40[13]\)" 25; then
         pass "the playback path saw the lapsed token"
         wait_for_log_after "$T" "guest credential refreshed in place \(401\) for=$PEER_LN" 40 && pass "guest ticket renewed from the playback path" || fail "no renewal after the 401"
-        if ensure_playing 20; then pass "playback continues after the lapse ($(session_state))"; else save_applog rig-lapse; fail "playback lost after the lapse ($(session_state))"; fi
+        if wait_playing 20; then pass "playback continues after the lapse ($(session_state))"; else save_applog rig-lapse; fail "playback lost after the lapse ($(session_state))"; fi
         SK=$(applog | tail -n +$N0 | grep -c "skipping track"); [ "$SK" -eq 0 ] && pass "no track skipped over the lapse" || fail "$SK track(s) skipped over the lapse"
       elif wait_for_log_after "$T" "guest credential refreshed in place \(stale\) for=$PEER_LN" 5; then
         skip "the poll renewed the ticket before the next track asked — lapse leg not exercised"

@@ -759,6 +759,48 @@ class ServerManager {
     unawaited(ensureTunnels(reason: 'direct-forgiven'));
   }
 
+  /// Fold the parent's `direct` hint for [peer] into its denial state
+  /// (FEDERATION_PLAN 8d): the parent's own word on whether the peer mints,
+  /// so a refusal is not learned one access call at a time. Returns true
+  /// when the denial changed — when the targets may have.
+  bool _applyDirectHint(Server peer, bool? hint) {
+    final next = applyDirectHint(
+        previousHint: peer.federationDirectHint,
+        hint: hint,
+        deniedAt: peer.directDeniedAt,
+        now: DateTime.now());
+    peer.federationDirectHint = hint;
+    if (next == peer.directDeniedAt) return false;
+    peer.directDeniedAt = next;
+    final word = next == null ? 'works — asking' : 'was refused — the proxy';
+    appLog('[federation] ${peer.localname}: the parent says direct access '
+        '$word');
+    return true;
+  }
+
+  /// The rule behind [_applyDirectHint]: the denial time after the hint.
+  /// Pure; unit-tested.
+  ///
+  /// `true` lifts any denial — the parent holds a token, so the peer mints.
+  /// `false` files a denial once, on the hint's first appearance or a flip
+  /// from `true`, and only when the client holds none: a denial of its own
+  /// (from an ask it made) keeps its more precise time, and a steady `false`
+  /// leaves an aged-out denial alone so the hourly re-ask still reaches the
+  /// parent and refreshes ITS memory — a peer that was upgraded is otherwise
+  /// never rediscovered by anyone. `null` (never asked, or a parent too old
+  /// to say) changes nothing.
+  @visibleForTesting
+  static DateTime? applyDirectHint(
+      {required bool? previousHint,
+      required bool? hint,
+      required DateTime? deniedAt,
+      required DateTime now}) {
+    if (hint == null) return deniedAt;
+    if (hint == true) return null;
+    if (previousHint == false) return deniedAt;
+    return deniedAt ?? now;
+  }
+
   /// The peer's own tunnel is up but its supervisor gave up on the guest
   /// token (the peer answered "NO"): a refresh through the parent is due.
   bool _directRefused(Server peer) {
@@ -2316,6 +2358,9 @@ class ServerManager {
   /// held for it. See [refreshFederatedPeers] for the rules.
   Future<void> _reconcilePeers(Server parent, List peers) async {
     bool changed = false;
+    // The parent's word on direct access moved for some peer (runtime state,
+    // nothing to write) — the targets may have moved with it.
+    bool hintChanged = false;
     // Ids first, names second: a peer the admin removed and re-added comes
     // back under a NEW row id (the plan's "peer ids are parent-side rowids"
     // risk). Matching by id alone would flag the old record missing and mint
@@ -2323,7 +2368,8 @@ class ServerManager {
     // id nobody holds is adopted by a child of the same name whose own id is
     // no longer listed.
     final Set<int> listed = {};
-    final entries = <({int id, String name, String? endpointId})>[];
+    final entries =
+        <({int id, String name, String? endpointId, bool? direct})>[];
     for (final p in peers) {
       if (p is! Map) continue;
       final id = p['id'];
@@ -2334,11 +2380,16 @@ class ServerManager {
       // tickets: kept for telling one peer under two parents apart later
       // (FEDERATION_PLAN 8c).
       final endpointId = p['endpointId'];
+      // What the parent has learned about reaching the peer directly
+      // (mStream #1003, FEDERATION_PLAN 8d): a bool when it has asked the
+      // peer to mint; null when it never has, or from a build too old to say.
+      final direct = p['direct'];
       entries.add((
         id: id,
         name: name,
         endpointId:
             endpointId is String && endpointId.isNotEmpty ? endpointId : null,
+        direct: direct is bool ? direct : null,
       ));
     }
     for (final e in entries) {
@@ -2360,6 +2411,7 @@ class ServerManager {
       if (existing == null) {
         final fresh =
             _newFederatedServer(parent, id, name, endpointId: e.endpointId);
+        if (_applyDirectHint(fresh, e.direct)) hintChanged = true;
         serverList.add(fresh);
         await _ensureDownloadDir(fresh);
         changed = true;
@@ -2379,7 +2431,11 @@ class ServerManager {
         existing.federationEndpointId = e.endpointId;
         changed = true;
       }
+      if (_applyDirectHint(existing, e.direct)) hintChanged = true;
     }
+    // A denial lifted or learned from the parent's word: re-evaluate what
+    // deserves a tunnel. Not gated on `changed` — nothing persisted moved.
+    if (hintChanged) unawaited(ensureTunnels(reason: 'direct-hint'));
 
     Server? vanishedUnderUs;
     for (final child in federatedChildren(parent)) {
