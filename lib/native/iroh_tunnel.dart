@@ -2,11 +2,12 @@
 // github.com/IrosTheBeggar/mstream-iroh-tunnel (formerly rust/iroh_tunnel here).
 //
 // Talks to the C ABI in the crate's `src/c_api.rs` via a prebuilt
-// native library:
-//   - Android: `libiroh_tunnel.so` (android/app/src/main/jniLibs/<abi>/,
-//     fetched from a crate release by tool/fetch-iroh-tunnel.sh)
-//   - iOS: `iroh_tunnel.framework` embedded in the app bundle (vended by
-//     packages/iroh_tunnel_native, fetched the same way)
+// native library from a tagged crate release, pinned by tool/iroh-tunnel.properties
+// (moved with tool/fetch-iroh-tunnel.sh <tag>):
+//   - Android: `libiroh_tunnel.so`, downloaded at build time by a Gradle
+//     task in android/app/build.gradle into the jniLibs of the APK
+//   - iOS: `iroh_tunnel.framework` embedded in the app bundle (a SwiftPM
+//     remote binaryTarget vended by packages/iroh_tunnel_native)
 //
 // ABI v2: tunnels are keyed by an app-chosen id — the server's identity, so
 // several can run at once (a Quick Connect server and a directly-reached
@@ -51,7 +52,7 @@ typedef _StrNative = Pointer<Utf8> Function();
 typedef _FreeNative = Void Function(Pointer<Utf8>);
 typedef _FreeDart = void Function(Pointer<Utf8>);
 
-/// The C ABI version this binding was written against. A committed binary
+/// The C ABI version this binding was written against. A shipped binary
 /// older than this is refused outright ([IrohTunnel.isSupported] is false and
 /// [IrohTunnel.unsupportedReason] says why) rather than being driven with
 /// arguments it would misread.
@@ -214,7 +215,7 @@ class IrohTunnel {
     if (!Platform.isAndroid && !Platform.isIOS) return false;
     try {
       // Opening the bindings also checks the ABI version (see _Bindings.open):
-      // a stale committed binary must not be driven with v2 arguments.
+      // a stale binary must not be driven with v2 arguments.
       instance._bindings ??= _Bindings.open();
       return true;
     } on IrohTunnelException catch (e) {

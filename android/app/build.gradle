@@ -68,9 +68,10 @@ android {
         //
         // ndk.abiFilters (what Flutter PACKAGES) keeps armeabi-v7a so 32-bit-ARM
         // devices stay supported on Google Play. That slice ships WITHOUT our native
-        // libs: libprojectM-4.so / libiroh_tunnel.so are prebuilt for arm64-v8a +
-        // x86_64 only (see src/main/jniLibs) and the CMake bridge below isn't built
-        // for armeabi-v7a either. The runtime guards handle the absence gracefully —
+        // libs: libprojectM-4.so (committed under src/main/jniLibs) and
+        // libiroh_tunnel.so (fetched at build time — the iroh tunnel section below)
+        // are prebuilt for arm64-v8a + x86_64 only, and the CMake bridge below isn't
+        // built for armeabi-v7a either. The runtime guards handle the absence gracefully —
         // VisualizerBridge catches the UnsatisfiedLinkError and reports "unavailable",
         // and iroh servers are gated off — so the rest of the app still runs. Dropping
         // armeabi-v7a is what cut Play device support, so we deliberately keep it.
@@ -151,6 +152,72 @@ android {
 flutter {
     source '../..'
 }
+
+// ---------------------------------------------------------------------------
+// The iroh tunnel libraries (libiroh_tunnel.so for arm64-v8a and x86_64) are
+// not committed. They come from a tagged release of the shared client crate
+// (github.com/IrosTheBeggar/mstream-iroh-tunnel), downloaded at build time and
+// checked against the SHA-256 pinned in tool/iroh-tunnel.properties, which
+// tool/fetch-iroh-tunnel.sh <tag> writes on a bump. The zip is kept under
+// ~/.gradle/caches/mstream-iroh-tunnel/ so a `flutter clean` or a second
+// worktree does not download it again and a build offline still packages it;
+// the unpacked libraries land in build/ and join the jniLibs source set, so
+// the release workflow's "is the .so in the APK" check is unchanged. iOS does
+// the same through the SwiftPM remote binaryTarget in
+// packages/iroh_tunnel_native. libprojectM-4.so stays committed in
+// src/main/jniLibs.
+def irohLock = new Properties()
+rootProject.file('../tool/iroh-tunnel.properties').withInputStream { irohLock.load(it) }
+def irohTag = irohLock.getProperty('tag')
+def irohSha = irohLock.getProperty('android.sha256')
+if (!irohTag || !irohSha) {
+    throw new GradleException('tool/iroh-tunnel.properties needs tag= and android.sha256= (run tool/fetch-iroh-tunnel.sh <tag>)')
+}
+def irohAsset = "iroh_tunnel-${irohTag}-android.zip"
+def irohUrl = "https://github.com/IrosTheBeggar/mstream-iroh-tunnel/releases/download/${irohTag}/${irohAsset}"
+def irohZip = new File(gradle.gradleUserHomeDir, "caches/mstream-iroh-tunnel/${irohAsset}")
+def irohLibs = layout.buildDirectory.dir("iroh-tunnel/${irohTag}/jniLibs").get().asFile
+
+def downloadIrohTunnel = tasks.register('downloadIrohTunnel') {
+    description = "Fetches ${irohAsset} from the crate's release unless the cached copy already matches tool/iroh-tunnel.properties"
+    // No declared outputs on purpose: the zip lives under the Gradle user
+    // home, which Gradle's file-system snapshot does not refresh between
+    // builds, so a deleted cache was still reported UP-TO-DATE. Hashing the
+    // 9 MB cached copy every build is the cheap, honest check instead.
+    doLast {
+        def sha256 = { File f ->
+            def md = java.security.MessageDigest.getInstance('SHA-256')
+            f.withInputStream { s ->
+                byte[] buf = new byte[1 << 16]
+                int n
+                while ((n = s.read(buf)) > 0) md.update(buf, 0, n)
+            }
+            new BigInteger(1, md.digest()).toString(16).padLeft(64, '0')
+        }
+        if (irohZip.isFile() && sha256(irohZip) == irohSha) return
+        irohZip.parentFile.mkdirs()
+        def part = new File(irohZip.path + '.part')
+        logger.lifecycle("iroh tunnel: fetching ${irohUrl}")
+        def conn = java.net.URI.create(irohUrl).toURL().openConnection()
+        conn.connectTimeout = 30000
+        conn.readTimeout = 120000
+        conn.inputStream.withStream { s -> part.withOutputStream { o -> o << s } }
+        def got = sha256(part)
+        if (got != irohSha) {
+            part.delete()
+            throw new GradleException("${irohAsset}: SHA-256 ${got} is not the ${irohSha} pinned in tool/iroh-tunnel.properties")
+        }
+        java.nio.file.Files.move(part.toPath(), irohZip.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+def unpackIrohTunnel = tasks.register('unpackIrohTunnel', Copy) {
+    description = "Unpacks the iroh tunnel libraries for ${irohTag} into the build directory"
+    dependsOn downloadIrohTunnel
+    from(zipTree(irohZip)) { include '*/libiroh_tunnel.so' }
+    into irohLibs
+}
+android.sourceSets.main.jniLibs.srcDir(irohLibs)
+tasks.named('preBuild') { dependsOn unpackIrohTunnel }
 
 // AGP 9 / built-in Kotlin: the kotlin-android plugin is removed from the
 // plugins block above and the old android.kotlinOptions is replaced by this

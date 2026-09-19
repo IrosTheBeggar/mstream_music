@@ -106,12 +106,13 @@ jobs:
           flutter build appbundle --release --flavor play --dart-define=VARIANT=play
 
       - name: Verify iroh tunnel .so is bundled
-        # The iroh remote-access transport ships as a prebuilt JNI lib committed under
-        # android/app/src/main/jniLibs/<abi>/libiroh_tunnel.so (same model as
-        # libprojectM — this runner has no Rust/NDK toolchain). Fail loudly if it is
-        # missing from the built artifacts, so a dropped/forgotten .so can't silently
-        # ship a release with no remote access. Refresh + recommit via
-        # tool/fetch-iroh-tunnel.sh when the tunnel crate is bumped.
+        # The iroh remote-access transport is a prebuilt JNI lib from a release of
+        # the shared crate, which the Gradle build downloads and checks against the
+        # SHA-256 pinned in tool/iroh-tunnel.properties (this runner has no Rust/NDK
+        # toolchain; libprojectM stays committed). Fail loudly if it is missing from
+        # the built artifacts, so a failed fetch or a dropped source set can't
+        # silently ship a release with no remote access. Bump the pin with
+        # tool/fetch-iroh-tunnel.sh <tag>.
         run: |
           set -euo pipefail
           apk=build/app/outputs/flutter-apk/app-full-release.apk
@@ -181,8 +182,10 @@ jobs:
     # (`needs` guarantees the release exists — softprops upserts by tag, so
     # this append can't race the creation). Unsigned because signing secrets
     # aren't wired up (see header); sideloaders re-sign on install anyway.
-    # Like the Android job, this runner has no Rust toolchain: the native
-    # transports ship as COMMITTED xcframeworks.
+    # Like the Android job, this runner has no Rust toolchain: iroh_tunnel is a
+    # SwiftPM remote binaryTarget on the crate release pinned in
+    # packages/iroh_tunnel_native (Xcode downloads it at package resolution and
+    # checks its checksum); viz_decoder is still a COMMITTED xcframework.
     runs-on: macos-15
     needs: build-and-release
     permissions:
@@ -213,9 +216,10 @@ jobs:
 
       - name: Verify native frameworks + privacy manifest are bundled
         # Same spirit as the Android job's jniLibs check: fail loudly if a
-        # committed xcframework vanished from the bundle (a dropped framework
-        # would ship a release with no remote access / no visualizer audio),
-        # or if the App-Store-required privacy manifest went missing.
+        # framework vanished from the bundle — the tunnel's downloaded one or
+        # the visualizer's committed one (a dropped framework would ship a
+        # release with no remote access / no visualizer audio) — or if the
+        # App-Store-required privacy manifest went missing.
         run: |
           set -euo pipefail
           app=build/ios/iphoneos/Runner.app

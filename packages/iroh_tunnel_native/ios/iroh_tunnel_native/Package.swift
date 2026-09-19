@@ -1,8 +1,12 @@
 // swift-tools-version: 5.9
 // Vends the prebuilt Rust iroh tunnel (the mstream-iroh-tunnel crate) to Runner as a
 // dynamic xcframework. Flutter's SwiftPM integration links it into the app
-// and Xcode embeds + signs it automatically. Rebuild the binary with
-// tool/fetch-iroh-tunnel.sh from a crate release (the xcframework is committed to git).
+// and Xcode embeds + signs it automatically. The binary is not committed: it
+// is a remote binaryTarget on a tagged release of the crate, which Xcode
+// downloads at package resolution and checks against the checksum below
+// (`swift package compute-checksum`, published with the release as
+// SWIFTPM-CHECKSUMS.txt). tool/fetch-iroh-tunnel.sh <tag> rewrites the url
+// and checksum lines on a bump.
 import PackageDescription
 
 let package = Package(
@@ -24,12 +28,12 @@ let package = Package(
         .library(name: "iroh-tunnel-native", targets: ["iroh_tunnel"])
     ],
     targets: [
-        // The path must stay inside this package directory — the Flutter tool
-        // symlinks the package into ios/Flutter/ephemeral, so ../ escapes
-        // would resolve against the symlink location.
+        // The zip holds iroh_tunnel.xcframework at its root (device + simulator
+        // arm64 slices); the target name must be the framework's.
         .binaryTarget(
             name: "iroh_tunnel",
-            path: "Frameworks/iroh_tunnel.xcframework"
+            url: "https://github.com/IrosTheBeggar/mstream-iroh-tunnel/releases/download/v0.2.0/iroh_tunnel-v0.2.0-ios.xcframework.zip",
+            checksum: "9f8e4c869b170359e2a8b8d2b78ababa28da6398f4fd109adb2c639b27fd0e19"
         )
     ]
 )
