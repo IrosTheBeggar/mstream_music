@@ -178,7 +178,7 @@ expect_pick() { # <phase> <track count> <server a localname> <server b localname
   T=$(now_ts)
   for i in $(seq 2 "$n"); do adbx shell input keyevent 87; sleep 1.5; done
   if wait_for_log_after "$T" '\[dj\] multi-server: [0-9]+/[0-9]+ answered' 90; then
-    line=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -oE '\[dj\] multi-server: [0-9]+/[0-9]+ answered, [0-9]+ usable, best [0-9.-]+ from [^ ]+' | head -1)
+    line=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -oE '\[dj\] multi-server: [0-9]+/[0-9]+ answered, [0-9]+ usable, (queueing [0-9]+; )?best [0-9.-]+ from [^ ]+' | head -1)
     ans=$(echo "$line" | grep -oE '[0-9]+/[0-9]+' | head -1); total=${ans#*/}; who=${line##* }
     [ "$ans" = "2/2" ] && pass "$ph: both servers answered — $line" || fail "$ph: not every server answered — $line"
     local hs; hs=$(applog | awk -v s="$T" '{ if (substr($1,1,12) >= s) print }' | grep -cE "\[dj\] ($sa|$sb) answers in model test-fake")
