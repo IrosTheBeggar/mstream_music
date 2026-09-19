@@ -127,7 +127,13 @@ READY=$(curl -s "http://127.0.0.1:$PB/api/" -H "x-access-token: $TB" | python3 -
 [ "$READY" = True ] && pass "B reports discoveryReady after the pass (the app's sonic gate reads it)" || fail "B reports discoveryReady=$READY after the pass"
 
 # ── pair them (A grants B its library) ─────────────────────────────────────
-TICKET=$(curl -s -X POST "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "$J" -H "x-access-token: $TA" -d '{"name":"Rig Parent B","vpaths":["demo"]}' | python3 -c "import sys,json; print(json.load(sys.stdin)['ticket'])")
+# The key's concurrent-stream cap (server default 3): expect_pick skips through
+# the album in seconds, and over the direct path a guest shares the cap, so the
+# streams left closing behind a run of NEXT presses tripped it (429, 2026-09-19).
+# Minted generous by default; SMOKE_DJ_MAX_STREAMS=3 puts the app's back-off
+# under test instead.
+DJ_MAX_STREAMS=${SMOKE_DJ_MAX_STREAMS:-12}
+TICKET=$(curl -s -X POST "http://127.0.0.1:$PA/api/v1/admin/federation/keys" -H "$J" -H "x-access-token: $TA" -d "{\"name\":\"Rig Parent B\",\"vpaths\":[\"demo\"],\"maxStreams\":$DJ_MAX_STREAMS}" | python3 -c "import sys,json; print(json.load(sys.stdin)['ticket'])")
 PEER=$(curl -s -X POST "http://127.0.0.1:$PB/api/v1/admin/federation/peers" -H "$J" -H "x-access-token: $TB" -d "{\"ticket\":$(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "$TICKET")}")
 PEER_ID=$(echo "$PEER" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))")
 STATUS=$(curl -s "http://127.0.0.1:$PB/api/v1/federation/peers" -H "x-access-token: $TB" | python3 -c "import sys,json; p=json.load(sys.stdin)['peers']; print(p[0]['lastStatus'] if p else 'none')")

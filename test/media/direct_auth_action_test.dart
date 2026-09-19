@@ -58,6 +58,17 @@ void main() {
       expect(act(probed: true, probedStatus: 410), DirectAuthAction.skip);
     });
 
+    // The federation key's concurrent-stream cap, which a guest shares with
+    // the parent: the streams a run of skips left open close on their own,
+    // so the track is worth a short wait and a reload, not a skip (the Auto
+    // DJ rig's rapid skips tripped it on the S25, 2026-09-19).
+    test('the peer at its stream cap → back off and reload', () {
+      expect(act(probed: true, probedStatus: 429), DirectAuthAction.backoff);
+      expect(AudioPlayerHandler.kDirectBusyAttempts, greaterThan(0));
+      expect(AudioPlayerHandler.kDirectBusyBackoff,
+          greaterThanOrEqualTo(const Duration(seconds: 1)));
+    });
+
     // A source that answers fine now was a blip; a 5xx or silence is the
     // walk's connectivity probe to judge.
     test('anything else the loopback says, or no answer → walk', () {

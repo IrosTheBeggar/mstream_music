@@ -68,9 +68,11 @@ enum ResumeFailureAction { rearm, skipTrack }
 /// What [AudioPlayerHandler.directAuthAction] decided about a failed track
 /// from a direct peer whose own tunnel is serving: [probe] its stream URL for
 /// a status first; then [refresh] the guest ticket through the parent and
-/// re-seed (a 401/403), [skip] a source the peer says is gone (a 404), or
-/// [walk] the ordinary retry/skip path.
-enum DirectAuthAction { probe, refresh, skip, walk }
+/// re-seed (a 401/403), [skip] a source the peer says is gone (a 404),
+/// [backoff] and reload when the peer is at its concurrent-stream cap (a
+/// 429 — the streams a run of skips left behind close on their own within
+/// moments), or [walk] the ordinary retry/skip path.
+enum DirectAuthAction { probe, refresh, skip, backoff, walk }
 
 class AudioPlayerHandler extends BaseAudioHandler
     with QueueHandler, SeekHandler {
@@ -1295,6 +1297,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// so the walk owns it. Shares the iroh recovery's per-server cooldown.
   static const Duration kDirectAuthRecoveryGap = Duration(seconds: 10);
 
+  /// A direct peer at its concurrent-stream cap (the federation key's
+  /// `maxStreams`, which a guest shares with the parent) answers 429 until
+  /// the streams already open close — a few seconds after a run of skips.
+  /// Wait this long between re-probes, this many times, before the walk.
+  static const Duration kDirectBusyBackoff = Duration(seconds: 3);
+  static const int kDirectBusyAttempts = 3;
+
   /// What to do about a failed track from a direct peer. Pure; unit-tested.
   ///
   /// Two calls per failure. With [probed] false it says whether the loopback
@@ -1327,6 +1336,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       case 404:
       case 410:
         return DirectAuthAction.skip;
+      case 429:
+        return DirectAuthAction.backoff;
       default:
         return DirectAuthAction.walk;
     }
@@ -1368,7 +1379,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// fine and the stale one a 401, and then a reload with fresh URLs is the
   /// whole fix. Returns the verdict and, after a refresh, what the parent
   /// said; the caller reloads.
-  Future<({DirectAuthAction action, DirectAccessOutcome? outcome})>
+  Future<({DirectAuthAction action, DirectAccessOutcome? outcome, int? status})>
       _renewLapsedGuestToken(Server server, MediaItem item) async {
     final name = server.localname;
     final status = await probeStreamStatus(_withRebuiltUrl(item).id);
@@ -1382,7 +1393,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     appLog('[play] direct peer answered ${status ?? 'nothing'} for the '
         'failed track → ${action.name} for=$name');
     if (action != DirectAuthAction.refresh) {
-      return (action: action, outcome: null);
+      return (action: action, outcome: null, status: status);
     }
     appLog('[play] direct auth lapsed for=$name (http $status) — '
         'refreshing the guest ticket');
@@ -1401,7 +1412,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         appLog('[play] guest ticket not renewed (${outcome.name}) '
             'for=$name — the walk takes the track');
     }
-    return (action: action, outcome: outcome);
+    return (action: action, outcome: outcome, status: status);
   }
 
   // Recover from a load that a direct peer's own tunnel refused
@@ -1447,6 +1458,42 @@ class AudioPlayerHandler extends BaseAudioHandler
           }
         case DirectAuthAction.skip:
           skip = true;
+        case DirectAuthAction.backoff:
+          // The peer is at its concurrent-stream cap: not the source's
+          // fault and not the tunnel's, so neither budget is touched. The
+          // streams a run of skips left open close within moments — wait,
+          // ask again, and reload at the spot once the peer has room;
+          // the walk only once it stays busy.
+          final name = server.localname;
+          var status = verdict.status;
+          for (var i = 1; i <= kDirectBusyAttempts; i++) {
+            appLog('[play] direct peer busy (http $status) for=$name — '
+                'retry $i/$kDirectBusyAttempts in '
+                '${kDirectBusyBackoff.inSeconds}s');
+            await Future<void>.delayed(kDirectBusyBackoff);
+            if (queue.value.isEmpty || !identical(_backend, _localBackend)) {
+              return;
+            }
+            status = await probeStreamStatus(_withRebuiltUrl(failed).id);
+            if (status != 429) break;
+          }
+          if (status != null && status >= 200 && status < 300) {
+            appLog('[play] direct peer has room again (http $status) '
+                'for=$name — reloading at the spot');
+            final spot = _reviveSpot();
+            final fresh = queue.value
+                .map((m) => _withRebuiltArt(_withRebuiltUrl(m)))
+                .toList();
+            queue.add(fresh);
+            await _loadAtSpot(_localBackend, fresh, spot);
+            if (_playIntent && !_recentlyInterrupted) {
+              unawaited(_localBackend.play());
+            }
+          } else {
+            appLog('[play] direct peer still busy (http $status) for=$name '
+                '— the walk takes the track');
+            followUp = error;
+          }
         case DirectAuthAction.walk:
         case DirectAuthAction.probe:
           // Answered, and not about the token: count it against the
