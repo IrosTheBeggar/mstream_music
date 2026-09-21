@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "每日播放次数",
   "listeningPlaysPerMonth": "每月播放次数",
   "listeningMostOnDay": "{count, plural, other{最多在 {date}：{count} 次播放}}",
-  "listeningMostInMonth": "{count, plural, other{最多在 {month}：{count} 次播放}}"
+  "listeningMostInMonth": "{count, plural, other{最多在 {month}：{count} 次播放}}",
+  "settingsHomeWidget": "主屏幕小组件",
+  "settingsHomeWidgetSubtitle": "将“正在播放”小组件以五种尺寸之一添加到主屏幕。",
+  "settingsHomeWidgetSubtitleIos": "长按主屏幕，添加小组件并选择 mStream Music。",
+  "homeWidgetPickSize": "选择尺寸",
+  "homeWidgetPinUnsupported": "此启动器无法从这里添加小组件，请使用它自带的小组件选择器。"
 }

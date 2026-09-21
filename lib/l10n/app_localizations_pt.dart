@@ -4298,4 +4298,22 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Widget da tela inicial';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Adicione o widget Tocando agora à tela inicial em um de cinco tamanhos.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Toque e segure na tela inicial, adicione um widget e escolha mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Escolha um tamanho';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'Este launcher não consegue adicionar widgets daqui. Use o seletor de widgets dele.';
 }

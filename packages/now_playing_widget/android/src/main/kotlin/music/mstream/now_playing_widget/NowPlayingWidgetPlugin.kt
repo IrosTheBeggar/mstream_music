@@ -55,7 +55,8 @@ class NowPlayingWidgetPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             // The iOS side holds a cold-launch intent for this; Android's
             // taps never pass through Dart, so there is nothing to release.
             "ready" -> result.success(null)
-            "requestPin" -> result.success(requestPin(context))
+            "requestPin" -> result.success(requestPin(context, call.arguments as? String))
+            "pinTargets" -> result.success(pinTargets(context))
             "debugState" -> result.success(debugState(context))
             "debugForceLayout" -> {
                 val name = call.arguments as? String
@@ -131,17 +132,28 @@ class NowPlayingWidgetPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             return s.hasTrack && s.playing && s.durationMs > 0 && Renderer.anyProgressInstance(context)
         }
 
-        fun requestPin(context: Context): Boolean {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        /** Whether this launcher takes pin requests at all (Android 8+, and its say). */
+        fun pinSupported(context: Context): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
+
+        /** Ask the launcher to place one size's widget ("2x1" … "4x3"; null = the 4x1). */
+        fun requestPin(context: Context, size: String?): Boolean {
+            if (!pinSupported(context)) return false
             val manager = AppWidgetManager.getInstance(context)
-            if (!manager.isRequestPinAppWidgetSupported) return false
             return try {
-                manager.requestPinAppWidget(Renderer.component(context), null, null)
+                manager.requestPinAppWidget(Renderer.component(context, size), null, null)
             } catch (e: Exception) {
                 Log.w(TAG, "requestPin failed: ${e.javaClass.simpleName}")
                 false
             }
         }
+
+        /** The sizes Settings can offer, with their labels, and whether pinning works here. */
+        fun pinTargets(context: Context): Map<String, Any?> = mapOf(
+            "supported" to pinSupported(context),
+            "targets" to Renderer.pinTargets(context),
+        )
 
         fun debugState(context: Context): Map<String, Any?> {
             val snapshot = Store.load(context)

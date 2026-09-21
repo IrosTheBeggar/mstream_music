@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "1日あたりの再生数",
   "listeningPlaysPerMonth": "月ごとの再生数",
   "listeningMostOnDay": "{count, plural, other{最多は {date}：{count} 回再生}}",
-  "listeningMostInMonth": "{count, plural, other{最多は {month}：{count} 回再生}}"
+  "listeningMostInMonth": "{count, plural, other{最多は {month}：{count} 回再生}}",
+  "settingsHomeWidget": "ホーム画面ウィジェット",
+  "settingsHomeWidgetSubtitle": "「再生中」ウィジェットを 5 種類のサイズからホーム画面に追加します。",
+  "settingsHomeWidgetSubtitleIos": "ホーム画面を長押しし、ウィジェットを追加して mStream Music を選びます。",
+  "homeWidgetPickSize": "サイズを選択",
+  "homeWidgetPinUnsupported": "このランチャーはここからウィジェットを追加できません。ランチャーのウィジェット一覧から追加してください。"
 }

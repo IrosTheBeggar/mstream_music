@@ -4261,4 +4261,22 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Home screen widget';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Add the Now Playing widget to your home screen in one of five sizes.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Long-press the home screen, add a widget, and pick mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Choose a size';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'This launcher can\'t add widgets from here. Use its own widget picker.';
 }

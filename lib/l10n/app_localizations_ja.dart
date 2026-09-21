@@ -4099,4 +4099,22 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'ホーム画面ウィジェット';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      '「再生中」ウィジェットを 5 種類のサイズからホーム画面に追加します。';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'ホーム画面を長押しし、ウィジェットを追加して mStream Music を選びます。';
+
+  @override
+  String get homeWidgetPickSize => 'サイズを選択';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'このランチャーはここからウィジェットを追加できません。ランチャーのウィジェット一覧から追加してください。';
 }

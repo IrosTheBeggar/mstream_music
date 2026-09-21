@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "Reproducciones por día",
   "listeningPlaysPerMonth": "Reproducciones por mes",
   "listeningMostOnDay": "{count, plural, =1{Más el {date}: 1 reproducción} other{Más el {date}: {count} reproducciones}}",
-  "listeningMostInMonth": "{count, plural, =1{Más en {month}: 1 reproducción} other{Más en {month}: {count} reproducciones}}"
+  "listeningMostInMonth": "{count, plural, =1{Más en {month}: 1 reproducción} other{Más en {month}: {count} reproducciones}}",
+  "settingsHomeWidget": "Widget de pantalla de inicio",
+  "settingsHomeWidgetSubtitle": "Añade el widget Reproduciendo ahora a la pantalla de inicio en uno de cinco tamaños.",
+  "settingsHomeWidgetSubtitleIos": "Mantén pulsada la pantalla de inicio, añade un widget y elige mStream Music.",
+  "homeWidgetPickSize": "Elige un tamaño",
+  "homeWidgetPinUnsupported": "Este launcher no puede añadir widgets desde aquí. Usa su propio selector de widgets."
 }

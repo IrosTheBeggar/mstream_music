@@ -4378,4 +4378,22 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Виджет на главном экране';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Добавьте виджет «Сейчас играет» на главный экран в одном из пяти размеров.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Удерживайте главный экран, добавьте виджет и выберите mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Выберите размер';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'Этот лаунчер не может добавлять виджеты отсюда. Воспользуйтесь его собственным списком виджетов.';
 }

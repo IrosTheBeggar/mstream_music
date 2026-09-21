@@ -19,6 +19,7 @@ import '../singletons/app_messenger.dart';
 import '../theme/velvet_theme.dart';
 import '../util/real_audio_permission.dart';
 import '../widgets/accent_color_sheet.dart';
+import '../widgets/home_widget_sheet.dart';
 import 'eq_screen.dart';
 import 'imported_shaders_screen.dart';
 
@@ -122,6 +123,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
+          // The home-screen widget: Android places it from here (the
+          // launcher's pin request, one of five sizes); iOS has no such
+          // API, so the row only says where the gallery is.
+          if (Platform.isAndroid || Platform.isIOS)
+            ListTile(
+              title: Text(l.settingsHomeWidget),
+              subtitle: Text(
+                Platform.isAndroid
+                    ? l.settingsHomeWidgetSubtitle
+                    : l.settingsHomeWidgetSubtitleIos,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary, fontSize: 12),
+              ),
+              onTap: Platform.isAndroid
+                  ? () => showModalBottomSheet(
+                        context: context,
+                        backgroundColor: VelvetColors.surface,
+                        builder: (_) => const HomeWidgetSheet(),
+                      )
+                  : null,
+            ),
           ListTile(
             title: Text(l.settingsLanguage),
             subtitle: Text(

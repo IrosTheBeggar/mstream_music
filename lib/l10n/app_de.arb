@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "Wiedergaben pro Tag",
   "listeningPlaysPerMonth": "Wiedergaben pro Monat",
   "listeningMostOnDay": "{count, plural, =1{Am meisten am {date}: 1 Wiedergabe} other{Am meisten am {date}: {count} Wiedergaben}}",
-  "listeningMostInMonth": "{count, plural, =1{Am meisten im {month}: 1 Wiedergabe} other{Am meisten im {month}: {count} Wiedergaben}}"
+  "listeningMostInMonth": "{count, plural, =1{Am meisten im {month}: 1 Wiedergabe} other{Am meisten im {month}: {count} Wiedergaben}}",
+  "settingsHomeWidget": "Widget für den Startbildschirm",
+  "settingsHomeWidgetSubtitle": "Füge das Widget „Aktuelle Wiedergabe“ in einer von fünf Größen zum Startbildschirm hinzu.",
+  "settingsHomeWidgetSubtitleIos": "Halte den Startbildschirm gedrückt, füge ein Widget hinzu und wähle mStream Music.",
+  "homeWidgetPickSize": "Größe wählen",
+  "homeWidgetPinUnsupported": "Dieser Launcher kann von hier aus keine Widgets hinzufügen. Verwende seine eigene Widget-Auswahl."
 }

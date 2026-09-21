@@ -71,16 +71,35 @@ object Renderer {
     /** Debug builds: draw every instance with this layout whatever its size (null = by size). */
     @Volatile var forcedLayout: Layout? = null
 
-    /** The 4x1's provider: what a pin request places. */
-    fun component(context: Context) = ComponentName(context, NowPlayingWidgetProvider::class.java)
+    /** A picker entry: its cell size, its provider, and the label the launcher shows for it. */
+    data class Entry(val size: String, val provider: Class<out NowPlayingWidgetProvider>, val label: Int)
 
-    private val providers = listOf(
-        NowPlayingWidgetProvider::class.java,
-        NowPlayingWidgetProviderMini::class.java,
-        NowPlayingWidgetProviderTile::class.java,
-        NowPlayingWidgetProviderCard::class.java,
-        NowPlayingWidgetProviderLarge::class.java,
+    /** The five picker entries, smallest first. */
+    val entries = listOf(
+        Entry("2x1", NowPlayingWidgetProviderMini::class.java, R.string.npw_label_2x1),
+        Entry("2x2", NowPlayingWidgetProviderTile::class.java, R.string.npw_label_2x2),
+        Entry("4x1", NowPlayingWidgetProvider::class.java, R.string.npw_label_4x1),
+        Entry("4x2", NowPlayingWidgetProviderCard::class.java, R.string.npw_label_4x2),
+        Entry("4x3", NowPlayingWidgetProviderLarge::class.java, R.string.npw_label_4x3),
     )
+
+    /** The entry for a size ("4x3"); the 4x1 for anything else, as before sizes existed. */
+    fun entryFor(size: String?): Entry = entries.firstOrNull { it.size == size } ?: entries.first { it.size == "4x1" }
+
+    /** The provider a pin request places: the given size's, else the 4x1's. */
+    fun component(context: Context, size: String? = null) = ComponentName(context, entryFor(size).provider)
+
+    /**
+     * What Settings offers to pin: every size with its picker label, in the
+     * app's language (the last snapshot's tag) so the row and the launcher's
+     * own dialog read alike.
+     */
+    fun pinTargets(context: Context): List<Map<String, String>> {
+        val ctx = localized(context, Store.load(context).locale)
+        return entries.map { mapOf("size" to it.size, "label" to ctx.getString(it.label)) }
+    }
+
+    private val providers = entries.map { it.provider }
 
     /** Every placed widget, whichever picker entry it came from. */
     fun ids(context: Context, manager: AppWidgetManager = AppWidgetManager.getInstance(context)): IntArray =

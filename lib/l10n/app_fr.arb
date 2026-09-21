@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "Lectures par jour",
   "listeningPlaysPerMonth": "Lectures par mois",
   "listeningMostOnDay": "{count, plural, one{Le plus le {date} : {count} lecture} other{Le plus le {date} : {count} lectures}}",
-  "listeningMostInMonth": "{count, plural, one{Le plus en {month} : {count} lecture} other{Le plus en {month} : {count} lectures}}"
+  "listeningMostInMonth": "{count, plural, one{Le plus en {month} : {count} lecture} other{Le plus en {month} : {count} lectures}}",
+  "settingsHomeWidget": "Widget d'écran d'accueil",
+  "settingsHomeWidgetSubtitle": "Ajoutez le widget Lecture en cours à l'écran d'accueil, dans l'une des cinq tailles.",
+  "settingsHomeWidgetSubtitleIos": "Appuyez longuement sur l'écran d'accueil, ajoutez un widget et choisissez mStream Music.",
+  "homeWidgetPickSize": "Choisissez une taille",
+  "homeWidgetPinUnsupported": "Ce lanceur ne peut pas ajouter de widgets d'ici. Utilisez son propre sélecteur de widgets."
 }

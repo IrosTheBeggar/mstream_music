@@ -6989,6 +6989,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Most in {month}: 1 play} other{Most in {month}: {count} plays}}'**
   String listeningMostInMonth(int count, String month);
+
+  /// Settings row title: adding the app's Now Playing home-screen widget.
+  ///
+  /// In en, this message translates to:
+  /// **'Home screen widget'**
+  String get settingsHomeWidget;
+
+  /// Subtitle of that row on Android, where a tap opens the size sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the Now Playing widget to your home screen in one of five sizes.'**
+  String get settingsHomeWidgetSubtitle;
+
+  /// Subtitle of that row on iOS, where the system's gallery is the only way; no tap.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press the home screen, add a widget, and pick mStream Music.'**
+  String get settingsHomeWidgetSubtitleIos;
+
+  /// Title of the Android size sheet under the row.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a size'**
+  String get homeWidgetPickSize;
+
+  /// Snackbar / sheet text when the Android launcher refuses pin requests.
+  ///
+  /// In en, this message translates to:
+  /// **'This launcher can\'t add widgets from here. Use its own widget picker.'**
+  String get homeWidgetPinUnsupported;
 }
 
 class _AppLocalizationsDelegate

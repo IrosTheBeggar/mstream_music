@@ -212,7 +212,8 @@ class NowPlayingWidgetPublisher {
   }
 
   /// Debug builds only: `ext.mstream.widget` on the VM service, so the smoke
-  /// script can place the widget, read what the native side holds, and push
+  /// script can place the widget (`pin&size=2x1|2x2|4x1|4x2|4x3`, the 4x1
+  /// by default), read what the native side holds, and push
   /// a cover through the whole fetch chain (`art&url=<image on a configured
   /// host>` republishes the last snapshot with that art; the next real
   /// change puts the widget right again), force one size's layout on every
@@ -226,7 +227,7 @@ class NowPlayingWidgetPublisher {
       try {
         final action = params['action'] ?? 'state';
         final dynamic r = switch (action) {
-          'pin' => await NowPlayingWidget.requestPin(),
+          'pin' => await NowPlayingWidget.requestPin(size: params['size']),
           'art' => await _debugPublishArt(params['url'] ?? ''),
           'layout' =>
             await NowPlayingWidget.debugForceLayout(params['name'] ?? 'auto'),
