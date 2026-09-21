@@ -43,8 +43,10 @@ swiped away from the app switcher, tap play on the widget. On an iOS 16 phone
 (the iPhone X) tap the widget itself.
 
 **Pass.** Every size shows the cover, the title and the artist; the large one
-shows the album line, a progress bar that moves while playing and the five
-buttons. Each button acts within a second and the widget follows (the app's
+shows the album line, a progress bar and an elapsed time that both move
+while playing without the app publishing anything (they are WidgetKit's
+self-updating timer views; a plain label would sit at 0:00 until the next
+reload), and the five buttons. Each button acts within a second and the widget follows (the app's
 `[widget] <action>: sent` then `[widget] action: <action>` in Diagnostics ›
 Share). With the app swiped away, a play tap launches it in the background
 and the log shows `[widget] play: Dart not up yet, holding` and then `sent

@@ -223,21 +223,41 @@ struct ProgressLine: View {
   var body: some View {
     VStack(spacing: 3) {
       if snapshot.playing, let interval = snapshot.progressInterval {
-        // Runs on its own between publishes; the app only sends a new fix on a jump.
+        // WidgetKit animates a timer interval on its own between reloads, for
+        // the bar and for a text alike; the app only sends a new fix on a
+        // jump. (A plain label here reads the position at the reload — 0:00
+        // for a fresh track — until the next one.)
         ProgressView(timerInterval: interval, countsDown: false, label: { EmptyView() }, currentValueLabel: { EmptyView() })
           .tint(Color.accentColor)
+        times(elapsed: elapsedLabel(interval))
       } else {
         ProgressView(value: Double(snapshot.position()), total: Double(max(snapshot.durationMs, 1)))
           .tint(Color.accentColor)
+        times(elapsed: Text(NowPlayingSnapshot.formatTime(snapshot.position())))
       }
-      HStack {
-        Text(NowPlayingSnapshot.formatTime(snapshot.position())).monospacedDigit()
-        Spacer()
-        Text(NowPlayingSnapshot.formatTime(snapshot.durationMs)).monospacedDigit()
-      }
-      .font(.caption2)
-      .foregroundStyle(.secondary)
     }
+  }
+
+  /// The elapsed time, counting up by itself at normal speed. The timer text
+  /// can only count wall-clock seconds, so at any other speed it would drift
+  /// from the position; the label is then the fix, as when paused.
+  private func elapsedLabel(_ interval: ClosedRange<Date>) -> Text {
+    if abs(snapshot.speed - 1) < 0.01 {
+      return Text(timerInterval: interval, countsDown: false)
+    }
+    return Text(NowPlayingSnapshot.formatTime(snapshot.position()))
+  }
+
+  private func times(elapsed: Text) -> some View {
+    HStack {
+      // A timer text reserves the width of its widest reading; keep the
+      // digits at the leading edge of that box.
+      elapsed.monospacedDigit().multilineTextAlignment(.leading)
+      Spacer()
+      Text(NowPlayingSnapshot.formatTime(snapshot.durationMs)).monospacedDigit()
+    }
+    .font(.caption2)
+    .foregroundStyle(.secondary)
   }
 }
 
