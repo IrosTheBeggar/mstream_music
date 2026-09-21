@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Lecture en cours</string>
+    <string name="npw_description">Pochette et commandes du morceau en cours dans mStream.</string>
+    <string name="npw_nothing_playing">Aucune lecture</string>
+    <string name="npw_open_app">Touchez pour ouvrir mStream</string>
+    <string name="npw_play">Lecture</string>
+    <string name="npw_pause">Pause</string>
+    <string name="npw_previous">Morceau précédent</string>
+    <string name="npw_next">Morceau suivant</string>
+</resources>

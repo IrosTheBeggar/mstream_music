@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Teraz odtwarzane</string>
+    <string name="npw_description">Okładka i sterowanie utworem odtwarzanym w mStream.</string>
+    <string name="npw_nothing_playing">Nic nie jest odtwarzane</string>
+    <string name="npw_open_app">Dotknij, aby otworzyć mStream</string>
+    <string name="npw_play">Odtwórz</string>
+    <string name="npw_pause">Wstrzymaj</string>
+    <string name="npw_previous">Poprzedni utwór</string>
+    <string name="npw_next">Następny utwór</string>
+</resources>

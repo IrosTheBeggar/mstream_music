@@ -1,0 +1,27 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- The widget provider. Declared here, not in the app manifest, so the
+             plugin is self-contained under manifest merging. exported=false is
+             what the platform docs prescribe: APPWIDGET_UPDATE and the option
+             changes arrive from the system, which may reach a non-exported
+             receiver; the button taps go to WidgetActionReceiver above, never
+             to this one. -->
+        <!-- The buttons' target: an explicit-component broadcast from the
+             widget's own PendingIntents, so no intent filter and not exported. -->
+        <receiver
+            android:name="music.mstream.now_playing_widget.WidgetActionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="music.mstream.now_playing_widget.NowPlayingWidgetProvider"
+            android:label="@string/npw_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info" />
+        </receiver>
+    </application>
+</manifest>

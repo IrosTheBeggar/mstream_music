@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+, light: the wallpaper palette (Material You), like the
+     system's own widgets. -->
+<resources>
+    <color name="npw_background">@android:color/system_neutral1_10</color>
+    <color name="npw_text">@android:color/system_neutral1_900</color>
+    <color name="npw_text_secondary">@android:color/system_neutral2_700</color>
+    <color name="npw_icon">@android:color/system_accent1_600</color>
+    <color name="npw_art_placeholder">@android:color/system_accent2_100</color>
+    <color name="npw_art_placeholder_icon">@android:color/system_accent2_600</color>
+</resources>

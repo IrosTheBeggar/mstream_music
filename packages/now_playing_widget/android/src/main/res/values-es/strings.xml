@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Reproduciendo ahora</string>
+    <string name="npw_description">Carátula y controles de la pista que suena en mStream.</string>
+    <string name="npw_nothing_playing">Nada en reproducción</string>
+    <string name="npw_open_app">Toca para abrir mStream</string>
+    <string name="npw_play">Reproducir</string>
+    <string name="npw_pause">Pausar</string>
+    <string name="npw_previous">Pista anterior</string>
+    <string name="npw_next">Pista siguiente</string>
+</resources>

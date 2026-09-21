@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark, below Android 12. -->
+<resources>
+    <color name="npw_background">#1F1F24</color>
+    <color name="npw_text">#F2F2F5</color>
+    <color name="npw_text_secondary">#A9A9B2</color>
+    <color name="npw_icon">#F2F2F5</color>
+    <color name="npw_art_placeholder">#2C2C33</color>
+    <color name="npw_art_placeholder_icon">#7A7A85</color>
+</resources>

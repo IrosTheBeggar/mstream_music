@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">正在播放</string>
+    <string name="npw_description">mStream 正在播放曲目的封面和控制按钮。</string>
+    <string name="npw_nothing_playing">没有播放内容</string>
+    <string name="npw_open_app">点按打开 mStream</string>
+    <string name="npw_play">播放</string>
+    <string name="npw_pause">暂停</string>
+    <string name="npw_previous">上一曲</string>
+    <string name="npw_next">下一曲</string>
+</resources>

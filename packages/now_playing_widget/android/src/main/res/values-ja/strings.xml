@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">再生中</string>
+    <string name="npw_description">mStream で再生中の曲のアートワークと操作ボタン。</string>
+    <string name="npw_nothing_playing">再生していません</string>
+    <string name="npw_open_app">タップして mStream を開く</string>
+    <string name="npw_play">再生</string>
+    <string name="npw_pause">一時停止</string>
+    <string name="npw_previous">前の曲</string>
+    <string name="npw_next">次の曲</string>
+</resources>

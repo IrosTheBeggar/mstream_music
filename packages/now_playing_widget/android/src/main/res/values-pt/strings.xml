@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Tocando agora</string>
+    <string name="npw_description">Capa e controles da faixa tocando no mStream.</string>
+    <string name="npw_nothing_playing">Nada tocando</string>
+    <string name="npw_open_app">Toque para abrir o mStream</string>
+    <string name="npw_play">Reproduzir</string>
+    <string name="npw_pause">Pausar</string>
+    <string name="npw_previous">Faixa anterior</string>
+    <string name="npw_next">Próxima faixa</string>
+</resources>

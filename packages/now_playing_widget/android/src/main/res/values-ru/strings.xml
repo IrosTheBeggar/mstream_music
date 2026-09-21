@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Сейчас играет</string>
+    <string name="npw_description">Обложка и управление треком, который играет в mStream.</string>
+    <string name="npw_nothing_playing">Ничего не играет</string>
+    <string name="npw_open_app">Нажмите, чтобы открыть mStream</string>
+    <string name="npw_play">Воспроизвести</string>
+    <string name="npw_pause">Пауза</string>
+    <string name="npw_previous">Предыдущий трек</string>
+    <string name="npw_next">Следующий трек</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Now Playing</string>
+    <string name="npw_description">Album art and controls for the track playing in mStream.</string>
+    <string name="npw_nothing_playing">Nothing playing</string>
+    <string name="npw_open_app">Tap to open mStream</string>
+    <string name="npw_play">Play</string>
+    <string name="npw_pause">Pause</string>
+    <string name="npw_previous">Previous track</string>
+    <string name="npw_next">Next track</string>
+</resources>
