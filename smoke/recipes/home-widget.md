@@ -50,7 +50,10 @@ reload), and the five buttons. Each button acts within a second and the widget f
 `[widget] <action>: sent` then `[widget] action: <action>` in Diagnostics ›
 Share). With the app swiped away, a play tap launches it in the background
 and the log shows `[widget] play: Dart not up yet, holding` and then `sent
-after the handshake`. On iOS 16 a tap on the widget opens the app.
+after the handshake`. On iOS 16 a tap on the widget opens the app. With the
+phone in another language the gallery entry reads in it; with the app's own
+language set (Settings › Language) the placed widget's "Nothing playing"
+reads in that one, as on Android.
 
 Seeding a queue on the simulator when it restored none: copy the emulator's
 rig queue (`adb shell run-as mstream.music.plus.dev cat app_flutter/queue.json`)

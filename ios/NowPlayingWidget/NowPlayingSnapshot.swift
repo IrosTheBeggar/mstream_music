@@ -22,6 +22,9 @@ struct NowPlayingSnapshot {
   /// "none", "all" or "one".
   var repeatMode = "none"
   var artFile = ""
+  /// The app's own language setting as a BCP 47 tag (`ja`, `pt-BR`), empty
+  /// when it follows the system; the widget's strings follow it (see L10n).
+  var locale = ""
 
   /// The second line: artist, else album, else nothing.
   var subtitle: String { artist.isEmpty ? album : artist }
@@ -48,6 +51,7 @@ struct NowPlayingSnapshot {
     s.shuffle = json["shuffle"] as? Bool ?? false
     s.repeatMode = json["repeat"] as? String ?? "none"
     s.artFile = json["artFile"] as? String ?? ""
+    s.locale = json["locale"] as? String ?? ""
     return s
   }
 
