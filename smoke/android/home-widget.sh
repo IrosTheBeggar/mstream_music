@@ -19,13 +19,17 @@ source "$(dirname "$0")/../lib.sh"; pick_device
 
 UI="$OUT/ui.xml"
 ui_dump() { adbx shell uiautomator dump /sdcard/smoke-ui.xml >/dev/null 2>&1; adbx shell cat /sdcard/smoke-ui.xml > "$UI" 2>/dev/null; }
-# Centre of the first node whose <attr> matches <regex> (case-insensitive), as "x y"; empty when absent.
-ui_center() { python3 - "$UI" "$1" "$2" <<'PY'
+# Centre of the first node whose <attr> matches <regex> (case-insensitive), as "x y";
+# empty when absent. A third argument "clickable" restricts it to clickable nodes —
+# One UI's placement dialog is titled "Add to Home screen?", which must not win
+# over its Add button.
+ui_center() { python3 - "$UI" "$1" "$2" "${3:-}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 try: root = ET.parse(sys.argv[1]).getroot()
 except Exception: sys.exit(0)
-pat = re.compile(sys.argv[3], re.I)
+pat = re.compile(sys.argv[3], re.I); clickable = sys.argv[4] == 'clickable'
 for n in root.iter('node'):
+    if clickable and n.get('clickable') != 'true': continue
     if pat.search(n.get(sys.argv[2]) or ''):
         m = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', n.get('bounds') or '')
         if m:
@@ -63,8 +67,9 @@ S=$(wx state); N=$(field "$S" result.native.instances)
 log "widget instances: ${N:-?} (session service: $(field "$S" result.native.mediaBrowserService))"
 if [ "${N:-0}" = 0 ] && [ "${SMOKE_WIDGET_PIN:-1}" != 0 ]; then
   wx pin >/dev/null; sleep 3; ui_dump
-  c=$(ui_center text 'add automatically|add to home|^add$'); [ -n "$c" ] || c=$(ui_center content-desc 'add automatically|add to home|^add$')
-  if [ -n "$c" ]; then tap $c; log "accepted the launcher's placement dialog"; sleep 3; S=$(wx state); N=$(field "$S" result.native.instances); fi
+  # The confirm button: "Add automatically" (Pixel / AOSP launcher), "Add" (One UI).
+  c=$(ui_center text '^add automatically$|^add$' clickable); [ -n "$c" ] || c=$(ui_center content-desc '^add automatically$|^add$' clickable)
+  if [ -n "$c" ]; then tap $c; log "accepted the launcher's placement dialog"; sleep 4; S=$(wx state); N=$(field "$S" result.native.instances); fi
 fi
 if [ "${N:-0}" = 0 ]; then skip "no widget placed (the launcher's dialog was not found) — place one by hand and rerun"; summary; exit 0; fi
 pass "widget placed ($N instance(s))"
