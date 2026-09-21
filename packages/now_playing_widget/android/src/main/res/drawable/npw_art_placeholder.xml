@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown until the cover lands, and in the empty state. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <!-- An intrinsic square, so the large layout's cover slot (which
+                 sizes itself from its drawable) has a shape before art lands. -->
+            <size
+                android:width="120dp"
+                android:height="120dp" />
+            <solid android:color="@color/npw_art_placeholder" />
+            <corners android:radius="@dimen/npw_art_corner" />
+        </shape>
+    </item>
+    <item
+        android:width="28dp"
+        android:height="28dp"
+        android:drawable="@drawable/npw_ic_note"
+        android:gravity="center" />
+</layer-list>

@@ -77,6 +77,12 @@ dependencies:
   # actually streams so screen-off Wi-Fi power-save can't stall playback.
   wifi_lock_shim:
     path: packages/wifi_lock_shim
+  # In-repo Android home-screen widget (Now Playing + transport). A path
+  # plugin for the same reason as wifi_lock_shim: it must register on the
+  # headless engine too, or the widget goes stale after a Bluetooth-key or
+  # media-resumption boot.
+  now_playing_widget:
+    path: packages/now_playing_widget
   # In-repo iOS packaging for the Rust iroh tunnel: a SwiftPM remote
   # binaryTarget on a tagged mstream-iroh-tunnel release (url + checksum in its
   # Package.swift; tool/fetch-iroh-tunnel.sh moves the pin). Android fetches

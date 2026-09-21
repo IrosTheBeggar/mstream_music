@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The 2x2 tile. Sizes are in launcher cells (n cells = 70n - 30 dp); the layout a
+     placed widget draws follows its frame (Layout.pick), so it can be resized
+     into any other size. No periodic update: the app pushes every change. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:maxResizeHeight="320dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/now_playing_widget_tile"
+    android:previewLayout="@layout/now_playing_widget_tile"
+    android:description="@string/npw_description"
+    android:widgetCategory="home_screen" />

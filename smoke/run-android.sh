@@ -6,6 +6,7 @@ cd "$(dirname "$0")" || exit 2
 mkdir -p out
 scripts="android/session-actions.sh android/launch-matrix.sh android/switch-during-outage.sh android/media-resumption.sh android/bt-late-pause.sh android/dead-zone.sh android/playback-soak.sh"
 [ "${SMOKE_CAST:-0}" = 1 ] && scripts="$scripts android/cast-through-rebuild.sh"
+[ "${SMOKE_WIDGET:-0}" = 1 ] && scripts="$scripts android/home-widget.sh"
 summary=""
 for s in $scripts; do
   echo; echo "########## $s"

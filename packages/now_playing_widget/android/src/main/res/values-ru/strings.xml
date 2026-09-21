@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Сейчас играет</string>
+    <string name="npw_description">Обложка и управление треком, который играет в mStream.</string>
+    <string name="npw_nothing_playing">Ничего не играет</string>
+    <string name="npw_open_app">Нажмите, чтобы открыть mStream</string>
+    <string name="npw_play">Воспроизвести</string>
+    <string name="npw_pause">Пауза</string>
+    <string name="npw_previous">Предыдущий трек</string>
+    <string name="npw_next">Следующий трек</string>
+    <string name="npw_shuffle_on">Перемешивание включено</string>
+    <string name="npw_shuffle_off">Перемешивание выключено</string>
+    <string name="npw_repeat_off">Повтор выключен</string>
+    <string name="npw_repeat_all">Повторять все</string>
+    <string name="npw_repeat_one">Повторять трек</string>
+    <string name="npw_label_2x1">Сейчас играет 2×1</string>
+    <string name="npw_label_2x2">Сейчас играет 2×2</string>
+    <string name="npw_label_4x1">Сейчас играет 4×1</string>
+    <string name="npw_label_4x2">Сейчас играет 4×2</string>
+    <string name="npw_label_4x3">Сейчас играет 4×3</string>
+</resources>

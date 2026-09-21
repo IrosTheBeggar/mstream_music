@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">正在播放</string>
+    <string name="npw_description">mStream 正在播放曲目的封面和控制按钮。</string>
+    <string name="npw_nothing_playing">没有播放内容</string>
+    <string name="npw_open_app">点按打开 mStream</string>
+    <string name="npw_play">播放</string>
+    <string name="npw_pause">暂停</string>
+    <string name="npw_previous">上一曲</string>
+    <string name="npw_next">下一曲</string>
+    <string name="npw_shuffle_on">随机播放已开启</string>
+    <string name="npw_shuffle_off">随机播放已关闭</string>
+    <string name="npw_repeat_off">重复播放已关闭</string>
+    <string name="npw_repeat_all">重复播放全部</string>
+    <string name="npw_repeat_one">单曲循环</string>
+    <string name="npw_label_2x1">正在播放 2×1</string>
+    <string name="npw_label_2x2">正在播放 2×2</string>
+    <string name="npw_label_4x1">正在播放 4×1</string>
+    <string name="npw_label_4x2">正在播放 4×2</string>
+    <string name="npw_label_4x3">正在播放 4×3</string>
+</resources>

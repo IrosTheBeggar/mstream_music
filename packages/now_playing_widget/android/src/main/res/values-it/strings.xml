@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">In riproduzione</string>
+    <string name="npw_description">Copertina e controlli del brano in riproduzione in mStream.</string>
+    <string name="npw_nothing_playing">Nessuna riproduzione</string>
+    <string name="npw_open_app">Tocca per aprire mStream</string>
+    <string name="npw_play">Riproduci</string>
+    <string name="npw_pause">Pausa</string>
+    <string name="npw_previous">Brano precedente</string>
+    <string name="npw_next">Brano successivo</string>
+    <string name="npw_shuffle_on">Casuale attivo</string>
+    <string name="npw_shuffle_off">Casuale disattivato</string>
+    <string name="npw_repeat_off">Ripeti disattivato</string>
+    <string name="npw_repeat_all">Ripeti tutto</string>
+    <string name="npw_repeat_one">Ripeti brano</string>
+    <string name="npw_label_2x1">In riproduzione 2×1</string>
+    <string name="npw_label_2x2">In riproduzione 2×2</string>
+    <string name="npw_label_4x1">In riproduzione 4×1</string>
+    <string name="npw_label_4x2">In riproduzione 4×2</string>
+    <string name="npw_label_4x3">In riproduzione 4×3</string>
+</resources>

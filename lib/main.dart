@@ -13,6 +13,7 @@ import 'screens/browser.dart';
 import 'screens/album_detail_view.dart';
 import 'objects/display_item.dart';
 import 'native/carplay_bridge.dart';
+import 'native/now_playing_widget_publisher.dart';
 import 'singletons/server_list.dart';
 import 'singletons/tunnel_policy.dart';
 import 'objects/server.dart';
@@ -130,6 +131,11 @@ Future<void> _startApp() async {
   // CarPlay: serve the browse tree + queue to the Swift scene, and tell it Dart
   // is up (the car may have connected before main() ran). iOS only.
   await CarPlayBridge.init();
+  // Home-screen widget (Android): mirror what is playing into the launcher's
+  // widget. Its buttons drive the media session natively, never through
+  // Dart, so this only ever publishes. Here, not in a screen, so headless
+  // boots keep it current too.
+  await NowPlayingWidgetPublisher.start();
   // Download status/progress listener. Here — not the widget's initState — so
   // HEADLESS boots (media resumption, Android Auto) also track completions:
   // the keep-queue-offline sweep runs from the handler's queue listener in

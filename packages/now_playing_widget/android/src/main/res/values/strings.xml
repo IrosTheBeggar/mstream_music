@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Now Playing</string>
+    <string name="npw_description">Album art and controls for the track playing in mStream.</string>
+    <string name="npw_nothing_playing">Nothing playing</string>
+    <string name="npw_open_app">Tap to open mStream</string>
+    <string name="npw_play">Play</string>
+    <string name="npw_pause">Pause</string>
+    <string name="npw_previous">Previous track</string>
+    <string name="npw_next">Next track</string>
+    <string name="npw_shuffle_on">Shuffle on</string>
+    <string name="npw_shuffle_off">Shuffle off</string>
+    <string name="npw_repeat_off">Repeat off</string>
+    <string name="npw_repeat_all">Repeat all</string>
+    <string name="npw_repeat_one">Repeat one</string>
+    <string name="npw_label_2x1">Now Playing 2×1</string>
+    <string name="npw_label_2x2">Now Playing 2×2</string>
+    <string name="npw_label_4x1">Now Playing 4×1</string>
+    <string name="npw_label_4x2">Now Playing 4×2</string>
+    <string name="npw_label_4x3">Now Playing 4×3</string>
+</resources>

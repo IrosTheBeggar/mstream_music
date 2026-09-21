@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: the launcher's own widget radii, so the card matches the
+     system widgets beside it. -->
+<resources>
+    <dimen name="npw_corner">@android:dimen/system_app_widget_background_radius</dimen>
+    <dimen name="npw_art_corner">@android:dimen/system_app_widget_inner_radius</dimen>
+</resources>

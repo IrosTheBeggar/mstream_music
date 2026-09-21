@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="npw_label">Reproduciendo ahora</string>
+    <string name="npw_description">Carátula y controles de la pista que suena en mStream.</string>
+    <string name="npw_nothing_playing">Nada en reproducción</string>
+    <string name="npw_open_app">Toca para abrir mStream</string>
+    <string name="npw_play">Reproducir</string>
+    <string name="npw_pause">Pausar</string>
+    <string name="npw_previous">Pista anterior</string>
+    <string name="npw_next">Pista siguiente</string>
+    <string name="npw_shuffle_on">Aleatorio activado</string>
+    <string name="npw_shuffle_off">Aleatorio desactivado</string>
+    <string name="npw_repeat_off">Repetición desactivada</string>
+    <string name="npw_repeat_all">Repetir todo</string>
+    <string name="npw_repeat_one">Repetir una</string>
+    <string name="npw_label_2x1">Reproduciendo ahora 2×1</string>
+    <string name="npw_label_2x2">Reproduciendo ahora 2×2</string>
+    <string name="npw_label_4x1">Reproduciendo ahora 4×1</string>
+    <string name="npw_label_4x2">Reproduciendo ahora 4×2</string>
+    <string name="npw_label_4x3">Reproduciendo ahora 4×3</string>
+</resources>

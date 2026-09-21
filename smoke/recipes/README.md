@@ -14,3 +14,4 @@ look for. Recipes, in the order they are worth running:
 7. [android-auto-dhu.md](android-auto-dhu.md)
 8. [lock-screen-controls.md](lock-screen-controls.md)
 9. [server-removed-while-playing.md](server-removed-while-playing.md)
+10. [home-widget.md](home-widget.md)

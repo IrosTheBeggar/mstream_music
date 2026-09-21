@@ -47,8 +47,7 @@ class ArtContentProvider : ContentProvider() {
         // file:// local-read or a general SSRF / open-proxy gadget.
         val r = Uri.parse(remote)
         val scheme = r.scheme?.lowercase()
-        if ((scheme != "http" && scheme != "https") ||
-            r.path?.contains("/album-art/") != true) {
+        if ((scheme != "http" && scheme != "https") || !isArtPath(r.path)) {
             return null
         }
         val cacheFile = cacheFileFor(remote)
@@ -130,6 +129,12 @@ class ArtContentProvider : ContentProvider() {
 
     private fun lookupArtHost(host: String?): ArtHost {
         if (host.isNullOrEmpty()) return ArtHost(false, false)
+        // A Quick Connect server is reached at http://127.0.0.1:<tunnel port>
+        // (Server.effectiveBaseUrl) while servers.json holds its iroh URL, so
+        // the host match below can never see it. Loopback is this device, which
+        // any app can dial directly — serving it here grants nothing new. Plain
+        // http, so no self-signed question arises.
+        if (isLoopback(host)) return ArtHost(configured = true, selfSigned = false)
         return try {
             val dir = context!!.getDir("flutter", Context.MODE_PRIVATE)
             val file = File(dir, "servers.json")
@@ -149,6 +154,20 @@ class ArtContentProvider : ContentProvider() {
         } catch (e: Exception) {
             ArtHost(false, false)
         }
+    }
+
+    private fun isLoopback(host: String): Boolean =
+        host == "127.0.0.1" || host.equals("localhost", ignoreCase = true) ||
+            host == "::1" || host == "[::1]"
+
+    // The two shapes an mStream art URL takes (util/stream_url.dart,
+    // buildAlbumArtUrl): a server's own /album-art/<file>, or a federated
+    // peer's cover proxied by its parent under
+    // /api/v1/federation/peers/<id>/art/<file>.
+    private fun isArtPath(path: String?): Boolean {
+        if (path == null) return false
+        if (path.contains("/album-art/")) return true
+        return path.startsWith("/api/v1/federation/peers/") && path.contains("/art/")
     }
 
     private fun md5(s: String): String =
