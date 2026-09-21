@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show File, HttpClient, HttpHeaders;
+import 'dart:io' show File, HttpClient, HttpHeaders, Platform;
 import 'dart:typed_data';
 
 import 'package:audio_service/audio_service.dart';
@@ -2445,6 +2445,52 @@ class AudioPlayerHandler extends BaseAudioHandler
       !queueEmpty &&
       !recovering;
 
+  /// A cold boot's play must keep the process alive while the restore runs.
+  ///
+  /// The service boots headless — a widget tap, a Bluetooth key, the
+  /// media-resumption chip, Android Auto — with no activity, and audio_service
+  /// takes the service into the foreground (startForeground plus its wake
+  /// lock) only when `playing` flips to true. Until then the process is
+  /// cached, and One UI freezes a cached process TEN seconds after it starts
+  /// (Galaxy S25, 2026-09-21: `am_freeze` at +10 s, thawed nine minutes later
+  /// by a tap on the widget; the tunnel had dialed in 0.3 s, but nothing ran
+  /// to see it). A restore that dials a Quick Connect tunnel first can take
+  /// longer than that, and the wait below allows a minute. So: flip
+  /// `playing` now — the transition the real play makes seconds later — which
+  /// also lands inside the short window in which Android lets a background
+  /// app start a foreground service after a user-driven event.
+  ///
+  /// The processing state is left alone on purpose: audio_service stops the
+  /// service on a transition INTO idle, so a "loading" that fell back to idle
+  /// would tear down exactly what this is meant to keep. Android only: iOS
+  /// has no freezer, and its Now Playing surfaces would show a false
+  /// "playing" for the wait.
+  void _holdForRestore() {
+    final held =
+        restoreHoldState(playbackState.value, isAndroid: Platform.isAndroid);
+    if (held == null) return;
+    appLog('[play] holding the service in the foreground for the restore');
+    playbackState.add(held);
+  }
+
+  /// After the wait, the truth again: the backend's state. With
+  /// androidStopForegroundOnPause off the service stays in the foreground on
+  /// the way back to paused, so a restore that never settled leaves a paused
+  /// notification, not a stuck "playing" one. A restore still landing
+  /// broadcasts for itself once it has.
+  void _releaseRestoreHold() {
+    if (_rebuilding || _restoring) return;
+    _broadcastState();
+  }
+
+  /// Pure: the state to publish while a play waits for the queue restore,
+  /// or null when nothing should change (not Android, or already playing).
+  static PlaybackState? restoreHoldState(PlaybackState current,
+      {required bool isAndroid}) {
+    if (!isAndroid || current.playing) return null;
+    return current.copyWith(playing: true);
+  }
+
   // Completes when the launch queue restore has settled — restored, nothing
   // to restore (feature off / no snapshot / empty), or failed. Signalled by
   // QueueStore.init(); play() awaits it on a cold boot so a transport command
@@ -2514,7 +2560,12 @@ class AudioPlayerHandler extends BaseAudioHandler
       }
     }
     if (queue.value.isEmpty && !_restoreSettled.isCompleted) {
-      await _awaitQueueRestore();
+      _holdForRestore();
+      try {
+        await _awaitQueueRestore();
+      } finally {
+        _releaseRestoreHold();
+      }
       // The wait can run tens of seconds — a pause/stop that arrived during
       // it must win, not be overridden by this stale play when the restored
       // queue comes up. (pause() and stop() both clear _playIntent.)

@@ -48,7 +48,7 @@ target) on exit, including on Ctrl-C. Nothing prints pairing codes or tokens.
 | `android/session-actions.sh` | shuffle/repeat advertised to the OS (lock screen, Auto, CarPlay) | 15 s |
 | `android/launch-matrix.sh` | a standard default is usable at once; a Quick Connect default dials first; one dial, no teardown churn | 40 s |
 | `android/switch-during-outage.sh` | switching to the standard server mid-outage resets the browser at once, no strip | 3 min |
-| `android/media-resumption.sh` | headless boot on a PLAY key after a force-kill | 1 min |
+| `android/media-resumption.sh` | headless boot on a PLAY key after a kill: the play holds the service in the foreground for the restore, the OS never freezes the new process, the queue plays. Reports whether the saved queue was on a standard or a Quick Connect server — queue from the latter to cover the slow case | 1 min |
 | `android/bt-late-pause.sh` | the car-off late PAUSE is ignored | 1 min |
 | `android/dead-zone.sh` | hand-off, 75 s outage, Retry tap, Wi-Fi return — all in place | 5 min |
 | `android/federation-rig.sh` | two local mStream servers paired over federation; the peer reconciles, browses, plays and downloads through the parent's proxies — over HTTP, or with `SMOKE_RIG_IROH=1` over the parent's Quick Connect tunnel, which must survive a switch to a standard server. Needs a server checkout (header) | 4 min |
