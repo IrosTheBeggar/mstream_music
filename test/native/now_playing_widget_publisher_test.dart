@@ -258,6 +258,28 @@ void main() {
     });
   });
 
+  group('NowPlayingWidgetPublisher modes (the iOS widget\'s toggles)', () {
+    test('shuffle toggles', () {
+      expect(NowPlayingWidgetPublisher.nextShuffleMode(AudioServiceShuffleMode.none),
+          AudioServiceShuffleMode.all);
+      expect(NowPlayingWidgetPublisher.nextShuffleMode(AudioServiceShuffleMode.all),
+          AudioServiceShuffleMode.none);
+      expect(NowPlayingWidgetPublisher.nextShuffleMode(AudioServiceShuffleMode.group),
+          AudioServiceShuffleMode.none);
+    });
+
+    test('repeat cycles off → all → one → off', () {
+      expect(NowPlayingWidgetPublisher.nextRepeatMode(AudioServiceRepeatMode.none),
+          AudioServiceRepeatMode.all);
+      expect(NowPlayingWidgetPublisher.nextRepeatMode(AudioServiceRepeatMode.all),
+          AudioServiceRepeatMode.one);
+      expect(NowPlayingWidgetPublisher.nextRepeatMode(AudioServiceRepeatMode.group),
+          AudioServiceRepeatMode.one);
+      expect(NowPlayingWidgetPublisher.nextRepeatMode(AudioServiceRepeatMode.one),
+          AudioServiceRepeatMode.none);
+    });
+  });
+
   group('NowPlayingWidgetPublisher.shouldPublish', () {
     Map<String, Object?> snap({
       bool playing = true,

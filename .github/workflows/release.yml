@@ -214,7 +214,7 @@ jobs:
           flutter pub get
           flutter build ios --release --no-codesign
 
-      - name: Verify native frameworks + privacy manifest are bundled
+      - name: Verify native frameworks, privacy manifest + widget extension are bundled
         # Same spirit as the Android job's jniLibs check: fail loudly if a
         # framework vanished from the bundle — the tunnel's downloaded one or
         # the visualizer's committed one (a dropped framework would ship a
@@ -229,6 +229,11 @@ jobs:
           done
           [ -f "$app/PrivacyInfo.xcprivacy" ] \
             || { echo "::error::PrivacyInfo.xcprivacy missing from Runner.app"; exit 1; }
+          # The home-screen widget is an app extension embedded in PlugIns; a
+          # dropped target dependency or embed phase would ship a release with
+          # no widget in the picker and no error anywhere else.
+          [ -f "$app/PlugIns/NowPlayingWidget.appex/NowPlayingWidget" ] \
+            || { echo "::error::NowPlayingWidget.appex missing from Runner.app/PlugIns"; exit 1; }
           echo "OK: iroh_tunnel + viz_decoder frameworks and privacy manifest present"
 
       - name: Package unsigned .ipa

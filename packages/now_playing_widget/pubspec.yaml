@@ -1,8 +1,10 @@
 name: now_playing_widget
 description: >-
-  In-repo Android home-screen widget for mStream: album art, title, artist
-  and previous / play-pause / next for the track the audio handler is on.
-  Kept as a path plugin (not a MainActivity channel) so it auto-registers on
+  In-repo home-screen widget for mStream: album art, title, artist and
+  previous / play-pause / next for the track the audio handler is on.
+  Android draws it itself (RemoteViews); iOS hands the snapshot to the
+  WidgetKit extension in ios/NowPlayingWidget through the App Group. Kept
+  as a path plugin (not a MainActivity channel) so it auto-registers on
   every FlutterEngine, including the headless one Android Auto, a Bluetooth
   key and media resumption cold-boot — a widget wired through the activity
   would go stale after any of those.
@@ -22,4 +24,6 @@ flutter:
     platforms:
       android:
         package: music.mstream.now_playing_widget
+        pluginClass: NowPlayingWidgetPlugin
+      ios:
         pluginClass: NowPlayingWidgetPlugin

@@ -2,21 +2,44 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/services.dart';
 
-/// The Android home-screen "Now Playing" widget.
+/// The home-screen "Now Playing" widget.
 ///
 /// Dart owns the state: the app pushes a snapshot of what is playing whenever
 /// it changes ([publish]) and the native side persists it, fetches the art
-/// and re-renders every placed widget. The widget's buttons never come back
+/// and re-renders every placed widget. On Android the buttons never come back
 /// through Dart — natively they drive audio_service's media session through
 /// its transport controls, and binding that service starts it, so a tap on a
 /// dead app cold-boots the handler headless (the action is held until the
-/// handler is up) much as a Bluetooth play key would.
+/// handler is up) much as a Bluetooth play key would. On iOS the buttons are
+/// App Intents the system runs in the app's process; they arrive here as
+/// `action` calls ([onAction]) once the app has said it is [ready].
 ///
-/// Every call is a no-op off Android and fail-open: a platform error can
-/// never disturb playback.
+/// Every call is a no-op on other platforms and fail-open: a platform error
+/// can never disturb playback.
 class NowPlayingWidget {
   static const MethodChannel channel =
       MethodChannel('mstream/now_playing_widget');
+
+  static bool get _supported => Platform.isAndroid || Platform.isIOS;
+
+  /// A transport action from the widget: `play`, `pause`, `next`, `previous`,
+  /// `shuffle`, `repeat`. iOS only today (Android never routes through Dart).
+  static void Function(String action)? onAction;
+
+  /// Tell the native side the app is up and [onAction] is set, so an action
+  /// it held from a cold launch can go out.
+  static Future<void> ready() async {
+    if (!_supported) return;
+    channel.setMethodCallHandler((call) async {
+      if (call.method == 'action') onAction?.call('${call.arguments}');
+      return null;
+    });
+    try {
+      await channel.invokeMethod<void>('ready');
+    } catch (_) {
+      // A build without the plugin, or a native side with no handshake.
+    }
+  }
 
   /// Snapshot keys the native side reads. Missing keys read as empty / false.
   static const String keyTitle = 'title';
@@ -41,7 +64,7 @@ class NowPlayingWidget {
   /// Push the current state. [snapshot] holds the `key*` entries above; an
   /// `hasTrack: false` snapshot renders the empty state.
   static Future<void> publish(Map<String, Object?> snapshot) async {
-    if (!Platform.isAndroid) return;
+    if (!_supported) return;
     try {
       await channel.invokeMethod<void>('publish', snapshot);
     } on MissingPluginException {
@@ -78,7 +101,7 @@ class NowPlayingWidget {
   /// What the native side holds: the persisted snapshot, the number of placed
   /// widgets, whether art is cached. Debug tooling only.
   static Future<Map<String, Object?>> debugState() async {
-    if (!Platform.isAndroid) return const {};
+    if (!_supported) return const {};
     try {
       final r = await channel.invokeMethod<Map<Object?, Object?>>('debugState');
       return r?.map((k, v) => MapEntry('$k', v)) ?? const {};

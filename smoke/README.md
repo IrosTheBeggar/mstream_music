@@ -59,6 +59,7 @@ target) on exit, including on Ctrl-C. Nothing prints pairing codes or tokens.
 | `android/home-widget.sh` | opt-in (`SMOKE_WIDGET=1`, places a widget on the home screen): the Now Playing widget shows what Dart published, its Pause / Play / Next drive the handler, every size's layout renders with its controls, the large one's progress advances natively and its shuffle / repeat toggle, and a Play tap after a kill cold-boots the service headless. Debug build (the placement rides the `ext.mstream.widget` hook), English launcher | 2 min |
 | `ios/sim-launch.sh` | app-owned engine boots, UI renders, resume reaches Dart | 1 min |
 | `ios/carplay-round.sh` | the whole CarPlay template flow, buttons, artist, Siri dry-run, depth guard | 2 min |
+| `ios/widget-sim.sh` | the home-screen widget: extension in the bundle, App Group snapshot without the art URL, the intent handshake, play / pause / next through the intent path (needs a restored queue; recipe seeds one) | 1 min |
 
 ## Reading a failure
 
