@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Sizes are in launcher cells: n cells = 70n - 30 dp. 4x1 (250x40) is the
-     compact row; from 2 cells high (110 dp) the provider switches to the tall
-     layout with bigger art (NowPlayingWidgetProvider.layoutFor). No periodic
+     row it is placed at; resized, it becomes the 2x1 mini, the 2x2 tile, the
+     4x2 card or the 4x3+ large layout (Layout.pick). No periodic
      update: the app pushes every change, so updatePeriodMillis stays 0 and the
      launcher never wakes the process on a timer. The targetCell* / description /
      previewLayout attributes are API 31+ and ignored below. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="40dp"
-    android:minResizeWidth="180dp"
+    android:minResizeWidth="110dp"
     android:minResizeHeight="40dp"
     android:targetCellWidth="4"
     android:targetCellHeight="1"
-    android:maxResizeHeight="180dp"
+    android:maxResizeHeight="320dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/now_playing_widget"

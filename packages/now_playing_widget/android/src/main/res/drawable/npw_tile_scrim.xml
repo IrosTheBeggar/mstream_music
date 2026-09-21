@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The tile's text strip: dark over any cover, rounded to the card below. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/npw_tile_scrim" />
+    <corners
+        android:bottomLeftRadius="@dimen/npw_corner"
+        android:bottomRightRadius="@dimen/npw_corner" />
+</shape>

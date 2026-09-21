@@ -16,8 +16,8 @@ import androidx.media.MediaBrowserServiceCompat
 /**
  * The widget's buttons. A tap is a broadcast to [WidgetActionReceiver]
  * (this package only), which drives audio_service's media session through
- * its transport controls — explicit play / pause / skip on the session, the
- * same calls the system's own media controls make.
+ * its transport controls — explicit play / pause / skip / shuffle / repeat on
+ * the session, the same calls the system's own media controls make.
  *
  * Why not a media-key broadcast to audio_service's MediaButtonReceiver, the
  * way a Bluetooth key arrives: audio_service tells an explicit play apart
@@ -36,16 +36,26 @@ enum class WidgetAction(val intentAction: String) {
     PLAY("music.mstream.now_playing_widget.PLAY"),
     PAUSE("music.mstream.now_playing_widget.PAUSE"),
     NEXT("music.mstream.now_playing_widget.NEXT"),
-    PREVIOUS("music.mstream.now_playing_widget.PREVIOUS");
+    PREVIOUS("music.mstream.now_playing_widget.PREVIOUS"),
+    SHUFFLE("music.mstream.now_playing_widget.SHUFFLE"),
+    REPEAT("music.mstream.now_playing_widget.REPEAT");
 
-    /** Safe to send twice: play / pause are idempotent, a skip is not. */
-    val idempotent: Boolean get() = this == PLAY || this == PAUSE
-
-    fun send(controls: MediaControllerCompat.TransportControls) = when (this) {
+    /** The toggles read the state the widget showed, so a tap means what the icon meant. */
+    fun send(controls: MediaControllerCompat.TransportControls, shown: NowPlayingSnapshot) = when (this) {
         PLAY -> controls.play()
         PAUSE -> controls.pause()
         NEXT -> controls.skipToNext()
         PREVIOUS -> controls.skipToPrevious()
+        SHUFFLE -> controls.setShuffleMode(
+            if (shown.shuffle) PlaybackStateCompat.SHUFFLE_MODE_NONE else PlaybackStateCompat.SHUFFLE_MODE_ALL,
+        )
+        REPEAT -> controls.setRepeatMode(
+            when (shown.nextRepeat) {
+                NowPlayingSnapshot.REPEAT_ALL -> PlaybackStateCompat.REPEAT_MODE_ALL
+                NowPlayingSnapshot.REPEAT_ONE -> PlaybackStateCompat.REPEAT_MODE_ONE
+                else -> PlaybackStateCompat.REPEAT_MODE_NONE
+            },
+        )
     }
 
     fun pendingIntent(context: Context): PendingIntent {
@@ -120,9 +130,11 @@ object Transport {
             Log.w(TAG, "$action: no media browser service in this build")
             return
         }
+        // What the widget showed when it was tapped: the toggles act on it.
+        val shown = Store.load(context)
         main.post {
             inFlight?.finish("superseded by $action")
-            inFlight = Connection(context, service, action).also { it.start() }
+            inFlight = Connection(context, service, action, shown).also { it.start() }
         }
     }
 
@@ -130,6 +142,7 @@ object Transport {
         private val context: Context,
         service: ComponentName,
         private val action: WidgetAction,
+        private val shown: NowPlayingSnapshot,
     ) : MediaBrowserCompat.ConnectionCallback() {
         private val browser = MediaBrowserCompat(context, service, this, null)
         private var controller: MediaControllerCompat? = null
@@ -169,7 +182,7 @@ object Transport {
                 Log.i(TAG, "$action: handler not up yet, waiting")
                 return
             }
-            action.send(c.transportControls)
+            action.send(c.transportControls, shown)
             Log.i(TAG, "$action: sent")
             finish(null)
         }

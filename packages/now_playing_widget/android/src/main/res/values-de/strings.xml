@@ -8,4 +8,9 @@
     <string name="npw_pause">Pause</string>
     <string name="npw_previous">Vorheriger Titel</string>
     <string name="npw_next">Nächster Titel</string>
+    <string name="npw_shuffle_on">Zufallswiedergabe an</string>
+    <string name="npw_shuffle_off">Zufallswiedergabe aus</string>
+    <string name="npw_repeat_off">Wiederholen aus</string>
+    <string name="npw_repeat_all">Alle wiederholen</string>
+    <string name="npw_repeat_one">Titel wiederholen</string>
 </resources>

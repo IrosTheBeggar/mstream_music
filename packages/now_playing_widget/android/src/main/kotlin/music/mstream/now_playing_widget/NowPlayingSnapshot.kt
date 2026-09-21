@@ -11,6 +11,10 @@ import java.security.MessageDigest
  * restart, a resize — needs no Dart. The art URL itself is never persisted:
  * it carries the server's session token, so only its cache key ([artKey],
  * the token-blind hash ArtLoader files the bytes under) is written.
+ *
+ * The position is a fix, not a clock: [positionMs] was true at [positionAtMs]
+ * (epoch), and [positionNow] extrapolates from there at [speed] while playing,
+ * so the large layout's progress advances between publishes without Dart.
  */
 data class NowPlayingSnapshot(
     val hasTrack: Boolean = false,
@@ -23,9 +27,35 @@ data class NowPlayingSnapshot(
     val playing: Boolean = false,
     /** BCP-47 tag of the app's language override, or empty to follow the system. */
     val locale: String = "",
+    val durationMs: Long = 0,
+    val positionMs: Long = 0,
+    val positionAtMs: Long = 0,
+    val speed: Float = 1f,
+    val shuffle: Boolean = false,
+    /** "none", "all" or "one". */
+    val repeat: String = REPEAT_NONE,
 ) {
     /** The second line: artist, else album, else nothing (never the word "null"). */
     val subtitle: String get() = artist.ifEmpty { album }
+
+    /** Where playback is at [nowMs]: the fix, advanced while playing, never past the end. */
+    fun positionNow(nowMs: Long): Long {
+        val raw = if (playing && positionAtMs > 0 && nowMs > positionAtMs) {
+            positionMs + ((nowMs - positionAtMs) * speed).toLong()
+        } else {
+            positionMs
+        }
+        val cap = if (durationMs > 0) durationMs else Long.MAX_VALUE
+        return raw.coerceIn(0, cap)
+    }
+
+    /** The repeat button cycles the way the player panel does: off → all → one → off. */
+    val nextRepeat: String
+        get() = when (repeat) {
+            REPEAT_NONE -> REPEAT_ALL
+            REPEAT_ALL -> REPEAT_ONE
+            else -> REPEAT_NONE
+        }
 
     fun toStore(): Map<String, String> = mapOf(
         KEY_HAS_TRACK to hasTrack.toString(),
@@ -35,6 +65,12 @@ data class NowPlayingSnapshot(
         KEY_ART_KEY to artKey,
         KEY_PLAYING to playing.toString(),
         KEY_LOCALE to locale,
+        KEY_DURATION_MS to durationMs.toString(),
+        KEY_POSITION_MS to positionMs.toString(),
+        KEY_POSITION_AT_MS to positionAtMs.toString(),
+        KEY_SPEED to speed.toString(),
+        KEY_SHUFFLE to shuffle.toString(),
+        KEY_REPEAT to repeat,
     )
 
     companion object {
@@ -46,6 +82,15 @@ data class NowPlayingSnapshot(
         const val KEY_ART_KEY = "artKey"
         const val KEY_PLAYING = "playing"
         const val KEY_LOCALE = "locale"
+        const val KEY_DURATION_MS = "durationMs"
+        const val KEY_POSITION_MS = "positionMs"
+        const val KEY_POSITION_AT_MS = "positionAtMs"
+        const val KEY_SPEED = "speed"
+        const val KEY_SHUFFLE = "shuffle"
+        const val KEY_REPEAT = "repeat"
+        const val REPEAT_NONE = "none"
+        const val REPEAT_ALL = "all"
+        const val REPEAT_ONE = "one"
 
         /** A snapshot as the Dart side sends it (`NowPlayingWidget.publish`). */
         fun fromChannel(args: Map<*, *>?): NowPlayingSnapshot {
@@ -60,6 +105,12 @@ data class NowPlayingSnapshot(
                 artKey = if (artUrl.isEmpty()) "" else keyFor(artUrl),
                 playing = a.bool(KEY_PLAYING),
                 locale = a.str(KEY_LOCALE),
+                durationMs = a.long(KEY_DURATION_MS),
+                positionMs = a.long(KEY_POSITION_MS),
+                positionAtMs = a.long(KEY_POSITION_AT_MS),
+                speed = a.float(KEY_SPEED, 1f),
+                shuffle = a.bool(KEY_SHUFFLE),
+                repeat = repeatOf(a.str(KEY_REPEAT)),
             )
         }
 
@@ -72,7 +123,16 @@ data class NowPlayingSnapshot(
             artKey = map.str(KEY_ART_KEY),
             playing = map.bool(KEY_PLAYING),
             locale = map.str(KEY_LOCALE),
+            durationMs = map.long(KEY_DURATION_MS),
+            positionMs = map.long(KEY_POSITION_MS),
+            positionAtMs = map.long(KEY_POSITION_AT_MS),
+            speed = map.float(KEY_SPEED, 1f),
+            shuffle = map.bool(KEY_SHUFFLE),
+            repeat = repeatOf(map.str(KEY_REPEAT)),
         )
+
+        private fun repeatOf(s: String): String =
+            if (s == REPEAT_ALL || s == REPEAT_ONE) s else REPEAT_NONE
 
         /**
          * The art cache key: the remote URL without its query, plus the
@@ -104,6 +164,15 @@ data class NowPlayingSnapshot(
             }
         }
 
+        /** m:ss, or h:mm:ss from an hour up. */
+        fun formatTime(ms: Long): String {
+            val total = (ms / 1000).coerceAtLeast(0)
+            val h = total / 3600
+            val m = (total % 3600) / 60
+            val s = total % 60
+            return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+        }
+
         private fun md5(s: String): String =
             MessageDigest.getInstance("MD5").digest(s.toByteArray())
                 .joinToString("") { "%02x".format(it) }
@@ -114,6 +183,18 @@ data class NowPlayingSnapshot(
             is Boolean -> v
             is String -> v == "true"
             else -> false
+        }
+
+        private fun Map<*, *>.long(key: String): Long = when (val v = this[key]) {
+            is Number -> v.toLong()
+            is String -> v.toLongOrNull() ?: 0L
+            else -> 0L
+        }
+
+        private fun Map<*, *>.float(key: String, default: Float): Float = when (val v = this[key]) {
+            is Number -> v.toFloat()
+            is String -> v.toFloatOrNull() ?: default
+            else -> default
         }
     }
 }

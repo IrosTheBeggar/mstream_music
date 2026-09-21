@@ -8,4 +8,9 @@
     <string name="npw_pause">Pause</string>
     <string name="npw_previous">Previous track</string>
     <string name="npw_next">Next track</string>
+    <string name="npw_shuffle_on">Shuffle on</string>
+    <string name="npw_shuffle_off">Shuffle off</string>
+    <string name="npw_repeat_off">Repeat off</string>
+    <string name="npw_repeat_all">Repeat all</string>
+    <string name="npw_repeat_one">Repeat one</string>
 </resources>

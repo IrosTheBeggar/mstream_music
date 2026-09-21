@@ -43,8 +43,25 @@ except Exception: sys.exit(1)
 sys.exit(0 if any((n.get('text') or '') == sys.argv[2] for n in root.iter('node')) else 1)
 PY
 }
+ui_has_text_re() { python3 - "$UI" "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+try: root = ET.parse(sys.argv[1]).getroot()
+except Exception: sys.exit(1)
+sys.exit(0 if any(re.fullmatch(sys.argv[2], n.get('text') or '') for n in root.iter('node')) else 1)
+PY
+}
 widget_tap() { # <content-desc regex> → 0 when tapped
   ui_dump; local c; c=$(ui_center content-desc "$1"); [ -n "$c" ] || return 1; tap $c; log "widget tap: $1"; }
+ui_has_widget() { grep -q 'resource-id="[^"]*npw_root"' "$UI" 2>/dev/null; }
+# The launcher may be on another home page than the widget (One UI comes back
+# to its main page; the pinned widget landed wherever there was room): page
+# through, left then right, until the widget's root view is in the dump.
+find_widget_page() {
+  local i; ui_dump; ui_has_widget && return 0
+  for i in 1 2 3 4; do adbx shell input swipe 900 1200 150 1200 300; sleep 1.5; ui_dump; ui_has_widget && { log "widget on home page +$i"; return 0; }; done
+  for i in 1 2 3 4 5 6 7 8; do adbx shell input swipe 150 1200 900 1200 300; sleep 1.5; ui_dump; ui_has_widget && { log "widget on home page $((i-4))"; return 0; }; done
+  return 1
+}
 published_title() { applog | grep -oE '\[widget\] publish .*title="[^"]*"' | tail -1 | sed 's/.*title="//; s/"$//'; }
 
 # ── boot + the debug hook over the VM service ──
@@ -75,7 +92,8 @@ if [ "${N:-0}" = 0 ]; then skip "no widget placed (the launcher's dialog was not
 pass "widget placed ($N instance(s))"
 
 # ── the launcher shows what Dart published ──
-key KEYCODE_HOME; sleep 3; ui_dump
+key KEYCODE_HOME; sleep 3
+find_widget_page || { fail "the widget is on no home page the launcher will show (wrong launcher, or a folder?)"; summary; exit 1; }
 T=$(published_title)
 if [ -n "$T" ] && ui_has_text "$T"; then pass "launcher shows the published title: \"$T\""
 elif [ -z "$T" ]; then ui_has_text "Nothing playing" && pass "launcher shows the empty state" || fail "nothing published and no empty state on the launcher"
@@ -83,8 +101,11 @@ else fail "launcher does not show \"$T\" (is the widget on the visible home page
 shot widget-idle
 
 # ── the buttons, process alive ──
-A=$(now_ts); ensure_playing 20 || log "(could not start playback)"
-wait_for_log_after "$A" '\[widget\] publish hasTrack=true playing=true' 15 && pass "playing published" || fail "no playing publish"
+# Start with the widget's own Play (a PLAY media key would go to whichever app
+# played last on this phone, not necessarily mStream); the key is the fallback
+# for an empty state, which has no button.
+A=$(now_ts); is_playing || widget_tap '^play$' || media_key play
+wait_for_log_after "$A" '\[widget\] publish hasTrack=true playing=true' 20 && pass "playing published" || fail "no playing publish"
 sleep 2; ui_dump; [ -n "$(ui_center content-desc '^pause$')" ] && pass "widget shows Pause while playing" || fail "no Pause button on the launcher"
 shot widget-playing
 
@@ -128,6 +149,32 @@ A=$(now_ts); widget_tap "$SKIPBTN" && wait_for_log_after "$A" '\[play\] track ' 
 sleep 3; ui_dump; T=$(published_title)
 if [ -n "$T" ] && [ "$T" != "$T0" ] && ui_has_text "$T"; then pass "title followed the skip: \"$T0\" → \"$T\""; else fail "launcher shows \"$T\" after the skip from \"$T0\""; fi
 shot widget-after-skip
+
+# ── every size's layout inflates and carries its own controls (forced through
+#    the debug hook; the launcher keeps the placed frame, so the shots are clipped) ──
+for L in mini tile card large row; do
+  wx "layout&name=$L" >/dev/null; sleep 3; ui_dump; shot "widget-layout-$L"; T=$(published_title); ok=""
+  case $L in
+    mini)  [ -n "$(ui_center content-desc '^(play|pause)$')" ] && [ -z "$(ui_center content-desc '^next track$')" ] && ui_has_text "$T" && ok=1;;
+    tile)  [ -n "$(ui_center content-desc '^next track$')" ] && [ -z "$(ui_center content-desc '^previous track$')" ] && ui_has_text "$T" && ok=1;;
+    # Forced into a one-cell frame the large layout's top row has no room, so
+    # its title is not asked for here — the other layouts cover the title.
+    large) [ -n "$(ui_center content-desc '^shuffle')" ] && [ -n "$(ui_center content-desc '^repeat')" ] && ui_has_text_re '[0-9]+:[0-9]{2}' && ok=1;;
+    *)     [ -n "$(ui_center content-desc '^previous track$')" ] && [ -n "$(ui_center content-desc '^next track$')" ] && ui_has_text "$T" && ok=1;;
+  esac
+  [ "$ok" = 1 ] && pass "layout $L renders with its controls" || fail "layout $L: missing controls or title"
+done
+# The large layout's progress advances natively: two elapsed readings 6 s apart differ.
+wx "layout&name=large" >/dev/null; sleep 3; ui_dump
+E1=$(python3 -c "import re,sys,xml.etree.ElementTree as ET; print(next((n.get('text') for n in ET.parse(sys.argv[1]).getroot().iter('node') if re.fullmatch(r'[0-9]+:[0-9]{2}', n.get('text') or '')), ''))" "$UI")
+sleep 7; ui_dump
+E2=$(python3 -c "import re,sys,xml.etree.ElementTree as ET; print(next((n.get('text') for n in ET.parse(sys.argv[1]).getroot().iter('node') if re.fullmatch(r'[0-9]+:[0-9]{2}', n.get('text') or '')), ''))" "$UI")
+[ -n "$E1" ] && [ -n "$E2" ] && [ "$E1" != "$E2" ] && pass "progress advanced natively ($E1 → $E2)" || fail "progress did not advance ($E1 → $E2)"
+A=$(now_ts); widget_tap '^shuffle' && wait_for_log_after "$A" '\[widget\] publish' 10 && sleep 2 && ui_dump && [ -n "$(ui_center content-desc '^shuffle on$')" ] && pass "widget Shuffle → on" || fail "widget Shuffle did not turn on"
+A=$(now_ts); widget_tap '^shuffle' && wait_for_log_after "$A" '\[widget\] publish' 10 && sleep 2 && ui_dump && [ -n "$(ui_center content-desc '^shuffle off$')" ] && pass "widget Shuffle → off" || fail "widget Shuffle did not turn off"
+A=$(now_ts); widget_tap '^repeat' && wait_for_log_after "$A" '\[widget\] publish' 10 && sleep 2 && ui_dump && [ -n "$(ui_center content-desc '^repeat all$')" ] && pass "widget Repeat → all" || fail "widget Repeat did not cycle to all"
+widget_tap '^repeat'; sleep 3; widget_tap '^repeat'; sleep 3; ui_dump; [ -n "$(ui_center content-desc '^repeat off$')" ] && pass "widget Repeat → one → off" || fail "widget Repeat did not cycle back to off"
+wx "layout&name=auto" >/dev/null; sleep 2
 
 # ── a Play tap after the process is killed (the way the OS reclaims it; not force-stop) ──
 widget_tap '^pause$'; sleep 3

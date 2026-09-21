@@ -8,4 +8,9 @@
     <string name="npw_pause">Wstrzymaj</string>
     <string name="npw_previous">Poprzedni utwór</string>
     <string name="npw_next">Następny utwór</string>
+    <string name="npw_shuffle_on">Odtwarzanie losowe włączone</string>
+    <string name="npw_shuffle_off">Odtwarzanie losowe wyłączone</string>
+    <string name="npw_repeat_off">Powtarzanie wyłączone</string>
+    <string name="npw_repeat_all">Powtarzaj wszystko</string>
+    <string name="npw_repeat_one">Powtarzaj utwór</string>
 </resources>

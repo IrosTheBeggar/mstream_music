@@ -8,4 +8,9 @@
     <string name="npw_pause">暂停</string>
     <string name="npw_previous">上一曲</string>
     <string name="npw_next">下一曲</string>
+    <string name="npw_shuffle_on">随机播放已开启</string>
+    <string name="npw_shuffle_off">随机播放已关闭</string>
+    <string name="npw_repeat_off">重复播放已关闭</string>
+    <string name="npw_repeat_all">重复播放全部</string>
+    <string name="npw_repeat_one">单曲循环</string>
 </resources>

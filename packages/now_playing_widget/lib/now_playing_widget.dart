@@ -26,6 +26,17 @@ class NowPlayingWidget {
   static const String keyPlaying = 'playing';
   static const String keyHasTrack = 'hasTrack';
   static const String keyLocale = 'locale';
+  /// The track's length, 0 when unknown (the large layout then hides progress).
+  static const String keyDurationMs = 'durationMs';
+  /// A position FIX: [keyPositionMs] was true at [keyPositionAtMs] (epoch ms)
+  /// and advances at [keySpeed] while playing. The native side extrapolates
+  /// between publishes, so a fix is sent only when it jumps (a seek, a track).
+  static const String keyPositionMs = 'positionMs';
+  static const String keyPositionAtMs = 'positionAtMs';
+  static const String keySpeed = 'speed';
+  static const String keyShuffle = 'shuffle';
+  /// 'none', 'all' or 'one'.
+  static const String keyRepeat = 'repeat';
 
   /// Push the current state. [snapshot] holds the `key*` entries above; an
   /// `hasTrack: false` snapshot renders the empty state.
@@ -48,6 +59,19 @@ class NowPlayingWidget {
       return await channel.invokeMethod<bool>('requestPin') ?? false;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Debug builds: draw every placed widget with one layout regardless of
+  /// its size — `mini`, `tile`, `row`, `card`, `large` — or `auto` to go back
+  /// to sizing. Returns what is now in force.
+  static Future<String> debugForceLayout(String name) async {
+    if (!Platform.isAndroid) return 'auto';
+    try {
+      return await channel.invokeMethod<String>('debugForceLayout', name) ??
+          'auto';
+    } catch (e) {
+      return 'error: $e';
     }
   }
 

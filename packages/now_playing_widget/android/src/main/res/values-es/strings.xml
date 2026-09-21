@@ -8,4 +8,9 @@
     <string name="npw_pause">Pausar</string>
     <string name="npw_previous">Pista anterior</string>
     <string name="npw_next">Pista siguiente</string>
+    <string name="npw_shuffle_on">Aleatorio activado</string>
+    <string name="npw_shuffle_off">Aleatorio desactivado</string>
+    <string name="npw_repeat_off">Repetición desactivada</string>
+    <string name="npw_repeat_all">Repetir todo</string>
+    <string name="npw_repeat_one">Repetir una</string>
 </resources>

@@ -8,4 +8,9 @@
     <string name="npw_pause">Pausa</string>
     <string name="npw_previous">Brano precedente</string>
     <string name="npw_next">Brano successivo</string>
+    <string name="npw_shuffle_on">Casuale attivo</string>
+    <string name="npw_shuffle_off">Casuale disattivato</string>
+    <string name="npw_repeat_off">Ripeti disattivato</string>
+    <string name="npw_repeat_all">Ripeti tutto</string>
+    <string name="npw_repeat_one">Ripeti brano</string>
 </resources>

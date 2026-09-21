@@ -7,4 +7,10 @@
     <color name="npw_icon">#F2F2F5</color>
     <color name="npw_art_placeholder">#2C2C33</color>
     <color name="npw_art_placeholder_icon">#7A7A85</color>
+    <color name="npw_track">#3A3A44</color>
+    <!-- The 2x2 tile's strip: fixed, since it sits on the cover, not the card. -->
+    <color name="npw_tile_scrim">#D9141418</color>
+    <color name="npw_tile_text">#F2F2F5</color>
+    <color name="npw_tile_text_secondary">#C4C4CC</color>
+    <color name="npw_tile_icon">#F2F2F5</color>
 </resources>

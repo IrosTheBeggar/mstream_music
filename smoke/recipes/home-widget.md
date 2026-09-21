@@ -4,15 +4,21 @@ The Android Now Playing widget (`packages/now_playing_widget`). The script
 `smoke/android/home-widget.sh` covers the mirror, the three buttons and a
 Play tap after a kill, on an English launcher; this is what it cannot see.
 
-**Do.** Long-press the home screen › Widgets › mStream, place the 4×1 and a
-4×2. Play a track from each kind of server: a standard one, Quick Connect,
+**Do.** Long-press the home screen › Widgets › mStream, place one, then
+resize copies to every size: 2×1 (mini), 2×2 (tile), 4×1 (row), 4×2 (card)
+and 4×3 or taller (large, with the album line, progress and shuffle /
+repeat). Play a track from each kind of server: a standard one, Quick Connect,
 a federated peer. Switch the system to dark and back. Set the app's language
 (Settings › Language) to another one, then back to the system's. Clear the
 queue. Reboot the phone with a track paused. With the app killed from
 Recents' "close all", press a Bluetooth headset's play key.
 
-**Pass.** Both sizes show the cover, the title and the artist, and the icons
-follow the wallpaper palette (Android 12+) and the dark switch. The cover
+**Pass.** Every size shows the cover, the title and the artist, and the icons
+follow the wallpaper palette (Android 12+) and the dark switch; the tile's
+cover fills it with the text on a dark strip. On the large one the progress
+bar and elapsed time move every few seconds while playing and stop when
+paused, and its shuffle and repeat icons follow the app's own toggles both
+ways (the app's within a second, the widget's on the next publish). The cover
 loads for all three server kinds — Quick Connect's rides the loopback tunnel,
 the peer's the parent's `/art/` proxy, both of which the art provider used to
 refuse. The two lines of the empty state and the button descriptions

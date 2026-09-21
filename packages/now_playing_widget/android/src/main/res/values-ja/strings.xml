@@ -8,4 +8,9 @@
     <string name="npw_pause">一時停止</string>
     <string name="npw_previous">前の曲</string>
     <string name="npw_next">次の曲</string>
+    <string name="npw_shuffle_on">シャッフル オン</string>
+    <string name="npw_shuffle_off">シャッフル オフ</string>
+    <string name="npw_repeat_off">リピート オフ</string>
+    <string name="npw_repeat_all">全曲リピート</string>
+    <string name="npw_repeat_one">1曲リピート</string>
 </resources>
