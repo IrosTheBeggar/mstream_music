@@ -6,7 +6,8 @@ import WidgetKit
 /// Small: the cover with play/pause. Medium: cover, title and artist, the
 /// three transport buttons. Large: the album line, a live progress bar with
 /// times, shuffle and repeat beside the transport. Lock screen (rectangular):
-/// cover, title, artist. The buttons work from iOS 17 (App Intents run in the
+/// cover, title, artist; circular: the cover; inline: the title line. The
+/// buttons work from iOS 17 (App Intents run in the
 /// app's process); on iOS 16 the widget is a picture of the state, and a tap
 /// anywhere opens the app through its URL scheme.
 @main
@@ -53,7 +54,10 @@ struct NowPlayingWidget: Widget {
     // the extension's own bundle); a placed widget follows the app's (L10n).
     .configurationDisplayName("Now Playing")
     .description("Album art and controls for the track playing in mStream.")
-    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
+    .supportedFamilies([
+      .systemSmall, .systemMedium, .systemLarge,
+      .accessoryRectangular, .accessoryCircular, .accessoryInline,
+    ])
     .widgetBackground()
   }
 }
@@ -107,6 +111,10 @@ struct NowPlayingView: View {
       switch family {
       case .accessoryRectangular:
         LockScreenRow(snapshot: snapshot)
+      case .accessoryCircular:
+        LockScreenCircle(snapshot: snapshot)
+      case .accessoryInline:
+        LockScreenInline(snapshot: snapshot)
       case .systemSmall:
         SmallCard(snapshot: snapshot)
       case .systemLarge:
@@ -119,13 +127,24 @@ struct NowPlayingView: View {
   }
 }
 
+extension WidgetFamily {
+  /// The lock-screen families: the system draws their surround and renders
+  /// them in its own vibrant style.
+  var isAccessory: Bool {
+    switch self {
+    case .accessoryCircular, .accessoryRectangular, .accessoryInline: return true
+    default: return false
+    }
+  }
+}
+
 /// The card fill, done the iOS 17 way (containerBackground) with the iOS 16
 /// fallback; the lock screen draws its own.
 struct CardBackground: ViewModifier {
   let family: WidgetFamily
 
   func body(content: Content) -> some View {
-    if family == .accessoryRectangular {
+    if family.isAccessory {
       content
     } else if #available(iOS 17.0, *) {
       content
@@ -371,6 +390,42 @@ struct LockScreenRow: View {
         Text(snapshot.hasTrack ? snapshot.title : L10n.string("Nothing playing", snapshot.locale)).font(.headline).lineLimit(1)
         Text(snapshot.hasTrack ? snapshot.subtitle : "mStream").font(.caption).lineLimit(1)
       }
+    }
+  }
+}
+
+/// The circular lock-screen widget: the cover (the system renders it in its
+/// vibrant style), or the state glyph when there is none.
+struct LockScreenCircle: View {
+  let snapshot: NowPlayingSnapshot
+
+  var body: some View {
+    ZStack {
+      AccessoryWidgetBackground()
+      if let image = snapshot.art {
+        Image(uiImage: image).resizable().aspectRatio(contentMode: .fill).clipShape(Circle())
+      } else {
+        Image(systemName: snapshot.playing ? "play.fill" : "music.note").font(.title2)
+      }
+    }
+  }
+}
+
+/// The inline lock-screen widget (the line above the clock): a glyph and the
+/// title, with the artist after it when there is room.
+struct LockScreenInline: View {
+  let snapshot: NowPlayingSnapshot
+
+  private var line: String {
+    guard snapshot.hasTrack else { return L10n.string("Nothing playing", snapshot.locale) }
+    return snapshot.subtitle.isEmpty ? snapshot.title : "\(snapshot.title) – \(snapshot.subtitle)"
+  }
+
+  var body: some View {
+    Label {
+      Text(line)
+    } icon: {
+      Image(systemName: snapshot.playing ? "play.fill" : "music.note")
     }
   }
 }

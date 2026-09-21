@@ -4,8 +4,10 @@ The Android Now Playing widget (`packages/now_playing_widget`). The script
 `smoke/android/home-widget.sh` covers the mirror, the three buttons and a
 Play tap after a kill, on an English launcher; this is what it cannot see.
 
-**Do.** Long-press the home screen › Widgets › mStream, place one, then
-resize copies to every size: 2×1 (mini), 2×2 (tile), 4×1 (row), 4×2 (card)
+**Do.** Settings › Home screen widget › a size (the launcher's own dialog
+confirms; a launcher that refuses pin requests gets the hint to use its
+picker instead), or long-press the home screen › Widgets › mStream. Place
+one, then resize copies to every size: 2×1 (mini), 2×2 (tile), 4×1 (row), 4×2 (card)
 and 4×3 or taller (large, with the album line, progress and shuffle /
 repeat). Play a track from each kind of server: a standard one, Quick Connect,
 a federated peer. Switch the system to dark and back. Set the app's language
@@ -36,13 +38,16 @@ intent handshake and a play / pause / next round trip through the same path
 the widget's buttons take. Placing the widget is by hand.
 
 **Do.** Simulator (iOS 17+): long-press the home screen › Edit › Add Widget ›
-mStream Music, add the small, medium and large sizes; on iOS 16+ add the lock
-screen one too. Play a track in the app, go home, tap the widget's pause,
+mStream Music, add the small, medium and large sizes; on iOS 16+ add the three
+lock-screen shapes too (lock screen › long-press › Customize › the widget
+strip: rectangular, circular, and the inline line above the clock). Play a track in the app, go home, tap the widget's pause,
 play, next, and on the large one shuffle and repeat. Then, with the app
 swiped away from the app switcher, tap play on the widget. On an iOS 16 phone
 (the iPhone X) tap the widget itself.
 
-**Pass.** Every size shows the cover, the title and the artist; the large one
+**Pass.** Every size shows the cover, the title and the artist (the circle
+shows the cover alone, the inline line the title with the artist after it,
+both in the system's vibrant rendering); the large one
 shows the album line, a progress bar and an elapsed time that both move
 while playing without the app publishing anything (they are WidgetKit's
 self-updating timer views; a plain label would sit at 0:00 until the next
