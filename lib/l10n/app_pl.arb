@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "Odtworzenia dziennie",
   "listeningPlaysPerMonth": "Odtworzenia miesięcznie",
   "listeningMostOnDay": "{count, plural, one{Najwięcej {date}: 1 odtworzenie} few{Najwięcej {date}: {count} odtworzenia} many{Najwięcej {date}: {count} odtworzeń} other{Najwięcej {date}: {count} odtworzenia}}",
-  "listeningMostInMonth": "{count, plural, one{Najwięcej: {month} — 1 odtworzenie} few{Najwięcej: {month} — {count} odtworzenia} many{Najwięcej: {month} — {count} odtworzeń} other{Najwięcej: {month} — {count} odtworzenia}}"
+  "listeningMostInMonth": "{count, plural, one{Najwięcej: {month} — 1 odtworzenie} few{Najwięcej: {month} — {count} odtworzenia} many{Najwięcej: {month} — {count} odtworzeń} other{Najwięcej: {month} — {count} odtworzenia}}",
+  "settingsHomeWidget": "Widżet ekranu głównego",
+  "settingsHomeWidgetSubtitle": "Dodaj widżet Teraz odtwarzane do ekranu głównego w jednym z pięciu rozmiarów.",
+  "settingsHomeWidgetSubtitleIos": "Przytrzymaj ekran główny, dodaj widżet i wybierz mStream Music.",
+  "homeWidgetPickSize": "Wybierz rozmiar",
+  "homeWidgetPinUnsupported": "Ten launcher nie może dodawać widżetów stąd. Użyj jego własnego wyboru widżetów."
 }

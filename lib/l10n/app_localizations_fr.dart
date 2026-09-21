@@ -4314,4 +4314,22 @@ class AppLocalizationsFr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Widget d\'écran d\'accueil';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Ajoutez le widget Lecture en cours à l\'écran d\'accueil, dans l\'une des cinq tailles.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Appuyez longuement sur l\'écran d\'accueil, ajoutez un widget et choisissez mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Choisissez une taille';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'Ce lanceur ne peut pas ajouter de widgets d\'ici. Utilisez son propre sélecteur de widgets.';
 }

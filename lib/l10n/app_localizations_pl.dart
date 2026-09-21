@@ -4371,4 +4371,22 @@ class AppLocalizationsPl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Widżet ekranu głównego';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Dodaj widżet Teraz odtwarzane do ekranu głównego w jednym z pięciu rozmiarów.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Przytrzymaj ekran główny, dodaj widżet i wybierz mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Wybierz rozmiar';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'Ten launcher nie może dodawać widżetów stąd. Użyj jego własnego wyboru widżetów.';
 }

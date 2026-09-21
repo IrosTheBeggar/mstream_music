@@ -1145,5 +1145,10 @@
   "listeningPlaysPerDay": "Прослушиваний в день",
   "listeningPlaysPerMonth": "Прослушиваний в месяц",
   "listeningMostOnDay": "{count, plural, one{Больше всего {date}: {count} прослушивание} few{Больше всего {date}: {count} прослушивания} many{Больше всего {date}: {count} прослушиваний} other{Больше всего {date}: {count} прослушивания}}",
-  "listeningMostInMonth": "{count, plural, one{Больше всего: {month} — {count} прослушивание} few{Больше всего: {month} — {count} прослушивания} many{Больше всего: {month} — {count} прослушиваний} other{Больше всего: {month} — {count} прослушивания}}"
+  "listeningMostInMonth": "{count, plural, one{Больше всего: {month} — {count} прослушивание} few{Больше всего: {month} — {count} прослушивания} many{Больше всего: {month} — {count} прослушиваний} other{Больше всего: {month} — {count} прослушивания}}",
+  "settingsHomeWidget": "Виджет на главном экране",
+  "settingsHomeWidgetSubtitle": "Добавьте виджет «Сейчас играет» на главный экран в одном из пяти размеров.",
+  "settingsHomeWidgetSubtitleIos": "Удерживайте главный экран, добавьте виджет и выберите mStream Music.",
+  "homeWidgetPickSize": "Выберите размер",
+  "homeWidgetPinUnsupported": "Этот лаунчер не может добавлять виджеты отсюда. Воспользуйтесь его собственным списком виджетов."
 }

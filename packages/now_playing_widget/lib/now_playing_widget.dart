@@ -75,13 +75,27 @@ class NowPlayingWidget {
   }
 
   /// Ask the launcher to place the widget (Android 8+; the launcher shows its
-  /// own confirmation). False when the launcher does not support pinning.
-  static Future<bool> requestPin() async {
+  /// own confirmation) — one of the sizes [pinTargets] lists (`2x1` … `4x3`),
+  /// the 4x1 when none is given. False when the launcher does not support
+  /// pinning.
+  static Future<bool> requestPin({String? size}) async {
     if (!Platform.isAndroid) return false;
     try {
-      return await channel.invokeMethod<bool>('requestPin') ?? false;
+      return await channel.invokeMethod<bool>('requestPin', size) ?? false;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// The sizes a pin request can place, each with the label the launcher's
+  /// own picker shows for it (in the app's language), and whether this
+  /// launcher takes pin requests at all. Android only; empty elsewhere.
+  static Future<PinTargets> pinTargets() async {
+    if (!Platform.isAndroid) return PinTargets.none;
+    try {
+      return PinTargets.parse(await channel.invokeMethod<Object?>('pinTargets'));
+    } catch (_) {
+      return PinTargets.none;
     }
   }
 
@@ -108,5 +122,50 @@ class NowPlayingWidget {
     } catch (e) {
       return {'error': '$e'};
     }
+  }
+}
+
+/// One of the widget's picker entries: its cell size and the launcher's label.
+class PinTarget {
+  const PinTarget({required this.size, required this.label});
+
+  /// `2x1`, `2x2`, `4x1`, `4x2` or `4x3`.
+  final String size;
+
+  /// What the launcher's picker (and its pin dialog) calls it.
+  final String label;
+
+  @override
+  String toString() => 'PinTarget($size, $label)';
+}
+
+/// What [NowPlayingWidget.pinTargets] reports.
+class PinTargets {
+  const PinTargets({required this.supported, required this.targets});
+
+  /// Whether the launcher takes pin requests (Android 8+, and its say).
+  final bool supported;
+
+  /// The sizes on offer, smallest first.
+  final List<PinTarget> targets;
+
+  static const none = PinTargets(supported: false, targets: []);
+
+  /// The native reply: `{supported: bool, targets: [{size, label}, …]}`;
+  /// anything malformed is [none].
+  static PinTargets parse(Object? reply) {
+    if (reply is! Map) return none;
+    final raw = reply['targets'];
+    final targets = <PinTarget>[];
+    if (raw is List) {
+      for (final t in raw) {
+        if (t is! Map) continue;
+        final size = t['size'], label = t['label'];
+        if (size is String && size.isNotEmpty && label is String) {
+          targets.add(PinTarget(size: size, label: label));
+        }
+      }
+    }
+    return PinTargets(supported: reply['supported'] == true, targets: targets);
   }
 }

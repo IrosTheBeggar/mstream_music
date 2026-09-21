@@ -4023,4 +4023,19 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => '主屏幕小组件';
+
+  @override
+  String get settingsHomeWidgetSubtitle => '将“正在播放”小组件以五种尺寸之一添加到主屏幕。';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos => '长按主屏幕，添加小组件并选择 mStream Music。';
+
+  @override
+  String get homeWidgetPickSize => '选择尺寸';
+
+  @override
+  String get homeWidgetPinUnsupported => '此启动器无法从这里添加小组件，请使用它自带的小组件选择器。';
 }

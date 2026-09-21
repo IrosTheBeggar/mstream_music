@@ -4300,4 +4300,22 @@ class AppLocalizationsIt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsHomeWidget => 'Widget per la schermata Home';
+
+  @override
+  String get settingsHomeWidgetSubtitle =>
+      'Aggiungi il widget In riproduzione alla schermata Home in una delle cinque dimensioni.';
+
+  @override
+  String get settingsHomeWidgetSubtitleIos =>
+      'Tieni premuta la schermata Home, aggiungi un widget e scegli mStream Music.';
+
+  @override
+  String get homeWidgetPickSize => 'Scegli una dimensione';
+
+  @override
+  String get homeWidgetPinUnsupported =>
+      'Questo launcher non può aggiungere widget da qui. Usa il suo selettore di widget.';
 }
