@@ -52,6 +52,9 @@ class NowPlayingWidgetPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 Transport.onDartPublished()
                 result.success(null)
             }
+            // The iOS side holds a cold-launch intent for this; Android's
+            // taps never pass through Dart, so there is nothing to release.
+            "ready" -> result.success(null)
             "requestPin" -> result.success(requestPin(context))
             "debugState" -> result.success(debugState(context))
             "debugForceLayout" -> {

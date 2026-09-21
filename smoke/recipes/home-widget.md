@@ -28,3 +28,33 @@ shows the track with a Play icon (never a stale Pause). The Bluetooth resume
 reaches the widget: it shows Pause within a few seconds, with no app window
 ever opened — the `[widget] publish` line in Diagnostics › Share comes from
 the headless boot.
+
+## iOS
+
+`smoke/ios/widget-sim.sh` checks the bundle, the App Group snapshot, the
+intent handshake and a play / pause / next round trip through the same path
+the widget's buttons take. Placing the widget is by hand.
+
+**Do.** Simulator (iOS 17+): long-press the home screen › Edit › Add Widget ›
+mStream Music, add the small, medium and large sizes; on iOS 16+ add the lock
+screen one too. Play a track in the app, go home, tap the widget's pause,
+play, next, and on the large one shuffle and repeat. Then, with the app
+swiped away from the app switcher, tap play on the widget. On an iOS 16 phone
+(the iPhone X) tap the widget itself.
+
+**Pass.** Every size shows the cover, the title and the artist; the large one
+shows the album line, a progress bar and an elapsed time that both move
+while playing without the app publishing anything (they are WidgetKit's
+self-updating timer views; a plain label would sit at 0:00 until the next
+reload), and the five buttons. Each button acts within a second and the widget follows (the app's
+`[widget] <action>: sent` then `[widget] action: <action>` in Diagnostics ›
+Share). With the app swiped away, a play tap launches it in the background
+and the log shows `[widget] play: Dart not up yet, holding` and then `sent
+after the handshake`. On iOS 16 a tap on the widget opens the app.
+
+Seeding a queue on the simulator when it restored none: copy the emulator's
+rig queue (`adb shell run-as mstream.music.plus.dev cat app_flutter/queue.json`)
+into the app container's `Documents/queue.json`
+(`xcrun simctl get_app_container <udid> mstream.music data`), rewriting
+`10.0.2.2:3161` to `127.0.0.1:3161`, and put that rig first in
+`Documents/servers.json`.

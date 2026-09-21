@@ -2,6 +2,7 @@ import Flutter
 import Intents
 import UIKit
 import UserNotifications
+import now_playing_widget
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -30,6 +31,9 @@ import UserNotifications
     self.engine = engine
     carPlay = CarPlayBridge(messenger: engine.binaryMessenger)
     siri = SiriMediaHandler(bridge: carPlay)
+    // The home-screen widget's buttons (App Intents, iOS 17+) run in this
+    // process; the plugin hands them to the audio handler once Dart is up.
+    NowPlayingIntentBridge.handler = { NowPlayingWidgetPlugin.perform($0) }
     // Local notifications (federation-request alerts): FlutterAppDelegate
     // forwards the center's callbacks to the plugin once it is the delegate.
     UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate

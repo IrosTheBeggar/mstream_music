@@ -1,4 +1,4 @@
-import 'dart:async' show StreamSubscription;
+import 'dart:async' show StreamSubscription, unawaited;
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io' show Platform;
@@ -48,9 +48,9 @@ class NowPlayingWidgetPublisher {
   static NowPlayingWidgetPublisher? _app;
 
   /// The app's instance: the audio handler, the language setting and the
-  /// plugin. Android only; a no-op everywhere else and on a second call.
+  /// plugin. Android and iOS; a no-op everywhere else and on a second call.
   static Future<void> start() async {
-    if (!Platform.isAndroid || _app != null) return;
+    if (!(Platform.isAndroid || Platform.isIOS) || _app != null) return;
     final handler = MediaManager().audioHandler;
     _app = NowPlayingWidgetPublisher(
       mediaItem: handler.mediaItem,
@@ -58,8 +58,54 @@ class NowPlayingWidgetPublisher {
       locale: SettingsManager().localeStream,
       send: NowPlayingWidget.publish,
     )..listen();
+    // iOS: the widget's App Intents run in the app's process and reach the
+    // handler through here (Android's taps drive the media session natively
+    // and never pass this way). The handshake releases an intent a cold
+    // launch held while Dart was still booting.
+    NowPlayingWidget.onAction = (action) => unawaited(act(action, handler));
+    await NowPlayingWidget.ready();
     if (kDebugMode) _registerDebugExtension();
   }
+
+  /// A widget action against the handler, the way the player panel would do
+  /// it: explicit play / pause, the skips, shuffle toggled, repeat cycled.
+  static Future<void> act(String action, AudioHandler handler) async {
+    appLog('[widget] action: $action');
+    final state = handler.playbackState.value;
+    switch (action) {
+      case 'play':
+        await handler.play();
+      case 'pause':
+        await handler.pause();
+      case 'next':
+        await handler.skipToNext();
+      case 'previous':
+        await handler.skipToPrevious();
+      case 'shuffle':
+        await handler.setShuffleMode(nextShuffleMode(state.shuffleMode));
+      case 'repeat':
+        await handler.setRepeatMode(nextRepeatMode(state.repeatMode));
+      default:
+        appLog('[widget] unknown action: $action');
+    }
+  }
+
+  /// Pure: shuffle is a toggle.
+  static AudioServiceShuffleMode nextShuffleMode(AudioServiceShuffleMode m) =>
+      m == AudioServiceShuffleMode.none
+          ? AudioServiceShuffleMode.all
+          : AudioServiceShuffleMode.none;
+
+  /// Pure: repeat cycles off → all → one → off, the player panel's order
+  /// ('group' has no meaning here and is treated as 'all').
+  static AudioServiceRepeatMode nextRepeatMode(AudioServiceRepeatMode m) =>
+      switch (m) {
+        AudioServiceRepeatMode.none => AudioServiceRepeatMode.all,
+        AudioServiceRepeatMode.all ||
+        AudioServiceRepeatMode.group =>
+          AudioServiceRepeatMode.one,
+        AudioServiceRepeatMode.one => AudioServiceRepeatMode.none,
+      };
 
   void listen() {
     _sub ??= Rx.combineLatest3<MediaItem?, PlaybackState, Locale?,
@@ -169,9 +215,11 @@ class NowPlayingWidgetPublisher {
   /// script can place the widget, read what the native side holds, and push
   /// a cover through the whole fetch chain (`art&url=<image on a configured
   /// host>` republishes the last snapshot with that art; the next real
-  /// change puts the widget right again), or force one size's layout on
-  /// every placed widget (`layout&name=mini|tile|row|card|large|auto`).
-  /// Params: `action=state|pin|art|layout`.
+  /// change puts the widget right again), force one size's layout on every
+  /// placed widget (`layout&name=mini|tile|row|card|large|auto`), or drive a
+  /// transport action the way a widget button would
+  /// (`act&name=play|pause|next|previous|shuffle|repeat`).
+  /// Params: `action=state|pin|art|layout|act`.
   static void _registerDebugExtension() {
     developer.registerExtension('ext.mstream.widget',
         (String method, Map<String, String> params) async {
@@ -182,6 +230,10 @@ class NowPlayingWidgetPublisher {
           'art' => await _debugPublishArt(params['url'] ?? ''),
           'layout' =>
             await NowPlayingWidget.debugForceLayout(params['name'] ?? 'auto'),
+          // Not awaited: the handler's play() completes only when playback
+          // later pauses or stops (just_audio semantics), and the hook must
+          // answer at once.
+          'act' => _fireAct(params['name'] ?? ''),
           _ => {
               'native': await NowPlayingWidget.debugState(),
               'last': _app?.last,
@@ -194,6 +246,11 @@ class NowPlayingWidgetPublisher {
             jsonEncode({'ok': false, 'error': '$e'}));
       }
     });
+  }
+
+  static bool _fireAct(String name) {
+    unawaited(act(name, MediaManager().audioHandler));
+    return true;
   }
 
   static Future<bool> _debugPublishArt(String url) async {
