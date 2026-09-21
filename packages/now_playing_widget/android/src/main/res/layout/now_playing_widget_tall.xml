@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Two cells and up: a bigger cover on the left; text above the buttons on
-     the right. Same ids as the compact layout — the renderer fills both. -->
+<!-- A wide frame between one row and the large layout's height (a launcher
+     with small cells, or a rotated frame): the cover fills the height on the
+     left, the text sits at the top and the buttons at the bottom on the
+     right. Same ids as the compact layout — the renderer fills both. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/npw_root"
     android:layout_width="match_parent"
@@ -8,19 +10,27 @@
     android:background="@drawable/npw_background"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:paddingStart="12dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="10dp">
 
     <ImageView
         android:id="@+id/npw_art"
-        android:layout_width="88dp"
-        android:layout_height="88dp"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:adjustViewBounds="true"
         android:importantForAccessibility="no"
-        android:scaleType="centerCrop"
+        android:maxHeight="140dp"
+        android:maxWidth="140dp"
+        android:minHeight="72dp"
+        android:minWidth="72dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/npw_art_placeholder" />
 
     <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="88dp"
+        android:layout_height="match_parent"
         android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
@@ -92,32 +102,32 @@
             android:id="@+id/npw_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="-8dp"
+            android:layout_marginStart="-10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageView
                 android:id="@+id/npw_previous"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:contentDescription="@string/npw_previous"
-                android:padding="9dp"
+                android:padding="10dp"
                 android:src="@drawable/npw_ic_previous" />
 
             <ImageView
                 android:id="@+id/npw_play_pause"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
                 android:contentDescription="@string/npw_play"
                 android:padding="6dp"
                 android:src="@drawable/npw_ic_play" />
 
             <ImageView
                 android:id="@+id/npw_next"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:contentDescription="@string/npw_next"
-                android:padding="9dp"
+                android:padding="10dp"
                 android:src="@drawable/npw_ic_next" />
         </LinearLayout>
     </LinearLayout>

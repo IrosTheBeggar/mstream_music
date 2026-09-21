@@ -23,7 +23,7 @@ import java.util.Locale
  * answered from the persisted snapshot, so no Dart is needed. The app's own
  * pushes come in through NowPlayingWidgetPlugin, which renders directly.
  */
-class NowPlayingWidgetProvider : AppWidgetProvider() {
+open class NowPlayingWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         Renderer.renderFromStore(context, manager, ids)
         NowPlayingWidgetPlugin.scheduleTicks(context)
@@ -36,6 +36,19 @@ class NowPlayingWidgetProvider : AppWidgetProvider() {
         NowPlayingWidgetPlugin.scheduleTicks(context)
     }
 }
+
+/**
+ * The widget picker lists one entry per size (the sizes are what the user
+ * asked for; a lone resizable entry hid four of them). Each is its own
+ * provider with its own placement size; what a placed widget draws still
+ * follows its frame ([Layout.pick]), so any of them can be resized into any
+ * other. The 4x1 keeps the original class, so widgets placed before the
+ * split stay valid.
+ */
+class NowPlayingWidgetProviderMini : NowPlayingWidgetProvider()
+class NowPlayingWidgetProviderTile : NowPlayingWidgetProvider()
+class NowPlayingWidgetProviderCard : NowPlayingWidgetProvider()
+class NowPlayingWidgetProviderLarge : NowPlayingWidgetProvider()
 
 /** The persisted snapshot (see NowPlayingSnapshot). */
 object Store {
@@ -58,10 +71,20 @@ object Renderer {
     /** Debug builds: draw every instance with this layout whatever its size (null = by size). */
     @Volatile var forcedLayout: Layout? = null
 
+    /** The 4x1's provider: what a pin request places. */
     fun component(context: Context) = ComponentName(context, NowPlayingWidgetProvider::class.java)
 
+    private val providers = listOf(
+        NowPlayingWidgetProvider::class.java,
+        NowPlayingWidgetProviderMini::class.java,
+        NowPlayingWidgetProviderTile::class.java,
+        NowPlayingWidgetProviderCard::class.java,
+        NowPlayingWidgetProviderLarge::class.java,
+    )
+
+    /** Every placed widget, whichever picker entry it came from. */
     fun ids(context: Context, manager: AppWidgetManager = AppWidgetManager.getInstance(context)): IntArray =
-        manager.getAppWidgetIds(component(context))
+        providers.flatMap { manager.getAppWidgetIds(ComponentName(context, it)).toList() }.toIntArray()
 
     /**
      * A launcher-initiated render: the last snapshot, with `playing` trusted

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The 4x1 row. Sizes are in launcher cells (n cells = 70n - 30 dp); the layout a
+<!-- The 4x3 large. Sizes are in launcher cells (n cells = 70n - 30 dp); the layout a
      placed widget draws follows its frame (Layout.pick), so it can be resized
      into any other size. No periodic update: the app pushes every change. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="40dp"
+    android:minHeight="180dp"
     android:minResizeWidth="110dp"
     android:minResizeHeight="40dp"
     android:targetCellWidth="4"
-    android:targetCellHeight="1"
+    android:targetCellHeight="3"
     android:maxResizeHeight="320dp"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/now_playing_widget"
-    android:previewLayout="@layout/now_playing_widget"
+    android:initialLayout="@layout/now_playing_widget_large"
+    android:previewLayout="@layout/now_playing_widget_large"
     android:description="@string/npw_description"
     android:widgetCategory="home_screen" />

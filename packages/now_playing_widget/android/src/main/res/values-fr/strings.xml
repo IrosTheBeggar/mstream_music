@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Répétition désactivée</string>
     <string name="npw_repeat_all">Tout répéter</string>
     <string name="npw_repeat_one">Répéter le morceau</string>
+    <string name="npw_label_2x1">Lecture en cours 2×1</string>
+    <string name="npw_label_2x2">Lecture en cours 2×2</string>
+    <string name="npw_label_4x1">Lecture en cours 4×1</string>
+    <string name="npw_label_4x2">Lecture en cours 4×2</string>
+    <string name="npw_label_4x3">Lecture en cours 4×3</string>
 </resources>

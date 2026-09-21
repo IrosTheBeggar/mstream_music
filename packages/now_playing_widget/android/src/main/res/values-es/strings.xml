@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Repetición desactivada</string>
     <string name="npw_repeat_all">Repetir todo</string>
     <string name="npw_repeat_one">Repetir una</string>
+    <string name="npw_label_2x1">Reproduciendo ahora 2×1</string>
+    <string name="npw_label_2x2">Reproduciendo ahora 2×2</string>
+    <string name="npw_label_4x1">Reproduciendo ahora 4×1</string>
+    <string name="npw_label_4x2">Reproduciendo ahora 4×2</string>
+    <string name="npw_label_4x3">Reproduciendo ahora 4×3</string>
 </resources>

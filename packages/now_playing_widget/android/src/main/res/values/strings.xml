@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Repeat off</string>
     <string name="npw_repeat_all">Repeat all</string>
     <string name="npw_repeat_one">Repeat one</string>
+    <string name="npw_label_2x1">Now Playing 2×1</string>
+    <string name="npw_label_2x2">Now Playing 2×2</string>
+    <string name="npw_label_4x1">Now Playing 4×1</string>
+    <string name="npw_label_4x2">Now Playing 4×2</string>
+    <string name="npw_label_4x3">Now Playing 4×3</string>
 </resources>

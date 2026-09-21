@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Ripeti disattivato</string>
     <string name="npw_repeat_all">Ripeti tutto</string>
     <string name="npw_repeat_one">Ripeti brano</string>
+    <string name="npw_label_2x1">In riproduzione 2×1</string>
+    <string name="npw_label_2x2">In riproduzione 2×2</string>
+    <string name="npw_label_4x1">In riproduzione 4×1</string>
+    <string name="npw_label_4x2">In riproduzione 4×2</string>
+    <string name="npw_label_4x3">In riproduzione 4×3</string>
 </resources>

@@ -12,9 +12,15 @@
             android:name="music.mstream.now_playing_widget.WidgetActionReceiver"
             android:exported="false" />
 
+        <!-- One picker entry per size (each its own provider; the 4x1 keeps
+             the original class so widgets placed before the split stay
+             valid). exported=false is what the platform docs prescribe:
+             APPWIDGET_UPDATE and the option changes arrive from the system,
+             which may reach a non-exported receiver; the button taps go to
+             WidgetActionReceiver above, never to these. -->
         <receiver
             android:name="music.mstream.now_playing_widget.NowPlayingWidgetProvider"
-            android:label="@string/npw_label"
+            android:label="@string/npw_label_4x1"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -23,5 +29,54 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/now_playing_widget_info" />
         </receiver>
+
+        <receiver
+            android:name="music.mstream.now_playing_widget.NowPlayingWidgetProviderMini"
+            android:label="@string/npw_label_2x1"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info_mini" />
+        </receiver>
+
+        <receiver
+            android:name="music.mstream.now_playing_widget.NowPlayingWidgetProviderTile"
+            android:label="@string/npw_label_2x2"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info_tile" />
+        </receiver>
+
+        <receiver
+            android:name="music.mstream.now_playing_widget.NowPlayingWidgetProviderCard"
+            android:label="@string/npw_label_4x2"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info_card" />
+        </receiver>
+
+        <receiver
+            android:name="music.mstream.now_playing_widget.NowPlayingWidgetProviderLarge"
+            android:label="@string/npw_label_4x3"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info_large" />
+        </receiver>
+
     </application>
 </manifest>

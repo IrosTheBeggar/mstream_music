@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Повтор выключен</string>
     <string name="npw_repeat_all">Повторять все</string>
     <string name="npw_repeat_one">Повторять трек</string>
+    <string name="npw_label_2x1">Сейчас играет 2×1</string>
+    <string name="npw_label_2x2">Сейчас играет 2×2</string>
+    <string name="npw_label_4x1">Сейчас играет 4×1</string>
+    <string name="npw_label_4x2">Сейчас играет 4×2</string>
+    <string name="npw_label_4x3">Сейчас играет 4×3</string>
 </resources>

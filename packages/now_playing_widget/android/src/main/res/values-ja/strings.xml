@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">リピート オフ</string>
     <string name="npw_repeat_all">全曲リピート</string>
     <string name="npw_repeat_one">1曲リピート</string>
+    <string name="npw_label_2x1">再生中 2×1</string>
+    <string name="npw_label_2x2">再生中 2×2</string>
+    <string name="npw_label_4x1">再生中 4×1</string>
+    <string name="npw_label_4x2">再生中 4×2</string>
+    <string name="npw_label_4x3">再生中 4×3</string>
 </resources>

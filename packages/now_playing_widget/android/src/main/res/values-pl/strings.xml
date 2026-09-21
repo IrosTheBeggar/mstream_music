@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Powtarzanie wyłączone</string>
     <string name="npw_repeat_all">Powtarzaj wszystko</string>
     <string name="npw_repeat_one">Powtarzaj utwór</string>
+    <string name="npw_label_2x1">Teraz odtwarzane 2×1</string>
+    <string name="npw_label_2x2">Teraz odtwarzane 2×2</string>
+    <string name="npw_label_4x1">Teraz odtwarzane 4×1</string>
+    <string name="npw_label_4x2">Teraz odtwarzane 4×2</string>
+    <string name="npw_label_4x3">Teraz odtwarzane 4×3</string>
 </resources>

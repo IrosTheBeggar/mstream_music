@@ -35,34 +35,33 @@ enum class Layout(
         /**
          * Launchers disagree on what a cell measures — a Pixel-style grid
          * draws a 2-cell width at about 170 dp and a row at 104 dp, One UI
-         * on a Galaxy S25 at about 140 and 68, AOSP's own minimums are 110
-         * and 40 — so absolute dp thresholds cannot tell a 2x2 from a 4x3
-         * across phones (a Galaxy's three rows are shorter than a Pixel's
-         * two). The shape can: the aspect ratio separates one, two and three
-         * or more rows for a given width, and one width cut-off separates two
-         * cells from four on every launcher measured.
+         * on a Galaxy S25 at 152 and 72 (two rows: 168), AOSP's own minimums
+         * are 110 and 40 — so a layout cannot be read off a cell count. The
+         * frame itself decides: two cells wide is the narrow pair, told apart
+         * by shape; a wide frame gets the large layout as soon as it is tall
+         * enough to hold it (a Galaxy's two rows already are, a Pixel's two
+         * rows too), the card between one row and that, and the row when it
+         * is a strip.
          */
         const val NARROW_BELOW_DP = 220
-        /** Wider than this many times its height: one row. */
-        const val ONE_ROW_FROM_RATIO = 2.5f
-        /** Wider than this: two rows (below it, three or more). */
-        const val TWO_ROWS_FROM_RATIO = 1.45f
-        /** The large layout's own floor; a squarer frame that is shorter gets the card. */
-        const val LARGE_MIN_HEIGHT_DP = 165
-        /** A frame this tall holds the card even when it is very wide: a 4x2 or 4x3 in landscape. */
-        const val CARD_FROM_HEIGHT_DP = 130
+        /** Narrow and wider than this many times its height: the mini, else the tile. */
+        const val MINI_FROM_RATIO = 1.45f
+        /** A wide frame at least this tall holds the large layout. */
+        const val LARGE_FROM_HEIGHT_DP = 165
+        /** A strip: much wider than tall and shorter than this gets the row. */
+        const val ROW_FROM_RATIO = 2.5f
+        const val ROW_BELOW_HEIGHT_DP = 130
 
         fun pick(widthDp: Int, heightDp: Int): Layout {
             if (widthDp <= 0 || heightDp <= 0) return ROW
             val ratio = widthDp.toFloat() / heightDp
             val narrow = widthDp < NARROW_BELOW_DP
             return when {
-                narrow && ratio >= TWO_ROWS_FROM_RATIO -> MINI
+                narrow && ratio >= MINI_FROM_RATIO -> MINI
                 narrow -> TILE
-                ratio >= ONE_ROW_FROM_RATIO && heightDp < CARD_FROM_HEIGHT_DP -> ROW
-                ratio >= TWO_ROWS_FROM_RATIO -> CARD
-                heightDp < LARGE_MIN_HEIGHT_DP -> CARD
-                else -> LARGE
+                ratio >= ROW_FROM_RATIO && heightDp < ROW_BELOW_HEIGHT_DP -> ROW
+                heightDp >= LARGE_FROM_HEIGHT_DP -> LARGE
+                else -> CARD
             }
         }
 

@@ -13,4 +13,9 @@
     <string name="npw_repeat_off">Wiederholen aus</string>
     <string name="npw_repeat_all">Alle wiederholen</string>
     <string name="npw_repeat_one">Titel wiederholen</string>
+    <string name="npw_label_2x1">Aktuelle Wiedergabe 2×1</string>
+    <string name="npw_label_2x2">Aktuelle Wiedergabe 2×2</string>
+    <string name="npw_label_4x1">Aktuelle Wiedergabe 4×1</string>
+    <string name="npw_label_4x2">Aktuelle Wiedergabe 4×2</string>
+    <string name="npw_label_4x3">Aktuelle Wiedergabe 4×3</string>
 </resources>
