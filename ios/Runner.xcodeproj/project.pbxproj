@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7F84D21830D819657C230A26 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0141B5E58D030C9CDB958EF1 /* Localizable.xcstrings */; };
+		3101EEFDB075CDF6DCD221F5 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0141B5E58D030C9CDB958EF1 /* Localizable.xcstrings */; };
 		83DD6EFF8036957F25162101 /* NowPlayingWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD803CAD3427CE849A154A78 /* NowPlayingWidget.swift */; };
 		AB92F84F0DD3AFBE7667478D /* NowPlayingSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A8AF053099F405C183D8AA4 /* NowPlayingSnapshot.swift */; };
 		6CC2A4B74B54A7C7F659FAE9 /* NowPlayingIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB010AC5A928C770C5158817 /* NowPlayingIntents.swift */; };
@@ -68,6 +70,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0141B5E58D030C9CDB958EF1 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		21192394BD14796CB9DCCBFF /* NowPlayingWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NowPlayingWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD803CAD3427CE849A154A78 /* NowPlayingWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingWidget.swift; sourceTree = "<group>"; };
 		4A8AF053099F405C183D8AA4 /* NowPlayingSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingSnapshot.swift; sourceTree = "<group>"; };
@@ -124,6 +127,7 @@
 				EB010AC5A928C770C5158817 /* NowPlayingIntents.swift */,
 				CFCD073E796156A714F1C0D0 /* Info.plist */,
 				DD6D82C377DCCD90644304CD /* NowPlayingWidget.entitlements */,
+				0141B5E58D030C9CDB958EF1 /* Localizable.xcstrings */,
 			);
 			path = NowPlayingWidget;
 			sourceTree = "<group>";
@@ -281,6 +285,15 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
+				es,
+				fr,
+				it,
+				ja,
+				pl,
+				pt,
+				ru,
+				"zh-Hans",
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
@@ -302,6 +315,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F84D21830D819657C230A26 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,6 +334,7 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				A1B2C3D4E5F6071829304050 /* PrivacyInfo.xcprivacy in Resources */,
+				3101EEFDB075CDF6DCD221F5 /* Localizable.xcstrings in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

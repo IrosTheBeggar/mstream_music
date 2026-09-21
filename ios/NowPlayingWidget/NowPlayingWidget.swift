@@ -26,7 +26,7 @@ struct NowPlayingProvider: TimelineProvider {
     var s = NowPlayingSnapshot()
     s.hasTrack = true
     s.title = "mStream"
-    s.artist = "Now Playing"
+    s.artist = L10n.string("Now Playing", "")
     return NowPlayingEntry(date: Date(), snapshot: s)
   }
 
@@ -49,6 +49,8 @@ struct NowPlayingWidget: Widget {
       NowPlayingView(snapshot: entry.snapshot)
         .widgetURL(URL(string: "mstream://nowplaying"))
     }
+    // The gallery entry can only follow the system language (Localizable, via
+    // the extension's own bundle); a placed widget follows the app's (L10n).
     .configurationDisplayName("Now Playing")
     .description("Album art and controls for the track playing in mStream.")
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
@@ -64,6 +66,33 @@ extension WidgetConfiguration {
       return self.contentMarginsDisabled()
     }
     return self
+  }
+}
+
+// MARK: - Strings
+
+/// The extension's strings (Localizable.xcstrings, shared with the app for the
+/// intents' titles), in the app's language: the tag the snapshot carries when
+/// the app has its own language setting — as the Android widget does — and
+/// the system language otherwise, which is also all the gallery entry can do.
+enum L10n {
+  static func string(_ key: String, _ tag: String) -> String {
+    bundle(for: tag).localizedString(forKey: key, value: nil, table: nil)
+  }
+
+  /// The lproj for a tag, trying the region-less form too (`pt-BR` → `pt`)
+  /// and the catalog's script name for Chinese (`zh` → `zh-Hans`).
+  static func bundle(for tag: String) -> Bundle {
+    guard !tag.isEmpty else { return .main }
+    var names = [tag]
+    if let dash = tag.firstIndex(of: "-") { names.append(String(tag[..<dash])) }
+    if names.contains("zh") { names.append("zh-Hans") }
+    for name in names {
+      if let path = Bundle.main.path(forResource: name, ofType: "lproj"), let bundle = Bundle(path: path) {
+        return bundle
+      }
+    }
+    return .main
   }
 }
 
@@ -153,8 +182,9 @@ struct TitleLines: View {
           Text(snapshot.album).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
         }
       } else {
-        Text("Nothing playing").font(titleFont).lineLimit(1)
-        Text("Tap to open mStream").font(subtitleFont).foregroundStyle(.secondary).lineLimit(1)
+        Text(L10n.string("Nothing playing", snapshot.locale)).font(titleFont).lineLimit(1)
+        // Two lines: the empty state has the room, and some languages need it.
+        Text(L10n.string("Tap to open mStream", snapshot.locale)).font(subtitleFont).foregroundStyle(.secondary).lineLimit(2)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -338,7 +368,7 @@ struct LockScreenRow: View {
         Image(systemName: snapshot.playing ? "play.fill" : "music.note").font(.title3)
       }
       VStack(alignment: .leading) {
-        Text(snapshot.hasTrack ? snapshot.title : "Nothing playing").font(.headline).lineLimit(1)
+        Text(snapshot.hasTrack ? snapshot.title : L10n.string("Nothing playing", snapshot.locale)).font(.headline).lineLimit(1)
         Text(snapshot.hasTrack ? snapshot.subtitle : "mStream").font(.caption).lineLimit(1)
       }
     }
