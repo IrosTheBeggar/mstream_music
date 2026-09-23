@@ -2,6 +2,7 @@
 
 #include <android/log.h>
 #include <cstring>
+#include <exception>
 #include <regex>
 #include <sstream>
 #include <utility>
@@ -267,7 +268,16 @@ ParsedShader parseShader(const std::string& source) {
             std::smatch cm;
             if (std::regex_search(line, cm, channelMarker)) {
                 std::string target = lowerAlnum(cm[1].str());
-                int ch = std::stoi(cm[2].str());
+                // Parsed defensively, like the size line below: an index is
+                // 0..3, and a digit run too long for int makes std::stoi
+                // throw — which, uncaught on the compile worker, ends the app.
+                // An index that won't parse routes nothing, as one past 3.
+                int ch = -1;
+                try {
+                    ch = std::stoi(cm[2].str());
+                } catch (...) {
+                    ch = -1;
+                }
                 std::string srcName = lowerAlnum(cm[3].str());
                 int tgtIdx = passIndexFromName(target);
                 int srcEnum = channelSourceFromString(srcName);
@@ -568,7 +578,20 @@ GLuint ShaderEngine::compileSingleProgram(const std::string& fragSource) {
 }
 
 ShaderEngine::PassSet* ShaderEngine::compilePassSet(const std::string& source) {
-    ParsedShader parsed = parseShader(source);
+    // The parser reads user-supplied text, and this runs on the compile
+    // worker's own thread (or the sync fallback's), where an exception that
+    // escapes ends the process. So a shader that won't parse fails the way one
+    // that won't compile does: logged, and the current preset stays up.
+    ParsedShader parsed;
+    try {
+        parsed = parseShader(source);
+    } catch (const std::exception& e) {
+        LOGE("shader parse failed: %s", e.what());
+        return nullptr;
+    } catch (...) {
+        LOGE("shader parse failed");
+        return nullptr;
+    }
     auto* set = new PassSet();
     int totalCompiled = 0;
     for (int i = 0; i < PASS_COUNT; ++i) {
@@ -691,20 +714,18 @@ GLuint ShaderEngine::channelTextureFor(ChannelSource src, int currentPassIdx,
             const int bufIdx = static_cast<int>(src) - static_cast<int>(CHAN_BUFFER_A);
             const BufferTarget& bt = bufferTargets_[bufIdx];
             if (!bt.allocated) return blackTex_;
-            // Read from the slot we WON'T be writing this frame. If
-            // we're sampling our own buffer (self-feedback), that's
-            // the previous frame's contents. If we're sampling another
-            // buffer that runs before us in render order, it's that
-            // buffer's just-written texture.
-            if (currentPassIdx == bufIdx) {
-                // self-feedback: read the side that's currently the
-                // "previous" frame (not the current write slot).
-                return bt.tex[bt.writeIdx ^ 1];
-            } else {
-                // Reading another buffer: it was just written this
-                // frame to its current write slot, so read from it.
-                return bt.tex[bt.writeIdx];
-            }
+            // Shadertoy's rule. A buffer that already ran this frame —
+            // buffers run A..D, then the image, so a lower index — hands
+            // over what it just wrote: its current write slot. The pass's
+            // own buffer (self-feedback), or a buffer still to run, hands
+            // over the LAST frame: the slot it won't write this frame.
+            // Write slots only flip once the whole frame is drawn, so a
+            // still-to-run buffer's current write slot holds the frame
+            // before last — reading it put a later-buffer read two frames
+            // stale, which a Shadertoy simulation passing state back and
+            // forth between buffers cannot survive.
+            const bool ranThisFrame = bufIdx < currentPassIdx;
+            return bt.tex[ranThisFrame ? bt.writeIdx : bt.writeIdx ^ 1];
         }
         case CHAN_NONE:
         default:
