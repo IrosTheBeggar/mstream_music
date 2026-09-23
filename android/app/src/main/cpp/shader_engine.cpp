@@ -2,6 +2,7 @@
 
 #include <android/log.h>
 #include <cstring>
+#include <exception>
 #include <regex>
 #include <sstream>
 #include <utility>
@@ -267,7 +268,16 @@ ParsedShader parseShader(const std::string& source) {
             std::smatch cm;
             if (std::regex_search(line, cm, channelMarker)) {
                 std::string target = lowerAlnum(cm[1].str());
-                int ch = std::stoi(cm[2].str());
+                // Parsed defensively, like the size line below: an index is
+                // 0..3, and a digit run too long for int makes std::stoi
+                // throw — which, uncaught on the compile worker, ends the app.
+                // An index that won't parse routes nothing, as one past 3.
+                int ch = -1;
+                try {
+                    ch = std::stoi(cm[2].str());
+                } catch (...) {
+                    ch = -1;
+                }
                 std::string srcName = lowerAlnum(cm[3].str());
                 int tgtIdx = passIndexFromName(target);
                 int srcEnum = channelSourceFromString(srcName);
@@ -568,7 +578,20 @@ GLuint ShaderEngine::compileSingleProgram(const std::string& fragSource) {
 }
 
 ShaderEngine::PassSet* ShaderEngine::compilePassSet(const std::string& source) {
-    ParsedShader parsed = parseShader(source);
+    // The parser reads user-supplied text, and this runs on the compile
+    // worker's own thread (or the sync fallback's), where an exception that
+    // escapes ends the process. So a shader that won't parse fails the way one
+    // that won't compile does: logged, and the current preset stays up.
+    ParsedShader parsed;
+    try {
+        parsed = parseShader(source);
+    } catch (const std::exception& e) {
+        LOGE("shader parse failed: %s", e.what());
+        return nullptr;
+    } catch (...) {
+        LOGE("shader parse failed");
+        return nullptr;
+    }
     auto* set = new PassSet();
     int totalCompiled = 0;
     for (int i = 0; i < PASS_COUNT; ++i) {
