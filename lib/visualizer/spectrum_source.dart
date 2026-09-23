@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import '../native/audio_capture.dart';
 import '../native/viz_decoder.dart';
+import 'spectrum_curve.dart';
 
 /// Produces the Shadertoy-style audio texture (`iChannel0`) the desktop shader
 /// visualizer samples: an RGBA image, [texWidth]×[texHeight] (512×2), where
@@ -11,14 +12,14 @@ import '../native/viz_decoder.dart';
 /// matching the native AudioTexture's layout, so the ported shaders read it with
 /// `texture(iChannel0, vec2(freq, 0.25))` / `vec2(t, 0.75)` unchanged.
 ///
-/// The signal is synthesized — the same strategy the Android visualizer uses by
-/// default (three drifting carriers across bass/mid/treble + light noise + a 2 Hz
-/// beat), so it needs no mic permission and looks alive across the spectrum.
-/// Replacing [_synth] with captured playback PCM later is all that real-audio
-/// reactivity needs.
+/// The samples are the real playback signal where there is one — the decode
+/// sidecar (iOS, macOS) or the loopback capture (Windows) — and otherwise the
+/// synthesized signal the Android visualizer also falls back on. Either way the
+/// bytes come from [SpectrumCurve], Android's own response curve, so a preset
+/// reacts here the way it does on a phone.
 class SpectrumSource {
-  static const int _fftSize = 1024; // → 512 magnitude bins
-  static const int bins = _fftSize ~/ 2; // 512
+  static const int _fftSize = SpectrumCurve.fftSize; // → 512 magnitude bins
+  static const int bins = SpectrumCurve.bins; // 512
   static const int texWidth = bins; // 512
   static const int texHeight = 2;
   static const double _sampleRate = 44100.0;
@@ -41,31 +42,17 @@ class SpectrumSource {
   double _phaseBass = 0, _phaseMid = 0, _phaseTreble = 0;
   int _frame = 0;
 
-  final Float64List _re = Float64List(_fftSize);
-  final Float64List _im = Float64List(_fftSize);
+  final SpectrumCurve _curve = SpectrumCurve();
 
-  /// Fill a window (real playback PCM if captured, else synthesized), FFT it,
-  /// and refresh [textureBytes].
-  void advance() {
-    _real = _readReal();
-    if (!_real) _synth();
-    _fft();
+  /// Fill a window (real playback PCM if captured, else synthesized), run it
+  /// through the curve, and refresh [textureBytes]. [dt] is the seconds since
+  /// the last call: the curve smooths by time, not by frame.
+  void advance(double dt) {
+    if (!_readReal()) _synth();
+    _curve.update(_samples, dt);
     _writeTexture();
     _frame++;
   }
-
-  /// Whether the current window came from real playback audio (decode sidecar
-  /// or WASAPI capture) — those get spectrum auto-gain in [_writeTexture].
-  bool _real = false;
-
-  // Spectrum auto-gain for real audio: music spreads energy across the whole
-  // spectrum, so its per-bin magnitudes sit far below the synthesized
-  // carriers the shaders were tuned on and the bars barely register. The
-  // running peak rises instantly and decays slowly; the floor caps the gain
-  // (1/_agcFloor) so near-silence isn't amplified into a wall of noise.
-  static const double _agcDecay = 0.995; // ≈halves in 2.3 s at 60 fps
-  static const double _agcFloor = 0.02; // gain cap 42×
-  double _agcPeak = _agcFloor;
 
   /// Pull real playback samples into [_samples], preferring the decode
   /// sidecar (iOS: the window ending at the playback position) over the
@@ -118,86 +105,17 @@ class SpectrumSource {
     _phaseTreble %= 2 * pi;
   }
 
-  void _fft() {
-    for (var i = 0; i < _fftSize; i++) {
-      final w = 0.5 - 0.5 * cos(2 * pi * i / (_fftSize - 1)); // Hann
-      _re[i] = _samples[i] * w;
-      _im[i] = 0.0;
-    }
-    _transform(_re, _im);
-  }
-
-  // In-place iterative radix-2 Cooley–Tukey FFT (n must be a power of two).
-  static void _transform(Float64List re, Float64List im) {
-    final n = re.length;
-    var j = 0;
-    for (var i = 1; i < n; i++) {
-      var bit = n >> 1;
-      for (; (j & bit) != 0; bit >>= 1) {
-        j ^= bit;
-      }
-      j ^= bit;
-      if (i < j) {
-        var tr = re[i];
-        re[i] = re[j];
-        re[j] = tr;
-        var ti = im[i];
-        im[i] = im[j];
-        im[j] = ti;
-      }
-    }
-    for (var len = 2; len <= n; len <<= 1) {
-      final ang = -2 * pi / len;
-      final wr = cos(ang), wi = sin(ang);
-      final half = len >> 1;
-      for (var i = 0; i < n; i += len) {
-        var cwr = 1.0, cwi = 0.0;
-        for (var k = 0; k < half; k++) {
-          final a = i + k, b = a + half;
-          final tr = cwr * re[b] - cwi * im[b];
-          final ti = cwr * im[b] + cwi * re[b];
-          re[b] = re[a] - tr;
-          im[b] = im[a] - ti;
-          re[a] += tr;
-          im[a] += ti;
-          final nwr = cwr * wr - cwi * wi;
-          cwi = cwr * wi + cwi * wr;
-          cwr = nwr;
-        }
-      }
-    }
-  }
-
+  // The curve's one byte per texel, as the RGBA the sampler image is built
+  // from: the value in R, G and B, opaque.
   void _writeTexture() {
-    // Normalize a Hann-windowed magnitude (a pure tone peaks near fftSize/4) and
-    // perceptually spread it with sqrt so quiet content still shows.
-    const norm = 1.0 / (_fftSize * 0.25);
-    var gain = 1.0;
-    if (_real) {
-      var peak = 0.0;
-      for (var x = 0; x < bins; x++) {
-        final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm;
-        if (mag > peak) peak = mag;
-      }
-      _agcPeak = max(peak, max(_agcPeak * _agcDecay, _agcFloor));
-      // Aim the loudest bin at ~0.85 of full scale, headroom for transients.
-      gain = 0.85 / _agcPeak;
-    }
-    for (var x = 0; x < bins; x++) {
-      final mag = sqrt(_re[x] * _re[x] + _im[x] * _im[x]) * norm * gain;
-      final v = (sqrt(mag.clamp(0.0, 1.0)) * 255).round();
-      final o = x * 4; // row 0
+    final bytes = _curve.bytes;
+    for (var i = 0; i < bytes.length; i++) {
+      final v = bytes[i];
+      final o = i * 4;
       textureBytes[o] = v;
       textureBytes[o + 1] = v;
       textureBytes[o + 2] = v;
       textureBytes[o + 3] = 255;
-
-      final w = ((0.5 + 0.5 * _samples[x]).clamp(0.0, 1.0) * 255).round();
-      final o2 = (bins + x) * 4; // row 1
-      textureBytes[o2] = w;
-      textureBytes[o2 + 1] = w;
-      textureBytes[o2 + 2] = w;
-      textureBytes[o2 + 3] = 255;
     }
   }
 }
