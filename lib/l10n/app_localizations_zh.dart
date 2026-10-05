@@ -1722,7 +1722,288 @@ class AppLocalizationsZh extends AppLocalizations {
   String get irohShareUnavailable => '点对点（iroh）服务器不支持分享 — 它们没有可链接的公开地址。';
 
   @override
-  String get discoverTitle => '发现';
+  String get discoverTitle => '更多类似';
+
+  @override
+  String get discoverPageTitle => '发现';
+
+  @override
+  String get discoverPageRefresh => '刷新';
+
+  @override
+  String discoverPageSubFinished(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '基于你听完的 $count 首歌 · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageSubListened(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '基于你听过的 $count 首歌 · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageSubCounters => '基于你最常听的歌';
+
+  @override
+  String get discoverPageSubPinned => '基于你选的歌';
+
+  @override
+  String get discoverPageSubRandom => '还没有听完的歌 · 先用一首随机歌曲';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => '全部时间';
+
+  @override
+  String discoverPageWidened(String window) {
+    return '最近 $window 内没有记录，所以这些来自更早之前。';
+  }
+
+  @override
+  String get discoverPageBasedOn => '依据';
+
+  @override
+  String get discoverPageBasedOnNote => '你听完的歌 · 不含跳过的';
+
+  @override
+  String get discoverPageRandomChip => '随机';
+
+  @override
+  String get discoverPageFromLibrary => '来自你的曲库';
+
+  @override
+  String get discoverPageSeeAll => '查看全部';
+
+  @override
+  String get discoverPageNeverPlayed => '从未播放';
+
+  @override
+  String discoverPageLastPlayed(String ago) {
+    return '上次播放 $ago';
+  }
+
+  @override
+  String get discoverPageAgoToday => '今天';
+
+  @override
+  String get discoverPageAgoYesterday => '昨天';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个月前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 年前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumPlayed(int played, int total) {
+    return '已播放 $played/$total';
+  }
+
+  @override
+  String discoverPageSongsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 首',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张专辑',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPagePlayAll(int count) {
+    return '全部播放（$count）';
+  }
+
+  @override
+  String get discoverPageAddToQueue => '加入队列';
+
+  @override
+  String get discoverPageLibraryEmpty => '在此筛选条件下，曲库中没有与这些歌相似的内容。';
+
+  @override
+  String get discoverPageFilterUnplayed => '从未播放';
+
+  @override
+  String discoverPageFilterFresh(int days) {
+    return '$days 天内未播放';
+  }
+
+  @override
+  String get discoverPageFilterAll => '全部';
+
+  @override
+  String get discoverPageAlbumsHeader => '专辑';
+
+  @override
+  String get discoverPageSongsHeader => '歌曲';
+
+  @override
+  String discoverPageServersSearched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已搜索 $count 台服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageNewArtist => '新艺人';
+
+  @override
+  String get discoverPageNetworkEmpty => '网络中没有与这些歌相关的新内容。';
+
+  @override
+  String discoverPagePeersOnline(int online, int total) {
+    return '$online/$total 在线';
+  }
+
+  @override
+  String get discoverPagePeerOffline => '离线';
+
+  @override
+  String get discoverPagePeerMismatched => '使用不同的声音模型';
+
+  @override
+  String get discoverPageNoPeers => '还没有可询问的对等服务器。在“联合”中与朋友的服务器配对后，他们的歌会出现在这里。';
+
+  @override
+  String get discoverPagePeersEmpty => '对等服务器上没有与这些歌相关的新内容。';
+
+  @override
+  String get discoverPagePeerNotReady => '该对等服务器尚未出现在服务器列表中 — 打开“联合”刷新一下。';
+
+  @override
+  String get discoverPageRestoreFailed => '无法恢复这些歌曲。请重试。';
+
+  @override
+  String get discoverPageScanWaiting => '发现扫描分析完这些歌曲后会显示在这里。';
+
+  @override
+  String get discoverPageListen => '收听';
+
+  @override
+  String get discoverPageRandomTitle => '听完几首歌，这个页面就会了解你的口味';
+
+  @override
+  String get discoverPageRandomBody =>
+      '“发现”根据你听完的歌来推荐，跳过的歌不算。在有这样的歌之前，这里是围绕曲库中一首随机歌曲的推荐。';
+
+  @override
+  String get discoverPageAnotherPick => '换一首';
+
+  @override
+  String get discoverPageChooseSong => '选择一首歌…';
+
+  @override
+  String get discoverPageRandomFailed => '无法随机选择歌曲。';
+
+  @override
+  String get discoverPageError => '无法加载“发现”。请检查连接后重试。';
+
+  @override
+  String get discoverPageRetry => '重试';
+
+  @override
+  String get discoverPageSeedsSub => '你听完的歌 · 跳过的不算';
+
+  @override
+  String discoverPageSeedsOn(int on, int total) {
+    return '已启用 $on/$total';
+  }
+
+  @override
+  String get discoverPagePickedHeader => '本次选择';
+
+  @override
+  String get discoverPageRecentHeader => '最近听完';
+
+  @override
+  String get discoverPageCountersHeader => '最常播放';
+
+  @override
+  String get discoverPageNewestFirst => '最新在前';
+
+  @override
+  String get discoverPageDroppedHeader => '已排除';
+
+  @override
+  String get discoverPageDroppedNote => '打开即可恢复';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return '播放 $count 次';
+  }
+
+  @override
+  String get discoverPageListenedTo => '听过';
+
+  @override
+  String get discoverPageNotAnalyzed => '尚未分析';
+
+  @override
+  String get discoverPageAddOwn => '自己添加';
+
+  @override
+  String get discoverPageAddOwnSub => '想多听类似的歌';
+
+  @override
+  String get discoverPagePickSong => '选一首歌…';
+
+  @override
+  String get discoverPagePickSongSub => '搜索曲库，或随机选一首';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '使用这 $count 首',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => '按声音匹配';
@@ -3131,13 +3412,13 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '为正在播放的曲目打开“发现” · 来自 $count 个已下载曲库的线索',
+      other: '为正在播放的曲目打开“更多类似” · 来自 $count 个已下载曲库的线索',
     );
     return '$_temp0';
   }
 
   @override
-  String get p2pFindSimilarNothingPlaying => '请先播放一首歌 — “发现”会跟随当前曲目';
+  String get p2pFindSimilarNothingPlaying => '请先播放一首歌 — “更多类似”会跟随当前曲目';
 
   @override
   String get p2pNewArtistsOnlySub => '隐藏此曲库中已有艺术家的线索';

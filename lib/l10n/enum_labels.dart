@@ -162,6 +162,8 @@ String browserChromeLabel(AppLocalizations l, String? english) {
       return l.autoDjTitle;
     case 'Sonic path':
       return l.pathScreenTitle;
+    case 'Discover':
+      return l.discoverPageTitle;
     case 'Federation':
       return l.browserFederation;
     case 'P2P Network':

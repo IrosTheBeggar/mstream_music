@@ -3162,11 +3162,413 @@ abstract class AppLocalizations {
   /// **'Sharing isn\'t available for peer-to-peer (iroh) servers — they have no public URL to link to.'**
   String get irohShareUnavailable;
 
-  /// Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet.
+  /// Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet. Retitled "More like this" by the Discover page plan §2.12: the history-seeded page alone is called "Discover" (discoverPageTitle).
+  ///
+  /// In en, this message translates to:
+  /// **'More like this'**
+  String get discoverTitle;
+
+  /// Title of the Discover page (recommendations seeded by the user's play history on one server: library songs and albums, network leads, peers' songs) and its card under Listen on the server home.
   ///
   /// In en, this message translates to:
   /// **'Discover'**
-  String get discoverTitle;
+  String get discoverPageTitle;
+
+  /// Discover page app-bar button: fetch the recommendations again.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get discoverPageRefresh;
+
+  /// Discover page subtitle: the seeds are songs played to the end. {window} is a window label like "30 days" or "all time".
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{based on 1 song you finished · {window}} other{based on {count} songs you finished · {window}}}'**
+  String discoverPageSubFinished(int count, String window);
+
+  /// Discover page subtitle when some seeds were listened to past half rather than finished. {window} as above.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{based on 1 song you listened to · {window}} other{based on {count} songs you listened to · {window}}}'**
+  String discoverPageSubListened(int count, String window);
+
+  /// Discover page subtitle when the seeds came from all-time play counts.
+  ///
+  /// In en, this message translates to:
+  /// **'based on the songs you play most'**
+  String get discoverPageSubCounters;
+
+  /// Discover page subtitle when only songs the user picked seed the page.
+  ///
+  /// In en, this message translates to:
+  /// **'based on songs you picked'**
+  String get discoverPageSubPinned;
+
+  /// Discover page subtitle when nothing has been played yet and a random library song stands in.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing finished yet · a random pick instead'**
+  String get discoverPageSubRandom;
+
+  /// A seed window length in days (segmented control label and app-bar subtitle part).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String discoverPageWindowDays(int count);
+
+  /// The all-time seed window (segmented control label and app-bar subtitle part).
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get discoverPageWindowAll;
+
+  /// Seeds sheet note when the chosen window had no plays and the server looked further back. {window} is like "30 days".
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in the last {window}, so these come from further back.'**
+  String discoverPageWidened(String window);
+
+  /// Discover page section header over the seed chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on'**
+  String get discoverPageBasedOn;
+
+  /// Small note next to the Based on header.
+  ///
+  /// In en, this message translates to:
+  /// **'what you finished · skips left out'**
+  String get discoverPageBasedOnNote;
+
+  /// Tag on the seed chip when it is a random pick.
+  ///
+  /// In en, this message translates to:
+  /// **'random'**
+  String get discoverPageRandomChip;
+
+  /// Discover page section header: songs and albums from the user's own library.
+  ///
+  /// In en, this message translates to:
+  /// **'From your library'**
+  String get discoverPageFromLibrary;
+
+  /// Discover page section link that opens the whole list.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get discoverPageSeeAll;
+
+  /// Library row / album label: this account never played it.
+  ///
+  /// In en, this message translates to:
+  /// **'never played'**
+  String get discoverPageNeverPlayed;
+
+  /// Library row label. {ago} is a relative time like "8 months ago".
+  ///
+  /// In en, this message translates to:
+  /// **'last played {ago}'**
+  String discoverPageLastPlayed(String ago);
+
+  /// Relative time: today.
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get discoverPageAgoToday;
+
+  /// Relative time: yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'yesterday'**
+  String get discoverPageAgoYesterday;
+
+  /// Relative time in months.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 month ago} other{{count} months ago}}'**
+  String discoverPageAgoMonths(int count);
+
+  /// Relative time in years.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 year ago} other{{count} years ago}}'**
+  String discoverPageAgoYears(int count);
+
+  /// Album card label: how many of the album's tracks this account played.
+  ///
+  /// In en, this message translates to:
+  /// **'{played} of {total} played'**
+  String discoverPageAlbumPlayed(int played, int total);
+
+  /// A number of songs.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 song} other{{count} songs}}'**
+  String discoverPageSongsCount(int count);
+
+  /// A number of albums.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 album} other{{count} albums}}'**
+  String discoverPageAlbumsCount(int count);
+
+  /// Pill under the library rows: play every listed song. {count} is how many.
+  ///
+  /// In en, this message translates to:
+  /// **'Play all {count}'**
+  String discoverPagePlayAll(int count);
+
+  /// Pill under the library rows: append every listed song to the queue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue'**
+  String get discoverPageAddToQueue;
+
+  /// One italic line when the library source has nothing for this filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in your library matches these songs with this filter.'**
+  String get discoverPageLibraryEmpty;
+
+  /// Library filter chip: only songs never played.
+  ///
+  /// In en, this message translates to:
+  /// **'Never played'**
+  String get discoverPageFilterUnplayed;
+
+  /// Library filter chip: never played, or not played in {days} days.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in {days} days'**
+  String discoverPageFilterFresh(int days);
+
+  /// Library filter chip: every matching song, played or not.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything'**
+  String get discoverPageFilterAll;
+
+  /// Header over the album cards in the library list.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get discoverPageAlbumsHeader;
+
+  /// Header over the song rows in the library list.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get discoverPageSongsHeader;
+
+  /// Network section meta: how many network libraries were searched.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 server searched} other{{count} servers searched}}'**
+  String discoverPageServersSearched(int count);
+
+  /// Pill on a network row: the artist is not in the user's library.
+  ///
+  /// In en, this message translates to:
+  /// **'new artist'**
+  String get discoverPageNewArtist;
+
+  /// One italic line when the network had nothing new for these seeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new on the network for these songs.'**
+  String get discoverPageNetworkEmpty;
+
+  /// Peers section meta: how many peers answered.
+  ///
+  /// In en, this message translates to:
+  /// **'{online} of {total} online'**
+  String discoverPagePeersOnline(int online, int total);
+
+  /// Peer group label: the peer did not answer this time.
+  ///
+  /// In en, this message translates to:
+  /// **'offline'**
+  String get discoverPagePeerOffline;
+
+  /// Peer group label: the peer uses another sound model, so its songs cannot be compared.
+  ///
+  /// In en, this message translates to:
+  /// **'uses a different sound model'**
+  String get discoverPagePeerMismatched;
+
+  /// One italic line when this server has no federated peers to ask.
+  ///
+  /// In en, this message translates to:
+  /// **'No peers to ask yet. Pair with a friend\'s server under Federation and their songs can show up here.'**
+  String get discoverPageNoPeers;
+
+  /// One italic line when peers answered with nothing new.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new on your peers\' servers for these songs.'**
+  String get discoverPagePeersEmpty;
+
+  /// Snackbar when a peer song cannot play because the peer is not in the app's server list yet.
+  ///
+  /// In en, this message translates to:
+  /// **'This peer isn\'t in your server list yet — open Federation to refresh it.'**
+  String get discoverPagePeerNotReady;
+
+  /// Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t bring those songs back. Try again.'**
+  String get discoverPageRestoreFailed;
+
+  /// One line under a Discover page source (library, network, peers) while the scan has not analyzed any seed yet, instead of that source's empty-state copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows up once the discovery scan has analyzed these songs.'**
+  String get discoverPageScanWaiting;
+
+  /// Tooltip of the play button on a peer row.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen'**
+  String get discoverPageListen;
+
+  /// Card title when nothing has been finished yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish a few songs and this page learns your taste'**
+  String get discoverPageRandomTitle;
+
+  /// Card body under that title.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover seeds itself from songs you play to the end. Skipped songs never count. Until there are some, here are suggestions around a random pick from your library.'**
+  String get discoverPageRandomBody;
+
+  /// Button on the nothing-finished card: seed from another random song.
+  ///
+  /// In en, this message translates to:
+  /// **'Another pick'**
+  String get discoverPageAnotherPick;
+
+  /// Button on the nothing-finished card: pick the seed song yourself.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a song…'**
+  String get discoverPageChooseSong;
+
+  /// Snackbar when no random song could be picked.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t pick a random song.'**
+  String get discoverPageRandomFailed;
+
+  /// Shown when the Discover page could not load and has nothing to show.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover couldn\'t load. Check the connection and try again.'**
+  String get discoverPageError;
+
+  /// Button: try loading again.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get discoverPageRetry;
+
+  /// Seeds sheet subtitle under "Based on".
+  ///
+  /// In en, this message translates to:
+  /// **'songs you played to the end · skips never count'**
+  String get discoverPageSeedsSub;
+
+  /// Seeds sheet line: how many seeds are switched on.
+  ///
+  /// In en, this message translates to:
+  /// **'{on} of {total} on'**
+  String discoverPageSeedsOn(int on, int total);
+
+  /// Seeds sheet group: songs pinned for this visit (now playing at open, songs picked).
+  ///
+  /// In en, this message translates to:
+  /// **'Picked for this visit'**
+  String get discoverPagePickedHeader;
+
+  /// Seeds sheet group: seeds from recent play history.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished recently'**
+  String get discoverPageRecentHeader;
+
+  /// Seeds sheet group: seeds from all-time play counts.
+  ///
+  /// In en, this message translates to:
+  /// **'Played most'**
+  String get discoverPageCountersHeader;
+
+  /// Small note next to the recent seeds header.
+  ///
+  /// In en, this message translates to:
+  /// **'newest first'**
+  String get discoverPageNewestFirst;
+
+  /// Seeds sheet group: seeds the user switched off (remembered on the server).
+  ///
+  /// In en, this message translates to:
+  /// **'Left out'**
+  String get discoverPageDroppedHeader;
+
+  /// Small note next to that header.
+  ///
+  /// In en, this message translates to:
+  /// **'switch one on to bring it back'**
+  String get discoverPageDroppedNote;
+
+  /// Seed row detail: how many times the seed was played.
+  ///
+  /// In en, this message translates to:
+  /// **'played {count}×'**
+  String discoverPagePlayedTimes(int count);
+
+  /// Seed row detail: the seed was listened to past half but not to the end.
+  ///
+  /// In en, this message translates to:
+  /// **'listened to'**
+  String get discoverPageListenedTo;
+
+  /// Seed row detail: the seed has not been analyzed yet, so it steers nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'not analyzed yet'**
+  String get discoverPageNotAnalyzed;
+
+  /// Seeds sheet group: add a seed yourself.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your own'**
+  String get discoverPageAddOwn;
+
+  /// Small note next to that header.
+  ///
+  /// In en, this message translates to:
+  /// **'a song you want more of'**
+  String get discoverPageAddOwnSub;
+
+  /// Seeds sheet row: opens the song picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a song…'**
+  String get discoverPagePickSong;
+
+  /// Subtitle of that row.
+  ///
+  /// In en, this message translates to:
+  /// **'search your library, or take a random one'**
+  String get discoverPagePickSongSub;
+
+  /// Seeds sheet primary button: apply the seeds that are switched on.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Use this 1} other{Use these {count}}}'**
+  String discoverPageUseThese(int count);
 
   /// Subtitle under the Discover screen title: results are audio-similarity matches, not genre-tag matches.
   ///
@@ -5610,16 +6012,16 @@ abstract class AppLocalizations {
   /// **'Find similar music on the network'**
   String get p2pFindSimilar;
 
-  /// Row subtitle.
+  /// Row subtitle. Retitled "More like this" by the Discover page plan §2.12: the history-seeded page alone is called "Discover" (discoverPageTitle).
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{Opens Discover for the track playing now · leads from 1 downloaded library} other{Opens Discover for the track playing now · leads from {count} downloaded libraries}}'**
+  /// **'{count, plural, =1{Opens More like this for the track playing now · leads from 1 downloaded library} other{Opens More like this for the track playing now · leads from {count} downloaded libraries}}'**
   String p2pFindSimilarSub(int count);
 
-  /// Row subtitle when nothing is playing.
+  /// Row subtitle when nothing is playing. Retitled "More like this" by the Discover page plan §2.12: the history-seeded page alone is called "Discover" (discoverPageTitle).
   ///
   /// In en, this message translates to:
-  /// **'Play something first — Discover follows the current track'**
+  /// **'Play something first — More like this follows the current track'**
   String get p2pFindSimilarNothingPlaying;
 
   /// Subtitle of the new-artists-only switch.

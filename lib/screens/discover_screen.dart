@@ -22,8 +22,11 @@ import '../util/stream_url.dart';
 import '../widgets/song_picker_sheet.dart';
 import 'sonic_path_screen.dart';
 
-/// Discover — sonic-similarity recommendations seeded by the NOW-PLAYING
-/// track, the mobile counterpart of the webapp's Discover panel. Up to four
+/// More like this — sonic-similarity recommendations seeded by ONE song (the
+/// now-playing track, or the one a "Find similar" entry passed), the mobile
+/// counterpart of the webapp's now-playing panel. Titled "More like this"
+/// (l.discoverTitle) since the Discover page plan §2.12: "Discover" alone
+/// names the history-seeded page (discovery_page.dart). Up to four
 /// sections, each shown only when the seed's server advertised the matching
 /// /api/v1/ping flag (never probed blind):
 ///   • Similar tracks   — local library, playable rows + "Queue all"

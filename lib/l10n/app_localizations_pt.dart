@@ -1838,7 +1838,312 @@ class AppLocalizationsPt extends AppLocalizations {
       'O compartilhamento não está disponível em servidores peer-to-peer (iroh) — eles não têm uma URL pública para vincular.';
 
   @override
-  String get discoverTitle => 'Descobrir';
+  String get discoverTitle => 'Mais como esta';
+
+  @override
+  String get discoverPageTitle => 'Descobrir';
+
+  @override
+  String get discoverPageRefresh => 'Atualizar';
+
+  @override
+  String discoverPageSubFinished(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'com base em $count músicas ouvidas até o fim · $window',
+      one: 'com base em $count música ouvida até o fim · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageSubListened(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'com base em $count músicas que você ouviu · $window',
+      one: 'com base em $count música que você ouviu · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageSubCounters =>
+      'com base nas músicas que você mais ouve';
+
+  @override
+  String get discoverPageSubPinned => 'com base nas músicas que você escolheu';
+
+  @override
+  String get discoverPageSubRandom =>
+      'nada ouvido até o fim ainda · uma escolha aleatória no lugar';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dias',
+      one: '$count dia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => 'Sempre';
+
+  @override
+  String discoverPageWidened(String window) {
+    return 'Nada nos últimos $window, então estas vêm de antes.';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'Com base em';
+
+  @override
+  String get discoverPageBasedOnNote =>
+      'o que você ouviu até o fim · sem as puladas';
+
+  @override
+  String get discoverPageRandomChip => 'aleatória';
+
+  @override
+  String get discoverPageFromLibrary => 'Da sua biblioteca';
+
+  @override
+  String get discoverPageSeeAll => 'Ver tudo';
+
+  @override
+  String get discoverPageNeverPlayed => 'nunca tocada';
+
+  @override
+  String discoverPageLastPlayed(String ago) {
+    return 'última vez $ago';
+  }
+
+  @override
+  String get discoverPageAgoToday => 'hoje';
+
+  @override
+  String get discoverPageAgoYesterday => 'ontem';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'há $count meses',
+      one: 'há $count mês',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'há $count anos',
+      one: 'há $count ano',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumPlayed(int played, int total) {
+    return '$played de $total ouvidas';
+  }
+
+  @override
+  String discoverPageSongsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count músicas',
+      one: '$count música',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count álbuns',
+      one: '$count álbum',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPagePlayAll(int count) {
+    return 'Tocar todas ($count)';
+  }
+
+  @override
+  String get discoverPageAddToQueue => 'Adicionar à fila';
+
+  @override
+  String get discoverPageLibraryEmpty =>
+      'Nada na sua biblioteca combina com estas músicas com este filtro.';
+
+  @override
+  String get discoverPageFilterUnplayed => 'Nunca tocadas';
+
+  @override
+  String discoverPageFilterFresh(int days) {
+    return 'Não em $days dias';
+  }
+
+  @override
+  String get discoverPageFilterAll => 'Tudo';
+
+  @override
+  String get discoverPageAlbumsHeader => 'Álbuns';
+
+  @override
+  String get discoverPageSongsHeader => 'Músicas';
+
+  @override
+  String discoverPageServersSearched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores pesquisados',
+      one: '$count servidor pesquisado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageNewArtist => 'artista novo';
+
+  @override
+  String get discoverPageNetworkEmpty =>
+      'Nada de novo na rede para estas músicas.';
+
+  @override
+  String discoverPagePeersOnline(int online, int total) {
+    return '$online de $total online';
+  }
+
+  @override
+  String get discoverPagePeerOffline => 'offline';
+
+  @override
+  String get discoverPagePeerMismatched => 'usa outro modelo de som';
+
+  @override
+  String get discoverPageNoPeers =>
+      'Ainda não há pares. Conecte-se ao servidor de um amigo em Federação e as músicas dele podem aparecer aqui.';
+
+  @override
+  String get discoverPagePeersEmpty =>
+      'Nada de novo nos servidores dos seus pares para estas músicas.';
+
+  @override
+  String get discoverPagePeerNotReady =>
+      'Este par ainda não está na sua lista de servidores — abra Federação para atualizá-la.';
+
+  @override
+  String get discoverPageRestoreFailed =>
+      'Não foi possível trazer essas músicas de volta. Tente novamente.';
+
+  @override
+  String get discoverPageScanWaiting =>
+      'Aparece depois de a análise de descoberta processar estas músicas.';
+
+  @override
+  String get discoverPageListen => 'Ouvir';
+
+  @override
+  String get discoverPageRandomTitle =>
+      'Ouça algumas músicas até o fim e esta página aprende o seu gosto';
+
+  @override
+  String get discoverPageRandomBody =>
+      'Descobrir se baseia nas músicas que você ouve até o fim. Músicas puladas nunca contam. Até que haja algumas, aqui vão sugestões em torno de uma escolha aleatória da sua biblioteca.';
+
+  @override
+  String get discoverPageAnotherPick => 'Outra escolha';
+
+  @override
+  String get discoverPageChooseSong => 'Escolher uma música…';
+
+  @override
+  String get discoverPageRandomFailed =>
+      'Não foi possível escolher uma música aleatória.';
+
+  @override
+  String get discoverPageError =>
+      'Não foi possível carregar Descobrir. Verifique a conexão e tente novamente.';
+
+  @override
+  String get discoverPageRetry => 'Tentar novamente';
+
+  @override
+  String get discoverPageSeedsSub =>
+      'músicas ouvidas até o fim · as puladas não contam';
+
+  @override
+  String discoverPageSeedsOn(int on, int total) {
+    return '$on de $total ativas';
+  }
+
+  @override
+  String get discoverPagePickedHeader => 'Escolhidas para esta visita';
+
+  @override
+  String get discoverPageRecentHeader => 'Ouvidas recentemente';
+
+  @override
+  String get discoverPageCountersHeader => 'Mais ouvidas';
+
+  @override
+  String get discoverPageNewestFirst => 'mais recentes primeiro';
+
+  @override
+  String get discoverPageDroppedHeader => 'Deixadas de fora';
+
+  @override
+  String get discoverPageDroppedNote => 'ative uma para trazê-la de volta';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return 'tocada $count×';
+  }
+
+  @override
+  String get discoverPageListenedTo => 'ouvida';
+
+  @override
+  String get discoverPageNotAnalyzed => 'ainda não analisada';
+
+  @override
+  String get discoverPageAddOwn => 'Adicione a sua';
+
+  @override
+  String get discoverPageAddOwnSub => 'uma música de que você quer mais';
+
+  @override
+  String get discoverPagePickSong => 'Escolher uma música…';
+
+  @override
+  String get discoverPagePickSongSub =>
+      'pesquise na biblioteca ou escolha uma aleatória';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Usar estas $count',
+      one: 'Usar esta ($count)',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'Combinações por som';
@@ -3351,16 +3656,16 @@ class AppLocalizationsPt extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          'Abre Descobrir para a faixa em reprodução · sugestões de $count bibliotecas baixadas',
+          'Abre Mais como esta para a faixa em reprodução · sugestões de $count bibliotecas baixadas',
       one:
-          'Abre Descobrir para a faixa em reprodução · sugestões de $count biblioteca baixada',
+          'Abre Mais como esta para a faixa em reprodução · sugestões de $count biblioteca baixada',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'Toque algo primeiro — Descobrir segue a faixa atual';
+      'Toque algo primeiro — Mais como esta segue a faixa atual';
 
   @override
   String get p2pNewArtistsOnlySub =>

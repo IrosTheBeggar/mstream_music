@@ -78,6 +78,67 @@ void main() {
     expect(i, j + 1, reason: 'right after Auto DJ, in the same group');
   });
 
+  test('a server that advertises discovery and the taste route gets Discover',
+      () {
+    // The card is the history-seeded page (Discover page plan §2.9): one
+    // server account's history, so a per-server card under LISTEN, after
+    // the DJ and the sonic path.
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..discoveryPathAvailable = true
+      ..discoveryAvailable = true
+      ..discoveryTasteAvailable = true;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), [
+      'fileExplorer',
+      'playlists',
+      'albums',
+      'artists',
+      'rated',
+      'recent',
+      'localFiles',
+      'autoDj',
+      'sonicPath',
+      'discover',
+      'torrents',
+    ]);
+    expect(_headers(), ['Library', 'Listen', 'Server']);
+    final card =
+        BrowserManager().browserList.singleWhere((r) => r.data == 'discover');
+    expect(card.name, 'Discover', reason: 'browserChromeLabel keys on it');
+    expect(card.server, same(s));
+  });
+
+  test('Discover needs both flags — either alone shows no card', () {
+    // Flags, never probes: the taste route 403s with discovery off, and a
+    // server too old for the route never advertises it.
+    final s = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..discoveryAvailable = true;
+    manager.serverList.add(s);
+    manager.currentServer = s;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), isNot(contains('discover')),
+        reason: 'discovery on, taste route not advertised');
+
+    s
+      ..discoveryAvailable = false
+      ..discoveryTasteAvailable = true;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), isNot(contains('discover')),
+        reason: 'taste route advertised, discovery switched off');
+
+    s.discoveryAvailable = true;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), contains('discover'));
+    // Without the path route it follows Auto DJ directly.
+    final i =
+        BrowserManager().browserList.indexWhere((r) => r.data == 'discover');
+    final j =
+        BrowserManager().browserList.indexWhere((r) => r.data == 'autoDj');
+    expect(i, j + 1);
+  });
+
   test('a server with peers gets a NETWORK group above SERVER, counting them',
       () {
     final parent = Server('https://home.example.com', null, null, 'JWT', 'home');
@@ -177,6 +238,38 @@ void main() {
     // A peer hosts the DJ (mStream #946) but takes no torrents and has no
     // peers of its own: LISTEN stays, NETWORK and SERVER go.
     expect(_headers(), ['Library', 'Listen']);
+  });
+
+  test('a peer never gets Discover, even when it advertises the route', () {
+    // The taste route wants a logged-in account (a federation key 403s) and
+    // a peer's plays are its parent's: Discover is the PARENT's card. The
+    // peer's own GET /api answer goes through the real fold, which pins.
+    final parent = Server('https://home.example.com', null, null, 'JWT', 'home')
+      ..discoveryAvailable = true
+      ..discoveryTasteAvailable = true;
+    final peer = Server('federated://home/3', null, null, null, 'peer-basement')
+      ..federationParent = 'home'
+      ..federationPeerId = 3
+      ..parentServer = parent;
+    manager.serverList.addAll([parent, peer]);
+    manager.applyServerInfoForTest(peer, {
+      'server': '6.32.0',
+      'features': {
+        'discovery': true,
+        'discoveryReady': true,
+        'discoveryTaste': 1,
+        'discoveryPlugins': true,
+      },
+      'user': {'vpaths': ['music']},
+    });
+
+    manager.currentServer = peer;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), isNot(contains('discover')));
+
+    manager.currentServer = parent;
+    BrowserManager().goToNavScreen();
+    expect(_sections(), contains('discover'));
   });
 
   test('a federated server explains itself with an inert note row', () {

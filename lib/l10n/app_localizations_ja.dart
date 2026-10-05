@@ -1761,7 +1761,290 @@ class AppLocalizationsJa extends AppLocalizations {
       'ピアツーピア（iroh）サーバーでは共有を利用できません — リンクできる公開 URL がありません。';
 
   @override
-  String get discoverTitle => 'ディスカバー';
+  String get discoverTitle => '似た曲';
+
+  @override
+  String get discoverPageTitle => 'ディスカバー';
+
+  @override
+  String get discoverPageRefresh => '更新';
+
+  @override
+  String discoverPageSubFinished(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最後まで聴いた $count 曲から · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageSubListened(int count, String window) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '聴いた $count 曲から · $window',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageSubCounters => 'よく聴く曲から';
+
+  @override
+  String get discoverPageSubPinned => '選んだ曲から';
+
+  @override
+  String get discoverPageSubRandom => 'まだ聴き終えた曲がありません · 代わりにランダムな1曲';
+
+  @override
+  String discoverPageWindowDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageWindowAll => '全期間';
+
+  @override
+  String discoverPageWidened(String window) {
+    return '直近 $window には何もないため、さらに前の曲を使っています。';
+  }
+
+  @override
+  String get discoverPageBasedOn => 'もとにした曲';
+
+  @override
+  String get discoverPageBasedOnNote => '最後まで聴いた曲 · スキップは除外';
+
+  @override
+  String get discoverPageRandomChip => 'ランダム';
+
+  @override
+  String get discoverPageFromLibrary => 'ライブラリから';
+
+  @override
+  String get discoverPageSeeAll => 'すべて表示';
+
+  @override
+  String get discoverPageNeverPlayed => '未再生';
+
+  @override
+  String discoverPageLastPlayed(String ago) {
+    return '最終再生 $ago';
+  }
+
+  @override
+  String get discoverPageAgoToday => '今日';
+
+  @override
+  String get discoverPageAgoYesterday => '昨日';
+
+  @override
+  String discoverPageAgoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count か月前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAgoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 年前',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumPlayed(int played, int total) {
+    return '$total 曲中 $played 曲再生済み';
+  }
+
+  @override
+  String discoverPageSongsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 曲',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPageAlbumsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count アルバム',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String discoverPagePlayAll(int count) {
+    return '$count 曲を再生';
+  }
+
+  @override
+  String get discoverPageAddToQueue => 'キューに追加';
+
+  @override
+  String get discoverPageLibraryEmpty => 'このフィルターでは、ライブラリに合う曲がありません。';
+
+  @override
+  String get discoverPageFilterUnplayed => '未再生';
+
+  @override
+  String discoverPageFilterFresh(int days) {
+    return '$days 日以上未再生';
+  }
+
+  @override
+  String get discoverPageFilterAll => 'すべて';
+
+  @override
+  String get discoverPageAlbumsHeader => 'アルバム';
+
+  @override
+  String get discoverPageSongsHeader => '曲';
+
+  @override
+  String discoverPageServersSearched(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count サーバーを検索',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get discoverPageNewArtist => '新しいアーティスト';
+
+  @override
+  String get discoverPageNetworkEmpty => 'これらの曲に合う新しい候補はネットワークにありません。';
+
+  @override
+  String discoverPagePeersOnline(int online, int total) {
+    return '$total 台中 $online 台オンライン';
+  }
+
+  @override
+  String get discoverPagePeerOffline => 'オフライン';
+
+  @override
+  String get discoverPagePeerMismatched => '別のサウンドモデルを使用';
+
+  @override
+  String get discoverPageNoPeers =>
+      'まだピアがありません。フェデレーションで友人のサーバーとつながると、その曲がここに表示されます。';
+
+  @override
+  String get discoverPagePeersEmpty => 'ピアのサーバーには、これらの曲に合う新しい曲はありません。';
+
+  @override
+  String get discoverPagePeerNotReady =>
+      'このピアはまだサーバー一覧にありません。フェデレーションを開いて更新してください。';
+
+  @override
+  String get discoverPageRestoreFailed => '曲を元に戻せませんでした。もう一度お試しください。';
+
+  @override
+  String get discoverPageScanWaiting => 'ディスカバリースキャンがこれらの曲を解析すると表示されます。';
+
+  @override
+  String get discoverPageListen => '聴く';
+
+  @override
+  String get discoverPageRandomTitle => '何曲か最後まで聴くと、このページがあなたの好みを学びます';
+
+  @override
+  String get discoverPageRandomBody =>
+      'ディスカバーは最後まで聴いた曲をもとにします。スキップした曲は数えません。それまでは、ライブラリからランダムに選んだ1曲をもとにおすすめします。';
+
+  @override
+  String get discoverPageAnotherPick => '別の曲';
+
+  @override
+  String get discoverPageChooseSong => '曲を選ぶ…';
+
+  @override
+  String get discoverPageRandomFailed => 'ランダムな曲を選べませんでした。';
+
+  @override
+  String get discoverPageError => 'ディスカバーを読み込めませんでした。接続を確認して、もう一度お試しください。';
+
+  @override
+  String get discoverPageRetry => '再試行';
+
+  @override
+  String get discoverPageSeedsSub => '最後まで聴いた曲 · スキップは数えません';
+
+  @override
+  String discoverPageSeedsOn(int on, int total) {
+    return '$total 曲中 $on 曲がオン';
+  }
+
+  @override
+  String get discoverPagePickedHeader => '今回選んだ曲';
+
+  @override
+  String get discoverPageRecentHeader => '最近聴き終えた曲';
+
+  @override
+  String get discoverPageCountersHeader => 'よく聴く曲';
+
+  @override
+  String get discoverPageNewestFirst => '新しい順';
+
+  @override
+  String get discoverPageDroppedHeader => '除外した曲';
+
+  @override
+  String get discoverPageDroppedNote => 'オンにすると戻ります';
+
+  @override
+  String discoverPagePlayedTimes(int count) {
+    return '$count 回再生';
+  }
+
+  @override
+  String get discoverPageListenedTo => '途中まで聴いた';
+
+  @override
+  String get discoverPageNotAnalyzed => '未解析';
+
+  @override
+  String get discoverPageAddOwn => '自分で追加';
+
+  @override
+  String get discoverPageAddOwnSub => 'もっと聴きたい曲';
+
+  @override
+  String get discoverPagePickSong => '曲を選ぶ…';
+
+  @override
+  String get discoverPagePickSongSub => 'ライブラリを検索するか、ランダムに選ぶ';
+
+  @override
+  String discoverPageUseThese(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'この $count 曲を使う',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get discoverMatchedBySound => 'サウンドでマッチ';
@@ -3194,14 +3477,14 @@ class AppLocalizationsJa extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '再生中の曲で「ディスカバー」を開きます · 取得済み $count ライブラリからの候補',
+      other: '再生中の曲で「似た曲」を開きます · 取得済み $count ライブラリからの候補',
     );
     return '$_temp0';
   }
 
   @override
   String get p2pFindSimilarNothingPlaying =>
-      'まず何かを再生してください — 「ディスカバー」は再生中の曲に追従します';
+      'まず何かを再生してください — 「似た曲」は再生中の曲に追従します';
 
   @override
   String get p2pNewArtistsOnlySub => 'このライブラリに既にいるアーティストの候補を隠す';

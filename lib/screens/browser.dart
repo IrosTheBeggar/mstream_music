@@ -27,6 +27,7 @@ import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
+import 'discovery_page.dart';
 import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
@@ -152,6 +153,15 @@ class _BrowserState extends State<Browser> {
       if (s != null) SonicPathState().beginSetup(s);
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const SonicPathScreen()));
+      return;
+    }
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'discover') {
+      final s = browserList[index].server;
+      if (s != null) {
+        Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => DiscoveryPage(server: s)));
+      }
       return;
     }
     if (browserList[index].type == 'execAction' &&

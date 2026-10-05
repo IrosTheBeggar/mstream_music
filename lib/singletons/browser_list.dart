@@ -385,6 +385,16 @@ class BrowserManager {
       if (server.discoveryPathAvailable == true)
         DisplayItem(server, 'Sonic path', 'execAction', 'sonicPath',
             Icon(Icons.route, color: VelvetColors.textSecondary), null),
+      // Discover: the page seeded by this ACCOUNT's play history on this
+      // server — one server's history, so a card here rather than a drawer
+      // entry (mStream docs/discovery-page-plan.md §2.9). Both flags: the
+      // taste route 403s with discovery off. A peer never gets it (both
+      // pinned false: the route wants a logged-in account, and a peer's
+      // plays are its parent's).
+      if (server.discoveryAvailable == true &&
+          server.discoveryTasteAvailable == true)
+        DisplayItem(server, 'Discover', 'execAction', 'discover',
+            Icon(Icons.explore, color: VelvetColors.textSecondary), null),
       // Listening stats are one record across every server (this phone's,
       // plus each server's), so they live in the drawer, not under a server.
       // NETWORK: the libraries other servers share with this one. Only when

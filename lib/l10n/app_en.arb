@@ -1424,9 +1424,377 @@
   "@irohShareUnavailable": {
     "description": "Shown when trying to share tracks from an iroh (peer-to-peer) server."
   },
-  "discoverTitle": "Discover",
+  "discoverTitle": "More like this",
   "@discoverTitle": {
-    "description": "Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet."
+    "description": "Title of the Discover screen (sonic-similarity recommendations seeded by the playing track) and its entry in the player's more-actions sheet. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle)."
+  },
+  "discoverPageTitle": "Discover",
+  "@discoverPageTitle": {
+    "description": "Title of the Discover page (recommendations seeded by the user's play history on one server: library songs and albums, network leads, peers' songs) and its card under Listen on the server home."
+  },
+  "discoverPageRefresh": "Refresh",
+  "@discoverPageRefresh": {
+    "description": "Discover page app-bar button: fetch the recommendations again."
+  },
+  "discoverPageSubFinished": "{count, plural, =1{based on 1 song you finished · {window}} other{based on {count} songs you finished · {window}}}",
+  "@discoverPageSubFinished": {
+    "description": "Discover page subtitle: the seeds are songs played to the end. {window} is a window label like \"30 days\" or \"all time\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageSubListened": "{count, plural, =1{based on 1 song you listened to · {window}} other{based on {count} songs you listened to · {window}}}",
+  "@discoverPageSubListened": {
+    "description": "Discover page subtitle when some seeds were listened to past half rather than finished. {window} as above.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageSubCounters": "based on the songs you play most",
+  "@discoverPageSubCounters": {
+    "description": "Discover page subtitle when the seeds came from all-time play counts."
+  },
+  "discoverPageSubPinned": "based on songs you picked",
+  "@discoverPageSubPinned": {
+    "description": "Discover page subtitle when only songs the user picked seed the page."
+  },
+  "discoverPageSubRandom": "nothing finished yet · a random pick instead",
+  "@discoverPageSubRandom": {
+    "description": "Discover page subtitle when nothing has been played yet and a random library song stands in."
+  },
+  "discoverPageWindowDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@discoverPageWindowDays": {
+    "description": "A seed window length in days (segmented control label and app-bar subtitle part).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageWindowAll": "All time",
+  "@discoverPageWindowAll": {
+    "description": "The all-time seed window (segmented control label and app-bar subtitle part)."
+  },
+  "discoverPageWidened": "Nothing in the last {window}, so these come from further back.",
+  "@discoverPageWidened": {
+    "description": "Seeds sheet note when the chosen window had no plays and the server looked further back. {window} is like \"30 days\".",
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageBasedOn": "Based on",
+  "@discoverPageBasedOn": {
+    "description": "Discover page section header over the seed chips."
+  },
+  "discoverPageBasedOnNote": "what you finished · skips left out",
+  "@discoverPageBasedOnNote": {
+    "description": "Small note next to the Based on header."
+  },
+  "discoverPageRandomChip": "random",
+  "@discoverPageRandomChip": {
+    "description": "Tag on the seed chip when it is a random pick."
+  },
+  "discoverPageFromLibrary": "From your library",
+  "@discoverPageFromLibrary": {
+    "description": "Discover page section header: songs and albums from the user's own library."
+  },
+  "discoverPageSeeAll": "See all",
+  "@discoverPageSeeAll": {
+    "description": "Discover page section link that opens the whole list."
+  },
+  "discoverPageNeverPlayed": "never played",
+  "@discoverPageNeverPlayed": {
+    "description": "Library row / album label: this account never played it."
+  },
+  "discoverPageLastPlayed": "last played {ago}",
+  "@discoverPageLastPlayed": {
+    "description": "Library row label. {ago} is a relative time like \"8 months ago\".",
+    "placeholders": {
+      "ago": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageAgoToday": "today",
+  "@discoverPageAgoToday": {
+    "description": "Relative time: today."
+  },
+  "discoverPageAgoYesterday": "yesterday",
+  "@discoverPageAgoYesterday": {
+    "description": "Relative time: yesterday."
+  },
+  "discoverPageAgoMonths": "{count, plural, =1{1 month ago} other{{count} months ago}}",
+  "@discoverPageAgoMonths": {
+    "description": "Relative time in months.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageAgoYears": "{count, plural, =1{1 year ago} other{{count} years ago}}",
+  "@discoverPageAgoYears": {
+    "description": "Relative time in years.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageAlbumPlayed": "{played} of {total} played",
+  "@discoverPageAlbumPlayed": {
+    "description": "Album card label: how many of the album's tracks this account played.",
+    "placeholders": {
+      "played": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageSongsCount": "{count, plural, =1{1 song} other{{count} songs}}",
+  "@discoverPageSongsCount": {
+    "description": "A number of songs.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageAlbumsCount": "{count, plural, =1{1 album} other{{count} albums}}",
+  "@discoverPageAlbumsCount": {
+    "description": "A number of albums.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPagePlayAll": "Play all {count}",
+  "@discoverPagePlayAll": {
+    "description": "Pill under the library rows: play every listed song. {count} is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageAddToQueue": "Add to queue",
+  "@discoverPageAddToQueue": {
+    "description": "Pill under the library rows: append every listed song to the queue."
+  },
+  "discoverPageLibraryEmpty": "Nothing in your library matches these songs with this filter.",
+  "@discoverPageLibraryEmpty": {
+    "description": "One italic line when the library source has nothing for this filter."
+  },
+  "discoverPageFilterUnplayed": "Never played",
+  "@discoverPageFilterUnplayed": {
+    "description": "Library filter chip: only songs never played."
+  },
+  "discoverPageFilterFresh": "Not in {days} days",
+  "@discoverPageFilterFresh": {
+    "description": "Library filter chip: never played, or not played in {days} days.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageFilterAll": "Everything",
+  "@discoverPageFilterAll": {
+    "description": "Library filter chip: every matching song, played or not."
+  },
+  "discoverPageAlbumsHeader": "Albums",
+  "@discoverPageAlbumsHeader": {
+    "description": "Header over the album cards in the library list."
+  },
+  "discoverPageSongsHeader": "Songs",
+  "@discoverPageSongsHeader": {
+    "description": "Header over the song rows in the library list."
+  },
+  "discoverPageServersSearched": "{count, plural, =1{1 server searched} other{{count} servers searched}}",
+  "@discoverPageServersSearched": {
+    "description": "Network section meta: how many network libraries were searched.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageNewArtist": "new artist",
+  "@discoverPageNewArtist": {
+    "description": "Pill on a network row: the artist is not in the user's library."
+  },
+  "discoverPageNetworkEmpty": "Nothing new on the network for these songs.",
+  "@discoverPageNetworkEmpty": {
+    "description": "One italic line when the network had nothing new for these seeds."
+  },
+  "discoverPagePeersOnline": "{online} of {total} online",
+  "@discoverPagePeersOnline": {
+    "description": "Peers section meta: how many peers answered.",
+    "placeholders": {
+      "online": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPagePeerOffline": "offline",
+  "@discoverPagePeerOffline": {
+    "description": "Peer group label: the peer did not answer this time."
+  },
+  "discoverPagePeerMismatched": "uses a different sound model",
+  "@discoverPagePeerMismatched": {
+    "description": "Peer group label: the peer uses another sound model, so its songs cannot be compared."
+  },
+  "discoverPageNoPeers": "No peers to ask yet. Pair with a friend's server under Federation and their songs can show up here.",
+  "@discoverPageNoPeers": {
+    "description": "One italic line when this server has no federated peers to ask."
+  },
+  "discoverPagePeersEmpty": "Nothing new on your peers' servers for these songs.",
+  "@discoverPagePeersEmpty": {
+    "description": "One italic line when peers answered with nothing new."
+  },
+  "discoverPagePeerNotReady": "This peer isn't in your server list yet — open Federation to refresh it.",
+  "@discoverPagePeerNotReady": {
+    "description": "Snackbar when a peer song cannot play because the peer is not in the app's server list yet."
+  },
+  "discoverPageRestoreFailed": "Couldn't bring those songs back. Try again.",
+  "@discoverPageRestoreFailed": {
+    "description": "Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out)."
+  },
+  "discoverPageScanWaiting": "Shows up once the discovery scan has analyzed these songs.",
+  "@discoverPageScanWaiting": {
+    "description": "One line under a Discover page source (library, network, peers) while the scan has not analyzed any seed yet, instead of that source's empty-state copy."
+  },
+  "discoverPageListen": "Listen",
+  "@discoverPageListen": {
+    "description": "Tooltip of the play button on a peer row."
+  },
+  "discoverPageRandomTitle": "Finish a few songs and this page learns your taste",
+  "@discoverPageRandomTitle": {
+    "description": "Card title when nothing has been finished yet."
+  },
+  "discoverPageRandomBody": "Discover seeds itself from songs you play to the end. Skipped songs never count. Until there are some, here are suggestions around a random pick from your library.",
+  "@discoverPageRandomBody": {
+    "description": "Card body under that title."
+  },
+  "discoverPageAnotherPick": "Another pick",
+  "@discoverPageAnotherPick": {
+    "description": "Button on the nothing-finished card: seed from another random song."
+  },
+  "discoverPageChooseSong": "Choose a song…",
+  "@discoverPageChooseSong": {
+    "description": "Button on the nothing-finished card: pick the seed song yourself."
+  },
+  "discoverPageRandomFailed": "Couldn't pick a random song.",
+  "@discoverPageRandomFailed": {
+    "description": "Snackbar when no random song could be picked."
+  },
+  "discoverPageError": "Discover couldn't load. Check the connection and try again.",
+  "@discoverPageError": {
+    "description": "Shown when the Discover page could not load and has nothing to show."
+  },
+  "discoverPageRetry": "Try again",
+  "@discoverPageRetry": {
+    "description": "Button: try loading again."
+  },
+  "discoverPageSeedsSub": "songs you played to the end · skips never count",
+  "@discoverPageSeedsSub": {
+    "description": "Seeds sheet subtitle under \"Based on\"."
+  },
+  "discoverPageSeedsOn": "{on} of {total} on",
+  "@discoverPageSeedsOn": {
+    "description": "Seeds sheet line: how many seeds are switched on.",
+    "placeholders": {
+      "on": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPagePickedHeader": "Picked for this visit",
+  "@discoverPagePickedHeader": {
+    "description": "Seeds sheet group: songs pinned for this visit (now playing at open, songs picked)."
+  },
+  "discoverPageRecentHeader": "Finished recently",
+  "@discoverPageRecentHeader": {
+    "description": "Seeds sheet group: seeds from recent play history."
+  },
+  "discoverPageCountersHeader": "Played most",
+  "@discoverPageCountersHeader": {
+    "description": "Seeds sheet group: seeds from all-time play counts."
+  },
+  "discoverPageNewestFirst": "newest first",
+  "@discoverPageNewestFirst": {
+    "description": "Small note next to the recent seeds header."
+  },
+  "discoverPageDroppedHeader": "Left out",
+  "@discoverPageDroppedHeader": {
+    "description": "Seeds sheet group: seeds the user switched off (remembered on the server)."
+  },
+  "discoverPageDroppedNote": "switch one on to bring it back",
+  "@discoverPageDroppedNote": {
+    "description": "Small note next to that header."
+  },
+  "discoverPagePlayedTimes": "played {count}×",
+  "@discoverPagePlayedTimes": {
+    "description": "Seed row detail: how many times the seed was played.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "discoverPageListenedTo": "listened to",
+  "@discoverPageListenedTo": {
+    "description": "Seed row detail: the seed was listened to past half but not to the end."
+  },
+  "discoverPageNotAnalyzed": "not analyzed yet",
+  "@discoverPageNotAnalyzed": {
+    "description": "Seed row detail: the seed has not been analyzed yet, so it steers nothing."
+  },
+  "discoverPageAddOwn": "Add your own",
+  "@discoverPageAddOwn": {
+    "description": "Seeds sheet group: add a seed yourself."
+  },
+  "discoverPageAddOwnSub": "a song you want more of",
+  "@discoverPageAddOwnSub": {
+    "description": "Small note next to that header."
+  },
+  "discoverPagePickSong": "Pick a song…",
+  "@discoverPagePickSong": {
+    "description": "Seeds sheet row: opens the song picker."
+  },
+  "discoverPagePickSongSub": "search your library, or take a random one",
+  "@discoverPagePickSongSub": {
+    "description": "Subtitle of that row."
+  },
+  "discoverPageUseThese": "{count, plural, =1{Use this 1} other{Use these {count}}}",
+  "@discoverPageUseThese": {
+    "description": "Seeds sheet primary button: apply the seeds that are switched on.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "discoverMatchedBySound": "Matched by sound",
   "@discoverMatchedBySound": {
@@ -3384,18 +3752,18 @@
   "@p2pFindSimilar": {
       "description": "Row: opens Discover's network section."
   },
-  "p2pFindSimilarSub": "{count, plural, =1{Opens Discover for the track playing now · leads from 1 downloaded library} other{Opens Discover for the track playing now · leads from {count} downloaded libraries}}",
+  "p2pFindSimilarSub": "{count, plural, =1{Opens More like this for the track playing now · leads from 1 downloaded library} other{Opens More like this for the track playing now · leads from {count} downloaded libraries}}",
   "@p2pFindSimilarSub": {
-      "description": "Row subtitle.",
+      "description": "Row subtitle. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle).",
       "placeholders": {
           "count": {
               "type": "int"
           }
       }
   },
-  "p2pFindSimilarNothingPlaying": "Play something first — Discover follows the current track",
+  "p2pFindSimilarNothingPlaying": "Play something first — More like this follows the current track",
   "@p2pFindSimilarNothingPlaying": {
-      "description": "Row subtitle when nothing is playing."
+      "description": "Row subtitle when nothing is playing. Retitled \"More like this\" by the Discover page plan §2.12: the history-seeded page alone is called \"Discover\" (discoverPageTitle)."
   },
   "p2pNewArtistsOnlySub": "Hide leads for artists already in this library",
   "@p2pNewArtistsOnlySub": {
