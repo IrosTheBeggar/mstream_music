@@ -679,27 +679,38 @@ class DiscoveryScanPendingCard extends StatelessWidget {
 /// library itself.
 class DiscoveryRandomCard extends StatelessWidget {
   final bool busy;
+  /// The pick came from a "New seeds" rotation that went past every
+  /// finished song: the card says so and offers New seeds first.
+  final bool cycled;
   final VoidCallback onAnotherPick;
   final VoidCallback onChooseSong;
   final VoidCallback onBrowse;
+  final VoidCallback? onNewSeeds;
   const DiscoveryRandomCard({
     super.key,
     required this.busy,
+    this.cycled = false,
     required this.onAnotherPick,
     required this.onChooseSong,
     required this.onBrowse,
+    this.onNewSeeds,
   });
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return _StateCard(
-      title: l.discoverPageRandomTitle,
-      body: l.discoverPageRandomBody,
+      title: cycled ? l.discoverPageSeedsCycled : l.discoverPageRandomTitle,
+      body: cycled ? l.discoverPageSeedsCycledBody : l.discoverPageRandomBody,
       actions: [
+        if (cycled)
+          DiscoveryPill(l.discoverPageNewSeeds,
+              icon: Icons.refresh,
+              primary: true,
+              onTap: busy ? null : onNewSeeds),
         DiscoveryPill(l.discoverPageAnotherPick,
             icon: Icons.casino_outlined,
-            primary: true,
+            primary: !cycled,
             onTap: busy ? null : onAnotherPick),
         DiscoveryPill(l.discoverPageChooseSong,
             icon: Icons.search, onTap: busy ? null : onChooseSong),
@@ -732,6 +743,10 @@ Widget discoveryStateWidget(BuildContext context, DisplayItem item,
     case DiscoveryListingState.random:
       return DiscoveryRandomCard(
         busy: c == null || c.loading,
+        cycled: c?.seedsCycled ?? false,
+        onNewSeeds: () {
+          if (c != null) c.newSeeds();
+        },
         onAnotherPick: () {
           if (c != null) discoveryAnotherPick(context, c);
         },

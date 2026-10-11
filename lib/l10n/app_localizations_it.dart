@@ -1882,6 +1882,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get discoverPageNewSeeds => 'Nuovi brani di partenza';
 
   @override
+  String get discoverPageSeedsCycled =>
+      'Hai esaurito tutti i brani che hai ascoltato fino alla fine';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'Ecco alcuni suggerimenti attorno a un brano scelto a caso dalla tua libreria. «Nuovi brani di partenza» ricomincia dagli ultimi brani che hai ascoltato fino alla fine.';
+
+  @override
   String get discoverPageIncludePlayed =>
       'Includi i brani ascoltati di recente';
 

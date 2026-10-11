@@ -437,6 +437,8 @@
   "discoverPageBasedOnAllTime": "Период",
   "discoverPageMoreOptions": "Другие параметры",
   "discoverPageNewSeeds": "Новые исходные треки",
+  "discoverPageSeedsCycled": "Вы прошли все треки, которые дослушали до конца",
+  "discoverPageSeedsCycledBody": "Вот рекомендации вокруг случайного трека из вашей библиотеки. «Новые исходные треки» начнёт заново с последних дослушанных треков.",
   "discoverPageIncludePlayed": "Включать недавно прослушанные треки",
   "discoverPageAlbumsLibrary": "Альбомы из вашей библиотеки",
   "discoverPageAlbumsPeer": "Альбомы с сервера «{name}»",

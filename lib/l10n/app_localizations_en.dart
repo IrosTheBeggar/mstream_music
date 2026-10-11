@@ -1860,6 +1860,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverPageNewSeeds => 'New seeds';
 
   @override
+  String get discoverPageSeedsCycled =>
+      'You\'ve been through every song you finished';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.';
+
+  @override
   String get discoverPageIncludePlayed => 'Include songs I\'ve played lately';
 
   @override

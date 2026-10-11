@@ -437,6 +437,8 @@
   "discoverPageBasedOnAllTime": "Période",
   "discoverPageMoreOptions": "Plus d’options",
   "discoverPageNewSeeds": "Nouveaux morceaux de départ",
+  "discoverPageSeedsCycled": "Vous avez fait le tour de tous les morceaux que vous avez terminés",
+  "discoverPageSeedsCycledBody": "Voici des suggestions autour d'un morceau pris au hasard dans votre bibliothèque. « Nouveaux morceaux de départ » recommence à partir des derniers morceaux que vous avez terminés.",
   "discoverPageIncludePlayed": "Inclure les morceaux écoutés récemment",
   "discoverPageAlbumsLibrary": "Albums de votre bibliothèque",
   "discoverPageAlbumsPeer": "Albums de {name}",

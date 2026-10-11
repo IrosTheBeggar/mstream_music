@@ -437,6 +437,8 @@
   "discoverPageBasedOnAllTime": "Zeitraum",
   "discoverPageMoreOptions": "Weitere Optionen",
   "discoverPageNewSeeds": "Neue Ausgangstitel",
+  "discoverPageSeedsCycled": "Du hast alle Titel durch, die du zu Ende gehört hast",
+  "discoverPageSeedsCycledBody": "Hier sind Vorschläge rund um einen zufälligen Titel aus deiner Bibliothek. „Neue Ausgangstitel“ beginnt wieder bei den zuletzt zu Ende gehörten Titeln.",
   "discoverPageIncludePlayed": "Kürzlich gehörte Titel einbeziehen",
   "discoverPageAlbumsLibrary": "Alben aus deiner Bibliothek",
   "discoverPageAlbumsPeer": "Alben von {name}",

@@ -208,6 +208,11 @@ class DiscoveryPageController extends ChangeNotifier {
   bool get isRandom =>
       seeded?.seedSource == TasteSeedSource.random || seeded?.fallback == true;
 
+  /// The random pick on screen came from a "New seeds" rotation that had
+  /// gone past every finished song — the card says so instead of asking
+  /// the user to finish a few songs.
+  bool get seedsCycled => isRandom && _seededRotation.isNotEmpty;
+
   TasteFilter get effectiveFilter =>
       filter ?? library?.filter ?? TasteFilter.fresh;
 

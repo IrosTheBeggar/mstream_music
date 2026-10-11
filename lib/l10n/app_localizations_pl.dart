@@ -1903,6 +1903,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPageNewSeeds => 'Nowe utwory bazowe';
 
   @override
+  String get discoverPageSeedsCycled =>
+      'Przeszliśmy już przez wszystkie utwory, które przesłuchałeś do końca';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'Oto propozycje wokół losowego utworu z twojej biblioteki. „Nowe utwory bazowe” zaczyna od nowa od ostatnio przesłuchanych do końca utworów.';
+
+  @override
   String get discoverPageIncludePlayed => 'Uwzględnij utwory słuchane ostatnio';
 
   @override

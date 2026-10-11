@@ -3222,6 +3222,18 @@ abstract class AppLocalizations {
   /// **'New seeds'**
   String get discoverPageNewSeeds;
 
+  /// Title of the random-pick card once New seeds has gone past every finished song
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve been through every song you finished'**
+  String get discoverPageSeedsCycled;
+
+  /// Body of that card; names the New seeds button
+  ///
+  /// In en, this message translates to:
+  /// **'Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.'**
+  String get discoverPageSeedsCycledBody;
+
   /// The one checkbox in Discover's seeds sheet (opened from "More options"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not.
   ///
   /// In en, this message translates to:

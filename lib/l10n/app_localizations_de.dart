@@ -1884,6 +1884,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverPageNewSeeds => 'Neue Ausgangstitel';
 
   @override
+  String get discoverPageSeedsCycled =>
+      'Du hast alle Titel durch, die du zu Ende gehört hast';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'Hier sind Vorschläge rund um einen zufälligen Titel aus deiner Bibliothek. „Neue Ausgangstitel“ beginnt wieder bei den zuletzt zu Ende gehörten Titeln.';
+
+  @override
   String get discoverPageIncludePlayed => 'Kürzlich gehörte Titel einbeziehen';
 
   @override

@@ -21,6 +21,7 @@ import 'package:mstream_music/objects/display_item.dart';
 import 'package:mstream_music/objects/server.dart';
 import 'package:mstream_music/screens/browser.dart';
 import 'package:mstream_music/screens/discovery/discovery_listing.dart';
+import 'package:mstream_music/screens/discovery/discovery_widgets.dart';
 import 'package:mstream_music/screens/discovery/discovery_page_controller.dart';
 import 'package:mstream_music/singletons/browser_list.dart';
 import 'package:mstream_music/singletons/server_list.dart';
@@ -408,6 +409,34 @@ void main() {
       await tester.pumpAndSettle();
       return asked;
     }
+
+    testWidgets('the random card after a rotation says the seeds cycled '
+        'and offers New seeds first', (tester) async {
+      var asked = 0;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: appSupportedLocales,
+        home: Scaffold(
+          body: DiscoveryRandomCard(
+            busy: false,
+            cycled: true,
+            onNewSeeds: () => asked++,
+            onAnotherPick: () {},
+            onChooseSong: () {},
+            onBrowse: () {},
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text("You've been through every song you finished"),
+          findsOneWidget);
+      expect(find.text('Finish a few songs and this page learns your taste'),
+          findsNothing);
+      expect(find.text('New seeds'), findsOneWidget);
+      await tester.tap(find.text('New seeds'));
+      await tester.pump();
+      expect(asked, 1);
+    });
 
     testWidgets('the bar, the sections and the rows, with no numbers',
         (tester) async {

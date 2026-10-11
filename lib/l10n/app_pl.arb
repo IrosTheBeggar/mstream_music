@@ -437,6 +437,8 @@
   "discoverPageBasedOnAllTime": "Okres",
   "discoverPageMoreOptions": "Więcej opcji",
   "discoverPageNewSeeds": "Nowe utwory bazowe",
+  "discoverPageSeedsCycled": "Przeszliśmy już przez wszystkie utwory, które przesłuchałeś do końca",
+  "discoverPageSeedsCycledBody": "Oto propozycje wokół losowego utworu z twojej biblioteki. „Nowe utwory bazowe” zaczyna od nowa od ostatnio przesłuchanych do końca utworów.",
   "discoverPageIncludePlayed": "Uwzględnij utwory słuchane ostatnio",
   "discoverPageAlbumsLibrary": "Albumy z twojej biblioteki",
   "discoverPageAlbumsPeer": "Albumy z serwera „{name}”",

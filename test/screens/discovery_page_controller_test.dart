@@ -855,6 +855,8 @@ void main() {
       await c.newSeeds();
       expect(c.isRandom, isTrue, reason: 'nothing finished is left');
       expect(seedHashes(c), ['rnd']);
+      expect(c.seedsCycled, isTrue,
+          reason: 'this random pick came from a rotation: the card says so');
 
       await c.newSeeds();
       expect(sentExclude(taste.mainCalls.last), isNull,
@@ -862,6 +864,7 @@ void main() {
       expect(taste.mainCalls.last.toJson().containsKey('remember'), isFalse);
       expect(c.rotation, isEmpty);
       expect(seedHashes(c), ['f0', 'f1', 'f2']);
+      expect(c.seedsCycled, isFalse);
     });
 
     test('only pins left (the server has none of its own): starts over too',
@@ -1087,6 +1090,8 @@ void main() {
     final c = make();
     await c.load();
     expect(c.isRandom, isTrue);
+    expect(c.seedsCycled, isFalse,
+        reason: 'a plain random pick is not a cycled rotation');
     // The server asks no connected server for a random seed.
     expect(c.peers, isNull);
     expect(c.hasConnectedServers, isFalse);

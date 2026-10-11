@@ -1761,6 +1761,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageNewSeeds => '换一批依据歌曲';
 
   @override
+  String get discoverPageSeedsCycled => '你听完的歌曲已经全部用过了';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      '这里是围绕你曲库中一首随机歌曲的推荐。“换一批依据歌曲”会从你最近听完的歌曲重新开始。';
+
+  @override
   String get discoverPageIncludePlayed => '包括最近听过的歌曲';
 
   @override

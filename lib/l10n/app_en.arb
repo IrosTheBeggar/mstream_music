@@ -1474,6 +1474,14 @@
   "@discoverPageNewSeeds": {
     "description": "Tooltip of the refresh button on the Discover page's top bar (where other lists have search): starts the page from other songs you finished — the next ones back in your history — instead of the ones it is based on now."
   },
+  "discoverPageSeedsCycled": "You've been through every song you finished",
+  "@discoverPageSeedsCycled": {
+    "description": "Title of the random-pick card once New seeds has gone past every finished song"
+  },
+  "discoverPageSeedsCycledBody": "Here are suggestions around a random pick from your library. New seeds starts again from the songs you finished last.",
+  "@discoverPageSeedsCycledBody": {
+    "description": "Body of that card; names the New seeds button"
+  },
   "discoverPageIncludePlayed": "Include songs I've played lately",
   "@discoverPageIncludePlayed": {
     "description": "The one checkbox in Discover's seeds sheet (opened from \"More options\"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not."

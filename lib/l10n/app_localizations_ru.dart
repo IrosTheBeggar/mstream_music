@@ -1908,6 +1908,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get discoverPageNewSeeds => 'Новые исходные треки';
 
   @override
+  String get discoverPageSeedsCycled =>
+      'Вы прошли все треки, которые дослушали до конца';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'Вот рекомендации вокруг случайного трека из вашей библиотеки. «Новые исходные треки» начнёт заново с последних дослушанных треков.';
+
+  @override
   String get discoverPageIncludePlayed => 'Включать недавно прослушанные треки';
 
   @override

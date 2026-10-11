@@ -1800,6 +1800,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get discoverPageNewSeeds => 'もとにする曲を変える';
 
   @override
+  String get discoverPageSeedsCycled => '最後まで聴いた曲をすべて使い切りました';
+
+  @override
+  String get discoverPageSeedsCycledBody =>
+      'ライブラリからランダムに選んだ曲をもとにしたおすすめです。「もとにする曲を変える」で、最近最後まで聴いた曲からやり直します。';
+
+  @override
   String get discoverPageIncludePlayed => '最近聴いた曲も含める';
 
   @override
