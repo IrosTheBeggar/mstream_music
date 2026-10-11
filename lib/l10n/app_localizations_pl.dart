@@ -1867,47 +1867,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPageTitle => 'Odkrywaj';
 
   @override
-  String get discoverPageRefresh => 'Odśwież';
-
-  @override
-  String discoverPageSubFinished(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'na podstawie $count utworu przesłuchanego do końca',
-      many: 'na podstawie $count utworów przesłuchanych do końca',
-      few: 'na podstawie $count utworów przesłuchanych do końca',
-      one: 'na podstawie 1 utworu przesłuchanego do końca',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageSubListened(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'na podstawie $count przesłuchanego utworu',
-      many: 'na podstawie $count przesłuchanych utworów',
-      few: 'na podstawie $count przesłuchanych utworów',
-      one: 'na podstawie 1 przesłuchanego utworu',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageSubCounters =>
-      'na podstawie najczęściej słuchanych utworów';
-
-  @override
-  String get discoverPageSubPinned =>
-      'na podstawie wybranych przez ciebie utworów';
-
-  @override
-  String get discoverPageSubRandom =>
-      'nic jeszcze nie przesłuchano do końca · zamiast tego losowy utwór';
-
-  @override
   String discoverPageWindowDays(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1941,18 +1900,42 @@ class AppLocalizationsPl extends AppLocalizations {
   String get discoverPageMoreOptions => 'Więcej opcji';
 
   @override
-  String get discoverPageFromLibrary => 'Z twojej biblioteki';
+  String get discoverPageIncludePlayed => 'Uwzględnij utwory słuchane ostatnio';
 
   @override
-  String get discoverPageSeeAll => 'Zobacz wszystko';
+  String get discoverPageAlbumsLibrary => 'Albumy z twojej biblioteki';
 
   @override
-  String get discoverPageNeverPlayed => 'nigdy nie odtwarzany';
-
-  @override
-  String discoverPageLastPlayed(String ago) {
-    return 'ostatnio $ago';
+  String discoverPageAlbumsPeer(String name) {
+    return 'Albumy z serwera „$name”';
   }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Albumy z połączonych serwerów';
+
+  @override
+  String get discoverPageSongsLibrary => 'Utwory z twojej biblioteki';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Utwory z serwera „$name”';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Utwory z połączonych serwerów';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'Nic nowego w twojej bibliotece nie brzmi jak te utwory.';
+
+  @override
+  String get discoverPagePeersQuiet => 'Na razie nic z połączonych serwerów.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Zapisz jako playlistę';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Przeglądaj bibliotekę';
 
   @override
   String get discoverPageAgoToday => 'dzisiaj';
@@ -1987,118 +1970,8 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String discoverPageAlbumPlayed(int played, int total) {
-    return 'odtworzono $played z $total';
-  }
-
-  @override
-  String discoverPageSongsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count utworu',
-      many: '$count utworów',
-      few: '$count utwory',
-      one: '1 utwór',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageAlbumsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count albumu',
-      many: '$count albumów',
-      few: '$count albumy',
-      one: '1 album',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPagePlayAll(int count) {
-    return 'Odtwórz wszystkie ($count)';
-  }
-
-  @override
-  String get discoverPageAddToQueue => 'Dodaj do kolejki';
-
-  @override
-  String get discoverPageLibraryEmpty =>
-      'Nic w twojej bibliotece nie pasuje do tych utworów przy tym filtrze.';
-
-  @override
-  String get discoverPageFilterUnplayed => 'Nigdy nie odtwarzane';
-
-  @override
-  String discoverPageFilterFresh(int days) {
-    return 'Nie od $days dni';
-  }
-
-  @override
-  String get discoverPageFilterAll => 'Wszystko';
-
-  @override
-  String get discoverPageAlbumsHeader => 'Albumy';
-
-  @override
-  String get discoverPageSongsHeader => 'Utwory';
-
-  @override
-  String discoverPageServersSearched(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'przeszukano $count serwera',
-      many: 'przeszukano $count serwerów',
-      few: 'przeszukano $count serwery',
-      one: 'przeszukano 1 serwer',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageNewArtist => 'nowy wykonawca';
-
-  @override
-  String get discoverPageNetworkEmpty =>
-      'W sieci nie ma nic nowego dla tych utworów.';
-
-  @override
-  String discoverPagePeersOnline(int online, int total) {
-    return '$online z $total online';
-  }
-
-  @override
-  String get discoverPagePeerOffline => 'offline';
-
-  @override
-  String get discoverPagePeerMismatched => 'używa innego modelu dźwięku';
-
-  @override
-  String get discoverPageNoPeers =>
-      'Brak jeszcze peerów. Połącz się z serwerem znajomego w sekcji Federacja, a jego utwory mogą się tu pojawić.';
-
-  @override
-  String get discoverPagePeersEmpty =>
-      'Na serwerach twoich peerów nie ma nic nowego dla tych utworów.';
-
-  @override
-  String get discoverPagePeerNotReady =>
-      'Tego peera nie ma jeszcze na liście serwerów — otwórz Federację, aby ją odświeżyć.';
-
-  @override
   String get discoverPageRestoreFailed =>
       'Nie udało się przywrócić tych utworów. Spróbuj ponownie.';
-
-  @override
-  String get discoverPageScanWaiting =>
-      'Pojawi się, gdy skan odkrywania przeanalizuje te utwory.';
-
-  @override
-  String get discoverPageListen => 'Słuchaj';
 
   @override
   String get discoverPageRandomTitle =>

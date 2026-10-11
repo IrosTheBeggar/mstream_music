@@ -3174,42 +3174,6 @@ abstract class AppLocalizations {
   /// **'Discover'**
   String get discoverPageTitle;
 
-  /// Discover page app-bar button: fetch the recommendations again.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh'**
-  String get discoverPageRefresh;
-
-  /// Discover page subtitle: the seeds are songs played to the end. The window is not repeated here: the page's configuration bar shows it.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{based on 1 song you finished} other{based on {count} songs you finished}}'**
-  String discoverPageSubFinished(int count);
-
-  /// Discover page subtitle when some seeds were listened to past half rather than finished.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{based on 1 song you listened to} other{based on {count} songs you listened to}}'**
-  String discoverPageSubListened(int count);
-
-  /// Discover page subtitle when the seeds came from all-time play counts.
-  ///
-  /// In en, this message translates to:
-  /// **'based on the songs you play most'**
-  String get discoverPageSubCounters;
-
-  /// Discover page subtitle when only songs the user picked seed the page.
-  ///
-  /// In en, this message translates to:
-  /// **'based on songs you picked'**
-  String get discoverPageSubPinned;
-
-  /// Discover page subtitle when nothing has been played yet and a random library song stands in.
-  ///
-  /// In en, this message translates to:
-  /// **'nothing finished yet · a random pick instead'**
-  String get discoverPageSubRandom;
-
   /// A seed window length in days (segmented control label and app-bar subtitle part).
   ///
   /// In en, this message translates to:
@@ -3252,29 +3216,71 @@ abstract class AppLocalizations {
   /// **'More options'**
   String get discoverPageMoreOptions;
 
-  /// Discover page section header: songs and albums from the user's own library.
+  /// The one checkbox in Discover's seeds sheet (opened from "More options"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not.
   ///
   /// In en, this message translates to:
-  /// **'From your library'**
-  String get discoverPageFromLibrary;
+  /// **'Include songs I\'ve played lately'**
+  String get discoverPageIncludePlayed;
 
-  /// Discover page section link that opens the whole list.
+  /// Discover section header (shown in small caps): albums from the user's own library.
   ///
   /// In en, this message translates to:
-  /// **'See all'**
-  String get discoverPageSeeAll;
+  /// **'Albums from your library'**
+  String get discoverPageAlbumsLibrary;
 
-  /// Library row / album label: this account never played it.
+  /// Discover section header (shown in small caps): albums from the one connected (federated) server that answered. {name} is that server's name.
   ///
   /// In en, this message translates to:
-  /// **'never played'**
-  String get discoverPageNeverPlayed;
+  /// **'Albums from {name}'**
+  String discoverPageAlbumsPeer(String name);
 
-  /// Library row label. {ago} is a relative time like "8 months ago".
+  /// Discover section header (shown in small caps): albums from several connected (federated) servers.
   ///
   /// In en, this message translates to:
-  /// **'last played {ago}'**
-  String discoverPageLastPlayed(String ago);
+  /// **'Albums from connected servers'**
+  String get discoverPageAlbumsPeers;
+
+  /// Discover section header (shown in small caps): songs from the user's own library.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs from your library'**
+  String get discoverPageSongsLibrary;
+
+  /// Discover section header (shown in small caps): songs from the one connected (federated) server that answered. {name} is that server's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs from {name}'**
+  String discoverPageSongsPeer(String name);
+
+  /// Discover section header (shown in small caps): songs from several connected (federated) servers.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs from connected servers'**
+  String get discoverPageSongsPeers;
+
+  /// One line under "Songs from your library" when the library has no suggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new in your library sounds like these songs.'**
+  String get discoverPageLibraryNothing;
+
+  /// One line under the connected servers' songs header when they had nothing playable.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing from your connected servers right now.'**
+  String get discoverPagePeersQuiet;
+
+  /// Button under Discover's library songs: save them as a server playlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as playlist'**
+  String get discoverPageSaveAsPlaylist;
+
+  /// Button on Discover's nothing-finished card: open the server's File Explorer.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse your library'**
+  String get discoverPageBrowseLibrary;
 
   /// Relative time: today.
   ///
@@ -3300,143 +3306,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 year ago} other{{count} years ago}}'**
   String discoverPageAgoYears(int count);
 
-  /// Album card label: how many of the album's tracks this account played.
-  ///
-  /// In en, this message translates to:
-  /// **'{played} of {total} played'**
-  String discoverPageAlbumPlayed(int played, int total);
-
-  /// A number of songs.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 song} other{{count} songs}}'**
-  String discoverPageSongsCount(int count);
-
-  /// A number of albums.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 album} other{{count} albums}}'**
-  String discoverPageAlbumsCount(int count);
-
-  /// Pill under the library rows: play every listed song. {count} is how many.
-  ///
-  /// In en, this message translates to:
-  /// **'Play all {count}'**
-  String discoverPagePlayAll(int count);
-
-  /// Pill under the library rows: append every listed song to the queue.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to queue'**
-  String get discoverPageAddToQueue;
-
-  /// One italic line when the library source has nothing for this filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing in your library matches these songs with this filter.'**
-  String get discoverPageLibraryEmpty;
-
-  /// Library filter chip: only songs never played.
-  ///
-  /// In en, this message translates to:
-  /// **'Never played'**
-  String get discoverPageFilterUnplayed;
-
-  /// Library filter chip: never played, or not played in {days} days.
-  ///
-  /// In en, this message translates to:
-  /// **'Not in {days} days'**
-  String discoverPageFilterFresh(int days);
-
-  /// Library filter chip: every matching song, played or not.
-  ///
-  /// In en, this message translates to:
-  /// **'Everything'**
-  String get discoverPageFilterAll;
-
-  /// Header over the album cards in the library list.
-  ///
-  /// In en, this message translates to:
-  /// **'Albums'**
-  String get discoverPageAlbumsHeader;
-
-  /// Header over the song rows in the library list.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs'**
-  String get discoverPageSongsHeader;
-
-  /// Network section meta: how many network libraries were searched.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 server searched} other{{count} servers searched}}'**
-  String discoverPageServersSearched(int count);
-
-  /// Pill on a network row: the artist is not in the user's library.
-  ///
-  /// In en, this message translates to:
-  /// **'new artist'**
-  String get discoverPageNewArtist;
-
-  /// One italic line when the network had nothing new for these seeds.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing new on the network for these songs.'**
-  String get discoverPageNetworkEmpty;
-
-  /// Peers section meta: how many peers answered.
-  ///
-  /// In en, this message translates to:
-  /// **'{online} of {total} online'**
-  String discoverPagePeersOnline(int online, int total);
-
-  /// Peer group label: the peer did not answer this time.
-  ///
-  /// In en, this message translates to:
-  /// **'offline'**
-  String get discoverPagePeerOffline;
-
-  /// Peer group label: the peer uses another sound model, so its songs cannot be compared.
-  ///
-  /// In en, this message translates to:
-  /// **'uses a different sound model'**
-  String get discoverPagePeerMismatched;
-
-  /// One italic line when this server has no federated peers to ask.
-  ///
-  /// In en, this message translates to:
-  /// **'No peers to ask yet. Pair with a friend\'s server under Federation and their songs can show up here.'**
-  String get discoverPageNoPeers;
-
-  /// One italic line when peers answered with nothing new.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing new on your peers\' servers for these songs.'**
-  String get discoverPagePeersEmpty;
-
-  /// Snackbar when a peer song cannot play because the peer is not in the app's server list yet.
-  ///
-  /// In en, this message translates to:
-  /// **'This peer isn\'t in your server list yet — open Federation to refresh it.'**
-  String get discoverPagePeerNotReady;
-
   /// Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out).
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t bring those songs back. Try again.'**
   String get discoverPageRestoreFailed;
-
-  /// One line under a Discover page source (library, network, peers) while the scan has not analyzed any seed yet, instead of that source's empty-state copy.
-  ///
-  /// In en, this message translates to:
-  /// **'Shows up once the discovery scan has analyzed these songs.'**
-  String get discoverPageScanWaiting;
-
-  /// Tooltip of the play button on a peer row.
-  ///
-  /// In en, this message translates to:
-  /// **'Listen'**
-  String get discoverPageListen;
 
   /// Card title when nothing has been finished yet.
   ///

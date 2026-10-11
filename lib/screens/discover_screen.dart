@@ -26,7 +26,7 @@ import 'sonic_path_screen.dart';
 /// now-playing track, or the one a "Find similar" entry passed), the mobile
 /// counterpart of the webapp's now-playing panel. Titled "More like this"
 /// (l.discoverTitle) since the Discover page plan §2.12: "Discover" alone
-/// names the history-seeded page (discovery_page.dart). Up to four
+/// names the history-seeded listing (discovery/discovery_listing.dart). Up to four
 /// sections, each shown only when the seed's server advertised the matching
 /// /api/v1/ping flag (never probed blind):
 ///   • Similar tracks   — local library, playable rows + "Queue all"

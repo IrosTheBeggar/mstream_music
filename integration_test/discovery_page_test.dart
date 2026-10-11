@@ -1,13 +1,16 @@
-// Discover page journey (Discover page plan §4.2).
+// Discover journey (Discover page plan §4.2, §2.13 — the play-now page, in
+// the browser).
 //
 // A server whose ping advertises `discovery` and `discoveryTaste` gets a
-// Discover card under Listen on the home; opening it posts ONE library +
-// network taste call (no peers call: the ping does not grant
-// federationDiscovery) and renders the configuration bar (the window, and
-// "More options" for the seeds sheet) over the library's songs as rows —
-// the seeds themselves only in the sheet. Choosing a window in the bar
-// re-asks with it. The mock's GET /api/ is unmatched (404), so the app falls
-// back to the ping — the flat shape the flags are read from.
+// Discover card under Listen on the home; tapping it fills the BROWSER
+// listing (no new screen): ONE library taste call (no network source, and
+// no peers call — the ping does not grant federationDiscovery), then the
+// configuration bar (the window, and "More options" for the seeds sheet,
+// where the one checkbox sits above the seeds) over "Songs from your
+// library" as the browser's own song rows, with no counts. Choosing a
+// window in the bar re-asks with it; Back returns to the server home. The
+// mock's GET /api/ is unmatched (404), so the app falls back to the ping —
+// the flat shape the flags are read from.
 
 import 'dart:convert';
 import 'dart:io';
@@ -69,7 +72,11 @@ void main() {
             'filepath': 'default/Moderat/Dawn Chorus.mp3',
             'similarity': 0.83,
             'seedHash': 'h1',
-            'metadata': {'title': 'Dawn Chorus', 'artist': 'Moderat'},
+            'metadata': {
+              'title': 'Dawn Chorus',
+              'artist': 'Moderat',
+              'album': 'III',
+            },
             'genreTags': [],
             'playCount': 0,
             'lastPlayed': null,
@@ -104,7 +111,7 @@ void main() {
   });
 
   testWidgets(
-    'the home Discover card opens the page with its bar, seeds sheet and '
+    'the home Discover card fills the browser with its bar, seeds sheet and '
     'library rows',
     (WidgetTester tester) async {
       mockServer = await MockServer.start({
@@ -149,30 +156,39 @@ void main() {
       await tester.tap(card);
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
-      // One library + network call; nothing playing, so nothing pinned.
+      // One library call; nothing playing, so nothing pinned.
       expect(tasteBodies, hasLength(1));
-      expect(tasteBodies.single['sources'], ['library', 'network']);
+      expect(tasteBodies.single['sources'], ['library']);
+      expect(tasteBodies.single['newArtistsOnly'], isFalse);
       expect(tasteBodies.single.containsKey('pin'), isFalse);
 
-      // No window in the subtitle: the bar is its one home.
-      expect(find.text('based on 2 songs you finished'), findsOneWidget);
-      // The bar: the window form and "More options"; no seed chips in the
-      // body.
+      // In the browser, not a pushed screen: the home's cards are gone and
+      // the browser toolbar names the listing.
+      expect(find.text('Auto DJ', skipOffstage: false), findsNothing);
+      // The bar: the window form and "More options"; no seed chips, no
+      // subtitle, no counts.
       expect(find.text('Based on the last'), findsOneWidget);
       expect(find.text('30 days'), findsOneWidget);
       expect(find.text('More options'), findsOneWidget);
-      expect(find.text('BASED ON'), findsNothing);
+      expect(find.textContaining('songs you finished'), findsNothing);
       expect(find.textContaining('Manor'), findsNothing);
       expect(find.textContaining('Roygbiv'), findsNothing);
-      expect(find.text('FROM YOUR LIBRARY'), findsOneWidget);
+      expect(find.text('SONGS FROM YOUR LIBRARY'), findsOneWidget);
       expect(find.text('Dawn Chorus'), findsOneWidget);
+      expect(find.text('Moderat · III'), findsOneWidget);
       expect(find.text('Cirrus'), findsOneWidget);
-      expect(find.text('Play all 2'), findsOneWidget);
+      expect(find.text('Queue all'), findsOneWidget);
+      expect(find.textContaining('Play all'), findsNothing);
+      expect(find.textContaining('never played'), findsNothing);
+      expect(find.textContaining('%'), findsNothing);
+      expect(find.text('FROM THE NETWORK'), findsNothing);
 
-      // "More options" opens the seeds sheet; closing it asks nothing.
+      // "More options" opens the seeds sheet, the checkbox above the
+      // seeds; closing it asks nothing.
       await tester.tap(find.text('More options'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
       expect(find.text('Based on'), findsOneWidget);
+      expect(find.text("Include songs I've played lately"), findsOneWidget);
       expect(find.text('Manor'), findsOneWidget);
       expect(find.text('Roygbiv'), findsOneWidget);
       expect(find.text('Use these 2'), findsOneWidget);
@@ -191,6 +207,14 @@ void main() {
       expect(tasteBodies.last['window'], 90);
       expect(tasteBodies.last['remember'], isTrue);
       expect(find.text('90 days'), findsOneWidget);
+
+      // Back (the browser toolbar's) returns to the server home.
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+      expect(find.text('More options'), findsNothing);
+      expect(find.text('Dawn Chorus'), findsNothing);
+      expect(find.text('Discover', skipOffstage: false), findsOneWidget);
+      expect(find.text('Auto DJ', skipOffstage: false), findsOneWidget);
     },
   );
 }

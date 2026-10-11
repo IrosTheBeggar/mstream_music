@@ -1432,40 +1432,6 @@
   "@discoverPageTitle": {
     "description": "Title of the Discover page (recommendations seeded by the user's play history on one server: library songs and albums, network leads, peers' songs) and its card under Listen on the server home."
   },
-  "discoverPageRefresh": "Refresh",
-  "@discoverPageRefresh": {
-    "description": "Discover page app-bar button: fetch the recommendations again."
-  },
-  "discoverPageSubFinished": "{count, plural, =1{based on 1 song you finished} other{based on {count} songs you finished}}",
-  "@discoverPageSubFinished": {
-    "description": "Discover page subtitle: the seeds are songs played to the end. The window is not repeated here: the page's configuration bar shows it.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageSubListened": "{count, plural, =1{based on 1 song you listened to} other{based on {count} songs you listened to}}",
-  "@discoverPageSubListened": {
-    "description": "Discover page subtitle when some seeds were listened to past half rather than finished.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageSubCounters": "based on the songs you play most",
-  "@discoverPageSubCounters": {
-    "description": "Discover page subtitle when the seeds came from all-time play counts."
-  },
-  "discoverPageSubPinned": "based on songs you picked",
-  "@discoverPageSubPinned": {
-    "description": "Discover page subtitle when only songs the user picked seed the page."
-  },
-  "discoverPageSubRandom": "nothing finished yet · a random pick instead",
-  "@discoverPageSubRandom": {
-    "description": "Discover page subtitle when nothing has been played yet and a random library song stands in."
-  },
   "discoverPageWindowDays": "{count, plural, =1{1 day} other{{count} days}}",
   "@discoverPageWindowDays": {
     "description": "A seed window length in days (segmented control label and app-bar subtitle part).",
@@ -1504,26 +1470,59 @@
   "@discoverPageMoreOptions": {
     "description": "Link at the right of the Discover page's configuration bar; opens the seeds sheet (which songs the page is based on: drop one, bring one back, pin a song)."
   },
-  "discoverPageFromLibrary": "From your library",
-  "@discoverPageFromLibrary": {
-    "description": "Discover page section header: songs and albums from the user's own library."
+  "discoverPageIncludePlayed": "Include songs I've played lately",
+  "@discoverPageIncludePlayed": {
+    "description": "The one checkbox in Discover's seeds sheet (opened from \"More options\"), above the seeds; also the button under the library's empty line. Off = only songs not played lately; on = every song, played or not."
   },
-  "discoverPageSeeAll": "See all",
-  "@discoverPageSeeAll": {
-    "description": "Discover page section link that opens the whole list."
+  "discoverPageAlbumsLibrary": "Albums from your library",
+  "@discoverPageAlbumsLibrary": {
+    "description": "Discover section header (shown in small caps): albums from the user's own library."
   },
-  "discoverPageNeverPlayed": "never played",
-  "@discoverPageNeverPlayed": {
-    "description": "Library row / album label: this account never played it."
-  },
-  "discoverPageLastPlayed": "last played {ago}",
-  "@discoverPageLastPlayed": {
-    "description": "Library row label. {ago} is a relative time like \"8 months ago\".",
+  "discoverPageAlbumsPeer": "Albums from {name}",
+  "@discoverPageAlbumsPeer": {
+    "description": "Discover section header (shown in small caps): albums from the one connected (federated) server that answered. {name} is that server's name.",
     "placeholders": {
-      "ago": {
+      "name": {
         "type": "String"
       }
     }
+  },
+  "discoverPageAlbumsPeers": "Albums from connected servers",
+  "@discoverPageAlbumsPeers": {
+    "description": "Discover section header (shown in small caps): albums from several connected (federated) servers."
+  },
+  "discoverPageSongsLibrary": "Songs from your library",
+  "@discoverPageSongsLibrary": {
+    "description": "Discover section header (shown in small caps): songs from the user's own library."
+  },
+  "discoverPageSongsPeer": "Songs from {name}",
+  "@discoverPageSongsPeer": {
+    "description": "Discover section header (shown in small caps): songs from the one connected (federated) server that answered. {name} is that server's name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "discoverPageSongsPeers": "Songs from connected servers",
+  "@discoverPageSongsPeers": {
+    "description": "Discover section header (shown in small caps): songs from several connected (federated) servers."
+  },
+  "discoverPageLibraryNothing": "Nothing new in your library sounds like these songs.",
+  "@discoverPageLibraryNothing": {
+    "description": "One line under \"Songs from your library\" when the library has no suggestions."
+  },
+  "discoverPagePeersQuiet": "Nothing from your connected servers right now.",
+  "@discoverPagePeersQuiet": {
+    "description": "One line under the connected servers' songs header when they had nothing playable."
+  },
+  "discoverPageSaveAsPlaylist": "Save as playlist",
+  "@discoverPageSaveAsPlaylist": {
+    "description": "Button under Discover's library songs: save them as a server playlist."
+  },
+  "discoverPageBrowseLibrary": "Browse your library",
+  "@discoverPageBrowseLibrary": {
+    "description": "Button on Discover's nothing-finished card: open the server's File Explorer."
   },
   "discoverPageAgoToday": "today",
   "@discoverPageAgoToday": {
@@ -1551,138 +1550,9 @@
       }
     }
   },
-  "discoverPageAlbumPlayed": "{played} of {total} played",
-  "@discoverPageAlbumPlayed": {
-    "description": "Album card label: how many of the album's tracks this account played.",
-    "placeholders": {
-      "played": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageSongsCount": "{count, plural, =1{1 song} other{{count} songs}}",
-  "@discoverPageSongsCount": {
-    "description": "A number of songs.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageAlbumsCount": "{count, plural, =1{1 album} other{{count} albums}}",
-  "@discoverPageAlbumsCount": {
-    "description": "A number of albums.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPagePlayAll": "Play all {count}",
-  "@discoverPagePlayAll": {
-    "description": "Pill under the library rows: play every listed song. {count} is how many.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageAddToQueue": "Add to queue",
-  "@discoverPageAddToQueue": {
-    "description": "Pill under the library rows: append every listed song to the queue."
-  },
-  "discoverPageLibraryEmpty": "Nothing in your library matches these songs with this filter.",
-  "@discoverPageLibraryEmpty": {
-    "description": "One italic line when the library source has nothing for this filter."
-  },
-  "discoverPageFilterUnplayed": "Never played",
-  "@discoverPageFilterUnplayed": {
-    "description": "Library filter chip: only songs never played."
-  },
-  "discoverPageFilterFresh": "Not in {days} days",
-  "@discoverPageFilterFresh": {
-    "description": "Library filter chip: never played, or not played in {days} days.",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageFilterAll": "Everything",
-  "@discoverPageFilterAll": {
-    "description": "Library filter chip: every matching song, played or not."
-  },
-  "discoverPageAlbumsHeader": "Albums",
-  "@discoverPageAlbumsHeader": {
-    "description": "Header over the album cards in the library list."
-  },
-  "discoverPageSongsHeader": "Songs",
-  "@discoverPageSongsHeader": {
-    "description": "Header over the song rows in the library list."
-  },
-  "discoverPageServersSearched": "{count, plural, =1{1 server searched} other{{count} servers searched}}",
-  "@discoverPageServersSearched": {
-    "description": "Network section meta: how many network libraries were searched.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPageNewArtist": "new artist",
-  "@discoverPageNewArtist": {
-    "description": "Pill on a network row: the artist is not in the user's library."
-  },
-  "discoverPageNetworkEmpty": "Nothing new on the network for these songs.",
-  "@discoverPageNetworkEmpty": {
-    "description": "One italic line when the network had nothing new for these seeds."
-  },
-  "discoverPagePeersOnline": "{online} of {total} online",
-  "@discoverPagePeersOnline": {
-    "description": "Peers section meta: how many peers answered.",
-    "placeholders": {
-      "online": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "discoverPagePeerOffline": "offline",
-  "@discoverPagePeerOffline": {
-    "description": "Peer group label: the peer did not answer this time."
-  },
-  "discoverPagePeerMismatched": "uses a different sound model",
-  "@discoverPagePeerMismatched": {
-    "description": "Peer group label: the peer uses another sound model, so its songs cannot be compared."
-  },
-  "discoverPageNoPeers": "No peers to ask yet. Pair with a friend's server under Federation and their songs can show up here.",
-  "@discoverPageNoPeers": {
-    "description": "One italic line when this server has no federated peers to ask."
-  },
-  "discoverPagePeersEmpty": "Nothing new on your peers' servers for these songs.",
-  "@discoverPagePeersEmpty": {
-    "description": "One italic line when peers answered with nothing new."
-  },
-  "discoverPagePeerNotReady": "This peer isn't in your server list yet — open Federation to refresh it.",
-  "@discoverPagePeerNotReady": {
-    "description": "Snackbar when a peer song cannot play because the peer is not in the app's server list yet."
-  },
   "discoverPageRestoreFailed": "Couldn't bring those songs back. Try again.",
   "@discoverPageRestoreFailed": {
     "description": "Snackbar when songs switched back on in the Discover seeds sheet could not be taken out of the saved exclusions (the server still leaves them out)."
-  },
-  "discoverPageScanWaiting": "Shows up once the discovery scan has analyzed these songs.",
-  "@discoverPageScanWaiting": {
-    "description": "One line under a Discover page source (library, network, peers) while the scan has not analyzed any seed yet, instead of that source's empty-state copy."
-  },
-  "discoverPageListen": "Listen",
-  "@discoverPageListen": {
-    "description": "Tooltip of the play button on a peer row."
   },
   "discoverPageRandomTitle": "Finish a few songs and this page learns your taste",
   "@discoverPageRandomTitle": {

@@ -172,6 +172,88 @@ Map<String, dynamic> peersPayload() => {
       },
     };
 
+/// A federation row in a peers answer.
+Map<String, dynamic> peerRow(String title, String artist, double sim,
+        {String? album, String? path, String? art}) =>
+    {
+      'artist': artist,
+      'title': title,
+      'similarity': sim,
+      'filepath': ?path,
+      'album': ?album,
+      'album_art_file': ?art,
+      'source': 'federation',
+      'seedHash': null,
+    };
+
+/// The peers call's answer from five connected servers: Sam and Lee
+/// answered (both mirrored in the tests that use this), Kim answered but is
+/// not mirrored, Ola is offline, Ivo runs another sound model.
+Map<String, dynamic> manyPeersPayload() => {
+      'window': 30,
+      'seedSource': 'history',
+      'seeds': [],
+      'library': null,
+      'network': null,
+      'peers': {
+        'peers': [
+          {
+            'id': 7,
+            'name': "Sam's server",
+            'reachable': true,
+            'mismatched': false,
+            'results': [
+              peerRow('Alpha', 'Kiasmos', 0.70,
+                  album: 'Blurred', path: 'sam/a.flac', art: 'blurred.jpg'),
+              peerRow('Bravo', 'Kiasmos', 0.90,
+                  album: 'Blurred', path: 'sam/b.flac'),
+              peerRow('Charlie', 'Ólafur Arnalds', 0.60, path: 'sam/c.flac'),
+            ],
+          },
+          {
+            'id': 8,
+            'name': "Lee's server",
+            'reachable': true,
+            'mismatched': false,
+            'results': [
+              peerRow('Delta', 'Rival Consoles', 0.80,
+                  album: 'Persona', path: 'lee/d.flac'),
+              // No path: nothing to stream.
+              peerRow('Echo', 'Rival Consoles', 0.75, album: 'Persona'),
+            ],
+          },
+          {
+            'id': 9,
+            'name': "Kim's server",
+            'reachable': true,
+            'mismatched': false,
+            'results': [
+              peerRow('Foxtrot', 'Jon Hopkins', 0.95, path: 'kim/f.flac'),
+            ],
+          },
+          {
+            'id': 10,
+            'name': "Ola's server",
+            'reachable': false,
+            'mismatched': false,
+            'results': [
+              peerRow('Golf', 'Tycho', 0.99, path: 'ola/g.flac'),
+            ],
+          },
+          {
+            'id': 11,
+            'name': "Ivo's server",
+            'reachable': true,
+            'mismatched': true,
+            'results': [
+              peerRow('Hotel', 'Bonobo', 0.97, path: 'ivo/h.flac'),
+            ],
+          },
+        ],
+        'searched': {'peers': 5, 'unreachable': 1, 'mismatched': 1},
+      },
+    };
+
 TasteResponse parse(Map<String, dynamic> m) => TasteResponse.fromServerMap(m);
 
 /// Whether a request asked for the peers source only.

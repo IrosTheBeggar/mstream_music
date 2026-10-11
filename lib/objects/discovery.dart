@@ -203,6 +203,17 @@ class DiscoveryLead {
   /// The clipboard payload ("Artist – Title", or just the title when the
   /// artist is unknown) — same lead-following flow as the webapp.
   String get copyText => artist.isEmpty ? title : '$artist - $title';
+
+  /// A federation row's album-art file on its peer, when the row names one
+  /// (the webapp's peerArtOf reads the same keys) — resolved through the
+  /// parent's federation art proxy. Null for a P2P lead, which has none.
+  String? get art {
+    for (final k in const ['art', 'albumArt', 'album-art', 'album_art_file']) {
+      final v = _path(raw[k]);
+      if (v != null) return v;
+    }
+    return null;
+  }
 }
 
 /// `POST /api/v1/discovery/{p2p,federation}/similar` response. The two routes

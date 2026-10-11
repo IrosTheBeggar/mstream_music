@@ -1728,38 +1728,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageTitle => '发现';
 
   @override
-  String get discoverPageRefresh => '刷新';
-
-  @override
-  String discoverPageSubFinished(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '基于你听完的 $count 首歌',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageSubListened(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '基于你听过的 $count 首歌',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageSubCounters => '基于你最常听的歌';
-
-  @override
-  String get discoverPageSubPinned => '基于你选的歌';
-
-  @override
-  String get discoverPageSubRandom => '还没有听完的歌 · 先用一首随机歌曲';
-
-  @override
   String discoverPageWindowDays(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1790,18 +1758,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverPageMoreOptions => '更多选项';
 
   @override
-  String get discoverPageFromLibrary => '来自你的曲库';
+  String get discoverPageIncludePlayed => '包括最近听过的歌曲';
 
   @override
-  String get discoverPageSeeAll => '查看全部';
+  String get discoverPageAlbumsLibrary => '来自你曲库的专辑';
 
   @override
-  String get discoverPageNeverPlayed => '从未播放';
-
-  @override
-  String discoverPageLastPlayed(String ago) {
-    return '上次播放 $ago';
+  String discoverPageAlbumsPeer(String name) {
+    return '来自 $name 的专辑';
   }
+
+  @override
+  String get discoverPageAlbumsPeers => '来自已连接服务器的专辑';
+
+  @override
+  String get discoverPageSongsLibrary => '来自你曲库的歌曲';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return '来自 $name 的歌曲';
+  }
+
+  @override
+  String get discoverPageSongsPeers => '来自已连接服务器的歌曲';
+
+  @override
+  String get discoverPageLibraryNothing => '曲库中没有听起来像这些歌的新歌。';
+
+  @override
+  String get discoverPagePeersQuiet => '已连接的服务器暂时没有内容。';
+
+  @override
+  String get discoverPageSaveAsPlaylist => '保存为播放列表';
+
+  @override
+  String get discoverPageBrowseLibrary => '浏览曲库';
 
   @override
   String get discoverPageAgoToday => '今天';
@@ -1830,102 +1821,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String discoverPageAlbumPlayed(int played, int total) {
-    return '已播放 $played/$total';
-  }
-
-  @override
-  String discoverPageSongsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 首',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageAlbumsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 张专辑',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPagePlayAll(int count) {
-    return '全部播放（$count）';
-  }
-
-  @override
-  String get discoverPageAddToQueue => '加入队列';
-
-  @override
-  String get discoverPageLibraryEmpty => '在此筛选条件下，曲库中没有与这些歌相似的内容。';
-
-  @override
-  String get discoverPageFilterUnplayed => '从未播放';
-
-  @override
-  String discoverPageFilterFresh(int days) {
-    return '$days 天内未播放';
-  }
-
-  @override
-  String get discoverPageFilterAll => '全部';
-
-  @override
-  String get discoverPageAlbumsHeader => '专辑';
-
-  @override
-  String get discoverPageSongsHeader => '歌曲';
-
-  @override
-  String discoverPageServersSearched(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '已搜索 $count 台服务器',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageNewArtist => '新艺人';
-
-  @override
-  String get discoverPageNetworkEmpty => '网络中没有与这些歌相关的新内容。';
-
-  @override
-  String discoverPagePeersOnline(int online, int total) {
-    return '$online/$total 在线';
-  }
-
-  @override
-  String get discoverPagePeerOffline => '离线';
-
-  @override
-  String get discoverPagePeerMismatched => '使用不同的声音模型';
-
-  @override
-  String get discoverPageNoPeers => '还没有可询问的对等服务器。在“联合”中与朋友的服务器配对后，他们的歌会出现在这里。';
-
-  @override
-  String get discoverPagePeersEmpty => '对等服务器上没有与这些歌相关的新内容。';
-
-  @override
-  String get discoverPagePeerNotReady => '该对等服务器尚未出现在服务器列表中 — 打开“联合”刷新一下。';
-
-  @override
   String get discoverPageRestoreFailed => '无法恢复这些歌曲。请重试。';
-
-  @override
-  String get discoverPageScanWaiting => '发现扫描分析完这些歌曲后会显示在这里。';
-
-  @override
-  String get discoverPageListen => '收听';
 
   @override
   String get discoverPageRandomTitle => '听完几首歌，这个页面就会了解你的口味';

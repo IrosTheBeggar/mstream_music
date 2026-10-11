@@ -1848,41 +1848,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverPageTitle => 'Descubrir';
 
   @override
-  String get discoverPageRefresh => 'Actualizar';
-
-  @override
-  String discoverPageSubFinished(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'según $count canciones que escuchaste enteras',
-      one: 'según 1 canción que escuchaste entera',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageSubListened(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'según $count canciones que escuchaste',
-      one: 'según 1 canción que escuchaste',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageSubCounters => 'según las canciones que más escuchas';
-
-  @override
-  String get discoverPageSubPinned => 'según las canciones que elegiste';
-
-  @override
-  String get discoverPageSubRandom =>
-      'aún no has terminado nada · en su lugar, una al azar';
-
-  @override
   String discoverPageWindowDays(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1914,18 +1879,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverPageMoreOptions => 'Más opciones';
 
   @override
-  String get discoverPageFromLibrary => 'De tu biblioteca';
+  String get discoverPageIncludePlayed =>
+      'Incluir canciones que he escuchado hace poco';
 
   @override
-  String get discoverPageSeeAll => 'Ver todo';
+  String get discoverPageAlbumsLibrary => 'Álbumes de tu biblioteca';
 
   @override
-  String get discoverPageNeverPlayed => 'nunca escuchada';
-
-  @override
-  String discoverPageLastPlayed(String ago) {
-    return 'última vez $ago';
+  String discoverPageAlbumsPeer(String name) {
+    return 'Álbumes de $name';
   }
+
+  @override
+  String get discoverPageAlbumsPeers => 'Álbumes de servidores conectados';
+
+  @override
+  String get discoverPageSongsLibrary => 'Canciones de tu biblioteca';
+
+  @override
+  String discoverPageSongsPeer(String name) {
+    return 'Canciones de $name';
+  }
+
+  @override
+  String get discoverPageSongsPeers => 'Canciones de servidores conectados';
+
+  @override
+  String get discoverPageLibraryNothing =>
+      'Nada nuevo de tu biblioteca suena como estas canciones.';
+
+  @override
+  String get discoverPagePeersQuiet =>
+      'Ahora mismo no hay nada de tus servidores conectados.';
+
+  @override
+  String get discoverPageSaveAsPlaylist => 'Guardar como lista de reproducción';
+
+  @override
+  String get discoverPageBrowseLibrary => 'Explorar tu biblioteca';
 
   @override
   String get discoverPageAgoToday => 'hoy';
@@ -1956,112 +1947,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String discoverPageAlbumPlayed(int played, int total) {
-    return '$played de $total escuchadas';
-  }
-
-  @override
-  String discoverPageSongsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count canciones',
-      one: '1 canción',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPageAlbumsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count álbumes',
-      one: '1 álbum',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String discoverPagePlayAll(int count) {
-    return 'Reproducir las $count';
-  }
-
-  @override
-  String get discoverPageAddToQueue => 'Añadir a la cola';
-
-  @override
-  String get discoverPageLibraryEmpty =>
-      'Nada de tu biblioteca encaja con estas canciones con este filtro.';
-
-  @override
-  String get discoverPageFilterUnplayed => 'Nunca escuchadas';
-
-  @override
-  String discoverPageFilterFresh(int days) {
-    return 'No en $days días';
-  }
-
-  @override
-  String get discoverPageFilterAll => 'Todo';
-
-  @override
-  String get discoverPageAlbumsHeader => 'Álbumes';
-
-  @override
-  String get discoverPageSongsHeader => 'Canciones';
-
-  @override
-  String discoverPageServersSearched(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count servidores consultados',
-      one: '1 servidor consultado',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get discoverPageNewArtist => 'artista nuevo';
-
-  @override
-  String get discoverPageNetworkEmpty =>
-      'No hay nada nuevo en la red para estas canciones.';
-
-  @override
-  String discoverPagePeersOnline(int online, int total) {
-    return '$online de $total en línea';
-  }
-
-  @override
-  String get discoverPagePeerOffline => 'sin conexión';
-
-  @override
-  String get discoverPagePeerMismatched => 'usa otro modelo de sonido';
-
-  @override
-  String get discoverPageNoPeers =>
-      'Aún no hay pares. Conéctate con el servidor de un amigo en Federación y sus canciones podrán aparecer aquí.';
-
-  @override
-  String get discoverPagePeersEmpty =>
-      'No hay nada nuevo en los servidores de tus pares para estas canciones.';
-
-  @override
-  String get discoverPagePeerNotReady =>
-      'Este par aún no está en tu lista de servidores: abre Federación para actualizarla.';
-
-  @override
   String get discoverPageRestoreFailed =>
       'No se pudieron recuperar esas canciones. Vuelve a intentarlo.';
-
-  @override
-  String get discoverPageScanWaiting =>
-      'Aparecerá cuando el análisis de descubrimiento haya procesado estas canciones.';
-
-  @override
-  String get discoverPageListen => 'Escuchar';
 
   @override
   String get discoverPageRandomTitle =>

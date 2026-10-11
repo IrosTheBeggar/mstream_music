@@ -1,6 +1,8 @@
-// DiscoveryPageController (Discover page plan §3.1, §4.2): the two parallel
-// taste calls, stale answers dropped, the 403 latch with ONE re-ping, the
-// five-minute client TTL, remembered exclusions, pins at open only.
+// DiscoveryPageController (Discover page plan §3.1, §4.2, §2.13): the two
+// parallel taste calls (the library, then peers), stale answers dropped, the
+// 403 latch with ONE re-ping, the five-minute client TTL, remembered
+// exclusions, pins at open only, the one library checkbox, and the
+// connected servers' playable rows and album cards.
 //
 // Every dependency is injected — taste fetch, prefs, re-ping, random pick,
 // clock — so nothing here touches the network or a singleton's state.
@@ -39,8 +41,8 @@ class FakeTaste {
 DiscoveryFetchResult<TasteResponse> ok(Map<String, dynamic> m) =>
     DiscoveryFetchResult.ok(parse(m));
 
-/// The usual answers: the main payload for library + network, the peers one
-/// for peers.
+/// The usual answers: the main payload for the library, the peers one for
+/// peers.
 DiscoveryFetchResult<TasteResponse> answer(TasteRequest r) =>
     ok(isPeersCall(r) ? peersPayload() : mainPayload());
 
@@ -67,7 +69,6 @@ void main() {
             (_, p) async => DiscoveryFetchResult.ok(p),
         reping: reping ?? (_) async => repings++,
         randomPick: randomPick ?? (_) async => null,
-        newArtistsOnly: () => false,
         now: () => clock,
         pinAtOpen: pin,
       );
@@ -81,16 +82,22 @@ void main() {
   });
 
   group('two parallel requests', () {
-    test('library + network and peers go out together, before either '
-        'answers', () async {
+    test('the library and peers go out together, before either answers',
+        () async {
       final c = make();
       final done = c.load();
       await Future<void>.delayed(Duration.zero);
       expect(taste.requests, hasLength(2), reason: 'both in flight at once');
       final main = taste.mainCalls.single.toJson();
-      expect(main['sources'], ['library', 'network']);
-      expect(main['limit'], {'tracks': 24, 'albums': 8, 'network': 12});
-      expect(taste.peersCalls.single.toJson()['sources'], ['peers']);
+      // The play-now page: no P2P network (a later Explore surface's).
+      expect(main['sources'], ['library']);
+      expect(main['limit'], {'tracks': 24, 'albums': 8});
+      // Discover draws no "new artists only" control, so it never thins
+      // the rows unseen.
+      expect(main['newArtistsOnly'], isFalse);
+      final peersBody = taste.peersCalls.single.toJson();
+      expect(peersBody['sources'], ['peers']);
+      expect(peersBody['newArtistsOnly'], isFalse);
       expect(c.loading, isTrue);
       expect(c.loadingPeers, isTrue);
 
@@ -106,7 +113,6 @@ void main() {
       expect(c.loading, isFalse);
       expect(c.seeds, hasLength(5));
       expect(c.library?.tracks, hasLength(5));
-      expect(c.network?.results.single.title, 'Says');
       // Rows are playable DisplayItems with the app's leading slash and the
       // lite-metadata flag.
       expect(c.libraryRows.first.data, '/music/Moderat/Dawn Chorus.mp3');
@@ -114,6 +120,10 @@ void main() {
       expect(c.albumItems.first.type, 'album');
       expect(c.albumItems.first.albumArtist, 'Tycho');
       expect(c.albumItems.first.year, 2011);
+      // The faces carry no year, count or play fact: the song row's line
+      // is "Artist · Album", the card's the credit alone.
+      expect(c.albumItems.first.subtext, 'Tycho');
+      expect(c.libraryRows.first.subtext, 'Moderat');
     });
 
     test('no peers call when this account may not query peers', () async {
@@ -557,17 +567,70 @@ void main() {
       expect(saves, 0);
     });
 
-    test('the filter refetches library + network only, remembered',
+    test('the checkbox refetches the library only, remembered', () async {
+      taste.auto = answer;
+      final c = make();
+      await c.load();
+      expect(c.includesPlayed, isFalse, reason: "the answer's 'fresh'");
+      await c.setFilter(
+          DiscoveryPageController.filterFor(includePlayed: true));
+      expect(taste.mainCalls, hasLength(2));
+      expect(taste.peersCalls, hasLength(1), reason: 'peers ignore the filter');
+      final main = taste.mainCalls.last.toJson();
+      expect(main['filter'], 'all');
+      expect(main['remember'], isTrue);
+      expect(c.includesPlayed, isTrue);
+    });
+
+    test('the checkbox maps ticked to all and unticked to fresh', () {
+      expect(DiscoveryPageController.filterFor(includePlayed: true),
+          TasteFilter.all);
+      expect(DiscoveryPageController.filterFor(includePlayed: false),
+          TasteFilter.fresh);
+    });
+
+    test('a saved never-played-only filter reads as fresh: asked again '
+        'once, then remembered', () async {
+      // The server answers the filter asked for, else the saved one.
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? peersPayload()
+          : mainPayload(filter: r.filter?.name ?? 'unplayed'));
+      final c = make();
+      final drawn = <TasteFilter?>[];
+      c.addListener(() => drawn.add(c.seeded?.library?.filter));
+      await c.load();
+      expect(taste.mainCalls, hasLength(2));
+      expect(drawn, isNot(contains(TasteFilter.unplayed)),
+          reason: 'the never-played answer is re-asked, never drawn');
+      expect(taste.mainCalls.first.toJson().containsKey('filter'), isFalse);
+      final again = taste.mainCalls.last.toJson();
+      expect(again['filter'], 'fresh');
+      expect(again['remember'], isTrue);
+      expect(c.includesPlayed, isFalse);
+
+      await c.refresh();
+      expect(taste.mainCalls, hasLength(3),
+          reason: 'the choice is made: no second re-ask');
+      expect(taste.mainCalls.last.toJson()['filter'], 'fresh');
+    });
+
+    test('the checkbox applies at once and the seeds\' apply keeps it',
         () async {
       taste.auto = answer;
       final c = make();
       await c.load();
-      await c.setFilter(TasteFilter.unplayed);
-      expect(taste.mainCalls, hasLength(2));
-      expect(taste.peersCalls, hasLength(1), reason: 'peers ignore the filter');
-      final main = taste.mainCalls.last.toJson();
-      expect(main['filter'], 'unplayed');
-      expect(main['remember'], isTrue);
+      final pending =
+          c.setFilter(DiscoveryPageController.filterFor(includePlayed: true));
+      expect(c.includesPlayed, isTrue, reason: 'the box ticks at once');
+      await pending;
+      expect(taste.mainCalls.last.toJson()['filter'], 'all');
+
+      // "Use these N" afterwards carries the filter in force, no new choice.
+      final before = taste.mainCalls.length;
+      await c.applySeeds(window: c.effectiveWindow, pins: const []);
+      expect(taste.mainCalls, hasLength(before + 1));
+      expect(taste.mainCalls.last.toJson()['filter'], 'all');
+      expect(c.filter, TasteFilter.all);
     });
 
     test('a failed filter change puts the old choice back', () async {
@@ -575,7 +638,7 @@ void main() {
       final c = make();
       await c.load();
       taste.auto = (_) => const DiscoveryFetchResult.error();
-      await c.setFilter(TasteFilter.unplayed);
+      await c.setFilter(TasteFilter.all);
       expect(c.error, isTrue);
       expect(c.effectiveFilter, TasteFilter.fresh,
           reason: 'the rows shown are still the fresh ones');
@@ -642,7 +705,9 @@ void main() {
     final c = make();
     await c.load();
     expect(c.isRandom, isTrue);
-    expect(c.network, isNull);
+    // The server asks no connected server for a random seed.
+    expect(c.peers, isNull);
+    expect(c.hasConnectedServers, isFalse);
   });
 
   // Peers rows play through the parent's federation stream proxy: as a row
@@ -681,6 +746,87 @@ void main() {
           reason: 'a lead is a handful of fields: fetch the full block');
       expect(row.metadata?.title, 'Blurred EP');
       expect(row.metadata?.artist, 'Kiasmos');
+    });
+
+    test('the connected servers\' rows: answered peers only, mirrored only, '
+        'with a path, best match first', () async {
+      ServerManager().serverList.addAll([
+        server,
+        peer(7)..parentServer = server,
+        peer(8)..parentServer = server,
+        peer(10)..parentServer = server,
+        peer(11)..parentServer = server,
+      ]);
+      // The group's setUp visit is cached under the same request.
+      DiscoveryPageController.clearCache();
+      taste.auto = (r) =>
+          ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
+      final c = make();
+      await c.load();
+      // Kim is not mirrored, Ola offline, Ivo on another model, Echo has
+      // no path: none of them is drawn.
+      expect([for (final r in c.peerRows) r.metadata?.title],
+          ['Bravo', 'Delta', 'Alpha', 'Charlie']);
+      expect(c.peerRows.first.server?.federationPeerId, 7);
+      expect(c.peerRows.first.subtext, 'Kiasmos · Blurred');
+      expect(c.peerRows[3].subtext, 'Ólafur Arnalds');
+      // Three paired servers answered: "… from connected servers".
+      expect(c.connectedServerName, isNull);
+      expect(c.hasConnectedServers, isTrue);
+    });
+
+    test('the album cards: grouped by server + album + artist, ranked by '
+        'their best row, art from the first row that has it', () async {
+      ServerManager().serverList.addAll([
+        server,
+        peer(7)..parentServer = server,
+        peer(8)..parentServer = server,
+      ]);
+      // The group's setUp visit is cached under the same request.
+      DiscoveryPageController.clearCache();
+      taste.auto = (r) =>
+          ok(isPeersCall(r) ? manyPeersPayload() : mainPayload());
+      final c = make();
+      await c.load();
+      final albums = c.peerAlbumItems;
+      expect([for (final a in albums) a.name], ['Blurred', 'Persona'],
+          reason: 'Charlie has no album tag; Echo cannot play');
+      expect(albums.first.type, 'album');
+      expect(albums.first.data, 'Blurred');
+      expect(albums.first.server?.federationPeerId, 7,
+          reason: 'opens in the album detail through that peer');
+      expect(albums.first.subtext, 'Kiasmos');
+      expect(albums.first.altAlbumArt, 'blurred.jpg');
+      expect(albums.first.year, isNull);
+      expect(albums.first.albumArtist, isNull,
+          reason: 'a track artist is not the album credit');
+      expect(albums.first.trackArtist, 'Kiasmos',
+          reason: 'opened by name + the artist filter, as the webapp does, '
+              'so same-named albums on the peer do not merge');
+      expect(albums.last.altAlbumArt, isNull);
+    });
+
+    test('one connected server answered: it is named', () async {
+      ServerManager().serverList.addAll([server, peer(7)..parentServer = server]);
+      final c = make();
+      await c.load();
+      expect(c.connectedServerName, "Sam's server",
+          reason: "Lee's server did not answer");
+      expect(c.peerRows.single.metadata?.title, 'Blurred EP');
+      expect(c.peerAlbumItems, isEmpty, reason: 'the row has no album tag');
+    });
+
+    test('no paired server: no connected-server section at all', () async {
+      DiscoveryPageController.clearCache();
+      taste.auto = (r) => ok(isPeersCall(r)
+          ? {
+              'peers': {'peers': [], 'searched': {'peers': 0}}
+            }
+          : mainPayload());
+      final c = make();
+      await c.load();
+      expect(c.peers?.peers, isEmpty);
+      expect(c.hasConnectedServers, isFalse);
     });
 
     test('an unmirrored peer, or one under another parent, gives no row',

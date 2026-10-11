@@ -1,25 +1,26 @@
-import 'package:flutter/services.dart';
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../objects/discovery.dart';
 import '../../objects/display_item.dart';
-import '../../singletons/browser_list.dart';
+import '../../singletons/api.dart';
 import '../../theme/velvet_theme.dart';
 import '../../util/queue_actions.dart';
-import '../../util/stream_url.dart';
-import '../../util/image_cache.dart';
-import '../../widgets/federation_widgets.dart';
-import '../../widgets/track_actions_sheet.dart';
-import '../discover_screen.dart' show MatchMeter;
+import '../../widgets/player_panel.dart';
+import '../../widgets/playlist_picker_sheet.dart';
+import '../../widgets/song_picker_sheet.dart';
+import 'discovery_listing.dart';
 import 'discovery_page_controller.dart';
+import 'discovery_seeds_sheet.dart';
 
-/// The Discover page's rows, cards and formatters, shared by the page
-/// (discovery_page.dart) and its "See all" lists (discovery_source_list.dart).
-/// Colours come from VelvetColors only; the theme's primary drives every
-/// control and no source gets a colour of its own (the canvas's plug-ins
-/// decision) — sources are told apart by their headers.
+/// The pieces of Discover's browser listing that the browser does not draw
+/// itself — the configuration bar, the state cards, the footers — and the
+/// actions behind them (discovery_listing.dart says what the listing holds;
+/// browser.dart draws its album and song items as it draws them
+/// everywhere). Colours come from VelvetColors only, and nothing here shows
+/// a count, a percentage or a play fact: Discover is the play-now page.
 
 // ── formatters ──────────────────────────────────────────────────────────
 
@@ -28,8 +29,8 @@ String discoveryWindowLabel(AppLocalizations l, int window) =>
     window <= 0 ? l.discoverPageWindowAll : l.discoverPageWindowDays(window);
 
 /// A calendar-day relative time: today, yesterday, N days, then months, then
-/// years — the "last played 8 months ago" scale, which fmtAgo (minutes to a
-/// short date) does not cover.
+/// years — the seeds sheet's "finished 8 months ago" scale, which fmtAgo
+/// (minutes to a short date) does not cover.
 String discoveryAgo(AppLocalizations l, DateTime when, DateTime now) {
   final a = when.toLocal();
   final b = now.toLocal();
@@ -49,140 +50,97 @@ String discoveryAgo(AppLocalizations l, DateTime when, DateTime now) {
   return l.discoverPageAgoYears(years < 1 ? 1 : years);
 }
 
-/// "never played" / "last played 8 months ago" for a library row; null when
-/// the server did not say (a claim the page will not make for it).
-String? discoveryPlayLabel(AppLocalizations l, TasteTrack t, DateTime now) {
-  if (t.playCount == 0) return l.discoverPageNeverPlayed;
-  final last = t.lastPlayed;
-  if (last != null) return l.discoverPageLastPlayed(discoveryAgo(l, last, now));
-  return null;
-}
-
-/// The album card's third line: "never played", "2 of 12 played", or the
-/// song count when the server gave no play facts.
-String? discoveryAlbumLabel(AppLocalizations l, TasteAlbum a) {
-  if (a.unplayed) return l.discoverPageNeverPlayed;
-  final played = a.playedTracks;
-  final total = a.scopedTracks ?? a.trackCount;
-  if (played != null && total != null && total > 0) {
-    return l.discoverPageAlbumPlayed(played, total);
-  }
-  if (a.trackCount != null) return l.discoverPageSongsCount(a.trackCount!);
-  return null;
-}
-
-/// The app-bar subtitle: what the page is seeded from (plan §2.1–§2.2).
-/// "finished" only when every history seed was played to the end; a seed
-/// that was stopped past half makes it "listened to". No window: the
-/// configuration bar is its one home — after a widened answer the two would
-/// otherwise name different windows at once (the bar the one asked for, the
-/// answer the one that produced seeds); [discoveryWidenedNote] explains that
-/// case in the body instead.
-String? discoverySubtitle(AppLocalizations l, TasteResponse? r) {
-  if (r == null) return null;
-  if (r.seedSource == TasteSeedSource.random || r.fallback) {
-    return l.discoverPageSubRandom;
-  }
-  if (r.seedSource == TasteSeedSource.pinned) return l.discoverPageSubPinned;
-  if (r.seedSource == TasteSeedSource.counters) {
-    return l.discoverPageSubCounters;
-  }
-  final history = r.seeds.where((s) => !s.pinned).toList();
-  if (history.isEmpty) {
-    return r.seeds.isEmpty ? null : l.discoverPageSubPinned;
-  }
-  return history.any((s) => s.outcome == 'stopped')
-      ? l.discoverPageSubListened(history.length)
-      : l.discoverPageSubFinished(history.length);
-}
-
-/// "Nothing in the last 30 days, so these come from further back." — when
-/// the server widened the window to find seeds, so the bar's window and the
-/// rows' real reach do not silently disagree. Null otherwise, and for a
-/// random pick (no history at all: the random card already says why).
-String? discoveryWidenedNote(AppLocalizations l, TasteResponse? r) {
-  final from = r?.widenedFrom;
-  if (r == null || from == null) return null;
-  if (r.seedSource == TasteSeedSource.random || r.fallback) return null;
-  return l.discoverPageWidened(discoveryWindowLabel(l, from));
-}
-
-/// No seed is analyzed yet (the scan is pending). The server then answers
-/// every source it was asked for EMPTY — on purpose, so a client never hides
-/// an advertised source while a scan runs (discovery-taste.js) — and each
-/// source's own empty line ("nothing matches", "warming up", "no peers")
-/// would blame the wrong thing: this line names the scan instead.
-bool discoveryScanWaiting(DiscoveryPageController c) =>
-    c.seeded?.notAnalyzed == true;
-
-/// The network source's one line when it has no rows: the scan, then the
-/// P2P shelf still filling (nothing searched), then a plain "no match".
-String discoveryNetworkEmptyLine(
-    AppLocalizations l, DiscoveryPageController c, TasteLeads net) {
-  if (discoveryScanWaiting(c)) return l.discoverPageScanWaiting;
-  return net.searchedPeers == 0
-      ? l.discoverNetworkWarmingUp
-      : l.discoverPageNetworkEmpty;
+/// A Discover 'section' item's header: "Albums from your library",
+/// "Songs from Sam's server", "Songs from connected servers"…
+String discoverySectionLabel(AppLocalizations l, DisplayItem section) {
+  final name = section.subtext;
+  return switch (DiscoverySection.values.asNameMap()[section.data]) {
+    DiscoverySection.albumsLibrary => l.discoverPageAlbumsLibrary,
+    DiscoverySection.albumsPeers => name == null
+        ? l.discoverPageAlbumsPeers
+        : l.discoverPageAlbumsPeer(name),
+    DiscoverySection.songsLibrary => l.discoverPageSongsLibrary,
+    DiscoverySection.songsPeers =>
+      name == null ? l.discoverPageSongsPeers : l.discoverPageSongsPeer(name),
+    null => section.name,
+  };
 }
 
 // ── actions ─────────────────────────────────────────────────────────────
 
+/// Floating, so it clears the docked mini-player (a plain bottom snackbar
+/// renders behind it) — the browser's own playlist-error toast.
 void discoveryToast(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(message),
     behavior: SnackBarBehavior.floating,
+    margin: EdgeInsets.only(
+      left: 16,
+      right: 16,
+      bottom: PlayerPanel.kCollapsedHeight +
+          MediaQuery.of(context).viewPadding.bottom +
+          8,
+    ),
   ));
 }
 
-/// A network row's tap (v1 has no plug-in verbs on mobile, plan §4.2):
-/// copy "Artist - Title", as DiscoverScreen's lead rows do.
-Future<void> discoveryCopyLead(BuildContext context, DiscoveryLead lead) async {
+/// "More options": the seeds sheet. "Use these N" pops with the apply in
+/// flight, so a restore the server would not take can still be reported
+/// once the sheet is gone.
+Future<void> discoveryEditSeeds(
+    BuildContext context, DiscoveryPageController c) async {
   final l = AppLocalizations.of(context);
-  await Clipboard.setData(ClipboardData(text: lead.copyText));
-  if (context.mounted) discoveryToast(context, l.discoverLeadCopied);
-}
-
-Future<void> discoveryOpenMusicBrainz(
-    BuildContext context, DiscoveryLead lead) async {
-  final mbid = lead.recordingMbid;
-  if (mbid == null) return;
-  final url = 'https://musicbrainz.org/recording/$mbid';
-  final ok =
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  if (!ok && context.mounted) {
-    discoveryToast(context, AppLocalizations.of(context).couldNotOpen(url));
+  final pending = await showModalBottomSheet<Future<bool>>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: VelvetColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => DiscoverySeedsSheet(controller: c),
+  );
+  if (pending == null) return;
+  final restored = await pending;
+  if (!restored && context.mounted) {
+    discoveryToast(context, l.discoverPageRestoreFailed);
   }
 }
 
-/// A library song tapped: the user's tap behaviour over the whole list
-/// (play from here / append and jump / add), as every browse list does.
-Future<void> discoveryTapTrack(
-    BuildContext context, List<DisplayItem> rows, int index) async {
+/// "Choose a song…" on the nothing-finished card: pin one of your own.
+Future<void> discoveryChooseSong(
+    BuildContext context, DiscoveryPageController c) async {
   final l = AppLocalizations.of(context);
-  if (await handleTrackTap(rows, index) && context.mounted) {
-    discoveryToast(context, l.browserSongsAdded(1));
+  final picked = await showModalBottomSheet<DisplayItem>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: VelvetColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) =>
+        SongPickerSheet(server: c.server, title: l.discoverPageChooseSong),
+  );
+  final path = picked?.data;
+  if (path == null) return;
+  await c.pinSong(path);
+}
+
+/// "Another pick" on the nothing-finished card.
+Future<void> discoveryAnotherPick(
+    BuildContext context, DiscoveryPageController c) async {
+  final l = AppLocalizations.of(context);
+  if (!await c.anotherPick() && context.mounted) {
+    discoveryToast(context, l.discoverPageRandomFailed);
   }
 }
 
-void discoveryTrackActions(BuildContext context, DisplayItem row) =>
-    showTrackActionsSheet(context, row);
-
-/// A library row's inline "next" (plan §1: Library = inline play / queue /
-/// next + track-actions): after the current track, playback untouched.
-Future<void> discoveryQueueNext(BuildContext context, DisplayItem row) async {
-  final l = AppLocalizations.of(context);
-  if (await addNext(row) != null && context.mounted) {
-    discoveryToast(context, l.browserSongsAdded(1));
-  }
+/// "Browse your library": the server's File Explorer, pushed over Discover
+/// (Back comes back here) — the webapp's button opens the same view.
+void discoveryBrowseLibrary(DiscoveryPageController c) {
+  ApiManager().getFileList('~', useThisServer: c.server);
 }
 
-/// A library row's inline "queue": the end of the queue, without playing.
-Future<void> discoveryQueueEnd(BuildContext context, DisplayItem row) async {
-  final l = AppLocalizations.of(context);
-  await addToQueueEnd(row);
-  if (context.mounted) discoveryToast(context, l.browserSongsAdded(1));
-}
-
+/// A footer's "Queue all": the end of the queue, in the listing's order.
 Future<void> discoveryQueueAll(
     BuildContext context, List<DisplayItem> rows) async {
   final l = AppLocalizations.of(context);
@@ -190,83 +148,41 @@ Future<void> discoveryQueueAll(
   if (n > 0 && context.mounted) discoveryToast(context, l.browserSongsAdded(n));
 }
 
-/// An album card opens the album detail. That view lives in the root
-/// route's body (main.dart's IndexedStack, so the browser toolbar's Play /
-/// Shuffle / Add and the mini-player stay with it), not in a route of its
-/// own — so the page steps back to the root first. Coming back is free: the
-/// visit is cached for kDiscoveryPageTtl.
-void discoveryOpenAlbum(BuildContext context, DisplayItem album) {
-  Navigator.of(context).popUntil((r) => r.isFirst);
-  BrowserManager().openAlbumDetail(album);
-}
-
-/// A peers row's play action: now, through the parent's federation stream
-/// proxy (plan §1: peers rows are playable, never a plug-in). A row whose
-/// peer the app has not mirrored yet says so instead of failing silently;
-/// a row with no peer path cannot play at all.
-VoidCallback? discoveryPeerPlay(
-    BuildContext context, DiscoveryPageController c, DiscoveryLead lead) {
-  if (lead.filepath == null) return null;
-  final row = c.peerTrackItem(lead);
-  if (row == null) {
-    return () => discoveryToast(
-        context, AppLocalizations.of(context).discoverPagePeerNotReady);
-  }
-  return () => playNow(row);
-}
-
-/// A peers row's queue button (or long-press): append it to the queue.
-/// Null for a row that cannot play (see [discoveryPeerPlay]).
-VoidCallback? discoveryPeerQueue(
-    BuildContext context, DiscoveryPageController c, DiscoveryLead lead) {
-  final row = c.peerTrackItem(lead);
-  if (row == null) return null;
-  return () async {
-    final l = AppLocalizations.of(context);
-    await addToQueueEnd(row);
-    if (context.mounted) discoveryToast(context, l.browserSongsAdded(1));
-  };
-}
-
-/// The peers source's groups and its one-line empty states — shared with
-/// the "See all" list.
-List<Widget> discoveryPeerGroups(
-    BuildContext context, DiscoveryPageController c, TastePeers p,
-    {int? maxRows}) {
+/// The library footer's "Save as playlist" — the sonic path screen's flow:
+/// the shared picker (create-or-overwrite), then playlist/save with the
+/// rows' paths.
+Future<void> discoverySaveAsPlaylist(
+    BuildContext context, DiscoveryPageController c,
+    List<DisplayItem> rows) async {
   final l = AppLocalizations.of(context);
-  if (discoveryScanWaiting(c) && p.allResults.isEmpty) {
-    return [DiscoveryHint(l.discoverPageScanWaiting)];
+  final server = c.server;
+  final name = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: VelvetColors.surface,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => PlaylistPickerSheet(server: server),
+  );
+  final playlist = name?.trim();
+  if (playlist == null || playlist.isEmpty) return;
+  try {
+    await ApiManager().savePlaylist(
+        server, playlist, [for (final r in rows) ?r.data]);
+    // Keep the pickers fresh before the next ping refreshes the list.
+    if (!server.playlists.contains(playlist)) server.playlists.add(playlist);
+    if (context.mounted) {
+      discoveryToast(context, l.addedToPlaylist(playlist));
+    }
+  } catch (_) {
+    if (context.mounted) discoveryToast(context, l.trackAddToPlaylistFailed);
   }
-  if (p.peers.isEmpty) return [DiscoveryHint(l.discoverPageNoPeers)];
-  final out = <Widget>[
-    for (final g in p.peers)
-      // A reachable peer with nothing to offer is noise; an offline or
-      // mismatched one is state the user should see.
-      if (g.results.isNotEmpty || !g.reachable || g.mismatched)
-        DiscoveryPeerGroup(
-          group: g,
-          maxRows: maxRows,
-          playable: (lead) => c.peerTrackItem(lead) != null,
-          onPlay: (lead) => discoveryPeerPlay(context, c, lead),
-          onQueue: (lead) => discoveryPeerQueue(context, c, lead),
-        ),
-  ];
-  if (p.allResults.isEmpty) {
-    out.add(DiscoveryHint(p.peers.every((g) => !g.reachable)
-        ? l.discoverPeersUnreachable
-        : l.discoverPagePeersEmpty));
-  }
-  return out;
 }
-
-/// The "Not in N days" threshold the chip names: the route's default
-/// staleDays (plan §2.5). The page never changes it, and a value saved by
-/// another client is not read back here.
-const int kDiscoveryStaleDays = 90;
 
 // ── layout ──────────────────────────────────────────────────────────────
 
-/// The tap-target floor for every control the page adds (44 px; Apple's
+/// The tap-target floor for every control Discover adds (44 px; Apple's
 /// HIG and the Material 48 dp padded target both clear it).
 const double kDiscoveryTapTarget = 44;
 
@@ -294,640 +210,269 @@ class _HitArea extends StatelessWidget {
       );
 }
 
-/// A compact icon button with a [kDiscoveryTapTarget] square hit area.
-Widget discoveryIconButton({
-  required IconData icon,
-  required String tooltip,
-  required VoidCallback? onPressed,
-  Color? color,
-  double size = 22,
-}) =>
-    IconButton(
-      icon: Icon(icon, color: color ?? VelvetColors.textSecondary, size: size),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(
-          width: kDiscoveryTapTarget, height: kDiscoveryTapTarget),
-      tooltip: tooltip,
-      onPressed: onPressed,
-    );
-
-/// The canvas's section header: uppercase title, a quiet count / state, and
-/// a "See all" link on the right.
-class DiscoverySectionHeader extends StatelessWidget {
-  final String title;
-  final String? meta;
-  final VoidCallback? onSeeAll;
-  final bool first;
-  const DiscoverySectionHeader(this.title,
-      {super.key,
-      this.meta,
-      this.onSeeAll,
-      this.first = false});
+/// The gray configuration bar, the listing's first row: "Based on the last
+/// [30 days ▾]" (the window's one home) and "More options", which opens the
+/// seeds sheet — where the one checkbox, "Include songs I've played lately",
+/// sits above the seeds. One Wrap, so a narrow screen or a large text
+/// setting moves "More options" to a second line instead of overflowing.
+///
+/// Each control is off — and dimmed, since their text carries its own
+/// colour — while it could not do anything useful: during a call (a change
+/// would only race the answer it is about to replace), under the 403 latch
+/// (nothing would be asked; the scan-pending card's "Check again" is the way
+/// out), and for "More options" before any answer (no seeds to show yet).
+/// A thin line under the bar says a call is out while rows are already up.
+class DiscoveryConfigBar extends StatelessWidget {
+  final DiscoveryPageController controller;
+  const DiscoveryConfigBar({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, first ? 10 : 18, 4, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  flex: 3,
-                  child: Text(
-                    title.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: VelvetColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ),
-                if (meta != null && meta!.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    flex: 2,
-                    child: Text(
-                      meta!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: VelvetColors.textTertiary, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (onSeeAll != null)
-            // Standard density: the padded 48 px target (compact would cut
-            // it to 40, under the floor).
-            TextButton(
-              onPressed: onSeeAll,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: Text(
-                l.discoverPageSeeAll,
-                style: TextStyle(
-                  color: VelvetColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else
-            // The link's height, so a header reads the same with or
-            // without one.
-            const SizedBox(height: 48),
-        ],
+    final c = controller;
+    final idle = !c.loading && !c.disabled;
+    final canSeeds = idle && c.seeded != null;
+    final current = c.effectiveWindow;
+    // Plain text colours, not the link colour: on the bar's `raised` the
+    // primary is unreadable in Light (amber on light gray) and the
+    // secondary text too faint in Velvet.
+    final ink = VelvetColors.textPrimary;
+    return Container(
+      key: const ValueKey('discovery-config-bar'),
+      decoration: BoxDecoration(
+        color: VelvetColors.raised,
+        border: Border(bottom: BorderSide(color: VelvetColors.border)),
       ),
-    );
-  }
-}
-
-/// "A source with nothing → one italic line".
-class DiscoveryHint extends StatelessWidget {
-  final String text;
-  const DiscoveryHint(this.text, {super.key});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: VelvetColors.textSecondary,
-            fontSize: 13,
-            height: 1.35,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-}
-
-Widget discoveryLoadingRow() => SizedBox(
-      height: 72,
-      child: Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: VelvetColors.primary,
-          ),
-        ),
-      ),
-    );
-
-/// The match percentage pinned to a cover's corner (the canvas's badge).
-class DiscoveryMatchBadge extends StatelessWidget {
-  final double similarity;
-  final double fontSize;
-  const DiscoveryMatchBadge(this.similarity, {super.key, this.fontSize = 10});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: VelvetColors.bg,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: VelvetColors.border),
-        ),
-        child: Text(
-          '${(similarity * 100).round()}%',
-          style: TextStyle(
-            color: VelvetColors.primary,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w700,
-            height: 1.2,
-          ),
-        ),
-      );
-}
-
-/// A library song: art with its match badge, title, artist · play facts,
-/// the inline next / queue verbs and the track-actions ⋮ (rate, playlist,
-/// go to album, more like this) — plan §1's Library verbs. The tap is the
-/// caller's (the user's tap behaviour over the whole list), which is the
-/// inline play.
-class DiscoveryTrackRow extends StatelessWidget {
-  final DisplayItem row;
-  final TasteTrack track;
-  final DateTime now;
-  final VoidCallback onTap;
-  final VoidCallback onNext;
-  final VoidCallback onQueue;
-  final VoidCallback onMore;
-  const DiscoveryTrackRow({
-    super.key,
-    required this.row,
-    required this.track,
-    required this.now,
-    required this.onTap,
-    required this.onNext,
-    required this.onQueue,
-    required this.onMore,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final artist = track.metadata?.artist?.trim();
-    final facts = discoveryPlayLabel(l, track, now);
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 60),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 4, 6),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    row.getAlbumThumb(size: 44),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: DiscoveryMatchBadge(track.similarity),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      track.displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 15, color: VelvetColors.textPrimary),
-                    ),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(children: [
-                        if (artist != null && artist.isNotEmpty)
-                          TextSpan(text: artist),
-                        if (facts != null)
-                          TextSpan(
-                            text: (artist != null && artist.isNotEmpty)
-                                ? ' · $facts'
-                                : facts,
-                            style:
-                                TextStyle(color: VelvetColors.textTertiary),
-                          ),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 13, color: VelvetColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              discoveryIconButton(
-                icon: Icons.playlist_play,
-                tooltip: l.queueAddNext,
-                onPressed: onNext,
-              ),
-              discoveryIconButton(
-                icon: Icons.queue_music,
-                tooltip: l.queueAddToEnd,
-                onPressed: onQueue,
-              ),
-              discoveryIconButton(
-                icon: Icons.more_vert,
-                tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
-                onPressed: onMore,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// An album card in AlbumGrid's style (card surface, square cover, name,
-/// credit) plus the match badge and this account's play facts.
-class DiscoveryAlbumCard extends StatelessWidget {
-  final DisplayItem item;
-  final TasteAlbum album;
-  final VoidCallback onTap;
-  final double width;
-  const DiscoveryAlbumCard({
-    super.key,
-    required this.item,
-    required this.album,
-    required this.onTap,
-    this.width = 128,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final credit = album.albumArtist ??
-        (album.artists.isEmpty ? null : album.artists.join(', '));
-    final facts = discoveryAlbumLabel(l, album);
-    return SizedBox(
-      width: width,
-      child: Material(
-        color: VelvetColors.card,
-        borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: VelvetColors.primaryDim,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: width,
-                height: width,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _cover(),
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: DiscoveryMatchBadge(album.similarity,
-                          fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      album.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: VelvetColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      credit ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: VelvetColors.textSecondary, fontSize: 12),
-                    ),
-                    Text(
-                      facts ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: VelvetColors.textTertiary,
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _cover() {
-    final file = item.altAlbumArt;
-    final server = item.server;
-    final placeholder = Container(
-      color: VelvetColors.raised,
-      child: Icon(Icons.album,
-          color: VelvetColors.textTertiary, size: width * 0.3),
-    );
-    if (server == null || file == null) return placeholder;
-    return Image.network(
-      buildAlbumArtUrl(server, file, compress: 'm'),
-      fit: BoxFit.cover,
-      cacheWidth: artCacheSize(width),
-      errorBuilder: (_, _, _) => placeholder,
-    );
-  }
-}
-
-/// A network lead — DiscoverScreen's lead row (tap copies "Artist - Title",
-/// the MusicBrainz button when the row has a recording id), with the
-/// canvas's "new artist" pill.
-class DiscoveryLeadRow extends StatelessWidget {
-  final DiscoveryLead lead;
-
-  /// Every row is a new artist when the call asked newArtistsOnly: the
-  /// server then drops artists the library already has. The row itself
-  /// carries no such flag, so without the setting the pill is not drawn.
-  final bool newArtist;
-  const DiscoveryLeadRow(
-      {super.key, required this.lead, this.newArtist = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final genre = genreTagLabel(lead.genreTags, max: 1);
-    final subtitle = [
-      if (lead.artist.isNotEmpty) lead.artist,
-      ?genre,
-      ?lead.peerName,
-    ].join(' · ');
-    return ListTile(
-      dense: true,
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: VelvetColors.raised,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.travel_explore,
-            color: VelvetColors.textSecondary, size: 22),
-      ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(
-              lead.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
-            ),
-          ),
-          if (newArtist) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-              decoration: BoxDecoration(
-                color: VelvetColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                l.discoverPageNewArtist,
-                style: TextStyle(
-                  color: VelvetColors.onPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (lead.recordingMbid != null)
-            discoveryIconButton(
-              icon: Icons.open_in_new,
-              size: 18,
-              tooltip: l.discoverOpenMusicBrainz,
-              onPressed: () => discoveryOpenMusicBrainz(context, lead),
-            ),
-          MatchMeter(similarity: lead.similarity),
-        ],
-      ),
-      onTap: () => discoveryCopyLead(context, lead),
-    );
-  }
-}
-
-/// One peer's answer: an online/offline dot and the peer's name, then its
-/// rows. An unreachable or model-mismatched peer is dimmed and says why.
-class DiscoveryPeerGroup extends StatelessWidget {
-  final TastePeerGroup group;
-
-  /// Rows to show (the page shows the first few; "See all" every one).
-  final int? maxRows;
-
-  /// Plays the row now / queues it; null for a row that cannot (see
-  /// discoveryPeerPlay — a not-yet-mirrored peer's ▶ still answers, with
-  /// a snackbar saying why).
-  final VoidCallback? Function(DiscoveryLead lead) onPlay;
-  final VoidCallback? Function(DiscoveryLead lead) onQueue;
-
-  /// Whether the row can actually play here (its peer is mirrored), so a
-  /// row that can only explain itself is not drawn as one that plays.
-  final bool Function(DiscoveryLead lead) playable;
-  const DiscoveryPeerGroup(
-      {super.key,
-      required this.group,
-      required this.onPlay,
-      required this.onQueue,
-      required this.playable,
-      this.maxRows});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final status = !group.reachable
-        ? l.discoverPagePeerOffline
-        : group.mismatched
-            ? l.discoverPagePeerMismatched
-            : null;
-    final rows = maxRows == null
-        ? group.results
-        : group.results.take(maxRows!).toList();
-    return Opacity(
-      opacity: group.reachable && !group.mismatched ? 1 : 0.5,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                FedDot(group.reachable
-                    ? VelvetColors.success
-                    : VelvetColors.textTertiary),
-                Flexible(
-                  child: Text(
-                    group.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  children: [
+                    Text(
+                      // "Based on the last All time" reads wrong.
+                      current <= 0
+                          ? l.discoverPageBasedOnAllTime
+                          : l.discoverPageBasedOnLast,
+                      style: TextStyle(color: ink, fontSize: 13),
+                    ),
+                    Opacity(
+                      opacity: idle ? 1 : 0.5,
+                      child: PopupMenuButton<int>(
+                        key: const ValueKey('discovery-window'),
+                        enabled: idle,
+                        tooltip: '',
+                        initialValue: current,
+                        color: VelvetColors.surface,
+                        onSelected: (w) => unawaited(c.setWindow(w)),
+                        itemBuilder: (_) => [
+                          for (final w in kTasteWindows)
+                            CheckedPopupMenuItem<int>(
+                              value: w,
+                              checked: w == current,
+                              child: Text(
+                                discoveryWindowLabel(l, w),
+                                style: TextStyle(
+                                    color: VelvetColors.textPrimary,
+                                    fontSize: 14),
+                              ),
+                            ),
+                        ],
+                        child: _WindowPill(discoveryWindowLabel(l, current)),
+                      ),
+                    ),
+                  ],
+                ),
+                Opacity(
+                  opacity: canSeeds ? 1 : 0.5,
+                  // Standard density: the padded 48 px target.
+                  child: TextButton(
+                    key: const ValueKey('discovery-more-options'),
+                    onPressed:
+                        canSeeds ? () => discoveryEditSeeds(context, c) : null,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: Text(
+                      l.discoverPageMoreOptions,
+                      style: TextStyle(
+                        color: ink,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: VelvetColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
-                if (status != null) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: VelvetColors.textTertiary, fontSize: 12),
-                    ),
+              ],
+            ),
+          ),
+          // A fixed 2 px slot, so the rows never jump when it comes and goes.
+          SizedBox(
+            height: 2,
+            child: c.loading && c.seeded != null
+                ? LinearProgressIndicator(
+                    minHeight: 2,
+                    color: VelvetColors.primary,
+                    backgroundColor: Colors.transparent,
+                  )
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The window chooser's face in the configuration bar: the window in force
+/// and a caret, outlined so it reads on the bar's gray in every palette.
+/// 32 px tall (taller only under a large text setting); the
+/// [kDiscoveryTapTarget] band around it is the menu's hit area too. The
+/// label ellipsizes rather than overflow a bar narrower than it.
+class _WindowPill extends StatelessWidget {
+  final String label;
+  const _WindowPill(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: kDiscoveryTapTarget),
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          decoration: ShapeDecoration(
+            shape: StadiumBorder(side: BorderSide(color: VelvetColors.border2)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: VelvetColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+              ),
+              Icon(Icons.arrow_drop_down,
+                  size: 20, color: VelvetColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A section's one dim line ("Nothing from your connected servers right
+/// now."), with an optional button after it.
+class DiscoveryHint extends StatelessWidget {
+  final String text;
+  final String? action;
+  final VoidCallback? onAction;
+  const DiscoveryHint(this.text, {super.key, this.action, this.onAction});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: VelvetColors.textSecondary,
+                fontSize: 13,
+                height: 1.35,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            if (action != null) ...[
+              const SizedBox(height: 4),
+              DiscoveryPill(action!, onTap: onAction),
+            ],
+          ],
+        ),
+      );
+}
+
+/// Placeholders while a source is asked — album tiles and song rows in the
+/// browser's shapes, no words.
+class DiscoverySkeleton extends StatelessWidget {
+  final bool albums;
+  final int rows;
+  const DiscoverySkeleton({super.key, this.albums = false, this.rows = 4});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget block(double w, double h, {double r = 4}) => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: VelvetColors.raised,
+            borderRadius: BorderRadius.circular(r),
+          ),
+        );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (albums)
+          SizedBox(
+            height: 180,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  if (i > 0) const SizedBox(width: 12),
+                  block(128, 160, r: VelvetColors.radiusLarge),
                 ],
               ],
             ),
           ),
-          for (final lead in rows)
-            DiscoveryPeerRow(
-                lead: lead,
-                playable: playable(lead),
-                onPlay: onPlay(lead),
-                onQueue: onQueue(lead)),
-        ],
-      ),
-    );
-  }
-}
-
-/// A peer's song: playable through this server (plan §1 — never a plug-in),
-/// so the row plays it now and the trailing ▶ says so, with the inline
-/// queue beside it (plan §1: Peers = inline Listen and queue). A row whose
-/// peer is not mirrored yet ([playable] false) is dimmed with a quiet ▶
-/// whose tap explains; it has no queue.
-class DiscoveryPeerRow extends StatelessWidget {
-  final DiscoveryLead lead;
-  final bool playable;
-  final VoidCallback? onPlay;
-  final VoidCallback? onQueue;
-  const DiscoveryPeerRow(
-      {super.key,
-      required this.lead,
-      this.playable = true,
-      this.onPlay,
-      this.onQueue});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final genre = genreTagLabel(lead.genreTags, max: 1);
-    final subtitle = [
-      if (lead.artist.isNotEmpty) lead.artist,
-      ?genre,
-    ].join(' · ');
-    final live = playable && onPlay != null;
-    final tile = ListTile(
-      dense: true,
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: VelvetColors.raised,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.hub_outlined,
-            color: VelvetColors.textSecondary, size: 22),
-      ),
-      title: Text(
-        lead.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 15, color: VelvetColors.textPrimary),
-      ),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, color: VelvetColors.textSecondary),
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MatchMeter(similarity: lead.similarity),
-          if (live && onQueue != null)
-            discoveryIconButton(
-              icon: Icons.queue_music,
-              tooltip: l.queueAddToEnd,
-              onPressed: onQueue,
-            ),
-          discoveryIconButton(
-            icon: Icons.play_circle_outline,
-            size: 26,
-            color: live ? VelvetColors.primary : VelvetColors.textTertiary,
-            tooltip: l.discoverPageListen,
-            onPressed: onPlay,
+        for (var i = 0; i < rows; i++)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
+            child: Row(children: [
+              block(40, 40, r: VelvetColors.radiusSmall),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FractionallySizedBox(
+                        widthFactor: 0.6, child: block(double.infinity, 12)),
+                    const SizedBox(height: 8),
+                    FractionallySizedBox(
+                        widthFactor: 0.4, child: block(double.infinity, 10)),
+                  ],
+                ),
+              ),
+            ]),
           ),
-        ],
-      ),
-      onTap: onPlay,
-      onLongPress: onQueue,
+      ],
     );
-    return live ? tile : Opacity(opacity: 0.6, child: tile);
   }
 }
 
-/// A rounded action pill under the library rows (Play all / Shuffle / Add
-/// to queue); [primary] fills it with the accent.
+/// A rounded action pill (the footers, the state cards); [primary] fills
+/// it with the accent.
 class DiscoveryPill extends StatelessWidget {
   final String label;
   final IconData? icon;
@@ -940,169 +485,99 @@ class DiscoveryPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = primary ? VelvetColors.onPrimary : VelvetColors.textPrimary;
     // 36 px on the canvas; the hit area reaches the 44 px floor.
-    return _HitArea(onTap: onTap, child: Material(
-      color: primary ? VelvetColors.primary : VelvetColors.raised,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
+    return _HitArea(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 18, color: fg),
-                const SizedBox(width: 6),
-              ],
-              // Ellipsized rather than overflowing a row narrower than it
-              // (a long locale under a large text setting on a small phone).
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: fg, fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ));
-  }
-}
-
-/// A selectable pill (the filter chips): filled with the
-/// accent when it is the one in force — ListeningScreen's scope pill.
-class DiscoveryChoicePill extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const DiscoveryChoicePill(this.label,
-      {super.key, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: selected ? VelvetColors.onPrimary : VelvetColors.textSecondary,
-      ),
-    );
-    // 32 px on the canvas; the hit area reaches the 44 px floor.
-    return _HitArea(onTap: onTap, child: Material(
-      color: selected ? VelvetColors.primary : VelvetColors.raised,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: 32,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          child: text,
-        ),
-      ),
-    ));
-  }
-}
-
-/// Discovery is on but nothing is analyzed yet — DiscoverScreen's
-/// scan-pending card (same copy), with its "Check again".
-class DiscoveryScanPendingCard extends StatelessWidget {
-  final bool rechecking;
-  final VoidCallback onRecheck;
-  const DiscoveryScanPendingCard(
-      {super.key, required this.rechecking, required this.onRecheck});
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: VelvetColors.raised,
-          borderRadius: BorderRadius.circular(VelvetColors.radiusLarge),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.hourglass_empty,
-                    size: 18, color: VelvetColors.textSecondary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l.discoverScanPendingTitle,
-                    style: TextStyle(
-                      color: VelvetColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+        child: Material(
+          color: primary ? VelvetColors.primary : VelvetColors.raised,
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 18, color: fg),
+                    const SizedBox(width: 6),
+                  ],
+                  // Ellipsized rather than overflowing a row narrower than
+                  // it (a long locale under a large text setting on a small
+                  // phone).
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: fg, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l.discoverScanPendingBody,
-              style: TextStyle(color: VelvetColors.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: rechecking ? null : onRecheck,
-                icon: rechecking
-                    ? SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: VelvetColors.primary),
-                      )
-                    : Icon(Icons.refresh,
-                        size: 16, color: VelvetColors.primary),
-                label: Text(
-                  l.discoverCheckAgain,
-                  style: TextStyle(color: VelvetColors.primary, fontSize: 13),
-                ),
+                ],
               ),
             ),
+          ),
+        ));
+  }
+}
+
+/// A song list's footer: "Queue all · Shuffle · Save as playlist" under the
+/// library's songs, "Queue all" under the connected servers' — the verbs
+/// that act on the whole list. No counts.
+class DiscoveryFooter extends StatelessWidget {
+  final DiscoveryPageController controller;
+
+  /// [kDiscoverFootLibrary] or [kDiscoverFootPeers].
+  final String which;
+  const DiscoveryFooter(
+      {super.key, required this.controller, required this.which});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final c = controller;
+    final library = which == kDiscoverFootLibrary;
+    final rows = library ? c.libraryRows : c.peerRows;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+      child: Wrap(
+        spacing: 8,
+        // The pills' 44 px hit areas already space the rows.
+        runSpacing: 0,
+        children: [
+          DiscoveryPill(l.discoverQueueAll,
+              icon: Icons.playlist_add,
+              primary: true,
+              onTap: () => discoveryQueueAll(context, rows)),
+          if (library) ...[
+            DiscoveryPill(l.shuffle,
+                icon: Icons.shuffle,
+                onTap: () => playFromHere(rows, 0, shuffle: true)),
+            DiscoveryPill(l.discoverPageSaveAsPlaylist,
+                icon: Icons.queue_music,
+                onTap: () => discoverySaveAsPlaylist(context, c, rows)),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Nothing counted yet (plan §2.8): the page runs on one random library
-/// song. Explains why, and offers another pick or a song of the user's own.
-class DiscoveryRandomCard extends StatelessWidget {
-  final bool busy;
-  final VoidCallback onAnotherPick;
-  final VoidCallback onChooseSong;
-  const DiscoveryRandomCard({
-    super.key,
-    required this.busy,
-    required this.onAnotherPick,
-    required this.onChooseSong,
-  });
+/// A state card's frame: a raised panel with a title, a body and buttons.
+class _StateCard extends StatelessWidget {
+  final IconData? icon;
+  final String title;
+  final String? body;
+  final List<Widget> actions;
+  const _StateCard(
+      {this.icon, required this.title, this.body, this.actions = const []});
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -1113,37 +588,175 @@ class DiscoveryRandomCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l.discoverPageRandomTitle,
-              style: TextStyle(
-                color: VelvetColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l.discoverPageRandomBody,
-              style: TextStyle(
-                  color: VelvetColors.textSecondary, fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              // The pills' 44 px hit areas already space the rows.
-              runSpacing: 0,
+            Row(
               children: [
-                DiscoveryPill(l.discoverPageAnotherPick,
-                    icon: Icons.casino_outlined,
-                    primary: true,
-                    onTap: busy ? null : onAnotherPick),
-                DiscoveryPill(l.discoverPageChooseSong,
-                    icon: Icons.search, onTap: busy ? null : onChooseSong),
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: VelvetColors.textSecondary),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: VelvetColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
+            if (body != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                body!,
+                style: TextStyle(
+                    color: VelvetColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.4),
+              ),
+            ],
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                // The pills' 44 px hit areas already space the rows.
+                runSpacing: 0,
+                children: actions,
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+}
+
+/// The library call failed: one line and Try again.
+class DiscoveryFailedCard extends StatelessWidget {
+  final VoidCallback onRetry;
+  const DiscoveryFailedCard({super.key, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return _StateCard(
+      icon: Icons.cloud_off_outlined,
+      title: l.discoverPageError,
+      actions: [
+        DiscoveryPill(l.discoverPageRetry,
+            icon: Icons.refresh, primary: true, onTap: onRetry),
+      ],
+    );
+  }
+}
+
+/// Discovery is on but nothing is analyzed yet — DiscoverScreen's
+/// scan-pending copy, with its "Check again".
+class DiscoveryScanPendingCard extends StatelessWidget {
+  final bool rechecking;
+  final VoidCallback onRecheck;
+  const DiscoveryScanPendingCard(
+      {super.key, required this.rechecking, required this.onRecheck});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return _StateCard(
+      icon: Icons.hourglass_empty,
+      title: l.discoverScanPendingTitle,
+      body: l.discoverScanPendingBody,
+      actions: [
+        DiscoveryPill(l.discoverCheckAgain,
+            icon: Icons.refresh, onTap: rechecking ? null : onRecheck),
+      ],
+    );
+  }
+}
+
+/// Nothing finished yet (plan §2.8): the seeds are one random library song.
+/// Says why, and offers another pick, a song of the user's own, or the
+/// library itself.
+class DiscoveryRandomCard extends StatelessWidget {
+  final bool busy;
+  final VoidCallback onAnotherPick;
+  final VoidCallback onChooseSong;
+  final VoidCallback onBrowse;
+  const DiscoveryRandomCard({
+    super.key,
+    required this.busy,
+    required this.onAnotherPick,
+    required this.onChooseSong,
+    required this.onBrowse,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return _StateCard(
+      title: l.discoverPageRandomTitle,
+      body: l.discoverPageRandomBody,
+      actions: [
+        DiscoveryPill(l.discoverPageAnotherPick,
+            icon: Icons.casino_outlined,
+            primary: true,
+            onTap: busy ? null : onAnotherPick),
+        DiscoveryPill(l.discoverPageChooseSong,
+            icon: Icons.search, onTap: busy ? null : onChooseSong),
+        DiscoveryPill(l.discoverPageBrowseLibrary,
+            icon: Icons.folder_outlined, onTap: onBrowse),
+      ],
+    );
+  }
+}
+
+/// One [kDiscoverState] item, drawn. The browser hands each state item
+/// here; the controller is the open listing's.
+Widget discoveryStateWidget(BuildContext context, DisplayItem item,
+    DiscoveryPageController? c) {
+  final l = AppLocalizations.of(context);
+  final state = DiscoveryListingState.values.asNameMap()[item.data];
+  switch (state) {
+    case DiscoveryListingState.off:
+      return DiscoveryHint(l.discoverTurnedOff);
+    case DiscoveryListingState.loading:
+      return const DiscoverySkeleton(albums: true, rows: 6);
+    case DiscoveryListingState.peersLoading:
+      return const DiscoverySkeleton(rows: 3);
+    case DiscoveryListingState.failed:
+      return DiscoveryFailedCard(onRetry: () => c?.refresh());
+    case DiscoveryListingState.scanPending:
+      return DiscoveryScanPendingCard(
+          rechecking: c?.rechecking ?? false,
+          onRecheck: () => c?.recheck());
+    case DiscoveryListingState.random:
+      return DiscoveryRandomCard(
+        busy: c == null || c.loading,
+        onAnotherPick: () {
+          if (c != null) discoveryAnotherPick(context, c);
+        },
+        onChooseSong: () {
+          if (c != null) discoveryChooseSong(context, c);
+        },
+        onBrowse: () {
+          if (c != null) discoveryBrowseLibrary(c);
+        },
+      );
+    case DiscoveryListingState.libraryEmpty:
+      // The way out is to let played songs back in — offered only while
+      // they are left out.
+      final offer = c != null && !c.includesPlayed;
+      return DiscoveryHint(
+        l.discoverPageLibraryNothing,
+        action: offer ? l.discoverPageIncludePlayed : null,
+        onAction: offer
+            ? () => c.setFilter(
+                DiscoveryPageController.filterFor(includePlayed: true))
+            : null,
+      );
+    case DiscoveryListingState.peersQuiet:
+      return DiscoveryHint(l.discoverPagePeersQuiet);
+    case null:
+      return const SizedBox.shrink();
   }
 }

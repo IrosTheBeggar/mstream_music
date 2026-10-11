@@ -11,13 +11,17 @@ import 'discovery_page_controller.dart';
 import 'discovery_widgets.dart';
 
 /// The seeds sheet (the PhoneSeeds canvas board), opened from "More options"
-/// in the page's configuration bar: a switch per seed, the dropped seeds to
-/// bring back, "Pick a song…" to pin one, and "Find similar" on a seed (the
-/// per-song lens the old seed chips opened). The window is not here — the
-/// bar is its one home. Nothing is sent until "Use these N" — the sheet
-/// edits a draft and hands it to [DiscoveryPageController.applySeeds] over
-/// the window in force, which remembers drops and restores server-side (so
-/// every client agrees) and keeps pins for this visit only (plan §2.3).
+/// in Discover's configuration bar: Discover's one checkbox ("Include songs
+/// I've played lately") above the seeds, then a switch per seed, the dropped
+/// seeds to bring back, "Pick a song…" to pin one, and "Find similar" on a
+/// seed (the per-song lens the old seed chips opened). The window is not
+/// here — the bar is its one home. The checkbox applies at once, as the
+/// webapp's does: it is the controller's filter, re-asked (and remembered)
+/// the moment it changes, so closing the sheet keeps it and Reset leaves it
+/// alone. The seeds are a draft: nothing is sent until "Use these N", which
+/// hands it to [DiscoveryPageController.applySeeds] over the window in
+/// force — drops and restores remembered server-side (so every client
+/// agrees), pins kept for this visit only (plan §2.3).
 class DiscoverySeedsSheet extends StatefulWidget {
   final DiscoveryPageController controller;
   const DiscoverySeedsSheet({super.key, required this.controller});
@@ -119,7 +123,7 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
 
   void _apply() {
     // The page shows the refetch; the sheet's job is done once it is asked.
-    // The pending apply is the sheet's result, so the page — which outlives
+    // The pending apply is the sheet's result, so Discover — which outlives
     // the sheet — can say so when a restore did not take (the server would
     // otherwise go on leaving the song out with no word).
     final pending = c.applySeeds(
@@ -207,6 +211,27 @@ class _DiscoverySeedsSheetState extends State<DiscoverySeedsSheet> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.only(bottom: 8),
                 children: [
+                  // The library filter: off = songs you have not played
+                  // lately ('fresh'), on = everything ('all'). Applied at
+                  // once (setFilter flips the filter before it asks, and
+                  // puts it back if the re-ask fails), so it draws from
+                  // the controller.
+                  ListenableBuilder(
+                    listenable: c,
+                    builder: (context, _) => CheckboxListTile(
+                      key: const ValueKey('discovery-include-played'),
+                      value: c.includesPlayed,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: VelvetColors.primary,
+                      title: Text(l.discoverPageIncludePlayed,
+                          style: TextStyle(
+                              color: VelvetColors.textPrimary, fontSize: 15)),
+                      onChanged: (v) => c.setFilter(
+                          DiscoveryPageController.filterFor(
+                              includePlayed: v ?? false)),
+                    ),
+                  ),
+                  Divider(color: VelvetColors.border, height: 1),
                   if (_pins.isNotEmpty) ...[
                     _groupHeader(l.discoverPagePickedHeader),
                     for (final p in _pins) _pinRow(l, p),

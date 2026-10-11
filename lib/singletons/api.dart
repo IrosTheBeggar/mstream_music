@@ -617,11 +617,15 @@ class ApiManager {
   /// the browser stack — used by the album detail screen, which renders its own
   /// tracklist. Throws on a server error so the caller can show its own state.
   Future<List<DisplayItem>> fetchAlbumSongs(String? album,
-      {Server? useThisServer, int? year, String? albumArtist}) async {
+      {Server? useThisServer,
+      int? year,
+      String? albumArtist,
+      String? artist}) async {
     final res = await makeServerCall(
         useThisServer,
         '/api/v1/db/album-songs',
-        albumSongsBody(album, year: year, albumArtist: albumArtist),
+        albumSongsBody(album,
+            year: year, albumArtist: albumArtist, artist: artist),
         'POST');
 
     final List<DisplayItem> newList = [];

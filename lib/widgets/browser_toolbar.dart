@@ -9,6 +9,7 @@
 //   • local search open → close · filter field
 //   • home (section list) → the "search the whole server" field
 //   • normal list        → back · label · Play · Shuffle · overflow (songs)
+//                          (not on Discover: its footers carry the verbs)
 //                          back · label · search · (no songs to act on)
 //
 // Search state lives in BrowserManager (the body does the filtering); the
@@ -23,6 +24,7 @@ import 'package:rxdart/rxdart.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/enum_labels.dart';
 import '../objects/display_item.dart';
+import '../screens/discovery/discovery_listing.dart';
 import '../singletons/api.dart';
 import '../singletons/browser_list.dart';
 import '../singletons/downloads.dart';
@@ -472,8 +474,17 @@ class _BrowserToolbarState extends State<BrowserToolbar> {
     // Play/Shuffle appear only when the current list actually holds playable
     // rows, so Albums / Artists / Playlists (which list containers, not songs)
     // keep a clean bar and you never get a play button with nothing to play.
+    //
+    // Discover is the exception: its song lists carry their own verbs (the
+    // footers' Queue all · Shuffle · Save as playlist, per list), and its
+    // frame mixes the library's rows with connected servers' — so no
+    // page-wide Play / Add all / Download, which would act on both at once
+    // (and offer to download a peer's tracks unasked). Back · label ·
+    // search, like a list with nothing to play.
     final canBack = BrowserManager().browserCache.length > 1;
-    final targets = _actionTargets;
+    final targets = DiscoveryListing.isListing(s.list)
+        ? const <DisplayItem>[]
+        : _actionTargets;
     final canPlay = _enqueueable(targets).isNotEmpty;
     return Row(children: [
       if (canBack)

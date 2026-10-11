@@ -19,6 +19,7 @@ import '../singletons/media.dart';
 import '../singletons/track_capture.dart';
 import '../util/media_format.dart';
 import '../util/queue_actions.dart';
+import '../util/image_cache.dart';
 import '../util/server_version.dart';
 
 import '../singletons/sonic_path_state.dart';
@@ -27,7 +28,8 @@ import 'p2p/p2p_screen.dart';
 import 'add_server.dart';
 import 'add_torrent_screen.dart';
 import 'auto_dj.dart';
-import 'discovery_page.dart';
+import 'discovery/discovery_listing.dart';
+import 'discovery/discovery_widgets.dart';
 import 'sonic_path_screen.dart';
 
 class Browser extends StatefulWidget {
@@ -139,6 +141,16 @@ class _BrowserState extends State<Browser> {
       return;
     }
 
+    // Discover is a browser listing like Albums: a frame on this stack that
+    // fills itself in as the server answers (discovery_listing.dart), so it
+    // draws with the browser's own rows and Back returns to the home.
+    if (browserList[index].type == 'execAction' &&
+        browserList[index].data == 'discover') {
+      final s = browserList[index].server;
+      if (s != null) DiscoveryListing().open(s);
+      return;
+    }
+
     // The feature cards: screens of their own rather than browser frames, so
     // the browser stays where it is behind them.
     if (browserList[index].type == 'execAction' &&
@@ -153,15 +165,6 @@ class _BrowserState extends State<Browser> {
       if (s != null) SonicPathState().beginSetup(s);
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const SonicPathScreen()));
-      return;
-    }
-    if (browserList[index].type == 'execAction' &&
-        browserList[index].data == 'discover') {
-      final s = browserList[index].server;
-      if (s != null) {
-        Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => DiscoveryPage(server: s)));
-      }
       return;
     }
     if (browserList[index].type == 'execAction' &&
@@ -1122,6 +1125,127 @@ class _BrowserState extends State<Browser> {
                     ])))));
   }
 
+  // ── Discover: the listing DiscoveryListing keeps on the stack ──
+  //
+  // The browser's own album items and song rows (makeListItem, so taps and
+  // long-presses do what they do everywhere), between the pieces only
+  // Discover has: the configuration bar first, state cards, section
+  // headers, the footers. Albums run as a horizontal strip of the album
+  // grid's cards when the album-grid setting is on (the browser's album
+  // look), as album rows when it is off. Pull to refresh re-asks the
+  // server. Local search narrows the songs and albums; the chrome stays.
+  Widget _discoveryView(
+      BuildContext context, List<DisplayItem> all, String query) {
+    final c = DiscoveryListing().controller;
+    final items = query.isEmpty
+        ? all
+        : all
+            .where((it) =>
+                it.type == kDiscoverBar ||
+                ((it.type == 'file' || it.type == 'album') &&
+                    it.matchesQuery(query)))
+            .toList();
+    return StreamBuilder<bool>(
+      stream: SettingsManager().albumGridStream,
+      initialData: SettingsManager().albumGrid,
+      builder: (context, gridSnap) {
+        final grid = gridSnap.data ?? true;
+        final children = <Widget>[];
+        var firstHeader = true;
+        for (var i = 0; i < items.length; i++) {
+          final it = items[i];
+          switch (it.type) {
+            case kDiscoverBar:
+              if (c != null) children.add(DiscoveryConfigBar(controller: c));
+            case kDiscoverState:
+              children.add(discoveryStateWidget(context, it, c));
+            case kDiscoverFoot:
+              if (c != null) {
+                children.add(DiscoveryFooter(controller: c, which: it.data!));
+              }
+            case 'section':
+              children.add(
+                  _discoverySectionHeader(context, it, first: firstHeader));
+              firstHeader = false;
+            case 'album' when grid:
+              // The run of album items from here is one strip.
+              var end = i;
+              while (end + 1 < items.length && items[end + 1].type == 'album') {
+                end++;
+              }
+              children.add(_discoveryAlbumStrip(context, items, i, end));
+              i = end;
+            default:
+              children.add(makeListItem(items, i, context));
+          }
+        }
+        // Same row density as the browser's list (see the main ListView).
+        return ListTileTheme.merge(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+          horizontalTitleGap: 10,
+          minLeadingWidth: 32,
+          child: RefreshIndicator(
+            color: VelvetColors.primary,
+            onRefresh: c?.refresh ?? () async {},
+            child: ListView(
+              controller: BrowserManager().sc,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 24),
+              children: children,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// A Discover header, in the home's section style (small accent caps).
+  Widget _discoverySectionHeader(BuildContext context, DisplayItem section,
+      {required bool first}) {
+    final l = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, first ? 14 : 22, 14, 6),
+      child: Text(
+        discoverySectionLabel(l, section).toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: VelvetColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  static const double _stripCardWidth = 132;
+
+  /// Album items [from]..[to] of [items] as one horizontal strip of the
+  /// album grid's cards; a tap goes through handleTap, as a grid card's
+  /// does.
+  Widget _discoveryAlbumStrip(
+      BuildContext context, List<DisplayItem> items, int from, int to) {
+    final cacheW = artCacheSize(_stripCardWidth);
+    return SizedBox(
+      height: _stripCardWidth / AlbumGrid.aspectRatio,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        itemCount: to - from + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: AlbumGrid.spacing),
+        itemBuilder: (context, k) => SizedBox(
+          width: _stripCardWidth,
+          child: AlbumGridCard(
+            item: items[from + k],
+            cacheWidth: cacheW,
+            onTap: () => handleTap(items, from + k, context),
+          ),
+        ),
+      ),
+    );
+  }
+
   // In-flow context strip under the toolbar: the query on a search-results list,
   // or the current directory in the file explorer. Both are persistent context
   // for their view (tracked per stack frame, so they revert on back-nav). The
@@ -1253,6 +1377,14 @@ class _BrowserState extends State<Browser> {
                   stream: BrowserManager().browserListStream,
                   builder: (context, snapshot) {
                     final List<DisplayItem> rawList = snapshot.data ?? [];
+
+                    // Discover draws its own listing (the bar, sections and
+                    // footers around the browser's rows).
+                    if (DiscoveryListing.isListing(rawList)) {
+                      final search = BrowserManager().search;
+                      return _discoveryView(context, rawList,
+                          search.open ? search.query.trim() : '');
+                    }
 
                     // Local search filters only the *displayed* list; the
                     // manager's browserList (hence navigation / back-stack
